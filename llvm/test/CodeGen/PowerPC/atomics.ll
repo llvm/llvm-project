@@ -265,25 +265,25 @@ define i16 @cas_weak_i16_acquire_acquire(ptr %mem) {
 define i32 @cas_strong_i32_acqrel_acquire(ptr %mem) {
 ; CHECK-LABEL: cas_strong_i32_acqrel_acquire:
 ; CHECK:       # %bb.0:
-; PPC32-NEXT:    mr      r4, r3
-; PPC32-NEXT:    lwarx r3, 0, r3
-; PPC32-NEXT:    cmplwi  r3, 0
-; PPC32-NEXT:    bne     cr0, .LBB10_4
-; PPC32-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC32-NEXT:    li r5, 1
-; PPC32-NEXT:    lwsync
-; PPC32-NEXT:  .LBB10_2:                               # %cmpxchg.trystore
-; PPC32-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC32-NEXT:    stwcx. r5, 0, r4
-; PPC32-NEXT:    beq     cr0, .LBB10_4
-; PPC32-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC32-NEXT:                                          #   in Loop: Header=BB10_2 Depth=1
-; PPC32-NEXT:    lwarx r3, 0, r4
-; PPC32-NEXT:    cmplwi  r3, 0
-; PPC32-NEXT:    beq     cr0, .LBB10_2
-; PPC32-NEXT:  .LBB10_4:                               # %cmpxchg.nostore
-; PPC32-NEXT:    lwsync
-; PPC32-NEXT:    blr
+; CHECK-NEXT:    mr      r4, r3
+; CHECK-NEXT:    lwarx r3, 0, r3
+; CHECK-NEXT:    cmplwi  r3, 0
+; CHECK-NEXT:    bne     cr0, .LBB10_4
+; CHECK-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
+; CHECK-NEXT:    li r5, 1
+; CHECK-NEXT:    lwsync
+; CHECK-NEXT:  .LBB10_2:                               # %cmpxchg.trystore
+; CHECK-NEXT:                                          # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    stwcx. r5, 0, r4
+; CHECK-NEXT:    beq     cr0, .LBB10_4
+; CHECK-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
+; CHECK-NEXT:                                          #   in Loop: Header=BB10_2 Depth=1
+; CHECK-NEXT:    lwarx r3, 0, r4
+; CHECK-NEXT:    cmplwi  r3, 0
+; CHECK-NEXT:    beq     cr0, .LBB10_2
+; CHECK-NEXT:  .LBB10_4:                               # %cmpxchg.nostore
+; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    blr
   %val = cmpxchg ptr %mem, i32 0, i32 1 acq_rel acquire
   %loaded = extractvalue { i32, i1} %val, 0
   ret i32 %loaded

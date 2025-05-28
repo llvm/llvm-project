@@ -402,18 +402,18 @@ define void @test40(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    clrlwi 5, 5, 24
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    .p2align        5
-; PPC64LE-NEXT:  .LBB40_1:
-; PPC64LE-NEXT:                # =>This Inner Loop Header: Depth=1
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB40_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi  6, 6, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bnelr 0
-; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:                #   in Loop: Header=BB40_1 Depth=1
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB40_1
-; PPC64LE-NEXT:  # %bb.3:
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.end
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val monotonic monotonic
   ret void
@@ -424,18 +424,18 @@ define void @test41(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    clrlwi 5, 5, 24
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    .p2align        5
-; PPC64LE-NEXT:  .LBB41_1:
-; PPC64LE-NEXT:                # =>This Inner Loop Header: Depth=1
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB41_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi  6, 6, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
-; PPC64LE-NEXT:    bnelr   0
-; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:                #   in Loop: Header=BB41_1 Depth=1
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB41_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.success
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.success
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acquire monotonic
@@ -447,18 +447,18 @@ define void @test42(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    clrlwi 5, 5, 24
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
-; PPC64LE-NEXT:    .p2align        5
-; PPC64LE-NEXT:  .LBB42_1:
-; PPC64LE-NEXT:                # =>This Inner Loop Header: Depth=1
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB42_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    clrlwi  6, 6, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
 ; PPC64LE-NEXT:    cmplw 6, 4
 ; PPC64LE-NEXT:    bne 0, .LBB42_3
-; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:                #   in Loop: Header=BB42_1 Depth=1
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
 ; PPC64LE-NEXT:    bne 0, .LBB42_1
-; PPC64LE-NEXT:  .LBB42_3:
+; PPC64LE-NEXT:  .LBB42_3: # %cmpxchg.nostore
 ; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acquire acquire
@@ -467,9468 +467,9471 @@ define void @test42(ptr %ptr, i8 %cmp, i8 %val) {
 
 define void @test43(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-LABEL: test43:
-; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:     lbarx 6, 0, 3
-; PPC64LE-NEXT:     clrlwi  4, 4, 24
-; PPC64LE-NEXT:     clrlwi  6, 6, 24
-; PPC64LE-NEXT:     cmplw   6, 4
-; PPC64LE-NEXT:     bnelr   0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:     lwsync
-; PPC64LE-NEXT:     clrlwi  5, 5, 24
-; PPC64LE-NEXT:     .p2align        5
-; PPC64LE-NEXT:  .LBB43_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:     stbcx. 5, 0, 3
-; PPC64LE-NEXT:     beqlr   0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB43_2 Depth=1
-; PPC64LE-NEXT:     lbarx 6, 0, 3
-; PPC64LE-NEXT:     clrlwi  6, 6, 24
-; PPC64LE-NEXT:     cmplw   6, 4
-; PPC64LE-NEXT:     beq     0, .LBB43_2
-; PPC64LE-NEXT:     blr
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB43_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB43_2
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val release monotonic
   ret void
 }
 
 define void @test44(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-LABEL: test44:
-; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:     lbarx 6, 0, 3
-; PPC64LE-NEXT:     clrlwi  4, 4, 24
-; PPC64LE-NEXT:     clrlwi  6, 6, 24
-; PPC64LE-NEXT:     cmplw   6, 4
-; PPC64LE-NEXT:     bne     0, .LBB44_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:     lwsync
-; PPC64LE-NEXT:     clrlwi  5, 5, 24
-; PPC64LE-NEXT:     .p2align        5
-; PPC64LE-NEXT:  .LBB44_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:     stbcx. 5, 0, 3
-; PPC64LE-NEXT:     beqlr   0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB44_2 Depth=1
-; PPC64LE-NEXT:     lbarx 6, 0, 3
-; PPC64LE-NEXT:     clrlwi  6, 6, 24
-; PPC64LE-NEXT:     cmplw   6, 4
-; PPC64LE-NEXT:     beq     0, .LBB44_2
-; PPC64LE-NEXT:  .LBB44_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:     lwsync
-; PPC64LE-NEXT:     blr
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB44_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB44_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB44_2
+; PPC64LE-NEXT:  .LBB44_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val release acquire
   ret void
 }
 
 define void @test45(ptr %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-LABEL: test45:
-; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:     lbarx 6, 0, 3
-; PPC64LE-NEXT:     clrlwi  4, 4, 24
-; PPC64LE-NEXT:     clrlwi  6, 6, 24
-; PPC64LE-NEXT:     cmplw   6, 4
-; PPC64LE-NEXT:     bnelr   0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:     lwsync
-; PPC64LE-NEXT:     clrlwi  5, 5, 24
-; PPC64LE-NEXT:     .p2align        5
-; PPC64LE-NEXT:  .LBB45_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:     stbcx. 5, 0, 3
-; PPC64LE-NEXT:     beq     0, .LBB45_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB45_2 Depth=1
-; PPC64LE-NEXT:     lbarx 6, 0, 3
-; PPC64LE-NEXT:     clrlwi  6, 6, 24
-; PPC64LE-NEXT:     cmplw   6, 4
-; PPC64LE-NEXT:     beq     0, .LBB45_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB45_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB45_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB45_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB45_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acq_rel monotonic
   ret void
 }
 
 define void @test46(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test46:                                 # @test46
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB46_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB46_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB46_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB46_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB46_2
-; PPC64LE-NEXT:  .LBB46_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test46:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB46_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB46_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB46_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB46_2
+; PPC64LE-NEXT:  .LBB46_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acq_rel acquire
   ret void
 }
 
 define void @test47(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test47:                                 # @test47
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB47_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB47_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB47_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB47_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
+; PPC64LE-LABEL: test47:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB47_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB47_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB47_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
 ; PPC64LE-NEXT:    blr
-; PPC64LE-NEXT:  .LBB47_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
+; PPC64LE-NEXT:  .LBB47_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val seq_cst monotonic
   ret void
 }
 
 define void @test48(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test48:                                 # @test48
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB48_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB48_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB48_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB48_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB48_2
-; PPC64LE-NEXT:  .LBB48_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
+; PPC64LE-LABEL: test48:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB48_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB48_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB48_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB48_2
+; PPC64LE-NEXT:  .LBB48_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val seq_cst acquire
   ret void
 }
 
 define void @test49(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test49:                                 # @test49
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB49_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB49_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB49_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB49_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB49_2
-; PPC64LE-NEXT:  .LBB49_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
+; PPC64LE-LABEL: test49:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB49_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB49_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB49_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB49_2
+; PPC64LE-NEXT:  .LBB49_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val seq_cst seq_cst
   ret void
 }
 
 define void @test50(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test50:                                 # @test50
+; PPC64LE-LABEL: test50:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB50_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB50_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB50_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.end
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB50_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB50_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.end
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val monotonic monotonic
   ret void
 }
 
 define void @test51(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test51:                                 # @test51
+; PPC64LE-LABEL: test51:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB51_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB51_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB51_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB51_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB51_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acquire monotonic
   ret void
 }
 
 define void @test52(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test52:                                 # @test52
+; PPC64LE-LABEL: test52:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB52_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB52_3
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB52_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB52_1
-; PPC64LE-NEXT:  .LBB52_3:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB52_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB52_3
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB52_1
+; PPC64LE-NEXT:  .LBB52_3: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acquire acquire
   ret void
 }
 
 define void @test53(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test53:                                 # @test53
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB53_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB53_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB53_2
+; PPC64LE-LABEL: test53:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB53_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB53_2
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val release monotonic
   ret void
 }
 
 define void @test54(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test54:                                 # @test54
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB54_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB54_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB54_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB54_2
-; PPC64LE-NEXT:  .LBB54_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
+; PPC64LE-LABEL: test54:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB54_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB54_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB54_2
+; PPC64LE-NEXT:  .LBB54_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val release acquire
   ret void
 }
 
 define void @test55(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test55:                                 # @test55
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB55_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB55_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB55_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB55_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
+; PPC64LE-LABEL: test55:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB55_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB55_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB55_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
 ; PPC64LE-NEXT:    blr
-; PPC64LE-NEXT:  .LBB55_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
+; PPC64LE-NEXT:  .LBB55_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acq_rel monotonic
   ret void
 }
 
 define void @test56(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test56:                                 # @test56
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB56_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB56_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB56_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB56_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB56_2
-; PPC64LE-NEXT:  .LBB56_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
+; PPC64LE-LABEL: test56:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB56_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB56_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB56_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB56_2
+; PPC64LE-NEXT:  .LBB56_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acq_rel acquire
   ret void
 }
 
 define void @test57(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test57:                                 # @test57
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB57_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB57_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB57_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB57_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
+; PPC64LE-LABEL: test57:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB57_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB57_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB57_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
 ; PPC64LE-NEXT:    blr
-; PPC64LE-NEXT:  .LBB57_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
+; PPC64LE-NEXT:  .LBB57_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val seq_cst monotonic
   ret void
 }
 
 define void @test58(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test58:                                 # @test58
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB58_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB58_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB58_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB58_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB58_2
-; PPC64LE-NEXT:  .LBB58_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
+; PPC64LE-LABEL: test58:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB58_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB58_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB58_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB58_2
+; PPC64LE-NEXT:  .LBB58_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val seq_cst acquire
   ret void
 }
 
 define void @test59(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test59:                                 # @test59
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB59_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB59_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB59_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB59_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB59_2
-; PPC64LE-NEXT:  .LBB59_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr 
+; PPC64LE-LABEL: test59:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB59_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB59_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB59_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB59_2
+; PPC64LE-NEXT:  .LBB59_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val seq_cst seq_cst
-    ret void
+  ret void
 }
 
 define void @test60(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test60:                                 # @test60
+; PPC64LE-LABEL: test60:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB60_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB60_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB60_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.end
-; PPC64LE-NEXT:        blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB60_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB60_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val monotonic monotonic
-    ret void
+  ret void
 }
 
 define void @test61(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test61:                                 # @test61
+; PPC64LE-LABEL: test61:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB61_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB61_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB61_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB61_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB61_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acquire monotonic
-    ret void
+  ret void
 }
 
 define void @test62(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test62:                                 # @test62
+; PPC64LE-LABEL: test62:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB62_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB62_3
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB62_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB62_1
-; PPC64LE-NEXT:  .LBB62_3:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB62_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB62_3
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB62_1
+; PPC64LE-NEXT:  .LBB62_3: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acquire acquire
-    ret void
+  ret void
 }
 
 define void @test63(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test63:                                 # @test63
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB63_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB63_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB63_2
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test63:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB63_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB63_2
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val release monotonic
-    ret void
+  ret void
 }
 
 define void @test64(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test64:                                 # @test64
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB64_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB64_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB64_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB64_2
-; PPC64LE-NEXT:  .LBB64_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test64:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB64_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB64_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB64_2
+; PPC64LE-NEXT:  .LBB64_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val release acquire
-    ret void
+  ret void
 }
 
 define void @test65(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test65:                                 # @test65
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB65_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB65_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB65_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB65_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB65_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test65:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB65_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB65_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB65_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB65_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acq_rel monotonic
-    ret void
+  ret void
 }
 
 define void @test66(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test66:                                 # @test66
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB66_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB66_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB66_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB66_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB66_2
-; PPC64LE-NEXT:  .LBB66_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test66:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB66_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB66_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB66_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB66_2
+; PPC64LE-NEXT:  .LBB66_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acq_rel acquire
-    ret void
+  ret void
 }
 
 define void @test67(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test67:                                 # @test67
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB67_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB67_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB67_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB67_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB67_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test67:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB67_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB67_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB67_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB67_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst monotonic
-    ret void
+  ret void
 }
 
 define void @test68(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test68:                                 # @test68
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB68_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB68_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB68_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB68_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB68_2
-; PPC64LE-NEXT:  .LBB68_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test68:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB68_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB68_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB68_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB68_2
+; PPC64LE-NEXT:  .LBB68_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst acquire
-    ret void
+  ret void
 }
 
 define void @test69(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test69:                                 # @test69
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB69_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB69_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB69_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB69_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB69_2
-; PPC64LE-NEXT:  .LBB69_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test69:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB69_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB69_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB69_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB69_2
+; PPC64LE-NEXT:  .LBB69_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst seq_cst
   ret void
 }
 
 define void @test70(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test70:                                 # @test70
+; PPC64LE-LABEL: test70:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB70_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB70_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB70_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB70_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB70_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val monotonic monotonic
-    ret void
+  ret void
 }
 
 define void @test71(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test71:                                 # @test71
+; PPC64LE-LABEL: test71:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB71_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB71_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB71_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB71_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB71_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acquire monotonic
-    ret void
+  ret void
 }
 
 define void @test72(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test72:                                 # @test72
+; PPC64LE-LABEL: test72:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB72_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB72_3
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB72_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB72_1
-; PPC64LE-NEXT:  .LBB72_3:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB72_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB72_3
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB72_1
+; PPC64LE-NEXT:  .LBB72_3: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acquire acquire
-    ret void
+  ret void
 }
 
 define void @test73(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test73:                                 # @test73
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB73_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB73_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB73_2
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test73:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB73_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB73_2
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val release monotonic
-    ret void
+  ret void
 }
 
 define void @test74(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test74:                                 # @test74
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB74_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB74_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB74_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB74_2
-; PPC64LE-NEXT:  .LBB74_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test74:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB74_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB74_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB74_2
+; PPC64LE-NEXT:  .LBB74_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val release acquire
-    ret void
+  ret void
 }
 
 define void @test75(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test75:                                 # @test75
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB75_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB75_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB75_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB75_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB75_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test75:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB75_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB75_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB75_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB75_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acq_rel monotonic
-    ret void
+  ret void
 }
 
 define void @test76(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test76:                                 # @test76
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB76_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB76_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB76_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB76_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB76_2
-; PPC64LE-NEXT:  .LBB76_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test76:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB76_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB76_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB76_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB76_2
+; PPC64LE-NEXT:  .LBB76_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acq_rel acquire
-    ret void
+  ret void
 }
 
 define void @test77(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test77:                                 # @test77
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB77_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB77_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB77_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB77_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB77_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test77:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB77_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB77_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB77_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB77_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val seq_cst monotonic
-    ret void
+  ret void
 }
 
 define void @test78(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test78:                                 # @test78
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB78_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB78_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB78_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB78_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB78_2
-; PPC64LE-NEXT:  .LBB78_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test78:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB78_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB78_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB78_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB78_2
+; PPC64LE-NEXT:  .LBB78_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val seq_cst acquire
-    ret void
+  ret void
 }
 
 define void @test79(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test79:                                 # @test79
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB79_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB79_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB79_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB79_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB79_2
-; PPC64LE-NEXT:  .LBB79_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test79:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB79_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB79_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB79_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB79_2
+; PPC64LE-NEXT:  .LBB79_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val seq_cst seq_cst
-    ret void
+  ret void
 }
 
 define void @test80(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test80:                                 # @test80
+; PPC64LE-LABEL: test80:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB80_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB80_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB80_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB80_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB80_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val syncscope("singlethread") monotonic monotonic
-    ret void
+  ret void
 }
 
 define void @test81(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test81:                                 # @test81
+; PPC64LE-LABEL: test81:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB81_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB81_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB81_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB81_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB81_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val syncscope("singlethread") acquire monotonic
-    ret void
+  ret void
 }
 
 define void @test82(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test82:                                 # @test82
+; PPC64LE-LABEL: test82:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB82_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB82_3
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB82_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB82_1
-; PPC64LE-NEXT:  .LBB82_3:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB82_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB82_3
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB82_1
+; PPC64LE-NEXT:  .LBB82_3: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val syncscope("singlethread") acquire acquire
-    ret void
+  ret void
 }
 
 define void @test83(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test83:                                 # @test83
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB83_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB83_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB83_2
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test83:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB83_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB83_2
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val syncscope("singlethread") release monotonic
-    ret void
+  ret void
 }
 
 define void @test84(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test84:                                 # @test84
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB84_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB84_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB84_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB84_2
-; PPC64LE-NEXT:  .LBB84_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test84:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB84_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB84_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB84_2
+; PPC64LE-NEXT:  .LBB84_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val syncscope("singlethread") release acquire
-    ret void
+  ret void
 }
 
 define void @test85(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test85:                                 # @test85
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB85_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB85_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB85_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB85_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB85_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test85:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB85_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB85_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB85_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB85_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val syncscope("singlethread") acq_rel monotonic
-    ret void
+  ret void
 }
 
 define void @test86(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test86:                                 # @test86
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB86_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB86_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB86_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB86_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB86_2
-; PPC64LE-NEXT:  .LBB86_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test86:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB86_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB86_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB86_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB86_2
+; PPC64LE-NEXT:  .LBB86_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val syncscope("singlethread") acq_rel acquire
-    ret void
+  ret void
 }
 
 define void @test87(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test87:                                 # @test87
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB87_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB87_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB87_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB87_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB87_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test87:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB87_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB87_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB87_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB87_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val syncscope("singlethread") seq_cst monotonic
-    ret void
+  ret void
 }
 
 define void @test88(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test88:                                 # @test88
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB88_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB88_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB88_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB88_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB88_2
-; PPC64LE-NEXT:  .LBB88_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test88:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB88_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB88_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB88_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB88_2
+; PPC64LE-NEXT:  .LBB88_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val syncscope("singlethread") seq_cst acquire
-    ret void
+  ret void
 }
 
 define void @test89(ptr %ptr, i8 %cmp, i8 %val) {
-; PPC64LE-LABEL: test89:                                 # @test89
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 24
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB89_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 24
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB89_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB89_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB89_2 Depth=1
-; PPC64LE-NEXT:  	lbarx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 24
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB89_2
-; PPC64LE-NEXT:  .LBB89_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test89:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 24
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB89_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 24
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB89_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB89_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lbarx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 24
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB89_2
+; PPC64LE-NEXT:  .LBB89_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val syncscope("singlethread") seq_cst seq_cst
-    ret void
+  ret void
 }
 
 define void @test90(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test90:                                 # @test90
+; PPC64LE-LABEL: test90:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB90_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB90_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB90_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB90_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB90_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val syncscope("singlethread") monotonic monotonic
-    ret void
+  ret void
 }
 
 define void @test91(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test91:                                 # @test91
+; PPC64LE-LABEL: test91:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB91_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB91_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB91_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB91_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB91_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val syncscope("singlethread") acquire monotonic
-    ret void
+  ret void
 }
 
 define void @test92(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test92:                                 # @test92
+; PPC64LE-LABEL: test92:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB92_1:                               # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB92_3
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB92_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB92_1
-; PPC64LE-NEXT:  .LBB92_3:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB92_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB92_3
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB92_1
+; PPC64LE-NEXT:  .LBB92_3: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val syncscope("singlethread") acquire acquire
-    ret void
+  ret void
 }
 
 define void @test93(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test93:                                 # @test93
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB93_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB93_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB93_2
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test93:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB93_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB93_2
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val syncscope("singlethread") release monotonic
-    ret void
+  ret void
 }
 
 define void @test94(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test94:                                 # @test94
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB94_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB94_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB94_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB94_2
-; PPC64LE-NEXT:  .LBB94_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test94:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB94_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB94_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB94_2
+; PPC64LE-NEXT:  .LBB94_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val syncscope("singlethread") release acquire
-    ret void
+  ret void
 }
 
 define void @test95(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test95:                                 # @test95
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB95_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB95_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB95_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB95_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB95_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test95:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB95_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB95_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB95_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB95_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val syncscope("singlethread") acq_rel monotonic
-    ret void
+  ret void
 }
 
 define void @test96(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test96:                                 # @test96
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB96_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB96_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB96_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB96_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB96_2
-; PPC64LE-NEXT:  .LBB96_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test96:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB96_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB96_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB96_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB96_2
+; PPC64LE-NEXT:  .LBB96_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val syncscope("singlethread") acq_rel acquire
-    ret void
+  ret void
 }
 
 define void @test97(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test97:                                 # @test97
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB97_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB97_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB97_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB97_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB97_5:                               # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test97:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB97_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB97_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB97_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB97_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val syncscope("singlethread") seq_cst monotonic
-    ret void
+  ret void
 }
 
 define void @test98(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test98:                                 # @test98
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB98_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB98_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB98_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB98_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB98_2
-; PPC64LE-NEXT:  .LBB98_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test98:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB98_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB98_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB98_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB98_2
+; PPC64LE-NEXT:  .LBB98_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val syncscope("singlethread") seq_cst acquire
-    ret void
+  ret void
 }
 
 define void @test99(ptr %ptr, i16 %cmp, i16 %val) {
-; PPC64LE-LABEL: test99:                                 # @test99
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	4, 4, 16
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB99_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	clrlwi	5, 5, 16
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB99_2:                               # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB99_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB99_2 Depth=1
-; PPC64LE-NEXT:  	lharx 6, 0, 3
-; PPC64LE-NEXT:  	clrlwi	6, 6, 16
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB99_2
-; PPC64LE-NEXT:  .LBB99_4:                               # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test99:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 4, 4, 16
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB99_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    clrlwi 5, 5, 16
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB99_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB99_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lharx 6, 0, 3
+; PPC64LE-NEXT:    clrlwi 6, 6, 16
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB99_2
+; PPC64LE-NEXT:  .LBB99_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val syncscope("singlethread") seq_cst seq_cst
-    ret void
+  ret void
 }
 
 define void @test100(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test100:                                # @test100
+; PPC64LE-LABEL: test100:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB100_1:                              # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB100_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB100_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB100_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB100_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val syncscope("singlethread") monotonic monotonic
-    ret void
+  ret void
 }
 
 define void @test101(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test101:                                # @test101
+; PPC64LE-LABEL: test101:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB101_1:                              # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB101_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB101_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB101_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB101_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val syncscope("singlethread") acquire monotonic
   ret void
 }
 
 define void @test102(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test102:                                # @test102
+; PPC64LE-LABEL: test102:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB102_1:                              # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB102_3
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB102_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB102_1
-; PPC64LE-NEXT:  .LBB102_3:                              # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB102_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB102_3
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB102_1
+; PPC64LE-NEXT:  .LBB102_3: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val syncscope("singlethread") acquire acquire
   ret void
 }
 
 define void @test103(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test103:                                # @test103
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB103_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB103_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB103_2
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test103:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB103_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB103_2
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val syncscope("singlethread") release monotonic
   ret void
 }
 
 define void @test104(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test104:                                # @test104
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB104_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB104_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB104_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB104_2
-; PPC64LE-NEXT:  .LBB104_4:                              # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test104:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB104_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB104_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB104_2
+; PPC64LE-NEXT:  .LBB104_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val syncscope("singlethread") release acquire
   ret void
 }
 
 define void @test105(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test105:                                # @test105
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB105_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB105_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB105_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB105_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB105_5:                              # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test105:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB105_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB105_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB105_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB105_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val syncscope("singlethread") acq_rel monotonic
   ret void
 }
 
 define void @test106(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test106:                                # @test106
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB106_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB106_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB106_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB106_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB106_2
-; PPC64LE-NEXT:  .LBB106_4:                              # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test106:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB106_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB106_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB106_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB106_2
+; PPC64LE-NEXT:  .LBB106_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val syncscope("singlethread") acq_rel acquire
   ret void
 }
 
 define void @test107(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test107:                                # @test107
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB107_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB107_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB107_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB107_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB107_5:                              # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test107:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB107_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB107_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB107_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB107_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val syncscope("singlethread") seq_cst monotonic
   ret void
 }
 
 define void @test108(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test108:                                # @test108
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB108_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB108_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB108_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB108_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB108_2
-; PPC64LE-NEXT:  .LBB108_4:                              # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test108:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB108_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB108_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB108_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB108_2
+; PPC64LE-NEXT:  .LBB108_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val syncscope("singlethread") seq_cst acquire
   ret void
 }
 
 define void @test109(ptr %ptr, i32 %cmp, i32 %val) {
-; PPC64LE-LABEL: test109:                                # @test109
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB109_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB109_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stwcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB109_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB109_2 Depth=1
-; PPC64LE-NEXT:  	lwarx 6, 0, 3
-; PPC64LE-NEXT:  	cmplw	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB109_2
-; PPC64LE-NEXT:  .LBB109_4:                              # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test109:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB109_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB109_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stwcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB109_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    lwarx 6, 0, 3
+; PPC64LE-NEXT:    cmplw 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB109_2
+; PPC64LE-NEXT:  .LBB109_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val syncscope("singlethread") seq_cst seq_cst
   ret void
 }
 
 define void @test110(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test110:                                # @test110
+; PPC64LE-LABEL: test110:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB110_1:                              # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB110_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB110_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB110_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB110_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val syncscope("singlethread") monotonic monotonic
   ret void
 }
 
 define void @test111(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test111:                                # @test111
+; PPC64LE-LABEL: test111:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB111_1:                              # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB111_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB111_1
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB111_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB111_1
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val syncscope("singlethread") acquire monotonic
   ret void
 }
 
 define void @test112(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test112:                                # @test112
+; PPC64LE-LABEL: test112:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB112_1:                              # %cmpxchg.start
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB112_3
-; PPC64LE-NEXT:  # %bb.2:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB112_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB112_1
-; PPC64LE-NEXT:  .LBB112_3:                              # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB112_1: # %cmpxchg.start
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB112_3
+; PPC64LE-NEXT:  # %bb.2: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB112_1
+; PPC64LE-NEXT:  .LBB112_3: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val syncscope("singlethread") acquire acquire
   ret void
 }
 
 define void @test113(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test113:                                # @test113
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB113_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB113_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB113_2
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test113:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB113_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB113_2
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val syncscope("singlethread") release monotonic
   ret void
 }
 
 define void @test114(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test114:                                # @test114
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB114_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB114_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beqlr	0
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB114_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB114_2
-; PPC64LE-NEXT:  .LBB114_4:                              # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test114:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB114_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB114_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beqlr 0
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB114_2
+; PPC64LE-NEXT:  .LBB114_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val syncscope("singlethread") release acquire
   ret void
 }
 
 define void @test115(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test115:                                # @test115
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB115_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB115_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB115_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB115_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB115_5:                              # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test115:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB115_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB115_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB115_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB115_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val syncscope("singlethread") acq_rel monotonic
   ret void
 }
 
 define void @test116(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test116:                                # @test116
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB116_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB116_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB116_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB116_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB116_2
-; PPC64LE-NEXT:  .LBB116_4:                              # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test116:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB116_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB116_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB116_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB116_2
+; PPC64LE-NEXT:  .LBB116_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val syncscope("singlethread") acq_rel acquire
   ret void
 }
 
 define void @test117(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test117:                                # @test117
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bnelr	0
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB117_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB117_5
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB117_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB117_2
-; PPC64LE-NEXT:  # %bb.4:                                # %cmpxchg.end
-; PPC64LE-NEXT:         blr
-; PPC64LE-NEXT:  .LBB117_5:                              # %cmpxchg.success
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test117:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bnelr 0
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB117_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB117_5
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB117_2
+; PPC64LE-NEXT:  # %bb.4: # %cmpxchg.end
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB117_5: # %cmpxchg.success
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val syncscope("singlethread") seq_cst monotonic
   ret void
 }
 
 define void @test118(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test118:                                # @test118
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB118_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB118_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB118_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB118_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB118_2
-; PPC64LE-NEXT:  .LBB118_4:                              # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test118:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB118_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB118_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB118_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB118_2
+; PPC64LE-NEXT:  .LBB118_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val syncscope("singlethread") seq_cst acquire
   ret void
 }
 
 define void @test119(ptr %ptr, i64 %cmp, i64 %val) {
-; PPC64LE-LABEL: test119:                                # @test119
-; PPC64LE:       # %bb.0:                                # %cmpxchg.start
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	bne	0, .LBB119_4
-; PPC64LE-NEXT:  # %bb.1:                                # %cmpxchg.fencedstore
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	.p2align	5
-; PPC64LE-NEXT:  .LBB119_2:                              # %cmpxchg.trystore
-; PPC64LE-NEXT:                                          # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	stdcx. 5, 0, 3
-; PPC64LE-NEXT:  	beq	0, .LBB119_4
-; PPC64LE-NEXT:  # %bb.3:                                # %cmpxchg.releasedload
-; PPC64LE-NEXT:                                          #   in Loop: Header=BB119_2 Depth=1
-; PPC64LE-NEXT:  	ldarx 6, 0, 3
-; PPC64LE-NEXT:  	cmpld	6, 4
-; PPC64LE-NEXT:  	beq	0, .LBB119_2
-; PPC64LE-NEXT:  .LBB119_4:                              # %cmpxchg.nostore
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-LABEL: test119:
+; PPC64LE:       # %bb.0: # %cmpxchg.start
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    bne 0, .LBB119_4
+; PPC64LE-NEXT:  # %bb.1: # %cmpxchg.fencedstore
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    .p2align 5
+; PPC64LE-NEXT:  .LBB119_2: # %cmpxchg.trystore
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    stdcx. 5, 0, 3
+; PPC64LE-NEXT:    beq 0, .LBB119_4
+; PPC64LE-NEXT:  # %bb.3: # %cmpxchg.releasedload
+; PPC64LE-NEXT:    #
+; PPC64LE-NEXT:    ldarx 6, 0, 3
+; PPC64LE-NEXT:    cmpld 6, 4
+; PPC64LE-NEXT:    beq 0, .LBB119_2
+; PPC64LE-NEXT:  .LBB119_4: # %cmpxchg.nostore
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val syncscope("singlethread") seq_cst seq_cst
   ret void
 }
 
 define i8 @test120(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test120:                                # @test120
+; PPC64LE-LABEL: test120:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB120_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB120_1
+; PPC64LE-NEXT:  .LBB120_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB120_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test121(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test121:                                # @test121
+; PPC64LE-LABEL: test121:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB121_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	stbcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB121_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB121_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    stbcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB121_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test122(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test122:                                # @test122
+; PPC64LE-LABEL: test122:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB122_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB122_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB122_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB122_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test123(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test123:                                # @test123
+; PPC64LE-LABEL: test123:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB123_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB123_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB123_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB123_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test124(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test124:                                # @test124
+; PPC64LE-LABEL: test124:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB124_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB124_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB124_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB124_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test125(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test125:                                # @test125
+; PPC64LE-LABEL: test125:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB125_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB125_1
+; PPC64LE-NEXT:  .LBB125_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB125_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test126(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test126:                                # @test126
+; PPC64LE-LABEL: test126:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB126_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	sthcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB126_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB126_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    sthcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB126_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test127(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test127:                                # @test127
+; PPC64LE-LABEL: test127:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB127_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB127_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB127_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB127_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test128(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test128:                                # @test128
+; PPC64LE-LABEL: test128:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB128_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB128_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB128_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB128_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test129(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test129:                                # @test129
+; PPC64LE-LABEL: test129:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB129_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB129_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB129_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB129_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test130(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test130:                                # @test130
+; PPC64LE-LABEL: test130:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB130_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB130_1
+; PPC64LE-NEXT:  .LBB130_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB130_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test131(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test131:                                # @test131
+; PPC64LE-LABEL: test131:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB131_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	stwcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB131_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB131_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    stwcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB131_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test132(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test132:                                # @test132
+; PPC64LE-LABEL: test132:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB132_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB132_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB132_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB132_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test133(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test133:                                # @test133
+; PPC64LE-LABEL: test133:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB133_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB133_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB133_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB133_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test134(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test134:                                # @test134
+; PPC64LE-LABEL: test134:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB134_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB134_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB134_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB134_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test135(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test135:                                # @test135
+; PPC64LE-LABEL: test135:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB135_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB135_1
+; PPC64LE-NEXT:  .LBB135_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB135_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test136(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test136:                                # @test136
+; PPC64LE-LABEL: test136:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB136_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	stdcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB136_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB136_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    stdcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB136_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test137(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test137:                                # @test137
+; PPC64LE-LABEL: test137:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB137_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB137_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB137_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB137_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test138(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test138:                                # @test138
+; PPC64LE-LABEL: test138:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB138_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB138_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB138_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB138_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test139(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test139:                                # @test139
+; PPC64LE-LABEL: test139:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB139_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB139_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB139_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB139_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test140(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test140:                                # @test140
+; PPC64LE-LABEL: test140:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB140_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB140_1
+; PPC64LE-NEXT:  .LBB140_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB140_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test141(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test141:                                # @test141
+; PPC64LE-LABEL: test141:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB141_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	add 6, 4, 3
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB141_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB141_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    add 6, 4, 3
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB141_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test142(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test142:                                # @test142
+; PPC64LE-LABEL: test142:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB142_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB142_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB142_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB142_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test143(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test143:                                # @test143
+; PPC64LE-LABEL: test143:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB143_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB143_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB143_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB143_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test144(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test144:                                # @test144
+; PPC64LE-LABEL: test144:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB144_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB144_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB144_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB144_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test145(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test145:                                # @test145
+; PPC64LE-LABEL: test145:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB145_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB145_1
+; PPC64LE-NEXT:  .LBB145_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB145_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test146(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test146:                                # @test146
+; PPC64LE-LABEL: test146:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB146_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	add 6, 4, 3
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB146_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB146_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    add 6, 4, 3
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB146_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test147(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test147:                                # @test147
+; PPC64LE-LABEL: test147:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB147_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB147_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB147_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB147_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test148(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test148:                                # @test148
+; PPC64LE-LABEL: test148:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB148_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB148_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB148_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB148_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test149(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test149:                                # @test149
+; PPC64LE-LABEL: test149:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB149_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB149_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB149_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB149_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test150(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test150:                                # @test150
+; PPC64LE-LABEL: test150:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB150_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB150_1
+; PPC64LE-NEXT:  .LBB150_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB150_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test151(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test151:                                # @test151
+; PPC64LE-LABEL: test151:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB151_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	add 6, 4, 3
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB151_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB151_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    add 6, 4, 3
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB151_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test152(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test152:                                # @test152
+; PPC64LE-LABEL: test152:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB152_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB152_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB152_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB152_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test153(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test153:                                # @test153
+; PPC64LE-LABEL: test153:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB153_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB153_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB153_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB153_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test154(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test154:                                # @test154
+; PPC64LE-LABEL: test154:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB154_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB154_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB154_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB154_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test155(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test155:                                # @test155
+; PPC64LE-LABEL: test155:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB155_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB155_1
+; PPC64LE-NEXT:  .LBB155_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB155_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test156(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test156:                                # @test156
+; PPC64LE-LABEL: test156:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB156_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	add 6, 4, 3
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB156_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB156_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    add 6, 4, 3
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB156_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test157(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test157:                                # @test157
+; PPC64LE-LABEL: test157:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB157_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB157_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB157_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB157_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test158(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test158:                                # @test158
+; PPC64LE-LABEL: test158:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB158_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB158_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB158_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB158_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test159(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test159:                                # @test159
+; PPC64LE-LABEL: test159:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB159_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB159_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB159_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB159_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test160(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test160:                                # @test160
+; PPC64LE-LABEL: test160:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB160_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB160_1
+; PPC64LE-NEXT:  .LBB160_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB160_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test161(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test161:                                # @test161
+; PPC64LE-LABEL: test161:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB161_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	sub	6, 3, 4
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB161_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB161_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    sub 6, 3, 4
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB161_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test162(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test162:                                # @test162
+; PPC64LE-LABEL: test162:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB162_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB162_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB162_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB162_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test163(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test163:                                # @test163
+; PPC64LE-LABEL: test163:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB163_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB163_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB163_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB163_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test164(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test164:                                # @test164
+; PPC64LE-LABEL: test164:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB164_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB164_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB164_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB164_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test165(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test165:                                # @test165
+; PPC64LE-LABEL: test165:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB165_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB165_1
+; PPC64LE-NEXT:  .LBB165_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB165_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test166(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test166:                                # @test166
+; PPC64LE-LABEL: test166:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB166_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	sub	6, 3, 4
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB166_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB166_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    sub 6, 3, 4
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB166_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test167(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test167:                                # @test167
+; PPC64LE-LABEL: test167:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB167_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB167_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB167_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB167_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test168(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test168:                                # @test168
+; PPC64LE-LABEL: test168:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB168_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB168_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB168_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB168_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test169(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test169:                                # @test169
+; PPC64LE-LABEL: test169:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB169_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB169_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB169_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB169_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test170(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test170:                                # @test170
+; PPC64LE-LABEL: test170:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB170_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB170_1
+; PPC64LE-NEXT:  .LBB170_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB170_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test171(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test171:                                # @test171
+; PPC64LE-LABEL: test171:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB171_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	sub	6, 3, 4
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB171_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB171_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    sub 6, 3, 4
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB171_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test172(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test172:                                # @test172
+; PPC64LE-LABEL: test172:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB172_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB172_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB172_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB172_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test173(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test173:                                # @test173
+; PPC64LE-LABEL: test173:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB173_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB173_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB173_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB173_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test174(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test174:                                # @test174
+; PPC64LE-LABEL: test174:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB174_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB174_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB174_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB174_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test175(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test175:                                # @test175
+; PPC64LE-LABEL: test175:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB175_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB175_1
+; PPC64LE-NEXT:  .LBB175_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB175_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test176(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test176:                                # @test176
+; PPC64LE-LABEL: test176:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB176_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	sub	6, 3, 4
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB176_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB176_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    sub 6, 3, 4
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB176_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test177(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test177:                                # @test177
+; PPC64LE-LABEL: test177:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB177_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB177_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB177_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB177_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test178(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test178:                                # @test178
+; PPC64LE-LABEL: test178:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB178_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB178_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB178_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB178_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test179(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test179:                                # @test179
+; PPC64LE-LABEL: test179:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB179_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB179_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB179_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB179_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test180(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test180:                                # @test180
+; PPC64LE-LABEL: test180:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB180_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB180_1
+; PPC64LE-NEXT:  .LBB180_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB180_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test181(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test181:                                # @test181
+; PPC64LE-LABEL: test181:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB181_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	and 6, 4, 3
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB181_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB181_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    and 6, 4, 3
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB181_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test182(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test182:                                # @test182
+; PPC64LE-LABEL: test182:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB182_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB182_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB182_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB182_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test183(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test183:                                # @test183
+; PPC64LE-LABEL: test183:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB183_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB183_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB183_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB183_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test184(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test184:                                # @test184
+; PPC64LE-LABEL: test184:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB184_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB184_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB184_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB184_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test185(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test185:                                # @test185
+; PPC64LE-LABEL: test185:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB185_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB185_1
+; PPC64LE-NEXT:  .LBB185_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB185_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test186(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test186:                                # @test186
+; PPC64LE-LABEL: test186:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB186_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	and 6, 4, 3
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB186_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB186_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    and 6, 4, 3
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB186_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test187(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test187:                                # @test187
+; PPC64LE-LABEL: test187:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB187_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB187_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB187_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB187_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test188(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test188:                                # @test188
+; PPC64LE-LABEL: test188:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB188_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB188_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB188_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB188_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test189(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test189:                                # @test189
+; PPC64LE-LABEL: test189:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB189_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB189_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB189_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB189_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test190(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test190:                                # @test190
+; PPC64LE-LABEL: test190:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB190_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB190_1
+; PPC64LE-NEXT:  .LBB190_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB190_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test191(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test191:                                # @test191
+; PPC64LE-LABEL: test191:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB191_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	and 6, 4, 3
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB191_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB191_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    and 6, 4, 3
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB191_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test192(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test192:                                # @test192
+; PPC64LE-LABEL: test192:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB192_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB192_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB192_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB192_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test193(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test193:                                # @test193
+; PPC64LE-LABEL: test193:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB193_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB193_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB193_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB193_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test194(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test194:                                # @test194
+; PPC64LE-LABEL: test194:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB194_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB194_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB194_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB194_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test195(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test195:                                # @test195
+; PPC64LE-LABEL: test195:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB195_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB195_1
+; PPC64LE-NEXT:  .LBB195_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB195_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test196(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test196:                                # @test196
+; PPC64LE-LABEL: test196:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB196_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	and 6, 4, 3
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB196_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB196_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    and 6, 4, 3
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB196_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test197(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test197:                                # @test197
+; PPC64LE-LABEL: test197:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB197_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB197_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB197_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB197_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test198(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test198:                                # @test198
+; PPC64LE-LABEL: test198:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB198_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB198_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB198_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB198_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test199(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test199:                                # @test199
+; PPC64LE-LABEL: test199:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB199_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB199_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB199_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB199_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test200(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test200:                                # @test200
+; PPC64LE-LABEL: test200:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB200_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB200_1
+; PPC64LE-NEXT:  .LBB200_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB200_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test201(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test201:                                # @test201
+; PPC64LE-LABEL: test201:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB201_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	nand 6, 4, 3
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB201_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB201_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    nand 6, 4, 3
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB201_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test202(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test202:                                # @test202
+; PPC64LE-LABEL: test202:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB202_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB202_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB202_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB202_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test203(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test203:                                # @test203
+; PPC64LE-LABEL: test203:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB203_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB203_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB203_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB203_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test204(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test204:                                # @test204
+; PPC64LE-LABEL: test204:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB204_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB204_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB204_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB204_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test205(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test205:                                # @test205
+; PPC64LE-LABEL: test205:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB205_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB205_1
+; PPC64LE-NEXT:  .LBB205_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB205_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test206(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test206:                                # @test206
+; PPC64LE-LABEL: test206:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB206_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	nand 6, 4, 3
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB206_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB206_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    nand 6, 4, 3
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB206_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test207(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test207:                                # @test207
+; PPC64LE-LABEL: test207:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB207_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB207_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB207_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB207_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test208(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test208:                                # @test208
+; PPC64LE-LABEL: test208:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB208_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB208_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB208_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB208_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test209(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test209:                                # @test209
+; PPC64LE-LABEL: test209:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB209_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB209_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB209_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB209_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test210(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test210:                                # @test210
+; PPC64LE-LABEL: test210:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB210_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB210_1
+; PPC64LE-NEXT:  .LBB210_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB210_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test211(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test211:                                # @test211
+; PPC64LE-LABEL: test211:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB211_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	nand 6, 4, 3
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB211_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB211_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    nand 6, 4, 3
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB211_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test212(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test212:                                # @test212
+; PPC64LE-LABEL: test212:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB212_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB212_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB212_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB212_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test213(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test213:                                # @test213
+; PPC64LE-LABEL: test213:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB213_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB213_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB213_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB213_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test214(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test214:                                # @test214
+; PPC64LE-LABEL: test214:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB214_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB214_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB214_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB214_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test215(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test215:                                # @test215
+; PPC64LE-LABEL: test215:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB215_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB215_1
+; PPC64LE-NEXT:  .LBB215_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB215_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test216(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test216:                                # @test216
+; PPC64LE-LABEL: test216:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB216_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	nand 6, 4, 3
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB216_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB216_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    nand 6, 4, 3
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB216_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test217(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test217:                                # @test217
+; PPC64LE-LABEL: test217:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB217_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB217_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB217_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB217_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test218(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test218:                                # @test218
+; PPC64LE-LABEL: test218:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB218_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB218_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB218_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB218_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test219(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test219:                                # @test219
+; PPC64LE-LABEL: test219:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB219_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB219_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB219_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB219_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test220(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test220:                                # @test220
+; PPC64LE-LABEL: test220:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB220_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB220_1
+; PPC64LE-NEXT:  .LBB220_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB220_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test221(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test221:                                # @test221
+; PPC64LE-LABEL: test221:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB221_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	or 6, 4, 3
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB221_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB221_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    or 6, 4, 3
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB221_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test222(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test222:                                # @test222
+; PPC64LE-LABEL: test222:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB222_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB222_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB222_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB222_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test223(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test223:                                # @test223
+; PPC64LE-LABEL: test223:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB223_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB223_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB223_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB223_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test224(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test224:                                # @test224
+; PPC64LE-LABEL: test224:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB224_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB224_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB224_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB224_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test225(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test225:                                # @test225
+; PPC64LE-LABEL: test225:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB225_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB225_1
+; PPC64LE-NEXT:  .LBB225_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB225_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test226(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test226:                                # @test226
+; PPC64LE-LABEL: test226:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB226_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	or 6, 4, 3
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB226_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB226_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    or 6, 4, 3
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB226_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test227(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test227:                                # @test227
+; PPC64LE-LABEL: test227:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB227_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB227_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB227_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB227_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test228(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test228:                                # @test228
+; PPC64LE-LABEL: test228:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB228_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB228_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB228_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB228_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test229(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test229:                                # @test229
+; PPC64LE-LABEL: test229:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB229_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB229_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB229_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB229_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test230(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test230:                                # @test230
+; PPC64LE-LABEL: test230:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB230_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB230_1
+; PPC64LE-NEXT:  .LBB230_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB230_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test231(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test231:                                # @test231
+; PPC64LE-LABEL: test231:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB231_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	or 6, 4, 3
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB231_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB231_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    or 6, 4, 3
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB231_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test232(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test232:                                # @test232
+; PPC64LE-LABEL: test232:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB232_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB232_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB232_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB232_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test233(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test233:                                # @test233
+; PPC64LE-LABEL: test233:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB233_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB233_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB233_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB233_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test234(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test234:                                # @test234
+; PPC64LE-LABEL: test234:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB234_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB234_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB234_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB234_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test235(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test235:                                # @test235
+; PPC64LE-LABEL: test235:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB235_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB235_1
+; PPC64LE-NEXT:  .LBB235_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB235_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test236(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test236:                                # @test236
+; PPC64LE-LABEL: test236:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB236_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	or 6, 4, 3
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB236_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB236_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    or 6, 4, 3
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB236_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test237(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test237:                                # @test237
+; PPC64LE-LABEL: test237:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB237_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB237_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB237_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB237_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test238(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test238:                                # @test238
+; PPC64LE-LABEL: test238:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB238_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB238_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB238_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB238_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test239(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test239:                                # @test239
+; PPC64LE-LABEL: test239:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB239_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB239_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB239_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB239_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test240(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test240:                                # @test240
+; PPC64LE-LABEL: test240:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB240_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB240_1
+; PPC64LE-NEXT:  .LBB240_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB240_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test241(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test241:                                # @test241
+; PPC64LE-LABEL: test241:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB241_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	xor 6, 4, 3
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB241_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB241_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    xor 6, 4, 3
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB241_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test242(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test242:                                # @test242
+; PPC64LE-LABEL: test242:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB242_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB242_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB242_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB242_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test243(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test243:                                # @test243
+; PPC64LE-LABEL: test243:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB243_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB243_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB243_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB243_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test244(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test244:                                # @test244
+; PPC64LE-LABEL: test244:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB244_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB244_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB244_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB244_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test245(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test245:                                # @test245
+; PPC64LE-LABEL: test245:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB245_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB245_1
+; PPC64LE-NEXT:  .LBB245_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB245_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test246(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test246:                                # @test246
+; PPC64LE-LABEL: test246:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB246_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	xor 6, 4, 3
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB246_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB246_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    xor 6, 4, 3
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB246_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test247(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test247:                                # @test247
+; PPC64LE-LABEL: test247:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB247_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB247_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB247_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB247_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test248(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test248:                                # @test248
+; PPC64LE-LABEL: test248:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB248_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB248_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB248_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB248_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test249(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test249:                                # @test249
+; PPC64LE-LABEL: test249:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB249_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB249_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB249_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB249_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test250(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test250:                                # @test250
+; PPC64LE-LABEL: test250:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB250_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB250_1
+; PPC64LE-NEXT:  .LBB250_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB250_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test251(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test251:                                # @test251
+; PPC64LE-LABEL: test251:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB251_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	xor 6, 4, 3
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB251_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB251_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    xor 6, 4, 3
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB251_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test252(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test252:                                # @test252
+; PPC64LE-LABEL: test252:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB252_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB252_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB252_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB252_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test253(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test253:                                # @test253
+; PPC64LE-LABEL: test253:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB253_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB253_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB253_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB253_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test254(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test254:                                # @test254
+; PPC64LE-LABEL: test254:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB254_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB254_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB254_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB254_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test255(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test255:                                # @test255
+; PPC64LE-LABEL: test255:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB255_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB255_1
+; PPC64LE-NEXT:  .LBB255_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB255_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test256(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test256:                                # @test256
+; PPC64LE-LABEL: test256:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB256_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	xor 6, 4, 3
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB256_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB256_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    xor 6, 4, 3
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB256_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test257(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test257:                                # @test257
+; PPC64LE-LABEL: test257:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB257_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB257_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB257_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB257_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test258(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test258:                                # @test258
+; PPC64LE-LABEL: test258:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB258_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB258_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB258_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB258_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test259(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test259:                                # @test259
+; PPC64LE-LABEL: test259:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB259_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB259_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB259_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB259_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test260(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test260:                                # @test260
+; PPC64LE-LABEL: test260:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB260_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB260_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB260_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB260_1
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB260_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB260_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB260_1
 ; PPC64LE-NEXT:  .LBB260_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test261(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test261:                                # @test261
+; PPC64LE-LABEL: test261:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB261_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB261_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB261_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB261_1
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB261_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB261_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB261_1
 ; PPC64LE-NEXT:  .LBB261_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test262(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test262:                                # @test262
+; PPC64LE-LABEL: test262:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB262_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB262_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB262_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB262_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB262_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB262_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB262_1
 ; PPC64LE-NEXT:  .LBB262_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test263(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test263:                                # @test263
+; PPC64LE-LABEL: test263:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB263_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB263_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB263_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB263_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB263_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB263_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB263_1
 ; PPC64LE-NEXT:  .LBB263_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test264(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test264:                                # @test264
+; PPC64LE-LABEL: test264:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB264_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB264_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB264_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB264_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB264_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB264_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB264_1
 ; PPC64LE-NEXT:  .LBB264_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test265(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test265:                                # @test265
+; PPC64LE-LABEL: test265:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB265_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB265_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB265_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB265_1
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB265_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB265_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB265_1
 ; PPC64LE-NEXT:  .LBB265_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test266(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test266:                                # @test266
+; PPC64LE-LABEL: test266:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB266_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB266_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB266_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB266_1
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB266_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB266_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB266_1
 ; PPC64LE-NEXT:  .LBB266_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test267(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test267:                                # @test267
+; PPC64LE-LABEL: test267:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB267_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB267_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB267_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB267_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB267_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB267_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB267_1
 ; PPC64LE-NEXT:  .LBB267_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test268(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test268:                                # @test268
+; PPC64LE-LABEL: test268:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB268_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB268_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB268_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB268_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB268_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB268_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB268_1
 ; PPC64LE-NEXT:  .LBB268_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test269(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test269:                                # @test269
+; PPC64LE-LABEL: test269:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB269_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB269_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB269_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB269_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB269_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB269_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB269_1
 ; PPC64LE-NEXT:  .LBB269_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test270(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test270:                                # @test270
+; PPC64LE-LABEL: test270:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB270_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB270_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB270_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB270_1
+; PPC64LE-NEXT:  .LBB270_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB270_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB270_1
 ; PPC64LE-NEXT:  .LBB270_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test271(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test271:                                # @test271
+; PPC64LE-LABEL: test271:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB271_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpw	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB271_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB271_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB271_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB271_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    cmpw 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB271_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB271_1
 ; PPC64LE-NEXT:  .LBB271_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test272(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test272:                                # @test272
+; PPC64LE-LABEL: test272:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB272_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB272_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB272_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB272_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB272_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB272_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB272_1
 ; PPC64LE-NEXT:  .LBB272_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test273(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test273:                                # @test273
+; PPC64LE-LABEL: test273:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB273_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB273_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB273_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB273_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB273_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB273_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB273_1
 ; PPC64LE-NEXT:  .LBB273_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test274(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test274:                                # @test274
+; PPC64LE-LABEL: test274:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB274_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB274_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB274_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB274_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB274_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB274_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB274_1
 ; PPC64LE-NEXT:  .LBB274_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test275(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test275:                                # @test275
+; PPC64LE-LABEL: test275:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB275_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB275_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB275_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB275_1
+; PPC64LE-NEXT:  .LBB275_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB275_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB275_1
 ; PPC64LE-NEXT:  .LBB275_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test276(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test276:                                # @test276
+; PPC64LE-LABEL: test276:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB276_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpd	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB276_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB276_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB276_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB276_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    cmpd 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB276_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB276_1
 ; PPC64LE-NEXT:  .LBB276_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test277(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test277:                                # @test277
+; PPC64LE-LABEL: test277:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB277_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB277_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB277_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB277_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB277_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB277_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB277_1
 ; PPC64LE-NEXT:  .LBB277_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test278(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test278:                                # @test278
+; PPC64LE-LABEL: test278:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB278_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB278_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB278_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB278_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB278_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB278_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB278_1
 ; PPC64LE-NEXT:  .LBB278_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test279(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test279:                                # @test279
+; PPC64LE-LABEL: test279:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB279_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB279_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB279_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB279_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB279_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB279_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB279_1
 ; PPC64LE-NEXT:  .LBB279_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test280(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test280:                                # @test280
+; PPC64LE-LABEL: test280:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB280_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB280_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB280_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB280_1
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB280_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB280_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB280_1
 ; PPC64LE-NEXT:  .LBB280_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test281(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test281:                                # @test281
+; PPC64LE-LABEL: test281:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB281_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB281_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB281_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB281_1
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB281_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB281_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB281_1
 ; PPC64LE-NEXT:  .LBB281_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test282(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test282:                                # @test282
+; PPC64LE-LABEL: test282:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB282_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB282_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB282_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB282_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB282_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB282_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB282_1
 ; PPC64LE-NEXT:  .LBB282_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test283(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test283:                                # @test283
+; PPC64LE-LABEL: test283:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB283_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB283_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB283_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB283_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB283_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB283_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB283_1
 ; PPC64LE-NEXT:  .LBB283_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test284(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test284:                                # @test284
+; PPC64LE-LABEL: test284:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB284_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB284_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB284_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB284_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB284_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB284_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB284_1
 ; PPC64LE-NEXT:  .LBB284_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test285(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test285:                                # @test285
+; PPC64LE-LABEL: test285:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB285_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB285_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB285_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB285_1
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB285_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB285_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB285_1
 ; PPC64LE-NEXT:  .LBB285_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test286(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test286:                                # @test286
+; PPC64LE-LABEL: test286:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB286_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB286_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB286_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB286_1
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB286_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB286_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB286_1
 ; PPC64LE-NEXT:  .LBB286_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test287(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test287:                                # @test287
+; PPC64LE-LABEL: test287:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB287_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB287_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB287_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB287_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB287_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB287_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB287_1
 ; PPC64LE-NEXT:  .LBB287_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test288(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test288:                                # @test288
+; PPC64LE-LABEL: test288:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB288_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB288_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB288_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB288_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB288_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB288_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB288_1
 ; PPC64LE-NEXT:  .LBB288_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test289(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test289:                                # @test289
+; PPC64LE-LABEL: test289:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB289_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB289_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB289_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB289_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB289_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB289_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB289_1
 ; PPC64LE-NEXT:  .LBB289_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test290(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test290:                                # @test290
+; PPC64LE-LABEL: test290:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB290_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB290_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB290_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB290_1
+; PPC64LE-NEXT:  .LBB290_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB290_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB290_1
 ; PPC64LE-NEXT:  .LBB290_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test291(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test291:                                # @test291
+; PPC64LE-LABEL: test291:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB291_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpw	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB291_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB291_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB291_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB291_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    cmpw 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB291_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB291_1
 ; PPC64LE-NEXT:  .LBB291_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test292(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test292:                                # @test292
+; PPC64LE-LABEL: test292:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB292_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB292_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB292_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB292_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB292_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB292_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB292_1
 ; PPC64LE-NEXT:  .LBB292_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test293(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test293:                                # @test293
+; PPC64LE-LABEL: test293:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB293_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB293_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB293_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB293_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB293_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB293_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB293_1
 ; PPC64LE-NEXT:  .LBB293_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test294(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test294:                                # @test294
+; PPC64LE-LABEL: test294:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB294_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB294_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB294_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB294_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB294_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB294_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB294_1
 ; PPC64LE-NEXT:  .LBB294_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test295(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test295:                                # @test295
+; PPC64LE-LABEL: test295:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB295_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB295_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB295_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB295_1
+; PPC64LE-NEXT:  .LBB295_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB295_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB295_1
 ; PPC64LE-NEXT:  .LBB295_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test296(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test296:                                # @test296
+; PPC64LE-LABEL: test296:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB296_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpd	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB296_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB296_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB296_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB296_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    cmpd 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB296_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB296_1
 ; PPC64LE-NEXT:  .LBB296_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test297(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test297:                                # @test297
+; PPC64LE-LABEL: test297:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB297_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB297_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB297_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB297_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB297_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB297_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB297_1
 ; PPC64LE-NEXT:  .LBB297_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test298(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test298:                                # @test298
+; PPC64LE-LABEL: test298:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB298_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB298_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB298_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB298_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB298_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB298_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB298_1
 ; PPC64LE-NEXT:  .LBB298_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test299(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test299:                                # @test299
+; PPC64LE-LABEL: test299:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB299_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB299_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB299_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB299_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB299_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB299_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB299_1
 ; PPC64LE-NEXT:  .LBB299_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test300(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test300:                                # @test300
+; PPC64LE-LABEL: test300:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB300_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB300_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB300_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB300_1
+; PPC64LE-NEXT:  .LBB300_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB300_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB300_1
 ; PPC64LE-NEXT:  .LBB300_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test301(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test301:                                # @test301
+; PPC64LE-LABEL: test301:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB301_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB301_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB301_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB301_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB301_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB301_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB301_1
 ; PPC64LE-NEXT:  .LBB301_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test302(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test302:                                # @test302
+; PPC64LE-LABEL: test302:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB302_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB302_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB302_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB302_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB302_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB302_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB302_1
 ; PPC64LE-NEXT:  .LBB302_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test303(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test303:                                # @test303
+; PPC64LE-LABEL: test303:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB303_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB303_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB303_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB303_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB303_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB303_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB303_1
 ; PPC64LE-NEXT:  .LBB303_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test304(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test304:                                # @test304
+; PPC64LE-LABEL: test304:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB304_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB304_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB304_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB304_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB304_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB304_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB304_1
 ; PPC64LE-NEXT:  .LBB304_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test305(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test305:                                # @test305
+; PPC64LE-LABEL: test305:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB305_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB305_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB305_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB305_1
+; PPC64LE-NEXT:  .LBB305_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB305_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB305_1
 ; PPC64LE-NEXT:  .LBB305_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test306(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test306:                                # @test306
+; PPC64LE-LABEL: test306:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB306_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB306_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB306_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB306_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB306_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB306_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB306_1
 ; PPC64LE-NEXT:  .LBB306_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test307(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test307:                                # @test307
+; PPC64LE-LABEL: test307:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB307_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB307_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB307_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB307_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB307_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB307_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB307_1
 ; PPC64LE-NEXT:  .LBB307_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test308(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test308:                                # @test308
+; PPC64LE-LABEL: test308:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB308_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB308_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB308_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB308_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB308_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB308_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB308_1
 ; PPC64LE-NEXT:  .LBB308_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test309(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test309:                                # @test309
+; PPC64LE-LABEL: test309:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB309_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB309_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB309_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB309_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB309_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB309_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB309_1
 ; PPC64LE-NEXT:  .LBB309_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test310(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test310:                                # @test310
+; PPC64LE-LABEL: test310:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB310_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB310_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB310_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB310_1
+; PPC64LE-NEXT:  .LBB310_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB310_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB310_1
 ; PPC64LE-NEXT:  .LBB310_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test311(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test311:                                # @test311
+; PPC64LE-LABEL: test311:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB311_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB311_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB311_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB311_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB311_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB311_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB311_1
 ; PPC64LE-NEXT:  .LBB311_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test312(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test312:                                # @test312
+; PPC64LE-LABEL: test312:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB312_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB312_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB312_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB312_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB312_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB312_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB312_1
 ; PPC64LE-NEXT:  .LBB312_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test313(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test313:                                # @test313
+; PPC64LE-LABEL: test313:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB313_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB313_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB313_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB313_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB313_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB313_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB313_1
 ; PPC64LE-NEXT:  .LBB313_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test314(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test314:                                # @test314
+; PPC64LE-LABEL: test314:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB314_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB314_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB314_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB314_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB314_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB314_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB314_1
 ; PPC64LE-NEXT:  .LBB314_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test315(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test315:                                # @test315
+; PPC64LE-LABEL: test315:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB315_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB315_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB315_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB315_1
+; PPC64LE-NEXT:  .LBB315_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB315_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB315_1
 ; PPC64LE-NEXT:  .LBB315_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test316(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test316:                                # @test316
+; PPC64LE-LABEL: test316:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB316_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpld	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB316_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB316_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB316_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB316_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    cmpld 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB316_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB316_1
 ; PPC64LE-NEXT:  .LBB316_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test317(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test317:                                # @test317
+; PPC64LE-LABEL: test317:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB317_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB317_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB317_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB317_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB317_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB317_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB317_1
 ; PPC64LE-NEXT:  .LBB317_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test318(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test318:                                # @test318
+; PPC64LE-LABEL: test318:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB318_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB318_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB318_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB318_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB318_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB318_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB318_1
 ; PPC64LE-NEXT:  .LBB318_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test319(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test319:                                # @test319
+; PPC64LE-LABEL: test319:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB319_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB319_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB319_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB319_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB319_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB319_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB319_1
 ; PPC64LE-NEXT:  .LBB319_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test320(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test320:                                # @test320
+; PPC64LE-LABEL: test320:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB320_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB320_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB320_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB320_1
+; PPC64LE-NEXT:  .LBB320_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB320_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB320_1
 ; PPC64LE-NEXT:  .LBB320_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i8 %val monotonic
   ret i8 %ret
 }
 
 define i8 @test321(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test321:                                # @test321
+; PPC64LE-LABEL: test321:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB321_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB321_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB321_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB321_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB321_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB321_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB321_1
 ; PPC64LE-NEXT:  .LBB321_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i8 %val acquire
   ret i8 %ret
 }
 
 define i8 @test322(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test322:                                # @test322
+; PPC64LE-LABEL: test322:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB322_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB322_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB322_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB322_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB322_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB322_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB322_1
 ; PPC64LE-NEXT:  .LBB322_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i8 %val release
   ret i8 %ret
 }
 
 define i8 @test323(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test323:                                # @test323
+; PPC64LE-LABEL: test323:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB323_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB323_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB323_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB323_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB323_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB323_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB323_1
 ; PPC64LE-NEXT:  .LBB323_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i8 %val acq_rel
   ret i8 %ret
 }
 
 define i8 @test324(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test324:                                # @test324
+; PPC64LE-LABEL: test324:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB324_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB324_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB324_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB324_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB324_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB324_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB324_1
 ; PPC64LE-NEXT:  .LBB324_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i8 %val seq_cst
   ret i8 %ret
 }
 
 define i16 @test325(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test325:                                # @test325
+; PPC64LE-LABEL: test325:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB325_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB325_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB325_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB325_1
+; PPC64LE-NEXT:  .LBB325_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB325_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB325_1
 ; PPC64LE-NEXT:  .LBB325_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i16 %val monotonic
   ret i16 %ret
 }
 
 define i16 @test326(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test326:                                # @test326
+; PPC64LE-LABEL: test326:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB326_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB326_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB326_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB326_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB326_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB326_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB326_1
 ; PPC64LE-NEXT:  .LBB326_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i16 %val acquire
   ret i16 %ret
 }
 
 define i16 @test327(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test327:                                # @test327
+; PPC64LE-LABEL: test327:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB327_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB327_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB327_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB327_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB327_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB327_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB327_1
 ; PPC64LE-NEXT:  .LBB327_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i16 %val release
   ret i16 %ret
 }
 
 define i16 @test328(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test328:                                # @test328
+; PPC64LE-LABEL: test328:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB328_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB328_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB328_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB328_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB328_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB328_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB328_1
 ; PPC64LE-NEXT:  .LBB328_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i16 %val acq_rel
   ret i16 %ret
 }
 
 define i16 @test329(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test329:                                # @test329
+; PPC64LE-LABEL: test329:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB329_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB329_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB329_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB329_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB329_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB329_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB329_1
 ; PPC64LE-NEXT:  .LBB329_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i16 %val seq_cst
   ret i16 %ret
 }
 
 define i32 @test330(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test330:                                # @test330
+; PPC64LE-LABEL: test330:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB330_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB330_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB330_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB330_1
+; PPC64LE-NEXT:  .LBB330_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB330_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB330_1
 ; PPC64LE-NEXT:  .LBB330_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i32 %val monotonic
   ret i32 %ret
 }
 
 define i32 @test331(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test331:                                # @test331
+; PPC64LE-LABEL: test331:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB331_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB331_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB331_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB331_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB331_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB331_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB331_1
 ; PPC64LE-NEXT:  .LBB331_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i32 %val acquire
   ret i32 %ret
 }
 
 define i32 @test332(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test332:                                # @test332
+; PPC64LE-LABEL: test332:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB332_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB332_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB332_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB332_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB332_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB332_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB332_1
 ; PPC64LE-NEXT:  .LBB332_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i32 %val release
   ret i32 %ret
 }
 
 define i32 @test333(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test333:                                # @test333
+; PPC64LE-LABEL: test333:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB333_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB333_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB333_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB333_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB333_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB333_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB333_1
 ; PPC64LE-NEXT:  .LBB333_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i32 %val acq_rel
   ret i32 %ret
 }
 
 define i32 @test334(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test334:                                # @test334
+; PPC64LE-LABEL: test334:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB334_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB334_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB334_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB334_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB334_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB334_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB334_1
 ; PPC64LE-NEXT:  .LBB334_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i32 %val seq_cst
   ret i32 %ret
 }
 
 define i64 @test335(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test335:                                # @test335
+; PPC64LE-LABEL: test335:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB335_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB335_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB335_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB335_1
+; PPC64LE-NEXT:  .LBB335_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB335_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB335_1
 ; PPC64LE-NEXT:  .LBB335_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i64 %val monotonic
   ret i64 %ret
 }
 
 define i64 @test336(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test336:                                # @test336
+; PPC64LE-LABEL: test336:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB336_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpld	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB336_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB336_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB336_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB336_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    cmpld 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB336_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB336_1
 ; PPC64LE-NEXT:  .LBB336_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i64 %val acquire
   ret i64 %ret
 }
 
 define i64 @test337(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test337:                                # @test337
+; PPC64LE-LABEL: test337:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB337_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB337_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB337_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB337_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB337_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB337_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB337_1
 ; PPC64LE-NEXT:  .LBB337_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i64 %val release
   ret i64 %ret
 }
 
 define i64 @test338(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test338:                                # @test338
+; PPC64LE-LABEL: test338:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB338_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB338_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB338_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB338_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB338_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB338_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB338_1
 ; PPC64LE-NEXT:  .LBB338_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i64 %val acq_rel
   ret i64 %ret
 }
 
 define i64 @test339(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test339:                                # @test339
+; PPC64LE-LABEL: test339:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB339_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB339_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB339_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB339_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB339_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB339_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB339_1
 ; PPC64LE-NEXT:  .LBB339_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i64 %val seq_cst
   ret i64 %ret
 }
 
 define i8 @test340(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test340:                                # @test340
+; PPC64LE-LABEL: test340:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB340_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB340_1
+; PPC64LE-NEXT:  .LBB340_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB340_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test341(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test341:                                # @test341
+; PPC64LE-LABEL: test341:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB341_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	stbcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB341_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB341_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    stbcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB341_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test342(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test342:                                # @test342
+; PPC64LE-LABEL: test342:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB342_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB342_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB342_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB342_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test343(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test343:                                # @test343
+; PPC64LE-LABEL: test343:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB343_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB343_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB343_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB343_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test344(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test344:                                # @test344
+; PPC64LE-LABEL: test344:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB344_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB344_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB344_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB344_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test345(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test345:                                # @test345
+; PPC64LE-LABEL: test345:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB345_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB345_1
+; PPC64LE-NEXT:  .LBB345_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB345_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test346(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test346:                                # @test346
+; PPC64LE-LABEL: test346:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB346_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	sthcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB346_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB346_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    sthcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB346_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test347(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test347:                                # @test347
+; PPC64LE-LABEL: test347:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB347_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB347_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB347_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB347_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test348(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test348:                                # @test348
+; PPC64LE-LABEL: test348:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB348_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB348_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB348_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB348_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test349(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test349:                                # @test349
+; PPC64LE-LABEL: test349:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB349_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB349_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB349_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB349_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test350(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test350:                                # @test350
+; PPC64LE-LABEL: test350:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB350_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB350_1
+; PPC64LE-NEXT:  .LBB350_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB350_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test351(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test351:                                # @test351
+; PPC64LE-LABEL: test351:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB351_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	stwcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB351_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB351_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    stwcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB351_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test352(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test352:                                # @test352
+; PPC64LE-LABEL: test352:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB352_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB352_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB352_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB352_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test353(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test353:                                # @test353
+; PPC64LE-LABEL: test353:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB353_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB353_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB353_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB353_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test354(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test354:                                # @test354
+; PPC64LE-LABEL: test354:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB354_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB354_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB354_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB354_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test355(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test355:                                # @test355
+; PPC64LE-LABEL: test355:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB355_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB355_1
+; PPC64LE-NEXT:  .LBB355_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB355_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test356(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test356:                                # @test356
+; PPC64LE-LABEL: test356:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB356_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	stdcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB356_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB356_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    stdcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB356_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test357(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test357:                                # @test357
+; PPC64LE-LABEL: test357:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB357_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB357_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB357_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB357_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test358(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test358:                                # @test358
+; PPC64LE-LABEL: test358:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB358_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB358_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB358_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB358_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test359(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test359:                                # @test359
+; PPC64LE-LABEL: test359:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB359_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB359_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB359_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB359_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xchg ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 define i8 @test360(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test360:                                # @test360
+; PPC64LE-LABEL: test360:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB360_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB360_1
+; PPC64LE-NEXT:  .LBB360_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB360_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test361(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test361:                                # @test361
+; PPC64LE-LABEL: test361:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB361_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	add 6, 4, 3
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB361_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB361_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    add 6, 4, 3
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB361_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test362(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test362:                                # @test362
+; PPC64LE-LABEL: test362:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB362_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB362_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB362_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB362_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test363(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test363:                                # @test363
+; PPC64LE-LABEL: test363:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB363_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB363_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB363_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB363_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test364(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test364:                                # @test364
+; PPC64LE-LABEL: test364:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB364_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB364_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB364_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB364_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test365(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test365:                                # @test365
+; PPC64LE-LABEL: test365:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB365_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB365_1
+; PPC64LE-NEXT:  .LBB365_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB365_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test366(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test366:                                # @test366
+; PPC64LE-LABEL: test366:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB366_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	add 6, 4, 3
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB366_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB366_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    add 6, 4, 3
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB366_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test367(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test367:                                # @test367
+; PPC64LE-LABEL: test367:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB367_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB367_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB367_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB367_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test368(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test368:                                # @test368
+; PPC64LE-LABEL: test368:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB368_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB368_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB368_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB368_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test369(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test369:                                # @test369
+; PPC64LE-LABEL: test369:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB369_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB369_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB369_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB369_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test370(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test370:                                # @test370
+; PPC64LE-LABEL: test370:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB370_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB370_1
+; PPC64LE-NEXT:  .LBB370_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB370_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test371(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test371:                                # @test371
+; PPC64LE-LABEL: test371:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB371_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	add 6, 4, 3
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB371_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB371_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    add 6, 4, 3
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB371_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test372(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test372:                                # @test372
+; PPC64LE-LABEL: test372:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB372_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB372_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB372_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB372_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test373(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test373:                                # @test373
+; PPC64LE-LABEL: test373:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB373_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB373_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB373_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB373_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test374(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test374:                                # @test374
+; PPC64LE-LABEL: test374:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB374_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB374_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB374_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB374_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test375(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test375:                                # @test375
+; PPC64LE-LABEL: test375:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB375_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB375_1
+; PPC64LE-NEXT:  .LBB375_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB375_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test376(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test376:                                # @test376
+; PPC64LE-LABEL: test376:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB376_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	add 6, 4, 3
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB376_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB376_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    add 6, 4, 3
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB376_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test377(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test377:                                # @test377
+; PPC64LE-LABEL: test377:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB377_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB377_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB377_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB377_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test378(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test378:                                # @test378
+; PPC64LE-LABEL: test378:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB378_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB378_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB378_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB378_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test379(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test379:                                # @test379
+; PPC64LE-LABEL: test379:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB379_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	add 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB379_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB379_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    add 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB379_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw add ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 define i8 @test380(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test380:                                # @test380
+; PPC64LE-LABEL: test380:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB380_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB380_1
+; PPC64LE-NEXT:  .LBB380_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB380_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test381(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test381:                                # @test381
+; PPC64LE-LABEL: test381:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB381_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	sub	6, 3, 4
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB381_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB381_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    sub 6, 3, 4
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB381_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test382(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test382:                                # @test382
+; PPC64LE-LABEL: test382:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB382_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB382_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB382_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB382_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test383(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test383:                                # @test383
+; PPC64LE-LABEL: test383:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB383_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB383_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB383_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB383_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test384(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test384:                                # @test384
+; PPC64LE-LABEL: test384:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB384_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB384_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB384_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB384_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test385(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test385:                                # @test385
+; PPC64LE-LABEL: test385:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB385_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB385_1
+; PPC64LE-NEXT:  .LBB385_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB385_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test386(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test386:                                # @test386
+; PPC64LE-LABEL: test386:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB386_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	sub	6, 3, 4
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB386_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB386_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    sub 6, 3, 4
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB386_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test387(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test387:                                # @test387
+; PPC64LE-LABEL: test387:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB387_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB387_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB387_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB387_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test388(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test388:                                # @test388
+; PPC64LE-LABEL: test388:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB388_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB388_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB388_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB388_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test389(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test389:                                # @test389
+; PPC64LE-LABEL: test389:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB389_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB389_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB389_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB389_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test390(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test390:                                # @test390
+; PPC64LE-LABEL: test390:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB390_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB390_1
+; PPC64LE-NEXT:  .LBB390_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB390_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test391(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test391:                                # @test391
+; PPC64LE-LABEL: test391:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB391_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	sub	6, 3, 4
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB391_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB391_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    sub 6, 3, 4
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB391_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test392(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test392:                                # @test392
+; PPC64LE-LABEL: test392:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB392_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB392_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB392_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB392_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test393(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test393:                                # @test393
+; PPC64LE-LABEL: test393:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB393_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB393_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB393_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB393_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test394(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test394:                                # @test394
+; PPC64LE-LABEL: test394:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB394_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB394_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB394_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB394_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test395(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test395:                                # @test395
+; PPC64LE-LABEL: test395:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB395_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB395_1
+; PPC64LE-NEXT:  .LBB395_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB395_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test396(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test396:                                # @test396
+; PPC64LE-LABEL: test396:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB396_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	sub	6, 3, 4
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB396_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB396_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    sub 6, 3, 4
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB396_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test397(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test397:                                # @test397
+; PPC64LE-LABEL: test397:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB397_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB397_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB397_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB397_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test398(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test398:                                # @test398
+; PPC64LE-LABEL: test398:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB398_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB398_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB398_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB398_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test399(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test399:                                # @test399
+; PPC64LE-LABEL: test399:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB399_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	sub	6, 5, 4
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB399_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB399_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    sub 6, 5, 4
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB399_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw sub ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 define i8 @test400(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test400:                                # @test400
+; PPC64LE-LABEL: test400:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB400_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB400_1
+; PPC64LE-NEXT:  .LBB400_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB400_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test401(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test401:                                # @test401
+; PPC64LE-LABEL: test401:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB401_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	and 6, 4, 3
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB401_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB401_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    and 6, 4, 3
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB401_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test402(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test402:                                # @test402
+; PPC64LE-LABEL: test402:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB402_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB402_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB402_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB402_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test403(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test403:                                # @test403
+; PPC64LE-LABEL: test403:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB403_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB403_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB403_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB403_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test404(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test404:                                # @test404
+; PPC64LE-LABEL: test404:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB404_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB404_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB404_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB404_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test405(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test405:                                # @test405
+; PPC64LE-LABEL: test405:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB405_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB405_1
+; PPC64LE-NEXT:  .LBB405_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB405_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test406(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test406:                                # @test406
+; PPC64LE-LABEL: test406:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB406_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	and 6, 4, 3
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB406_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB406_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    and 6, 4, 3
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB406_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test407(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test407:                                # @test407
+; PPC64LE-LABEL: test407:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB407_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB407_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB407_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB407_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test408(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test408:                                # @test408
+; PPC64LE-LABEL: test408:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB408_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB408_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB408_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB408_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test409(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test409:                                # @test409
+; PPC64LE-LABEL: test409:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB409_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB409_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB409_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB409_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test410(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test410:                                # @test410
+; PPC64LE-LABEL: test410:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB410_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB410_1
+; PPC64LE-NEXT:  .LBB410_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB410_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test411(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test411:                                # @test411
+; PPC64LE-LABEL: test411:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB411_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	and 6, 4, 3
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB411_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB411_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    and 6, 4, 3
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB411_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test412(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test412:                                # @test412
+; PPC64LE-LABEL: test412:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB412_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB412_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB412_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB412_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test413(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test413:                                # @test413
+; PPC64LE-LABEL: test413:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB413_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB413_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB413_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB413_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test414(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test414:                                # @test414
+; PPC64LE-LABEL: test414:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB414_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB414_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB414_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB414_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test415(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test415:                                # @test415
+; PPC64LE-LABEL: test415:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB415_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB415_1
+; PPC64LE-NEXT:  .LBB415_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB415_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test416(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test416:                                # @test416
+; PPC64LE-LABEL: test416:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB416_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	and 6, 4, 3
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB416_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB416_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    and 6, 4, 3
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB416_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test417(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test417:                                # @test417
+; PPC64LE-LABEL: test417:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB417_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB417_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB417_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB417_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test418(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test418:                                # @test418
+; PPC64LE-LABEL: test418:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB418_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB418_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB418_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB418_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test419(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test419:                                # @test419
+; PPC64LE-LABEL: test419:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB419_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	and 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB419_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB419_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    and 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB419_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw and ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 define i8 @test420(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test420:                                # @test420
+; PPC64LE-LABEL: test420:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB420_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB420_1
+; PPC64LE-NEXT:  .LBB420_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB420_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test421(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test421:                                # @test421
+; PPC64LE-LABEL: test421:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB421_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	nand 6, 4, 3
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB421_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB421_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    nand 6, 4, 3
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB421_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test422(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test422:                                # @test422
+; PPC64LE-LABEL: test422:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB422_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB422_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB422_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB422_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test423(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test423:                                # @test423
+; PPC64LE-LABEL: test423:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB423_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB423_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB423_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB423_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test424(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test424:                                # @test424
+; PPC64LE-LABEL: test424:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB424_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB424_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB424_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB424_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test425(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test425:                                # @test425
+; PPC64LE-LABEL: test425:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB425_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB425_1
+; PPC64LE-NEXT:  .LBB425_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB425_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test426(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test426:                                # @test426
+; PPC64LE-LABEL: test426:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB426_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	nand 6, 4, 3
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB426_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB426_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    nand 6, 4, 3
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB426_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test427(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test427:                                # @test427
+; PPC64LE-LABEL: test427:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB427_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB427_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB427_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB427_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test428(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test428:                                # @test428
+; PPC64LE-LABEL: test428:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB428_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB428_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB428_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB428_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test429(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test429:                                # @test429
+; PPC64LE-LABEL: test429:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB429_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB429_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB429_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB429_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test430(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test430:                                # @test430
+; PPC64LE-LABEL: test430:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB430_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB430_1
+; PPC64LE-NEXT:  .LBB430_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB430_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test431(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test431:                                # @test431
+; PPC64LE-LABEL: test431:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB431_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	nand 6, 4, 3
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB431_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB431_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    nand 6, 4, 3
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB431_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test432(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test432:                                # @test432
+; PPC64LE-LABEL: test432:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB432_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB432_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB432_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB432_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test433(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test433:                                # @test433
+; PPC64LE-LABEL: test433:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB433_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB433_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB433_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB433_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test434(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test434:                                # @test434
+; PPC64LE-LABEL: test434:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB434_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB434_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB434_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB434_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test435(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test435:                                # @test435
+; PPC64LE-LABEL: test435:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB435_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB435_1
+; PPC64LE-NEXT:  .LBB435_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB435_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test436(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test436:                                # @test436
+; PPC64LE-LABEL: test436:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB436_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	nand 6, 4, 3
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB436_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB436_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    nand 6, 4, 3
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB436_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test437(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test437:                                # @test437
+; PPC64LE-LABEL: test437:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB437_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB437_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB437_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB437_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test438(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test438:                                # @test438
+; PPC64LE-LABEL: test438:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB438_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB438_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB438_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB438_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test439(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test439:                                # @test439
+; PPC64LE-LABEL: test439:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB439_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	nand 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB439_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB439_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    nand 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB439_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw nand ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 define i8 @test440(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test440:                                # @test440
+; PPC64LE-LABEL: test440:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB440_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB440_1
+; PPC64LE-NEXT:  .LBB440_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB440_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test441(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test441:                                # @test441
+; PPC64LE-LABEL: test441:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB441_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	or 6, 4, 3
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB441_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB441_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    or 6, 4, 3
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB441_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test442(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test442:                                # @test442
+; PPC64LE-LABEL: test442:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB442_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB442_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB442_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB442_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test443(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test443:                                # @test443
+; PPC64LE-LABEL: test443:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB443_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB443_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB443_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB443_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test444(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test444:                                # @test444
+; PPC64LE-LABEL: test444:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB444_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB444_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB444_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB444_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test445(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test445:                                # @test445
+; PPC64LE-LABEL: test445:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB445_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB445_1
+; PPC64LE-NEXT:  .LBB445_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB445_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test446(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test446:                                # @test446
+; PPC64LE-LABEL: test446:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB446_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	or 6, 4, 3
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB446_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB446_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    or 6, 4, 3
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB446_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test447(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test447:                                # @test447
+; PPC64LE-LABEL: test447:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB447_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB447_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB447_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB447_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test448(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test448:                                # @test448
+; PPC64LE-LABEL: test448:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB448_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB448_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB448_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB448_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test449(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test449:                                # @test449
+; PPC64LE-LABEL: test449:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB449_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB449_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB449_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB449_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test450(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test450:                                # @test450
+; PPC64LE-LABEL: test450:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB450_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB450_1
+; PPC64LE-NEXT:  .LBB450_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB450_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test451(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test451:                                # @test451
+; PPC64LE-LABEL: test451:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB451_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	or 6, 4, 3
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB451_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB451_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    or 6, 4, 3
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB451_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test452(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test452:                                # @test452
+; PPC64LE-LABEL: test452:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB452_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB452_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB452_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB452_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test453(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test453:                                # @test453
+; PPC64LE-LABEL: test453:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB453_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB453_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB453_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB453_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test454(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test454:                                # @test454
+; PPC64LE-LABEL: test454:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB454_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB454_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB454_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB454_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test455(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test455:                                # @test455
+; PPC64LE-LABEL: test455:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB455_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB455_1
+; PPC64LE-NEXT:  .LBB455_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB455_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test456(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test456:                                # @test456
+; PPC64LE-LABEL: test456:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB456_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	or 6, 4, 3
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB456_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB456_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    or 6, 4, 3
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB456_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test457(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test457:                                # @test457
+; PPC64LE-LABEL: test457:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB457_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB457_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB457_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB457_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test458(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test458:                                # @test458
+; PPC64LE-LABEL: test458:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB458_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB458_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB458_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB458_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test459(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test459:                                # @test459
+; PPC64LE-LABEL: test459:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB459_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	or 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB459_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB459_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    or 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB459_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw or ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 define i8 @test460(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test460:                                # @test460
+; PPC64LE-LABEL: test460:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB460_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB460_1
+; PPC64LE-NEXT:  .LBB460_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB460_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test461(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test461:                                # @test461
+; PPC64LE-LABEL: test461:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB461_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	xor 6, 4, 3
-; PPC64LE-NEXT:  	stbcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB461_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB461_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    xor 6, 4, 3
+; PPC64LE-NEXT:    stbcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB461_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test462(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test462:                                # @test462
+; PPC64LE-LABEL: test462:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB462_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB462_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB462_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB462_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test463(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test463:                                # @test463
+; PPC64LE-LABEL: test463:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB463_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB463_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB463_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB463_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test464(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test464:                                # @test464
+; PPC64LE-LABEL: test464:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB464_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stbcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB464_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB464_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB464_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test465(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test465:                                # @test465
+; PPC64LE-LABEL: test465:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB465_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB465_1
+; PPC64LE-NEXT:  .LBB465_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB465_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test466(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test466:                                # @test466
+; PPC64LE-LABEL: test466:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB466_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	xor 6, 4, 3
-; PPC64LE-NEXT:  	sthcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB466_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB466_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    xor 6, 4, 3
+; PPC64LE-NEXT:    sthcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB466_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test467(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test467:                                # @test467
+; PPC64LE-LABEL: test467:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB467_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB467_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB467_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB467_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test468(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test468:                                # @test468
+; PPC64LE-LABEL: test468:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB468_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB468_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB468_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB468_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test469(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test469:                                # @test469
+; PPC64LE-LABEL: test469:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB469_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	sthcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB469_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB469_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB469_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test470(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test470:                                # @test470
+; PPC64LE-LABEL: test470:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB470_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB470_1
+; PPC64LE-NEXT:  .LBB470_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB470_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test471(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test471:                                # @test471
+; PPC64LE-LABEL: test471:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB471_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	xor 6, 4, 3
-; PPC64LE-NEXT:  	stwcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB471_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB471_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    xor 6, 4, 3
+; PPC64LE-NEXT:    stwcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB471_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test472(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test472:                                # @test472
+; PPC64LE-LABEL: test472:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB472_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB472_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB472_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB472_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test473(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test473:                                # @test473
+; PPC64LE-LABEL: test473:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB473_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB473_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB473_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB473_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test474(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test474:                                # @test474
+; PPC64LE-LABEL: test474:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB474_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stwcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB474_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB474_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB474_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test475(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test475:                                # @test475
+; PPC64LE-LABEL: test475:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB475_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB475_1
+; PPC64LE-NEXT:  .LBB475_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB475_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test476(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test476:                                # @test476
+; PPC64LE-LABEL: test476:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB476_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	xor 6, 4, 3
-; PPC64LE-NEXT:  	stdcx. 6, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB476_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB476_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    xor 6, 4, 3
+; PPC64LE-NEXT:    stdcx. 6, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB476_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test477(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test477:                                # @test477
+; PPC64LE-LABEL: test477:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB477_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB477_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB477_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB477_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test478(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test478:                                # @test478
+; PPC64LE-LABEL: test478:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB478_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB478_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB478_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB478_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test479(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test479:                                # @test479
+; PPC64LE-LABEL: test479:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB479_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	xor 6, 4, 5
-; PPC64LE-NEXT:  	stdcx. 6, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB479_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB479_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    xor 6, 4, 5
+; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB479_1
 ; PPC64LE-NEXT:  # %bb.2:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw xor ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 define i8 @test480(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test480:                                # @test480
+; PPC64LE-LABEL: test480:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB480_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB480_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB480_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB480_1
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB480_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB480_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB480_1
 ; PPC64LE-NEXT:  .LBB480_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test481(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test481:                                # @test481
+; PPC64LE-LABEL: test481:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB481_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB481_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB481_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB481_1
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB481_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB481_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB481_1
 ; PPC64LE-NEXT:  .LBB481_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test482(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test482:                                # @test482
+; PPC64LE-LABEL: test482:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB482_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB482_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB482_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB482_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB482_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB482_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB482_1
 ; PPC64LE-NEXT:  .LBB482_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test483(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test483:                                # @test483
+; PPC64LE-LABEL: test483:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB483_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB483_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB483_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB483_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB483_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB483_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB483_1
 ; PPC64LE-NEXT:  .LBB483_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test484(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test484:                                # @test484
+; PPC64LE-LABEL: test484:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB484_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB484_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB484_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB484_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB484_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB484_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB484_1
 ; PPC64LE-NEXT:  .LBB484_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test485(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test485:                                # @test485
+; PPC64LE-LABEL: test485:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB485_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB485_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB485_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB485_1
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB485_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB485_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB485_1
 ; PPC64LE-NEXT:  .LBB485_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test486(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test486:                                # @test486
+; PPC64LE-LABEL: test486:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB486_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB486_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB486_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB486_1
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB486_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB486_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB486_1
 ; PPC64LE-NEXT:  .LBB486_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test487(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test487:                                # @test487
+; PPC64LE-LABEL: test487:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB487_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB487_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB487_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB487_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB487_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB487_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB487_1
 ; PPC64LE-NEXT:  .LBB487_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test488(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test488:                                # @test488
+; PPC64LE-LABEL: test488:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB488_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB488_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB488_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB488_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB488_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB488_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB488_1
 ; PPC64LE-NEXT:  .LBB488_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test489(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test489:                                # @test489
+; PPC64LE-LABEL: test489:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB489_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	bgt	0, .LBB489_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB489_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB489_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB489_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    bgt 0, .LBB489_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB489_1
 ; PPC64LE-NEXT:  .LBB489_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test490(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test490:                                # @test490
+; PPC64LE-LABEL: test490:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB490_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB490_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB490_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB490_1
+; PPC64LE-NEXT:  .LBB490_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB490_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB490_1
 ; PPC64LE-NEXT:  .LBB490_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test491(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test491:                                # @test491
+; PPC64LE-LABEL: test491:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB491_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpw	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB491_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB491_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB491_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB491_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    cmpw 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB491_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB491_1
 ; PPC64LE-NEXT:  .LBB491_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test492(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test492:                                # @test492
+; PPC64LE-LABEL: test492:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB492_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB492_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB492_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB492_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB492_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB492_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB492_1
 ; PPC64LE-NEXT:  .LBB492_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test493(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test493:                                # @test493
+; PPC64LE-LABEL: test493:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB493_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB493_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB493_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB493_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB493_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB493_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB493_1
 ; PPC64LE-NEXT:  .LBB493_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test494(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test494:                                # @test494
+; PPC64LE-LABEL: test494:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB494_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB494_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB494_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB494_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB494_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB494_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB494_1
 ; PPC64LE-NEXT:  .LBB494_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test495(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test495:                                # @test495
+; PPC64LE-LABEL: test495:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB495_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB495_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB495_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB495_1
+; PPC64LE-NEXT:  .LBB495_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB495_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB495_1
 ; PPC64LE-NEXT:  .LBB495_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test496(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test496:                                # @test496
+; PPC64LE-LABEL: test496:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB496_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpd	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB496_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB496_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB496_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB496_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    cmpd 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB496_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB496_1
 ; PPC64LE-NEXT:  .LBB496_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test497(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test497:                                # @test497
+; PPC64LE-LABEL: test497:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB497_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB497_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB497_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB497_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB497_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB497_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB497_1
 ; PPC64LE-NEXT:  .LBB497_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test498(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test498:                                # @test498
+; PPC64LE-LABEL: test498:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB498_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB498_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB498_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB498_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB498_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB498_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB498_1
 ; PPC64LE-NEXT:  .LBB498_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test499(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test499:                                # @test499
+; PPC64LE-LABEL: test499:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB499_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB499_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB499_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB499_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB499_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB499_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB499_1
 ; PPC64LE-NEXT:  .LBB499_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw max ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 define i8 @test500(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test500:                                # @test500
+; PPC64LE-LABEL: test500:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB500_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB500_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB500_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB500_1
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB500_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB500_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB500_1
 ; PPC64LE-NEXT:  .LBB500_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test501(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test501:                                # @test501
+; PPC64LE-LABEL: test501:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB501_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB501_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB501_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB501_1
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB501_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB501_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB501_1
 ; PPC64LE-NEXT:  .LBB501_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test502(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test502:                                # @test502
+; PPC64LE-LABEL: test502:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB502_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB502_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB502_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB502_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB502_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB502_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB502_1
 ; PPC64LE-NEXT:  .LBB502_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test503(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test503:                                # @test503
+; PPC64LE-LABEL: test503:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB503_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB503_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB503_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB503_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB503_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB503_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB503_1
 ; PPC64LE-NEXT:  .LBB503_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test504(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test504:                                # @test504
+; PPC64LE-LABEL: test504:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	extsb 5, 4
-; PPC64LE-NEXT:  .LBB504_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 4, 0, 3
-; PPC64LE-NEXT:  	extsb 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB504_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB504_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB504_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    extsb 5, 4
+; PPC64LE-NEXT:  .LBB504_1:
+; PPC64LE-NEXT:    lbarx 4, 0, 3
+; PPC64LE-NEXT:    extsb 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB504_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB504_1
 ; PPC64LE-NEXT:  .LBB504_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test505(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test505:                                # @test505
+; PPC64LE-LABEL: test505:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB505_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB505_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB505_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB505_1
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB505_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB505_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB505_1
 ; PPC64LE-NEXT:  .LBB505_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test506(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test506:                                # @test506
+; PPC64LE-LABEL: test506:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB506_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB506_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB506_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB506_1
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB506_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB506_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB506_1
 ; PPC64LE-NEXT:  .LBB506_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test507(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test507:                                # @test507
+; PPC64LE-LABEL: test507:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB507_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB507_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB507_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB507_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB507_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB507_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB507_1
 ; PPC64LE-NEXT:  .LBB507_3:
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test508(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test508:                                # @test508
+; PPC64LE-LABEL: test508:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB508_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB508_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB508_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB508_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB508_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB508_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB508_1
 ; PPC64LE-NEXT:  .LBB508_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test509(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test509:                                # @test509
+; PPC64LE-LABEL: test509:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  	extsh 5, 4
-; PPC64LE-NEXT:  .LBB509_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 4, 0, 3
-; PPC64LE-NEXT:  	extsh 6, 4
-; PPC64LE-NEXT:  	cmpw	6, 5
-; PPC64LE-NEXT:  	blt	0, .LBB509_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB509_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 5, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB509_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:    extsh 5, 4
+; PPC64LE-NEXT:  .LBB509_1:
+; PPC64LE-NEXT:    lharx 4, 0, 3
+; PPC64LE-NEXT:    extsh 6, 4
+; PPC64LE-NEXT:    cmpw 6, 5
+; PPC64LE-NEXT:    blt 0, .LBB509_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 5, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB509_1
 ; PPC64LE-NEXT:  .LBB509_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 4
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 4
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test510(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test510:                                # @test510
+; PPC64LE-LABEL: test510:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB510_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB510_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB510_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB510_1
+; PPC64LE-NEXT:  .LBB510_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB510_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB510_1
 ; PPC64LE-NEXT:  .LBB510_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test511(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test511:                                # @test511
+; PPC64LE-LABEL: test511:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB511_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpw	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB511_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB511_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB511_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB511_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    cmpw 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB511_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB511_1
 ; PPC64LE-NEXT:  .LBB511_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test512(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test512:                                # @test512
+; PPC64LE-LABEL: test512:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB512_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB512_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB512_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB512_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB512_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB512_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB512_1
 ; PPC64LE-NEXT:  .LBB512_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test513(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test513:                                # @test513
+; PPC64LE-LABEL: test513:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB513_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB513_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB513_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB513_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB513_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB513_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB513_1
 ; PPC64LE-NEXT:  .LBB513_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test514(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test514:                                # @test514
+; PPC64LE-LABEL: test514:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB514_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB514_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB514_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB514_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB514_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmpw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB514_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB514_1
 ; PPC64LE-NEXT:  .LBB514_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test515(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test515:                                # @test515
+; PPC64LE-LABEL: test515:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB515_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB515_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB515_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB515_1
+; PPC64LE-NEXT:  .LBB515_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB515_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB515_1
 ; PPC64LE-NEXT:  .LBB515_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test516(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test516:                                # @test516
+; PPC64LE-LABEL: test516:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB516_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpd	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB516_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB516_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB516_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB516_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    cmpd 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB516_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB516_1
 ; PPC64LE-NEXT:  .LBB516_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test517(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test517:                                # @test517
+; PPC64LE-LABEL: test517:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB517_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB517_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB517_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB517_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB517_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB517_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB517_1
 ; PPC64LE-NEXT:  .LBB517_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test518(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test518:                                # @test518
+; PPC64LE-LABEL: test518:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB518_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB518_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB518_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB518_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB518_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB518_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB518_1
 ; PPC64LE-NEXT:  .LBB518_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test519(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test519:                                # @test519
+; PPC64LE-LABEL: test519:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB519_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpd	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB519_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB519_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB519_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB519_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpd 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB519_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB519_1
 ; PPC64LE-NEXT:  .LBB519_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw min ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 define i8 @test520(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test520:                                # @test520
+; PPC64LE-LABEL: test520:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB520_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB520_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB520_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB520_1
+; PPC64LE-NEXT:  .LBB520_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB520_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB520_1
 ; PPC64LE-NEXT:  .LBB520_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test521(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test521:                                # @test521
+; PPC64LE-LABEL: test521:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB521_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB521_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB521_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB521_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB521_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB521_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB521_1
 ; PPC64LE-NEXT:  .LBB521_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test522(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test522:                                # @test522
+; PPC64LE-LABEL: test522:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB522_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB522_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB522_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB522_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB522_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB522_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB522_1
 ; PPC64LE-NEXT:  .LBB522_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test523(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test523:                                # @test523
+; PPC64LE-LABEL: test523:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB523_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB523_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB523_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB523_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB523_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB523_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB523_1
 ; PPC64LE-NEXT:  .LBB523_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test524(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test524:                                # @test524
+; PPC64LE-LABEL: test524:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB524_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB524_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB524_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB524_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB524_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB524_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB524_1
 ; PPC64LE-NEXT:  .LBB524_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test525(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test525:                                # @test525
+; PPC64LE-LABEL: test525:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB525_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB525_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB525_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB525_1
+; PPC64LE-NEXT:  .LBB525_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB525_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB525_1
 ; PPC64LE-NEXT:  .LBB525_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test526(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test526:                                # @test526
+; PPC64LE-LABEL: test526:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB526_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB526_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB526_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB526_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB526_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB526_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB526_1
 ; PPC64LE-NEXT:  .LBB526_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test527(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test527:                                # @test527
+; PPC64LE-LABEL: test527:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB527_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB527_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB527_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB527_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB527_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB527_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB527_1
 ; PPC64LE-NEXT:  .LBB527_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test528(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test528:                                # @test528
+; PPC64LE-LABEL: test528:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB528_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB528_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB528_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB528_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB528_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB528_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB528_1
 ; PPC64LE-NEXT:  .LBB528_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test529(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test529:                                # @test529
+; PPC64LE-LABEL: test529:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB529_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB529_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB529_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB529_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB529_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB529_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB529_1
 ; PPC64LE-NEXT:  .LBB529_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test530(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test530:                                # @test530
+; PPC64LE-LABEL: test530:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB530_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB530_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB530_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB530_1
+; PPC64LE-NEXT:  .LBB530_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB530_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB530_1
 ; PPC64LE-NEXT:  .LBB530_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test531(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test531:                                # @test531
+; PPC64LE-LABEL: test531:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB531_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB531_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB531_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB531_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB531_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB531_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB531_1
 ; PPC64LE-NEXT:  .LBB531_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test532(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test532:                                # @test532
+; PPC64LE-LABEL: test532:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB532_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB532_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB532_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB532_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB532_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB532_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB532_1
 ; PPC64LE-NEXT:  .LBB532_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test533(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test533:                                # @test533
+; PPC64LE-LABEL: test533:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB533_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB533_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB533_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB533_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB533_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB533_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB533_1
 ; PPC64LE-NEXT:  .LBB533_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test534(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test534:                                # @test534
+; PPC64LE-LABEL: test534:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB534_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB534_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB534_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB534_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB534_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB534_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB534_1
 ; PPC64LE-NEXT:  .LBB534_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test535(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test535:                                # @test535
+; PPC64LE-LABEL: test535:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB535_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB535_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB535_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB535_1
+; PPC64LE-NEXT:  .LBB535_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB535_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB535_1
 ; PPC64LE-NEXT:  .LBB535_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test536(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test536:                                # @test536
+; PPC64LE-LABEL: test536:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB536_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpld	3, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB536_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB536_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB536_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB536_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    cmpld 3, 4
+; PPC64LE-NEXT:    bgt 0, .LBB536_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB536_1
 ; PPC64LE-NEXT:  .LBB536_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test537(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test537:                                # @test537
+; PPC64LE-LABEL: test537:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB537_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB537_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB537_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB537_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB537_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB537_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB537_1
 ; PPC64LE-NEXT:  .LBB537_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test538(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test538:                                # @test538
+; PPC64LE-LABEL: test538:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB538_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB538_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB538_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB538_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB538_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB538_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB538_1
 ; PPC64LE-NEXT:  .LBB538_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test539(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test539:                                # @test539
+; PPC64LE-LABEL: test539:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB539_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	bgt	0, .LBB539_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB539_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB539_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB539_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    bgt 0, .LBB539_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB539_1
 ; PPC64LE-NEXT:  .LBB539_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umax ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 define i8 @test540(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test540:                                # @test540
+; PPC64LE-LABEL: test540:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB540_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB540_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB540_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB540_1
+; PPC64LE-NEXT:  .LBB540_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB540_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB540_1
 ; PPC64LE-NEXT:  .LBB540_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i8 %val syncscope("singlethread") monotonic
   ret i8 %ret
 }
 
 define i8 @test541(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test541:                                # @test541
+; PPC64LE-LABEL: test541:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB541_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB541_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB541_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB541_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB541_1:
+; PPC64LE-NEXT:    lbarx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB541_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB541_1
 ; PPC64LE-NEXT:  .LBB541_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i8 %val syncscope("singlethread") acquire
   ret i8 %ret
 }
 
 define i8 @test542(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test542:                                # @test542
+; PPC64LE-LABEL: test542:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB542_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB542_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB542_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB542_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB542_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB542_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB542_1
 ; PPC64LE-NEXT:  .LBB542_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i8 %val syncscope("singlethread") release
   ret i8 %ret
 }
 
 define i8 @test543(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test543:                                # @test543
+; PPC64LE-LABEL: test543:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB543_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB543_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB543_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB543_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB543_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB543_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB543_1
 ; PPC64LE-NEXT:  .LBB543_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i8 %val syncscope("singlethread") acq_rel
   ret i8 %ret
 }
 
 define i8 @test544(ptr %ptr, i8 %val) {
-; PPC64LE-LABEL: test544:                                # @test544
+; PPC64LE-LABEL: test544:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB544_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lbarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB544_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB544_1 Depth=1
-; PPC64LE-NEXT:  	stbcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB544_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB544_1:
+; PPC64LE-NEXT:    lbarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB544_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stbcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB544_1
 ; PPC64LE-NEXT:  .LBB544_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i8 %val syncscope("singlethread") seq_cst
   ret i8 %ret
 }
 
 define i16 @test545(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test545:                                # @test545
+; PPC64LE-LABEL: test545:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB545_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB545_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB545_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB545_1
+; PPC64LE-NEXT:  .LBB545_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB545_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB545_1
 ; PPC64LE-NEXT:  .LBB545_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i16 %val syncscope("singlethread") monotonic
   ret i16 %ret
 }
 
 define i16 @test546(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test546:                                # @test546
+; PPC64LE-LABEL: test546:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB546_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB546_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB546_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB546_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB546_1:
+; PPC64LE-NEXT:    lharx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB546_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB546_1
 ; PPC64LE-NEXT:  .LBB546_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i16 %val syncscope("singlethread") acquire
   ret i16 %ret
 }
 
 define i16 @test547(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test547:                                # @test547
+; PPC64LE-LABEL: test547:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB547_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB547_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB547_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB547_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB547_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB547_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB547_1
 ; PPC64LE-NEXT:  .LBB547_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i16 %val syncscope("singlethread") release
   ret i16 %ret
 }
 
 define i16 @test548(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test548:                                # @test548
+; PPC64LE-LABEL: test548:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB548_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB548_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB548_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB548_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB548_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB548_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB548_1
 ; PPC64LE-NEXT:  .LBB548_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i16 %val syncscope("singlethread") acq_rel
   ret i16 %ret
 }
 
 define i16 @test549(ptr %ptr, i16 %val) {
-; PPC64LE-LABEL: test549:                                # @test549
+; PPC64LE-LABEL: test549:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB549_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lharx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB549_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB549_1 Depth=1
-; PPC64LE-NEXT:  	sthcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB549_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB549_1:
+; PPC64LE-NEXT:    lharx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB549_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    sthcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB549_1
 ; PPC64LE-NEXT:  .LBB549_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i16 %val syncscope("singlethread") seq_cst
   ret i16 %ret
 }
 
 define i32 @test550(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test550:                                # @test550
+; PPC64LE-LABEL: test550:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB550_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB550_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB550_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB550_1
+; PPC64LE-NEXT:  .LBB550_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB550_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB550_1
 ; PPC64LE-NEXT:  .LBB550_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i32 %val syncscope("singlethread") monotonic
   ret i32 %ret
 }
 
 define i32 @test551(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test551:                                # @test551
+; PPC64LE-LABEL: test551:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB551_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 3, 0, 5
-; PPC64LE-NEXT:  	cmplw	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB551_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB551_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB551_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB551_1:
+; PPC64LE-NEXT:    lwarx 3, 0, 5
+; PPC64LE-NEXT:    cmplw 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB551_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB551_1
 ; PPC64LE-NEXT:  .LBB551_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i32 %val syncscope("singlethread") acquire
   ret i32 %ret
 }
 
 define i32 @test552(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test552:                                # @test552
+; PPC64LE-LABEL: test552:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB552_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB552_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB552_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB552_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB552_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB552_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB552_1
 ; PPC64LE-NEXT:  .LBB552_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i32 %val syncscope("singlethread") release
   ret i32 %ret
 }
 
 define i32 @test553(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test553:                                # @test553
+; PPC64LE-LABEL: test553:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB553_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB553_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB553_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB553_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB553_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB553_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB553_1
 ; PPC64LE-NEXT:  .LBB553_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i32 %val syncscope("singlethread") acq_rel
   ret i32 %ret
 }
 
 define i32 @test554(ptr %ptr, i32 %val) {
-; PPC64LE-LABEL: test554:                                # @test554
+; PPC64LE-LABEL: test554:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB554_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	lwarx 5, 0, 3
-; PPC64LE-NEXT:  	cmplw	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB554_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB554_1 Depth=1
-; PPC64LE-NEXT:  	stwcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB554_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB554_1:
+; PPC64LE-NEXT:    lwarx 5, 0, 3
+; PPC64LE-NEXT:    cmplw 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB554_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stwcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB554_1
 ; PPC64LE-NEXT:  .LBB554_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i32 %val syncscope("singlethread") seq_cst
   ret i32 %ret
 }
 
 define i64 @test555(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test555:                                # @test555
+; PPC64LE-LABEL: test555:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  .LBB555_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB555_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB555_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB555_1
+; PPC64LE-NEXT:  .LBB555_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB555_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB555_1
 ; PPC64LE-NEXT:  .LBB555_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i64 %val syncscope("singlethread") monotonic
   ret i64 %ret
 }
 
 define i64 @test556(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test556:                                # @test556
+; PPC64LE-LABEL: test556:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	mr	5, 3
-; PPC64LE-NEXT:  .LBB556_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 3, 0, 5
-; PPC64LE-NEXT:  	cmpld	3, 4
-; PPC64LE-NEXT:  	blt	0, .LBB556_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB556_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 5
-; PPC64LE-NEXT:  	bne	0, .LBB556_1
+; PPC64LE-NEXT:    mr 5, 3
+; PPC64LE-NEXT:  .LBB556_1:
+; PPC64LE-NEXT:    ldarx 3, 0, 5
+; PPC64LE-NEXT:    cmpld 3, 4
+; PPC64LE-NEXT:    blt 0, .LBB556_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 5
+; PPC64LE-NEXT:    bne 0, .LBB556_1
 ; PPC64LE-NEXT:  .LBB556_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i64 %val syncscope("singlethread") acquire
   ret i64 %ret
 }
 
 define i64 @test557(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test557:                                # @test557
+; PPC64LE-LABEL: test557:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB557_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB557_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB557_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB557_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB557_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB557_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB557_1
 ; PPC64LE-NEXT:  .LBB557_3:
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i64 %val syncscope("singlethread") release
   ret i64 %ret
 }
 
 define i64 @test558(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test558:                                # @test558
+; PPC64LE-LABEL: test558:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  .LBB558_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB558_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB558_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB558_1
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:  .LBB558_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB558_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB558_1
 ; PPC64LE-NEXT:  .LBB558_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i64 %val syncscope("singlethread") acq_rel
   ret i64 %ret
 }
 
 define i64 @test559(ptr %ptr, i64 %val) {
-; PPC64LE-LABEL: test559:                                # @test559
+; PPC64LE-LABEL: test559:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	sync
-; PPC64LE-NEXT:  .LBB559_1:                              # =>This Inner Loop Header: Depth=1
-; PPC64LE-NEXT:  	ldarx 5, 0, 3
-; PPC64LE-NEXT:  	cmpld	5, 4
-; PPC64LE-NEXT:  	blt	0, .LBB559_3
-; PPC64LE-NEXT:  # %bb.2:                                #   in Loop: Header=BB559_1 Depth=1
-; PPC64LE-NEXT:  	stdcx. 4, 0, 3
-; PPC64LE-NEXT:  	bne	0, .LBB559_1
+; PPC64LE-NEXT:    sync
+; PPC64LE-NEXT:  .LBB559_1:
+; PPC64LE-NEXT:    ldarx 5, 0, 3
+; PPC64LE-NEXT:    cmpld 5, 4
+; PPC64LE-NEXT:    blt 0, .LBB559_3
+; PPC64LE-NEXT:  # %bb.2:
+; PPC64LE-NEXT:    stdcx. 4, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB559_1
 ; PPC64LE-NEXT:  .LBB559_3:
-; PPC64LE-NEXT:  	lwsync
-; PPC64LE-NEXT:  	mr	3, 5
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    mr 3, 5
+; PPC64LE-NEXT:    blr
   %ret = atomicrmw umin ptr %ptr, i64 %val syncscope("singlethread") seq_cst
   ret i64 %ret
 }
 
 ; The second load should never be scheduled before isync.
 define i32 @test_ordering0(ptr %ptr1, ptr %ptr2) {
-; PPC64LE-LABEL: test_ordering0:                         # @test_ordering0
+; PPC64LE-LABEL: test_ordering0:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwz 4, 0(3)
-; PPC64LE-NEXT:  	cmpd 7, 4, 4
-; PPC64LE-NEXT:  	bne- 7, .+4
-; PPC64LE-NEXT:  	isync
-; PPC64LE-NEXT:  	lwz 3, 0(3)
-; PPC64LE-NEXT:  	add 3, 4, 3
-; PPC64LE-NEXT:         blr
+; PPC64LE-NEXT:    lwz 4, 0(3)
+; PPC64LE-NEXT:    cmpd 7, 4, 4
+; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    isync
+; PPC64LE-NEXT:    lwz 3, 0(3)
+; PPC64LE-NEXT:    add 3, 4, 3
+; PPC64LE-NEXT:    blr
   %val1 = load atomic i32, ptr %ptr1 acquire, align 4
   %val2 = load i32, ptr %ptr1
   %add = add i32 %val1, %val2
@@ -9937,15 +9940,15 @@ define i32 @test_ordering0(ptr %ptr1, ptr %ptr2) {
 
 ; The second store should never be scheduled before isync.
 define i32 @test_ordering1(ptr %ptr1, i32 %val1, ptr %ptr2) {
-; PPC64LE-LABEL: test_ordering1:                         # @test_ordering1
+; PPC64LE-LABEL: test_ordering1:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:  	lwz 3, 0(3)
-; PPC64LE-NEXT:  	cmpd 7, 3, 3
-; PPC64LE-NEXT:  	bne- 7, .+4
-; PPC64LE-NEXT:  	isync
-; PPC64LE-NEXT:  	stw 4, 0(5)
-; PPC64LE-NEXT:         blr
- %val2 = load atomic i32, ptr %ptr1 acquire, align 4
- store i32 %val1, ptr %ptr2
- ret i32 %val2
+; PPC64LE-NEXT:    lwz 3, 0(3)
+; PPC64LE-NEXT:    cmpd 7, 3, 3
+; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    isync
+; PPC64LE-NEXT:    stw 4, 0(5)
+; PPC64LE-NEXT:    blr
+  %val2 = load atomic i32, ptr %ptr1 acquire, align 4
+  store i32 %val1, ptr %ptr2
+  ret i32 %val2
 }
