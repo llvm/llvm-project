@@ -6752,6 +6752,12 @@ CanQualType ASTContext::getUIntMaxType() const {
   return getFromTargetType(Target->getUIntMaxType());
 }
 
+/// Return the type of wide characters in C context, no matter whether it's C
+/// or C++ being compiled.
+QualType ASTContext::getWCharTypeInC() const {
+  return getFromTargetType(Target->getWCharType());
+}
+
 /// getSignedWCharType - Return the type of "signed wchar_t".
 /// Used when in C++, as a GCC extension.
 QualType ASTContext::getSignedWCharType() const {

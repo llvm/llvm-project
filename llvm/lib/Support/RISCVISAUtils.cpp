@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Utilities shared by TableGen and RISCVISAInfo.
+// Utilities shared by TableGen, RISCVISAInfo and other RISC-V specifics.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/RISCVISAUtils.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/MD5.h"
 #include <cassert>
 
 using namespace llvm;
@@ -89,4 +90,23 @@ bool llvm::RISCVISAUtils::compareExtension(const std::string &LHS,
 
   // If the rank is same, it must be sorted by lexicographic order.
   return LHS < RHS;
+}
+
+uint32_t llvm::RISCVISAUtils::zicfilpFuncSigHash(const StringRef FuncSig) {
+  const llvm::MD5::MD5Result MD5Result =
+      llvm::MD5::hash({(const uint8_t *)FuncSig.data(), FuncSig.size()});
+
+  uint64_t MD5High = MD5Result.high();
+  uint64_t MD5Low = MD5Result.low();
+  while (MD5High || MD5Low) {
+    const uint32_t Low20Bits = MD5Low & 0xFFFFFULL;
+    if (Low20Bits)
+      return Low20Bits;
+
+    // Logical right shift MD5 result by 20 bits
+    MD5Low = (MD5High & 0xFFFFF) << 44 | MD5Low >> 20;
+    MD5High >>= 20;
+  }
+
+  return llvm::MD5Hash("RISC-V") & 0xFFFFFULL;
 }
