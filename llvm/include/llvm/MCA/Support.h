@@ -14,6 +14,7 @@
 #ifndef LLVM_MCA_SUPPORT_H
 #define LLVM_MCA_SUPPORT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
@@ -67,7 +68,7 @@ public:
   // Add the components of RHS to this instance.  Instead of calculating
   // the final value here, we keep track of the numerator and denominator
   // separately, to reduce floating point error.
-  ReleaseAtCycles &operator+=(const ReleaseAtCycles &RHS);
+  LLVM_ABI ReleaseAtCycles &operator+=(const ReleaseAtCycles &RHS);
 };
 
 /// Populates vector Masks with processor resource masks.
@@ -92,7 +93,7 @@ public:
 ///
 /// Resource masks are used by the ResourceManager to solve set membership
 /// problems with simple bit manipulation operations.
-void computeProcResourceMasks(const MCSchedModel &SM,
+LLVM_ABI void computeProcResourceMasks(const MCSchedModel &SM,
                               MutableArrayRef<uint64_t> Masks);
 
 // Returns the index of the highest bit set. For resource masks, the position of
@@ -106,7 +107,7 @@ inline unsigned getResourceStateIndex(uint64_t Mask) {
 /// cycles. The reciprocal block throughput is computed as the MAX between:
 ///  - NumMicroOps / DispatchWidth
 ///  - ProcReleaseAtCycles / #ProcResourceUnits  (for every consumed resource).
-double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,
+LLVM_ABI double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,
                                unsigned NumMicroOps,
                                ArrayRef<unsigned> ProcResourceUsage);
 } // namespace mca

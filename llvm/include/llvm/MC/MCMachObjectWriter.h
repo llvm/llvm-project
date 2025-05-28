@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCMACHOBJECTWRITER_H
 #define LLVM_MC_MCMACHOBJECTWRITER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -29,7 +30,7 @@ namespace llvm {
 
 class MachObjectWriter;
 
-class MCMachObjectTargetWriter : public MCObjectTargetWriter {
+class LLVM_ABI MCMachObjectTargetWriter : public MCObjectTargetWriter {
   const unsigned Is64Bit : 1;
   const uint32_t CPUType;
 protected:
@@ -83,7 +84,7 @@ public:
   /// @}
 };
 
-class MachObjectWriter final : public MCObjectWriter {
+class LLVM_ABI MachObjectWriter final : public MCObjectWriter {
 public:
   struct DataRegionData {
     MachO::DataRegionType Kind;
@@ -114,7 +115,7 @@ private:
     uint8_t SectionIndex;
 
     // Support lexicographic sorting.
-    bool operator<(const MachSymbolData &RHS) const;
+    LLVM_ABI bool operator<(const MachSymbolData &RHS) const;
   };
 
   struct IndirectSymbolData {

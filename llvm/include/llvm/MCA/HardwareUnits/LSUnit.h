@@ -15,6 +15,7 @@
 #ifndef LLVM_MCA_HARDWAREUNITS_LSUNIT_H
 #define LLVM_MCA_HARDWAREUNITS_LSUNIT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
@@ -25,7 +26,7 @@ namespace llvm {
 namespace mca {
 
 /// Abstract base interface for LS (load/store) units in llvm-mca.
-class LSUnitBase : public HardwareUnit {
+class LLVM_ABI LSUnitBase : public HardwareUnit {
   /// Load queue size.
   ///
   /// A value of zero for this field means that the load queue is unbounded.
@@ -192,7 +193,7 @@ public:
 /// A load/store barrier is "executed" when it becomes the oldest entry in
 /// the load/store queue(s). That also means, all the older loads/stores have
 /// already been executed.
-class LSUnit : public LSUnitBase {
+class LLVM_ABI LSUnit : public LSUnitBase {
 
   // This class doesn't know about the latency of a load instruction. So, it
   // conservatively/pessimistically assumes that the latency of a load opcode

@@ -13,6 +13,7 @@
 #ifndef LLVM_MC_MCSYMBOL_H
 #define LLVM_MC_MCSYMBOL_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
@@ -63,7 +64,7 @@ protected:
   };
 
   // Special sentinel value for the absolute pseudo fragment.
-  static MCFragment *AbsolutePseudoFragment;
+  LLVM_ABI static MCFragment *AbsolutePseudoFragment;
 
   /// If a symbol has a Fragment, the section is implied, so we only need
   /// one pointer.
@@ -177,7 +178,7 @@ protected:
 
   // Provide custom new/delete as we will only allocate space for a name
   // if we need one.
-  void *operator new(size_t s, const MCSymbolTableEntry *Name, MCContext &Ctx);
+  LLVM_ABI void *operator new(size_t s, const MCSymbolTableEntry *Name, MCContext &Ctx);
 
 private:
   void operator delete(void *);
@@ -306,7 +307,7 @@ public:
     return Value;
   }
 
-  void setVariableValue(const MCExpr *Value);
+  LLVM_ABI void setVariableValue(const MCExpr *Value);
 
   /// @}
 
@@ -409,10 +410,10 @@ public:
   bool isWeakExternal() const { return IsWeakExternal; }
 
   /// print - Print the value to the stream \p OS.
-  void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
+  LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI) const;
 
   /// dump - Print the value to stderr.
-  void dump() const;
+  LLVM_ABI void dump() const;
 
 protected:
   /// Get the (implementation defined) symbol flags.

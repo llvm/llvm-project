@@ -16,6 +16,7 @@
 #ifndef LLVM_MC_MCLINKEROPTIMIZATIONHINT_H
 #define LLVM_MC_MCLINKEROPTIMIZATIONHINT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -125,11 +126,11 @@ public:
 
   /// Emit this directive as:
   /// <kind, numArgs, addr1, ..., addrN>
-  void emit(const MCAssembler &Asm, MachObjectWriter &ObjWriter) const;
+  LLVM_ABI void emit(const MCAssembler &Asm, MachObjectWriter &ObjWriter) const;
 
   /// Get the size in bytes of this directive if emitted in \p ObjWriter with
   /// the given \p Layout.
-  uint64_t getEmitSize(const MCAssembler &Asm,
+  LLVM_ABI uint64_t getEmitSize(const MCAssembler &Asm,
                        const MachObjectWriter &ObjWriter) const;
 };
 

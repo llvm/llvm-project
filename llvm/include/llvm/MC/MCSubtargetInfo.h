@@ -13,6 +13,7 @@
 #ifndef LLVM_MC_MCSUBTARGETINFO_H
 #define LLVM_MC_MCSUBTARGETINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -73,7 +74,7 @@ struct SubtargetSubTypeKV {
 ///
 /// Generic base class for all target subtargets.
 ///
-class MCSubtargetInfo {
+class LLVM_ABI MCSubtargetInfo {
   Triple TargetTriple;
   std::string CPU; // CPU being targeted.
   std::string TuneCPU; // CPU being tuned for.

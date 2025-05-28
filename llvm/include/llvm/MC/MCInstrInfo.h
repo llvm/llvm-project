@@ -13,6 +13,7 @@
 #ifndef LLVM_MC_MCINSTRINFO_H
 #define LLVM_MC_MCINSTRINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include <cassert>
@@ -74,7 +75,7 @@ public:
 
   /// Returns true if a certain instruction is deprecated and if so
   /// returns the reason in \p Info.
-  bool getDeprecatedInfo(MCInst &MI, const MCSubtargetInfo &STI,
+  LLVM_ABI bool getDeprecatedInfo(MCInst &MI, const MCSubtargetInfo &STI,
                          std::string &Info) const;
 };
 

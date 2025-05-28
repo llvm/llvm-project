@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCASMMACRO_H
 #define LLVM_MC_MCASMMACRO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -74,9 +75,9 @@ public:
   bool is(TokenKind K) const { return Kind == K; }
   bool isNot(TokenKind K) const { return Kind != K; }
 
-  SMLoc getLoc() const;
-  SMLoc getEndLoc() const;
-  SMRange getLocRange() const;
+  LLVM_ABI SMLoc getLoc() const;
+  LLVM_ABI SMLoc getEndLoc() const;
+  LLVM_ABI SMRange getLocRange() const;
 
   /// Get the contents of a string token (without quotes).
   StringRef getStringContents() const {
@@ -115,7 +116,7 @@ public:
     return IntVal;
   }
 
-  void dump(raw_ostream &OS) const;
+  LLVM_ABI void dump(raw_ostream &OS) const;
 };
 
 struct MCAsmMacroParameter {

@@ -16,6 +16,7 @@
 #ifndef LLVM_MCA_STAGES_ENTRYSTAGE_H
 #define LLVM_MCA_STAGES_ENTRYSTAGE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MCA/SourceMgr.h"
 #include "llvm/MCA/Stages/Stage.h"
@@ -23,7 +24,7 @@
 namespace llvm {
 namespace mca {
 
-class EntryStage final : public Stage {
+class LLVM_ABI EntryStage final : public Stage {
   InstRef CurrentInstruction;
   SmallVector<std::unique_ptr<Instruction>, 16> Instructions;
   SourceMgr &SM;

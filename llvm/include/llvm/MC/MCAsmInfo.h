@@ -15,6 +15,7 @@
 #ifndef LLVM_MC_MCASMINFO_H
 #define LLVM_MC_MCASMINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -55,7 +56,7 @@ enum LCOMMType { NoAlignment, ByteAlignment, Log2Alignment };
 
 /// This class is intended to be used as a base class for asm
 /// properties and features specific to the target.
-class MCAsmInfo {
+class LLVM_ABI MCAsmInfo {
 public:
   /// Assembly character literal syntax types.
   enum AsmCharLiteralSyntax {

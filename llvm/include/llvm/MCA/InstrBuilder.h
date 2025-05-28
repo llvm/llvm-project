@@ -14,6 +14,7 @@
 #ifndef LLVM_MCA_INSTRBUILDER_H
 #define LLVM_MCA_INSTRBUILDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -32,7 +33,7 @@ class RecycledInstErr : public ErrorInfo<RecycledInstErr> {
   Instruction *RecycledInst;
 
 public:
-  static char ID;
+  LLVM_ABI static char ID;
 
   explicit RecycledInstErr(Instruction *Inst) : RecycledInst(Inst) {}
   // Always need to carry an Instruction
@@ -99,7 +100,7 @@ class InstrBuilder {
   Error verifyInstrDesc(const InstrDesc &ID, const MCInst &MCI) const;
 
 public:
-  InstrBuilder(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+  LLVM_ABI InstrBuilder(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
                const MCRegisterInfo &RI, const MCInstrAnalysis *IA,
                const InstrumentManager &IM, unsigned CallLatency);
 
@@ -114,7 +115,7 @@ public:
   /// or null if there isn't any.
   void setInstRecycleCallback(InstRecycleCallback CB) { InstRecycleCB = CB; }
 
-  Expected<std::unique_ptr<Instruction>>
+  LLVM_ABI Expected<std::unique_ptr<Instruction>>
   createInstruction(const MCInst &MCI, const SmallVector<Instrument *> &IVec);
 };
 } // namespace mca

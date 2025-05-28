@@ -21,7 +21,7 @@ class MCContext;
 class MCExpr;
 
 /// Create MCExprs from relocations found in an object file.
-class MCRelocationInfo {
+class LLVM_ABI MCRelocationInfo {
 protected:
   MCContext &Ctx;
 

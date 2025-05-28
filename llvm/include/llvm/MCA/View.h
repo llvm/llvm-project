@@ -15,6 +15,7 @@
 #ifndef LLVM_MCA_VIEW_H
 #define LLVM_MCA_VIEW_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MCA/HWEventListener.h"
 #include "llvm/Support/JSON.h"
@@ -23,7 +24,7 @@
 namespace llvm {
 namespace mca {
 
-class View : public HWEventListener {
+class LLVM_ABI View : public HWEventListener {
 public:
   virtual ~View() = default;
 

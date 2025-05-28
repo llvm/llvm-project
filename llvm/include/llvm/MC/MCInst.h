@@ -15,6 +15,7 @@
 #ifndef LLVM_MC_MCINST_H
 #define LLVM_MC_MCINST_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
@@ -174,10 +175,10 @@ public:
     return Op;
   }
 
-  void print(raw_ostream &OS, const MCRegisterInfo *RegInfo = nullptr) const;
-  void dump() const;
-  bool isBareSymbolRef() const;
-  bool evaluateAsConstantImm(int64_t &Imm) const;
+  LLVM_ABI void print(raw_ostream &OS, const MCRegisterInfo *RegInfo = nullptr) const;
+  LLVM_ABI void dump() const;
+  LLVM_ABI bool isBareSymbolRef() const;
+  LLVM_ABI bool evaluateAsConstantImm(int64_t &Imm) const;
 };
 
 /// Instances of this class represent a single low-level machine
@@ -226,16 +227,16 @@ public:
     return Operands.insert(I, Op);
   }
 
-  void print(raw_ostream &OS, const MCRegisterInfo *RegInfo = nullptr) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS, const MCRegisterInfo *RegInfo = nullptr) const;
+  LLVM_ABI void dump() const;
 
   /// Dump the MCInst as prettily as possible using the additional MC
   /// structures, if given. Operators are separated by the \p Separator
   /// string.
-  void dump_pretty(raw_ostream &OS, const MCInstPrinter *Printer = nullptr,
+  LLVM_ABI void dump_pretty(raw_ostream &OS, const MCInstPrinter *Printer = nullptr,
                    StringRef Separator = " ",
                    const MCRegisterInfo *RegInfo = nullptr) const;
-  void dump_pretty(raw_ostream &OS, StringRef Name, StringRef Separator = " ",
+  LLVM_ABI void dump_pretty(raw_ostream &OS, StringRef Name, StringRef Separator = " ",
                    const MCRegisterInfo *RegInfo = nullptr) const;
 };
 
