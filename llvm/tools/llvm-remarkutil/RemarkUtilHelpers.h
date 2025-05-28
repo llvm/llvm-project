@@ -79,8 +79,9 @@ public:
   static Expected<FilterMatcher> createRE(StringRef Filter,
                                           const cl::list<std::string> &Arg);
 
-  static Expected<std::optional<FilterMatcher>> createExactOrRE(const llvm::cl::opt<std::string> &ExactArg,
-                                                 const llvm::cl::opt<std::string> &REArg);
+  static Expected<std::optional<FilterMatcher>>
+  createExactOrRE(const llvm::cl::opt<std::string> &ExactArg,
+                  const llvm::cl::opt<std::string> &REArg);
 
   static FilterMatcher createAny() { return {".*", true}; }
 

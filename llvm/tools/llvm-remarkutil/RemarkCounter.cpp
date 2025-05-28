@@ -236,15 +236,18 @@ Error RemarkCounter::print(StringRef OutputFileName) {
 
 Expected<Filters> getRemarkFilter() {
   // Create Filter properties.
-  auto MaybeRemarkNameFilter = FilterMatcher::createExactOrRE(RemarkNameOpt, RemarkNameOptRE);
+  auto MaybeRemarkNameFilter =
+      FilterMatcher::createExactOrRE(RemarkNameOpt, RemarkNameOptRE);
   if (!MaybeRemarkNameFilter)
     return MaybeRemarkNameFilter.takeError();
 
-  auto MaybePassNameFilter = FilterMatcher::createExactOrRE(PassNameOpt, PassNameOptRE);
+  auto MaybePassNameFilter =
+      FilterMatcher::createExactOrRE(PassNameOpt, PassNameOptRE);
   if (!MaybePassNameFilter)
     return MaybePassNameFilter.takeError();
 
-  auto MaybeRemarkArgFilter = FilterMatcher::createExactOrRE(RemarkFilterArgByOpt, RemarkArgFilterOptRE);
+  auto MaybeRemarkArgFilter = FilterMatcher::createExactOrRE(
+      RemarkFilterArgByOpt, RemarkArgFilterOptRE);
   if (!MaybeRemarkArgFilter)
     return MaybeRemarkArgFilter.takeError();
 
@@ -253,7 +256,8 @@ Expected<Filters> getRemarkFilter() {
     RemarkType = RemarkTypeOpt;
 
   // Create RemarkFilter.
-  return Filters{std::move(*MaybeRemarkNameFilter), std::move(*MaybePassNameFilter),
+  return Filters{std::move(*MaybeRemarkNameFilter),
+                 std::move(*MaybePassNameFilter),
                  std::move(*MaybeRemarkArgFilter), RemarkType};
 }
 
