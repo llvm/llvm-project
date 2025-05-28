@@ -20,7 +20,7 @@
 @property(class) int myCategoryTypeProp;
 // CHECK-DAG: "!testRelLabel": "memberOf $ c:objc(cs)Interface(cpy)myCategoryTypeProp $ c:objc(cs)Interface"
 @property int myCategoryInstanceProp;
-// CHECK-DAG "!testRelLabel": "memberOf $ c:objc(cs)Interface(py)myCategoryInstanceProp $ c:objc(cs)Interface"
+// CHECK-DAG: "!testRelLabel": "memberOf $ c:objc(cs)Interface(py)myCategoryInstanceProp $ c:objc(cs)Interface"
 @end
 
 // expected-no-diagnostics
