@@ -540,6 +540,9 @@ void VPlanTransforms::prepareForVectorization(
     if (auto *LatchExitVPB = MiddleVPBB->getSingleSuccessor())
       VPBlockUtils::disconnectBlocks(MiddleVPBB, LatchExitVPB);
     VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+    VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
+    Plan.getEntry()->swapSuccessors();
+
     // The exit blocks are unreachable, remove their recipes to make sure no
     // users remain that may pessimize transforms.
     for (auto *EB : Plan.getExitBlocks()) {
@@ -552,6 +555,11 @@ void VPlanTransforms::prepareForVectorization(
   // The connection order corresponds to the operands of the conditional branch,
   // with the middle block already connected to the exit block.
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+  // Also connect the entry block to the scalar preheader.
+  // TODO: Also introduce a branch recipe together with the minimum trip count
+  // check.
+  VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
+  Plan.getEntry()->swapSuccessors();
 
   auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
   // Here we use the same DebugLoc as the scalar loop latch terminator instead

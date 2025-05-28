@@ -4284,8 +4284,8 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
             (int64_t(Offset) >= 0 && NW.hasNoUnsignedSignedWrap()))
           Flags |= SDNodeFlags::NoUnsignedWrap;
 
-        N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N,
-                        DAG.getConstant(Offset, dl, N.getValueType()), Flags);
+        N = DAG.getMemBasePlusOffset(
+            N, DAG.getConstant(Offset, dl, N.getValueType()), dl, Flags);
       }
     } else {
       // IdxSize is the width of the arithmetic according to IR semantics.
@@ -4329,7 +4329,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
 
         OffsVal = DAG.getSExtOrTrunc(OffsVal, dl, N.getValueType());
 
-        N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, OffsVal, Flags);
+        N = DAG.getMemBasePlusOffset(N, OffsVal, dl, Flags);
         continue;
       }
 
@@ -4389,7 +4389,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       SDNodeFlags AddFlags;
       AddFlags.setNoUnsignedWrap(NW.hasNoUnsignedWrap());
 
-      N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, IdxN, AddFlags);
+      N = DAG.getMemBasePlusOffset(N, IdxN, dl, AddFlags);
     }
   }
 
@@ -8198,11 +8198,20 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_interleave3:
     visitVectorInterleave(I, 3);
     return;
+  case Intrinsic::vector_interleave4:
+    visitVectorInterleave(I, 4);
+    return;
   case Intrinsic::vector_interleave5:
     visitVectorInterleave(I, 5);
     return;
+  case Intrinsic::vector_interleave6:
+    visitVectorInterleave(I, 6);
+    return;
   case Intrinsic::vector_interleave7:
     visitVectorInterleave(I, 7);
+    return;
+  case Intrinsic::vector_interleave8:
+    visitVectorInterleave(I, 8);
     return;
   case Intrinsic::vector_deinterleave2:
     visitVectorDeinterleave(I, 2);
@@ -8210,11 +8219,20 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_deinterleave3:
     visitVectorDeinterleave(I, 3);
     return;
+  case Intrinsic::vector_deinterleave4:
+    visitVectorDeinterleave(I, 4);
+    return;
   case Intrinsic::vector_deinterleave5:
     visitVectorDeinterleave(I, 5);
     return;
+  case Intrinsic::vector_deinterleave6:
+    visitVectorDeinterleave(I, 6);
+    return;
   case Intrinsic::vector_deinterleave7:
     visitVectorDeinterleave(I, 7);
+    return;
+  case Intrinsic::vector_deinterleave8:
+    visitVectorDeinterleave(I, 8);
     return;
   case Intrinsic::experimental_vector_compress:
     setValue(&I, DAG.getNode(ISD::VECTOR_COMPRESS, sdl,
@@ -9155,8 +9173,7 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   Size = DAG.getSExtOrTrunc(Size, sdl, Dst.getValueType());
 
   // Adjust return pointer to point just past the last dst byte.
-  SDValue DstPlusSize = DAG.getNode(ISD::ADD, sdl, Dst.getValueType(),
-                                    Dst, Size);
+  SDValue DstPlusSize = DAG.getMemBasePlusOffset(Dst, Size, sdl);
   setValue(&I, DstPlusSize);
   return true;
 }
@@ -11247,10 +11264,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     MachineFunction &MF = CLI.DAG.getMachineFunction();
     Align HiddenSRetAlign = MF.getFrameInfo().getObjectAlign(DemoteStackIdx);
     for (unsigned i = 0; i < NumValues; ++i) {
-      SDValue Add =
-          CLI.DAG.getNode(ISD::ADD, CLI.DL, PtrVT, DemoteStackSlot,
-                          CLI.DAG.getConstant(Offsets[i], CLI.DL, PtrVT),
-                          SDNodeFlags::NoUnsignedWrap);
+      SDValue Add = CLI.DAG.getMemBasePlusOffset(
+          DemoteStackSlot, CLI.DAG.getConstant(Offsets[i], CLI.DL, PtrVT),
+          CLI.DL, SDNodeFlags::NoUnsignedWrap);
       SDValue L = CLI.DAG.getLoad(
           RetTys[i], CLI.DL, CLI.Chain, Add,
           MachinePointerInfo::getFixedStack(CLI.DAG.getMachineFunction(),

@@ -4410,7 +4410,7 @@ Retry:
     LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 5\n");
     return DAG.getNode(
         LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
-        DAG.getConstant(CN1->getSExtValue() >> MaskIdx0, DL, ValTy),
+        DAG.getSignedConstant(CN1->getSExtValue() >> MaskIdx0, DL, ValTy),
         DAG.getConstant(ValBits == 32 ? (MaskIdx0 + (MaskLen0 & 31) - 1)
                                       : (MaskIdx0 + MaskLen0 - 1),
                         DL, GRLenVT),
@@ -5729,7 +5729,7 @@ emitSelectPseudo(MachineInstr &MI, MachineBasicBlock *BB,
     SelectMBBI = Next;
   }
 
-  F->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+  F->getProperties().resetNoPHIs();
   return TailMBB;
 }
 

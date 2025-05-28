@@ -31,7 +31,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -6411,9 +6410,9 @@ static bool TryOCLSamplerInitialization(Sema &S,
   return true;
 }
 
-static bool IsZeroInitializer(Expr *Initializer, Sema &S) {
-  return Initializer->isIntegerConstantExpr(S.getASTContext()) &&
-    (Initializer->EvaluateKnownConstInt(S.getASTContext()) == 0);
+static bool IsZeroInitializer(const Expr *Init, ASTContext &Ctx) {
+  std::optional<llvm::APSInt> Value = Init->getIntegerConstantExpr(Ctx);
+  return Value && Value->isZero();
 }
 
 static bool TryOCLZeroOpaqueTypeInitialization(Sema &S,
@@ -6432,7 +6431,7 @@ static bool TryOCLZeroOpaqueTypeInitialization(Sema &S,
   // event should be zero.
   //
   if (DestType->isEventT() || DestType->isQueueT()) {
-    if (!IsZeroInitializer(Initializer, S))
+    if (!IsZeroInitializer(Initializer, S.getASTContext()))
       return false;
 
     Sequence.AddOCLZeroOpaqueTypeStep(DestType);
@@ -6448,7 +6447,7 @@ static bool TryOCLZeroOpaqueTypeInitialization(Sema &S,
     if (DestType->isOCLIntelSubgroupAVCMcePayloadType() ||
         DestType->isOCLIntelSubgroupAVCMceResultType())
       return false;
-    if (!IsZeroInitializer(Initializer, S))
+    if (!IsZeroInitializer(Initializer, S.getASTContext()))
       return false;
 
     Sequence.AddOCLZeroOpaqueTypeStep(DestType);
