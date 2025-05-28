@@ -35,6 +35,7 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -52,6 +53,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -248,6 +250,13 @@ translateDataLayout(DataLayoutSpecInterface attribute,
         continue;
       layoutStream << "-F" << (value.getFunctionDependent() ? "n" : "i")
                    << alignment;
+      continue;
+    }
+    if (key.getValue() == DLTIDialect::kDataLayoutLegalIntWidthsKey) {
+      layoutStream << "-n";
+      llvm::interleave(
+          cast<DenseI32ArrayAttr>(entry.getValue()).asArrayRef(), layoutStream,
+          [&](int32_t val) { layoutStream << val; }, ":");
       continue;
     }
     emitError(*loc) << "unsupported data layout key " << key;
