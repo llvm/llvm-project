@@ -8237,6 +8237,12 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     BasicBlock *FromBB = BasicBlock::Create(M.getContext(), "omp.type.from");
     BasicBlock *EndBB = BasicBlock::Create(M.getContext(), "omp.type.end");
     Value *IsAlloc = Builder.CreateIsNull(LeftToFrom);
+    for (GlobalVariable &GV : M.globals()) {
+      if (MDNode *MD = GV.getMetadata("omp.iterator")) {
+        auto *Zero = Constant::getNullValue(GV.getValueType());
+        GV.setInitializer(Zero);
+      }
+    }
     Builder.CreateCondBr(IsAlloc, AllocBB, AllocElseBB);
     // In case of alloc, clear OMP_MAP_TO and OMP_MAP_FROM.
     emitBlock(AllocBB, MapperFn);
