@@ -525,6 +525,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sincosf
     libc.src.math.sinf
     libc.src.math.sinhf
+    libc.src.math.sinpi
     libc.src.math.sinpif
     libc.src.math.sqrt
     libc.src.math.sqrtf
