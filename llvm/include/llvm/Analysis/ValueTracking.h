@@ -300,6 +300,14 @@ LLVM_ABI bool isKnownNeverNaN(const Value *V, unsigned Depth,
 LLVM_ABI std::optional<bool>
 computeKnownFPSignBit(const Value *V, unsigned Depth, const SimplifyQuery &SQ);
 
+/// Return true if the sign bit of the FP value can be ignored by the user when
+/// the value is zero.
+bool canIgnoreSignBitOfZero(const Use &U);
+
+/// Return true if the sign bit of the FP value can be ignored by the user when
+/// the value is NaN.
+bool canIgnoreSignBitOfNaN(const Use &U);
+
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8
 /// values obviously, but is also true for i32 0, i32 -1, i16 0xF0F0, double
