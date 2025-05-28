@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -9,8 +8,6 @@
 
 // <text_encoding>
 
-// libc++ not built with C++26 yet
-// XFAIL: *
 // REQUIRES: std-at-least-c++26
 // REQUIRES: locale.en_US.UTF-8
 // UNSUPPORTED: no-localization
