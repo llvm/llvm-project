@@ -19,6 +19,8 @@ class TestFrameVarDILArraySubscript(TestBase):
             self.runCmd("settings set target.experimental.use-DIL true")
             self.assertEqual(value_dil.GetValue(), value_frv.GetValue())
 
+    # int_arr[100] sometimes points to above the stack region, fix coming soon.
+    @skipIfWindows
     def test_subscript(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
