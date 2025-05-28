@@ -1224,9 +1224,11 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       Value *Start, Value *Sentinel) {
+                                       RecurKind RdxKind, Value *Start,
+                                       Value *Sentinel) {
+  bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RdxKind);
   Value *MaxRdx = Src->getType()->isVectorTy()
-                      ? Builder.CreateIntMaxReduce(Src, true)
+                      ? Builder.CreateIntMaxReduce(Src, IsSigned)
                       : Src;
   // Correct the final reduction result back to the start value if the maximum
   // reduction is sentinel value.
