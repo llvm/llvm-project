@@ -394,8 +394,8 @@ void OmpStructureChecker::CheckVariableListItem(
     const SymbolSourceMap &symbols) {
   for (auto &[symbol, source] : symbols) {
     if (!IsVariableListItem(*symbol)) {
-      context_.SayWithDecl(*symbol, source, "'%s' must be a variable"_err_en_US,
-                           symbol->name());
+      context_.SayWithDecl(
+          *symbol, source, "'%s' must be a variable"_err_en_US, symbol->name());
     }
   }
 }
