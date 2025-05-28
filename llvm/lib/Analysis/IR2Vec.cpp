@@ -103,6 +103,25 @@ Embedding Embedder::lookupVocab(const std::string &Key) const {
   return Vec;
 }
 
+const InstEmbeddingsMap &Embedder::getInstVecMap() const {
+  if (InstVecMap.empty())
+    computeEmbeddings();
+  return InstVecMap;
+}
+
+const BBEmbeddingsMap &Embedder::getBBVecMap() const {
+  if (BBVecMap.empty())
+    computeEmbeddings();
+  return BBVecMap;
+}
+
+const Embedding &Embedder::getFunctionVector() const {
+  // Currently, we always (re)compute the embeddings for the function.
+  // This is cheaper than caching the vector.
+  computeEmbeddings();
+  return FuncVector;
+}
+
 #define RETURN_LOOKUP_IF(CONDITION, KEY_STR)                                   \
   if (CONDITION)                                                               \
     return lookupVocab(KEY_STR);
@@ -132,7 +151,7 @@ Embedding SymbolicEmbedder::getOperandEmbedding(const Value *Op) const {
 
 #undef RETURN_LOOKUP_IF
 
-void SymbolicEmbedder::computeEmbeddings() {
+void SymbolicEmbedder::computeEmbeddings() const {
   if (F.isDeclaration())
     return;
   for (const auto &BB : F) {
@@ -142,7 +161,7 @@ void SymbolicEmbedder::computeEmbeddings() {
   }
 }
 
-Embedding SymbolicEmbedder::computeBB2Vec(const BasicBlock &BB) {
+Embedding SymbolicEmbedder::computeBB2Vec(const BasicBlock &BB) const {
   Embedding BBVector(Dimension, 0);
 
   for (const auto &I : BB) {
@@ -271,7 +290,6 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
     }
 
     std::unique_ptr<Embedder> Emb = std::move(*EmbOrErr);
-    Emb->computeEmbeddings();
 
     OS << "IR2Vec embeddings for function " << F.getName() << ":\n";
     OS << "Function vector: ";
