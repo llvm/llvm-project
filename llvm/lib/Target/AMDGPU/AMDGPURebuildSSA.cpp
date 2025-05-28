@@ -30,6 +30,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
   DenseMap<unsigned, SmallPtrSet<MachineBasicBlock *, 8>> DefBlocks;
   DenseMap<unsigned, SmallPtrSet<MachineBasicBlock *, 8>> LiveInBlocks;
   DenseMap<unsigned, SmallSet<unsigned, 4>> PHINodes;
+  DenseMap<MachineInstr *, unsigned> PHIMap;
   DenseMap<unsigned, std::stack<unsigned>> VregNames;
   DenseSet<unsigned> DefSeen;
 
@@ -48,7 +49,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
   void renameVRegs(MachineBasicBlock &MBB) {
     for (auto &PHI : MBB.phis()) {
       Register Res = PHI.getOperand(0).getReg();
-      const TargetRegisterClass *RC = TRI->getRegClass(Res);
+      const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, Res);
       Register NewVReg = MRI->createVirtualRegister(RC);
       PHI.getOperand(0).setReg(NewVReg);
       VregNames[Res].push(NewVReg);
@@ -56,7 +57,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
     }
     for (auto &I : make_range(MBB.getFirstNonPHI(), MBB.end())) {
      
-      for (auto Op : I.uses()) {
+      for (auto &Op : I.uses()) {
         if (Op.isReg() && Op.getReg().isVirtual()) {
           unsigned VReg = Op.getReg();
           if (VregNames[VReg].empty()) {
@@ -69,11 +70,11 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
         }
       }
 
-      for (auto Op : I.defs()) {
+      for (auto &Op : I.defs()) {
         if (Op.getReg().isVirtual()) {
           unsigned VReg = Op.getReg();
           if (DefSeen.contains(VReg)) {
-            const TargetRegisterClass *RC = TRI->getRegClass(VReg);
+            const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
             Register NewVReg = MRI->createVirtualRegister(RC);
             Op.setReg(NewVReg);
             VregNames[VReg].push(NewVReg);
@@ -86,7 +87,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
 
     for (auto Succ : successors(&MBB)) {
       for (auto &PHI : Succ->phis()) {
-        Register Res = PHI.getOperand(0).getReg();
+        Register Res = PHIMap[&PHI];
         if (VregNames[Res].empty()) {
           PHI.addOperand(MachineOperand::CreateReg(Res, false));
         } else {
@@ -108,7 +109,8 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
       for (auto Op : I.defs()) {
         if (Op.getReg().isVirtual()) {
           Register VReg = Op.getReg();
-          VregNames[VReg].pop();
+          if (!VregNames[VReg].empty())
+            VregNames[VReg].pop();
         }
       }
     }
@@ -174,19 +176,58 @@ bool AMDGPURebuildSSALegacy::runOnMachineFunction(MachineFunction &MF) {
   // that are defined in multiple blocks.
   // We will insert PHI nodes for these registers.
   collectCrossBlockVRegs(MF);
+
+  LLVM_DEBUG(dbgs() << "##### Virt regs live cross block ##################\n";
+             for (auto VReg : CrossBlockVRegs) {
+               dbgs() << Register::virtReg2Index(VReg) << " ";
+             } dbgs()
+             << "\n");
+
   for (auto VReg : CrossBlockVRegs) {
     SmallVector<MachineBasicBlock *> PHIBlocks;
+
+    LLVM_DEBUG(
+        dbgs() << "findPHINodesPlacement input:\nVreg: "
+               << Register::virtReg2Index(VReg) << "\n";
+        dbgs() << "Def Blocks: \n"; for (auto MBB : DefBlocks[VReg]) {
+          dbgs() << MBB->getName() << "." << MBB->getNumber() << " ";
+        } dbgs() << "\nLiveIn Blocks: \n";
+        for (auto MBB : LiveInBlocks[VReg]) {
+          dbgs() << MBB->getName() << "." << MBB->getNumber() << " ";
+        } dbgs()
+        << "\n");
+
     findPHINodesPlacement(LiveInBlocks[VReg], DefBlocks[VReg], PHIBlocks);
+    LLVM_DEBUG(dbgs() << "\nBlocks to insert PHI nodes:\n";
+               for (auto MBB : PHIBlocks) {
+                 dbgs() << MBB->getName() << "." << MBB->getNumber() << " ";
+               } dbgs()
+               << "\n");
     for (auto MBB : PHIBlocks) {
       if (!PHINodes[MBB->getNumber()].contains(VReg)) {
-        // Insert PHI for VReg. Don't use new VReg here as we'll replace them in
-        // renaming phase.
-        BuildMI(*MBB, MBB->begin(), DebugLoc(), TII->get(TargetOpcode::PHI))
+        // Insert PHI for VReg. Don't use new VReg here as we'll replace them
+        // in renaming phase.
+        auto PHINode = BuildMI(*MBB, MBB->begin(), DebugLoc(), TII->get(TargetOpcode::PHI))
             .addReg(VReg, RegState::Define);
         PHINodes[MBB->getNumber()].insert(VReg);
+        PHIMap[PHINode] = VReg;
       }
     }
   }
+
+    // Rename virtual registers in the basic block.
+  renameVRegs(MF.front());
+  LLVM_DEBUG(dbgs() << "##### Vreg names after renaming ##################\n";
+             for (auto &Pair : VregNames) {
+               dbgs() << Register::virtReg2Index(Pair.first) << ": ";
+               if (Pair.second.empty()) {
+                 dbgs() << "empty";
+               } else {
+                 dbgs() << Pair.second.top();
+               }
+               dbgs() << "\n";
+             } dbgs()
+             << "\n");
 
   return false;
 }
