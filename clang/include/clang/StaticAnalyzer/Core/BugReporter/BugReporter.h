@@ -643,9 +643,10 @@ public:
   /// reports.
   virtual void emitReport(std::unique_ptr<BugReport> R);
 
-  void EmitBasicReport(const Decl *DeclWithIssue, const CheckerBase *Checker,
-                       StringRef BugName, StringRef BugCategory,
-                       StringRef BugStr, PathDiagnosticLocation Loc,
+  void EmitBasicReport(const Decl *DeclWithIssue,
+                       const CheckerFrontend *Checker, StringRef BugName,
+                       StringRef BugCategory, StringRef BugStr,
+                       PathDiagnosticLocation Loc,
                        ArrayRef<SourceRange> Ranges = {},
                        ArrayRef<FixItHint> Fixits = {});
 
