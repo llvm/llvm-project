@@ -905,7 +905,7 @@ func.func @invalid_memref_cast() {
 // alignment is not power of 2.
 func.func @assume_alignment(%0: memref<4x4xf16>) {
   // expected-error@+1 {{alignment must be power of 2}}
-  memref.assume_alignment %0, 12 : memref<4x4xf16>
+  %1 = memref.assume_alignment %0, 12 : memref<4x4xf16>
   return
 }
 
@@ -914,7 +914,7 @@ func.func @assume_alignment(%0: memref<4x4xf16>) {
 // 0 alignment value.
 func.func @assume_alignment(%0: memref<4x4xf16>) {
   // expected-error@+1 {{attribute 'alignment' failed to satisfy constraint: 32-bit signless integer attribute whose value is positive}}
-  memref.assume_alignment %0, 0 : memref<4x4xf16>
+  %1 = memref.assume_alignment %0, 0 : memref<4x4xf16>
   return
 }
 

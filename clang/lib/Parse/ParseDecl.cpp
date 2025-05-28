@@ -29,12 +29,9 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
 
@@ -3736,13 +3733,14 @@ void Parser::ParseDeclarationSpecifiers(
     }
 
     case tok::kw___is_signed:
-      // GNU libstdc++ 4.4 uses __is_signed as an identifier, but Clang
-      // typically treats it as a trait. If we see __is_signed as it appears
-      // in libstdc++, e.g.,
+      // HACK: before 2022-12, libstdc++ uses __is_signed as an identifier,
+      // but Clang typically treats it as a trait.
+      // If we see __is_signed as it appears in libstdc++, e.g.,
       //
       //   static const bool __is_signed;
       //
       // then treat __is_signed as an identifier rather than as a keyword.
+      // This was fixed by libstdc++ in December 2022.
       if (DS.getTypeSpecType() == TST_bool &&
           DS.getTypeQualifiers() == DeclSpec::TQ_const &&
           DS.getStorageClassSpec() == DeclSpec::SCS_static)
