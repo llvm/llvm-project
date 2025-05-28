@@ -16832,7 +16832,7 @@ static void knownBitsForWorkitemID(const GCNSubtarget &ST,
 
 static void knownBitsForSBFE(const MachineInstr &MI, GISelValueTracking &VT,
                              KnownBits &Known, const APInt &DemandedElts,
-                             unsigned BFEWidth, bool SExt) {
+                             unsigned BFEWidth, bool SExt, unsigned Depth) {
   const MachineRegisterInfo &MRI = VT.getMachineFunction().getRegInfo();
   const MachineOperand &Src1 = MI.getOperand(2);
 
@@ -16854,7 +16854,8 @@ static void knownBitsForSBFE(const MachineInstr &MI, GISelValueTracking &VT,
       Src1Cst & maskTrailingOnes<unsigned>((BFEWidth == 32) ? 5 : 6);
   const unsigned Width = (Src1Cst >> 16) & maskTrailingOnes<unsigned>(6);
 
-  VT.computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts);
+  VT.computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                          Depth + 1);
 
   Known.Zero = Known.Zero.lshr(Offset);
   Known.One = Known.One.lshr(Offset);
@@ -16876,16 +16877,16 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   switch (MI->getOpcode()) {
   case AMDGPU::S_BFE_I32:
     return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/32,
-                            /*SExt=*/true);
+                            /*SExt=*/true, Depth);
   case AMDGPU::S_BFE_U32:
     return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/32,
-                            /*SExt=*/false);
+                            /*SExt=*/false, Depth);
   case AMDGPU::S_BFE_I64:
     return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/64,
-                            /*SExt=*/true);
+                            /*SExt=*/true, Depth);
   case AMDGPU::S_BFE_U64:
     return knownBitsForSBFE(*MI, VT, Known, DemandedElts, /*Width=*/64,
-                            /*SExt=*/false);
+                            /*SExt=*/false, Depth);
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
     Intrinsic::ID IID = cast<GIntrinsic>(MI)->getIntrinsicID();
