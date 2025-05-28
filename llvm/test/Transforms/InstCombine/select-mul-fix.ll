@@ -6,8 +6,8 @@
 define i32 @smul(i1 %b, i32 %x) {
 ; CHECK-LABEL: define i32 @smul(
 ; CHECK-SAME: i1 [[B:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[X]], i32 42, i32 1)
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[B]], i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[B]], i32 0, i32 [[X]]
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[S]], i32 42, i32 1)
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 0, i32 %x

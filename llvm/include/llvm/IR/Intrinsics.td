@@ -1581,13 +1581,11 @@ def int_ushl_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty],
 //
 def int_smul_fix : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
-                             [IntrNoMem, IntrSpeculatable,
-                              Commutative, ImmArg<ArgIndex<2>>]>;
+                             [IntrNoMem, Commutative, ImmArg<ArgIndex<2>>]>;
 
 def int_umul_fix : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
-                             [IntrNoMem, IntrSpeculatable,
-                              Commutative, ImmArg<ArgIndex<2>>]>;
+                             [IntrNoMem, Commutative, ImmArg<ArgIndex<2>>]>;
 
 def int_sdiv_fix : DefaultAttrsIntrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
