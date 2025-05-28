@@ -5031,7 +5031,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
     // ARM -- Scalable Vector Extension
 #define SVE_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
       break;
 
     // RISC-V V builtin types.
