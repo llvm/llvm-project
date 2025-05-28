@@ -25,6 +25,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__ranges/view_interface.h>
 #include <__string/char_traits.h>
+#include <__text_encoding/text_encoding_make_locale.h>
 #include <__utility/unreachable.h>
 #include <cstdint>
 #include <string_view>
@@ -489,7 +490,10 @@ public:
 #  endif
   }
 
-  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI static text_encoding environment();
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static text_encoding environment()
+  {
+    return text_encoding(__get_locale_encoding(""));
+  };
 
   template <id __i>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static bool environment_is() {

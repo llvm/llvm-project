@@ -752,6 +752,7 @@ set(files
   __system_error/system_error.h
   __system_error/throw_system_error.h
   __text_encoding/text_encoding.h
+  __text_encoding/text_encoding_get_locale.h
   __thread/formatter.h
   __thread/id.h
   __thread/jthread.h
