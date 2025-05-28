@@ -104,6 +104,8 @@ unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
       return ELF::R_RISCV_QC_E_BRANCH;
     case RISCV::fixup_riscv_qc_e_jump_plt:
       return ELF::R_RISCV_QC_E_JUMP_PLT;
+    case RISCV::fixup_riscv_nds_branch_10:
+      return ELF::R_RISCV_NDS_BRANCH_10;
     }
   }
 

@@ -227,9 +227,24 @@ class UImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"U", width, suffix> {
 }
 
+class BareSImmNAsmOperand<int width>
+    : ImmAsmOperand<"BareS", width, ""> {
+  let PredicateMethod = "isBareSimmN<" # width # ">";
+}
+
 class BareSImmNLsb0AsmOperand<int width>
     : ImmAsmOperand<"BareS", width, "Lsb0"> {
-  let PredicateMethod = "isBareSimmNLsb0<" # width # ">";
+  let PredicateMethod = "isBareSimmNLsbK<" # width # ", 1>";
+}
+
+class BareSImmNLsb00AsmOperand<int width>
+    : ImmAsmOperand<"BareS", width, "Lsb00"> {
+  let PredicateMethod = "isBareSimmNLsbK<" # width # ", 2>";
+}
+
+class BareSImmNLsb000AsmOperand<int width>
+    : ImmAsmOperand<"BareS", width, "Lsb000"> {
+  let PredicateMethod = "isBareSimmNLsbK<" # width # ", 3>";
 }
 
 class RISCVOp<ValueType vt = XLenVT> : Operand<vt> {
