@@ -1,4 +1,4 @@
-Comgr v4.0 Release Notes
+Comgr v4.0 (In Progress) Release Notes
 ========================
 
 This document contains the release notes for the Code Object Manager (Comgr),
