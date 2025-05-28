@@ -688,7 +688,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
       // descriptor.
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
         ReducedPartRdx =
-            createAnyOfReduction(Builder, ReducedPartRdx, RdxDesc, OrigPhi);
+            createAnyOfReduction(Builder, ReducedPartRdx,
+                                 RdxDesc.getRecurrenceStartValue(), OrigPhi);
       else
         ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
 
