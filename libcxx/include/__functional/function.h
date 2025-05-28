@@ -752,9 +752,8 @@ public:
 
 #  if _LIBCPP_HAS_BLOCKS_RUNTIME
 
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
-_LIBCPP_EXPORTED_FROM_ABI extern "C" void* _Block_copy(const void*);
-_LIBCPP_EXPORTED_FROM_ABI extern "C" void _Block_release(const void*);
+extern "C" void* _Block_copy(const void*);
+extern "C" void _Block_release(const void*);
 
 template <class _Rp1, class... _ArgTypes1, class _Alloc, class _Rp, class... _ArgTypes>
 class __func<_Rp1 (^)(_ArgTypes1...), _Alloc, _Rp(_ArgTypes...)> : public __base<_Rp(_ArgTypes...)> {
@@ -827,7 +826,6 @@ public:
   }
 #    endif // _LIBCPP_HAS_RTTI
 };
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 #  endif // _LIBCPP_HAS_EXTENSION_BLOCKS
 
