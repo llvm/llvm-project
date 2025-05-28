@@ -269,6 +269,68 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
                                        ArgTys[0] = User->getType();
                                      });
         }
+      } else {
+        // Only perform D16 folding if every user of the image sample is
+        // an ExtractElementInst immediately followed by an FPTrunc to half.
+        SmallVector<ExtractElementInst *, 4> Extracts;
+        SmallVector<FPTruncInst *, 4> Truncs;
+        bool AllHalfExtracts = true;
+
+        for (User *U : II.users()) {
+          auto *Ext = dyn_cast<ExtractElementInst>(U);
+          if (!Ext || !Ext->hasOneUse()) {
+            AllHalfExtracts = false;
+            break;
+          }
+          auto *Tr = dyn_cast<FPTruncInst>(*Ext->user_begin());
+          if (!Tr || !Tr->getType()->getScalarType()->isHalfTy()) {
+            AllHalfExtracts = false;
+            break;
+          }
+          Extracts.push_back(Ext);
+          Truncs.push_back(Tr);
+        }
+
+        if (AllHalfExtracts && !Extracts.empty()) {
+          auto *VecTy = cast<VectorType>(II.getType());
+          unsigned NElts = VecTy->getElementCount().getKnownMinValue();
+          Type *HalfVecTy =
+              VectorType::get(Type::getHalfTy(II.getContext()), NElts, false);
+
+          // Obtain the original image sample intrinsic's signature
+          // and replace its return type with the half-vector for D16 folding
+          SmallVector<Type *, 8> SigTys;
+          if (!Intrinsic::getIntrinsicSignature(II.getCalledFunction(), SigTys))
+            return nullptr;
+          SigTys[0] = HalfVecTy;
+
+          Module *M = II.getModule();
+          Function *HalfDecl =
+              Intrinsic::getOrInsertDeclaration(M, ImageDimIntr->Intr, SigTys);
+
+          II.mutateType(HalfVecTy);
+          II.setCalledFunction(HalfDecl);
+
+          IRBuilder<> Builder(&II);
+          for (auto [lane, Ext] : enumerate(Extracts)) {
+            FPTruncInst *Tr = Truncs[lane];
+            Value *Idx = Ext->getIndexOperand();
+
+            Builder.SetInsertPoint(Tr);
+
+            Value *HalfExtract = Builder.CreateExtractElement(&II, Idx);
+            HalfExtract->takeName(Tr);
+
+            Tr->replaceAllUsesWith(HalfExtract);
+          }
+
+          for (auto *T : Truncs)
+            IC.eraseInstFromFunction(*T);
+          for (auto *E : Extracts)
+            IC.eraseInstFromFunction(*E);
+
+          return &II;
+        }
       }
     }
   }
