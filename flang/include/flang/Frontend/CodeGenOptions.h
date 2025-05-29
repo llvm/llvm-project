@@ -16,6 +16,7 @@
 #define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
 #include "flang/Optimizer/OpenMP/Utils.h"
+#include "clang/Basic/Sanitizers.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
@@ -148,6 +149,50 @@ public:
   /// OpenMP is enabled.
   using DoConcurrentMappingKind = flangomp::DoConcurrentMappingKind;
 
+  /// Set of sanitizer checks that are non-fatal (i.e. execution should be
+  /// continued when possible).
+  clang::SanitizerSet SanitizeRecover;
+
+  /// Set of sanitizer checks that trap rather than diagnose.
+  clang::SanitizerSet SanitizeTrap;
+
+  /// Set of sanitizer checks that can merge handlers (smaller code size at
+  /// the expense of debuggability).
+  clang::SanitizerSet SanitizeMergeHandlers;
+
+  /// Set of thresholds in a range [0.0, 1.0]: the top hottest code responsible
+  /// for the given fraction of PGO counters will be excluded from sanitization
+  /// (0.0 [default] to skip none, 1.0 to skip all).
+  clang::SanitizerMaskCutoffs SanitizeSkipHotCutoffs;
+
+  /// Path to allowlist file specifying which objects
+  /// (files, functions) should exclusively be instrumented
+  /// by sanitizer coverage pass.
+  std::vector<std::string> SanitizeCoverageAllowlistFiles;
+
+  /// Path to ignorelist file specifying which objects
+  /// (files, functions) listed for instrumentation by sanitizer
+  /// coverage pass should actually not be instrumented.
+  std::vector<std::string> SanitizeCoverageIgnorelistFiles;
+
+  /// Path to ignorelist file specifying which objects
+  /// (files, functions) listed for instrumentation by sanitizer
+  /// binary metadata pass should not be instrumented.
+  std::vector<std::string> SanitizeMetadataIgnorelistFiles;
+
+  // Check if any one of SanitizeCoverage* is enabled.
+  bool hasSanitizeCoverage() const {
+    return SanitizeCoverageType || SanitizeCoverageIndirectCalls ||
+           SanitizeCoverageTraceCmp || SanitizeCoverageTraceLoads ||
+           SanitizeCoverageTraceStores || SanitizeCoverageControlFlow;
+  }
+
+  // Check if any one of SanitizeBinaryMetadata* is enabled.
+  bool hasSanitizeBinaryMetadata() const {
+    return SanitizeBinaryMetadataCovered || SanitizeBinaryMetadataAtomics ||
+           SanitizeBinaryMetadataUAR;
+  }
+
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default)                             \
@@ -157,6 +202,8 @@ public:
 
   CodeGenOptions();
 };
+
+bool asanUseGlobalsGC(const llvm::Triple &T, const CodeGenOptions &CGOpts);
 
 std::optional<llvm::CodeModel::Model> getCodeModel(llvm::StringRef string);
 
