@@ -20591,7 +20591,8 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     // control value of 7 is equivalent to brev8 and orc.b.
     Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     bool IsGORC = Op.getOpcode() == RISCVISD::ORC_B;
-    // To compute zeros, we need to invert the value and invert it back after.
+    // To compute zeros for ORC_B, we need to invert the value and invert it
+    // back after. This inverting is harmless for BREV8.
     Known.Zero =
         ~computeGREVOrGORC(~Known.Zero.getZExtValue(), 7, IsGORC);
     Known.One = computeGREVOrGORC(Known.One.getZExtValue(), 7, IsGORC);
@@ -20741,19 +20742,24 @@ bool RISCVTargetLowering::SimplifyDemandedBitsForTargetNode(
   unsigned BitWidth = OriginalDemandedBits.getBitWidth();
 
   switch (Op.getOpcode()) {
-  case RISCVISD::BREV8: {
+  case RISCVISD::BREV8:
+  case RISCVISD::ORC_B: {
     KnownBits Known2;
+    bool IsGORC = Op.getOpcode() == RISCVISD::ORC_B;
+    // For BREV8, we need to do BREV8 on the demanded bits.
+    // For ORC_B, any bit in the output demandeds all bits from the same byte.
+    // So we need to do ORC_B on the demanded bits.
     APInt DemandedBits =
         APInt(BitWidth, computeGREVOrGORC(OriginalDemandedBits.getZExtValue(),
-                                          7, /*IsGORC=*/false));
+                                          7, IsGORC));
     if (SimplifyDemandedBits(Op.getOperand(0), DemandedBits,
                              OriginalDemandedElts, Known2, TLO, Depth + 1))
       return true;
 
-    Known.Zero =
-        computeGREVOrGORC(Known2.Zero.getZExtValue(), 7, /*IsGORC=*/false);
-    Known.One =
-        computeGREVOrGORC(Known2.One.getZExtValue(), 7, /*IsGORC=*/false);
+    // To compute zeros for ORC_B, we need to invert the value and invert it
+    // back after. This inverting is harmless for BREV8.
+    Known.Zero = ~computeGREVOrGORC(~Known2.Zero.getZExtValue(), 7, IsGORC);
+    Known.One = computeGREVOrGORC(Known2.One.getZExtValue(), 7, IsGORC);
     return false;
   }
   }
