@@ -289,8 +289,9 @@ static bool hasSingleUse(unsigned Reg, MachineRegisterInfo &MRI,
                          WebAssemblyFunctionInfo &MFI, bool Optimize,
                          MachineInstr *Def, LiveIntervals *LIS) {
   if (!Optimize) {
-    // We don't want to stackify DBG_VALUE operands since WASM stack locations
-    // are less useful and less widely supported than WASM local locations.
+    // Using "hasOneUse" instead of "hasOneNonDBGUse" here because we don't
+    // want to stackify DBG_VALUE operands - WASM stack locations are less
+    // useful and less widely supported than WASM local locations.
     if (!MRI.hasOneUse(Reg))
       return false;
     // The frame base always has an implicit DBG use as DW_AT_frame_base.
