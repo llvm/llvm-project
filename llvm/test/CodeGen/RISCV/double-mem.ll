@@ -141,10 +141,10 @@ define dso_local double @fld_fsd_global(double %a, double %b) nounwind {
 ; RV32IZFINXZDINXZILSD:       # %bb.0:
 ; RV32IZFINXZDINXZILSD-NEXT:    lui a4, %hi(G)
 ; RV32IZFINXZDINXZILSD-NEXT:    fadd.d a0, a0, a2
-; RV32IZFINXZDINXZILSD-NEXT:    ld a2, %lo(G)(a4)
+; RV32IZFINXZDINXZILSD-NEXT:    ld zero, %lo(G)(a4)
 ; RV32IZFINXZDINXZILSD-NEXT:    addi a2, a4, %lo(G)
 ; RV32IZFINXZDINXZILSD-NEXT:    sd a0, %lo(G)(a4)
-; RV32IZFINXZDINXZILSD-NEXT:    ld a4, 72(a2)
+; RV32IZFINXZDINXZILSD-NEXT:    ld zero, 72(a2)
 ; RV32IZFINXZDINXZILSD-NEXT:    sd a0, 72(a2)
 ; RV32IZFINXZDINXZILSD-NEXT:    ret
 ; Use %a and %b in an FP op to ensure floating point registers are used, even

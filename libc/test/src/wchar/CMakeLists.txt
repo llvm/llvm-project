@@ -34,6 +34,18 @@ add_libc_test(
 )
 
 add_libc_test(
+  wmemset_test 
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wmemset_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.wchar.wmemset
+)
+
+add_libc_test(
   wcschr_test
   SUITE
     libc_wchar_unittests
@@ -51,4 +63,14 @@ add_libc_test(
     wcspbrk_test.cpp
   DEPENDS
     libc.src.wchar.wcspbrk
+)
+
+add_libc_test(
+  wmemcmp_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wmemcmp_test.cpp
+  DEPENDS
+    libc.src.wchar.wmemcmp
 )
