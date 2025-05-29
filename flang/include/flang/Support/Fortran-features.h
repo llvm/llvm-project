@@ -12,6 +12,8 @@
 #include "Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <vector>
 
@@ -79,11 +81,12 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
     HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile)
 
+// Generate default String -> Enum mapping.
+ENUM_CLASS_EXTRA(LanguageFeature)
+ENUM_CLASS_EXTRA(UsageWarning)
+
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
-
-std::optional<LanguageFeature> FindLanguageFeature(const char *);
-std::optional<UsageWarning> FindUsageWarning(const char *);
 
 class LanguageFeatureControl {
 public:
@@ -97,8 +100,10 @@ public:
   void EnableWarning(UsageWarning w, bool yes = true) {
     warnUsage_.set(w, yes);
   }
-  void WarnOnAllNonstandard(bool yes = true) { warnAllLanguage_ = yes; }
-  void WarnOnAllUsage(bool yes = true) { warnAllUsage_ = yes; }
+  void WarnOnAllNonstandard(bool yes = true);
+  bool IsWarnOnAllNonstandard() const { return warnAllLanguage_; }
+  void WarnOnAllUsage(bool yes = true);
+  bool IsWarnOnAllUsage() const { return warnAllUsage_; }
   void DisableAllNonstandardWarnings() {
     warnAllLanguage_ = false;
     warnLanguage_.clear();
@@ -107,16 +112,16 @@ public:
     warnAllUsage_ = false;
     warnUsage_.clear();
   }
-
+  void DisableAllWarnings() {
+    disableAllWarnings_ = true;
+    DisableAllNonstandardWarnings();
+    DisableAllUsageWarnings();
+  }
+  bool applyCLIOption(llvm::StringRef input);
+  bool AreWarningsDisabled() const { return disableAllWarnings_; }
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
-  bool ShouldWarn(LanguageFeature f) const {
-    return (warnAllLanguage_ && f != LanguageFeature::OpenMP &&
-               f != LanguageFeature::OpenACC && f != LanguageFeature::CUDA) ||
-        warnLanguage_.test(f);
-  }
-  bool ShouldWarn(UsageWarning w) const {
-    return warnAllUsage_ || warnUsage_.test(w);
-  }
+  bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }
+  bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
   // Return all spellings of operators names, depending on features enabled
   std::vector<const char *> GetNames(LogicalOperator) const;
   std::vector<const char *> GetNames(RelationalOperator) const;
@@ -127,6 +132,24 @@ private:
   bool warnAllLanguage_{false};
   UsageWarnings warnUsage_;
   bool warnAllUsage_{false};
+  bool disableAllWarnings_{false};
 };
+
+// Parse a CLI enum option return the enum index and whether it should be
+// enabled (true) or disabled (false). Just exposed for the template below.
+std::optional<std::pair<bool, int>> parseCLIEnumIndex(
+    llvm::StringRef input, std::function<std::optional<int>(Predicate)> find);
+
+template <typename ENUM>
+std::optional<std::pair<bool, ENUM>> parseCLIEnum(
+    llvm::StringRef input, std::function<std::optional<int>(Predicate)> find) {
+  using To = std::pair<bool, ENUM>;
+  using From = std::pair<bool, int>;
+  static std::function<To(From)> cast = [](From x) {
+    return std::pair{x.first, static_cast<ENUM>(x.second)};
+  };
+  return fmap(parseCLIEnumIndex(input, find), cast);
+}
+
 } // namespace Fortran::common
 #endif // FORTRAN_SUPPORT_FORTRAN_FEATURES_H_

@@ -18,8 +18,9 @@
 #define FORTRAN_COMMON_ENUM_CLASS_H_
 
 #include <array>
-#include <string>
-
+#include <functional>
+#include <optional>
+#include <string_view>
 namespace Fortran::common {
 
 constexpr std::size_t CountEnumNames(const char *p) {
@@ -58,15 +59,51 @@ constexpr std::array<std::string_view, ITEMS> EnumNames(const char *p) {
   return result;
 }
 
+template <typename F, typename T>
+std::optional<T> inline fmap(std::optional<F> x, std::function<T(const F)> f) {
+  return x ? std::optional<T>{f(*x)} : std::nullopt;
+}
+
+using Predicate = std::function<bool(const std::string_view)>;
+// Finds the first index for which the predicate returns true.
+std::optional<int> FindEnumIndex(
+    Predicate pred, int size, const std::string_view *names);
+
+using FindEnumIndexType = std::optional<int>(
+    Predicate, int, const std::string_view *);
+
+template <typename NAME>
+std::optional<NAME> inline FindEnum(
+    Predicate pred, std::function<std::optional<int>(Predicate)> find) {
+  std::function<NAME(int)> f = [](int x) { return static_cast<NAME>(x); };
+  return fmap(find(pred), f);
+}
+
 #define ENUM_CLASS(NAME, ...) \
   enum class NAME { __VA_ARGS__ }; \
   [[maybe_unused]] static constexpr std::size_t NAME##_enumSize{ \
       ::Fortran::common::CountEnumNames(#__VA_ARGS__)}; \
+  [[maybe_unused]] static constexpr std::array<std::string_view, \
+      NAME##_enumSize> NAME##_names{ \
+      ::Fortran::common::EnumNames<NAME##_enumSize>(#__VA_ARGS__)}; \
   [[maybe_unused]] static inline std::string_view EnumToString(NAME e) { \
-    static const constexpr auto names{ \
-        ::Fortran::common::EnumNames<NAME##_enumSize>(#__VA_ARGS__)}; \
-    return names[static_cast<std::size_t>(e)]; \
+    return NAME##_names[static_cast<std::size_t>(e)]; \
   }
 
+#define ENUM_CLASS_EXTRA(NAME) \
+  [[maybe_unused]] inline std::optional<int> Find##NAME##Index( \
+      ::Fortran::common::Predicate p) { \
+    return ::Fortran::common::FindEnumIndex( \
+        p, NAME##_enumSize, NAME##_names.data()); \
+  } \
+  [[maybe_unused]] inline std::optional<NAME> Find##NAME( \
+      ::Fortran::common::Predicate p) { \
+    return ::Fortran::common::FindEnum<NAME>(p, Find##NAME##Index); \
+  } \
+  [[maybe_unused]] inline std::optional<NAME> StringTo##NAME( \
+      const std::string_view name) { \
+    return Find##NAME( \
+        [name](const std::string_view s) -> bool { return name == s; }); \
+  }
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_ENUM_CLASS_H_

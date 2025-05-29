@@ -9,6 +9,8 @@
 #include "flang/Support/Fortran-features.h"
 #include "flang/Common/idioms.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::common {
 
@@ -94,57 +96,123 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
 }
 
-// Ignore case and any inserted punctuation (like '-'/'_')
-static std::optional<char> GetWarningChar(char ch) {
-  if (ch >= 'a' && ch <= 'z') {
-    return ch;
-  } else if (ch >= 'A' && ch <= 'Z') {
-    return ch - 'A' + 'a';
-  } else if (ch >= '0' && ch <= '9') {
-    return ch;
-  } else {
-    return std::nullopt;
+// Split a string with camel case into the individual words.
+// Note, the small vector is just an array of a few pointers and lengths
+// into the original input string. So all this allocation should be pretty
+// cheap.
+llvm::SmallVector<llvm::StringRef> splitCamelCase(llvm::StringRef input) {
+  using namespace llvm;
+  if (input.empty()) {
+    return {};
   }
+  SmallVector<StringRef> parts{};
+  parts.reserve(input.size());
+  auto check = [&input](size_t j, function_ref<bool(char)> predicate) {
+    return j < input.size() && predicate(input[j]);
+  };
+  size_t i{0};
+  size_t startWord = i;
+  for (; i < input.size(); i++) {
+    if ((check(i, isUpper) && check(i + 1, isUpper) && check(i + 2, isLower)) ||
+        ((check(i, isLower) || check(i, isDigit)) && check(i + 1, isUpper))) {
+      parts.push_back(StringRef(input.data() + startWord, i - startWord + 1));
+      startWord = i + 1;
+    }
+  }
+  parts.push_back(llvm::StringRef(input.data() + startWord, i - startWord));
+  return parts;
 }
 
-static bool WarningNameMatch(const char *a, const char *b) {
-  while (true) {
-    auto ach{GetWarningChar(*a)};
-    while (!ach && *a) {
-      ach = GetWarningChar(*++a);
+// Split a string whith hyphens into the individual words.
+llvm::SmallVector<llvm::StringRef> splitHyphenated(llvm::StringRef input) {
+  auto parts = llvm::SmallVector<llvm::StringRef>{};
+  llvm::SplitString(input, parts, "-");
+  return parts;
+}
+
+// Check if two strings are equal while normalizing case for the
+// right word which is assumed to be a single word in camel case.
+bool equalLowerCaseWithCamelCaseWord(llvm::StringRef l, llvm::StringRef r) {
+  size_t ls = l.size();
+  if (ls != r.size())
+    return false;
+  size_t j{0};
+  // Process the upper case characters.
+  for (; j < ls; j++) {
+    char rc = r[j];
+    char rc2l = llvm::toLower(rc);
+    if (rc == rc2l) {
+      // Past run of Uppers Case;
+      break;
     }
-    auto bch{GetWarningChar(*b)};
-    while (!bch && *b) {
-      bch = GetWarningChar(*++b);
-    }
-    if (!ach && !bch) {
-      return true;
-    } else if (!ach || !bch || *ach != *bch) {
+    if (l[j] != rc2l)
+      return false;
+  }
+  // Process the lower case characters.
+  for (; j < ls; j++) {
+    if (l[j] != r[j]) {
       return false;
     }
-    ++a, ++b;
   }
+  return true;
 }
 
-template <typename ENUM, std::size_t N>
-std::optional<ENUM> ScanEnum(const char *name) {
-  if (name) {
-    for (std::size_t j{0}; j < N; ++j) {
-      auto feature{static_cast<ENUM>(j)};
-      if (WarningNameMatch(name, EnumToString(feature).data())) {
-        return feature;
+// Parse a CLI enum option return the enum index and whether it should be
+// enabled (true) or disabled (false).
+std::optional<std::pair<bool, int>> parseCLIEnumIndex(
+    llvm::StringRef input, std::function<std::optional<int>(Predicate)> find) {
+  auto parts = splitHyphenated(input);
+  bool negated = false;
+  if (parts.size() >= 1 && !parts[0].compare(llvm::StringRef("no", 2))) {
+    negated = true;
+    // Remove the "no" part
+    parts = llvm::SmallVector<llvm::StringRef>(parts.begin() + 1, parts.end());
+  }
+  size_t chars = 0;
+  for (auto p : parts) {
+    chars += p.size();
+  }
+  auto pred = [&](auto s) {
+    if (chars != s.size()) {
+      return false;
+    }
+    auto ccParts = splitCamelCase(s);
+    auto num_ccParts = ccParts.size();
+    if (parts.size() != num_ccParts) {
+      return false;
+    }
+    for (size_t i{0}; i < num_ccParts; i++) {
+      if (!equalLowerCaseWithCamelCaseWord(parts[i], ccParts[i])) {
+        return false;
       }
     }
+    return true;
+  };
+  auto cast = [negated](int x) { return std::pair{!negated, x}; };
+  return fmap<int, std::pair<bool, int>>(find(pred), cast);
+}
+
+std::optional<std::pair<bool, LanguageFeature>> parseCLILanguageFeature(
+    llvm::StringRef input) {
+  return parseCLIEnum<LanguageFeature>(input, FindLanguageFeatureIndex);
+}
+
+std::optional<std::pair<bool, UsageWarning>> parseCLIUsageWarning(
+    llvm::StringRef input) {
+  return parseCLIEnum<UsageWarning>(input, FindUsageWarningIndex);
+}
+
+// Take a string from the CLI and apply it to the LanguageFeatureControl.
+// Return true if the option was applied recognized.
+bool LanguageFeatureControl::applyCLIOption(llvm::StringRef input) {
+  if (auto result = parseCLILanguageFeature(input)) {
+    EnableWarning(result->second, result->first);
+    return true;
+  } else if (auto result = parseCLIUsageWarning(input)) {
+    EnableWarning(result->second, result->first);
+    return true;
   }
-  return std::nullopt;
-}
-
-std::optional<LanguageFeature> FindLanguageFeature(const char *name) {
-  return ScanEnum<LanguageFeature, LanguageFeature_enumSize>(name);
-}
-
-std::optional<UsageWarning> FindUsageWarning(const char *name) {
-  return ScanEnum<UsageWarning, UsageWarning_enumSize>(name);
+  return false;
 }
 
 std::vector<const char *> LanguageFeatureControl::GetNames(
@@ -201,4 +269,32 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
   }
 }
 
+template <typename ENUM, std::size_t N>
+void ForEachEnum(std::function<void(ENUM)> f) {
+  for (size_t j{0}; j < N; ++j) {
+    f(static_cast<ENUM>(j));
+  }
+}
+
+void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
+  warnAllLanguage_ = yes;
+  disableAllWarnings_ = yes ? false : disableAllWarnings_;
+  // should be equivalent to: reset().flip() set ...
+  ForEachEnum<LanguageFeature, LanguageFeature_enumSize>(
+      [&](LanguageFeature f) { warnLanguage_.set(f, yes); });
+  if (yes) {
+    // These three features do not need to be warned about,
+    // but we do want their feature flags.
+    warnLanguage_.set(LanguageFeature::OpenMP, false);
+    warnLanguage_.set(LanguageFeature::OpenACC, false);
+    warnLanguage_.set(LanguageFeature::CUDA, false);
+  }
+}
+
+void LanguageFeatureControl::WarnOnAllUsage(bool yes) {
+  warnAllUsage_ = yes;
+  disableAllWarnings_ = yes ? false : disableAllWarnings_;
+  ForEachEnum<UsageWarning, UsageWarning_enumSize>(
+      [&](UsageWarning w) { warnUsage_.set(w, yes); });
+}
 } // namespace Fortran::common

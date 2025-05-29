@@ -34,6 +34,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
@@ -45,6 +46,7 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
+#include <string>
 
 using namespace Fortran::frontend;
 
@@ -971,9 +973,22 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
 /// Parses all diagnostics related arguments and populates the variables
 /// options accordingly. Returns false if new errors are generated.
+/// FC1 driver entry point for parsing diagnostic arguments.
 static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
+
+  auto &features = res.getFrontendOpts().features;
+  // The order of these flags (-pedantic -W<feature> -w) is important and is
+  // chosen to match clang's behavior.
+
+  // -pedantic
+  if (args.hasArg(clang::driver::options::OPT_pedantic)) {
+    features.WarnOnAllNonstandard();
+    features.WarnOnAllUsage();
+    res.setEnableConformanceChecks();
+    res.setEnableUsageChecks();
+  }
 
   // -Werror option
   // TODO: Currently throws a Diagnostic for anything other than -W<error>,
@@ -984,21 +999,27 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     for (const auto &wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
-      } else {
-        const unsigned diagID =
-            diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-                                  "Only `-Werror` is supported currently.");
-        diags.Report(diagID);
+        // -W(no-)<feature>
+      } else if (!features.applyCLIOption(wArg)) {
+        const unsigned diagID = diags.getCustomDiagID(
+            clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
+        diags.Report(diagID) << wArg;
       }
     }
   }
 
-  // Default to off for `flang -fc1`.
-  res.getFrontendOpts().showColors =
-      parseShowColorsArgs(args, /*defaultDiagColor=*/false);
+  // -w
+  if (args.hasArg(clang::driver::options::OPT_w)) {
+    features.DisableAllWarnings();
+    res.setDisableWarnings();
+  }
 
-  // Honor color diagnostics.
-  res.getDiagnosticOpts().ShowColors = res.getFrontendOpts().showColors;
+  // Default to off for `flang -fc1`.
+  bool showColors = parseShowColorsArgs(args, false);
+
+  diags.getDiagnosticOptions().ShowColors = showColors;
+  res.getDiagnosticOpts().ShowColors = showColors;
+  res.getFrontendOpts().showColors = showColors;
 
   return diags.getNumErrors() == numErrorsBefore;
 }
@@ -1074,16 +1095,6 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         Fortran::common::LanguageFeature::OpenACC);
   }
 
-  // -pedantic
-  if (args.hasArg(clang::driver::options::OPT_pedantic)) {
-    res.setEnableConformanceChecks();
-    res.setEnableUsageChecks();
-  }
-
-  // -w
-  if (args.hasArg(clang::driver::options::OPT_w))
-    res.setDisableWarnings();
-
   // -std=f2018
   // TODO: Set proper options when more fortran standards
   // are supported.
@@ -1092,6 +1103,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     // We only allow f2018 as the given standard
     if (standard == "f2018") {
       res.setEnableConformanceChecks();
+      res.getFrontendOpts().features.WarnOnAllNonstandard();
     } else {
       const unsigned diagID =
           diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
@@ -1099,6 +1111,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
   }
+
   return diags.getNumErrors() == numErrorsBefore;
 }
 
@@ -1694,16 +1707,7 @@ void CompilerInvocation::setFortranOpts() {
   if (frontendOptions.needProvenanceRangeToCharBlockMappings)
     fortranOptions.needProvenanceRangeToCharBlockMappings = true;
 
-  if (getEnableConformanceChecks())
-    fortranOptions.features.WarnOnAllNonstandard();
-
-  if (getEnableUsageChecks())
-    fortranOptions.features.WarnOnAllUsage();
-
-  if (getDisableWarnings()) {
-    fortranOptions.features.DisableAllNonstandardWarnings();
-    fortranOptions.features.DisableAllUsageWarnings();
-  }
+  fortranOptions.features = frontendOptions.features;
 }
 
 std::unique_ptr<Fortran::semantics::SemanticsContext>
