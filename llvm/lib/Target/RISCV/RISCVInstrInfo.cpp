@@ -4189,6 +4189,15 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
       return true;
     }
     break;
+  case RISCV::BEQ:
+  case RISCV::BNE:
+    // b{eq,ne} zero, rs, imm => b{eq,ne} rs, zero, imm
+    if (MI.getOperand(0).getReg() == RISCV::X0) {
+      MachineOperand MO0 = MI.getOperand(0);
+      MI.removeOperand(0);
+      MI.insert(MI.operands_begin() + 1, {MO0});
+    }
+    break;
   case RISCV::BLTU:
     // bltu zero, rs, imm => bne rs, zero, imm
     if (MI.getOperand(0).getReg() == RISCV::X0) {
