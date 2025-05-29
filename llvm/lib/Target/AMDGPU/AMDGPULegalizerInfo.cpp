@@ -223,13 +223,6 @@ static LegalityPredicate numElementsNotEven(unsigned TypeIdx) {
   };
 }
 
-static LegalityPredicate numElementsPowerOf2(unsigned TypeIdx) {
-  return [=](const LegalityQuery &Query) {
-    const LLT QueryTy = Query.Types[TypeIdx];
-    return QueryTy.isVector() && isPowerOf2_32(QueryTy.getNumElements());
-  };
-}
-
 static bool isRegisterSize(const GCNSubtarget &ST, unsigned Size) {
   return ((ST.useRealTrue16Insts() && Size == 16) || Size % 32 == 0) &&
          Size <= MaxRegisterSize;
@@ -1070,9 +1063,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
   if (ST.hasCvtPkF16F32Inst()) {
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}})
-        .fewerElementsIf(all(elementTypeIs(0, S16), vectorWiderThan(0, 32),
-                             numElementsPowerOf2(0), elementTypeIs(1, S32)),
-                         changeTo(0, V2S16));
+        .clampMaxNumElements(0, S16, 2);
   } else {
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
   }
