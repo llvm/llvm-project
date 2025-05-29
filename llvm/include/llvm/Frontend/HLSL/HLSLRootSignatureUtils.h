@@ -110,8 +110,9 @@ public:
   //   insert(E) -> true
   //   intervals: [0;unbounded] -> E
   //
-  // Returns if the first overlapping range when inserting
-  // (same return as getOverlapping)
+  // Returns a reference to the first RangeInfo that overlaps with
+  // [Info.LowerBound;Info.UpperBound], or, std::nullopt if there is no overlap
+  // (equivalent to getOverlapping)
   std::optional<const RangeInfo *> insert(const RangeInfo &Info);
 };
 
