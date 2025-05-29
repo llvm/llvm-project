@@ -639,3 +639,5 @@ the input argument lists. Edits should be one of the following forms:
 
 - `Ox`: Removes all flags matching `O` or `O[sz0-9]` and adds `Ox` at the end
   of the command line.
+
+This environment variable does not affect the options added by the config files.
