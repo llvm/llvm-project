@@ -320,7 +320,7 @@ func.func @scaling_truncf_f32_to_f4E2M1FN(%arg0 : f32, %arg1: f8E8M0FNU) -> f4E2
 // SCHECK: %[[C127:.+]] = arith.constant 127 : i32
 // SCHECK: %[[CN127:.+]] = arith.constant -127 : i32
 // SCHECK: %[[BITCASTI8:.+]] =  arith.bitcast %arg1 : f8E8M0FNU to i8
-// SCHECK: %[[EXTI:.+]] = arith.extsi %[[BITCASTI8]] : i8 to i32
+// SCHECK: %[[EXTI:.+]] = arith.extui %[[BITCASTI8]] : i8 to i32
 // SCHECK: %[[UNBIASEDSCALE:.+]] = arith.subi %[[EXTI]], %[[C127]] : i32
 // SCHECK: %[[NORMALIZED:.+]] = arith.subi %[[UNBIASEDSCALE]], %[[C2]] : i32
 // SCHECK: %[[UPPERCOND:.+]] = arith.cmpi sgt, %[[NORMALIZED]], %[[C127]] : i32
@@ -354,7 +354,7 @@ func.func @scaling_truncf_vector_f16_to_f6E3M2FN(%arg0 : vector<4xf16>, %arg1: v
 // SCHECK: %[[C127:.+]] = arith.constant dense<127> : vector<4xi32>
 // SCHECK: %[[CN127:.+]] = arith.constant dense<-127> : vector<4xi32>
 // SCHECK: %[[BITCASTI8:.+]] =  arith.bitcast %arg1 : vector<4xf8E8M0FNU> to vector<4xi8>
-// SCHECK: %[[EXTI:.+]] = arith.extsi %[[BITCASTI8]] : vector<4xi8> to vector<4xi32>
+// SCHECK: %[[EXTI:.+]] = arith.extui %[[BITCASTI8]] : vector<4xi8> to vector<4xi32>
 // SCHECK: %[[UNBIASEDSCALE:.+]] = arith.subi %[[EXTI]], %[[C127]] :  vector<4xi32>
 // SCHECK: %[[NORMALIZED:.+]] = arith.subi %[[UNBIASEDSCALE]], %[[C2]] : vector<4xi32>
 // SCHECK: %[[UPPERCOND:.+]] = arith.cmpi sgt, %[[NORMALIZED]], %[[C127]] : vector<4xi32>
@@ -386,10 +386,19 @@ func.func @scaling_truncf_propagate_rounding_mode(%arg0 : vector<4xf16>, %arg1: 
 // SCHECK: return %[[TRUNCF]] : vector<4xf6E3M2FN>
 
 // -----
-
-func.func @invalid_scaling_truncf_to_f4E2M1FN(%arg0: f16, %arg1 : f16) -> f4E2M1FN {
-    // expected-error@+1 {{failed to legalize operation 'arith.scaling_truncf' that was explicitly marked illegal}}
+func.func @scaling_truncf_f16_to_f4E2M1FN_using_f16_scales(%arg0: f16, %arg1 : f16) -> f4E2M1FN {
     %0 = arith.scaling_truncf %arg0, %arg1 : f16, f16 to f4E2M1FN
+    return %0 : f4E2M1FN
+}
+// SCHECK-LABLE: @scaling_truncf_f16_to_f4E2M1FN_using_f16_scales
+// SCHECK: %[[SCALETRUNCF:.+]] = arith.truncf %arg1 : f16 to f8E8M0FN
+// SCHECK: return
+
+// -----
+
+func.func @invalid_scaling_truncf_to_f4E2M1FN(%arg0: f16, %arg1 : f8E5M2FNUZ) -> f4E2M1FN {
+    // expected-error@+1 {{failed to legalize operation 'arith.scaling_truncf' that was explicitly marked illegal}}
+    %0 = arith.scaling_truncf %arg0, %arg1 : f16, f8E5M2FNUZ to f4E2M1FN
     return %0 : f4E2M1FN
 }
 
@@ -478,9 +487,23 @@ func.func @scaling_extf_to_f32(%arg0: f4E2M1FN, %arg1 : f8E8M0FNU) -> f32 {
 
 // -----
 
-func.func @invalid_scaling_extf_to_f32(%arg0: f4E2M1FN, %arg1 : f16) -> f32 {
-    // expected-error@+1 {{failed to legalize operation 'arith.scaling_extf' that was explicitly marked illegal}}
+func.func @scaling_extf_to_f32_using_f16_scales(%arg0: f4E2M1FN, %arg1 : f16) -> f32 {
     %0 = arith.scaling_extf %arg0, %arg1 : f4E2M1FN, f16 to f32
+    return %0 : f32 
+}
+
+// SCHECK-LABEL: @scaling_extf_to_f32_using_f16_scales
+// SCHECK: %[[TRUNCF_SCALE:.+]] = arith.truncf %arg1 : f16 to f8E8M0FNU
+// SCHECK: %[[EXT_SCALE:.+]] = arith.extf %[[TRUNCF_SCALE]] : f8E8M0FNU to f32
+// SCHECK: %[[EXT_INPUT:.+]] = arith.extf %arg0 : f4E2M1FN to f32
+// SCHECK: %[[RESULT:.+]] = arith.mulf %[[EXT_INPUT]], %[[EXT_SCALE]] : f32
+// SCHECK: return %[[RESULT]]
+
+// -----
+
+func.func @invalid_scaling_extf_to_f32(%arg0: f4E2M1FN, %arg1 : f8E5M2FNUZ) -> f32 {
+    // expected-error@+1 {{failed to legalize operation 'arith.scaling_extf' that was explicitly marked illegal}}
+    %0 = arith.scaling_extf %arg0, %arg1 : f4E2M1FN, f8E5M2FNUZ to f32
     return %0 : f32
 }
 

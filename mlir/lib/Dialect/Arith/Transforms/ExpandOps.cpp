@@ -428,7 +428,13 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     Value inputOperand = op.getIn();
     Value scaleOperand = op.getScale();
-    if (!llvm::isa<Float8E8M0FNUType>(getElementTypeOrSelf(scaleOperand))) {
+    Type scaleETy = getElementTypeOrSelf(scaleOperand);
+    // allow implicit exponent extraction from 16/32 bits floats
+    if (scaleETy.getIntOrFloatBitWidth() >= 16) {
+      scaleETy = b.getF8E8M0Type();
+      scaleOperand = b.create<arith::TruncFOp>(scaleETy, scaleOperand);
+    }
+    if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
           op, "scaling extf is not using scale operand of type f8E8M0FNU");
     }
@@ -451,11 +457,18 @@ struct ScalingTruncFOpConverter
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     Value inputOperand = op.getIn();
     Value scaleOperand = op.getScale();
-    if (!llvm::isa<Float8E8M0FNUType>(getElementTypeOrSelf(scaleOperand))) {
+    Type scaleTy = scaleOperand.getType();
+    Type scaleETy = getElementTypeOrSelf(scaleOperand);
+    // allow implicit exponent extraction from 16/32 bits floats
+    if (scaleETy.getIntOrFloatBitWidth() >= 16) {
+      scaleETy = b.getF8E8M0Type();
+      scaleOperand = b.create<arith::TruncFOp>(scaleETy, scaleOperand);
+      scaleTy = scaleOperand.getType();
+    }
+    if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
           op, "scaling truncf is not using scale operand of type f8E8M0FNU");
     }
-    auto scaleTy = scaleOperand.getType();
 
     Type resultTy = op.getType();
     Type resultETy = getElementTypeOrSelf(op.getOut());
@@ -487,7 +500,7 @@ struct ScalingTruncFOpConverter
     Value c127 = createConst(op->getLoc(), i32Ty, 127, rewriter);
     Value cNeg127 = createConst(op->getLoc(), i32Ty, -127, rewriter);
     Value scaleI8 = b.create<arith::BitcastOp>(i8Ty, scaleOperand);
-    Value scaleI32 = b.create<arith::ExtSIOp>(i32Ty, scaleI8);
+    Value scaleI32 = b.create<arith::ExtUIOp>(i32Ty, scaleI8);
     Value unbiasedScale = b.create<arith::SubIOp>(scaleI32, c127);
     Value normalizedUnbiasedScale =
         b.create<arith::SubIOp>(unbiasedScale, cMaxNormalExponent);
