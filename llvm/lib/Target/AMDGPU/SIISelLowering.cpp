@@ -6906,7 +6906,7 @@ SDValue SITargetLowering::splitFP_ROUNDVectorOp(SDValue Op,
                                                 SelectionDAG &DAG) const {
   EVT DstVT = Op.getValueType();
   unsigned NumElts = DstVT.getVectorNumElements();
-  assert(isPowerOf2_32(NumElts) && "Number of elements must be power of 2");
+  assert(NumElts > 2 && isPowerOf2_32(NumElts));
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
 
@@ -6930,7 +6930,7 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     assert(Subtarget->hasCvtPkF16F32Inst() && "support v_cvt_pk_f16_f32");
     if (SrcVT.getScalarType() != MVT::f32)
       return SDValue();
-    return DstVT == MVT::v2f16 ? Op : splitFP_ROUNDVectorOp(Op, DAG);
+    return SrcVT == MVT::v2f32 ? Op : splitFP_ROUNDVectorOp(Op, DAG);
   }
 
   if (SrcVT.getScalarType() != MVT::f64)
