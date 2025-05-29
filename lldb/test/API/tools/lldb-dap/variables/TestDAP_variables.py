@@ -104,7 +104,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 )
                 self.verify_values(verify_dict[name], variable, varref_dict)
 
-    def darwin_dwarf_missing_obj(self, initCommands):
+    def darwin_dwarf_missing_obj(self, initCommands=[]):
         self.build(debug_info="dwarf")
         program = self.getBuildArtifact("a.out")
         main_obj = self.getBuildArtifact("main.o")
@@ -791,13 +791,13 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         """
         Test that if we build a binary with DWARF in .o files and we remove
         the .o file for main.cpp, that we get a variable named "<error>"
-        whose value matches the appriopriate error. Errors when getting
+        whose value matches the appropriate error. Errors when getting
         variables are returned in the LLDB API when the user should be
         notified of issues that can easily be solved by rebuilding or
         changing compiler options and are designed to give better feedback
         to the user.
         """
-        self.darwin_dwarf_missing_obj(None)
+        self.darwin_dwarf_missing_obj([])
 
     @no_debug_info_test
     @skipUnlessDarwin

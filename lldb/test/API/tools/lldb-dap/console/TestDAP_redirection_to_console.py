@@ -16,7 +16,7 @@ class TestDAP_redirection_to_console(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(
-            program, lldbDAPEnv={"LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION": ""}
+            program, adapter_env={"LLDB_DAP_TEST_STDOUT_STDERR_REDIRECTION": "1"}
         )
 
         source = "main.cpp"
