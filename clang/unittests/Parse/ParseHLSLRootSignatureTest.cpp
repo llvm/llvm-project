@@ -225,7 +225,11 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   const llvm::StringLiteral Source = R"cc(
-    StaticSampler(s0, mipLODBias = 0)
+    StaticSampler(s0),
+    StaticSampler(s0, maxAnisotropy = 3,
+      minLOD = 4.2f, mipLODBias = 0.23e+3,
+      maxLOD = 9000,
+    )
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -241,13 +245,27 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
 
   ASSERT_FALSE(Parser.parse());
 
-  ASSERT_EQ(Elements.size(), 1u);
+  ASSERT_EQ(Elements.size(), 2u);
 
+  // Check default values are as expected
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 16u);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 0.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 3.402823466e+38f);
+
+  // Check values can be set as expected
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 230.f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 3u);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 4.2f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 9000.f);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
