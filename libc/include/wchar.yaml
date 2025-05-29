@@ -58,5 +58,3 @@ functions:
       - type: wchar_t *
       - type: const wchar_t *
       - type: size_t
-  
-
