@@ -768,6 +768,11 @@ let TargetPrefix = "nvvm" in {
       DefaultAttrsIntrinsic<[], [llvm_i32_ty],
                             [IntrConvergent, IntrNoMem, IntrHasSideEffects]>;
 
+  // Performance Monitor Events (pm events) intrinsics
+  def int_nvvm_pm_event_mask : NVVMBuiltin,
+      DefaultAttrsIntrinsic<[], [llvm_i16_ty],
+                [IntrConvergent, IntrNoMem, IntrHasSideEffects,
+                 ImmArg<ArgIndex<0>>]>;
 //
 // Min Max
 //
