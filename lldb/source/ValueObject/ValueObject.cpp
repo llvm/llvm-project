@@ -657,7 +657,7 @@ bool ValueObject::IsCStringContainer(bool check_pointer) {
     return true;
   if (type_flags.Test(eTypeIsArray))
     return true;
-  addr_t cstr_address = GetPointerValue().second;
+  addr_t cstr_address = GetPointerValue().address;
   return (cstr_address != LLDB_INVALID_ADDRESS);
 }
 
@@ -706,7 +706,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
     lldb::DataBufferSP data_sp(heap_buf_ptr =
                                    new lldb_private::DataBufferHeap());
 
-    auto [addr_type, addr] =
+    auto [addr, addr_type] =
         is_pointer_type ? GetPointerValue() : GetAddressOf(true);
 
     switch (addr_type) {
@@ -899,8 +899,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
   const Flags type_flags(GetTypeInfo(&elem_or_pointee_compiler_type));
   if (type_flags.AnySet(eTypeIsArray | eTypeIsPointer) &&
       elem_or_pointee_compiler_type.IsCharType()) {
-    addr_t cstr_address = LLDB_INVALID_ADDRESS;
-    AddressType cstr_address_type = eAddressTypeInvalid;
+    AddrAndType cstr_address;
 
     size_t cstr_len = 0;
     bool capped_data = false;
@@ -915,14 +914,15 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
           cstr_len = max_length;
         }
       }
-      std::tie(cstr_address_type, cstr_address) = GetAddressOf(true);
+      cstr_address = GetAddressOf(true);
     } else {
       // We have a pointer
-      std::tie(cstr_address_type, cstr_address) = GetPointerValue();
+      cstr_address = GetPointerValue();
     }
 
-    if (cstr_address == 0 || cstr_address == LLDB_INVALID_ADDRESS) {
-      if (cstr_address_type == eAddressTypeHost && is_array) {
+    if (cstr_address.address == 0 ||
+        cstr_address.address == LLDB_INVALID_ADDRESS) {
+      if (cstr_address.type == eAddressTypeHost && is_array) {
         const char *cstr = GetDataExtractor().PeekCStr(0);
         if (cstr == nullptr) {
           s << "<invalid address>";
@@ -941,7 +941,7 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       }
     }
 
-    Address cstr_so_addr(cstr_address);
+    Address cstr_so_addr(cstr_address.address);
     DataExtractor data;
     if (cstr_len > 0 && honor_array) {
       // I am using GetPointeeData() here to abstract the fact that some
@@ -1196,7 +1196,7 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
       return value_or_err->isNonZero();
   }
   if (val_type.IsArrayType())
-    return GetAddressOf().second != 0;
+    return GetAddressOf().address != 0;
 
   return llvm::make_error<llvm::StringError>("type cannot be converted to bool",
                                              llvm::inconvertibleErrorCode());
@@ -1597,51 +1597,51 @@ bool ValueObject::DumpPrintableRepresentation(
   return var_success;
 }
 
-std::pair<AddressType, addr_t>
+ValueObject::AddrAndType
 ValueObject::GetAddressOf(bool scalar_is_load_address) {
   // Can't take address of a bitfield
   if (IsBitfield())
-    return {eAddressTypeInvalid, LLDB_INVALID_ADDRESS};
+    return {};
 
   if (!UpdateValueIfNeeded(false))
-    return {eAddressTypeInvalid, LLDB_INVALID_ADDRESS};
+    return {};
 
   switch (m_value.GetValueType()) {
   case Value::ValueType::Invalid:
-    return {eAddressTypeInvalid, LLDB_INVALID_ADDRESS};
+    return {};
   case Value::ValueType::Scalar:
     if (scalar_is_load_address) {
-      return {eAddressTypeLoad,
-              m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS)};
+      return {m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS),
+              eAddressTypeLoad};
     }
-    return {eAddressTypeInvalid, LLDB_INVALID_ADDRESS};
+    return {};
 
   case Value::ValueType::LoadAddress:
   case Value::ValueType::FileAddress:
-    return {m_value.GetValueAddressType(),
-            m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS)};
+    return {m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS),
+            m_value.GetValueAddressType()};
   case Value::ValueType::HostAddress:
-    return {m_value.GetValueAddressType(), LLDB_INVALID_ADDRESS};
+    return {LLDB_INVALID_ADDRESS, m_value.GetValueAddressType()};
   }
   llvm_unreachable("Unhandled value type!");
 }
 
-std::pair<AddressType, addr_t> ValueObject::GetPointerValue() {
+ValueObject::AddrAndType ValueObject::GetPointerValue() {
   if (!UpdateValueIfNeeded(false))
-    return {eAddressTypeInvalid, LLDB_INVALID_ADDRESS};
+    return {};
 
   switch (m_value.GetValueType()) {
   case Value::ValueType::Invalid:
-    return {eAddressTypeInvalid, LLDB_INVALID_ADDRESS};
+    return {};
   case Value::ValueType::Scalar:
-    return {GetAddressTypeOfChildren(),
-            m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS)};
+    return {m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS),
+            GetAddressTypeOfChildren()};
 
   case Value::ValueType::HostAddress:
   case Value::ValueType::LoadAddress:
   case Value::ValueType::FileAddress: {
     lldb::offset_t data_offset = 0;
-    return {GetAddressTypeOfChildren(), m_data.GetAddress(&data_offset)};
+    return {m_data.GetAddress(&data_offset), GetAddressTypeOfChildren()};
   }
   }
 
@@ -2732,7 +2732,7 @@ ValueObjectSP ValueObject::CreateConstantValue(ConstString name) {
 
     valobj_sp = ValueObjectConstResult::Create(
         exe_ctx.GetBestExecutionContextScope(), GetCompilerType(), name, data,
-        GetAddressOf().second);
+        GetAddressOf().address);
   }
 
   if (!valobj_sp) {
@@ -2858,7 +2858,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
   if (m_addr_of_valobj_sp)
     return m_addr_of_valobj_sp;
 
-  auto [address_type, addr] = GetAddressOf(/*scalar_is_load_address=*/false);
+  auto [addr, address_type] = GetAddressOf(/*scalar_is_load_address=*/false);
   error.Clear();
   if (addr != LLDB_INVALID_ADDRESS && address_type != eAddressTypeHost) {
     switch (address_type) {
@@ -2945,7 +2945,7 @@ lldb::ValueObjectSP ValueObject::Clone(ConstString new_name) {
 ValueObjectSP ValueObject::CastPointerType(const char *name,
                                            CompilerType &compiler_type) {
   ValueObjectSP valobj_sp;
-  addr_t ptr_value = GetPointerValue().second;
+  addr_t ptr_value = GetPointerValue().address;
 
   if (ptr_value != LLDB_INVALID_ADDRESS) {
     Address ptr_addr(ptr_value);
@@ -2958,7 +2958,7 @@ ValueObjectSP ValueObject::CastPointerType(const char *name,
 
 ValueObjectSP ValueObject::CastPointerType(const char *name, TypeSP &type_sp) {
   ValueObjectSP valobj_sp;
-  addr_t ptr_value = GetPointerValue().second;
+  addr_t ptr_value = GetPointerValue().address;
 
   if (ptr_value != LLDB_INVALID_ADDRESS) {
     Address ptr_addr(ptr_value);
@@ -2972,7 +2972,7 @@ ValueObjectSP ValueObject::CastPointerType(const char *name, TypeSP &type_sp) {
 lldb::addr_t ValueObject::GetLoadAddress() {
   if (auto target_sp = GetTargetSP()) {
     const bool scalar_is_load_address = true;
-    auto [addr_type, addr_value] = GetAddressOf(scalar_is_load_address);
+    auto [addr_value, addr_type] = GetAddressOf(scalar_is_load_address);
     if (addr_type == eAddressTypeFile) {
       lldb::ModuleSP module_sp(GetModule());
       if (!module_sp)

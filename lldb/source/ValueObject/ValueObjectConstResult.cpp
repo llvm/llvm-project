@@ -265,7 +265,7 @@ lldb::ValueObjectSP ValueObjectConstResult::AddressOf(Status &error) {
   return m_impl.AddressOf(error);
 }
 
-std::pair<AddressType, addr_t>
+ValueObject::AddrAndType
 ValueObjectConstResult::GetAddressOf(bool scalar_is_load_address) {
   return m_impl.GetAddressOf(scalar_is_load_address);
 }

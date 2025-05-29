@@ -50,7 +50,7 @@ lldb::ValueObjectSP ValueObjectConstResultChild::AddressOf(Status &error) {
   return m_impl.AddressOf(error);
 }
 
-std::pair<AddressType, lldb::addr_t>
+ValueObject::AddrAndType
 ValueObjectConstResultChild::GetAddressOf(bool scalar_is_load_address) {
   return m_impl.GetAddressOf(scalar_is_load_address);
 }

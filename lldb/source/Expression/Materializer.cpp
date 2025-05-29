@@ -509,7 +509,7 @@ public:
       }
     } else {
       lldb::addr_t addr_of_valobj =
-          valobj_sp->GetAddressOf(/*scalar_is_load_address=*/false).second;
+          valobj_sp->GetAddressOf(/*scalar_is_load_address=*/false).address;
       if (addr_of_valobj != LLDB_INVALID_ADDRESS) {
         Status write_error;
         map.WritePointerToMemory(load_addr, addr_of_valobj, write_error);

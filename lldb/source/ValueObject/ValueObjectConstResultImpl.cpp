@@ -206,16 +206,16 @@ ValueObjectConstResultImpl::Cast(const CompilerType &compiler_type) {
   return result_cast->GetSP();
 }
 
-std::pair<AddressType, addr_t>
+ValueObject::AddrAndType
 ValueObjectConstResultImpl::GetAddressOf(bool scalar_is_load_address) {
 
   if (m_impl_backend == nullptr)
-    return {eAddressTypeInvalid, 0};
+    return {0, eAddressTypeInvalid};
 
   if (m_live_address == LLDB_INVALID_ADDRESS)
     return m_impl_backend->ValueObject::GetAddressOf(scalar_is_load_address);
 
-  return {m_live_address_type, m_live_address};
+  return {m_live_address, m_live_address_type};
 }
 
 size_t ValueObjectConstResultImpl::GetPointeeData(DataExtractor &data,

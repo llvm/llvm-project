@@ -113,17 +113,16 @@ lldb_private::formatters::ExtractIndexFromString(const char *item_name) {
 
 Address
 lldb_private::formatters::GetArrayAddressOrPointerValue(ValueObject &valobj) {
-  lldb::addr_t data_addr = LLDB_INVALID_ADDRESS;
-  AddressType type = eAddressTypeInvalid;
+  ValueObject::AddrAndType data_addr;
 
   if (valobj.IsPointerType())
-    std::tie(type, data_addr) = valobj.GetPointerValue();
+    data_addr = valobj.GetPointerValue();
   else if (valobj.IsArrayType())
-    std::tie(type, data_addr) =
-        valobj.GetAddressOf(/*scalar_is_load_address=*/true);
+    data_addr = valobj.GetAddressOf(/*scalar_is_load_address=*/true);
 
-  if (data_addr != LLDB_INVALID_ADDRESS && type == eAddressTypeFile)
-    return Address(data_addr, valobj.GetModule()->GetSectionList());
+  if (data_addr.address != LLDB_INVALID_ADDRESS &&
+      data_addr.type == eAddressTypeFile)
+    return Address(data_addr.address, valobj.GetModule()->GetSectionList());
 
-  return data_addr;
+  return data_addr.address;
 }

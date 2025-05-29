@@ -48,8 +48,7 @@ public:
 
   lldb::ValueObjectSP AddressOf(Status &error) override;
 
-  std::pair<AddressType, lldb::addr_t>
-  GetAddressOf(bool scalar_is_load_address = true) override;
+  AddrAndType GetAddressOf(bool scalar_is_load_address = true) override;
 
   size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                         uint32_t item_count = 1) override;

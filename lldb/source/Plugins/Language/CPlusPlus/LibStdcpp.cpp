@@ -240,7 +240,7 @@ VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   const bool scalar_is_load_addr = true;
-  auto [addr_type, addr_of_string] =
+  auto [addr_of_string, addr_type] =
       valobj.IsPointerOrReferenceType()
           ? valobj.GetPointerValue()
           : valobj.GetAddressOf(scalar_is_load_addr);
@@ -290,7 +290,7 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
 bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   const bool scalar_is_load_addr = true;
-  auto [addr_type, addr_of_string] = valobj.GetAddressOf(scalar_is_load_addr);
+  auto [addr_of_string, addr_type] = valobj.GetAddressOf(scalar_is_load_addr);
   if (addr_of_string != LLDB_INVALID_ADDRESS) {
     switch (addr_type) {
     case eAddressTypeLoad: {
