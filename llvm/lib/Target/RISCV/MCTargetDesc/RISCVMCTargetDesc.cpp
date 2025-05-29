@@ -65,6 +65,7 @@ static MCAsmInfo *createRISCVMCAsmInfo(const MCRegisterInfo &MRI,
     MAI = new RISCVMCAsmInfo(TT);
   else if (TT.isOSBinFormatMachO())
     MAI = new RISCVMCAsmInfoDarwin();
+  assert(MAI && "Missing MCAsmInfo.");
 
   unsigned SP = MRI.getDwarfRegNum(RISCV::X2, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, SP, 0);
