@@ -4385,25 +4385,10 @@ static bool isUnmergeHalf(const MachineInstr *MI,
          MI->getOperand(1).isDef() && !MI->getOperand(2).isDef();
 }
 
-static std::optional<std::pair<const MachineOperand *, SrcStatus>>
-retOpRegStat(const MachineOperand *Op, SrcStatus Stat,
-             std::pair<const MachineOperand *, SrcStatus> &Curr) {
-  if (Stat != SrcStatus::INVALID &&
-      ((Op->isReg() && !(Op->getReg().isPhysical())))) {
-    return std::optional<std::pair<const MachineOperand *, SrcStatus>>(
-        {Op, Stat});
-  }
-
-  return std::nullopt;
-}
-
-static std::optional<std::pair<const MachineOperand *, SrcStatus>>
-retOpImmStat(const MachineOperand *Op, SrcStatus Stat,
-             std::pair<const MachineOperand *, SrcStatus> &Curr) {
-  // Only float point inline constant allowed.
-  if (Stat != SrcStatus::INVALID && Op->isFPImm()) {
-    return std::optional<std::pair<const MachineOperand *, SrcStatus>>(
-        {Op, Stat});
+static std::optional<std::pair<Register, SrcStatus>>
+retRegStat(Register Reg, SrcStatus Stat) {
+  if (Stat != SrcStatus::INVALID && !(Reg.isPhysical())) {
+    return std::optional<std::pair<Register, SrcStatus>>({Reg, Stat});
   }
 
   return std::nullopt;
@@ -4411,9 +4396,9 @@ retOpImmStat(const MachineOperand *Op, SrcStatus Stat,
 
 enum class TypeClass { VECTOR_OF_TWO, SCALAR, NONE_OF_LISTED };
 
-static TypeClass isVectorOfTwoOrScalar(const MachineOperand *Op,
+static TypeClass isVectorOfTwoOrScalar(Register Reg,
                                        const MachineRegisterInfo &MRI) {
-  LLT OpTy = MRI.getType(Op->getReg());
+  LLT OpTy = MRI.getType(Reg);
   if (OpTy.isScalar())
     return TypeClass::SCALAR;
   if (OpTy.isVector() && OpTy.getNumElements() == 2)
@@ -4421,17 +4406,9 @@ static TypeClass isVectorOfTwoOrScalar(const MachineOperand *Op,
   return TypeClass::NONE_OF_LISTED;
 }
 
-static bool isSameOperand(const MachineOperand *Op1,
-                          const MachineOperand *Op2) {
-  if (Op1->isReg())
-    return Op2->isReg() && Op1->getReg() == Op2->getReg();
-
-  return Op1->isIdenticalTo(*Op2);
-}
-
-static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
+static SrcStatus getNegStatus(Register Reg, SrcStatus S,
                               const MachineRegisterInfo &MRI) {
-  TypeClass NegType = isVectorOfTwoOrScalar(Op, MRI);
+  TypeClass NegType = isVectorOfTwoOrScalar(Reg, MRI);
   if (NegType != TypeClass::VECTOR_OF_TWO && NegType != TypeClass::SCALAR)
     return SrcStatus::INVALID;
 
@@ -4583,29 +4560,21 @@ static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
   }
 }
 
-static std::optional<std::pair<const MachineOperand *, SrcStatus>>
-calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
+static std::optional<std::pair<Register, SrcStatus>>
+calcNextStatus(std::pair<Register, SrcStatus> Curr,
                const MachineRegisterInfo &MRI) {
-  if (!Curr.first->isReg())
-    return std::nullopt;
-
-  const MachineInstr *MI = Curr.first->isDef()
-                               ? Curr.first->getParent()
-                               : MRI.getVRegDef(Curr.first->getReg());
+  const MachineInstr *MI = MRI.getVRegDef(Curr.first);
 
   unsigned Opc = MI->getOpcode();
 
   // Handle general Opc cases.
   switch (Opc) {
-  case AMDGPU::G_CONSTANT:
-  case AMDGPU::G_FCONSTANT:
-    return retOpImmStat(&MI->getOperand(1), Curr.second, Curr);
   case AMDGPU::G_BITCAST:
   case AMDGPU::COPY:
-    return retOpRegStat(&MI->getOperand(1), Curr.second, Curr);
+    return retRegStat(MI->getOperand(1).getReg(), Curr.second);
   case AMDGPU::G_FNEG:
-    return retOpRegStat(&MI->getOperand(1),
-                        getNegStatus(Curr.first, Curr.second, MRI), Curr);
+    return retRegStat(MI->getOperand(1).getReg(),
+                      getNegStatus(Curr.first, Curr.second, MRI));
   default:
     break;
   }
@@ -4614,12 +4583,11 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
   switch (Curr.second) {
   case SrcStatus::IS_SAME:
     if (isTruncHalf(MI, MRI))
-      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF, Curr);
+      return retRegStat(MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF);
     else if (isUnmergeHalf(MI, MRI)) {
-      if (isSameOperand(Curr.first, &MI->getOperand(0)))
-        return retOpRegStat(&MI->getOperand(2), SrcStatus::IS_LOWER_HALF, Curr);
-      else
-        return retOpRegStat(&MI->getOperand(2), SrcStatus::IS_UPPER_HALF, Curr);
+      if (Curr.first == MI->getOperand(0).getReg())
+        return retRegStat(MI->getOperand(2).getReg(), SrcStatus::IS_LOWER_HALF);
+      return retRegStat(MI->getOperand(2).getReg(), SrcStatus::IS_UPPER_HALF);
     }
     break;
   case SrcStatus::IS_HI_NEG:
@@ -4630,34 +4598,33 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
       // Src = [SrcHi, SrcLo] = [-CurrHi, CurrLo]
       //     = [-OpLowerHi, OpLowerLo]
       //     = -OpLower
-      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF_NEG,
-                          Curr);
+      return retRegStat(MI->getOperand(1).getReg(),
+                        SrcStatus::IS_LOWER_HALF_NEG);
     } else if (isUnmergeHalf(MI, MRI)) {
-      if (isSameOperand(Curr.first, &MI->getOperand(0)))
-        return retOpRegStat(&MI->getOperand(2), SrcStatus::IS_LOWER_HALF_NEG,
-                            Curr);
-      else
-        return retOpRegStat(&MI->getOperand(2), SrcStatus::IS_UPPER_HALF_NEG,
-                            Curr);
+      if (Curr.first == MI->getOperand(0).getReg())
+        return retRegStat(MI->getOperand(2).getReg(),
+                          SrcStatus::IS_LOWER_HALF_NEG);
+      return retRegStat(MI->getOperand(2).getReg(),
+                        SrcStatus::IS_UPPER_HALF_NEG);
     }
     break;
   case SrcStatus::IS_UPPER_HALF:
     if (isShlHalf(MI, MRI))
-      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF, Curr);
+      return retRegStat(MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF);
     break;
   case SrcStatus::IS_LOWER_HALF:
     if (isLshrHalf(MI, MRI))
-      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_UPPER_HALF, Curr);
+      return retRegStat(MI->getOperand(1).getReg(), SrcStatus::IS_UPPER_HALF);
     break;
   case SrcStatus::IS_UPPER_HALF_NEG:
     if (isShlHalf(MI, MRI))
-      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF_NEG,
-                          Curr);
+      return retRegStat(MI->getOperand(1).getReg(),
+                        SrcStatus::IS_LOWER_HALF_NEG);
     break;
   case SrcStatus::IS_LOWER_HALF_NEG:
     if (isLshrHalf(MI, MRI))
-      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_UPPER_HALF_NEG,
-                          Curr);
+      return retRegStat(MI->getOperand(1).getReg(),
+                        SrcStatus::IS_UPPER_HALF_NEG);
     break;
   default:
     break;
@@ -4672,8 +4639,8 @@ private:
   bool HasOpsel = true;
 
 public:
-  searchOptions(const MachineOperand *RootOp, const MachineRegisterInfo &MRI) {
-    const MachineInstr *MI = RootOp->getParent();
+  searchOptions(Register Reg, const MachineRegisterInfo &MRI) {
+    const MachineInstr *MI = MRI.getVRegDef(Reg);
     unsigned Opc = MI->getOpcode();
 
     if (Opc < TargetOpcode::GENERIC_OP_END) {
@@ -4699,12 +4666,12 @@ public:
   }
 };
 
-static SmallVector<std::pair<const MachineOperand *, SrcStatus>>
-getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
+static SmallVector<std::pair<Register, SrcStatus>>
+getSrcStats(Register Reg, const MachineRegisterInfo &MRI,
             searchOptions SearchOptions, int MaxDepth = 6) {
   int Depth = 0;
-  auto Curr = calcNextStatus({Op, SrcStatus::IS_SAME}, MRI);
-  SmallVector<std::pair<const MachineOperand *, SrcStatus>> Statlist;
+  auto Curr = calcNextStatus({Reg, SrcStatus::IS_SAME}, MRI);
+  SmallVector<std::pair<Register, SrcStatus>> Statlist;
 
   while (Depth <= MaxDepth && Curr.has_value()) {
     Depth++;
@@ -4716,12 +4683,11 @@ getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
   return Statlist;
 }
 
-static std::pair<const MachineOperand *, SrcStatus>
-getLastSameOrNeg(const MachineOperand *Op, const MachineRegisterInfo &MRI,
+static std::pair<Register, SrcStatus>
+getLastSameOrNeg(Register Reg, const MachineRegisterInfo &MRI,
                  searchOptions SearchOptions, int MaxDepth = 6) {
   int Depth = 0;
-  std::pair<const MachineOperand *, SrcStatus> LastSameOrNeg = {
-      Op, SrcStatus::IS_SAME};
+  std::pair<Register, SrcStatus> LastSameOrNeg = {Reg, SrcStatus::IS_SAME};
   auto Curr = calcNextStatus(LastSameOrNeg, MRI);
 
   while (Depth <= MaxDepth && Curr.has_value()) {
@@ -4739,10 +4705,10 @@ getLastSameOrNeg(const MachineOperand *Op, const MachineRegisterInfo &MRI,
   return LastSameOrNeg;
 }
 
-static bool isSameBitWidth(const MachineOperand *Op1, const MachineOperand *Op2,
+static bool isSameBitWidth(Register Reg1, Register Reg2,
                            const MachineRegisterInfo &MRI) {
-  unsigned Width1 = MRI.getType(Op1->getReg()).getSizeInBits();
-  unsigned Width2 = MRI.getType(Op2->getReg()).getSizeInBits();
+  unsigned Width1 = MRI.getType(Reg1).getSizeInBits();
+  unsigned Width2 = MRI.getType(Reg2).getSizeInBits();
   return Width1 == Width2;
 }
 
@@ -4771,45 +4737,31 @@ static unsigned updateMods(SrcStatus HiStat, SrcStatus LoStat, unsigned Mods) {
   return Mods;
 }
 
-static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat,
-                          const MachineOperand *NewOp,
-                          const MachineOperand *RootOp, const SIInstrInfo &TII,
+static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat, Register NewReg,
+                          Register RootReg, const SIInstrInfo &TII,
                           const MachineRegisterInfo &MRI) {
-  if (NewOp->isReg()) {
-    auto IsHalfState = [](SrcStatus S) {
-      return S == SrcStatus::IS_UPPER_HALF ||
-             S == SrcStatus::IS_UPPER_HALF_NEG ||
-             S == SrcStatus::IS_LOWER_HALF || S == SrcStatus::IS_LOWER_HALF_NEG;
-    };
-    return isSameBitWidth(NewOp, RootOp, MRI) && IsHalfState(LoStat) &&
-           IsHalfState(HiStat);
-  }
-  // Only float point inline constant allowed.
-  return ((HiStat == SrcStatus::IS_SAME || HiStat == SrcStatus::IS_HI_NEG) &&
-          (LoStat == SrcStatus::IS_SAME || LoStat == SrcStatus::IS_HI_NEG) &&
-          TII.isInlineConstant(NewOp->getFPImm()->getValueAPF()));
+  auto IsHalfState = [](SrcStatus S) {
+    return S == SrcStatus::IS_UPPER_HALF || S == SrcStatus::IS_UPPER_HALF_NEG ||
+           S == SrcStatus::IS_LOWER_HALF || S == SrcStatus::IS_LOWER_HALF_NEG;
+  };
+  return isSameBitWidth(NewReg, RootReg, MRI) && IsHalfState(LoStat) &&
+         IsHalfState(HiStat);
 }
 
-std::pair<const MachineOperand *, unsigned>
-AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
-                                               const MachineRegisterInfo &MRI,
-                                               bool IsDOT) const {
+std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
+    Register RootReg, const MachineRegisterInfo &MRI, bool IsDOT) const {
   unsigned Mods = 0;
-  const MachineOperand *Op = RootOp;
   // No modification if Root type is not form of <2 x Type>.
-  if (isVectorOfTwoOrScalar(Op, MRI) != TypeClass::VECTOR_OF_TWO) {
+  if (isVectorOfTwoOrScalar(RootReg, MRI) != TypeClass::VECTOR_OF_TWO) {
     Mods |= SISrcMods::OP_SEL_1;
-    return {Op, Mods};
+    return {RootReg, Mods};
   }
 
-  searchOptions SearchOptions(Op, MRI);
+  searchOptions SearchOptions(RootReg, MRI);
 
-  std::pair<const MachineOperand *, SrcStatus> Stat =
-      getLastSameOrNeg(Op, MRI, SearchOptions);
-  if (!Stat.first->isReg()) {
-    Mods |= SISrcMods::OP_SEL_1;
-    return {Op, Mods};
-  }
+  std::pair<Register, SrcStatus> Stat =
+      getLastSameOrNeg(RootReg, MRI, SearchOptions);
+
   if (Stat.second == SrcStatus::IS_BOTH_NEG)
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
   else if (Stat.second == SrcStatus::IS_HI_NEG)
@@ -4817,36 +4769,35 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
   else if (Stat.second == SrcStatus::IS_LO_NEG)
     Mods ^= SISrcMods::NEG;
 
-  Op = Stat.first;
-  MachineInstr *MI = MRI.getVRegDef(Op->getReg());
+  MachineInstr *MI = MRI.getVRegDef(Stat.first);
 
   if (MI->getOpcode() != AMDGPU::G_BUILD_VECTOR || MI->getNumOperands() != 3 ||
       (IsDOT && Subtarget->hasDOTOpSelHazard())) {
     Mods |= SISrcMods::OP_SEL_1;
-    return {Op, Mods};
+    return {Stat.first, Mods};
   }
 
-  SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistHi =
-      getSrcStats(&MI->getOperand(2), MRI, SearchOptions);
+  SmallVector<std::pair<Register, SrcStatus>> StatlistHi =
+      getSrcStats(MI->getOperand(2).getReg(), MRI, SearchOptions);
 
   if (StatlistHi.empty()) {
     Mods |= SISrcMods::OP_SEL_1;
-    return {Op, Mods};
+    return {Stat.first, Mods};
   }
 
-  SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistLo =
-      getSrcStats(&MI->getOperand(1), MRI, SearchOptions);
+  SmallVector<std::pair<Register, SrcStatus>> StatlistLo =
+      getSrcStats(MI->getOperand(1).getReg(), MRI, SearchOptions);
 
   if (StatlistLo.empty()) {
     Mods |= SISrcMods::OP_SEL_1;
-    return {Op, Mods};
+    return {Stat.first, Mods};
   }
 
   for (int I = StatlistHi.size() - 1; I >= 0; I--) {
     for (int J = StatlistLo.size() - 1; J >= 0; J--) {
-      if (isSameOperand(StatlistHi[I].first, StatlistLo[J].first) &&
+      if (StatlistHi[I].first == StatlistLo[J].first &&
           isValidToPack(StatlistHi[I].second, StatlistLo[J].second,
-                        StatlistHi[I].first, RootOp, TII, MRI))
+                        StatlistHi[I].first, RootReg, TII, MRI))
         return {StatlistHi[I].first,
                 updateMods(StatlistHi[I].second, StatlistLo[J].second, Mods)};
     }
@@ -4854,7 +4805,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
   // Packed instructions do not have abs modifiers.
   Mods |= SISrcMods::OP_SEL_1;
 
-  return {Op, Mods};
+  return {Stat.first, Mods};
 }
 
 int64_t getAllKindImm(const MachineOperand *Op) {
@@ -4870,11 +4821,11 @@ int64_t getAllKindImm(const MachineOperand *Op) {
   }
 }
 
-static bool checkRB(const MachineOperand *Op, unsigned int RBNo,
+static bool checkRB(Register Reg, unsigned int RBNo,
                     const AMDGPURegisterBankInfo &RBI,
                     const MachineRegisterInfo &MRI,
                     const TargetRegisterInfo &TRI) {
-  const RegisterBank *RB = RBI.getRegBank(Op->getReg(), MRI, TRI);
+  const RegisterBank *RB = RBI.getRegBank(Reg, MRI, TRI);
   return RB->getID() == RBNo;
 }
 
@@ -4885,52 +4836,45 @@ static bool checkRB(const MachineOperand *Op, unsigned int RBNo,
 // Thus
 // 1. If RootOp is SGPR, then NewOp can be SGPR or VGPR.
 // 2. If RootOp is VGPR, then NewOp must be VGPR.
-static const MachineOperand *
-getLegalRegBank(const MachineOperand *NewOp, const MachineOperand *RootOp,
-                const AMDGPURegisterBankInfo &RBI, MachineRegisterInfo &MRI,
-                const TargetRegisterInfo &TRI, const SIInstrInfo &TII) {
+static Register getLegalRegBank(Register NewReg, Register RootReg,
+                                const AMDGPURegisterBankInfo &RBI,
+                                MachineRegisterInfo &MRI,
+                                const TargetRegisterInfo &TRI,
+                                const SIInstrInfo &TII) {
   // RootOp can only be VGPR or SGPR (some hand written cases such as.
   // inst-select-ashr.v2s16.mir::ashr_v2s16_vs).
-  if (checkRB(RootOp, AMDGPU::SGPRRegBankID, RBI, MRI, TRI) ||
-      checkRB(NewOp, AMDGPU::VGPRRegBankID, RBI, MRI, TRI))
-    return NewOp;
+  if (checkRB(RootReg, AMDGPU::SGPRRegBankID, RBI, MRI, TRI) ||
+      checkRB(NewReg, AMDGPU::VGPRRegBankID, RBI, MRI, TRI))
+    return NewReg;
 
-  MachineInstr *MI = MRI.getVRegDef(RootOp->getReg());
-  if (MI->getOpcode() == AMDGPU::COPY &&
-      isSameOperand(NewOp, &MI->getOperand(1))) {
+  MachineInstr *MI = MRI.getVRegDef(RootReg);
+  if (MI->getOpcode() == AMDGPU::COPY && NewReg == MI->getOperand(1).getReg()) {
     // RootOp is VGPR, NewOp is not VGPR, but RootOp = COPY NewOp.
-    return RootOp;
+    return RootReg;
   }
 
   MachineBasicBlock *BB = MI->getParent();
-  const TargetRegisterClass *DstRC =
-      TRI.getConstrainedRegClassForOperand(*RootOp, MRI);
-  Register DstReg = MRI.createVirtualRegister(DstRC);
+  Register DstReg = MRI.cloneVirtualRegister(RootReg);
 
   MachineInstrBuilder MIB =
       BuildMI(*BB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), DstReg)
-          .addReg(NewOp->getReg());
+          .addReg(NewReg);
 
   // only accept VGPR.
-  return &MIB->getOperand(0);
+  return MIB->getOperand(0).getReg();
 }
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
                                                 bool IsDOT) const {
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
-  const MachineOperand *Op;
+  Register Reg;
   unsigned Mods;
-  std::tie(Op, Mods) = selectVOP3PModsImpl(&Root, MRI, IsDOT);
-  if (!(Op->isReg()))
-    return {{
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(getAllKindImm(Op)); },
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
-    }};
+  std::tie(Reg, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI, IsDOT);
 
-  Op = getLegalRegBank(Op, &Root, RBI, MRI, TRI, TII);
+  Reg = getLegalRegBank(Reg, Root.getReg(), RBI, MRI, TRI, TII);
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Op->getReg()); },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Reg); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
