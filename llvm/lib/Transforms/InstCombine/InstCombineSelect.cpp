@@ -25,6 +25,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -3881,8 +3882,14 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         FCmpInst::Predicate InvPred = FCmp->getInversePredicate();
         Value *NewCond = Builder.CreateFCmpFMF(InvPred, Cmp0, Cmp1, FCmp,
                                                FCmp->getName() + ".inv");
+        // Propagate ninf/nnan from fcmp to select.
+        FastMathFlags FMF = SI.getFastMathFlags();
+        if (FCmp->hasNoNaNs())
+          FMF.setNoNaNs(true);
+        if (FCmp->hasNoInfs())
+          FMF.setNoInfs(true);
         Value *NewSel =
-            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, &SI);
+            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FMF);
         return replaceInstUsesWith(SI, NewSel);
       }
     }
