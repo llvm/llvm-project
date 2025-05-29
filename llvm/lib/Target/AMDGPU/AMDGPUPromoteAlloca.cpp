@@ -446,7 +446,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   //   %0 = alloca [10 x <2 x i32>], align 8, addrspace(5)
   //   %1 = getelementptr [10 x <2 x i32>], ptr addrspace(5) %0, i32 0, i32 %j
   //   %2 = getelementptr i8, ptr addrspace(5) %1, i32 4
-  //   %3 = load  i32, ptr addrspace(5) %2, align 4
+  //   %3 = load i32, ptr addrspace(5) %2, align 4
   //
   // Combine both GEP operations in a single pass, producing:
   //   BasePtr      = %0
