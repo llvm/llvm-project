@@ -423,11 +423,33 @@ func.func @isnan_double(%arg0 : f64) {
 
 // -----
 
+// CHECK-LABEL: func @isnan_0dvector(
+// CHECK-SAME: vector<f32>
+func.func @isnan_0dvector(%arg0 : vector<f32>) {
+  // CHECK: %[[CAST:.+]] = builtin.unrealized_conversion_cast %arg0 : vector<f32> to vector<1xf32>
+  // CHECK: "llvm.intr.is.fpclass"(%[[CAST]]) <{bit = 3 : i32}> : (vector<1xf32>) -> vector<1xi1>
+  %0 = math.isnan %arg0 : vector<f32>
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @isfinite_double(
 // CHECK-SAME: f64
 func.func @isfinite_double(%arg0 : f64) {
   // CHECK: "llvm.intr.is.fpclass"(%arg0) <{bit = 504 : i32}> : (f64) -> i1
   %0 = math.isfinite %arg0 : f64
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @isfinite_0dvector(
+// CHECK-SAME: vector<f32>
+func.func @isfinite_0dvector(%arg0 : vector<f32>) {
+  // CHECK: %[[CAST:.+]] = builtin.unrealized_conversion_cast %arg0 : vector<f32> to vector<1xf32>
+  // CHECK: "llvm.intr.is.fpclass"(%[[CAST]]) <{bit = 504 : i32}> : (vector<1xf32>) -> vector<1xi1>
+  %0 = math.isfinite %arg0 : vector<f32>
   func.return
 }
 

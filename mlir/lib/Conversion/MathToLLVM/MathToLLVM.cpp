@@ -309,13 +309,15 @@ struct IsNaNOpLowering : public ConvertOpToLLVMPattern<math::IsNaNOp> {
   LogicalResult
   matchAndRewrite(math::IsNaNOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto operandType = adaptor.getOperand().getType();
-
-    if (!operandType || !LLVM::isCompatibleType(operandType))
+    const auto &typeConverter = *this->getTypeConverter();
+    auto operandType =
+        typeConverter.convertType(adaptor.getOperand().getType());
+    auto resultType = typeConverter.convertType(op.getResult().getType());
+    if (!operandType || !resultType)
       return failure();
 
     rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(
-        op, op.getType(), adaptor.getOperand(), llvm::fcNan);
+        op, resultType, adaptor.getOperand(), llvm::fcNan);
     return success();
   }
 };
@@ -326,13 +328,15 @@ struct IsFiniteOpLowering : public ConvertOpToLLVMPattern<math::IsFiniteOp> {
   LogicalResult
   matchAndRewrite(math::IsFiniteOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto operandType = adaptor.getOperand().getType();
-
-    if (!operandType || !LLVM::isCompatibleType(operandType))
+    const auto &typeConverter = *this->getTypeConverter();
+    auto operandType =
+        typeConverter.convertType(adaptor.getOperand().getType());
+    auto resultType = typeConverter.convertType(op.getResult().getType());
+    if (!operandType || !resultType)
       return failure();
 
     rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(
-        op, op.getType(), adaptor.getOperand(), llvm::fcFinite);
+        op, resultType, adaptor.getOperand(), llvm::fcFinite);
     return success();
   }
 };
