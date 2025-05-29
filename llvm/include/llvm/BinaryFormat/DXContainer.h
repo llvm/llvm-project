@@ -18,7 +18,6 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <cstdint>
 #include <stdint.h>
 
 namespace llvm {
@@ -153,6 +152,62 @@ enum class FeatureFlags : uint64_t {
 };
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
+
+#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
+enum class RootElementFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
+enum class RootDescriptorFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
+enum class DescriptorRangeFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define ROOT_PARAMETER(Val, Enum) Enum = Val,
+enum class RootParameterType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+
+#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
+enum class DescriptorRangeType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
+
+#define ROOT_PARAMETER(Val, Enum)                                              \
+  case Val:                                                                    \
+    return true;
+inline bool isValidParameterType(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define SHADER_VISIBILITY(Val, Enum) Enum = Val,
+enum class ShaderVisibility : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
+
+#define SHADER_VISIBILITY(Val, Enum)                                           \
+  case Val:                                                                    \
+    return true;
+inline bool isValidShaderVisibility(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return false;
+}
 
 PartType parsePartType(StringRef S);
 
@@ -544,150 +599,7 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
 
 namespace RTS0 {
-
-#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
-enum class RootElementFlag : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
-enum class RootDescriptorFlag : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
-enum class DescriptorRangeFlag : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define ROOT_PARAMETER(Val, Enum) Enum = Val,
-enum class RootParameterType : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
-
-#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
-enum class DescriptorRangeType : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
-
-#define ROOT_PARAMETER(Val, Enum)                                              \
-  case Val:                                                                    \
-    return true;
-inline bool isValidParameterType(uint32_t V) {
-  switch (V) {
-#include "DXContainerConstants.def"
-  }
-  return false;
-}
-
-#define SHADER_VISIBILITY(Val, Enum) Enum = Val,
-enum class ShaderVisibility : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
-
-#define SHADER_VISIBILITY(Val, Enum)                                           \
-  case Val:                                                                    \
-    return true;
-inline bool isValidShaderVisibility(uint32_t V) {
-  switch (V) {
-#include "DXContainerConstants.def"
-  }
-  return false;
-}
-
-#define STATIC_SAMPLER_FILTER(Val, Enum) Enum = Val,
-enum class StaticSamplerFilter : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define TEXTURE_ADDRESS_MODE(Val, Enum) Enum = Val,
-enum class TextureAddressMode : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define COMPARISON_FUNCTION(Val, Enum) Enum = Val,
-enum class ComparisonFunction : uint32_t {
-#include "DXContainerConstants.def"
-};
-
-#define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
-enum class StaticBorderColor : uint32_t {
-#include "DXContainerConstants.def"
-};
 namespace v1 {
-
-struct RootSignatureHeader {
-  uint32_t Version;
-  uint32_t NumParameters;
-  uint32_t ParametersOffset;
-  uint32_t NumStaticSamplers;
-  uint32_t StaticSamplerOffset;
-  uint32_t Flags;
-
-  void swapBytes() {
-    sys::swapByteOrder(Version);
-    sys::swapByteOrder(NumParameters);
-    sys::swapByteOrder(ParametersOffset);
-    sys::swapByteOrder(NumStaticSamplers);
-    sys::swapByteOrder(StaticSamplerOffset);
-    sys::swapByteOrder(Flags);
-  }
-};
-
-struct RootParameterHeader {
-  uint32_t ParameterType;
-  uint32_t ShaderVisibility;
-  uint32_t ParameterOffset;
-
-  void swapBytes() {
-    sys::swapByteOrder(ParameterType);
-    sys::swapByteOrder(ShaderVisibility);
-    sys::swapByteOrder(ParameterOffset);
-  }
-};
-
-struct RootConstants {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  uint32_t Num32BitValues;
-
-  void swapBytes() {
-    sys::swapByteOrder(ShaderRegister);
-    sys::swapByteOrder(RegisterSpace);
-    sys::swapByteOrder(Num32BitValues);
-  }
-};
-
-struct RootDescriptor {
-  uint32_t ShaderRegister;
-  uint32_t RegisterSpace;
-  void swapBytes() {
-    sys::swapByteOrder(ShaderRegister);
-    sys::swapByteOrder(RegisterSpace);
-  }
-};
-
-struct DescriptorRange {
-  uint32_t RangeType;
-  uint32_t NumDescriptors;
-  uint32_t BaseShaderRegister;
-  uint32_t RegisterSpace;
-  int32_t OffsetInDescriptorsFromTableStart;
-  void swapBytes() {
-    sys::swapByteOrder(RangeType);
-    sys::swapByteOrder(NumDescriptors);
-    sys::swapByteOrder(BaseShaderRegister);
-    sys::swapByteOrder(RegisterSpace);
-    sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
-  }
-};
-
 struct StaticSampler {
   uint32_t Filter;
   uint32_t AddressU;
@@ -718,11 +630,84 @@ struct StaticSampler {
     sys::swapByteOrder(ShaderVisibility);
   };
 };
+
+struct DescriptorRange {
+  uint32_t RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t OffsetInDescriptorsFromTableStart;
+  void swapBytes() {
+    sys::swapByteOrder(RangeType);
+    sys::swapByteOrder(NumDescriptors);
+    sys::swapByteOrder(BaseShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
+  }
+};
+
+struct RootDescriptor {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+  }
+};
+
+// following dx12 naming
+// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_constants
+struct RootConstants {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
+
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(Num32BitValues);
+  }
+};
+
+struct RootParameterHeader {
+  uint32_t ParameterType;
+  uint32_t ShaderVisibility;
+  uint32_t ParameterOffset;
+
+  void swapBytes() {
+    sys::swapByteOrder(ParameterType);
+    sys::swapByteOrder(ShaderVisibility);
+    sys::swapByteOrder(ParameterOffset);
+  }
+};
+
+struct RootSignatureHeader {
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t ParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplerOffset;
+  uint32_t Flags;
+
+  void swapBytes() {
+    sys::swapByteOrder(Version);
+    sys::swapByteOrder(NumParameters);
+    sys::swapByteOrder(ParametersOffset);
+    sys::swapByteOrder(NumStaticSamplers);
+    sys::swapByteOrder(StaticSamplerOffset);
+    sys::swapByteOrder(Flags);
+  }
+};
 } // namespace v1
 
 namespace v2 {
 struct RootDescriptor : public v1::RootDescriptor {
   uint32_t Flags;
+
+  RootDescriptor() = default;
+  explicit RootDescriptor(v1::RootDescriptor &Base)
+      : v1::RootDescriptor(Base), Flags(0u) {}
+
   void swapBytes() {
     v1::RootDescriptor::swapBytes();
     sys::swapByteOrder(Flags);
@@ -738,8 +723,6 @@ struct DescriptorRange : public v1::DescriptorRange {
 };
 } // namespace v2
 } // namespace RTS0
-// following dx12 naming
-// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_constants
 
 } // namespace dxbc
 } // namespace llvm

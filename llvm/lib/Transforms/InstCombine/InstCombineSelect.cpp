@@ -2773,6 +2773,47 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
   return nullptr;
 }
 
+/// Return true if the sign bit of result can be ignored when the result is
+/// zero.
+static bool ignoreSignBitOfZero(Instruction &I) {
+  if (I.hasNoSignedZeros())
+    return true;
+
+  // Check if the sign bit is ignored by the only user.
+  if (!I.hasOneUse())
+    return false;
+  Instruction *User = I.user_back();
+
+  // fcmp treats both positive and negative zero as equal.
+  if (User->getOpcode() == Instruction::FCmp)
+    return true;
+
+  if (auto *FPOp = dyn_cast<FPMathOperator>(User))
+    return FPOp->hasNoSignedZeros();
+
+  return false;
+}
+
+/// Return true if the sign bit of result can be ignored when the result is NaN.
+static bool ignoreSignBitOfNaN(Instruction &I) {
+  if (I.hasNoNaNs())
+    return true;
+
+  // Check if the sign bit is ignored by the only user.
+  if (!I.hasOneUse())
+    return false;
+  Instruction *User = I.user_back();
+
+  // fcmp ignores the sign bit of NaN.
+  if (User->getOpcode() == Instruction::FCmp)
+    return true;
+
+  if (auto *FPOp = dyn_cast<FPMathOperator>(User))
+    return FPOp->hasNoNaNs();
+
+  return false;
+}
+
 // Canonicalize select with fcmp to fabs(). -0.0 makes this tricky. We need
 // fast-math-flags (nsz) or fsub with +0.0 (not fneg) for this to work.
 static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
@@ -2793,7 +2834,14 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
 
     // fold (X <= +/-0.0) ? (0.0 - X) : X to fabs(X), when 'Swap' is false
     // fold (X >  +/-0.0) ? X : (0.0 - X) to fabs(X), when 'Swap' is true
-    if (match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X)))) {
+    // Note: We require "nnan" for this fold because fcmp ignores the signbit
+    //       of NAN, but IEEE-754 specifies the signbit of NAN values with
+    //       fneg/fabs operations.
+    if (match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X))) &&
+        (cast<FPMathOperator>(CondVal)->hasNoNaNs() || ignoreSignBitOfNaN(SI) ||
+         isKnownNeverNaN(X, /*Depth=*/0,
+                         IC.getSimplifyQuery().getWithInstruction(
+                             cast<Instruction>(CondVal))))) {
       if (!Swap && (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
         Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
         return IC.replaceInstUsesWith(SI, Fabs);
@@ -2837,7 +2885,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     // Note: We require "nnan" for this fold because fcmp ignores the signbit
     //       of NAN, but IEEE-754 specifies the signbit of NAN values with
     //       fneg/fabs operations.
-    if (!SI.hasNoSignedZeros() || !SI.hasNoNaNs())
+    if (!ignoreSignBitOfZero(SI) || !ignoreSignBitOfNaN(SI))
       return nullptr;
 
     if (Swap)
@@ -3922,16 +3970,20 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       if (match(&SI, m_OrdOrUnordFMax(m_Value(X), m_Value(Y)))) {
         Value *BinIntr =
             Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI);
-        if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr))
+        if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr)) {
           BinIntrInst->setHasNoNaNs(FCmp->hasNoNaNs());
+          BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
+        }
         return replaceInstUsesWith(SI, BinIntr);
       }
 
       if (match(&SI, m_OrdOrUnordFMin(m_Value(X), m_Value(Y)))) {
         Value *BinIntr =
             Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI);
-        if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr))
+        if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr)) {
           BinIntrInst->setHasNoNaNs(FCmp->hasNoNaNs());
+          BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
+        }
         return replaceInstUsesWith(SI, BinIntr);
       }
     }

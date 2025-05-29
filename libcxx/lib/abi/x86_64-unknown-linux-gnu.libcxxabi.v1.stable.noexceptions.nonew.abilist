@@ -1,6 +1,5 @@
 {'is_defined': False, 'name': '_ZNKSt11logic_error4whatEv', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNKSt13runtime_error4whatEv', 'type': 'FUNC'}
-{'is_defined': False, 'name': '_ZNKSt9exception4whatEv', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt11logic_errorD2Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt13runtime_errorD2Ev', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZNSt8bad_castD2Ev', 'type': 'FUNC'}
@@ -1128,6 +1127,7 @@
 {'is_defined': True, 'name': '_ZNSt3__117bad_function_callD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117bad_function_callD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117bad_function_callD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt3__117bad_function_call4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117iostream_categoryEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIcLb0EE4initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__117moneypunct_bynameIcLb1EE4initEPKc', 'type': 'FUNC'}

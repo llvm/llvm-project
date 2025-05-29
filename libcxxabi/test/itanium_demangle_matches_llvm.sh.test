@@ -1,0 +1,6 @@
+# This test diffs the ItaniumDemangle.h header in libcxxabi and LLVM to ensure
+# that they are the same.
+
+# RUN: tail -n +3 %{libcxxabi}/src/demangle/ItaniumDemangle.h > %t.libcxxabi_demangle
+# RUN: tail -n +3 %{llvm}/include/llvm/Demangle/ItaniumDemangle.h > %t.llvm_demangle
+# RUN: diff %t.libcxxabi_demangle %t.llvm_demangle

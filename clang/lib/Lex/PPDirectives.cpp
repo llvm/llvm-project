@@ -148,8 +148,7 @@ static bool isFeatureTestMacro(StringRef MacroName) {
       "__STDCPP_WANT_MATH_SPEC_FUNCS__",
       "__STDC_FORMAT_MACROS",
   };
-  return std::binary_search(std::begin(ReservedMacro), std::end(ReservedMacro),
-                            MacroName);
+  return llvm::binary_search(ReservedMacro, MacroName);
 }
 
 static bool isLanguageDefinedBuiltin(const SourceManager &SourceMgr,
@@ -371,8 +370,11 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
   SourceLocation MacroNameLoc = MacroNameTok.getLocation();
   if (ShadowFlag)
     *ShadowFlag = false;
-  if (!SourceMgr.isInSystemHeader(MacroNameLoc) &&
-      (SourceMgr.getBufferName(MacroNameLoc) != "<built-in>")) {
+  // Macro names with reserved identifiers are accepted if built-in or passed
+  // through the command line (the later may be present if -dD was used to
+  // generate the preprocessed file).
+  if (!SourceMgr.isInPredefinedFile(MacroNameLoc) &&
+      !SourceMgr.isInSystemHeader(MacroNameLoc)) {
     MacroDiag D = MD_NoWarn;
     if (isDefineUndef == MU_Define) {
       D = shouldWarnOnMacroDef(*this, II);
@@ -1702,8 +1704,7 @@ void Preprocessor::HandleDigitDirective(Token &DigitTok) {
     // If a filename was present, read any flags that are present.
     if (ReadLineMarkerFlags(IsFileEntry, IsFileExit, FileKind, *this))
       return;
-    if (!SourceMgr.isWrittenInBuiltinFile(DigitTok.getLocation()) &&
-        !SourceMgr.isWrittenInCommandLineFile(DigitTok.getLocation()))
+    if (!SourceMgr.isInPredefinedFile(DigitTok.getLocation()))
       Diag(StrTok, diag::ext_pp_gnu_line_directive);
 
     // Exiting to an empty string means pop to the including file, so leave
@@ -3655,7 +3656,6 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
 std::optional<LexEmbedParametersResult>
 Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
   LexEmbedParametersResult Result{};
-  SmallVector<Token, 2> ParameterTokens;
   tok::TokenKind EndTokenKind = ForHasEmbed ? tok::r_paren : tok::eod;
 
   auto DiagMismatchedBracesAndSkipToEOD =

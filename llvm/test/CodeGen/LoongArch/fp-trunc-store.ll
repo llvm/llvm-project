@@ -13,7 +13,7 @@ define void @fp_trunc(ptr %a, double %b) nounwind {
 ; LA32F-NEXT:    move $fp, $a0
 ; LA32F-NEXT:    move $a0, $a1
 ; LA32F-NEXT:    move $a1, $a2
-; LA32F-NEXT:    bl %plt(__truncdfsf2)
+; LA32F-NEXT:    bl __truncdfsf2
 ; LA32F-NEXT:    fst.s $fa0, $fp, 0
 ; LA32F-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
 ; LA32F-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload

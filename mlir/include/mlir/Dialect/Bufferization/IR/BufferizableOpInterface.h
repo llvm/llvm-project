@@ -302,7 +302,7 @@ struct BufferizationOptions {
                              Value to) const;
 
   /// Specifies whether not bufferizable ops are allowed in the input. If so,
-  /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
+  /// bufferization.to_buffer and bufferization.to_tensor ops are inserted at
   /// the boundaries.
   bool allowUnknownOps = false;
 
@@ -578,6 +578,20 @@ private:
       insideMutuallyExclusiveRegionsCache;
 };
 
+/// BufferizationState provides information about the state of the IR during the
+/// bufferization process.
+class BufferizationState {
+public:
+  /// Get a reference to the collection of cached symbol tables.
+  SymbolTableCollection &getSymbolTables();
+
+private:
+  /// The cached symbol tables.
+  /// The user is expected to update / invalidate the cached symbol tables if
+  /// the bufferized operation has the Symbol or SymbolTable traits.
+  SymbolTableCollection symbolTables;
+};
+
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
 /// If `copy` is set, the shaped value is copied. Otherwise, a tensor with
 /// undefined contents is allocated.
@@ -587,7 +601,7 @@ allocateTensorForShapedValue(OpBuilder &b, Location loc, Value shapedValue,
                              bool copy = true);
 
 /// Lookup the buffer for the given value. If the value was not bufferized
-/// yet, wrap it in a ToMemrefOp. Otherwise, it is the result of a ToTensorOp,
+/// yet, wrap it in a ToBufferOp. Otherwise, it is the result of a ToTensorOp,
 /// from which the memref operand is returned.
 FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
                            const BufferizationOptions &options);

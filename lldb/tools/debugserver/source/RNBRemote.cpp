@@ -820,7 +820,7 @@ rnb_err_t RNBRemote::GetPacketPayload(std::string &return_packet) {
   // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
 
   {
-    PThreadMutex::Locker locker(m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (m_rx_packets.empty()) {
       // Only reset the remote command available event if we have no more
       // packets
@@ -1052,7 +1052,7 @@ void RNBRemote::CommDataReceived(const std::string &new_data) {
   //  (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
 
   // Put the packet data into the buffer in a thread safe fashion
-  PThreadMutex::Locker locker(m_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
 
   std::string data;
   // See if we have any left over data from a previous call to this

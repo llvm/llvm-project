@@ -51,8 +51,7 @@ projects="${1}"
 targets="${2}"
 
 echo "--- cmake"
-pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
-pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
+pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 export CC=cl
 export CXX=cl

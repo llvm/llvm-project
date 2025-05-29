@@ -75,6 +75,12 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
     }
   }
 
+  // Add a generous buffer of directories, these are quite small
+  // and forks may add new directories upstream LLDB hadn't accounted for
+  // when we started pre-calculating directory size, so this should account for
+  // that
+  m_expected_directories += 100;
+
   m_saved_data_size +=
       m_expected_directories * sizeof(llvm::minidump::Directory);
   Status error;
@@ -712,7 +718,7 @@ Status MinidumpFileBuilder::AddExceptions() {
     // We have 120 bytes to work with and it's unlikely description will
     // overflow, but we gotta check.
     memcpy(&exp_record.ExceptionInformation, description.c_str(),
-           std::max(description.size(), Exception::MaxParameterBytes));
+           std::min(description.size(), Exception::MaxParameterBytes));
     exp_record.UnusedAlignment = static_cast<llvm::support::ulittle32_t>(0);
     ExceptionStream exp_stream;
     exp_stream.ThreadId =

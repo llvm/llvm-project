@@ -28,7 +28,7 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
 
     # Test hangs due to a kernel bug, see fdfeff0f in the linux kernel for details
     @skipIfTargetAndroid(api_levels=list(range(25 + 1)), archs=["aarch64", "arm"])
-    @skipIf
+    @skip
     def test_watched_var_should_only_hit_when_in_scope(self):
         """Test that a variable watchpoint should only hit when in scope."""
         self.build(dictionary=self.d)

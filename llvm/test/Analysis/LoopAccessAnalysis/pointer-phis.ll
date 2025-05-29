@@ -96,28 +96,28 @@ define i32 @store_with_pointer_phi_runtime_checks(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.1 = getelementptr inbounds double, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.2 = getelementptr inbounds double, ptr %C, i64 %iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP1]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.1 = getelementptr inbounds double, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds double, ptr %A, i64 %iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP2]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.2 = getelementptr inbounds double, ptr %C, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP3]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds double, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: (256000 + %B))
 ; CHECK-NEXT:            Member: {%B,+,8}<nw><%loop.header>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %C High: (256000 + %C))
 ; CHECK-NEXT:            Member: {%C,+,8}<nw><%loop.header>
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %A High: (256000 + %A))
 ; CHECK-NEXT:            Member: {%A,+,8}<nw><%loop.header>
 ; CHECK-EMPTY:
@@ -260,30 +260,30 @@ define i32 @store_with_pointer_phi_incoming_phi(ptr %A, ptr %B, ptr %C, i1 %c.0,
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %C
-; CHECK-NEXT:        Against group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP4]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %C
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds double, ptr %A, i64 %iv
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP5]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:        ptr %B
-; CHECK-NEXT:        Against group ([[GRP6]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds double, ptr %A, i64 %iv
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %C High: (8 + %C))
 ; CHECK-NEXT:            Member: %C
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %B High: (8 + %B))
 ; CHECK-NEXT:            Member: %B
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %A High: (256000 + %A))
 ; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop.header>
 ; CHECK-NEXT:            Member: %A
@@ -343,30 +343,30 @@ define i32 @store_with_pointer_phi_incoming_phi_irreducible_cycle(ptr %A, ptr %B
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %C
-; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP7]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %C
-; CHECK-NEXT:        Against group ([[GRP9:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds double, ptr %A, i64 %iv
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP8]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:        ptr %B
-; CHECK-NEXT:        Against group ([[GRP9]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds double, ptr %A, i64 %iv
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %C High: (8 + %C))
 ; CHECK-NEXT:            Member: %C
-; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %B High: (8 + %B))
 ; CHECK-NEXT:            Member: %B
-; CHECK-NEXT:        Group [[GRP9]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %A High: (256000 + %A))
 ; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop.header>
 ; CHECK-NEXT:            Member: %A
@@ -503,36 +503,36 @@ define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP10:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:        ptr %A
-; CHECK-NEXT:        Against group ([[GRP11:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:        ptr %C
 ; CHECK-NEXT:        ptr %C
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP10]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:        ptr %A
-; CHECK-NEXT:        Against group ([[GRP12:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP11]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:        ptr %C
 ; CHECK-NEXT:        ptr %C
-; CHECK-NEXT:        Against group ([[GRP12]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (2 + %A))
 ; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:            Member: %A
-; CHECK-NEXT:        Group [[GRP11]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %C High: (2 + %C))
 ; CHECK-NEXT:            Member: %C
 ; CHECK-NEXT:            Member: %C
-; CHECK-NEXT:        Group [[GRP12]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %B High: (2 + %B))
 ; CHECK-NEXT:            Member: %B
 ; CHECK-NEXT:            Member: %B

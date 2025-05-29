@@ -201,7 +201,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
 
   std::string Error;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(std::string(ArchName), TheTriple, Error);
+      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
   if (!TheTarget)
     return createStringError(make_error_code(std::errc::not_supported),
                              Twine("BOLT-ERROR: ", Error));
@@ -2425,6 +2425,10 @@ BinaryContext::createInstructionPatch(uint64_t Address,
 
 std::pair<size_t, size_t>
 BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
+  // Use the original size for non-simple functions.
+  if (!BF.isSimple() || BF.isIgnored())
+    return std::make_pair(BF.getSize(), 0);
+
   // Adjust branch instruction to match the current layout.
   if (FixBranches)
     BF.fixBranches();

@@ -1358,15 +1358,15 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
         if (decl_file || decl_line || decl_column)
           decl_up = std::make_unique<Declaration>(
               comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                  decl_file ? *decl_file : 0),
-              decl_line ? *decl_line : 0, decl_column ? *decl_column : 0);
+                  decl_file.value_or(0)),
+              decl_line.value_or(0), decl_column.value_or(0));
 
         std::unique_ptr<Declaration> call_up;
         if (call_file || call_line || call_column)
           call_up = std::make_unique<Declaration>(
               comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                  call_file ? *call_file : 0),
-              call_line ? *call_line : 0, call_column ? *call_column : 0);
+                  call_file.value_or(0)),
+              call_line.value_or(0), call_column.value_or(0));
 
         block->SetInlinedFunctionInfo(name, mangled_name, decl_up.get(),
                                       call_up.get());
@@ -1538,8 +1538,7 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
           compiler_type_no_qualifiers.GetOpaqueQualType())) {
     return true;
   }
-  auto type_system = compiler_type.GetTypeSystem();
-  auto clang_type_system = type_system.dyn_cast_or_null<TypeSystemClang>();
+  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (!clang_type_system)
     return false;
   DWARFASTParserClang *ast_parser =
@@ -1549,8 +1548,7 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
 
 bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  auto clang_type_system =
-      compiler_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (clang_type_system) {
     DWARFASTParserClang *ast_parser =
         static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
@@ -4245,8 +4243,9 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
           FileSpec(symfile.GetPath() + ".dwp", symfile.GetPathStyle());
       LLDB_LOG(log, "Searching for DWP using: \"{0}\"",
                module_spec.GetSymbolFileSpec());
-      dwp_filespec =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+      dwp_filespec = PluginManager::LocateExecutableSymbolFile(
+          module_spec, search_paths,
+          m_objfile_sp->GetModule()->GetSymbolLocatorStatistics());
       if (FileSystem::Instance().Exists(dwp_filespec)) {
         break;
       }
@@ -4257,8 +4256,9 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       // find the correct DWP file, as the Debuginfod plugin uses *only* this
       // data to correctly match the DWP file with the binary.
       module_spec.GetUUID() = m_objfile_sp->GetUUID();
-      dwp_filespec =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+      dwp_filespec = PluginManager::LocateExecutableSymbolFile(
+          module_spec, search_paths,
+          m_objfile_sp->GetModule()->GetSymbolLocatorStatistics());
     }
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);

@@ -1076,7 +1076,7 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     return std::nullopt;
   } else {
     return parser::MessageFormattedText{
-        "PRIVATE name '%s' is only accessible within module '%s'"_err_en_US,
+        "PRIVATE name '%s' is accessible only within module '%s'"_err_en_US,
         symbol.name(),
         DEREF(FindModuleContaining(symbol.owner())).GetName().value()};
   }

@@ -67,6 +67,15 @@ enum NodeType {
   /// poisoned the assertion will not be true for that value.
   AssertAlign,
 
+  /// AssertNoFPClass - These nodes record if a register contains a float
+  /// value that is known to be not some type.
+  /// This node takes two operands.  The first is the node that is known
+  /// never to be some float types; the second is a constant value with
+  /// the value of FPClassTest (casted to uint32_t).
+  /// NOTE: In case of the source value (or any vector element value) is
+  /// poisoned the assertion will not be true for that value.
+  AssertNoFPClass,
+
   /// Various leaf nodes.
   BasicBlock,
   VALUETYPE,
@@ -1367,6 +1376,8 @@ enum NodeType {
   ATOMIC_LOAD_FSUB,
   ATOMIC_LOAD_FMAX,
   ATOMIC_LOAD_FMIN,
+  ATOMIC_LOAD_FMAXIMUM,
+  ATOMIC_LOAD_FMINIMUM,
   ATOMIC_LOAD_UINC_WRAP,
   ATOMIC_LOAD_UDEC_WRAP,
   ATOMIC_LOAD_USUB_COND,
@@ -1521,6 +1532,15 @@ enum NodeType {
   // Finds the index of the last active mask element
   // Operands: Mask
   VECTOR_FIND_LAST_ACTIVE,
+
+  // GET_ACTIVE_LANE_MASK - this corrosponds to the llvm.get.active.lane.mask
+  // intrinsic. It creates a mask representing active and inactive vector
+  // lanes, active while Base + index < Trip Count. As with the intrinsic,
+  // the operands Base and Trip Count have the same scalar integer type and
+  // the internal addition of Base + index cannot overflow. However, the ISD
+  // node supports result types which are wider than i1, where the high
+  // bits conform to getBooleanContents similar to the SETCC operator.
+  GET_ACTIVE_LANE_MASK,
 
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address

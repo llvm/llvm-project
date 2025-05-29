@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__assert>
+#include <__system_error/throw_system_error.h>
 #include <__thread/id.h>
 #include <__utility/exception_guard.h>
 #include <limits>
@@ -22,6 +23,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // ~mutex is defined elsewhere
 
@@ -140,6 +142,7 @@ void recursive_timed_mutex::unlock() noexcept {
   }
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

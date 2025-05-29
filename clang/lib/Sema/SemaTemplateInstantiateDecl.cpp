@@ -999,6 +999,11 @@ Decl *TemplateDeclInstantiator::VisitHLSLBufferDecl(HLSLBufferDecl *Decl) {
   llvm_unreachable("HLSL buffer declarations cannot be instantiated");
 }
 
+Decl *TemplateDeclInstantiator::VisitHLSLRootSignatureDecl(
+    HLSLRootSignatureDecl *Decl) {
+  llvm_unreachable("HLSL root signature declarations cannot be instantiated");
+}
+
 Decl *
 TemplateDeclInstantiator::VisitPragmaCommentDecl(PragmaCommentDecl *D) {
   llvm_unreachable("pragma comment cannot be instantiated");
@@ -2211,8 +2216,8 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (!PrevClassTemplate && QualifierLoc) {
       SemaRef.Diag(Pattern->getLocation(), diag::err_not_tag_in_scope)
-          << llvm::to_underlying(D->getTemplatedDecl()->getTagKind())
-          << Pattern->getDeclName() << DC << QualifierLoc.getSourceRange();
+          << D->getTemplatedDecl()->getTagKind() << Pattern->getDeclName() << DC
+          << QualifierLoc.getSourceRange();
       return nullptr;
     }
   }
@@ -2948,8 +2953,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       if (MSInfo->getPointOfInstantiation().isInvalid()) {
         SourceLocation Loc = D->getLocation(); // FIXME
         MSInfo->setPointOfInstantiation(Loc);
-        SemaRef.PendingLocalImplicitInstantiations.push_back(
-            std::make_pair(Function, Loc));
+        SemaRef.PendingLocalImplicitInstantiations.emplace_back(Function, Loc);
       }
     }
   }
@@ -5474,8 +5478,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       // definition will be required).
       assert(!Recursive);
       Function->setInstantiationIsPending(true);
-      PendingInstantiations.push_back(
-        std::make_pair(Function, PointOfInstantiation));
+      PendingInstantiations.emplace_back(Function, PointOfInstantiation);
 
       if (llvm::isTimeTraceVerbose()) {
         llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
@@ -5751,8 +5754,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     RebuildTypeSourceInfoForDefaultSpecialMembers();
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
-    NamedDecl *ND = Function;
-    DeclContext *DC = ND->getLexicalDeclContext();
+    DeclContext *DC = Function->getLexicalDeclContext();
     std::optional<ArrayRef<TemplateArgument>> Innermost;
     if (auto *Primary = Function->getPrimaryTemplate();
         Primary &&
@@ -6065,22 +6067,20 @@ void Sema::InstantiateVariableInitializer(
   else if (OldVar->isInline())
     Var->setImplicitlyInline();
 
+  ContextRAII SwitchContext(*this, Var->getDeclContext());
+
+  EnterExpressionEvaluationContext Evaluated(
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
+  currentEvaluationContext().InLifetimeExtendingContext =
+      parentEvaluationContext().InLifetimeExtendingContext;
+  currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+      parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
+
   if (OldVar->getInit()) {
-    EnterExpressionEvaluationContext Evaluated(
-        *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
-
-    currentEvaluationContext().InLifetimeExtendingContext =
-        parentEvaluationContext().InLifetimeExtendingContext;
-    currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
-        parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
     // Instantiate the initializer.
-    ExprResult Init;
-
-    {
-      ContextRAII SwitchContext(*this, Var->getDeclContext());
-      Init = SubstInitializer(OldVar->getInit(), TemplateArgs,
-                              OldVar->getInitStyle() == VarDecl::CallInit);
-    }
+    ExprResult Init =
+        SubstInitializer(OldVar->getInit(), TemplateArgs,
+                         OldVar->getInitStyle() == VarDecl::CallInit);
 
     if (!Init.isInvalid()) {
       Expr *InitExpr = Init.get();
@@ -6202,8 +6202,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   // unit.
   if (!Def && !DefinitionRequired) {
     if (TSK == TSK_ExplicitInstantiationDefinition) {
-      PendingInstantiations.push_back(
-        std::make_pair(Var, PointOfInstantiation));
+      PendingInstantiations.emplace_back(Var, PointOfInstantiation);
     } else if (TSK == TSK_ImplicitInstantiation) {
       // Warn about missing definition at the end of translation unit.
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred() &&

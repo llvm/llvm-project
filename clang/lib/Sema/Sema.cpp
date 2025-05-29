@@ -1448,6 +1448,23 @@ void Sema::ActOnEndOfTranslationUnit() {
     // No initialization is performed for a tentative definition.
     CheckCompleteVariableDeclaration(VD);
 
+    // In C, if the definition is const-qualified and has no initializer, it
+    // is left uninitialized unless it has static or thread storage duration.
+    QualType Type = VD->getType();
+    if (!VD->isInvalidDecl() && !getLangOpts().CPlusPlus &&
+        Type.isConstQualified() && !VD->getAnyInitializer()) {
+      unsigned DiagID = diag::warn_default_init_const_unsafe;
+      if (VD->getStorageDuration() == SD_Static ||
+          VD->getStorageDuration() == SD_Thread)
+        DiagID = diag::warn_default_init_const;
+
+      bool EmitCppCompat = !Diags.isIgnored(
+          diag::warn_cxx_compat_hack_fake_diagnostic_do_not_emit,
+          VD->getLocation());
+
+      Diag(VD->getLocation(), DiagID) << Type << EmitCppCompat;
+    }
+
     // Notify the consumer that we've completed a tentative definition.
     if (!VD->isInvalidDecl())
       Consumer.CompleteTentativeDefinition(VD);
@@ -2367,8 +2384,8 @@ static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
           CapType.hasNonTrivialToPrimitiveCopyCUnion())
         S.checkNonTrivialCUnion(BC.getVariable()->getType(),
                                 BD->getCaretLocation(),
-                                Sema::NTCUC_BlockCapture,
-                                Sema::NTCUK_Destruct|Sema::NTCUK_Copy);
+                                NonTrivialCUnionContext::BlockCapture,
+                                Sema::NTCUK_Destruct | Sema::NTCUK_Copy);
     }
   }
 

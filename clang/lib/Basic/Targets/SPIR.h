@@ -58,15 +58,13 @@ static const unsigned SPIRDefIsPrivMap[] = {
 // Used by both the SPIR and SPIR-V targets.
 static const unsigned SPIRDefIsGenMap[] = {
     4, // Default
-    // Some OpenCL address space values for this map are dummy and they can't be
-    // used
     1, // opencl_global
-    0, // opencl_local
-    0, // opencl_constant
+    3, // opencl_local
+    2, // opencl_constant
     0, // opencl_private
-    0, // opencl_generic
-    0, // opencl_global_device
-    0, // opencl_global_host
+    4, // opencl_generic
+    5, // opencl_global_device
+    6, // opencl_global_host
     // cuda_* address space mapping is intended for HIPSPV (HIP to SPIR-V
     // translation). This mapping is enabled when the language mode is HIP.
     1, // cuda_device

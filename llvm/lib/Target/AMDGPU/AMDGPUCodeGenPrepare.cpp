@@ -26,7 +26,6 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -47,10 +46,10 @@ static cl::opt<bool> WidenLoads(
   cl::init(false));
 
 static cl::opt<bool> Widen16BitOps(
-  "amdgpu-codegenprepare-widen-16-bit-ops",
-  cl::desc("Widen uniform 16-bit instructions to 32-bit in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(true));
+    "amdgpu-codegenprepare-widen-16-bit-ops",
+    cl::desc(
+        "Widen uniform 16-bit instructions to 32-bit in AMDGPUCodeGenPrepare"),
+    cl::ReallyHidden, cl::init(false));
 
 static cl::opt<bool>
     BreakLargePHIs("amdgpu-codegenprepare-break-large-phis",
@@ -2102,8 +2101,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   for (VectorSlice &S : Slices) {
     const auto ValName = "largephi.insertslice" + std::to_string(NameSuffix++);
     if (S.NumElts > 1)
-      Vec =
-          B.CreateInsertVector(FVT, Vec, S.NewPHI, B.getInt64(S.Idx), ValName);
+      Vec = B.CreateInsertVector(FVT, Vec, S.NewPHI, S.Idx, ValName);
     else
       Vec = B.CreateInsertElement(Vec, S.NewPHI, S.Idx, ValName);
   }
@@ -2128,6 +2126,11 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
 
   // Check nonnull arguments.
   if (const auto *Arg = dyn_cast<Argument>(V); Arg && Arg->hasNonNullAttr())
+    return true;
+
+  // Check nonnull loads.
+  if (const auto *Load = dyn_cast<LoadInst>(V);
+      Load && Load->hasMetadata(LLVMContext::MD_nonnull))
     return true;
 
   // getUnderlyingObject may have looked through another addrspacecast, although

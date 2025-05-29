@@ -98,7 +98,6 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
                                           CallExpr *TheCall) {
   ASTContext &Context = getASTContext();
   bool IsTarget64Bit = TI.getTypeWidth(TI.getIntPtrType()) == 64;
-  llvm::APSInt Result;
 
   if (isPPC_64Builtin(BuiltinID) && !IsTarget64Bit)
     return Diag(TheCall->getBeginLoc(), diag::err_64_bit_builtin_32_bit_tgt)

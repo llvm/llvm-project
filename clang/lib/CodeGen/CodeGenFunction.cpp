@@ -283,6 +283,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::Pipe:
     case Type::BitInt:
     case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       return TEK_Scalar;
 
     // Complexes.
@@ -890,19 +891,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         FD->getBody()->getStmtClass() == Stmt::CoroutineBodyStmtClass)
       SanOpts.Mask &= ~SanitizerKind::Null;
 
-  // Add pointer authentication attributes.
-  const CodeGenOptions &CodeGenOpts = CGM.getCodeGenOpts();
-  if (CodeGenOpts.PointerAuth.ReturnAddresses)
-    Fn->addFnAttr("ptrauth-returns");
-  if (CodeGenOpts.PointerAuth.FunctionPointers)
-    Fn->addFnAttr("ptrauth-calls");
-  if (CodeGenOpts.PointerAuth.AuthTraps)
-    Fn->addFnAttr("ptrauth-auth-traps");
-  if (CodeGenOpts.PointerAuth.IndirectGotos)
-    Fn->addFnAttr("ptrauth-indirect-gotos");
-  if (CodeGenOpts.PointerAuth.AArch64JumpTableHardening)
-    Fn->addFnAttr("aarch64-jump-table-hardening");
-
   // Apply xray attributes to the function (as a string, for now)
   bool AlwaysXRayAttr = false;
   if (const auto *XRayAttr = D ? D->getAttr<XRayInstrumentAttr>() : nullptr) {
@@ -1115,9 +1103,15 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->removeFnAttr("zero-call-used-regs");
 
   // Add vscale_range attribute if appropriate.
+  llvm::StringMap<bool> FeatureMap;
+  bool IsArmStreaming = false;
+  if (FD) {
+    getContext().getFunctionFeatureMap(FeatureMap, FD);
+    IsArmStreaming = IsArmStreamingFunction(FD, true);
+  }
   std::optional<std::pair<unsigned, unsigned>> VScaleRange =
-      getContext().getTargetInfo().getVScaleRange(
-          getLangOpts(), FD ? IsArmStreamingFunction(FD, true) : false);
+      getContext().getTargetInfo().getVScaleRange(getLangOpts(), IsArmStreaming,
+                                                  &FeatureMap);
   if (VScaleRange) {
     CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), VScaleRange->first, VScaleRange->second));
@@ -2125,6 +2119,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
 
   llvm::Instruction *BrInst = Builder.CreateCondBr(CondV, TrueBlock, FalseBlock,
                                                    Weights, Unpredictable);
+  addInstToNewSourceAtom(BrInst, CondV);
+
   switch (HLSLControlFlowAttr) {
   case HLSLControlFlowHintAttr::Microsoft_branch:
   case HLSLControlFlowHintAttr::Microsoft_flatten: {
@@ -2286,7 +2282,7 @@ llvm::BlockAddress *CodeGenFunction::GetAddrOfLabel(const LabelDecl *L) {
 
   // Make sure the indirect branch includes all of the address-taken blocks.
   IndirectBranch->addDestination(BB);
-  return llvm::BlockAddress::get(CurFn, BB);
+  return llvm::BlockAddress::get(CurFn->getType(), BB);
 }
 
 llvm::BasicBlock *CodeGenFunction::GetIndirectGotoBlock() {
@@ -2478,6 +2474,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
     case Type::BitInt:
+    case Type::HLSLInlineSpirv:
       llvm_unreachable("type class is never variably-modified!");
 
     case Type::Elaborated:
@@ -3332,4 +3329,24 @@ CodeGenFunction::EmitPointerAuthAuth(const CGPointerAuthInfo &PointerAuth,
 
   return EmitPointerAuthCommon(*this, PointerAuth, Pointer,
                                llvm::Intrinsic::ptrauth_auth);
+}
+
+void CodeGenFunction::addInstToCurrentSourceAtom(
+    llvm::Instruction *KeyInstruction, llvm::Value *Backup) {
+  if (CGDebugInfo *DI = getDebugInfo())
+    DI->addInstToCurrentSourceAtom(KeyInstruction, Backup);
+}
+
+void CodeGenFunction::addInstToSpecificSourceAtom(
+    llvm::Instruction *KeyInstruction, llvm::Value *Backup, uint64_t Atom) {
+  if (CGDebugInfo *DI = getDebugInfo())
+    DI->addInstToSpecificSourceAtom(KeyInstruction, Backup, Atom);
+}
+
+void CodeGenFunction::addInstToNewSourceAtom(llvm::Instruction *KeyInstruction,
+                                             llvm::Value *Backup) {
+  if (CGDebugInfo *DI = getDebugInfo()) {
+    ApplyAtomGroup Grp(getDebugInfo());
+    DI->addInstToCurrentSourceAtom(KeyInstruction, Backup);
+  }
 }

@@ -221,7 +221,7 @@ public:
 
   hash_code getHashValue() const override {
     return hash_combine(this->Expression::getHashValue(), ValueType,
-                        hash_combine_range(op_begin(), op_end()));
+                        hash_combine_range(operands()));
   }
 
   // Debugging support

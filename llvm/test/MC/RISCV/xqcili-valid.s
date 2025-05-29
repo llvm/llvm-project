@@ -1,21 +1,18 @@
 # Xqcili - Qualcomm uC Load Large Immediate Extension
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcili -M no-aliases -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
 
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcili < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcili -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcili -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
 
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcili < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcili --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
-# CHECK-INST: qc.e.li a0, -1
-# CHECK-ENC: encoding: [0x1f,0x05,0xff,0xff,0xff,0xff]
-qc.e.li x10, 4294967295
 
 # CHECK-INST: qc.e.li a0, -2147483648
 # CHECK-ENC: encoding: [0x1f,0x05,0x00,0x00,0x00,0x80]
@@ -44,3 +41,15 @@ qc.li x10, 12345
 # CHECK-INST: qc.li   a0, -12346
 # CHECK-ENC: encoding: [0x1b,0xf5,0xc6,0xcf]
 qc.li x10, -12346
+
+# Check that compress patterns work as expected
+
+# CHECK-ALIAS: li a0, -1
+# CHECK-NOALIAS: c.li a0, -1
+# CHECK-ENC: encoding: [0x7d,0x55]
+qc.e.li x10, 4294967295
+
+# CHECK-ALIAS: li a0, 31
+# CHECK-NOALIAS: c.li a0, 31
+# CHECK-ENC: encoding: [0x7d,0x45]
+qc.li x10, 31

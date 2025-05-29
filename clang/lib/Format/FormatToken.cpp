@@ -45,8 +45,7 @@ bool FormatToken::isTypeName(const LangOptions &LangOpts) const {
   if (is(TT_TypeName) || Tok.isSimpleTypeSpecifier(LangOpts))
     return true;
   return (LangOpts.CXXOperatorNames || LangOpts.C11) && is(tok::identifier) &&
-         std::binary_search(CppNonKeywordTypes.begin(),
-                            CppNonKeywordTypes.end(), TokenText);
+         llvm::binary_search(CppNonKeywordTypes, TokenText);
 }
 
 bool FormatToken::isTypeOrIdentifier(const LangOptions &LangOpts) const {

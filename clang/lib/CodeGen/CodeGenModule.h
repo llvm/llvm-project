@@ -1633,7 +1633,7 @@ public:
   llvm::Metadata *CreateMetadataIdentifierGeneralized(QualType T);
 
   /// Create and attach type metadata to the given function.
-  void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
+  void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
 
   /// Set type metadata to the given function.

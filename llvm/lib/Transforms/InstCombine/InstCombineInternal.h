@@ -661,6 +661,7 @@ public:
   /// folded operation.
   void PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN);
 
+  Value *foldPtrToIntOfGEP(Type *IntTy, Value *Ptr);
   Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS, CmpPredicate Cond,
                            Instruction &I);
   Instruction *foldSelectICmp(CmpPredicate Pred, SelectInst *SI, Value *RHS,
@@ -735,6 +736,9 @@ public:
   Instruction *foldICmpShlConstConst(ICmpInst &I, Value *ShAmt, const APInt &C1,
                                      const APInt &C2);
 
+  Instruction *foldICmpBinOpWithConstantViaTruthTable(ICmpInst &Cmp,
+                                                      BinaryOperator *BO,
+                                                      const APInt &C);
   Instruction *foldICmpBinOpEqualityWithConstant(ICmpInst &Cmp,
                                                  BinaryOperator *BO,
                                                  const APInt &C);

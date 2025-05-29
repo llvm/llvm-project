@@ -23,6 +23,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
@@ -41,8 +42,9 @@ using namespace llvm;
 
 using llvm::hlsl::CBufferRowSizeInBytes;
 
-static void createResourceInitFn(CodeGenModule &CGM, llvm::GlobalVariable *GV,
-                                 unsigned Slot, unsigned Space);
+static void initializeBufferFromBinding(CodeGenModule &CGM,
+                                        llvm::GlobalVariable *GV,
+                                        HLSLResourceBindingAttr *RBA);
 
 namespace {
 
@@ -65,6 +67,20 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   StringRef DXILValKey = "dx.valver";
   auto *DXILValMD = M.getOrInsertNamedMetadata(DXILValKey);
   DXILValMD->addOperand(Val);
+}
+
+void addRootSignature(ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
+                      llvm::Function *Fn, llvm::Module &M) {
+  auto &Ctx = M.getContext();
+
+  llvm::hlsl::rootsig::MetadataBuilder Builder(Ctx, Elements);
+  MDNode *RootSignature = Builder.BuildRootSignature();
+  MDNode *FnPairing =
+      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature});
+
+  StringRef RootSignatureValKey = "dx.rootsignatures";
+  auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
+  RootSignatureValMD->addOperand(FnPairing);
 }
 
 } // namespace
@@ -255,14 +271,11 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   // Add globals for constant buffer elements and create metadata nodes
   emitBufferGlobalsAndMetadata(BufDecl, BufGV);
 
-  // Resource initialization
-  const HLSLResourceBindingAttr *RBA =
-      BufDecl->getAttr<HLSLResourceBindingAttr>();
-  // FIXME: handle implicit binding if no binding attribute is found
-  // (llvm/llvm-project#110722)
-  if (RBA)
-    createResourceInitFn(CGM, BufGV, RBA->getSlotNumber(),
-                         RBA->getSpaceNumber());
+  // Initialize cbuffer from binding (implicit or explicit)
+  HLSLResourceBindingAttr *RBA = BufDecl->getAttr<HLSLResourceBindingAttr>();
+  assert(RBA &&
+         "cbuffer/tbuffer should always have resource binding attribute");
+  initializeBufferFromBinding(CGM, BufGV, RBA);
 }
 
 llvm::TargetExtType *
@@ -422,6 +435,13 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
   B.CreateRetVoid();
+
+  // Add and identify root signature to function, if applicable
+  for (const Attr *Attr : FD->getAttrs()) {
+    if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr))
+      addRootSignature(RSAttr->getSignatureDecl()->getRootElements(), EntryFn,
+                       M);
+  }
 }
 
 void CGHLSLRuntime::setHLSLFunctionAttributes(const FunctionDecl *FD,
@@ -445,7 +465,6 @@ static void gatherFunctions(SmallVectorImpl<Function *> &Fns, llvm::Module &M,
   // HLSL neither supports priorities or COMDat values, so we will check those
   // in an assert but not handle them.
 
-  llvm::SmallVector<Function *> CtorFns;
   for (const auto &Ctor : CA->operands()) {
     if (isa<ConstantAggregateZero>(Ctor))
       continue;
@@ -505,15 +524,15 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
   }
 }
 
-static void createResourceInitFn(CodeGenModule &CGM, llvm::GlobalVariable *GV,
-                                 unsigned Slot, unsigned Space) {
-  LLVMContext &Ctx = CGM.getLLVMContext();
-  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(Ctx);
+static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
+                             Intrinsic::ID IntrID,
+                             ArrayRef<llvm::Value *> Args) {
 
+  LLVMContext &Ctx = CGM.getLLVMContext();
   llvm::Function *InitResFunc = llvm::Function::Create(
       llvm::FunctionType::get(CGM.VoidTy, false),
       llvm::GlobalValue::InternalLinkage,
-      ("_init_resource_" + GV->getName()).str(), CGM.getModule());
+      ("_init_buffer_" + GV->getName()).str(), CGM.getModule());
   InitResFunc->addFnAttr(llvm::Attribute::AlwaysInline);
 
   llvm::BasicBlock *EntryBB =
@@ -522,28 +541,12 @@ static void createResourceInitFn(CodeGenModule &CGM, llvm::GlobalVariable *GV,
   const DataLayout &DL = CGM.getModule().getDataLayout();
   Builder.SetInsertPoint(EntryBB);
 
-  // Make sure the global variable is resource handle (cbuffer) or
-  // resource class (=class where the first element is a resource handle).
+  // Make sure the global variable is buffer resource handle
   llvm::Type *HandleTy = GV->getValueType();
-  assert((HandleTy->isTargetExtTy() ||
-          (HandleTy->isStructTy() &&
-           HandleTy->getStructElementType(0)->isTargetExtTy())) &&
-         "unexpected type of the global");
-  if (!HandleTy->isTargetExtTy())
-    HandleTy = HandleTy->getStructElementType(0);
+  assert(HandleTy->isTargetExtTy() && "unexpected type of the buffer global");
 
-  llvm::Value *Args[] = {
-      llvm::ConstantInt::get(CGM.IntTy, Space), /* reg_space */
-      llvm::ConstantInt::get(CGM.IntTy, Slot),  /* lower_bound */
-      // FIXME: resource arrays are not yet implemented
-      llvm::ConstantInt::get(CGM.IntTy, 1), /* range_size */
-      llvm::ConstantInt::get(CGM.IntTy, 0), /* index */
-      // FIXME: NonUniformResourceIndex bit is not yet implemented
-      llvm::ConstantInt::get(Int1Ty, false) /* non-uniform */
-  };
   llvm::Value *CreateHandle = Builder.CreateIntrinsic(
-      /*ReturnType=*/HandleTy,
-      CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic(), Args, nullptr,
+      /*ReturnType=*/HandleTy, IntrID, Args, nullptr,
       Twine(GV->getName()).concat("_h"));
 
   llvm::Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, 0);
@@ -554,24 +557,30 @@ static void createResourceInitFn(CodeGenModule &CGM, llvm::GlobalVariable *GV,
   CGM.AddCXXGlobalInit(InitResFunc);
 }
 
-void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
-                                              llvm::GlobalVariable *GV) {
+static void initializeBufferFromBinding(CodeGenModule &CGM,
+                                        llvm::GlobalVariable *GV,
+                                        HLSLResourceBindingAttr *RBA) {
+  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
+  auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
+  auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
+  auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
+  auto *Space =
+      llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
 
-  // If the global variable has resource binding, create an init function
-  // for the resource
-  const HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
-  if (!RBA)
-    // FIXME: collect unbound resources for implicit binding resolution later
-    // on?
-    return;
-
-  if (!VD->getType().getTypePtr()->isHLSLResourceRecord())
-    // FIXME: Only simple declarations of resources are supported for now.
-    // Arrays of resources or resources in user defined classes are
-    // not implemented yet.
-    return;
-
-  createResourceInitFn(CGM, GV, RBA->getSlotNumber(), RBA->getSpaceNumber());
+  if (RBA->hasRegisterSlot()) {
+    auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
+    Intrinsic::ID Intr =
+        CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
+    initializeBuffer(CGM, GV, Intr,
+                     {Space, RegSlot, RangeSize, Index, NonUniform});
+  } else {
+    auto *OrderID =
+        llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
+    Intrinsic::ID Intr =
+        CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
+    initializeBuffer(CGM, GV, Intr,
+                     {OrderID, Space, RangeSize, Index, NonUniform});
+  }
 }
 
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {

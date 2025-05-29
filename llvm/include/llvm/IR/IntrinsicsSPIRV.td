@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+def generic_ptr_ty : LLVMQualPointerType<4>;
+
 let TargetPrefix = "spv" in {
   def int_spv_assign_type : Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
   def int_spv_assign_ptr_type : Intrinsic<[], [llvm_any_ty, llvm_metadata_ty, llvm_i32_ty], [ImmArg<ArgIndex<2>>]>;
@@ -117,6 +119,11 @@ let TargetPrefix = "spv" in {
             [llvm_any_ty],
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
             [IntrNoMem]>;
+  def int_spv_resource_handlefromimplicitbinding
+      : DefaultAttrsIntrinsic<
+            [llvm_any_ty],
+            [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
+            [IntrNoMem]>;
 
   def int_spv_firstbituhigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
   def int_spv_firstbitshigh : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>], [llvm_anyint_ty], [IntrNoMem]>;
@@ -146,4 +153,9 @@ let TargetPrefix = "spv" in {
 
   // FPMaxErrorDecorationINTEL
   def int_spv_assign_fpmaxerror_decoration: Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
+
+  // Convert between the generic storage class and a concrete one.
+  def int_spv_generic_cast_to_ptr_explicit
+    : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [generic_ptr_ty],
+       [IntrNoMem, NoUndef<RetIndex>]>;
 }

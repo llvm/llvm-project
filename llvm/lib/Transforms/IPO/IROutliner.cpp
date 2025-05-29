@@ -2296,7 +2296,6 @@ void IROutliner::deduplicateExtractedSections(
   fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove,
                       OutputMappings);
 
-  std::vector<Value *> SortedKeys;
   for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
     CurrentOS = CurrentGroup.Regions[Idx];
     AttributeFuncs::mergeAttributesForOutlining(*CurrentGroup.OutlinedFunction,
@@ -2702,7 +2701,7 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
 }
 
 bool IROutliner::extractSection(OutlinableRegion &Region) {
-  SetVector<Value *> ArgInputs, Outputs, SinkCands;
+  SetVector<Value *> ArgInputs, Outputs;
   assert(Region.StartBB && "StartBB for the OutlinableRegion is nullptr!");
   BasicBlock *InitialStart = Region.StartBB;
   Function *OrigF = Region.StartBB->getParent();

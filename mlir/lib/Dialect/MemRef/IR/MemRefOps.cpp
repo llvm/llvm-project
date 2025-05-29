@@ -68,7 +68,6 @@ Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
 OpFoldResult memref::getMixedSize(OpBuilder &builder, Location loc, Value value,
                                   int64_t dim) {
   auto memrefType = llvm::cast<MemRefType>(value.getType());
-  SmallVector<OpFoldResult> result;
   if (memrefType.isDynamicDim(dim))
     return builder.createOrFold<memref::DimOp>(loc, value, dim);
 
@@ -526,6 +525,11 @@ LogicalResult AssumeAlignmentOp::verify() {
   if (!llvm::isPowerOf2_32(getAlignment()))
     return emitOpError("alignment must be power of 2");
   return success();
+}
+
+void AssumeAlignmentOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "assume_align");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1890,9 +1894,7 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
     // reinterpret_cast(subview(x)) -> reinterpret_cast(x) if subview offsets
     // are 0.
     if (auto prev = src.getDefiningOp<SubViewOp>())
-      if (llvm::all_of(prev.getMixedOffsets(), [](OpFoldResult val) {
-            return isConstantIntValue(val, 0);
-          }))
+      if (llvm::all_of(prev.getMixedOffsets(), isZeroInteger))
         return prev.getSource();
 
     return nullptr;
@@ -3286,11 +3288,9 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
     auto srcSizes = srcSubview.getMixedSizes();
     auto sizes = getMixedSizes();
     auto offsets = getMixedOffsets();
-    bool allOffsetsZero = llvm::all_of(
-        offsets, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); });
+    bool allOffsetsZero = llvm::all_of(offsets, isZeroInteger);
     auto strides = getMixedStrides();
-    bool allStridesOne = llvm::all_of(
-        strides, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); });
+    bool allStridesOne = llvm::all_of(strides, isOneInteger);
     bool allSizesSame = llvm::equal(sizes, srcSizes);
     if (allOffsetsZero && allStridesOne && allSizesSame &&
         resultMemrefType == sourceMemrefType)

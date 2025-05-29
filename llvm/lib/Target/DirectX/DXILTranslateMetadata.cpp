@@ -412,7 +412,7 @@ public:
 
   bool runOnModule(Module &M) override {
     DXILResourceMap &DRM =
-        getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+        getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
     const ModuleShaderFlags &ShaderFlags =
