@@ -536,7 +536,7 @@ void Flang::addTargetOptions(const ArgList &Args,
   //  https://github.com/fujitsu/compiler-test-suite/blob/main/Fortran/0614/0614_0005.f
   if (!Triple.isARM()) {
     CmdArgs.push_back("-mmlir");
-    CmdArgs.push_back("-local-alloc-tbaa");
+    CmdArgs.push_back("-tbaa-local-alloc");
   }
 
   Args.addAllArgs(CmdArgs,

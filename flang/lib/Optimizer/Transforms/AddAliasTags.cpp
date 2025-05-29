@@ -48,7 +48,7 @@ static llvm::cl::opt<bool>
 // The code is kept so that these may be tried with new benchmarks to see if
 // this is worth fixing in the future.
 static llvm::cl::opt<bool> enableLocalAllocs(
-    "local-alloc-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
+    "tbaa-local-alloc", llvm::cl::init(false), llvm::cl::Hidden,
     llvm::cl::desc("Add TBAA tags to local allocations. UNSAFE."));
 
 namespace {
