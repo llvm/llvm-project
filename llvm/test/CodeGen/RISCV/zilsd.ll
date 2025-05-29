@@ -110,10 +110,8 @@ entry:
 define void @store_g() nounwind {
 ; CHECK-LABEL: store_g:
 ; CHECK:       # %bb.0: # %entyr
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    lui a2, %hi(g)
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    sd a0, %lo(g)(a2)
+; CHECK-NEXT:    lui a0, %hi(g)
+; CHECK-NEXT:    sd zero, %lo(g)(a0)
 ; CHECK-NEXT:    ret
 entyr:
   store i64 0, ptr @g
