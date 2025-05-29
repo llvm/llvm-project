@@ -285,6 +285,9 @@ bool hasDynamicSize(mlir::Type t) {
     return true;
   if (auto rec = mlir::dyn_cast<fir::RecordType>(t))
     return hasDynamicSize(rec);
+  if (auto boxChar = mlir::dyn_cast<fir::BoxCharType>(t)) {
+    return characterWithDynamicLen(boxChar.getEleTy());
+  }
   return false;
 }
 
