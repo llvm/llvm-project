@@ -62,7 +62,8 @@ namespace clang::CIRGen {
 ///     %3 = cir.get_member %0[4] {name = "more_bits"} : !cir.ptr<!rec_S> ->
 ///     !cir.ptr<!u16i>
 ///     %4 = cir.set_bitfield(#bfi_more_bits, %3 :
-///     !cir.ptr<!u16i>, %2 : !u32i) -> !u32i cir.return
+///     !cir.ptr<!u16i>, %2 : !u32i) -> !u32i
+///     cir.return
 ///   }
 ////
 struct CIRGenBitFieldInfo {
