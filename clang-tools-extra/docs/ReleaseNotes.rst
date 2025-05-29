@@ -133,7 +133,8 @@ New checks
 - New :doc:`bugprone-visibility-change-to-virtual-functions
   <clang-tidy/checks/bugprone/visibility-change-to-virtual-functions>` check.
 
-  Checks function visibility changes in subclasses.
+  Finds virtual function overrides with different visibility than the function
+  in the base class.
 
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.

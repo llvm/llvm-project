@@ -3,13 +3,14 @@
 bugprone-visibility-change-to-virtual-function
 ==============================================
 
-Checks changes in visibility of C++ member functions in subclasses. This
-includes for example if a virtual function declared as ``private`` is overridden
-and declared as ``public`` in a subclass. The detected change is the
-modification of visibility resulting from keywords ``public``, ``protected``,
-``private`` at overridden virtual functions. Use of the ``using`` keyword is not
-considered by this check. The check applies to any normal virtual function and
-optionally to destructors or operators.
+Finds virtual function overrides with different visibility than the function
+in the base class. This includes for example if a virtual function declared as
+``private`` is overridden and declared as ``public`` in a subclass. The detected
+change is the modification of visibility resulting from keywords ``public``,
+``protected``, ``private`` at overridden virtual functions. The check applies to
+any normal virtual function and optionally to destructors or operators. Use of
+the ``using`` keyword is not considered as visibility change by this check.
+
 
 .. code-block:: c++
 
@@ -65,7 +66,7 @@ Options
 
   If turned on, the check does apply to destructors too. Otherwise destructors
   are ignored by the check.
-  Default value is false.
+  Default value is `false`.
 
 .. option:: CheckOperators
 
@@ -73,7 +74,7 @@ Options
   member functions) too. This includes other special member functions (like
   conversions) too. This option is probably useful only in rare cases because
   operators and conversions are not often virtual functions.
-  Default value is false.
+  Default value is `false`.
 
 .. option:: IgnoredFunctions
 

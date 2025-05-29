@@ -13,7 +13,8 @@
 
 namespace clang::tidy::bugprone {
 
-/// Checks function visibility changes in subclasses.
+/// Finds virtual function overrides with different visibility than the function
+/// in the base class.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/visibility-change-to-virtual-function.html
