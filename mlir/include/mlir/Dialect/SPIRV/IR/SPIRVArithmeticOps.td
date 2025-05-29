@@ -24,8 +24,8 @@ class SPIRV_ArithmeticBinaryOp<string mnemonic, Type type,
       SPIRV_BinaryOp<mnemonic, type, type,
                    !listconcat(traits,
                                [Pure, SameOperandsAndResultType])> {
-  // TODO: Arithmetic operations that use this definition do not support cooperative matrices,
-  // these need to be fixed.
+  // In addition to normal types arithmetic instructions can support cooperative
+  // matrix.
   let arguments = (ins
     SPIRV_ScalarOrVectorOrCoopMatrixOf<type>:$operand1,
     SPIRV_ScalarOrVectorOrCoopMatrixOf<type>:$operand2
@@ -37,43 +37,20 @@ class SPIRV_ArithmeticBinaryOp<string mnemonic, Type type,
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-class SPIRV_ArithmeticWithCoopMatrixBinaryOp<string mnemonic,
-                                             Type scalarVectorType,
-                                             Type coopMatrixType,
-                                             list<Trait> traits = []> :
-      // Operands type same as result type.
-      SPIRV_BinaryOp<mnemonic, coopMatrixType, coopMatrixType,
-                   !listconcat(traits,
-                                [Pure, SameOperandsAndResultType])> {
-  // In addition to normal types these arithmetic instructions can support
-  // cooperative matrix.
-  let arguments = (ins
-    SPIRV_ScalarOrVectorOfOrCoopMatrixOf<scalarVectorType, coopMatrixType>:$operand1,
-    SPIRV_ScalarOrVectorOfOrCoopMatrixOf<scalarVectorType, coopMatrixType>:$operand2
-  );
-
-  let results = (outs
-    SPIRV_ScalarOrVectorOfOrCoopMatrixOf<scalarVectorType, coopMatrixType>:$result
-  );
-  let assemblyFormat = "operands attr-dict `:` type($result)";
-}
-
-class SPIRV_ArithmeticUnaryOp<string mnemonic,
-                              Type scalarVectorType,
-                              Type coopMatrixType,
+class SPIRV_ArithmeticUnaryOp<string mnemonic, Type type,
                               list<Trait> traits = []> :
       // Operand type same as result type.
-      SPIRV_UnaryOp<mnemonic, coopMatrixType, coopMatrixType,
+      SPIRV_UnaryOp<mnemonic, type, type,
                    !listconcat(traits,
                                [Pure, SameOperandsAndResultType])> {
   // In addition to normal types arithmetic instructions can support cooperative
   // matrix.
   let arguments = (ins
-    SPIRV_ScalarOrVectorOfOrCoopMatrixOf<scalarVectorType, coopMatrixType>:$operand1
+    SPIRV_ScalarOrVectorOrCoopMatrixOf<type>:$operand
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOfOrCoopMatrixOf<scalarVectorType, coopMatrixType>:$result
+    SPIRV_ScalarOrVectorOrCoopMatrixOf<type>:$result
   );
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
@@ -105,10 +82,7 @@ class SPIRV_ArithmeticExtendedBinaryOp<string mnemonic,
 
 // -----
 
-def SPIRV_FAddOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"FAdd",
-                                                      SPIRV_Float,
-                                                      SPIRV_FloatOrBFloat16,
-                                                      [Commutative]> {
+def SPIRV_FAddOp : SPIRV_ArithmeticBinaryOp<"FAdd", SPIRV_Float, [Commutative]> {
   let summary = "Floating-point addition of Operand 1 and Operand 2.";
 
   let description = [{
@@ -130,10 +104,7 @@ def SPIRV_FAddOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"FAdd",
 
 // -----
 
-def SPIRV_FDivOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"FDiv",
-                                                      SPIRV_Float,
-                                                      SPIRV_FloatOrBFloat16,
-                                                      []> {
+def SPIRV_FDivOp : SPIRV_ArithmeticBinaryOp<"FDiv", SPIRV_Float, []> {
   let summary = "Floating-point division of Operand 1 divided by Operand 2.";
 
   let description = [{
@@ -183,10 +154,7 @@ def SPIRV_FModOp : SPIRV_ArithmeticBinaryOp<"FMod", SPIRV_Float, []> {
 
 // -----
 
-def SPIRV_FMulOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"FMul",
-                                                      SPIRV_Float,
-                                                      SPIRV_FloatOrBFloat16,
-                                                      [Commutative]> {
+def SPIRV_FMulOp : SPIRV_ArithmeticBinaryOp<"FMul", SPIRV_Float, [Commutative]> {
   let summary = "Floating-point multiplication of Operand 1 and Operand 2.";
 
   let description = [{
@@ -208,10 +176,7 @@ def SPIRV_FMulOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"FMul",
 
 // -----
 
-def SPIRV_FNegateOp : SPIRV_ArithmeticUnaryOp<"FNegate",
-                                          SPIRV_Float,
-                                          SPIRV_FloatOrBFloat16,
-                                          []> {
+def SPIRV_FNegateOp : SPIRV_ArithmeticUnaryOp<"FNegate", SPIRV_Float, []> {
   let summary = [{
     Inverts the sign bit of Operand. (Note, however, that OpFNegate is still
     considered a floating-point instruction, and so is subject to the
@@ -264,10 +229,7 @@ def SPIRV_FRemOp : SPIRV_ArithmeticBinaryOp<"FRem", SPIRV_Float, []> {
 
 // -----
 
-def SPIRV_FSubOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"FSub",
-                                                      SPIRV_Float,
-                                                      SPIRV_FloatOrBFloat16,
-                                                      []> {
+def SPIRV_FSubOp : SPIRV_ArithmeticBinaryOp<"FSub", SPIRV_Float, []> {
   let summary = "Floating-point subtraction of Operand 2 from Operand 1.";
 
   let description = [{
@@ -289,10 +251,9 @@ def SPIRV_FSubOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"FSub",
 
 // -----
 
-def SPIRV_IAddOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"IAdd",
-                                                      SPIRV_Integer,
-                                                      SPIRV_Integer,
-                                                      [Commutative, UsableInSpecConstantOp]> {
+def SPIRV_IAddOp : SPIRV_ArithmeticBinaryOp<"IAdd",
+                                        SPIRV_Integer,
+                                        [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer addition of Operand 1 and Operand 2.";
 
   let description = [{
@@ -361,10 +322,9 @@ def SPIRV_IAddCarryOp : SPIRV_ArithmeticExtendedBinaryOp<"IAddCarry",
 
 // -----
 
-def SPIRV_IMulOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"IMul",
-                                                      SPIRV_Integer,
-                                                      SPIRV_Integer,
-                                                      [Commutative, UsableInSpecConstantOp]> {
+def SPIRV_IMulOp : SPIRV_ArithmeticBinaryOp<"IMul",
+                                        SPIRV_Integer,
+                                        [Commutative, UsableInSpecConstantOp]> {
   let summary = "Integer multiplication of Operand 1 and Operand 2.";
 
   let description = [{
@@ -394,10 +354,9 @@ def SPIRV_IMulOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"IMul",
 
 // -----
 
-def SPIRV_ISubOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"ISub",
-                                                      SPIRV_Integer,
-                                                      SPIRV_Integer,
-                                                      [UsableInSpecConstantOp]> {
+def SPIRV_ISubOp : SPIRV_ArithmeticBinaryOp<"ISub",
+                                        SPIRV_Integer,
+                                        [UsableInSpecConstantOp]> {
   let summary = "Integer subtraction of Operand 2 from Operand 1.";
 
   let description = [{
@@ -486,12 +445,12 @@ def SPIRV_DotOp : SPIRV_Op<"Dot",
   }];
 
   let arguments = (ins
-    SPIRV_VectorOf<SPIRV_FloatOrBFloat16>:$vector1,
-    SPIRV_VectorOf<SPIRV_FloatOrBFloat16>:$vector2
+    SPIRV_VectorOf<SPIRV_Float>:$vector1,
+    SPIRV_VectorOf<SPIRV_Float>:$vector2
   );
 
   let results = (outs
-    SPIRV_FloatOrBFloat16:$result
+    SPIRV_Float:$result
   );
 
   let assemblyFormat = "operands attr-dict `:` type($vector1) `->` type($result)";
@@ -501,10 +460,9 @@ def SPIRV_DotOp : SPIRV_Op<"Dot",
 
 // -----
 
-def SPIRV_SDivOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"SDiv",
-                                                      SPIRV_Integer,
-                                                      SPIRV_Integer,
-                                                      [UsableInSpecConstantOp]> {
+def SPIRV_SDivOp : SPIRV_ArithmeticBinaryOp<"SDiv",
+                                        SPIRV_Integer,
+                                        [UsableInSpecConstantOp]> {
   let summary = "Signed-integer division of Operand 1 divided by Operand 2.";
 
   let description = [{
@@ -603,7 +561,6 @@ def SPIRV_SMulExtendedOp : SPIRV_ArithmeticExtendedBinaryOp<"SMulExtended",
 
 def SPIRV_SNegateOp : SPIRV_ArithmeticUnaryOp<"SNegate",
                                           SPIRV_Integer,
-                                          SPIRV_Integer,
                                           [UsableInSpecConstantOp]> {
   let summary = "Signed-integer subtract of Operand from zero.";
 
@@ -665,10 +622,9 @@ def SPIRV_SRemOp : SPIRV_ArithmeticBinaryOp<"SRem",
 
 // -----
 
-def SPIRV_UDivOp : SPIRV_ArithmeticWithCoopMatrixBinaryOp<"UDiv",
-                                                      SPIRV_Integer,
-                                                      SPIRV_Integer,
-                                                      [UnsignedOp, UsableInSpecConstantOp]> {
+def SPIRV_UDivOp : SPIRV_ArithmeticBinaryOp<"UDiv",
+                                        SPIRV_Integer,
+                                        [UnsignedOp, UsableInSpecConstantOp]> {
   let summary = "Unsigned-integer division of Operand 1 divided by Operand 2.";
 
   let description = [{
