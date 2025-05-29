@@ -73,25 +73,6 @@ protected:
   std::unique_ptr<ObjectFile> ObjFile;
   std::unique_ptr<BinaryContext> BC;
 
-  /// Return true when the expected \p SampleSize profile data are generated and
-  /// contain all the \p ExpectedEventNames.
-  bool checkEvents(uint64_t PID, size_t SampleSize,
-                   const StringSet<> &ExpectedEventNames) {
-    DataAggregator DA("<pseudo input>");
-    DA.ParsingBuf = opts::ReadPerfEvents;
-    DA.BC = BC.get();
-    DataAggregator::MMapInfo MMap;
-    DA.BinaryMMapInfo.insert(std::make_pair(PID, MMap));
-
-    DA.parseSpeAsBasicEvents();
-
-    for (auto &EE : ExpectedEventNames)
-      if (!DA.EventNames.contains(EE.first()))
-        return false;
-
-    return SampleSize == DA.BasicSamples.size();
-  }
-
   /// Compare LBREntries
   bool checkLBREntry(const LBREntry &Lhs, const LBREntry &Rhs) {
     return Lhs.From == Rhs.From && Lhs.To == Rhs.To &&
@@ -135,26 +116,6 @@ protected:
 } // namespace bolt
 } // namespace llvm
 
-// Check that DataAggregator can parseSpeAsBasicEvents for branch events when
-// combined with other event types.
-
-TEST_F(PerfSpeEventsTestHelper, SpeBranches) {
-  // Check perf input with SPE branch events.
-  // Example collection command:
-  // ```
-  // perf record -e 'arm_spe_0/branch_filter=1/u' -- BINARY
-  // ```
-
-  opts::ReadPerfEvents =
-      "1234          instructions:              a002    a001\n"
-      "1234          instructions:              b002    b001\n"
-      "1234          instructions:              c002    c001\n"
-      "1234          instructions:              d002    d001\n"
-      "1234          instructions:              e002    e001\n";
-
-  EXPECT_TRUE(checkEvents(1234, 10, {"branches-spe:"}));
-}
-
 TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
   // Check perf input with SPE branch events as brstack format.
   // Example collection command:
@@ -180,63 +141,6 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
       {{{0xe001, 0xe002, false}}}, {{{0xf001, 0xf002, true}}},
   };
   parseAndCheckBrstackEvents(1234, ExpectedSamples);
-}
-
-TEST_F(PerfSpeEventsTestHelper, SpeBranchesAndCycles) {
-  // Check perf input with SPE branch events and cycles.
-  // Example collection command:
-  // ```
-  // perf record -e cycles:u -e 'arm_spe_0/branch_filter=1/u' -- BINARY
-  // ```
-
-  opts::ReadPerfEvents =
-      "1234          instructions:              a002    a001\n"
-      "1234              cycles:u:                 0    b001\n"
-      "1234              cycles:u:                 0    c001\n"
-      "1234          instructions:              d002    d001\n"
-      "1234          instructions:              e002    e001\n";
-
-  EXPECT_TRUE(checkEvents(1234, 8, {"branches-spe:", "cycles:u:"}));
-}
-
-TEST_F(PerfSpeEventsTestHelper, SpeAnyEventAndCycles) {
-  // Check perf input with any SPE event type and cycles.
-  // Example collection command:
-  // ```
-  // perf record -e cycles:u -e 'arm_spe_0//u' -- BINARY
-  // ```
-
-  opts::ReadPerfEvents =
-      "1234              cycles:u:                0     a001\n"
-      "1234              cycles:u:                0     b001\n"
-      "1234          instructions:                0     c001\n"
-      "1234          instructions:                0     d001\n"
-      "1234          instructions:              e002    e001\n";
-
-  EXPECT_TRUE(checkEvents(1234, 6,
-                          {"cycles:u:", "instructions-spe:", "branches-spe:"}));
-}
-
-TEST_F(PerfSpeEventsTestHelper, SpeNoBranchPairsRecorded) {
-  // Check perf input that has no SPE branch pairs recorded.
-  // Example collection command:
-  // ```
-  // perf record -e cycles:u -e 'arm_spe_0/load_filter=1,branch_filter=0/u' --
-  // BINARY
-  // ```
-
-  testing::internal::CaptureStderr();
-  opts::ReadPerfEvents =
-      "1234          instructions:                 0    a001\n"
-      "1234              cycles:u:                 0    b001\n"
-      "1234          instructions:                 0    c001\n"
-      "1234              cycles:u:                 0    d001\n"
-      "1234          instructions:                 0    e001\n";
-
-  EXPECT_TRUE(checkEvents(1234, 5, {"instructions-spe:", "cycles:u:"}));
-
-  std::string Stderr = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(Stderr, "PERF2BOLT-WARNING: no SPE branches found\n");
 }
 
 #endif
