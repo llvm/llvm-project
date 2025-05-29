@@ -136,6 +136,10 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD);
 static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
                                 const ValueDecl *D) {
+  // This function tries pretty hard to produce a good diagnostic. Just skip
+  // tha if nobody will see it anyway.
+  if (!S.diagnosing())
+    return false;
 
   if (isa<ParmVarDecl>(D)) {
     if (D->getType()->isReferenceType())
@@ -168,6 +172,9 @@ static bool diagnoseUnknownDecl(InterpState &S, CodePtr OpPC,
 
 static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
                                      const ValueDecl *VD) {
+  if (!S.diagnosing())
+    return;
+
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   if (!S.getLangOpts().CPlusPlus) {
     S.FFDiag(Loc);
