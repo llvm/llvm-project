@@ -544,52 +544,50 @@ multiclass CP_ASYNC_BULK_S2G_INTR<bit has_ch> {
       [(int_nvvm_cp_async_bulk_shared_cta_to_global_bytemask addr:$dst, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0), i16:$mask)]>,
       Requires<[hasPTX<86>, hasSM<100>]>;
 }
-defm CP_ASYNC_BULK_S2G    : CP_ASYNC_BULK_S2G_INTR<0>;
-defm CP_ASYNC_BULK_S2G_CH : CP_ASYNC_BULK_S2G_INTR<1>;
+defm CP_ASYNC_BULK_S2G    : CP_ASYNC_BULK_S2G_INTR<has_ch = 0>;
+defm CP_ASYNC_BULK_S2G_CH : CP_ASYNC_BULK_S2G_INTR<has_ch = 1>;
 
-multiclass CP_ASYNC_BULK_G2S<NVPTXRegClass rc> {
-  def NAME: NVPTXInst<(outs),
-            (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size),
-            !strconcat(CpAsyncBulkStr<0, 0>.G2S, " [$dst], [$src], $size, [$mbar];"), []>,
-            Requires<[hasPTX<80>, hasSM<90>]>;
-  def NAME # _MC: NVPTXInst<(outs),
-                  (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int16Regs:$mc),
-                  !strconcat(CpAsyncBulkStr<1, 0>.G2S, " [$dst], [$src], $size, [$mbar], $mc;"), []>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
-  def NAME # _CH: NVPTXInst<(outs),
-                  (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
-                  !strconcat(CpAsyncBulkStr<0, 1>.G2S, " [$dst], [$src], $size, [$mbar], $ch;"), []>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
-  def NAME # _MC_CH: NVPTXInst<(outs),
-                     (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int16Regs:$mc, Int64Regs:$ch),
-                     !strconcat(CpAsyncBulkStr<1, 1>.G2S, " [$dst], [$src], $size, [$mbar], $mc, $ch;"), []>,
-                     Requires<[hasPTX<80>, hasSM<90>]>;
+multiclass CP_ASYNC_BULK_G2S_INTR<bit has_ch> {
+  defvar Intr = int_nvvm_cp_async_bulk_global_to_shared_cluster;
+
+  def NAME : NVPTXInst<(outs),
+      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
+           Int32Regs:$size, Int16Regs:$mask, Int64Regs:$ch),
+      !if(has_ch,
+          CpAsyncBulkStr<0, 1>.G2S # " [$dst], [$src], $size, [$mbar], $ch;",
+          CpAsyncBulkStr<0, 0>.G2S # " [$dst], [$src], $size, [$mbar];"),
+      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i16:$mask, i64:$ch, 0, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<80>, hasSM<90>]>;
+
+  def NAME # _MC : NVPTXInst<(outs),
+      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
+           Int32Regs:$size, Int16Regs:$mask, Int64Regs:$ch),
+      !if(has_ch,
+          CpAsyncBulkStr<1, 1>.G2S # " [$dst], [$src], $size, [$mbar], $mask, $ch;",
+          CpAsyncBulkStr<1, 0>.G2S # " [$dst], [$src], $size, [$mbar], $mask;"),
+      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i16:$mask, i64:$ch, -1, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<80>, hasSM<90>]>;
 }
-defm CP_ASYNC_BULK_G2S : CP_ASYNC_BULK_G2S<Int64Regs>;
-defm CP_ASYNC_BULK_G2S_SHARED32 : CP_ASYNC_BULK_G2S<Int32Regs>;
+defm CP_ASYNC_BULK_G2S    : CP_ASYNC_BULK_G2S_INTR<has_ch = 0>;
+defm CP_ASYNC_BULK_G2S_CH : CP_ASYNC_BULK_G2S_INTR<has_ch = 1>;
 
-multiclass CP_ASYNC_BULK_CTA_TO_CLUSTER<NVPTXRegClass rc> {
-  def NAME: NVPTXInst<(outs),
-            (ins rc:$dst, rc:$mbar, rc:$src, Int32Regs:$size),
-            !strconcat(CpAsyncBulkStr<0, 0>.C2C, " [$dst], [$src], $size, [$mbar];"),
-            [(int_nvvm_cp_async_bulk_shared_cta_to_cluster rc:$dst, rc:$mbar, rc:$src, Int32Regs:$size)]>,
-            Requires<[hasPTX<80>, hasSM<90>]>;
+def CP_ASYNC_BULK_CTA_TO_CLUSTER : NVPTXInst<(outs),
+  (ins ADDR:$dst, ADDR:$mbar, ADDR:$src, Int32Regs:$size),
+  CpAsyncBulkStr<0, 0>.C2C # " [$dst], [$src], $size, [$mbar];",
+  [(int_nvvm_cp_async_bulk_shared_cta_to_cluster addr:$dst, addr:$mbar, addr:$src, i32:$size)]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
+multiclass CP_ASYNC_BULK_PREFETCH_INTR<bit has_ch> {
+  def NAME : NVPTXInst<(outs), (ins ADDR:$src, Int32Regs:$size, Int64Regs:$ch),
+      !if(has_ch,
+          "cp.async.bulk.prefetch.L2.global.L2::cache_hint" # " [$src], $size, $ch;",
+          "cp.async.bulk.prefetch.L2.global" # " [$src], $size;"),
+      [(int_nvvm_cp_async_bulk_prefetch_L2 addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<80>, hasSM<90>]>;
 }
-defm CP_ASYNC_BULK_CTA_TO_CLUSTER : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int64Regs>;
-defm CP_ASYNC_BULK_CTA_TO_CLUSTER_SHARED32 : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int32Regs>;
+defm CP_ASYNC_BULK_PREFETCH    : CP_ASYNC_BULK_PREFETCH_INTR<has_ch = 0>;
+defm CP_ASYNC_BULK_PREFETCH_CH : CP_ASYNC_BULK_PREFETCH_INTR<has_ch = 1>;
 
-//------------------------------
-// Bulk Copy Prefetch Functions
-//------------------------------
-def CP_ASYNC_BULK_PREFETCH : NVPTXInst<(outs),
-                             (ins Int64Regs:$src, Int32Regs:$size),
-                             "cp.async.bulk.prefetch.L2.global [$src], $size;", []>,
-                             Requires<[hasPTX<80>, hasSM<90>]>;
-
-def CP_ASYNC_BULK_PREFETCH_CH : NVPTXInst<(outs),
-                                (ins Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
-                                "cp.async.bulk.prefetch.L2.global.L2::cache_hint [$src], $size, $ch;", []>,
-                                Requires<[hasPTX<80>, hasSM<90>]>;
 //-------------------------------------
 // TMA Async Bulk Tensor Copy Functions
 //-------------------------------------
