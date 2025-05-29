@@ -1014,13 +1014,8 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
       // overlap.
       if (MRI.regsOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx]))
         return CompOprIdx;
-      // FIXME Temporary workaround because the RTL does not support the
-      // destinations with the same bank yet. See DEGFX13-11539. Revert the
-      // patch or uncomment the original code when the issue is fixed. And the
-      // tests will change. This change affects GFX1250 as well, so do not
-      // propagate it or use it for those parts
-      // if (VOPD3) // No need to check dst parity.
-        // continue;
+      if (VOPD3) // No need to check dst parity.
+        continue;
     }
 
     if (banksOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx], BanksMasks) &&

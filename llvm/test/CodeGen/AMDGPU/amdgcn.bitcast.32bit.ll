@@ -2410,15 +2410,13 @@ define <4 x i8> @bitcast_i32_to_v4i8(i32 %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX13-TRUE16-NEXT:    v_add_nc_u32_e32 v2, 3, v2
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.4: ; %end
 ; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
@@ -5294,15 +5292,13 @@ define <4 x i8> @bitcast_f32_to_v4i8(float %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX13-TRUE16-NEXT:    v_add_f32_e32 v2, 1.0, v2
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.4: ; %end
 ; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
@@ -7795,15 +7791,13 @@ define <4 x i8> @bitcast_v2i16_to_v4i8(<2 x i16> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX13-TRUE16-NEXT:    v_pk_add_u16 v2, v2, 3 op_sel_hi:[1,0]
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.4: ; %end
 ; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
@@ -9925,15 +9919,13 @@ define <4 x i8> @bitcast_v2f16_to_v4i8(<2 x half> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX13-TRUE16-NEXT:    v_pk_add_f16 v2, 0x200, v2 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.4: ; %end
 ; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
@@ -11628,15 +11620,13 @@ define <4 x i8> @bitcast_v2bf16_to_v4i8(<2 x bfloat> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX13-TRUE16-NEXT:    v_pk_add_bf16 v2, 0x40c0, v2 op_sel_hi:[0,1]
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.4: ; %end
 ; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l
@@ -12743,15 +12733,13 @@ define <4 x i8> @bitcast_v1i32_to_v4i8(<1 x i32> %a, i32 %b) {
 ; GFX13-TRUE16-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.2: ; %Flow
 ; GFX13-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX13-TRUE16-NEXT:  ; %bb.3: ; %cmp.true
 ; GFX13-TRUE16-NEXT:    v_add_nc_u32_e32 v2, 3, v2
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v2
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2
+; GFX13-TRUE16-NEXT:    v_dual_lshrrev_b32 v3, 24, v2 :: v_dual_lshrrev_b32 v1, 8, v2
 ; GFX13-TRUE16-NEXT:  ; %bb.4: ; %end
 ; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v2.l

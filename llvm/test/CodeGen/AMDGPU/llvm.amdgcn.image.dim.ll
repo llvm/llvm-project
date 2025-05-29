@@ -451,10 +451,10 @@ define amdgpu_ps <4 x float> @load_2d_tfe(<8 x i32> inreg %rsrc, ptr addrspace(1
 ;
 ; GFX13-LABEL: load_2d_tfe:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v7, 0
-; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
-; GFX13-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
-; GFX13-NEXT:    v_dual_mov_b32 v10, v7 :: v_dual_mov_b32 v11, v7
+; GFX13-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_mov_b32 v5, v1
+; GFX13-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v8, v7
+; GFX13-NEXT:    v_dual_mov_b32 v9, v7 :: v_dual_mov_b32 v10, v7
+; GFX13-NEXT:    v_mov_b32_e32 v11, v7
 ; GFX13-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
 ; GFX13-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v11
@@ -974,10 +974,10 @@ define amdgpu_ps <4 x float> @load_1darray_tfe(<8 x i32> inreg %rsrc, ptr addrsp
 ;
 ; GFX13-LABEL: load_1darray_tfe:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v7, 0
-; GFX13-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v6, v0
-; GFX13-NEXT:    v_dual_mov_b32 v8, v7 :: v_dual_mov_b32 v9, v7
-; GFX13-NEXT:    v_dual_mov_b32 v10, v7 :: v_dual_mov_b32 v11, v7
+; GFX13-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_mov_b32 v5, v1
+; GFX13-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v8, v7
+; GFX13-NEXT:    v_dual_mov_b32 v9, v7 :: v_dual_mov_b32 v10, v7
+; GFX13-NEXT:    v_mov_b32_e32 v11, v7
 ; GFX13-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
 ; GFX13-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v11
@@ -1507,11 +1507,11 @@ define amdgpu_ps <4 x float> @load_2darraymsaa_tfe(<8 x i32> inreg %rsrc, ptr ad
 ;
 ; GFX13-LABEL: load_2darraymsaa_tfe:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v9, 0
-; GFX13-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v6, v2
-; GFX13-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_mov_b32 v8, v0
-; GFX13-NEXT:    v_dual_mov_b32 v10, v9 :: v_dual_mov_b32 v11, v9
-; GFX13-NEXT:    v_dual_mov_b32 v12, v9 :: v_dual_mov_b32 v13, v9
+; GFX13-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v5, v3
+; GFX13-NEXT:    v_dual_mov_b32 v6, v2 :: v_dual_mov_b32 v7, v1
+; GFX13-NEXT:    v_dual_mov_b32 v8, v0 :: v_dual_mov_b32 v10, v9
+; GFX13-NEXT:    v_dual_mov_b32 v11, v9 :: v_dual_mov_b32 v12, v9
+; GFX13-NEXT:    v_mov_b32_e32 v13, v9
 ; GFX13-NEXT:    v_dual_mov_b32 v0, v9 :: v_dual_mov_b32 v1, v10
 ; GFX13-NEXT:    v_dual_mov_b32 v2, v11 :: v_dual_mov_b32 v3, v12
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v13

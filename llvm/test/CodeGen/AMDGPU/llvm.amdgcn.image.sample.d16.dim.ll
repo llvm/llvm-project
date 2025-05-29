@@ -211,9 +211,8 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX13-FAKE16:       ; %bb.0: ; %main_body
 ; GFX13-FAKE16-NEXT:    s_mov_b32 s14, exec_lo
 ; GFX13-FAKE16-NEXT:    s_wqm_b32 exec_lo, exec_lo
-; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v4, 0
-; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v3, v0
-; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v5, v4
+; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v2, v1
+; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_mov_b32 v5, v4
 ; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
 ; GFX13-FAKE16-NEXT:    s_and_b32 exec_lo, exec_lo, s14
 ; GFX13-FAKE16-NEXT:    image_sample v[0:1], [v3, v2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe d16

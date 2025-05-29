@@ -79,17 +79,15 @@ main_body:
 define amdgpu_ps float @test3(i32 %rsrc, i32 %data, i32 %cmp, i32 %vindex, i32 %voffset) {
 ; GFX13-LABEL: test3:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    v_mov_b32_e32 v4, v0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v1
+; GFX13-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v0, v1
 ; GFX13-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX13-NEXT:    s_movk_i32 s0, 0x1ffc
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], off, v4, null th:TH_ATOMIC_RETURN
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, v4, null offen th:TH_ATOMIC_RETURN
-; GFX13-NEXT:    v_add_nc_u32_e32 v3, 44, v3
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_mov_b32_e32 v1, v2
+; GFX13-NEXT:    v_dual_add_nc_u32 v3, 44, v3 :: v_dual_mov_b32 v1, v2
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, v4, null offen th:TH_ATOMIC_RETURN
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_mov_b32_e32 v1, v2
