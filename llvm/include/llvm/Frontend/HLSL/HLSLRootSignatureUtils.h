@@ -63,7 +63,7 @@ private:
 // RangeInfo holds the information to correctly construct a ResourceRange
 // and retains this information to be used for displaying a better diagnostic
 struct RangeInfo {
-  const static uint32_t Unbounded = static_cast<uint32_t>(-1);
+  const static uint32_t Unbounded = ~0u;
 
   uint32_t LowerBound;
   uint32_t UpperBound;
@@ -71,14 +71,14 @@ struct RangeInfo {
 
 class ResourceRange {
 public:
-  using IMap = llvm::IntervalMap<uint32_t, const RangeInfo *, 16,
+  using MapT = llvm::IntervalMap<uint32_t, const RangeInfo *, 16,
                                  llvm::IntervalMapInfo<uint32_t>>;
 
 private:
-  IMap Intervals;
+  MapT Intervals;
 
 public:
-  ResourceRange(IMap::Allocator &Allocator) : Intervals(IMap(Allocator)) {}
+  ResourceRange(MapT::Allocator &Allocator) : Intervals(MapT(Allocator)) {}
 
   // Returns a reference to the first RangeInfo that overlaps with
   // [Info.LowerBound;Info.UpperBound], or, std::nullopt if there is no overlap
