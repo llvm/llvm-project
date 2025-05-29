@@ -1526,10 +1526,6 @@ void PPCRegisterInfo::lowerDMRSpilling(MachineBasicBlock::iterator II,
   Register VSRpReg2 = MF.getRegInfo().createVirtualRegister(RC);
   Register VSRpReg3 = MF.getRegInfo().createVirtualRegister(RC);
 
-  BuildMI(MBB, II, DL, TII.get(PPC::DMXXEXTFDMR512_HI), VSRpReg2)
-      .addDef(VSRpReg3)
-      .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_wacc_hi));
-
   BuildMI(MBB, II, DL, TII.get(PPC::DMXXEXTFDMR512), VSRpReg0)
       .addDef(VSRpReg1)
       .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_wacc_lo));
@@ -1540,6 +1536,11 @@ void PPCRegisterInfo::lowerDMRSpilling(MachineBasicBlock::iterator II,
   addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
                         .addReg(VSRpReg1, RegState::Kill),
                     FrameIndex, IsLittleEndian ? 64 : 32);
+
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXEXTFDMR512_HI), VSRpReg2)
+      .addDef(VSRpReg3)
+      .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_wacc_hi));
+
   addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
                         .addReg(VSRpReg2, RegState::Kill),
                     FrameIndex, IsLittleEndian ? 32 : 64);
@@ -1574,6 +1575,12 @@ void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
                     FrameIndex, IsLittleEndian ? 96 : 0);
   addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg1),
                     FrameIndex, IsLittleEndian ? 64 : 32);
+
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512),
+          TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_lo))
+      .addReg(VSRpReg0, RegState::Kill)
+      .addReg(VSRpReg1, RegState::Kill);
+
   addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg2),
                     FrameIndex, IsLittleEndian ? 32 : 64);
   addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg3),
@@ -1584,11 +1591,6 @@ void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
           TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_hi))
       .addReg(VSRpReg2, RegState::Kill)
       .addReg(VSRpReg3, RegState::Kill);
-
-  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512),
-          TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_lo))
-      .addReg(VSRpReg0, RegState::Kill)
-      .addReg(VSRpReg1, RegState::Kill);
 
   // Discard the pseudo instruction.
   MBB.erase(II);
