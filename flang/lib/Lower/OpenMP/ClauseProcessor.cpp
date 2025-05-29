@@ -743,6 +743,9 @@ void TypeInfo::typeScan(mlir::Type ty) {
   } else if (auto bty = mlir::dyn_cast<fir::BoxType>(ty)) {
     inBox = true;
     typeScan(bty.getEleTy());
+  } else if (auto cty = mlir::dyn_cast<fir::ClassType>(ty)) {
+    inBox = true;
+    typeScan(cty.getEleTy());
   } else if (auto cty = mlir::dyn_cast<fir::CharacterType>(ty)) {
     charLen = cty.getLen();
   } else if (auto hty = mlir::dyn_cast<fir::HeapType>(ty)) {
