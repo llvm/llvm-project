@@ -3,45 +3,39 @@
 
 define float @extract_static(ptr %in, ptr %out) {
 ; CHECK-LABEL: @extract_static(
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr [[IN:%.*]], align 16
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <2 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 2
-; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <2 x float>, ptr [[VEC_GEP]], align 4
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x float> [[COL_LOAD1]], i32 1
 ; CHECK-NEXT:    ret float [[EXTRACT]]
 ;
-  %inv = load <4 x float>, ptr %in
-  %invt  = call <4 x float> @llvm.matrix.transpose(<4 x float> %inv, i32 2, i32 2)
-  %invtt = call <4 x float> @llvm.matrix.transpose(<4 x float> %invt, i32 2, i32 2)
-  %extract = extractelement <4 x float> %invtt, i32 3
+  %inv = call <4 x float> @llvm.matrix.column.major.load(ptr %in, i64 2, i1 1, i32 2, i32 2)
+  %extract = extractelement <4 x float> %inv, i32 3
   ret float %extract
 }
 
 define float @extract_static_outofbounds(ptr %in, ptr %out) {
 ; CHECK-LABEL: @extract_static_outofbounds(
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr [[IN:%.*]], align 16
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <2 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 2
-; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <2 x float>, ptr [[VEC_GEP]], align 4
 ; CHECK-NEXT:    ret float poison
 ;
-  %inv = load <4 x float>, ptr %in
-  %invt  = call <4 x float> @llvm.matrix.transpose(<4 x float> %inv, i32 2, i32 2)
-  %invtt = call <4 x float> @llvm.matrix.transpose(<4 x float> %invt, i32 2, i32 2)
-  %extract = extractelement <4 x float> %invtt, i32 5
+  %inv = call <4 x float> @llvm.matrix.column.major.load(ptr %in, i64 2, i1 1, i32 2, i32 2)
+  %extract = extractelement <4 x float> %inv, i32 5
   ret float %extract
 }
 
 define float @extract_dynamic(ptr %in, i32 %idx, ptr %out) {
 ; CHECK-LABEL: @extract_dynamic(
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr [[IN:%.*]], align 16
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load volatile <2 x float>, ptr [[IN:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr float, ptr [[IN]], i64 2
-; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load volatile <2 x float>, ptr [[VEC_GEP]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[COL_LOAD]], <2 x float> [[COL_LOAD1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[TMP1]], i32 [[IDX:%.*]]
 ; CHECK-NEXT:    ret float [[EXTRACT]]
 ;
-  %inv = load <4 x float>, ptr %in
-  %invt  = call <4 x float> @llvm.matrix.transpose(<4 x float> %inv, i32 2, i32 2)
-  %invtt = call <4 x float> @llvm.matrix.transpose(<4 x float> %invt, i32 2, i32 2)
-  %extract = extractelement <4 x float> %invtt, i32 %idx
+  %inv = call <4 x float> @llvm.matrix.column.major.load(ptr %in, i64 2, i1 1, i32 2, i32 2)
+  %extract = extractelement <4 x float> %inv, i32 %idx
   ret float %extract
 }
