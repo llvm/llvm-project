@@ -77,6 +77,7 @@ Expected<std::unique_ptr<Embedder>> Embedder::create(IR2VecKind Mode,
 }
 
 void Embedder::addVectors(Embedding &Dst, const Embedding &Src) {
+  assert(Dst.size() == Src.size() && "Vectors must have the same dimension");
   std::transform(Dst.begin(), Dst.end(), Src.begin(), Dst.begin(),
                  std::plus<double>());
 }
