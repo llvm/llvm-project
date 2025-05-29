@@ -363,6 +363,12 @@ void SwitchCG::SwitchLowering::findBitTestClusters(CaseClusterVector &Clusters,
   }
   Clusters.resize(DstIndex);
 
+  // Don't try to fold clusters checking for zero and a power-of-2 constant, if
+  // larger ranges may be lowered as balanced binary trees later on, which won't
+  // work correctly after applying the transform below.
+  if (Clusters.size() > 4)
+    return;
+
   // Check if the clusters contain one checking for 0 and another one checking
   // for a power-of-2 constant with matching destinations. Those clusters can be
   // combined to a single one with CC_And.
