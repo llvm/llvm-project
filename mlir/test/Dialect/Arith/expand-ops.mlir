@@ -340,6 +340,59 @@ func.func @scaling_truncf_f32_to_f4E2M1FN(%arg0 : f32, %arg1: f8E8M0FNU) -> f4E2
 // SCHECK: %[[DIVF:.+]] = arith.divf %[[FLUSHINPUT]], %[[EXPSCALE]] : f32
 // SCHECK: %[[RESULT:.+]] = arith.truncf %[[DIVF]] : f32 to f4E2M1FN
 // SCHECK: return %[[RESULT]]
+
+// -----
+
+func.func @scaling_truncf_vector_f16_to_f6E3M2FN(%arg0 : vector<4xf16>, %arg1: vector<4xf8E8M0FNU>) -> vector<4xf6E3M2FN> {
+    %0 = arith.scaling_truncf %arg0, %arg1 : vector<4xf16>, vector<4xf8E8M0FNU> to vector<4xf6E3M2FN>
+    return %0 : vector<4xf6E3M2FN>
+}
+
+// SCHECK-LABEL: @scaling_truncf_vector_f16_to_f6E3M2FN
+// SCHECK: %[[INPUTF32:.+]] = arith.extf %arg0 : vector<4xf16> to vector<4xf32>
+// SCHECK: %[[C2:.+]] = arith.constant dense<4> : vector<4xi32>
+// SCHECK: %[[C127:.+]] = arith.constant dense<127> : vector<4xi32>
+// SCHECK: %[[CN127:.+]] = arith.constant dense<-127> : vector<4xi32>
+// SCHECK: %[[BITCASTI8:.+]] =  arith.bitcast %arg1 : vector<4xf8E8M0FNU> to vector<4xi8>
+// SCHECK: %[[EXTI:.+]] = arith.extsi %[[BITCASTI8]] : vector<4xi8> to vector<4xi32>
+// SCHECK: %[[UNBIASEDSCALE:.+]] = arith.subi %[[EXTI]], %[[C127]] :  vector<4xi32>
+// SCHECK: %[[NORMALIZED:.+]] = arith.subi %[[UNBIASEDSCALE]], %[[C2]] : vector<4xi32>
+// SCHECK: %[[UPPERCOND:.+]] = arith.cmpi sgt, %[[NORMALIZED]], %[[C127]] : vector<4xi32>
+// SCHECK: %[[LOWERCOND:.+]] = arith.cmpi slt, %[[NORMALIZED]], %[[CN127]] : vector<4xi32>
+// SCHECK: %[[LOWERSELECT:.+]] = arith.select %[[LOWERCOND]], %[[CN127]], %[[NORMALIZED]] : vector<4xi1>, vector<4xi32>
+// SCHECK: %[[UPPERSELECT:.+]] = arith.select %[[UPPERCOND]], %[[C127]], %[[LOWERSELECT]] : vector<4xi1>, vector<4xi32>
+// SCHECK: %[[BIASED:.+]] = arith.addi %[[UPPERSELECT]], %[[C127]] : vector<4xi32>
+// SCHECK: %[[BIASEDI8:.+]] = arith.trunci %[[BIASED]] : vector<4xi32> to vector<4xi8>
+// SCHECK: %[[BITCASTF8:.+]] = arith.bitcast %[[BIASEDI8]] : vector<4xi8> to vector<4xf8E8M0FNU>
+// SCHECK: %[[EXPSCALE:.+]] = arith.extf %[[BITCASTF8]] : vector<4xf8E8M0FNU> to vector<4xf32>
+// SCHECK: %[[INPUTEXP:.+]] = arith.truncf %[[INPUTF32]] : vector<4xf32> to vector<4xf8E8M0FNU>
+// SCHECK: %[[INPUTEXPI8:.+]] = arith.bitcast %[[INPUTEXP]] : vector<4xf8E8M0FNU> to vector<4xi8> 
+// SCHECK: %[[C0:.+]] = arith.constant dense<0> : vector<4xi8>
+// SCHECK: %[[FLUSHCOND:.+]] = arith.cmpi eq, %[[C0]], %[[INPUTEXPI8]] : vector<4xi8>
+// SCHECK: %[[CF0:.+]] = arith.constant dense<0.000000e+00> : vector<4xf32>
+// SCHECK: %[[FLUSHINPUT:.+]] = arith.select %[[FLUSHCOND]], %[[CF0]], %[[INPUTF32]] : vector<4xi1>, vector<4xf32>
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[FLUSHINPUT]], %[[EXPSCALE]] : vector<4xf32>
+// SCHECK: %[[RESULT:.+]] = arith.truncf %[[DIVF]] : vector<4xf32> to vector<4xf6E3M2FN>
+// SCHECK: return %[[RESULT]] : vector<4xf6E3M2FN>
+
+// -----
+
+func.func @scaling_truncf_propagate_rounding_mode(%arg0 : vector<4xf16>, %arg1: vector<4xf8E8M0FNU>) -> vector<4xf6E3M2FN> {
+    %0 = arith.scaling_truncf %arg0, %arg1 to_nearest_even : vector<4xf16>, vector<4xf8E8M0FNU> to vector<4xf6E3M2FN>
+    return %0 : vector<4xf6E3M2FN>
+}
+// SCHECK-LABLE: @scaling_truncf_propagate_rounding_mode
+// SCHECK: %[[TRUNCF:.+]] = arith.truncf [[_:%[a-zA-Z0-9_]+]] to_nearest_even : vector<4xf32> to vector<4xf6E3M2FN>
+// SCHECK: return %[[TRUNCF]] : vector<4xf6E3M2FN>
+
+// -----
+
+func.func @invalid_scaling_truncf_to_f4E2M1FN(%arg0: f16, %arg1 : f16) -> f4E2M1FN {
+    // expected-error@+1 {{failed to legalize operation 'arith.scaling_truncf' that was explicitly marked illegal}}
+    %0 = arith.scaling_truncf %arg0, %arg1 : f16, f16 to f4E2M1FN
+    return %0 : f4E2M1FN
+}
+
 // -----
 
 func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {

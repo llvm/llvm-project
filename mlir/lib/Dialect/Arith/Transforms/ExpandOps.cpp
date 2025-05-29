@@ -473,6 +473,7 @@ struct ScalingTruncFOpConverter
     } else if (inputETy.getIntOrFloatBitWidth() > 32) {
       inputOperand = b.create<arith::TruncFOp>(f32Ty, inputOperand);
     }
+    inputTy = inputOperand.getType();
     inputETy = getElementTypeOrSelf(inputOperand);
 
     // normalize scale by exponent of the max normal value in result type as per
