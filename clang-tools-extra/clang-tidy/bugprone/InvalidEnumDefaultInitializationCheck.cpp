@@ -123,6 +123,7 @@ void InvalidEnumDefaultInitializationCheck::check(
         Result.Nodes.getNodeAs<InitListExpr>("array_filler_expr");
     // Initialization of omitted array elements with array filler was found.
     // Check the type for enum without zero value.
+    // FIXME: In this way only one enum-typed value is found, not all of these.
     FindEnumMember Finder;
     if (!Finder.Visit(InitList->getArrayFiller()->getType().getTypePtr()))
       return;
