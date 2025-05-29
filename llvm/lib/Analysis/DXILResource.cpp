@@ -920,10 +920,11 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
     uint32_t Space;
     uint32_t LowerBound;
     uint32_t UpperBound;
+    Value *Name;
     Binding(ResourceClass RC, uint32_t Space, uint32_t LowerBound,
-            uint32_t UpperBound)
-        : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound) {
-    }
+            uint32_t UpperBound, Value *Name)
+        : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound),
+          Name(Name) {}
   };
   SmallVector<Binding> Bindings;
 
@@ -948,6 +949,7 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
           int32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+          Value *Name = CI->getArgOperand(5);
 
           // negative size means unbounded resource array;
           // upper bound register overflow should be detected in Sema
@@ -955,7 +957,7 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
                  "upper bound register overflow");
           uint32_t UpperBound = Size < 0 ? UINT32_MAX : LowerBound + Size - 1;
           Bindings.emplace_back(RTI.getResourceClass(), Space, LowerBound,
-                                UpperBound);
+                                UpperBound, Name);
         }
       break;
     }
@@ -974,8 +976,9 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
 
   // remove duplicates
   Binding *NewEnd = llvm::unique(Bindings, [](auto &LHS, auto &RHS) {
-    return std::tie(LHS.RC, LHS.Space, LHS.LowerBound, LHS.UpperBound) ==
-           std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound);
+    return std::tie(LHS.RC, LHS.Space, LHS.LowerBound, LHS.UpperBound,
+                    LHS.Name) == std::tie(RHS.RC, RHS.Space, RHS.LowerBound,
+                                          RHS.UpperBound, RHS.Name);
   });
   if (NewEnd != Bindings.end())
     Bindings.erase(NewEnd);
@@ -1015,8 +1018,6 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
       if (B.UpperBound < UINT32_MAX)
         S->FreeRanges.emplace_back(B.UpperBound + 1, UINT32_MAX);
     } else {
-      // FIXME: This only detects overlapping bindings that are not an exact
-      // match (llvm/llvm-project#110723)
       OverlappingBinding = true;
       if (B.UpperBound < UINT32_MAX)
         LastFreeRange.LowerBound =

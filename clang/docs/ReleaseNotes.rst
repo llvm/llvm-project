@@ -575,7 +575,8 @@ Improvements to Clang's diagnostics
 
 - ``-Wswitch`` will now diagnose unhandled enumerators in switches also when
   the enumerator is deprecated. Warnings about using deprecated enumerators in
-  switch cases have moved behind a new ``-Wdeprecated-switch-case`` flag.
+  switch cases have moved behind a new ``-Wdeprecated-declarations-switch-case``
+  flag.
 
   For example:
 
@@ -598,7 +599,7 @@ Improvements to Clang's diagnostics
   The warning can be fixed either by adding a ``default:``, or by adding
   ``case Blue:``. Since the enumerator is deprecated, the latter approach will
   trigger a ``'Blue' is deprecated`` warning, which can be turned off with
-  ``-Wno-deprecated-switch-case``.
+  ``-Wno-deprecated-declarations-switch-case``.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -820,6 +821,7 @@ Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
+- Fix code completion crash involving PCH serialzied templates. (#GH139019)
 
 OpenACC Specific Changes
 ------------------------

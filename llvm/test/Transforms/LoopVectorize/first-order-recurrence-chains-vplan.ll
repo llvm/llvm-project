@@ -47,9 +47,9 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
-; CHECK-NEXT:    EMIT vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2_P:%.*]]>.1 = resume-phi vp<[[RESUME_2]]>.1, ir<33>
-; CHECK-NEXT:    EMIT vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_2_P:%.*]]>.1 = resume-phi vp<[[RESUME_2]]>.1, ir<33>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -128,10 +128,10 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph
-; CHECK-NEXT:    EMIT vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2_P:%.*]]>.1 = resume-phi vp<[[RESUME_2]]>.1, ir<33>
-; CHECK-NEXT:    EMIT vp<[[RESUME_3_P:%.*]]>.2 = resume-phi vp<[[RESUME_3]]>.2, ir<33>
-; CHECK-NEXT:    EMIT vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_1_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<22>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_2_P:%.*]]>.1 = resume-phi vp<[[RESUME_2]]>.1, ir<33>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_3_P:%.*]]>.2 = resume-phi vp<[[RESUME_3]]>.2, ir<33>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -213,9 +213,9 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
-; CHECK-NEXT:   EMIT vp<[[RESUME_X:%.+]]> = resume-phi vp<[[EXT_X]]>, ir<0>
-; CHECK-NEXT:   EMIT vp<[[RESUME_Y:%.+]]>.1 = resume-phi vp<[[EXT_Y]]>.1, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_X:%.+]]> = resume-phi vp<[[EXT_X]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_Y:%.+]]>.1 = resume-phi vp<[[EXT_Y]]>.1, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
@@ -292,9 +292,9 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
-; CHECK-NEXT:   EMIT vp<[[RESUME_X:%.+]]> = resume-phi vp<[[EXT_X]]>, ir<0>
-; CHECK-NEXT:   EMIT vp<[[RESUME_Y:%.+]]>.1 = resume-phi vp<[[EXT_Y]]>.1, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.*]]> = resume-phi vp<[[VTC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_X:%.+]]> = resume-phi vp<[[EXT_X]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_Y:%.+]]>.1 = resume-phi vp<[[EXT_Y]]>.1, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
