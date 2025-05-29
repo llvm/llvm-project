@@ -3661,7 +3661,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
       if (LHSDecompose && RHSDecompose && LHSDecompose->X == RHSDecompose->X &&
           RHSDecompose->Mask.isPowerOf2() && LHSDecompose->Mask.isPowerOf2() &&
-          LHSDecompose->Mask != RHSDecompose->Mask) {
+          LHSDecompose->Mask != RHSDecompose->Mask &&
+          LHSDecompose->Mask.getBitWidth() == Op0Ne->getBitWidth() &&
+          RHSDecompose->Mask.getBitWidth() == Op1Ne->getBitWidth()) {
+        assert(Op0Ne->getBitWidth() == Op1Ne->getBitWidth());
         assert(ICmpInst::isEquality(LHSDecompose->Pred));
         if (LHSDecompose->Pred == ICmpInst::ICMP_NE)
           std::swap(Op0Eq, Op0Ne);
