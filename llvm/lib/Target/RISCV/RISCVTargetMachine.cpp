@@ -151,9 +151,11 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
 static StringRef computeDataLayout(const Triple &TT,
                                    const TargetOptions &Options) {
   StringRef ABIName = Options.MCOptions.getABIName();
-  if (TT.isOSBinFormatMachO())
+  if (TT.isOSBinFormatMachO()) {
+    assert(TT.isArch32Bit() && "Invalid triple.");
+    assert((ABIName != "ilp32e") && "Invalid ABI.");
     return "e-m:o-p:32:32-i64:64-n32-S128";
-
+  }
   if (TT.isArch64Bit()) {
     if (ABIName == "lp64e")
       return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S64";
