@@ -4661,8 +4661,7 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   }
 
   SDValue Ops[] = {R1, R2, Imm};
-  SDNode *XAR =
-      CurDAG->getMachineNode(AArch64::XAR, DL, R1.getValueType(), Ops);
+  SDNode *XAR = CurDAG->getMachineNode(AArch64::XAR, DL, MVT::v2i64, Ops);
 
   if (VT == MVT::v1i64) {
     SDValue DSub = CurDAG->getTargetConstant(AArch64::dsub, DL, MVT::i32);
