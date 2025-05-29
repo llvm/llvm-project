@@ -346,6 +346,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 
   if (useInBoundsInsteadOfMasking) {
     // Update the inBounds attribute.
+    // FIXME: This computation is too weak - it ignores the read indices.
     for (unsigned i = 0; i < readRank; i++)
       inBoundsVal[i] = (sourceShape[i] == inputVectorSizes[i]) &&
                        !ShapedType::isDynamic(sourceShape[i]);

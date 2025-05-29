@@ -1659,9 +1659,10 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vectorToStore,
                static_cast<size_t>(vecToStoreType.getRank()) &&
            "Insufficient number of input vector sizes!");
     // Update the inBounds attribute.
+    // FIXME: This computation is too weak - it ignores the write indices.
     for (unsigned i = 0; i < vecToStoreRank; i++)
       inBoundsVal[i] =
-          (destShape[i] == inputVecSizesForLeadingDims[i]) &&
+          (destShape[i] >= inputVecSizesForLeadingDims[i]) &&
           !ShapedType::isDynamic(destShape[destRank - vecToStoreRank + i]);
   }
 
