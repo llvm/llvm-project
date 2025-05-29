@@ -31,6 +31,10 @@ TEST_F(LlvmLibcAsinTest, SpecialNumbers) {
 
 using namespace LIBC_NAMESPACE::testing;
 
+// With FTZ/DAZ flags are set, when the inputs are denormal, the output bit
+// pattern might not be exactly 0, but they should all be equal to 0 as floating
+// points.
+
 TEST_F(LlvmLibcAsinTest, FTZMode) {
   ModifyMXCSR mxcsr(FTZ);
 
