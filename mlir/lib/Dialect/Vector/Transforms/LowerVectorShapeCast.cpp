@@ -21,138 +21,103 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include <numeric>
 
 #define DEBUG_TYPE "vector-shape-cast-lowering"
 
 using namespace mlir;
-using namespace mlir::vector;
 
-/// Increments n-D `indices` by `step` starting from the innermost dimension.
-static void incIdx(MutableArrayRef<int64_t> indices, ArrayRef<int64_t> shape,
-                   int step = 1) {
-  for (int dim : llvm::reverse(llvm::seq<int>(0, indices.size()))) {
-    int64_t dimSize = shape[dim];
-    assert(indices[dim] < dimSize && "Indices are out of bound");
+/// Perform the inplace update
+///    rhs <- lhs + rhs
+///
+/// where `rhs` is a number expressed in mixed base `base` with most signficant
+/// dimensions on the left. For example if `rhs` is {a,b,c} and `base` is
+/// {5,3,2} then `rhs` has value a*3*2 + b*2 + c.
+///
+/// Some examples where `base` is {5,3,2}:
+/// rhs = {0,0,0}, lhs = 1  --> rhs = {0,0,1}
+/// rhs = {0,0,1}, lhs = 1  --> rhs = {0,1,0}
+/// rhs = {0,0,0}, lhs = 25 --> rhs = {4,0,1}
+///
+/// Invalid:
+/// rhs = {0,0,2}, lhs = 1 : rhs not in base {5,3,2}
+///
+/// Overflows not handled correctly:
+/// rhs = {4,2,1}, lhs = 2 --> rhs = {0,0,0} (not {0,0,1})
+static void inplaceAdd(int64_t lhs, ArrayRef<int64_t> base,
+                       MutableArrayRef<int64_t> rhs) {
 
-    indices[dim] += step;
+  // For dimensions in [numIndices - 1, ..., 3, 2, 1, 0]:
+  for (int dim : llvm::reverse(llvm::seq<int>(0, rhs.size()))) {
+    int64_t dimBase = base[dim];
+    assert(rhs[dim] < dimBase && "rhs not in base");
 
-    int64_t spill = indices[dim] / dimSize;
-    if (spill == 0)
+    int64_t incremented = rhs[dim] + lhs;
+
+    // If the incremented value excedes the dimension base, we must spill to the
+    // next most significant dimension and repeat (we might need to spill to
+    // more significant dimensions multiple times).
+    lhs = incremented / dimBase;
+    rhs[dim] = incremented % dimBase;
+    if (lhs == 0)
       break;
-
-    indices[dim] %= dimSize;
-    step = spill;
   }
 }
 
 namespace {
-/// ShapeOp n-D -> 1-D downcast serves the purpose of flattening N-D to 1-D
-/// vectors progressively. This iterates over the n-1 major dimensions of the
-/// n-D vector and performs rewrites into:
-///   vector.extract from n-D + vector.insert_strided_slice offset into 1-D
-class ShapeCastOpNDDownCastRewritePattern
-    : public OpRewritePattern<vector::ShapeCastOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::ShapeCastOp op,
-                                PatternRewriter &rewriter) const override {
-    auto sourceVectorType = op.getSourceVectorType();
-    auto resultVectorType = op.getResultVectorType();
-    if (sourceVectorType.isScalable() || resultVectorType.isScalable())
-      return failure();
-
-    int64_t srcRank = sourceVectorType.getRank();
-    int64_t resRank = resultVectorType.getRank();
-    if (srcRank < 2 || resRank != 1)
-      return failure();
-
-    // Compute the number of 1-D vector elements involved in the reshape.
-    int64_t numElts = 1;
-    for (int64_t dim = 0; dim < srcRank - 1; ++dim)
-      numElts *= sourceVectorType.getDimSize(dim);
-
-    auto loc = op.getLoc();
-    SmallVector<int64_t> srcIdx(srcRank - 1, 0);
-    SmallVector<int64_t> resIdx(resRank, 0);
-    int64_t extractSize = sourceVectorType.getShape().back();
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultVectorType);
-
-    // Compute the indices of each 1-D vector element of the source extraction
-    // and destination slice insertion and generate such instructions.
-    for (int64_t i = 0; i < numElts; ++i) {
-      if (i != 0) {
-        incIdx(srcIdx, sourceVectorType.getShape(), /*step=*/1);
-        incIdx(resIdx, resultVectorType.getShape(), /*step=*/extractSize);
-      }
-
-      Value extract =
-          rewriter.create<vector::ExtractOp>(loc, op.getSource(), srcIdx);
-      result = rewriter.create<vector::InsertStridedSliceOp>(
-          loc, extract, result,
-          /*offsets=*/resIdx, /*strides=*/1);
-    }
-
-    rewriter.replaceOp(op, result);
-    return success();
-  }
-};
-
-/// ShapeOp 1-D -> n-D upcast serves the purpose of unflattening n-D from 1-D
-/// vectors progressively. This iterates over the n-1 major dimension of the n-D
-/// vector and performs rewrites into:
-///   vector.extract_strided_slice from 1-D + vector.insert into n-D
-/// Note that 1-D extract_strided_slice are lowered to efficient vector.shuffle.
-class ShapeCastOpNDUpCastRewritePattern
-    : public OpRewritePattern<vector::ShapeCastOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::ShapeCastOp op,
-                                PatternRewriter &rewriter) const override {
-    auto sourceVectorType = op.getSourceVectorType();
-    auto resultVectorType = op.getResultVectorType();
-    if (sourceVectorType.isScalable() || resultVectorType.isScalable())
-      return failure();
-
-    int64_t srcRank = sourceVectorType.getRank();
-    int64_t resRank = resultVectorType.getRank();
-    if (srcRank != 1 || resRank < 2)
-      return failure();
-
-    // Compute the number of 1-D vector elements involved in the reshape.
-    int64_t numElts = 1;
-    for (int64_t dim = 0; dim < resRank - 1; ++dim)
-      numElts *= resultVectorType.getDimSize(dim);
-
-    // Compute the indices of each 1-D vector element of the source slice
-    // extraction and destination insertion and generate such instructions.
-    auto loc = op.getLoc();
-    SmallVector<int64_t> srcIdx(srcRank, 0);
-    SmallVector<int64_t> resIdx(resRank - 1, 0);
-    int64_t extractSize = resultVectorType.getShape().back();
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultVectorType);
-    for (int64_t i = 0; i < numElts; ++i) {
-      if (i != 0) {
-        incIdx(srcIdx, sourceVectorType.getShape(), /*step=*/extractSize);
-        incIdx(resIdx, resultVectorType.getShape(), /*step=*/1);
-      }
-
-      Value extract = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, op.getSource(), /*offsets=*/srcIdx, /*sizes=*/extractSize,
-          /*strides=*/1);
-      result = rewriter.create<vector::InsertOp>(loc, extract, result, resIdx);
-    }
-    rewriter.replaceOp(op, result);
-    return success();
-  }
-};
-
-// We typically should not lower general shape cast operations into data
-// movement instructions, since the assumption is that these casts are
-// optimized away during progressive lowering. For completeness, however,
-// we fall back to a reference implementation that moves all elements
-// into the right place if we get here.
+/// shape_cast is converted to a sequence of extract, extract_strided_slice,
+/// insert_strided_slice, and insert operations. The running example will be:
+///
+/// %0 = vector.shape_cast %arg0 :
+///         vector<2x2x3x4x7x11xi8> to vector<8x6x7x11xi8>
+///
+/// In this example the source and result shapes share a common suffix of 7x11.
+/// This means we can always decompose the shape_cast into extract, insert, and
+/// their strided equivalents, on vectors with shape suffix 7x11.
+///
+/// The greatest common divisor (gcd) of the first dimension preceding the
+/// common suffix is gcd(4,6) = 2. The algorithm implemented here will operate
+/// on vectors with shapes that are `multiples` of (what we define as) the
+/// 'atomic size', 2x7x11. The atomic size is `gcd` x `common-suffix`.
+///
+///         vector<2x2x3x4x7x11xi8> to
+///             vector<8x6x7x11xi8>
+///                        ^^^^         ---> common suffix of 7x11
+///                      ^              --->    gcd(4,6) is 2 | |
+///                                                         | | |
+///                                                         v v v
+///                                  atomic size   <-----   2x7x11
+///
+///
+///
+/// The decomposition implemented in this patterns consists of a sequence of
+/// repeated steps:
+///
+///  (1) Extract vectors from the suffix of the source.
+///      In our example this is 2x2x3x4x7x11 -> 4x7x11.
+///
+///  (2) Do extract_strided_slice down to the atomic size.
+///      In our example this is 4x7x11 -> 2x7x11.
+///
+///  (3) Do insert_strided_slice to the suffix of the result.
+///      In our example this is 2x7x11 -> 6x7x11.
+///
+///  (4) insert these vectors into the result vector.
+///      In our example this is 6x7x11 -> 8x6x7x11.
+///
+/// These steps occur with different periods. In this example
+///  (1) occurs 12 times,
+///  (2) and (3) occur 24 times, and
+///  (4) occurs 8 times.
+///
+/// Two special cases are handled seperately:
+///  (1) A shape_cast that just does leading 1 insertion/removal
+///  (2) A shape_cast where the gcd is 1.
+///
+/// These 2 cases can have more compact IR generated by not using the generic
+/// algorithm described above.
+///
 class ShapeCastOpRewritePattern : public OpRewritePattern<vector::ShapeCastOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -164,50 +129,149 @@ public:
     VectorType resultType = op.getResultVectorType();
 
     if (sourceType.isScalable() || resultType.isScalable())
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "shape_cast lowering not handled by this pattern");
 
-    // Special case for n-D / 1-D lowerings with implementations that use
-    // extract_strided_slice / insert_strided_slice.
-    int64_t sourceRank = sourceType.getRank();
-    int64_t resultRank = resultType.getRank();
-    if ((sourceRank > 1 && resultRank == 1) ||
-        (sourceRank == 1 && resultRank > 1))
-      return failure();
+    const ArrayRef<int64_t> sourceShape = sourceType.getShape();
+    const ArrayRef<int64_t> resultShape = resultType.getShape();
+    const int64_t sourceRank = sourceType.getRank();
+    const int64_t resultRank = resultType.getRank();
+    const int64_t numElms = sourceType.getNumElements();
+    const Value source = op.getSource();
 
-    int64_t numExtracts = sourceType.getNumElements();
-    int64_t nbCommonInnerDims = 0;
-    while (true) {
-      int64_t sourceDim = sourceRank - 1 - nbCommonInnerDims;
-      int64_t resultDim = resultRank - 1 - nbCommonInnerDims;
-      if (sourceDim < 0 || resultDim < 0)
-        break;
-      int64_t dimSize = sourceType.getDimSize(sourceDim);
-      if (dimSize != resultType.getDimSize(resultDim))
-        break;
-      numExtracts /= dimSize;
-      ++nbCommonInnerDims;
+    // Set the first dimension (starting at the end) in the source and result
+    // respectively where the dimension sizes differ. Using the running example:
+    //
+    //  dimensions:  [0 1 2 3 4 5 ]    [0 1 2 3 ]
+    //  shapes:      (2,2,3,4,7,11) -> (8,6,7,11)
+    //                      ^             ^
+    //                      |             |
+    //        sourceSuffixStartDim is 3   |
+    //                                    |
+    //                               resultSuffixStartDim is 1
+    int64_t sourceSuffixStartDim = sourceRank - 1;
+    int64_t resultSuffixStartDim = resultRank - 1;
+    while (sourceSuffixStartDim >= 0 && resultSuffixStartDim >= 0 &&
+           (sourceType.getDimSize(sourceSuffixStartDim) ==
+            resultType.getDimSize(resultSuffixStartDim))) {
+      --sourceSuffixStartDim;
+      --resultSuffixStartDim;
     }
 
-    // Replace with data movement operations:
-    //    x[0,0,0] = y[0,0]
-    //    x[0,0,1] = y[0,1]
-    //    x[0,1,0] = y[0,2]
-    // etc., incrementing the two index vectors "row-major"
-    // within the source and result shape.
-    SmallVector<int64_t> sourceIndex(sourceRank - nbCommonInnerDims, 0);
-    SmallVector<int64_t> resultIndex(resultRank - nbCommonInnerDims, 0);
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+    // This is the case where there are just some leading ones to contend with
+    // in the source or result. It can be handled with a single extract/insert
+    // pair.
+    if (resultSuffixStartDim < 0 || sourceSuffixStartDim < 0) {
+      const int64_t delta = sourceRank - resultRank;
+      const int64_t sourceLeading = delta > 0 ? delta : 0;
+      const int64_t resultLeading = delta > 0 ? 0 : -delta;
+      const Value poison = rewriter.create<ub::PoisonOp>(loc, resultType);
+      const Value extracted = rewriter.create<vector::ExtractOp>(
+          loc, source, SmallVector<int64_t>(sourceLeading, 0));
+      const Value result = rewriter.create<vector::InsertOp>(
+          loc, extracted, poison, SmallVector<int64_t>(resultLeading, 0));
+      rewriter.replaceOp(op, result);
+      return success();
+    }
 
-    for (int64_t i = 0; i < numExtracts; i++) {
-      if (i != 0) {
-        incIdx(sourceIndex, sourceType.getShape().drop_back(nbCommonInnerDims));
-        incIdx(resultIndex, resultType.getShape().drop_back(nbCommonInnerDims));
+    const int64_t sourceSuffixStartDimSize =
+        sourceType.getDimSize(sourceSuffixStartDim);
+    const int64_t resultSuffixStartDimSize =
+        resultType.getDimSize(resultSuffixStartDim);
+    const int64_t greatestCommonDivisor =
+        std::gcd(sourceSuffixStartDimSize, resultSuffixStartDimSize);
+    const int64_t stridedSliceRank = sourceRank - sourceSuffixStartDim;
+    const size_t extractPeriod =
+        sourceSuffixStartDimSize / greatestCommonDivisor;
+    const size_t insertPeriod =
+        resultSuffixStartDimSize / greatestCommonDivisor;
+
+    SmallVector<int64_t> atomicShape(sourceShape.begin() + sourceSuffixStartDim,
+                                     sourceShape.end());
+    atomicShape[0] = greatestCommonDivisor;
+
+    const int64_t numAtomicElms = std::accumulate(
+        atomicShape.begin(), atomicShape.end(), 1, std::multiplies<int64_t>());
+    const size_t nAtomicSlices = numElms / numAtomicElms;
+
+    // This is the case where the strided dimension size is 1. More compact IR
+    // is generated in this case if we just extract and insert the elements
+    // directly. In other words, we don't use extract_strided_slice and
+    // insert_strided_slice.
+    if (greatestCommonDivisor == 1) {
+      sourceSuffixStartDim += 1;
+      resultSuffixStartDim += 1;
+      SmallVector<int64_t> extractIndex(sourceSuffixStartDim, 0);
+      SmallVector<int64_t> insertIndex(resultSuffixStartDim, 0);
+      Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+      for (size_t i = 0; i < nAtomicSlices; ++i) {
+        Value extracted =
+            rewriter.create<vector::ExtractOp>(loc, source, extractIndex);
+
+        result = rewriter.create<vector::InsertOp>(loc, extracted, result,
+                                                   insertIndex);
+
+        inplaceAdd(1, sourceShape.take_front(sourceSuffixStartDim),
+                   extractIndex);
+        inplaceAdd(1, resultShape.take_front(resultSuffixStartDim),
+                   insertIndex);
+      }
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
+    // The insert_strided_slice result's type
+    const ArrayRef<int64_t> insertStridedShape =
+        resultShape.drop_front(resultSuffixStartDim);
+    const VectorType insertStridedType =
+        VectorType::get(insertStridedShape, resultType.getElementType());
+
+    SmallVector<int64_t> extractIndex(sourceSuffixStartDim, 0);
+    SmallVector<int64_t> insertIndex(resultSuffixStartDim, 0);
+    SmallVector<int64_t> extractOffsets(stridedSliceRank, 0);
+    SmallVector<int64_t> insertOffsets(stridedSliceRank, 0);
+    const SmallVector<int64_t> sizes(stridedSliceRank, 1);
+
+    Value extracted = {};
+    Value extractedStrided = {};
+    Value insertedSlice = {};
+    Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+    const Value partResult =
+        rewriter.create<ub::PoisonOp>(loc, insertStridedType);
+
+    for (size_t i = 0; i < nAtomicSlices; ++i) {
+
+      const size_t extractStridedPhase = i % extractPeriod;
+      const size_t insertStridedPhase = i % insertPeriod;
+
+      // vector.extract
+      if (extractStridedPhase == 0) {
+        extracted =
+            rewriter.create<vector::ExtractOp>(loc, source, extractIndex);
+        inplaceAdd(1, sourceShape.take_front(sourceSuffixStartDim),
+                   extractIndex);
       }
 
-      Value extract =
-          rewriter.create<vector::ExtractOp>(loc, op.getSource(), sourceIndex);
-      result =
-          rewriter.create<vector::InsertOp>(loc, extract, result, resultIndex);
+      // vector.extract_strided_slice
+      extractOffsets[0] = extractStridedPhase * greatestCommonDivisor;
+      extractedStrided = rewriter.create<vector::ExtractStridedSliceOp>(
+          loc, extracted, extractOffsets, atomicShape, sizes);
+
+      // vector.insert_strided_slice
+      if (insertStridedPhase == 0) {
+        insertedSlice = partResult;
+      }
+      insertOffsets[0] = insertStridedPhase * greatestCommonDivisor;
+      insertedSlice = rewriter.create<vector::InsertStridedSliceOp>(
+          loc, extractedStrided, insertedSlice, insertOffsets, sizes);
+
+      // vector.insert
+      if (insertStridedPhase + 1 == insertPeriod) {
+        result = rewriter.create<vector::InsertOp>(loc, insertedSlice, result,
+                                                   insertIndex);
+        inplaceAdd(1, resultType.getShape().take_front(resultSuffixStartDim),
+                   insertIndex);
+      }
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -345,8 +409,8 @@ public:
 
       // 4. Increment the insert/extract indices, stepping by minExtractionSize
       // for the trailing dimensions.
-      incIdx(srcIdx, sourceVectorType.getShape(), /*step=*/minExtractionSize);
-      incIdx(resIdx, resultVectorType.getShape(), /*step=*/minExtractionSize);
+      inplaceAdd(minExtractionSize, sourceVectorType.getShape(), srcIdx);
+      inplaceAdd(minExtractionSize, resultVectorType.getShape(), resIdx);
     }
 
     rewriter.replaceOp(op, result);
@@ -363,8 +427,6 @@ public:
 
 void mlir::vector::populateVectorShapeCastLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<ShapeCastOpNDDownCastRewritePattern,
-               ShapeCastOpNDUpCastRewritePattern, ShapeCastOpRewritePattern,
-               ScalableShapeCastOpRewritePattern>(patterns.getContext(),
-                                                  benefit);
+  patterns.add<ShapeCastOpRewritePattern, ScalableShapeCastOpRewritePattern>(
+      patterns.getContext(), benefit);
 }
