@@ -2454,6 +2454,7 @@ void ASTStmtReader::VisitOMPLoopTransformationDirective(
     OMPLoopTransformationDirective *D) {
   VisitOMPLoopBasedDirective(D);
   D->setNumGeneratedLoops(Record.readUInt32());
+  D->setNumGeneratedLoopNests(Record.readUInt32());
 }
 
 void ASTStmtReader::VisitOMPTileDirective(OMPTileDirective *D) {
@@ -2473,6 +2474,10 @@ void ASTStmtReader::VisitOMPReverseDirective(OMPReverseDirective *D) {
 }
 
 void ASTStmtReader::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void ASTStmtReader::VisitOMPFuseDirective(OMPFuseDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
@@ -3616,6 +3621,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       assert(Record[ASTStmtReader::NumStmtFields + 1] == 0 &&
              "Reverse directive has no clauses");
       S = OMPReverseDirective::CreateEmpty(Context);
+      break;
+    }
+    case STMT_OMP_FUSE_DIRECTIVE: {
+      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      unsigned NumLoopNests = Record[ASTStmtReader::NumStmtFields + 2];
+      S = OMPFuseDirective::CreateEmpty(Context, NumClauses, NumLoops,
+                                        NumLoopNests);
       break;
     }
 

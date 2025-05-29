@@ -1024,6 +1024,29 @@ OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
   return new (C) OMPPartialClause();
 }
 
+OMPLoopRangeClause *
+OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                           SourceLocation LParenLoc, SourceLocation FirstLoc,
+                           SourceLocation CountLoc, SourceLocation EndLoc,
+                           ArrayRef<Expr *> Args) {
+
+  assert(Args.size() == 2 &&
+         "looprange clause must have exactly two arguments");
+  OMPLoopRangeClause *Clause = CreateEmpty(C);
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setFirstLoc(FirstLoc);
+  Clause->setCountLoc(CountLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setArgs(Args);
+  return Clause;
+}
+
+OMPLoopRangeClause *OMPLoopRangeClause::CreateEmpty(const ASTContext &C) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(2));
+  return new (Mem) OMPLoopRangeClause();
+}
+
 OMPAllocateClause *OMPAllocateClause::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
     Expr *Allocator, Expr *Alignment, SourceLocation ColonLoc,
@@ -1885,6 +1908,21 @@ void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
     OS << '(';
     Factor->printPretty(OS, nullptr, Policy, 0);
     OS << ')';
+  }
+}
+
+void OMPClausePrinter::VisitOMPLoopRangeClause(OMPLoopRangeClause *Node) {
+  OS << "looprange";
+
+  Expr *First = Node->getFirst();
+  Expr *Count = Node->getCount();
+
+  if (First && Count) {
+    OS << "(";
+    First->printPretty(OS, nullptr, Policy, 0);
+    OS << ",";
+    Count->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
   }
 }
 

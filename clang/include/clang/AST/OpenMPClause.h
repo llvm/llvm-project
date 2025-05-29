@@ -1143,6 +1143,97 @@ public:
   static OMPFullClause *CreateEmpty(const ASTContext &C);
 };
 
+/// This class represents the 'looprange' clause in the
+/// '#pragma omp fuse' directive
+///
+/// \code {c}
+/// #pragma omp fuse looprange(1,2)
+/// {
+///   for(int i = 0; i < 64; ++i)
+///   for(int j = 0; j < 256; j+=2)
+///   for(int k = 127; k >= 0; --k)
+/// \endcode
+class OMPLoopRangeClause final
+    : public OMPClause,
+      private llvm::TrailingObjects<OMPLoopRangeClause, Expr *> {
+  friend class OMPClauseReader;
+  friend class llvm::TrailingObjects<OMPLoopRangeClause, Expr *>;
+
+  /// Location of '('
+  SourceLocation LParenLoc;
+
+  /// Location of first and count expressions
+  SourceLocation FirstLoc, CountLoc;
+
+  /// Number of looprange arguments (always 2: first, count)
+  unsigned NumArgs = 2;
+
+  /// Set the argument expressions.
+  void setArgs(ArrayRef<Expr *> Args) {
+    assert(Args.size() == NumArgs && "Expected exactly 2 looprange arguments");
+    std::copy(Args.begin(), Args.end(), getTrailingObjects<Expr *>());
+  }
+
+  /// Build an empty clause for deserialization.
+  explicit OMPLoopRangeClause()
+      : OMPClause(llvm::omp::OMPC_looprange, {}, {}), NumArgs(2) {}
+
+public:
+  /// Build a 'looprange' clause AST node.
+  static OMPLoopRangeClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation FirstLoc, SourceLocation CountLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> Args);
+
+  /// Build an empty 'looprange' clause node.
+  static OMPLoopRangeClause *CreateEmpty(const ASTContext &C);
+
+  // Location getters/setters
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  SourceLocation getFirstLoc() const { return FirstLoc; }
+  SourceLocation getCountLoc() const { return CountLoc; }
+
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  void setFirstLoc(SourceLocation Loc) { FirstLoc = Loc; }
+  void setCountLoc(SourceLocation Loc) { CountLoc = Loc; }
+
+  /// Get looprange arguments: first and count
+  Expr *getFirst() const { return getArgs()[0]; }
+  Expr *getCount() const { return getArgs()[1]; }
+
+  /// Set looprange arguments: first and count
+  void setFirst(Expr *E) { getArgs()[0] = E; }
+  void setCount(Expr *E) { getArgs()[1] = E; }
+
+  MutableArrayRef<Expr *> getArgs() {
+    return MutableArrayRef<Expr *>(getTrailingObjects<Expr *>(), NumArgs);
+  }
+  ArrayRef<Expr *> getArgs() const {
+    return ArrayRef<Expr *>(getTrailingObjects<Expr *>(), NumArgs);
+  }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(getArgs().begin()),
+                       reinterpret_cast<Stmt **>(getArgs().end()));
+  }
+  const_child_range children() const {
+    auto AR = getArgs();
+    return const_child_range(reinterpret_cast<Stmt *const *>(AR.begin()),
+                             reinterpret_cast<Stmt *const *>(AR.end()));
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_looprange;
+  }
+};
+
 /// Representation of the 'partial' clause of the '#pragma omp unroll'
 /// directive.
 ///
