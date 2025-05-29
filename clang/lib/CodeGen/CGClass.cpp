@@ -2942,7 +2942,8 @@ bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
 llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
     const CXXRecordDecl *RD, llvm::Value *VTable, llvm::Type *VTableTy,
     uint64_t VTableByteOffset) {
-  SanitizerScope SanScope(this, {SanitizerKind::SO_CFIVCall});
+  auto CheckOrdinal = SanitizerKind::SO_CFIVCall;
+  SanitizerScope SanScope(this, {CheckOrdinal});
 
   EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
 
@@ -2963,7 +2964,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   if (SanOpts.has(SanitizerKind::CFIVCall) &&
       !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
                                                      TypeName)) {
-    EmitCheck(std::make_pair(CheckResult, SanitizerKind::SO_CFIVCall),
+    EmitCheck(std::make_pair(CheckResult, CheckOrdinal),
               SanitizerHandler::CFICheckFail, {}, {});
   }
 

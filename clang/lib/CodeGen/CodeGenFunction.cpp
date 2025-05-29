@@ -1632,9 +1632,10 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
         CGM.getCodeGenOpts().StrictReturn ||
         !CGM.MayDropFunctionReturn(FD->getASTContext(), FD->getReturnType());
     if (SanOpts.has(SanitizerKind::Return)) {
-      SanitizerScope SanScope(this, {SanitizerKind::SO_Return});
+      auto CheckOrdinal = SanitizerKind::SO_Return;
+      SanitizerScope SanScope(this, {CheckOrdinal});
       llvm::Value *IsFalse = Builder.getFalse();
-      EmitCheck(std::make_pair(IsFalse, SanitizerKind::SO_Return),
+      EmitCheck(std::make_pair(IsFalse, CheckOrdinal),
                 SanitizerHandler::MissingReturn,
                 EmitCheckSourceLocation(FD->getLocation()), {});
     } else if (ShouldEmitUnreachable) {
@@ -2537,7 +2538,8 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
           //   expression [...] each time it is evaluated it shall have a value
           //   greater than zero.
           if (SanOpts.has(SanitizerKind::VLABound)) {
-            SanitizerScope SanScope(this, {SanitizerKind::SO_VLABound});
+            auto CheckOrdinal = SanitizerKind::SO_VLABound;
+            SanitizerScope SanScope(this, {CheckOrdinal});
             llvm::Value *Zero = llvm::Constant::getNullValue(size->getType());
             clang::QualType SEType = sizeExpr->getType();
             llvm::Value *CheckCondition =
@@ -2547,9 +2549,8 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
             llvm::Constant *StaticArgs[] = {
                 EmitCheckSourceLocation(sizeExpr->getBeginLoc()),
                 EmitCheckTypeDescriptor(SEType)};
-            EmitCheck(
-                std::make_pair(CheckCondition, SanitizerKind::SO_VLABound),
-                SanitizerHandler::VLABoundNotPositive, StaticArgs, size);
+            EmitCheck(std::make_pair(CheckCondition, CheckOrdinal),
+                      SanitizerHandler::VLABoundNotPositive, StaticArgs, size);
           }
 
           // Always zexting here would be wrong if it weren't
@@ -3198,7 +3199,8 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
   Assumption->removeFromParent();
 
   {
-    SanitizerScope SanScope(this, {SanitizerKind::SO_Alignment});
+    auto CheckOrdinal = SanitizerKind::SO_Alignment;
+    SanitizerScope SanScope(this, {CheckOrdinal});
 
     if (!OffsetValue)
       OffsetValue = Builder.getInt1(false); // no offset.
@@ -3207,7 +3209,7 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
                                     EmitCheckSourceLocation(SecondaryLoc),
                                     EmitCheckTypeDescriptor(Ty)};
     llvm::Value *DynamicData[] = {Ptr, Alignment, OffsetValue};
-    EmitCheck({std::make_pair(TheCheck, SanitizerKind::SO_Alignment)},
+    EmitCheck({std::make_pair(TheCheck, CheckOrdinal)},
               SanitizerHandler::AlignmentAssumption, StaticData, DynamicData);
   }
 

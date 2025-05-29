@@ -999,8 +999,8 @@ void ScalarExprEmitter::EmitFloatConversionCheck(
   if (!isa<llvm::IntegerType>(DstTy))
     return;
 
-  CodeGenFunction::SanitizerScope SanScope(
-      &CGF, {SanitizerKind::SO_FloatCastOverflow});
+  auto CheckOrdinal = SanitizerKind::SO_FloatCastOverflow;
+  CodeGenFunction::SanitizerScope SanScope(&CGF, {CheckOrdinal});
   using llvm::APFloat;
   using llvm::APSInt;
 
@@ -1057,7 +1057,7 @@ void ScalarExprEmitter::EmitFloatConversionCheck(
   llvm::Constant *StaticArgs[] = {CGF.EmitCheckSourceLocation(Loc),
                                   CGF.EmitCheckTypeDescriptor(OrigSrcType),
                                   CGF.EmitCheckTypeDescriptor(DstType)};
-  CGF.EmitCheck(std::make_pair(Check, SanitizerKind::SO_FloatCastOverflow),
+  CGF.EmitCheck(std::make_pair(Check, CheckOrdinal),
                 SanitizerHandler::FloatCastOverflow, StaticArgs, OrigSrc);
 }
 
@@ -1140,7 +1140,9 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
       Check;
 
   {
-    // We don't know the check kind yet
+    // We don't know the check kind until we call
+    // EmitIntegerTruncationCheckHelper, but we want to annotate
+    // EmitIntegerTruncationCheckHelper's instructions too.
     CodeGenFunction::SanitizerScope SanScope(
         &CGF, {SanitizerKind::SO_ImplicitUnsignedIntegerTruncation,
                SanitizerKind::SO_ImplicitSignedIntegerTruncation});
