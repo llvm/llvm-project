@@ -2379,7 +2379,6 @@ std::optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
 /// ==> rewrite to vector.splat %a : vector<3xf32>
 static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
                                                 PatternRewriter &rewriter) {
-
   if (!llvm::all_equal(fromElementsOp.getElements()))
     return failure();
   rewriter.replaceOpWithNewOp<SplatOp>(fromElementsOp, fromElementsOp.getType(),
@@ -2437,8 +2436,8 @@ class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
                                            "element not from vector.extract");
       }
 
-      // Check condition (i) by checking that all elements have same source as
-      // the first element.
+      // Check condition (i) by checking that all elements have the same source
+      // as the first element.
       if (insertIndex == 0) {
         source = extractOp.getVector();
       } else if (extractOp.getVector() != source) {
