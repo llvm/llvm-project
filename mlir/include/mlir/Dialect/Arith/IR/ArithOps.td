@@ -1246,7 +1246,7 @@ def Arith_ScalingExtFOp
     input.extf = arith.extf(input) : inputTy to resultTy
     result = arith.mulf(scale.extf, input.extf)
     ```
-    It propagates NaN values. Therefore if either scale or input operand element value is a NaN then output element value will also be a NaN.
+    It propagates NaN values. Therefore, if either scale or the input element contains NaN, then the output element value will also be a NaN.
   }];
   let hasVerifier = 1;
   let assemblyFormat =
