@@ -1084,6 +1084,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
 
   bool VMCnt = false;
   bool LGKMCnt = false;
+  bool DirectLDSWait = false;
 
   if ((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH)) !=
       SIAtomicAddrSpace::NONE) {
@@ -1104,6 +1105,10 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   }
 
   if ((AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    // Wait for direct loads to LDS from global memory to ensure that
+    // LDS operations cannot be reordered with respect to global memory
+    // operations.
+    DirectLDSWait = true;
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1147,6 +1152,18 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     default:
       llvm_unreachable("Unsupported synchronization scope");
     }
+  }
+
+  // Conservatively wait for vmcnt(0) to ensure that LDS operations and direct
+  // LDS loads from global memory cannot be reordered with respect to each other.
+  // This waitcnt can be safely optimized to wait for a higher vmcnt based on
+  // the number of outstanding direct LDS loads.
+  if (DirectLDSWait) {
+    unsigned WaitCntImmediate = AMDGPU::encodeWaitcnt(
+        IV, 0, getExpcntBitMask(IV), getLgkmcntBitMask(IV));
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_DIRECT_LDS_LOAD_soft))
+        .addImm(WaitCntImmediate);
+    Changed = true;
   }
 
   if (VMCnt || LGKMCnt) {
