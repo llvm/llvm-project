@@ -360,21 +360,6 @@ static LogicalResult getFuncOpsOrderedByCalls(
   return success();
 }
 
-static LogicalResult getFuncOpsOrderedByCalls(
-    ModuleOp moduleOp, SmallVectorImpl<func::FuncOp> &orderedFuncOps,
-    SmallVectorImpl<func::FuncOp> &remainingFuncOps, FuncCallerMap &callerMap,
-    OneShotAnalysisState &analysisState) {
-  auto *funcAnalysisState = analysisState.getExtension<FuncAnalysisState>();
-
-  if (funcAnalysisState)
-    return getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, remainingFuncOps,
-                                    callerMap, funcAnalysisState->symbolTables);
-
-  SymbolTableCollection symbolTables;
-  return getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps, remainingFuncOps,
-                                  callerMap, symbolTables);
-}
-
 /// Helper function that extracts the source from a memref.cast. If the given
 /// value is not a memref.cast result, simply returns the given value.
 static Value unpackCast(Value v) {
@@ -471,7 +456,8 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   FuncCallerMap callerMap;
 
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps,
-                                      remainingFuncOps, callerMap, state)))
+                                      remainingFuncOps, callerMap,
+                                      funcState.symbolTables)))
     return failure();
 
   // Analyze functions in order. Starting with functions that are not calling
