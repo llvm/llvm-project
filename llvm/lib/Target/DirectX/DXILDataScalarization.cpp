@@ -172,22 +172,6 @@ bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
   return false;
 }
 
-// Allocates and populates an array equivalent to the vector operand Vec.
-// Returns the array and the type of the array.
-static std::pair<Value *, Type *>
-allocaArrayFromVector(IRBuilder<> &Builder, Value *Vec, Type *IdxTy) {
-  Type *ArrTy = equivalentArrayTypeFromVector(Vec->getType());
-  Value *ArrAlloca = Builder.CreateAlloca(ArrTy);
-  for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
-    Value *EE = Builder.CreateExtractElement(Vec, I);
-    Value *GEP = Builder.CreateInBoundsGEP(
-        ArrTy, ArrAlloca,
-        {ConstantInt::get(IdxTy, 0), ConstantInt::get(IdxTy, I)});
-    Builder.CreateStore(EE, GEP);
-  }
-  return std::make_pair(ArrAlloca, ArrTy);
-}
-
 static bool replaceDynamicInsertElementInst(InsertElementInst &IEI) {
   IRBuilder<> Builder(&IEI);
 
@@ -196,12 +180,33 @@ static bool replaceDynamicInsertElementInst(InsertElementInst &IEI) {
   Value *Index = IEI.getOperand(2);
   Type *IndexTy = Index->getType();
 
-  std::pair<Value *, Type *> Arr = allocaArrayFromVector(Builder, Vec, IndexTy);
-  Value *ArrAlloca = Arr.first;
-  Type *ArrTy = Arr.second;
-  Value *GEP = Builder.CreateInBoundsGEP(ArrTy, ArrAlloca,
-                                         {ConstantInt::get(IndexTy, 0), Index});
-  Builder.CreateStore(Val, GEP);
+  Type *ArrTy = equivalentArrayTypeFromVector(Vec->getType());
+  Value *ArrAlloca = Builder.CreateAlloca(ArrTy);
+  const uint64_t ArrNumElems = ArrTy->getArrayNumElements();
+
+  SmallVector<Value *, 4> GEPs(ArrNumElems);
+  for (unsigned I = 0; I < ArrNumElems; ++I) {
+    Value *EE = Builder.CreateExtractElement(Vec, I);
+    Value *GEP = Builder.CreateInBoundsGEP(
+        ArrTy, ArrAlloca,
+        {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, I)});
+    Builder.CreateStore(EE, GEP);
+    GEPs[I] = GEP;
+  }
+
+  Value *GEPForStore = Builder.CreateInBoundsGEP(
+      ArrTy, ArrAlloca, {ConstantInt::get(IndexTy, 0), Index});
+  Builder.CreateStore(Val, GEPForStore);
+
+  Value *NewIEI = PoisonValue::get(Vec->getType());
+  for (unsigned I = 0; I < ArrNumElems; ++I) {
+    Value *GEP = GEPs[I];
+    Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), GEP);
+    NewIEI =
+        Builder.CreateInsertElement(NewIEI, Load, ConstantInt::get(IndexTy, I));
+  }
+
+  IEI.replaceAllUsesWith(NewIEI);
   IEI.eraseFromParent();
   return true;
 }
@@ -220,10 +225,15 @@ static bool replaceDynamicExtractElementInst(ExtractElementInst &EEI) {
   Value *Index = EEI.getIndexOperand();
   Type *IndexTy = Index->getType();
 
-  std::pair<Value *, Type *> Arr =
-      allocaArrayFromVector(Builder, EEI.getVectorOperand(), IndexTy);
-  Value *ArrAlloca = Arr.first;
-  Type *ArrTy = Arr.second;
+  Type *ArrTy = equivalentArrayTypeFromVector(EEI.getVectorOperandType());
+  Value *ArrAlloca = Builder.CreateAlloca(ArrTy);
+  for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
+    Value *EE = Builder.CreateExtractElement(EEI.getVectorOperand(), I);
+    Value *GEP = Builder.CreateInBoundsGEP(
+        ArrTy, ArrAlloca,
+        {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, I)});
+    Builder.CreateStore(EE, GEP);
+  }
 
   Value *GEP = Builder.CreateInBoundsGEP(ArrTy, ArrAlloca,
                                          {ConstantInt::get(IndexTy, 0), Index});

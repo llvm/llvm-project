@@ -25,8 +25,8 @@ define float @extract_float_vec_dynamic(<4 x float> %v, i32 %i) {
   ret float %ee
 }
 
-define void @insert_i32_vec_dynamic(<3 x i32> %v, i32 %a, i32 %i) {
-; CHECK-LABEL: define void @insert_i32_vec_dynamic(
+define <3 x i32> @insert_i32_vec_dynamic(<3 x i32> %v, i32 %a, i32 %i) {
+; CHECK-LABEL: define <3 x i32> @insert_i32_vec_dynamic(
 ; CHECK-SAME: <3 x i32> [[V:%.*]], i32 [[A:%.*]], i32 [[I:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = alloca [3 x i32], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i32> [[V]], i64 0
@@ -40,10 +40,16 @@ define void @insert_i32_vec_dynamic(<3 x i32> %v, i32 %a, i32 %i) {
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP1]], i32 0, i32 [[I]]
 ; CHECK-NEXT:    store i32 [[A]], ptr [[TMP8]], align 4
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <3 x i32> poison, i32 [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <3 x i32> [[TMP10]], i32 [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <3 x i32> [[TMP12]], i32 [[TMP13]], i32 2
+; CHECK-NEXT:    ret <3 x i32> [[TMP14]]
 ;
-  insertelement <3 x i32> %v, i32 %a, i32 %i
-  ret void
+  %ie = insertelement <3 x i32> %v, i32 %a, i32 %i
+  ret <3 x i32> %ie
 }
 
 ; An extractelement with a constant index should not be converted to array form
@@ -58,13 +64,13 @@ define i16 @extract_i16_vec_constant(<4 x i16> %v) {
 }
 
 ; An insertelement with a constant index should not be converted to array form
-define void @insert_half_vec_constant(<2 x half> %v, half %a) {
-; CHECK-LABEL: define void @insert_half_vec_constant(
+define <2 x half> @insert_half_vec_constant(<2 x half> %v, half %a) {
+; CHECK-LABEL: define <2 x half> @insert_half_vec_constant(
 ; CHECK-SAME: <2 x half> [[V:%.*]], half [[A:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> [[V]], half [[A]], i32 1
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    ret <2 x half> [[TMP1]]
 ;
-  insertelement <2 x half> %v, half %a, i32 1
-  ret void
+  %ie = insertelement <2 x half> %v, half %a, i32 1
+  ret <2 x half> %ie
 }
 
