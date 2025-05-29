@@ -307,8 +307,8 @@ func.func @truncf_vector_bf16_to_f8E8M0FNU(%arg0 : vector<4xbf16>) -> vector<4xf
 // CHECK-LABEL: @truncf_vector_bf16_to_f8E8M0FNU
 // CHECK-NOT: arith.truncf
 
-
 // -----
+
 func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {
     %0 = arith.extf %arg0 : f8E8M0FNU to f32
     return %0 : f32

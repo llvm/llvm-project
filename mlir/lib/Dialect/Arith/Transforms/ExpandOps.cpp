@@ -26,6 +26,16 @@ namespace arith {
 
 using namespace mlir;
 
+static Value createFloatConst(Location loc, Type type, float value,
+                              PatternRewriter &rewriter) {
+  auto attr = rewriter.getFloatAttr(getElementTypeOrSelf(type), value);
+  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
+    return rewriter.create<arith::ConstantOp>(
+        loc, DenseElementsAttr::get(shapedTy, attr));
+  }
+  return rewriter.create<arith::ConstantOp>(loc, attr);
+}
+
 /// Create an integer or index constant.
 static Value createConst(Location loc, Type type, int value,
                          PatternRewriter &rewriter) {
@@ -34,7 +44,6 @@ static Value createConst(Location loc, Type type, int value,
     return rewriter.create<arith::ConstantOp>(
         loc, DenseElementsAttr::get(shapedTy, attr));
   }
-
   return rewriter.create<arith::ConstantOp>(loc, attr);
 }
 
@@ -446,7 +455,7 @@ struct ScalingTruncFOpConverter
       return rewriter.notifyMatchFailure(
           op, "scaling truncf is not using scale operand of type f8E8M0FNU");
     }
-    auto scaleETy = getElementTypeOrSelf(scaleOperand);
+    auto scaleTy = scaleOperand.getType();
 
     Type resultTy = op.getType();
     Type resultETy = getElementTypeOrSelf(op.getOut());
@@ -500,12 +509,12 @@ struct ScalingTruncFOpConverter
     Value scaleF32 = b.create<arith::ExtFOp>(f32Ty, biasedScaleF8);
     // flush denorms by checking if exponent part of input operand is zero
     // or not.
-    Value inputExponent = b.create<arith::TruncFOp>(scaleETy, inputOperand);
+    Value inputExponent = b.create<arith::TruncFOp>(scaleTy, inputOperand);
     Value inputExponentU8 = b.create<arith::BitcastOp>(i8Ty, inputExponent);
     Value cI8Zero = createConst(op.getLoc(), i8Ty, 0x00, rewriter);
     Value cmpCond = b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, cI8Zero,
                                             inputExponentU8);
-    Value inputTyZero = createConst(op.getLoc(), inputTy, 0, rewriter);
+    Value inputTyZero = createFloatConst(op.getLoc(), inputTy, 0, rewriter);
     Value flushedInput =
         b.create<arith::SelectOp>(cmpCond, inputTyZero, inputOperand);
     Value result = b.create<arith::DivFOp>(flushedInput, scaleF32);
