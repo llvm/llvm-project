@@ -196,11 +196,48 @@ m_scev_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVUDivExpr>(Op0, Op1);
 }
 
+inline class_match<const Loop> m_Loop() { return class_match<const Loop>(); }
+
+/// Match an affine SCEVAddRecExpr.
+template <typename Op0_t, typename Op1_t, typename Loop_t>
+struct SCEVAffineAddRec_match {
+  SCEVBinaryExpr_match<SCEVAddRecExpr, Op0_t, Op1_t> Ops;
+  Loop_t Loop;
+
+  SCEVAffineAddRec_match(Op0_t Op0, Op1_t Op1, Loop_t Loop)
+      : Ops(Op0, Op1), Loop(Loop) {}
+
+  bool match(const SCEV *S) const {
+    return Ops.match(S) && Loop.match(cast<SCEVAddRecExpr>(S)->getLoop());
+  }
+};
+
+/// Match a specified const Loop*.
+struct specificloop_ty {
+  const Loop *L;
+
+  specificloop_ty(const Loop *L) : L(L) {}
+
+  bool match(const Loop *L) const { return L == this->L; }
+};
+
+inline specificloop_ty m_SpecificLoop(const Loop *L) { return L; }
+
+inline bind_ty<const Loop> m_Loop(const Loop *&L) { return L; }
+
 template <typename Op0_t, typename Op1_t>
-inline SCEVBinaryExpr_match<SCEVAddRecExpr, Op0_t, Op1_t>
+inline SCEVAffineAddRec_match<Op0_t, Op1_t, class_match<const Loop>>
 m_scev_AffineAddRec(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_scev_Binary<SCEVAddRecExpr>(Op0, Op1);
+  return SCEVAffineAddRec_match<Op0_t, Op1_t, class_match<const Loop>>(
+      Op0, Op1, m_Loop());
 }
+
+template <typename Op0_t, typename Op1_t, typename Loop_t>
+inline SCEVAffineAddRec_match<Op0_t, Op1_t, Loop_t>
+m_scev_AffineAddRec(const Op0_t &Op0, const Op1_t &Op1, const Loop_t &L) {
+  return SCEVAffineAddRec_match<Op0_t, Op1_t, Loop_t>(Op0, Op1, L);
+}
+
 } // namespace SCEVPatternMatch
 } // namespace llvm
 

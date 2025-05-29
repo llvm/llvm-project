@@ -46,6 +46,8 @@ enum class RootFlags : uint32_t {
   ValidFlags = 0x00000fff
 };
 
+raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags);
+
 enum class RootDescriptorFlags : unsigned {
   None = 0,
   DataVolatile = 0x2,
@@ -92,6 +94,8 @@ struct RootConstants {
   uint32_t Space = 0;
   ShaderVisibility Visibility = ShaderVisibility::All;
 };
+
+raw_ostream &operator<<(raw_ostream &OS, const RootConstants &Constants);
 
 enum class DescriptorType : uint8_t { SRV = 0, UAV, CBuffer };
 // Models RootDescriptor : CBV | SRV | UAV, by collecting like parameters
@@ -155,8 +159,13 @@ struct DescriptorTableClause {
 
 raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
 
-/// Models RootElement : RootFlags | RootConstants | RootDescriptor
-///  | DescriptorTable | DescriptorTableClause
+struct StaticSampler {
+  Register Reg;
+  float MipLODBias = 0.f;
+};
+
+/// Models RootElement : RootFlags | RootConstants | RootParam
+///  | DescriptorTable | DescriptorTableClause | StaticSampler
 ///
 /// A Root Signature is modeled in-memory by an array of RootElements. These
 /// aim to map closely to their DSL grammar reprsentation defined in the spec.
@@ -164,14 +173,16 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
 /// Each optional parameter has its default value defined in the struct, and,
 /// each mandatory parameter does not have a default initialization.
 ///
-/// For the variants RootFlags, RootConstants and DescriptorTableClause: each
-/// data member maps directly to a parameter in the grammar.
+/// For the variants RootFlags, RootConstants, RootParam, StaticSampler and
+/// DescriptorTableClause: each data member maps directly to a parameter in the
+/// grammar.
 ///
 /// The DescriptorTable is modelled by having its Clauses as the previous
 /// RootElements in the array, and it holds a data member for the Visibility
 /// parameter.
-using RootElement = std::variant<RootFlags, RootConstants, RootDescriptor,
-                                 DescriptorTable, DescriptorTableClause>;
+using RootElement =
+    std::variant<RootFlags, RootConstants, RootDescriptor, DescriptorTable,
+                 DescriptorTableClause, StaticSampler>;
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 

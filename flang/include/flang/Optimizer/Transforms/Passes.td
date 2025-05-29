@@ -76,6 +76,17 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
+def FIRToSCFPass : Pass<"fir-to-scf"> {
+  let summary = "Convert FIR structured control flow ops to SCF dialect.";
+  let description = [{
+    Convert FIR structured control flow ops to SCF dialect.
+  }];
+  let constructor = "::fir::createFIRToSCFPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::scf::SCFDialect"
+  ];
+}
+
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
   let summary = "Annotate constant operands to all FIR operations";
   let description = [{

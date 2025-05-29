@@ -417,11 +417,15 @@ def LoadOp : CIR_Op<"load", [
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr, UnitAttr:$isDeref);
+                           [MemRead]>:$addr,
+                       UnitAttr:$isDeref,
+                       OptionalAttr<I64Attr>:$alignment
+                       );
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
     (`deref` $isDeref^)?
+    (`align` `(` $alignment^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
@@ -458,9 +462,11 @@ def StoreOp : CIR_Op<"store", [
 
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
-                           [MemWrite]>:$addr);
+                           [MemWrite]>:$addr,
+                           OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
 
@@ -1643,7 +1649,8 @@ def GlobalOp : CIR_Op<"global"> {
                        TypeAttr:$sym_type,
                        Arg<GlobalLinkageKind, "linkage type">:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
-                       UnitAttr:$dsolocal);
+                       UnitAttr:$dsolocal,
+                       OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
     $linkage

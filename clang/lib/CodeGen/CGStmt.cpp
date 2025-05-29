@@ -2293,6 +2293,8 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
+  addInstToNewSourceAtom(SwitchInsn, CondV);
+
   if (HLSLControlFlowAttr != HLSLControlFlowHintAttr::SpellingNotCalculated) {
     llvm::MDBuilder MDHelper(CGM.getLLVMContext());
     llvm::ConstantInt *BranchHintConstant =

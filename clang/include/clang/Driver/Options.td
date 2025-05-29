@@ -5526,9 +5526,9 @@ def mlamcas : Flag<["-"], "mlamcas">, Group<m_loongarch_Features_Group>,
 def mno_lamcas : Flag<["-"], "mno-lamcas">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable amcas[_db].{b/h/w/d}">;
 def mld_seq_sa : Flag<["-"], "mld-seq-sa">, Group<m_loongarch_Features_Group>,
-  HelpText<"Do not generate load-load barrier instructions (dbar 0x700)">;
+  HelpText<"Do not generate same-address load-load barrier instructions (dbar 0x700)">;
 def mno_ld_seq_sa : Flag<["-"], "mno-ld-seq-sa">, Group<m_loongarch_Features_Group>,
-  HelpText<"Generate load-load barrier instructions (dbar 0x700)">;
+  HelpText<"Generate same-address load-load barrier instructions (dbar 0x700)">;
 def mdiv32 : Flag<["-"], "mdiv32">, Group<m_loongarch_Features_Group>,
   HelpText<"Use div.w[u] and mod.w[u] instructions with input not sign-extended.">;
 def mno_div32 : Flag<["-"], "mno-div32">, Group<m_loongarch_Features_Group>,
@@ -6679,8 +6679,12 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
+            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>,
+            Group<m_x86_Features_Group>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>,
+               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu"]>,
+               Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
 } // let Flags = [TargetSpecific]

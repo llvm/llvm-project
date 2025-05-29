@@ -21,7 +21,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Path.h"
 

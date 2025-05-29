@@ -766,17 +766,6 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     return true;
   }
 
-  // Inlineable constant might have been folded into Imm operand of fmaak or
-  // fmamk and we are trying to fold a non-inlinable constant.
-  if ((Opc == AMDGPU::S_FMAAK_F32 || Opc == AMDGPU::S_FMAMK_F32) &&
-      !OpToFold->isReg() && !TII->isInlineConstant(*OpToFold)) {
-    unsigned ImmIdx = Opc == AMDGPU::S_FMAAK_F32 ? 3 : 2;
-    MachineOperand &OpImm = MI->getOperand(ImmIdx);
-    if (!OpImm.isReg() &&
-        TII->isInlineConstant(*MI, MI->getOperand(OpNo), OpImm))
-      return tryToFoldAsFMAAKorMK();
-  }
-
   // Special case for s_fmac_f32 if we are trying to fold into Src0 or Src1.
   // By changing into fmamk we can untie Src2.
   // If folding for Src0 happens first and it is identical operand to Src1 we
@@ -786,24 +775,6 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
       (OpNo != 1 || !MI->getOperand(1).isIdenticalTo(MI->getOperand(2)))) {
     if (tryToFoldAsFMAAKorMK())
       return true;
-  }
-
-  // Check the case where we might introduce a second constant operand to a
-  // scalar instruction
-  if (TII->isSALU(MI->getOpcode())) {
-    const MCInstrDesc &InstDesc = MI->getDesc();
-    const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
-
-    // Fine if the operand can be encoded as an inline constant
-    if (!OpToFold->isReg() && !TII->isInlineConstant(*OpToFold, OpInfo)) {
-      // Otherwise check for another constant
-      for (unsigned i = 0, e = InstDesc.getNumOperands(); i != e; ++i) {
-        auto &Op = MI->getOperand(i);
-        if (OpNo != i && !Op.isReg() &&
-            !TII->isInlineConstant(Op, InstDesc.operands()[i]))
-          return false;
-      }
-    }
   }
 
   appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
@@ -1909,10 +1880,6 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
   if (!DstReg.isVirtual())
     return false;
 
-  if (OpToFold.isReg() &&
-      foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI))
-    return true;
-
   // Fold copy to AGPR through reg_sequence
   // TODO: Handle with subregister extract
   if (OpToFold.isReg() && MI.isCopy() && !MI.getOperand(1).getSubReg()) {
@@ -1947,7 +1914,14 @@ bool SIFoldOperandsImpl::tryFoldFoldableCopy(
     Changed = true;
   }
 
-  return Changed;
+  if (Changed)
+    return true;
+
+  // Run this after foldInstOperand to avoid turning scalar additions into
+  // vector additions when the result scalar result could just be folded into
+  // the user(s).
+  return OpToFold.isReg() &&
+         foldCopyToVGPROfScalarAddOfFrameIndex(DstReg, OpToFold.getReg(), MI);
 }
 
 // Clamp patterns are canonically selected to v_max_* instructions, so only
