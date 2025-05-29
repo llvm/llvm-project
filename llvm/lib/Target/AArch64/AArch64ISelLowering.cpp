@@ -1885,6 +1885,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
 
     setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv16i8, Custom);
+
+    // Wide add types
+    if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
+      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv4i32, Legal);
+      setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv8i16, Legal);
+      setPartialReduceMLAAction(MVT::nxv8i16, MVT::nxv16i8, Legal);
+    }
   }
 
   // Handle operations that are only available in non-streaming SVE mode.
@@ -17685,8 +17692,10 @@ bool AArch64TargetLowering::shouldFoldConstantShiftPairToMask(
 }
 
 bool AArch64TargetLowering::shouldFoldSelectWithIdentityConstant(
-    unsigned BinOpcode, EVT VT) const {
-  return VT.isScalableVector() && isTypeLegal(VT);
+    unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
+    SDValue Y) const {
+  return VT.isScalableVector() && isTypeLegal(VT) &&
+         SelectOpcode == ISD::VSELECT;
 }
 
 bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
