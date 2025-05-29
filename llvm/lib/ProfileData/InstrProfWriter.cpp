@@ -618,10 +618,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
 
-    if (auto E =
-            writeMemProf(OS, MemProfData, MemProfVersionRequested,
-                         MemProfFullSchema, std::move(DataAccessProfileData),
-                         std::move(MemProfSumBuilder.getSummary())))
+    if (auto E = writeMemProf(
+            OS, MemProfData, MemProfVersionRequested, MemProfFullSchema,
+            std::move(DataAccessProfileData), MemProfSumBuilder.getSummary()))
       return E;
   }
 
