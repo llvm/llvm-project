@@ -4679,7 +4679,7 @@ def err_attribute_preferred_name_arg_invalid : Error<
   "argument %0 to 'preferred_name' attribute is not a typedef for "
   "a specialization of %1">;
 def err_attribute_builtin_alias : Error<
-  "%0 attribute can only be applied to a ARM, HLSL or RISC-V builtin">;
+  "%0 attribute can only be applied to a ARM, HLSL, SPIR-V or RISC-V builtin">;
 
 // called-once attribute diagnostics.
 def err_called_once_attribute_wrong_type : Error<
@@ -12877,6 +12877,16 @@ def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
                                  "have a bit size of at least %select{2|1}0">;
 def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "
                                  "sizes greater than %1 not supported">;
+
+// SPIR-V builtins diagnostics
+def err_spirv_invalid_target : Error<
+   "builtin requires %select{spirv|spirv32 or spirv64}0 target">;
+def err_spirv_builtin_generic_cast_invalid_arg : Error<
+  "expecting a pointer argument to the generic address space">;
+def err_spirv_enum_not_int : Error<
+   "%0{storage class} argument for SPIR-V builtin is not a 32-bits integer">;
+def err_spirv_enum_not_valid : Error<
+   "invalid value for %select{storage class}0 argument">;
 
 // errors of expect.with.probability
 def err_probability_not_constant_float : Error<
