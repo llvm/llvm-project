@@ -395,7 +395,6 @@ Example usage for a project using a compile commands database:
         OutDirectory.c_str(), Err.message().c_str()));
   }
 
-
   // Run the generator.
   llvm::outs() << "Generating docs...\n";
   ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
