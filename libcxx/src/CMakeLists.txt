@@ -54,7 +54,6 @@ set(LIBCXX_SOURCES
   support/runtime/stdexcept_default.ipp
   support/runtime/stdexcept_vcruntime.ipp
   system_error.cpp
-  text_encoding.cpp
   typeinfo.cpp
   valarray.cpp
   variant.cpp
@@ -93,6 +92,7 @@ if (LIBCXX_ENABLE_LOCALIZATION)
     ostream.cpp
     regex.cpp
     strstream.cpp
+    text_encoding.cpp
     )
 endif()
 

@@ -25,7 +25,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__ranges/view_interface.h>
 #include <__string/char_traits.h>
-#include <__text_encoding/text_encoding_get_locale.h>
+#include <__text_encoding/get_locale_encoding.h>
 #include <__utility/unreachable.h>
 #include <cstdint>
 #include <string_view>
@@ -490,8 +490,8 @@ public:
 #  endif
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static text_encoding environment()
-  {
+#  if _LIBCPP_HAS_LOCALIZATION
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static text_encoding environment() {
     return text_encoding(__get_locale_encoding(""));
   };
 
@@ -499,6 +499,10 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static bool environment_is() {
     return environment() == __i;
   }
+#  else
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static text_encoding environment() = delete;
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static bool environment_is()       = delete;
+#  endif // _LIBCPP_HAS_LOCALIZATION
 
 private:
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __comp_name(string_view __a, string_view __b) {

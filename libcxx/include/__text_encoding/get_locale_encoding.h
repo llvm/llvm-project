@@ -6,15 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TEXT_ENCODING_TEXT_GET_LOCALE_H
-#define _LIBCPP___TEXT_ENCODING_TEXT_GET_LOCALE_H
+#ifndef _LIBCPP___GET_LOCALE_ENCODING_H
+#define _LIBCPP___GET_LOCALE_ENCODING_H
 
 #include <__config>
-#include <string_view>
+
+#if _LIBCPP_HAS_LOCALIZATION
+
+#  include <string_view>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
 string_view _LIBCPP_EXPORTED_FROM_ABI __get_locale_encoding(const char* __name);
 
 _LIBCPP_END_NAMESPACE_STD
-#endif 
+
+#endif // _LIBCPP_HAS_LOCALIZATION
+
+#endif // _LIBCPP___GET_LOCALE_ENCODING_H
