@@ -428,9 +428,9 @@ define i8 @ccmp8ri_zf_double_p(i8 %a, double %b, i8* nocapture %c)  {
 ; NDD-LABEL: ccmp8ri_zf_double_p:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpb $123, %dil # encoding: [0x40,0x80,0xff,0x7b]
-; NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; NDD-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-NEXT:    ucomisd %xmm0, %xmm0 # encoding: [0x66,0x0f,0x2e,0xc0]
-; NDD-NEXT:    setp %cl # encoding: [0x0f,0x9a,0xc1]
+; NDD-NEXT:    setzup %cl # encoding: [0x62,0xf4,0x7f,0x18,0x4a,0xc1]
 ; NDD-NEXT:    andb %cl, %al # EVEX TO LEGACY Compression encoding: [0x20,0xc8]
 ; NDD-NEXT:    cmpb $1, %al # encoding: [0x3c,0x01]
 ; NDD-NEXT:    jne .LBB10_2 # encoding: [0x75,A]
@@ -474,9 +474,9 @@ define i8 @ccmp8ri_zf_double_np(i8 %a, double %b, i8* nocapture %c)  {
 ; NDD-LABEL: ccmp8ri_zf_double_np:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpb $123, %dil # encoding: [0x40,0x80,0xff,0x7b]
-; NDD-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
+; NDD-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-NEXT:    ucomisd %xmm0, %xmm0 # encoding: [0x66,0x0f,0x2e,0xc0]
-; NDD-NEXT:    setnp %cl # encoding: [0x0f,0x9b,0xc1]
+; NDD-NEXT:    setzunp %cl # encoding: [0x62,0xf4,0x7f,0x18,0x4b,0xc1]
 ; NDD-NEXT:    andb %cl, %al # EVEX TO LEGACY Compression encoding: [0x20,0xc8]
 ; NDD-NEXT:    cmpb $1, %al # encoding: [0x3c,0x01]
 ; NDD-NEXT:    jne .LBB11_2 # encoding: [0x75,A]
@@ -1215,7 +1215,7 @@ define i32 @ccmp_nobranch(i32 noundef %a, i32 noundef %b) {
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
 ; NDD-NEXT:    ccmplel {dfv=} $2, %esi # encoding: [0x62,0xf4,0x04,0x0e,0x83,0xfe,0x02]
-; NDD-NEXT:    setge %al # encoding: [0x0f,0x9d,0xc0]
+; NDD-NEXT:    setzuge %al # encoding: [0x62,0xf4,0x7f,0x18,0x4d,0xc0]
 ; NDD-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -1241,7 +1241,7 @@ define i32 @ccmp_continous_nobranch(i32 noundef %a, i32 noundef %b, i32 noundef 
 ; NDD-NEXT:    cmpl $2, %edi # encoding: [0x83,0xff,0x02]
 ; NDD-NEXT:    ccmpll {dfv=sf} $2, %esi # encoding: [0x62,0xf4,0x24,0x0c,0x83,0xfe,0x02]
 ; NDD-NEXT:    ccmpll {dfv=sf} $4, %edx # encoding: [0x62,0xf4,0x24,0x0c,0x83,0xfa,0x04]
-; NDD-NEXT:    setge %al # encoding: [0x0f,0x9d,0xc0]
+; NDD-NEXT:    setzuge %al # encoding: [0x62,0xf4,0x7f,0x18,0x4d,0xc0]
 ; NDD-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 entry:

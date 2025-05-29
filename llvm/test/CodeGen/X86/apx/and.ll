@@ -435,7 +435,7 @@ define i1 @andflag8rr(i8 %a, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xf6,0xd6]
 ; CHECK-NEXT:    andb %al, %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x20,0xc7]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -444,7 +444,7 @@ define i1 @andflag8rr(i8 %a, i8 %b) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    notb %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xf6,0xd6]
 ; NF-NEXT:    andb %al, %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x20,0xc7]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -460,7 +460,7 @@ define i1 @andflag16rr(i16 %a, i16 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; CHECK-NEXT:    andw %ax, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x21,0xc7]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -469,7 +469,7 @@ define i1 @andflag16rr(i16 %a, i16 %b) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; NF-NEXT:    andw %ax, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x21,0xc7]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -484,7 +484,7 @@ define i1 @andflag32rr(i32 %a, i32 %b) {
 ; CHECK-LABEL: andflag32rr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x21,0xfe]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -492,7 +492,7 @@ define i1 @andflag32rr(i32 %a, i32 %b) {
 ; NF-LABEL: andflag32rr:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andl %edi, %esi # EVEX TO LEGACY Compression encoding: [0x21,0xfe]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -506,7 +506,7 @@ define i1 @andflag64rr(i64 %a, i64 %b) {
 ; CHECK-LABEL: andflag64rr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andq %rdi, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xfe]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -514,7 +514,7 @@ define i1 @andflag64rr(i64 %a, i64 %b) {
 ; NF-LABEL: andflag64rr:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andq %rdi, %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xfe]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -529,7 +529,7 @@ define i1 @andflag8rm(ptr %ptr, i8 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notb %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xf6,0xd6]
 ; CHECK-NEXT:    andb (%rdi), %al, %cl # encoding: [0x62,0xf4,0x74,0x18,0x22,0x07]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -538,7 +538,7 @@ define i1 @andflag8rm(ptr %ptr, i8 %b) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    notb %sil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xf6,0xd6]
 ; NF-NEXT:    andb (%rdi), %al, %cl # encoding: [0x62,0xf4,0x74,0x18,0x22,0x07]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -555,7 +555,7 @@ define i1 @andflag16rm(ptr %ptr, i16 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; CHECK-NEXT:    andw (%rdi), %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x23,0x07]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -564,7 +564,7 @@ define i1 @andflag16rm(ptr %ptr, i16 %b) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; NF-NEXT:    andw (%rdi), %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x23,0x07]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -580,7 +580,7 @@ define i1 @andflag32rm(ptr %ptr, i32 %b) {
 ; CHECK-LABEL: andflag32rm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl (%rdi), %esi # EVEX TO LEGACY Compression encoding: [0x23,0x37]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -588,7 +588,7 @@ define i1 @andflag32rm(ptr %ptr, i32 %b) {
 ; NF-LABEL: andflag32rm:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andl (%rdi), %esi # EVEX TO LEGACY Compression encoding: [0x23,0x37]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movl %esi, d64(%rip) # encoding: [0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -603,7 +603,7 @@ define i1 @andflag64rm(ptr %ptr, i64 %b) {
 ; CHECK-LABEL: andflag64rm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andq (%rdi), %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x23,0x37]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -611,7 +611,7 @@ define i1 @andflag64rm(ptr %ptr, i64 %b) {
 ; NF-LABEL: andflag64rm:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andq (%rdi), %rsi # EVEX TO LEGACY Compression encoding: [0x48,0x23,0x37]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movq %rsi, d64(%rip) # encoding: [0x48,0x89,0x35,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -626,7 +626,7 @@ define i1 @andflag8ri(i8 %a) {
 ; CHECK-LABEL: andflag8ri:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andb $-124, %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xe7,0x84]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -634,7 +634,7 @@ define i1 @andflag8ri(i8 %a) {
 ; NF-LABEL: andflag8ri:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andb $-124, %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xe7,0x84]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movb %cl, d64(%rip) # encoding: [0x88,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -650,7 +650,7 @@ define i1 @andflag16ri(i16 %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andw $-1235, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x81,0xe7,0x2d,0xfb]
 ; CHECK-NEXT:    # imm = 0xFB2D
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -659,7 +659,7 @@ define i1 @andflag16ri(i16 %a) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    andw $-1235, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x81,0xe7,0x2d,0xfb]
 ; NF-NEXT:    # imm = 0xFB2D
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -675,7 +675,7 @@ define i1 @andflag32ri(i32 %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $123456, %edi # EVEX TO LEGACY Compression encoding: [0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -684,7 +684,7 @@ define i1 @andflag32ri(i32 %a) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    andl $123456, %edi # EVEX TO LEGACY Compression encoding: [0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -699,7 +699,7 @@ define i1 @andflag64ri(i64 %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andq $123456, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -708,7 +708,7 @@ define i1 @andflag64ri(i64 %a) {
 ; NF:       # %bb.0:
 ; NF-NEXT:    andq $123456, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x81,0xe7,0x40,0xe2,0x01,0x00]
 ; NF-NEXT:    # imm = 0x1E240
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -722,7 +722,7 @@ define i1 @andflag16ri8(i16 %a) {
 ; CHECK-LABEL: andflag16ri8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andw $-124, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xe7,0x84]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -730,7 +730,7 @@ define i1 @andflag16ri8(i16 %a) {
 ; NF-LABEL: andflag16ri8:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andw $-124, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x83,0xe7,0x84]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -745,7 +745,7 @@ define i1 @andflag32ri8(i32 %a) {
 ; CHECK-LABEL: andflag32ri8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $123, %edi # EVEX TO LEGACY Compression encoding: [0x83,0xe7,0x7b]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -753,7 +753,7 @@ define i1 @andflag32ri8(i32 %a) {
 ; NF-LABEL: andflag32ri8:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andl $123, %edi # EVEX TO LEGACY Compression encoding: [0x83,0xe7,0x7b]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movl %edi, d64(%rip) # encoding: [0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 2, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -767,7 +767,7 @@ define i1 @andflag64ri8(i64 %a) {
 ; CHECK-LABEL: andflag64ri8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andq $123, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xe7,0x7b]
-; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; CHECK-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
@@ -775,7 +775,7 @@ define i1 @andflag64ri8(i64 %a) {
 ; NF-LABEL: andflag64ri8:
 ; NF:       # %bb.0:
 ; NF-NEXT:    andq $123, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xe7,0x7b]
-; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; NF-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NF-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; NF-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NF-NEXT:    retq # encoding: [0xc3]
