@@ -20575,7 +20575,8 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     bool IsGORC = Op.getOpcode() == RISCVISD::ORC_B;
     // To compute zeros, we need to invert the value and invert it back after.
-    Known.Zero = ~computeGREVOrGORC(~Known.Zero.getZExtValue(), 7, IsGORC);
+    Known.Zero =
+        ~computeGREVOrGORC(~Known.Zero.getZExtValue(), 7, IsGORC);
     Known.One = computeGREVOrGORC(Known.One.getZExtValue(), 7, IsGORC);
     break;
   }
@@ -20732,9 +20733,8 @@ bool RISCVTargetLowering::SimplifyDemandedBitsForTargetNode(
                              OriginalDemandedElts, Known2, TLO, Depth + 1))
       return true;
 
-    // To compute zeros, we need to invert the value and invert it back after.
     Known.Zero =
-        ~computeGREVOrGORC(~Known2.Zero.getZExtValue(), 7, /*IsGORC=*/false);
+        computeGREVOrGORC(Known2.Zero.getZExtValue(), 7, /*IsGORC=*/false);
     Known.One =
         computeGREVOrGORC(Known2.One.getZExtValue(), 7, /*IsGORC=*/false);
     return false;
