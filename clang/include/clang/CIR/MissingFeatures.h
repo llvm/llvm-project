@@ -134,6 +134,8 @@ struct MissingFeatures {
   static bool cxxSupport() { return false; }
   static bool recordZeroInit() { return false; }
   static bool zeroSizeRecordMembers() { return false; }
+  static bool isDiscreteBitFieldABI() { return false; }
+  static bool isBigEndian() { return false; }
 
   // Misc
   static bool cxxABI() { return false; }

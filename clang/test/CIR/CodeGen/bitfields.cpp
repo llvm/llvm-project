@@ -1,0 +1,79 @@
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
+
+struct A {
+  char a, b, c;
+  unsigned bits : 3;
+  unsigned more_bits : 4;
+  unsigned still_more_bits : 7;
+};
+
+typedef struct {
+  int a : 4;
+  int b : 5;
+  int c;
+} D;
+
+typedef struct {
+  int a : 4;
+  int b : 27;
+  int c : 17;
+  int d : 2;
+  int e : 15;
+  unsigned f; // type other than int above, not a bitfield
+} S;
+
+typedef struct {
+  int a : 3;  // one bitfield with size < 8
+  unsigned b;
+} T;
+
+typedef struct {
+    char a;
+    char b;
+    char c;
+
+    // startOffset 24 bits, new storage from here
+    int d: 2;
+    int e: 2;
+    int f: 4;
+    int g: 25;
+    int h: 3;
+    int i: 4;
+    int j: 3;
+    int k: 8;
+
+    int l: 14; // need to be a part of the new storage
+               // because (tail - startOffset) is 65 after 'l' field
+} U;
+
+// CIR-DAG:  !rec_D = !cir.record<struct "D" {!u16i, !s32i}>
+// CIR-DAG:  !rec_T = !cir.record<struct "T" {!u8i, !u32i}>
+// CIR-DAG:  !rec_U = !cir.record<struct "U" {!s8i, !s8i, !s8i, !cir.array<!u8i x 9>}>
+// CIR-DAG:  !rec_A = !cir.record<struct "A" padded {!s8i, !s8i, !s8i, !u8i, !u8i, !cir.array<!u8i x 3>}>
+// CIR-DAG:  !rec_S = !cir.record<struct "S" {!u32i, !cir.array<!u8i x 3>, !u16i, !u32i}>
+
+
+// LLVM-DAG: %struct.D = type { i16, i32 }
+// LLVM-DAG: %struct.U = type { i8, i8, i8, [9 x i8] }
+// LLVM-DAG: %struct.A = type { i8, i8, i8, i8, i8, [3 x i8] }
+// LLVM-DAG: %struct.S = type { i32, [3 x i8], i16, i32 }
+// LLVM-DAG: %struct.T = type { i8, i32 }
+
+// OGCG-DAG: %struct.D = type { i16, i32 }
+// OGCG-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
+// OGCG-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
+// OGCG-DAG: %struct.S = type { i64, i16, i32 }
+// OGCG-DAG: %struct.T = type { i8, i32 }
+
+void def() {
+  A a;
+  D d;
+  S s;
+  T t;
+  U u;
+}
