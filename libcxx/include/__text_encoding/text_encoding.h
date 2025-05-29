@@ -458,16 +458,9 @@ public:
   };
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr aliases_view aliases() const noexcept {
-    auto __rep = __encoding_rep_;
-    if (__encoding_rep_->__name_[0]) {
-      while (__rep > std::begin(__text_encoding_data) && __rep[-1].__mib_rep_ == __encoding_rep_->__mib_rep_) {
-        __rep--;
-      }
-    } else {
-      __rep = nullptr;
-    }
-
-    return aliases_view(__rep);
+    if (!__encoding_rep_->__name_[0])
+      return aliases_view(nullptr);
+    return aliases_view(__encoding_rep_);
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const text_encoding& __a, const text_encoding& __b) noexcept {
