@@ -184,25 +184,12 @@ struct ModuleDeps {
   /// on, not including transitive dependencies.
   std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
 
-  /// This struct contains information about a single dependency.
-  struct DepInfo {
-    /// Identifies the dependency.
-    ModuleID ID;
-
-    /// Indicates if the module that has this dependency exports it or not.
-    bool Exported = false;
-
-    bool operator<(const DepInfo &Other) const {
-      return std::tie(ID, Exported) < std::tie(Other.ID, Other.Exported);
-    }
-  };
-
-  /// A list of DepsInfo containing information about modules this module
-  /// directly depends on, not including transitive dependencies.
+  /// A list of module identifiers this module directly depends on, not
+  /// including transitive dependencies.
   ///
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
-  std::vector<ModuleDeps::DepInfo> ClangModuleDeps;
+  std::vector<ModuleID> ClangModuleDeps;
 
   /// The CASID for the module input dependency tree, if any.
   std::optional<std::string> CASFileSystemRootID;
@@ -303,8 +290,7 @@ private:
                           llvm::DenseSet<const Module *> &AddedModules);
 
   /// Add discovered module dependency for the given module.
-  void addOneModuleDep(const Module *M, bool Exported, const ModuleID ID,
-                       ModuleDeps &MD);
+  void addOneModuleDep(const Module *M, const ModuleID ID, ModuleDeps &MD);
 };
 
 /// Collects modular and non-modular dependencies of the main file by attaching
@@ -386,16 +372,16 @@ private:
 
   /// Collect module map files for given modules.
   llvm::DenseSet<const FileEntry *>
-  collectModuleMapFiles(ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const;
+  collectModuleMapFiles(ArrayRef<ModuleID> ClangModuleDeps) const;
 
   /// Add module map files to the invocation, if needed.
   void addModuleMapFiles(CompilerInvocation &CI,
-                         ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const;
+                         ArrayRef<ModuleID> ClangModuleDeps) const;
   /// Add module files (pcm) to the invocation, if needed.
   void addModuleFiles(CompilerInvocation &CI,
-                      ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const;
+                      ArrayRef<ModuleID> ClangModuleDeps) const;
   void addModuleFiles(CowCompilerInvocation &CI,
-                      ArrayRef<ModuleDeps::DepInfo> ClangModuleDeps) const;
+                      ArrayRef<ModuleID> ClangModuleDeps) const;
 
   /// Add paths that require looking up outputs to the given dependencies.
   void addOutputPaths(CowCompilerInvocation &CI, ModuleDeps &Deps);
