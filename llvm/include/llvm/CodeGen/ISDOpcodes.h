@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_ISDOPCODES_H
 
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -1572,32 +1573,33 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
 
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
-NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
+LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
 
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.
-NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
+LLVM_ABI NodeType getVecReduceBaseOpcode(unsigned VecReduceOpcode);
 
 /// Whether this is a vector-predicated Opcode.
-bool isVPOpcode(unsigned Opcode);
+LLVM_ABI bool isVPOpcode(unsigned Opcode);
 
 /// Whether this is a vector-predicated binary operation opcode.
-bool isVPBinaryOp(unsigned Opcode);
+LLVM_ABI bool isVPBinaryOp(unsigned Opcode);
 
 /// Whether this is a vector-predicated reduction opcode.
-bool isVPReduction(unsigned Opcode);
+LLVM_ABI bool isVPReduction(unsigned Opcode);
 
 /// The operand position of the vector mask.
-std::optional<unsigned> getVPMaskIdx(unsigned Opcode);
+LLVM_ABI std::optional<unsigned> getVPMaskIdx(unsigned Opcode);
 
 /// The operand position of the explicit vector length parameter.
-std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
+LLVM_ABI std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
 
 /// Translate this VP Opcode to its corresponding non-VP Opcode.
-std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode, bool hasFPExcept);
+LLVM_ABI std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode,
+                                                    bool hasFPExcept);
 
 /// Translate this non-VP Opcode to its corresponding VP Opcode.
-std::optional<unsigned> getVPForBaseOpcode(unsigned Opcode);
+LLVM_ABI std::optional<unsigned> getVPForBaseOpcode(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed
@@ -1662,7 +1664,7 @@ enum LoadExtType { NON_EXTLOAD = 0, EXTLOAD, SEXTLOAD, ZEXTLOAD };
 
 static const int LAST_LOADEXT_TYPE = ZEXTLOAD + 1;
 
-NodeType getExtForLoadExtType(bool IsFP, LoadExtType);
+LLVM_ABI NodeType getExtForLoadExtType(bool IsFP, LoadExtType);
 
 //===--------------------------------------------------------------------===//
 /// ISD::CondCode enum - These are ordered carefully to make the bitfields
@@ -1747,7 +1749,7 @@ inline unsigned getUnorderedFlavor(CondCode Cond) {
 
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation.
-CondCode getSetCCInverse(CondCode Operation, EVT Type);
+LLVM_ABI CondCode getSetCCInverse(CondCode Operation, EVT Type);
 
 inline bool isExtOpcode(unsigned Opcode) {
   return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||
@@ -1767,22 +1769,22 @@ namespace GlobalISel {
 /// this distinction. As such we need to be told whether the comparison is
 /// floating point or integer-like. Pointers should use integer-like
 /// comparisons.
-CondCode getSetCCInverse(CondCode Operation, bool isIntegerLike);
+LLVM_ABI CondCode getSetCCInverse(CondCode Operation, bool isIntegerLike);
 } // end namespace GlobalISel
 
 /// Return the operation corresponding to (Y op X) when given the operation
 /// for (X op Y).
-CondCode getSetCCSwappedOperands(CondCode Operation);
+LLVM_ABI CondCode getSetCCSwappedOperands(CondCode Operation);
 
 /// Return the result of a logical OR between different comparisons of
 /// identical values: ((X op1 Y) | (X op2 Y)). This function returns
 /// SETCC_INVALID if it is not possible to represent the resultant comparison.
-CondCode getSetCCOrOperation(CondCode Op1, CondCode Op2, EVT Type);
+LLVM_ABI CondCode getSetCCOrOperation(CondCode Op1, CondCode Op2, EVT Type);
 
 /// Return the result of a logical AND between different comparisons of
 /// identical values: ((X op1 Y) & (X op2 Y)). This function returns
 /// SETCC_INVALID if it is not possible to represent the resultant comparison.
-CondCode getSetCCAndOperation(CondCode Op1, CondCode Op2, EVT Type);
+LLVM_ABI CondCode getSetCCAndOperation(CondCode Op1, CondCode Op2, EVT Type);
 
 } // namespace ISD
 
