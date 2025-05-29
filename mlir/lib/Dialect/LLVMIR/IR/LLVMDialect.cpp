@@ -3563,6 +3563,35 @@ LogicalResult LLVM::BitcastOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// IntToPtrOp
+//===----------------------------------------------------------------------===//
+
+template <typename CastOp, typename ReverseCastOp>
+static OpFoldResult foldReversibleCast(CastOp castOp) {
+  auto reverseCastOp = castOp.getArg().template getDefiningOp<ReverseCastOp>();
+  if (!reverseCastOp)
+    return {};
+
+  // cast(reverse_cast(x)) -> x
+  if (reverseCastOp.getArg().getType() == castOp.getType())
+    return reverseCastOp.getArg();
+
+  return {};
+}
+
+OpFoldResult LLVM::IntToPtrOp::fold(FoldAdaptor adaptor) {
+  return foldReversibleCast<LLVM::IntToPtrOp, LLVM::PtrToIntOp>(*this);
+}
+
+//===----------------------------------------------------------------------===//
+// PtrToIntOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult LLVM::PtrToIntOp::fold(FoldAdaptor adaptor) {
+  return foldReversibleCast<LLVM::PtrToIntOp, LLVM::IntToPtrOp>(*this);
+}
+
+//===----------------------------------------------------------------------===//
 // Folder for LLVM::AddrSpaceCastOp
 //===----------------------------------------------------------------------===//
 

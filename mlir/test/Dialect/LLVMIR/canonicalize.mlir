@@ -103,10 +103,10 @@ llvm.func @fold_unrelated_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
 // -----
 // CHECK-LABEL: fold_extract_extractvalue
 llvm.func @fold_extract_extractvalue(%arr: !llvm.struct<(i64, array<1 x ptr<1>>)>) -> !llvm.ptr<1> {
-  // CHECK: llvm.extractvalue %{{.*}}[1, 0] 
+  // CHECK: llvm.extractvalue %{{.*}}[1, 0]
   // CHECK-NOT: extractvalue
-  %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)> 
-  %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>> 
+  %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)>
+  %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>>
   llvm.return %b : !llvm.ptr<1>
 }
 
@@ -130,6 +130,32 @@ llvm.func @fold_extract_splat() -> f64 {
   %a = llvm.mlir.constant(dense<-8.900000e+01> : tensor<2xf64>) : !llvm.array<2 x f64>
   %b = llvm.extractvalue %a[1] : !llvm.array<2 x f64>
   llvm.return %b : f64
+}
+
+// -----
+
+// CHECK-LABEL: fold_inttoptr_ptrtoint
+//  CHECK-SAME: %[[ARG:.+]]: i32) -> i32
+//   CHECK-NOT: inttoptr
+//   CHECK-NOT: ptrtoint
+//  CHECK-NEXT: llvm.return %[[ARG]]
+llvm.func @fold_inttoptr_ptrtoint(%x : i32) -> i32 {
+  %c = llvm.inttoptr %x : i32 to !llvm.ptr
+  %d = llvm.ptrtoint %c : !llvm.ptr to i32
+  llvm.return %d : i32
+}
+
+// -----
+
+// CHECK-LABEL: fold_ptrtoint_inttoptr
+//  CHECK-SAME: %[[ARG:.+]]: !llvm.ptr<3>) -> !llvm.ptr<3>
+//   CHECK-NOT: inttoptr
+//   CHECK-NOT: ptrtoint
+//  CHECK-NEXT: llvm.return %[[ARG]]
+llvm.func @fold_ptrtoint_inttoptr(%x : !llvm.ptr<3>) -> !llvm.ptr<3> {
+  %c = llvm.ptrtoint %x : !llvm.ptr<3> to i32
+  %d = llvm.inttoptr %c : i32 to !llvm.ptr<3>
+  llvm.return %d : !llvm.ptr<3>
 }
 
 // -----
