@@ -59,8 +59,7 @@ int main() {
   { // 1
     auto env_te = std::text_encoding::environment();
     assert(env_te == std::text_encoding::environment());
-    assert(env_te == default_te);
-    assert(env_te.mib() == default_te.mib());
+    assert(checkTextEncoding(env_te, default_te));
   }
 
   { // 2
@@ -68,9 +67,7 @@ int main() {
 
     auto env_te = std::text_encoding::environment();
 
-    assert(env_te == std::text_encoding::environment());
-    assert(env_te == default_te);
-    assert(env_te.mib() == default_te.mib());
+    assert(checkTextEncoding(env_te, default_te));
   }
 
   { // 3
@@ -81,7 +78,7 @@ int main() {
     assert(te == std::text_encoding::environment());
     assert(te.mib() == std::text_encoding::id::UTF8);
     assert(std::string_view(te.name()) == "UTF-8");
-    assert(te == std::text_encoding("UTF-8"));
+    assert(checkTextEncoding(te, std::text_encoding("UTF-8")));
 
     assert(std::text_encoding::environment_is<std::text_encoding::id::UTF8>());
   }

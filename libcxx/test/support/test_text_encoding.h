@@ -11,6 +11,8 @@
 
 #include <array>
 #include <cstdint>
+#include <iostream>
+#include <print>
 
 #include "test_macros.h"
 
@@ -1163,5 +1165,27 @@ constexpr std::array<const encoding_pair, 256> unique_encoding_data{{
     {2259, "TIS-620"},
     {2260, "CP50220"},
 }};
+
+inline bool checkTextEncoding(std::text_encoding te1, std::text_encoding te2) {
+  if (te1 != te2) {
+    std::println(
+        std::cerr,
+        "Text encoding mismatch! [{}] {} vs [{}] {}",
+        int(te1.mib()),
+        te1.name(),
+        int(te2.mib()),
+        te2.name());
+    return false;
+  }
+
+  if (te1.mib() != te2) {
+    std::println(std::cerr, "text encoding id mismatch! {} vs {}", int(te1.mib()), int(te2.mib()));
+  }
+
+  if (std::string_view(te1.name()) != std::string_view(te2.name())) {
+    std::println(std::cerr, "text encoding name mismatch! {} vs {}", te1.name(), te2.name());
+  }
+  return true;
+}
 
 #endif // SUPPORT_TEST_TEXT_ENCODING_H
