@@ -4377,6 +4377,14 @@ static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   return false;
 }
 
+static bool isUnmergeHalf(const MachineInstr *MI,
+                          const MachineRegisterInfo &MRI) {
+  if (MI->getOpcode() != AMDGPU::G_UNMERGE_VALUES)
+    return false;
+  return MI->getNumOperands() == 3 && MI->getOperand(0).isDef() &&
+         MI->getOperand(1).isDef() && !MI->getOperand(2).isDef();
+}
+
 static std::optional<std::pair<const MachineOperand *, SrcStatus>>
 retOpRegStat(const MachineOperand *Op, SrcStatus Stat,
              std::pair<const MachineOperand *, SrcStatus> &Curr) {
@@ -4411,6 +4419,14 @@ static TypeClass isVectorOfTwoOrScalar(const MachineOperand *Op,
   if (OpTy.isVector() && OpTy.getNumElements() == 2)
     return TypeClass::VECTOR_OF_TWO;
   return TypeClass::NONE_OF_LISTED;
+}
+
+static bool isSameOperand(const MachineOperand *Op1,
+                          const MachineOperand *Op2) {
+  if (Op1->isReg())
+    return Op2->isReg() && Op1->getReg() == Op2->getReg();
+
+  return Op1->isIdenticalTo(*Op2);
 }
 
 static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
@@ -4599,6 +4615,12 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
   case SrcStatus::IS_SAME:
     if (isTruncHalf(MI, MRI))
       return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF, Curr);
+    else if (isUnmergeHalf(MI, MRI)) {
+      if (isSameOperand(Curr.first, &MI->getOperand(0)))
+        return retOpRegStat(&MI->getOperand(2), SrcStatus::IS_LOWER_HALF, Curr);
+      else
+        return retOpRegStat(&MI->getOperand(2), SrcStatus::IS_UPPER_HALF, Curr);
+    }
     break;
   case SrcStatus::IS_HI_NEG:
     if (isTruncHalf(MI, MRI)) {
@@ -4610,6 +4632,13 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
       //     = -OpLower
       return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF_NEG,
                           Curr);
+    } else if (isUnmergeHalf(MI, MRI)) {
+      if (isSameOperand(Curr.first, &MI->getOperand(0)))
+        return retOpRegStat(&MI->getOperand(2), SrcStatus::IS_LOWER_HALF_NEG,
+                            Curr);
+      else
+        return retOpRegStat(&MI->getOperand(2), SrcStatus::IS_UPPER_HALF_NEG,
+                            Curr);
     }
     break;
   case SrcStatus::IS_UPPER_HALF:
@@ -4715,14 +4744,6 @@ static bool isSameBitWidth(const MachineOperand *Op1, const MachineOperand *Op2,
   unsigned Width1 = MRI.getType(Op1->getReg()).getSizeInBits();
   unsigned Width2 = MRI.getType(Op2->getReg()).getSizeInBits();
   return Width1 == Width2;
-}
-
-static bool isSameOperand(const MachineOperand *Op1,
-                          const MachineOperand *Op2) {
-  if (Op1->isReg())
-    return Op2->isReg() && Op1->getReg() == Op2->getReg();
-
-  return Op1->isIdenticalTo(*Op2);
 }
 
 static unsigned updateMods(SrcStatus HiStat, SrcStatus LoStat, unsigned Mods) {
