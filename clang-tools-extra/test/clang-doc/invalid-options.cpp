@@ -3,7 +3,7 @@
 // RUN: not clang-doc %s -output=%t/subdir 2>&1 | FileCheck --check-prefix=BAD-OUTPUT %s
 
 // BAD-OUTPUT: clang-doc error:
-// BAD-OUTPUT: Not a directory
+// BAD-OUTPUT: {{(Not a directory|no such file or directory)}}
 
 //
 // Test: Invalid format option
