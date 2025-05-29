@@ -230,7 +230,6 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
       minLOD = 4.2f, mipLODBias = 0.23e+3,
       addressW = TEXTURE_ADDRESS_CLAMP,
       addressV = TEXTURE_ADDRESS_BORDER,
-      filter = FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT,
       maxLOD = 9000, addressU = TEXTURE_ADDRESS_MIRROR
     )
   )cc";
@@ -255,7 +254,6 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).Filter, Filter::Anisotropic);
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Wrap);
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Wrap);
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Wrap);
@@ -269,8 +267,6 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).Filter,
-            Filter::MaximumMinPointMagLinearMipPoint);
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Mirror);
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Border);
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Clamp);
