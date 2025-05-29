@@ -3827,13 +3827,13 @@ let Predicates = [HasSVE2_or_SME] in {
             (SADDWT_ZZZ_H (SADDWB_ZZZ_H $Acc, $Input), $Input)>;
 
   def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv4i32:$LHS, nxv4i32:$RHS)),
-            (UMLALT_ZZZ_D (UMLALB_ZZZ_H $Acc, $LHS, $RHS), $LHS, $RHS)>;
+            (UMLALT_ZZZ_D (UMLALB_ZZZ_D $Acc, $LHS, $RHS), $LHS, $RHS)>;
   def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv4i32:$LHS, nxv4i32:$RHS)),
-            (SMLALT_ZZZ_D (SMLALB_ZZZ_H $Acc, $LHS, $RHS), $LHS, $RHS)>;
+            (SMLALT_ZZZ_D (SMLALB_ZZZ_D $Acc, $LHS, $RHS), $LHS, $RHS)>;
   def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv8i16:$LHS, nxv8i16:$RHS)),
-            (UMLALT_ZZZ_S (UMLALB_ZZZ_H $Acc, $LHS, $RHS), $LHS, $RHS)>;
+            (UMLALT_ZZZ_S (UMLALB_ZZZ_S $Acc, $LHS, $RHS), $LHS, $RHS)>;
   def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$LHS, nxv8i16:$RHS)),
-            (SMLALT_ZZZ_S (SMLALB_ZZZ_H $Acc, $LHS, $RHS), $LHS, $RHS)>;
+            (SMLALT_ZZZ_S (SMLALB_ZZZ_S $Acc, $LHS, $RHS), $LHS, $RHS)>;
   def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, nxv16i8:$LHS, nxv16i8:$RHS)),
             (UMLALT_ZZZ_H (UMLALB_ZZZ_H $Acc, $LHS, $RHS), $LHS, $RHS)>;
   def : Pat<(nxv8i16 (partial_reduce_smla nxv8i16:$Acc, nxv16i8:$LHS, nxv16i8:$RHS)),
