@@ -36,7 +36,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
-#include "llvm/ProfileData/MemProfSummary.h"
+#include "llvm/ProfileData/MemProfCommon.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"

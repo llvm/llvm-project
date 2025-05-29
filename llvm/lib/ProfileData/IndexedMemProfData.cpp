@@ -314,7 +314,7 @@ Error writeMemProf(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
     std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
-    memprof::MemProfSummary *MemProfSum) {
+    std::unique_ptr<memprof::MemProfSummary> MemProfSum) {
   switch (MemProfVersionRequested) {
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
@@ -322,7 +322,7 @@ Error writeMemProf(
     return writeMemProfV3(OS, MemProfData, MemProfFullSchema);
   case memprof::Version4:
     return writeMemProfV4(OS, MemProfData, MemProfFullSchema,
-                          std::move(DataAccessProfileData), MemProfSum);
+                          std::move(DataAccessProfileData), MemProfSum.get());
   }
 
   return make_error<InstrProfError>(
