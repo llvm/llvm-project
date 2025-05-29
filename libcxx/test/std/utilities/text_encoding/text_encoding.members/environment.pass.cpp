@@ -40,22 +40,22 @@
 std::string extractEncodingFromLocale(std::string locale_str) {
   auto dot_pos = locale_str.find('.'), at_pos = locale_str.find('@');
 
-  if(dot_pos == std::string::npos) {
+  if (dot_pos == std::string::npos) {
     return "ANSI_X3.4-1968"; // default is ASCII
   }
 
-  if(at_pos == std::string::npos) {
+  if (at_pos == std::string::npos) {
     return locale_str.substr(dot_pos + 1);
   }
-  
+
   return locale_str.substr(dot_pos + 1, at_pos - 1 - dot_pos);
 }
 
 int main() {
-  auto default_locale = std::setlocale(LC_ALL, nullptr);
+  auto default_locale   = std::setlocale(LC_ALL, nullptr);
   auto default_encoding = extractEncodingFromLocale(std::string(default_locale));
-  auto default_te = std::text_encoding(default_encoding); 
-  
+  auto default_te       = std::text_encoding(default_encoding);
+
   { // 1
     auto env_te = std::text_encoding::environment();
     assert(env_te == std::text_encoding::environment());
