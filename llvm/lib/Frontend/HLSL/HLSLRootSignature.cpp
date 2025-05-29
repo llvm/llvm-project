@@ -175,6 +175,8 @@ MDNode *MetadataBuilder::BuildRootSignature() {
       ElementMD = BuildRootFlags(*Flags);
     if (const auto &Constants = std::get_if<RootConstants>(&Element))
       ElementMD = BuildRootConstants(*Constants);
+    if (const auto &Descriptor = std::get_if<RootDescriptor>(&Element))
+      ElementMD = BuildRootDescriptor(*Descriptor);
     if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
       ElementMD = BuildDescriptorTableClause(*Clause);
     if (const auto &Table = std::get_if<DescriptorTable>(&Element))
@@ -211,6 +213,23 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
                ConstantAsMetadata::get(Builder.getInt32(Constants.Space)),
                ConstantAsMetadata::get(Builder.getInt32(
                    Constants.Num32BitConstants)),
+           });
+}
+
+MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
+  IRBuilder<> Builder(Ctx);
+  std::string Name;
+  llvm::raw_string_ostream OS(Name);
+  OS << "Root" << ClauseType(llvm::to_underlying(Descriptor.Type));
+  return MDNode::get(
+      Ctx, {
+               MDString::get(Ctx, OS.str()),
+               ConstantAsMetadata::get(
+                   Builder.getInt32(llvm::to_underlying(Descriptor.Visibility))),
+               ConstantAsMetadata::get(Builder.getInt32(Descriptor.Reg.Number)),
+               ConstantAsMetadata::get(Builder.getInt32(Descriptor.Space)),
+               ConstantAsMetadata::get(
+                   Builder.getInt32(llvm::to_underlying(Descriptor.Flags))),
            });
 }
 

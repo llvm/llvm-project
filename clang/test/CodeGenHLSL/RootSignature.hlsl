@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: !dx.rootsignatures = !{![[#EMPTY_ENTRY:]], ![[#DT_ENTRY:]],
-// CHECK-SAME: ![[#RF_ENTRY:]], ![[#RC_ENTRY:]]}
+// CHECK-SAME: ![[#RF_ENTRY:]], ![[#RC_ENTRY:]], ![[#RD_ENTRY:]]}
 
 // CHECK: ![[#EMPTY_ENTRY]] = !{ptr @EmptyEntry, ![[#EMPTY:]]}
 // CHECK: ![[#EMPTY]] = !{}
@@ -51,6 +51,20 @@ void RootFlagsEntry() {}
 [shader("compute"), RootSignature(SampleRootConstants)]
 [numthreads(1,1,1)]
 void RootConstantsEntry() {}
+
+// CHECK: ![[#RD_ENTRY]] = !{ptr @RootDescriptorsEntry, ![[#RD_RS:]]}
+// CHECK: ![[#RD_RS]] = !{![[#ROOT_CBV:]], ![[#ROOT_UAV:]], ![[#ROOT_SRV:]]}
+// CHECK: ![[#ROOT_CBV]] = !{!"RootCBV", i32 0, i32 0, i32 0, i32 4}
+// CHECK: ![[#ROOT_UAV]] = !{!"RootUAV", i32 0, i32 0, i32 0, i32 2}
+// CHECK: ![[#ROOT_SRV]] = !{!"RootSRV", i32 0, i32 0, i32 0, i32 4}
+
+#define SampleRootDescriptors \
+  "CBV(b0), " \
+  "UAV(u0), " \
+  "SRV(t0)"
+[shader("compute"), RootSignature(SampleRootDescriptors)]
+[numthreads(1,1,1)]
+void RootDescriptorsEntry() {}
 
 // Sanity test to ensure no root is added for this function as there is only
 // two entries in !dx.roosignatures
