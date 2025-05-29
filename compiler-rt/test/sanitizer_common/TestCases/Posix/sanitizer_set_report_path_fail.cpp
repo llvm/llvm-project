@@ -1,5 +1,9 @@
 // RUN: %clangxx -O2 %s -o %t
+
+// Case 1: Try setting a path that is an invalid/inaccessible directory.
 // RUN: not %env %run %t 2>&1 | FileCheck %s --check-prefix=ERROR1
+
+// Case 2: Try setting a path that is too large.
 // RUN: not %env %run %t A 2>&1 | FileCheck %s --check-prefix=ERROR2
 
 #include <sanitizer/common_interface_defs.h>
@@ -8,11 +12,11 @@
 int main(int argc, char **argv) {
   char buff[4096];
   if (argc == 1) {
-    // Try setting again with an invalid/inaccessible directory.
+    // Case 1
     sprintf(buff, "%s/report", argv[0]);
     // ERROR1: Can't create directory: {{.*}}
   } else {
-    // Try setting a path that is too large.
+    // Case 2
     snprintf(buff, sizeof(buff), "%04095d", 42);
     // ERROR2: Path is too long: 00000000...
   }
