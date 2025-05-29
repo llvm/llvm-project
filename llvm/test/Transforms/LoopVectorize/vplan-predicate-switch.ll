@@ -15,75 +15,72 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:   IR %n.mod.vf = urem i64 %0, 2
 ; CHECK-NEXT:   IR %n.vec = sub i64 %0, %n.mod.vf
 ; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + ir<%n.vec> * ir<1>
-; CHECK-NEXT: Successor(s): vector loop
+; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, default.2 ]
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>
-; CHECK-NEXT:     EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
-; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[WIDE_PTR]]>
-; CHECK-NEXT:     EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<-12>
-; CHECK-NEXT:     EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<13>
-; CHECK-NEXT:     EMIT vp<[[OR_CASES:%.+]]> = or vp<[[C1]]>, vp<[[C2]]>
-; CHECK-NEXT:     EMIT vp<[[DEFAULT_MASK:%.+]]> = not vp<[[OR_CASES]]>
-; CHECK-NEXT:   Successor(s): pred.store
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, default.2 ]
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>
+; CHECK-NEXT:   EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
+; CHECK-NEXT:   vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
+; CHECK-NEXT:   WIDEN ir<%l> = load vp<[[WIDE_PTR]]>
+; CHECK-NEXT:   EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<-12>
+; CHECK-NEXT:   EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<13>
+; CHECK-NEXT:   EMIT vp<[[OR_CASES:%.+]]> = or vp<[[C1]]>, vp<[[C2]]>
+; CHECK-NEXT:   EMIT vp<[[DEFAULT_MASK:%.+]]> = not vp<[[OR_CASES]]>
+; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
-; CHECK-NEXT:   <xVFxUF> pred.store: {
-; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[C2]]>
-; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
+; CHECK-NEXT: <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[C2]]>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:       REPLICATE store ir<0>, vp<[[PTR]]>
-; CHECK-NEXT:     Successor(s): pred.store.continue
+; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     REPLICATE store ir<0>, vp<[[PTR]]>
+; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.continue:
-; CHECK-NEXT:     No successors
-; CHECK-NEXT:   }
-; CHECK-NEXT:   Successor(s): if.then.2.0
-; CHECK-EMPTY:
-; CHECK-NEXT:   if.then.2.0:
-; CHECK-NEXT:   Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT:   <xVFxUF> pred.store: {
-; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[C1]]>
-; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:       REPLICATE store ir<42>, vp<[[PTR]]>
-; CHECK-NEXT:     Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.continue:
-; CHECK-NEXT:     No successors
-; CHECK-NEXT:   }
-; CHECK-NEXT:   Successor(s): if.then.1.1
-; CHECK-EMPTY:
-; CHECK-NEXT:   if.then.1.1:
-; CHECK-NEXT:   Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT:   <xVFxUF> pred.store: {
-; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[DEFAULT_MASK]]>
-; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.if:
-; CHECK-NEXT:       REPLICATE store ir<2>, vp<[[PTR]]>
-; CHECK-NEXT:     Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:     pred.store.continue:
-; CHECK-NEXT:     No successors
-; CHECK-NEXT:   }
-; CHECK-NEXT:   Successor(s): default.2
-; CHECK-EMPTY:
-; CHECK-NEXT:   default.2:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VFxUF]]>
-; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VTC]]>
+; CHECK-NEXT:   pred.store.continue:
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
+; CHECK-NEXT: Successor(s): if.then.2.0
+; CHECK-EMPTY:
+; CHECK-NEXT: if.then.2.0:
+; CHECK-NEXT: Successor(s): pred.store
+; CHECK-EMPTY:
+; CHECK-NEXT: <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[C1]]>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:     pred.store.if:
+; CHECK-NEXT:     REPLICATE store ir<42>, vp<[[PTR]]>
+; CHECK-NEXT:   Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): if.then.1.1
+; CHECK-EMPTY:
+; CHECK-NEXT: if.then.1.1:
+; CHECK-NEXT: Successor(s): pred.store
+; CHECK-EMPTY:
+; CHECK-NEXT: <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<[[DEFAULT_MASK]]>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.store.if:
+; CHECK-NEXT:     REPLICATE store ir<2>, vp<[[PTR]]>
+; CHECK-NEXT:   Successor(s): pred.store.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.store.continue:
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): default.2
+; CHECK-EMPTY:
+; CHECK-NEXT: default.2:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VFxUF]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VTC]]>
+; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<%0>, ir<[[VTC]]>

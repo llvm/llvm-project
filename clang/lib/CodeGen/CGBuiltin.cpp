@@ -26,9 +26,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
@@ -42,6 +40,33 @@
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
+
+/// Some builtins do not have library implementation on some targets and
+/// are instead emitted as LLVM IRs by some target builtin emitters.
+/// FIXME: Remove this when library support is added
+static bool shouldEmitBuiltinAsIR(unsigned BuiltinID,
+                                  const Builtin::Context &BI,
+                                  const CodeGenFunction &CGF) {
+  if (!CGF.CGM.getLangOpts().MathErrno &&
+      CGF.CurFPFeatures.getExceptionMode() ==
+          LangOptions::FPExceptionModeKind::FPE_Ignore &&
+      !CGF.CGM.getTargetCodeGenInfo().supportsLibCall()) {
+    switch (BuiltinID) {
+    default:
+      return false;
+    case Builtin::BIlogbf:
+    case Builtin::BI__builtin_logbf:
+    case Builtin::BIlogb:
+    case Builtin::BI__builtin_logb:
+    case Builtin::BIscalbnf:
+    case Builtin::BI__builtin_scalbnf:
+    case Builtin::BIscalbn:
+    case Builtin::BI__builtin_scalbn:
+      return true;
+    }
+  }
+  return false;
+}
 
 static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
                                         unsigned BuiltinID, const CallExpr *E,
@@ -247,9 +272,10 @@ Value *EmitFromInt(CodeGenFunction &CGF, llvm::Value *V,
 Address CheckAtomicAlignment(CodeGenFunction &CGF, const CallExpr *E) {
   ASTContext &Ctx = CGF.getContext();
   Address Ptr = CGF.EmitPointerWithAlignment(E->getArg(0));
+  const llvm::DataLayout &DL = CGF.CGM.getDataLayout();
   unsigned Bytes = Ptr.getElementType()->isPointerTy()
                        ? Ctx.getTypeSizeInChars(Ctx.VoidPtrTy).getQuantity()
-                       : Ptr.getElementType()->getScalarSizeInBits() / 8;
+                       : DL.getTypeStoreSize(Ptr.getElementType());
   unsigned Align = Ptr.getAlignment().getQuantity();
   if (Align % Bytes != 0) {
     DiagnosticsEngine &Diags = CGF.CGM.getDiags();
@@ -2622,7 +2648,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // disabled.
   // Math intrinsics are generated only when math-errno is disabled. Any pragmas
   // or attributes that affect math-errno should prevent or allow math
-  // intrincs to be generated. Intrinsics are generated:
+  // intrinsics to be generated. Intrinsics are generated:
   //   1- In fast math mode, unless math-errno is overriden
   //      via '#pragma float_control(precise, on)', or via an
   //      'attribute__((optnone))'.
@@ -4425,6 +4451,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
     Address Src = EmitPointerWithAlignment(E->getArg(1));
     Value *SizeVal = EmitScalarExpr(E->getArg(2));
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_trivially_relocate)
+      SizeVal = Builder.CreateMul(
+          SizeVal,
+          ConstantInt::get(
+              SizeVal->getType(),
+              getContext()
+                  .getTypeSizeInChars(E->getArg(0)->getType()->getPointeeType())
+                  .getQuantity()));
     EmitArgCheck(TCK_Store, Dest, E->getArg(0), 0);
     EmitArgCheck(TCK_Load, Src, E->getArg(1), 1);
     Builder.CreateMemMove(Dest, Src, SizeVal, false);
@@ -6225,13 +6259,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
   // the call using the normal call path, but using the unmangled
   // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(BuiltinID))
+  const auto &BI = getContext().BuiltinInfo;
+  if (!shouldEmitBuiltinAsIR(BuiltinID, BI, *this) &&
+      BI.isLibFunction(BuiltinID))
     return emitLibraryCall(*this, FD, E,
                            CGM.getBuiltinLibFunction(FD, BuiltinID));
 
   // If this is a predefined lib function (e.g. malloc), emit the call
   // using exactly the normal call path.
-  if (getContext().BuiltinInfo.isPredefinedLibFunction(BuiltinID))
+  if (BI.isPredefinedLibFunction(BuiltinID))
     return emitLibraryCall(*this, FD, E, CGM.getRawFunctionPointer(FD));
 
   // Check that a call to a target specific builtin has the correct target

@@ -450,6 +450,8 @@ public:
   MachineBasicBlock *emitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
+  ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -550,6 +552,7 @@ private:
 
   SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,

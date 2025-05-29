@@ -1214,6 +1214,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum RVVRequire Require) {
   switch (Require) {
     STRINGIFY(RVV_REQ_RV64)
     STRINGIFY(RVV_REQ_Zvfhmin)
+    STRINGIFY(RVV_REQ_Xandesvpackfph)
     STRINGIFY(RVV_REQ_Xsfvcp)
     STRINGIFY(RVV_REQ_Xsfvfnrclipxfqf)
     STRINGIFY(RVV_REQ_Xsfvfwmaccqqq)

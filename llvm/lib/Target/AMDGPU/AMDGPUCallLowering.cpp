@@ -493,6 +493,12 @@ static void allocateHSAUserSGPRs(CCState &CCInfo,
     CCInfo.AllocateReg(FlatScratchInitReg);
   }
 
+  if (UserSGPRInfo.hasPrivateSegmentSize()) {
+    Register PrivateSegmentSizeReg = Info.addPrivateSegmentSize(TRI);
+    MF.addLiveIn(PrivateSegmentSizeReg, &AMDGPU::SGPR_32RegClass);
+    CCInfo.AllocateReg(PrivateSegmentSizeReg);
+  }
+
   // TODO: Add GridWorkGroupCount user SGPRs when used. For now with HSA we read
   // these from the dispatch pointer.
 }

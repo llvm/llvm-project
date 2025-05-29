@@ -2129,6 +2129,11 @@ def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoMemoryEffect]> {
     $seq `,` $val custom<CustomRangeSubscript>($coor) attr-dict `:` functional-type(operands, results)
   }];
 
+  let extraClassDeclaration = [{
+    /// Is this insert_on_range inserting on all the values of the result type?
+    bool isFullRange();
+  }];
+
   let hasVerifier = 1;
 }
 
