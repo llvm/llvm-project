@@ -9217,7 +9217,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // compilation job.
   const llvm::DenseSet<unsigned> CompilerOptions{
       OPT_v,
-      OPT_cuda_path_EQ,
       OPT_rocm_path_EQ,
       OPT_O_Group,
       OPT_g_Group,
@@ -9259,6 +9258,18 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     auto TCRange = C.getOffloadToolChains(Kind);
     for (auto &I : llvm::make_range(TCRange)) {
       const ToolChain *TC = I.second;
+
+      // All NVPTX targets currently depend on CUDA binary utilities.
+      if (TC->getTriple().isNVPTX()) {
+        // Most toolchains have a cached version of this, but it's not exposed
+        // so we just do the work again.
+        CudaInstallationDetector CudaInstallation(C.getDriver(),
+                                                  TC->getTriple(), Args);
+        if (CudaInstallation.isValid())
+          CmdArgs.push_back(
+              Args.MakeArgString("--device-compiler=" + TC->getTripleString() +
+                                 "=" + CudaInstallation.getInstallPath()));
+      }
 
       // We do not use a bound architecture here so options passed only to a
       // specific architecture via -Xarch_<cpu> will not be forwarded.
@@ -9314,9 +9325,6 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       Args.MakeArgString("--host-triple=" + getToolChain().getTripleString()));
   if (Args.hasArg(options::OPT_v))
     CmdArgs.push_back("--wrapper-verbose");
-  if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ))
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("--cuda-path=") + A->getValue()));
 
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
