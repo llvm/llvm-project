@@ -164,9 +164,9 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
     if (!Replacement.has_value())
       continue;
 
-    if (Angled && Spelling.front() == '\"') {
-      Spelling.front() = '<';
-      Spelling.back() = '>';
+    if (Angled != (Spelling.front() == '<')) {
+      Spelling.front() = Angled ? '<' : '"';
+      Spelling.back() = Angled ? '>' : '"';
     }
 
     Diag &D = Result.emplace_back();

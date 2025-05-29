@@ -226,9 +226,10 @@ $insert_b[[]]#include "baz.h"
 #include "dir/c.h"
 $insert_d[[]]$insert_foo[[]]#include "fuzz.h"
 #include "header.h"
-$insert_foobar[[]]$insert_quoted[[]]#include "quoted_wrapper.h"
+$insert_foobar[[]]$insert_quoted[[]]$insert_quoted2[[]]#include "quoted_wrapper.h"
 $insert_angled[[]]#include <e.h>
-$insert_f[[]]$insert_vector[[]]
+$insert_f[[]]#include <quoted2_wrapper.h>
+$insert_vector[[]]
 
 #define DEF(X) const Foo *X;
 #define BAZ(X) const X x
@@ -241,6 +242,7 @@ $insert_f[[]]$insert_vector[[]]
     $b[[b]]();
     $angled[[angled]]();
     $quoted[[quoted]]();
+    $quoted2[[quoted2]]();
 
     ns::$bar[[Bar]] bar;
     bar.d();
@@ -280,6 +282,8 @@ $insert_f[[]]$insert_vector[[]]
 
   TU.AdditionalFiles["system/e.h"] = guard("#include <f.h>");
   TU.AdditionalFiles["system/f.h"] = guard("void f();");
+  TU.AdditionalFiles["system/quoted2_wrapper.h"] = guard("#include <system/quoted2.h>");
+  TU.AdditionalFiles["system/quoted2.h"] = guard("void quoted2();");
   TU.ExtraArgs.push_back("-isystem" + testPath("system"));
 
   TU.AdditionalFiles["fuzz.h"] = guard("#include \"buzz.h\"");
@@ -315,7 +319,7 @@ $insert_f[[]]$insert_vector[[]]
         return Header.contains("angled.h");
       }},
       /*QuotedHeaders=*/{[](llvm::StringRef Header) {
-        return Header.contains("quoted.h");
+        return Header.contains("quoted.h") || Header.contains("quoted2.h");
       }});
   EXPECT_THAT(
       Diags,
@@ -335,6 +339,12 @@ $insert_f[[]]$insert_vector[[]]
                    "No header providing \"quoted\" is directly included"),
               withFix({Fix(MainFile.range("insert_quoted"),
                            "#include \"quoted.h\"\n", "#include \"quoted.h\""),
+                       FixMessage("add all missing includes")})),
+          AllOf(
+              Diag(MainFile.range("quoted2"),
+                   "No header providing \"quoted2\" is directly included"),
+              withFix({Fix(MainFile.range("insert_quoted2"),
+                           "#include \"quoted2.h\"\n", "#include \"quoted2.h\""),
                        FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("bar"),
                      "No header providing \"ns::Bar\" is directly included"),
