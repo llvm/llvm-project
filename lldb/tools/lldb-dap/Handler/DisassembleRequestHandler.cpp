@@ -27,6 +27,7 @@ namespace lldb_dap {
 
 static protocol::DisassembledInstruction GetInvalidInstruction() {
   DisassembledInstruction invalid_inst;
+  invalid_inst.address = LLDB_INVALID_ADDRESS;
   invalid_inst.presentationHint =
       DisassembledInstruction::eDisassembledInstructionPresentationHintInvalid;
   return invalid_inst;

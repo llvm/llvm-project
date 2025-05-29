@@ -62,8 +62,6 @@ public:
 
   CompilerType GetSiginfoType(const llvm::Triple &triple) override;
 
-  lldb::StopInfoSP GetStopInfoFromSiginfo(Thread &thread) override;
-
   std::vector<ArchSpec> m_supported_architectures;
 
 private:
