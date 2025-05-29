@@ -1195,6 +1195,72 @@ define i1 @propagate_drop_flags_icmp(i32 %a, i32 %b) {
 
 declare i32 @llvm.umax.i32(i32 %a, i32 %b)
 
+define i1 @propagate_drop_fma_mul_add_left(float %arg1, float %arg2) {
+; CHECK-LABEL: @propagate_drop_fma_mul_add_left(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = fmul contract float [[ARG1:%.*]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = fadd contract float [[I]], 1.000000e+00
+; CHECK-NEXT:    [[I1_FR:%.*]] = freeze float [[I1]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[I1_FR]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+bb:
+  %i = fmul contract float %arg1, %arg2
+  %i1 = fadd contract float %i, 1.0
+  %cmp = fcmp ogt float %i1, 0.0
+  %fr = freeze i1 %cmp
+  ret i1 %fr
+}
+
+define i1 @propagate_drop_fma_add_mul_right(float %arg1, float %arg2) {
+; CHECK-LABEL: @propagate_drop_fma_add_mul_right(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = fmul contract float [[ARG1:%.*]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = fadd contract float [[I]], 1.000000e+00
+; CHECK-NEXT:    [[I1_FR:%.*]] = freeze float [[I1]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[I1_FR]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+bb:
+  %i = fmul contract float %arg1, %arg2
+  %i1 = fadd contract float 1.0, %i
+  %cmp = fcmp ogt float %i1, 0.0
+  %fr = freeze i1 %cmp
+  ret i1 %fr
+}
+
+define i1 @propagate_drop_fma_mul_sub_left(float %arg1, float %arg2) {
+; CHECK-LABEL: @propagate_drop_fma_mul_sub_left(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = fmul contract float [[ARG1:%.*]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = fadd contract float [[I]], -1.000000e+00
+; CHECK-NEXT:    [[I1_FR:%.*]] = freeze float [[I1]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[I1_FR]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+bb:
+  %i = fmul contract float %arg1, %arg2
+  %i1 = fsub contract float %i, 1.0
+  %cmp = fcmp ogt float %i1, 0.0
+  %fr = freeze i1 %cmp
+  ret i1 %fr
+}
+
+define float @propagate_drop_fma_sub_mul_right(float %arg1, float %arg2) {
+; CHECK-LABEL: @propagate_drop_fma_sub_mul_right(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = fmul contract float [[ARG1:%.*]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[I1:%.*]] = fsub contract float 1.000000e+00, [[I]]
+; CHECK-NEXT:    [[FR:%.*]] = freeze float [[I1]]
+; CHECK-NEXT:    ret float [[FR]]
+;
+bb:
+  %i = fmul contract float %arg1, %arg2
+  %i1 = fsub contract float 1.0, %i
+  %fr = freeze float %i1
+  ret float %fr
+}
+
 define i32 @freeze_call_with_range_attr(i32 %a) {
 ; CHECK-LABEL: @freeze_call_with_range_attr(
 ; CHECK-NEXT:    [[Y:%.*]] = lshr i32 2047, [[A:%.*]]

@@ -4665,6 +4665,49 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   if (!OrigOpInst || !OrigOpInst->hasOneUse() || isa<PHINode>(OrigOp))
     return nullptr;
 
+  // Avoid pushing freeze into common FMA patterns. In these cases,
+  // adding a freeze will prevent later optimizations that recognize
+  // FMA candidates like:
+  //   (fmul x, y) + z    -> fma(x, y, z)
+  //   x + (fmul y, z)    -> fma(y, z, x)
+  //   (fmul x, y) - z    -> fma(x, y, -z)
+  //   x - (fmul y, z)    -> fma(-y, z, x)
+  //
+  // which is common in performance-critical code like matrix multiplications or
+  // numerical kernels.
+  if (auto *BinOp = dyn_cast<BinaryOperator>(OrigOp)) {
+    unsigned Opcode = BinOp->getOpcode();
+    if ((Opcode == Instruction::FAdd || Opcode == Instruction::FSub) &&
+        BinOp->hasAllowContract()) {
+      Value *A = BinOp->getOperand(0);
+      Value *B = BinOp->getOperand(1);
+
+      if (Opcode == Instruction::FAdd) {
+        // Support (x * y) + z -> fma(x, y, z)
+        if (isa<BinaryOperator>(A) &&
+            cast<BinaryOperator>(A)->getOpcode() == Instruction::FMul)
+          return nullptr;
+
+        // Support x + (y * z) -> fma(y, z, x)
+        if (isa<BinaryOperator>(B) &&
+            cast<BinaryOperator>(B)->getOpcode() == Instruction::FMul)
+          return nullptr;
+      }
+
+      if (Opcode == Instruction::FSub) {
+        // Support (x * y) - z -> fma(x, y, -z)
+        if (isa<BinaryOperator>(A) &&
+            cast<BinaryOperator>(A)->getOpcode() == Instruction::FMul)
+          return nullptr;
+
+        // Support x - (y * z) -> fma(-y, z, x)
+        if (isa<BinaryOperator>(B) &&
+            cast<BinaryOperator>(B)->getOpcode() == Instruction::FMul)
+          return nullptr;
+      }
+    }
+  }
+
   // We can't push the freeze through an instruction which can itself create
   // poison.  If the only source of new poison is flags, we can simply
   // strip them (since we know the only use is the freeze and nothing can
