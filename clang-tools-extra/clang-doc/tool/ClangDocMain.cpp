@@ -301,10 +301,7 @@ Example usage for a project using a compile commands database:
   }
 
   if (Format == "mustache") {
-    if (auto Err = getMustacheHtmlFiles(argv[0], CDCtx)) {
-      llvm::errs() << toString(std::move(Err)) << "\n";
-      return 1;
-    }
+    ExitOnErr(getMustacheHtmlFiles(argv[0], CDCtx));
   }
 
   // Mapping phase
@@ -318,7 +315,6 @@ Example usage for a project using a compile commands database:
                    << toString(std::move(Err)) << "\n";
     else {
       ExitOnErr(std::move(Err));
-      return 1;
     }
   }
 
@@ -396,10 +392,7 @@ Example usage for a project using a compile commands database:
   llvm::outs() << "Generating docs...\n";
   ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
   llvm::outs() << "Generating assets for docs...\n";
-  Err = G->createResources(CDCtx);
-  if (Err) {
-    llvm::outs() << "warning: " << toString(std::move(Err)) << "\n";
-  }
+  ExitOnErr(G->createResources(CDCtx));
 
   return 0;
 }
