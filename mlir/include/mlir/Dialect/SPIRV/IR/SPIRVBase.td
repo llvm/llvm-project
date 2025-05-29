@@ -4226,7 +4226,7 @@ def SPIRV_Composite :
 def SPIRV_Type : AnyTypeOf<[
     SPIRV_Void, SPIRV_Bool, SPIRV_Integer, SPIRV_FloatOrBFloat16, SPIRV_Vector,
     SPIRV_AnyPtr, SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct,
-    SPIRV_AnyCooperativeMatrix, SPIRV_AnyMatrix, SPIRV_AnySampledImage,
+    SPIRV_AnyCooperativeMatrix, SPIRV_AnyMatrix, SPIRV_AnySampledImage
   ]>;
 
 def SPIRV_SignedInt : SignedIntOfWidths<[8, 16, 32, 64]>;
@@ -4245,24 +4245,21 @@ class SPIRV_MatrixOfType<list<Type> allowedTypes> :
 class SPIRV_VectorOf<Type type> :
     VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>;
 
-class SPIRV_CoopMatrixOf<Type type> :
-    SPIRV_CoopMatrixOfType<[type]>;
-
 class SPIRV_ScalarOrVectorOf<Type type> :
     AnyTypeOf<[type, SPIRV_VectorOf<type>]>;
 
 class SPIRV_ScalarOrVectorOrCoopMatrixOf<Type type> :
     AnyTypeOf<[type, SPIRV_VectorOf<type>,
-               SPIRV_CoopMatrixOf<type>]>;
+               SPIRV_CoopMatrixOfType<[type]>]>;
 
 class SPIRV_ScalarOrVectorOfOrCoopMatrixOf<Type scalarVectorType,
                                            Type coopMatrixType> :
     AnyTypeOf<[scalarVectorType, SPIRV_VectorOf<scalarVectorType>,
-               SPIRV_CoopMatrixOf<coopMatrixType>]>;
+               SPIRV_CoopMatrixOfType<[coopMatrixType]>]>;
 
 class SPIRV_MatrixOrCoopMatrixOf<Type type> :
     AnyTypeOf<[SPIRV_AnyMatrix,
-               SPIRV_CoopMatrixOf<type>]>;
+               SPIRV_CoopMatrixOfType<[type]>]>;
 
 class SPIRV_MatrixOf<Type type> :
     SPIRV_MatrixOfType<[type]>;
