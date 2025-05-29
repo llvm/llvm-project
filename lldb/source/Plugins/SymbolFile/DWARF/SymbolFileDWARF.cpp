@@ -4209,6 +4209,9 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
 
 const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
   llvm::call_once(m_dwp_symfile_once_flag, [this]() {
+    if (m_objfile_sp->GetArchitecture().GetTriple().isAppleMachO())
+      return;
+
     // Create a list of files to try and append .dwp to.
     FileSpecList symfiles;
     // Append the module's object file path.
