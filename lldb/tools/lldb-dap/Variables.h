@@ -12,7 +12,9 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include "llvm/ADT/DenseMap.h"
+#include <cstdint>
 #include <map>
+#include <utility>
 
 #define VARREF_FIRST_VAR_IDX (int64_t)4
 #define VARREF_LOCALS (int64_t)1
@@ -27,7 +29,6 @@ struct Variables {
   lldb::SBValueList locals;
   lldb::SBValueList globals;
   lldb::SBValueList registers;
-  int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
 
   /// Check if \p var_ref points to a variable that should persist for the
   /// entire duration of the debug session, e.g. repl expandable variables
@@ -52,19 +53,22 @@ struct Variables {
   lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
 
   bool SwitchFrame(uint32_t frame_id);
+  /// Initialize a frame if it hasn't been already, otherwise do nothing
+  void ReadyFrame(uint32_t frame_id, lldb::SBFrame &frame);
   std::optional<ScopeKind> GetScopeKind(const int64_t variablesReference);
 
   /// Clear all scope variables and non-permanent expandable variables.
   void Clear();
 
-  std::map<uint32_t,
-           std::tuple<lldb::SBValueList, lldb::SBValueList, lldb::SBValueList>>
-      frames;
-  std::map<int, std::pair<ScopeKind, uint32_t>> scope_kinds;
+  void AddScopeKind(int64_t variable_reference, ScopeKind kind,
+                    uint32_t frame_id);
 
 private:
   /// Variable_reference start index of permanent expandable variable.
   static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
+  int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
+
+  std::map<int, std::pair<ScopeKind, uint32_t>> m_scope_kinds;
 
   /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
@@ -73,6 +77,10 @@ private:
   /// Variables that persist across entire debug session.
   /// These are the variables evaluated from debug console REPL.
   llvm::DenseMap<int64_t, lldb::SBValue> m_referencedpermanent_variables;
+
+  std::map<uint32_t,
+           std::tuple<lldb::SBValueList, lldb::SBValueList, lldb::SBValueList>>
+      m_frames;
 
   int64_t m_next_permanent_var_ref{PermanentVariableStartIndex};
 };

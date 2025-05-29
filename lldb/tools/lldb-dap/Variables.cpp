@@ -8,12 +8,13 @@
 
 #include "Variables.h"
 #include "JSONUtils.h"
+#include "lldb/API/SBFrame.h"
 
 using namespace lldb_dap;
 
 lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
-  auto iter = scope_kinds.find(variablesReference);
-  if (iter == scope_kinds.end()) {
+  auto iter = m_scope_kinds.find(variablesReference);
+  if (iter == m_scope_kinds.end()) {
     return nullptr;
   }
 
@@ -40,7 +41,7 @@ void Variables::Clear() {
   globals.Clear();
   registers.Clear();
   m_referencedvariables.clear();
-  frames.clear();
+  m_frames.clear();
   m_next_temporary_var_ref = VARREF_FIRST_VAR_IDX;
 }
 
@@ -119,8 +120,8 @@ lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
 
 std::optional<ScopeKind>
 Variables::GetScopeKind(const int64_t variablesReference) {
-  auto iter = scope_kinds.find(variablesReference);
-  if (iter != scope_kinds.end()) {
+  auto iter = m_scope_kinds.find(variablesReference);
+  if (iter != m_scope_kinds.end()) {
     return iter->second.first;
   }
 
@@ -128,9 +129,9 @@ Variables::GetScopeKind(const int64_t variablesReference) {
 }
 
 bool Variables::SwitchFrame(const uint32_t frame_id) {
-  auto iter = frames.find(frame_id);
+  auto iter = m_frames.find(frame_id);
 
-  if (iter == frames.end()) {
+  if (iter == m_frames.end()) {
     return false;
   }
 
@@ -141,4 +142,31 @@ bool Variables::SwitchFrame(const uint32_t frame_id) {
   registers = frame_registers;
 
   return true;
+}
+
+void Variables::ReadyFrame(uint32_t frame_id, lldb::SBFrame &frame) {
+  if (m_frames.find(frame_id) == m_frames.end()) {
+
+    auto locals = frame.GetVariables(/*arguments=*/true,
+                                     /*locals=*/true,
+                                     /*statics=*/false,
+                                     /*in_scope_only=*/true);
+
+    auto globals = frame.GetVariables(/*arguments=*/false,
+                                      /*locals=*/false,
+                                      /*statics=*/true,
+                                      /*in_scope_only=*/true);
+
+    auto registers = frame.GetRegisters();
+
+    m_frames.insert(
+        std::make_pair(frame_id, std::make_tuple(locals, globals, registers)));
+  }
+}
+
+void Variables::AddScopeKind(int64_t variable_reference, ScopeKind kind,
+                             uint32_t frame_id) {
+
+  m_scope_kinds[variable_reference] =
+      std::make_pair(ScopeKind::Globals, frame_id);
 }

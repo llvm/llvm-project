@@ -9,6 +9,8 @@
 #include "DAP.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
+#include "Variables.h"
+#include <cstdint>
 #include <vector>
 
 using namespace lldb_dap::protocol;
@@ -80,46 +82,28 @@ ScopesRequestHandler::Run(const ScopesArguments &args) const {
 
   uint32_t frame_id = frame.GetFrameID();
 
-  if (dap.variables.frames.find(frame_id) == dap.variables.frames.end()) {
-
-    auto locals = frame.GetVariables(/*arguments=*/true,
-                                     /*locals=*/true,
-                                     /*statics=*/false,
-                                     /*in_scope_only=*/true);
-
-    auto globals = frame.GetVariables(/*arguments=*/false,
-                                      /*locals=*/false,
-                                      /*statics=*/true,
-                                      /*in_scope_only=*/true);
-
-    auto registers = frame.GetRegisters();
-
-    dap.variables.frames.insert(
-        std::make_pair(frame_id, std::make_tuple(locals, globals, registers)));
-  }
-
+  dap.variables.ReadyFrame(frame_id, frame);
   dap.variables.SwitchFrame(frame_id);
 
   std::vector<Scope> scopes = {};
 
-  scopes.push_back(CreateScope("Locals", dap.variables.m_next_temporary_var_ref,
-
+  int64_t variable_reference = dap.variables.GetNewVariableReference(false);
+  scopes.push_back(CreateScope("Locals", variable_reference,
                                dap.variables.locals.GetSize(), false));
 
-  dap.variables.scope_kinds[dap.variables.m_next_temporary_var_ref++] =
-      std::make_pair(ScopeKind::Locals, frame_id);
+  dap.variables.AddScopeKind(variable_reference, ScopeKind::Locals, frame_id);
 
-  scopes.push_back(CreateScope("Globals",
-                               dap.variables.m_next_temporary_var_ref,
+  variable_reference = dap.variables.GetNewVariableReference(false);
+  scopes.push_back(CreateScope("Globals", variable_reference,
                                dap.variables.globals.GetSize(), false));
-  dap.variables.scope_kinds[dap.variables.m_next_temporary_var_ref++] =
-      std::make_pair(ScopeKind::Globals, frame_id);
+  dap.variables.AddScopeKind(variable_reference, ScopeKind::Globals, frame_id);
 
-  scopes.push_back(CreateScope("Registers",
-                               dap.variables.m_next_temporary_var_ref,
+  variable_reference = dap.variables.GetNewVariableReference(false);
+  scopes.push_back(CreateScope("Registers", variable_reference,
                                dap.variables.registers.GetSize(), false));
-  dap.variables.scope_kinds[dap.variables.m_next_temporary_var_ref++] =
-      std::make_pair(ScopeKind::Registers, frame_id);
+
+  dap.variables.AddScopeKind(variable_reference, ScopeKind::Registers,
+                             frame_id);
 
   return ScopesResponseBody{std::move(scopes)};
 }
