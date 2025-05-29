@@ -156,10 +156,6 @@ public:
   void lowerQuadwordRestore(MachineBasicBlock::iterator II,
                             unsigned FrameIndex) const;
 
-  void lowerDMRPSpilling(MachineBasicBlock::iterator II,
-                         unsigned FrameIndex) const;
-  void lowerDMRPRestore(MachineBasicBlock::iterator II,
-                        unsigned FrameIndex) const;
   void lowerDMRSpilling(MachineBasicBlock::iterator II,
                         unsigned FrameIndex) const;
   void lowerDMRRestore(MachineBasicBlock::iterator II,
