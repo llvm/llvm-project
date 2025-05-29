@@ -1344,7 +1344,13 @@ public:
 
   SourceLocation getLocation() const { return DeclRefExprBits.Loc; }
   void setLocation(SourceLocation L) { DeclRefExprBits.Loc = L; }
-  SourceLocation getBeginLoc() const LLVM_READONLY;
+
+  SourceLocation getBeginLoc() const {
+    if (hasQualifier())
+      return getQualifierLoc().getBeginLoc();
+    return DeclRefExprBits.Loc;
+  }
+
   SourceLocation getEndLoc() const LLVM_READONLY;
 
   /// Determine whether this declaration reference was preceded by a
@@ -2901,26 +2907,35 @@ class CallExpr : public Expr {
   //
   // * An optional of type FPOptionsOverride.
   //
-  // Note that we store the offset in bytes from the this pointer to the start
-  // of the trailing objects. It would be perfectly possible to compute it
-  // based on the dynamic kind of the CallExpr. However 1.) we have plenty of
-  // space in the bit-fields of Stmt. 2.) It was benchmarked to be faster to
-  // compute this once and then load the offset from the bit-fields of Stmt,
-  // instead of re-computing the offset each time the trailing objects are
-  // accessed.
+  // CallExpr subclasses are asssumed to be 32 bytes or less, and CallExpr
+  // itself is 24 bytes. To avoid having to recompute or store the offset of the
+  // trailing objects, we put it at 32 bytes (such that it is suitable for all
+  // subclasses) We use the 8 bytes gap left for instances of CallExpr to store
+  // the begin source location, which has a significant impact on perf as
+  // getBeginLoc is assumed to be cheap.
+  // The layourt is as follow:
+  // CallExpr | Begin | 4 bytes left | Trailing Objects
+  // CXXMemberCallExpr | Trailing Objects
+  // A bit in CallExprBitfields indicates if source locations are present.
 
+protected:
+  static constexpr unsigned OffsetToTrailingObjects = 32;
+  template <typename T>
+  static constexpr unsigned
+  sizeToAllocateForCallExprSubclass(unsigned SizeOfTrailingObjects) {
+    static_assert(sizeof(T) <= CallExpr::OffsetToTrailingObjects);
+    return SizeOfTrailingObjects + CallExpr::OffsetToTrailingObjects;
+  }
+
+private:
   /// Return a pointer to the start of the trailing array of "Stmt *".
   Stmt **getTrailingStmts() {
     return reinterpret_cast<Stmt **>(reinterpret_cast<char *>(this) +
-                                     CallExprBits.OffsetToTrailingObjects);
+                                     OffsetToTrailingObjects);
   }
   Stmt *const *getTrailingStmts() const {
     return const_cast<CallExpr *>(this)->getTrailingStmts();
   }
-
-  /// Map a statement class to the appropriate offset in bytes from the
-  /// this pointer to the trailing objects.
-  static unsigned offsetToTrailingObjects(StmtClass SC);
 
   unsigned getSizeOfTrailingStmts() const {
     return (1 + getNumPreArgs() + getNumArgs()) * sizeof(Stmt *);
@@ -2928,7 +2943,7 @@ class CallExpr : public Expr {
 
   size_t getOffsetOfTrailingFPFeatures() const {
     assert(hasStoredFPFeatures());
-    return CallExprBits.OffsetToTrailingObjects + getSizeOfTrailingStmts();
+    return OffsetToTrailingObjects + getSizeOfTrailingStmts();
   }
 
 public:
@@ -2975,14 +2990,14 @@ protected:
   FPOptionsOverride *getTrailingFPFeatures() {
     assert(hasStoredFPFeatures());
     return reinterpret_cast<FPOptionsOverride *>(
-        reinterpret_cast<char *>(this) + CallExprBits.OffsetToTrailingObjects +
+        reinterpret_cast<char *>(this) + OffsetToTrailingObjects +
         getSizeOfTrailingStmts());
   }
   const FPOptionsOverride *getTrailingFPFeatures() const {
     assert(hasStoredFPFeatures());
     return reinterpret_cast<const FPOptionsOverride *>(
-        reinterpret_cast<const char *>(this) +
-        CallExprBits.OffsetToTrailingObjects + getSizeOfTrailingStmts());
+        reinterpret_cast<const char *>(this) + OffsetToTrailingObjects +
+        getSizeOfTrailingStmts());
   }
 
 public:
@@ -3027,6 +3042,19 @@ public:
   bool usesADL() const { return getADLCallKind() == UsesADL; }
 
   bool hasStoredFPFeatures() const { return CallExprBits.HasFPFeatures; }
+
+  bool usesMemberSyntax() const {
+    return CallExprBits.ExplicitObjectMemFunUsingMemberSyntax;
+  }
+  void setUsesMemberSyntax(bool V = true) {
+    CallExprBits.ExplicitObjectMemFunUsingMemberSyntax = V;
+    // Because the source location may be different for explicit
+    // member, we reset the cached values.
+    if (CallExprBits.HasTrailingSourceLoc) {
+      CallExprBits.HasTrailingSourceLoc = false;
+      updateTrailingSourceLoc();
+    }
+  }
 
   bool isCoroElideSafe() const { return CallExprBits.IsCoroElideSafe; }
   void setCoroElideSafe(bool V = true) { CallExprBits.IsCoroElideSafe = V; }
@@ -3187,9 +3215,48 @@ public:
   SourceLocation getRParenLoc() const { return RParenLoc; }
   void setRParenLoc(SourceLocation L) { RParenLoc = L; }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY;
-  SourceLocation getEndLoc() const LLVM_READONLY;
+  SourceLocation getBeginLoc() const {
+    if (CallExprBits.HasTrailingSourceLoc) {
+      static_assert(sizeof(CallExpr) <=
+                    OffsetToTrailingObjects + sizeof(SourceLocation));
+      return *reinterpret_cast<const SourceLocation *>(
+          reinterpret_cast<const char *>(this + 1));
+    }
 
+    if (usesMemberSyntax())
+      if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid())
+        return FirstArgLoc;
+
+    // FIXME: Some builtins have no callee begin location
+    SourceLocation begin = getCallee()->getBeginLoc();
+    if (begin.isInvalid() && getNumArgs() > 0 && getArg(0))
+      begin = getArg(0)->getBeginLoc();
+    return begin;
+  }
+
+  SourceLocation getEndLoc() const { return getRParenLoc(); }
+
+private:
+  friend class ASTStmtReader;
+  bool hasTrailingSourceLoc() const {
+    return CallExprBits.HasTrailingSourceLoc;
+  }
+
+  void updateTrailingSourceLoc() {
+    assert(!CallExprBits.HasTrailingSourceLoc &&
+           "Trailing source loc already set?");
+    assert(getStmtClass() == CallExprClass &&
+           "Calling setTrailingSourceLocs on a subclass of CallExpr");
+    static_assert(sizeof(CallExpr) <=
+                  OffsetToTrailingObjects + sizeof(SourceLocation));
+
+    SourceLocation *Locs =
+        reinterpret_cast<SourceLocation *>(reinterpret_cast<char *>(this + 1));
+    new (Locs) SourceLocation(getBeginLoc());
+    CallExprBits.HasTrailingSourceLoc = true;
+  }
+
+public:
   /// Return true if this is a call to __assume() or __builtin_assume() with
   /// a non-value-dependent constant parameter evaluating as false.
   bool isBuiltinAssumeFalse(const ASTContext &Ctx) const;
