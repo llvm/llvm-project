@@ -4252,11 +4252,6 @@ class SPIRV_ScalarOrVectorOrCoopMatrixOf<Type type> :
     AnyTypeOf<[type, SPIRV_VectorOf<type>,
                SPIRV_CoopMatrixOfType<[type]>]>;
 
-class SPIRV_ScalarOrVectorOfOrCoopMatrixOf<Type scalarVectorType,
-                                           Type coopMatrixType> :
-    AnyTypeOf<[scalarVectorType, SPIRV_VectorOf<scalarVectorType>,
-               SPIRV_CoopMatrixOfType<[coopMatrixType]>]>;
-
 class SPIRV_MatrixOrCoopMatrixOf<Type type> :
     AnyTypeOf<[SPIRV_AnyMatrix,
                SPIRV_CoopMatrixOfType<[type]>]>;
