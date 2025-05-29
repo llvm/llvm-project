@@ -42,3 +42,13 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wcschr
 )
+
+add_libc_test(
+  wcspbrk_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcspbrk_test.cpp
+  DEPENDS
+    libc.src.wchar.wcspbrk
+)
