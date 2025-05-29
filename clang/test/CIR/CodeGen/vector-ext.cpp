@@ -990,6 +990,7 @@ void foo14() {
 // OGCG: %[[TMP_B:.*]] = load <4 x float>, ptr %[[VEC_B]], align 16
 // OGCG: %[[GE:.*]] = fcmp oge <4 x float> %[[TMP_A]], %[[TMP_B]]
 // OGCG: %[[RES:.*]] = sext <4 x i1> %[[GE]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
 
 void foo15() {
   vi4 a;
