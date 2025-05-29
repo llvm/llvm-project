@@ -36,7 +36,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
-#include "llvm/ProfileData/MemProfSummary.h"
+#include "llvm/ProfileData/MemProfCommon.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -762,9 +762,9 @@ static AllocationType addCallStack(CallStackTrie &AllocTrie,
   return AllocType;
 }
 
-// Helper to compare the InlinedCallStack computed from an instruction's debug
-// info to a list of Frames from profile data (either the allocation data or a
-// callsite).
+// Return true if InlinedCallStack, computed from a call instruction's debug
+// info, is a prefix of ProfileCallStack, a list of Frames from profile data
+// (either the allocation data or a callsite).
 static bool
 stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
                                    ArrayRef<uint64_t> InlinedCallStack) {
