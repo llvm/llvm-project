@@ -920,8 +920,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->hasCvtPkF16F32Inst()) {
-    setOperationAction(ISD::FP_ROUND, {MVT::v2f16, MVT::v4f16, MVT::v8f16},
-                       Custom);
+    setOperationAction(ISD::FP_ROUND, {MVT::v2f16, MVT::v4f16, MVT::v8f16,
+                       MVT::v16f16}, Custom);
   }
 
   setTargetDAGCombine({ISD::ADD,
@@ -6902,32 +6902,23 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
                            DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
-SDValue SITargetLowering::SplitFP_ROUNDVectorToPacks(SDValue Op,
-                                                     SelectionDAG &DAG) const {
-  unsigned Opc = Op.getOpcode();
+SDValue SITargetLowering::splitFP_ROUNDVectorOp(SDValue Op,
+                                                SelectionDAG &DAG) const {
   EVT DstVT = Op.getValueType();
   unsigned NumElts = DstVT.getVectorNumElements();
-  assert(NumElts % 2 == 0 && "Only handle vectors of even number of elements");
-  if (NumElts == 2) // already packed.
-    return Op;
+  assert(isPowerOf2_32(NumElts) && "Number of elements must be power of 2");
 
-  SDValue Src = Op.getOperand(0);
-  EVT SrcVT = Src.getValueType();
-  LLVMContext &Context = *DAG.getContext();
-  EVT SrcPkVT = EVT::getVectorVT(Context, SrcVT.getScalarType(), 2);
-  EVT DstPkVT = EVT::getVectorVT(Context, DstVT.getScalarType(), 2);
+  auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
 
   SDLoc DL(Op);
-  SmallVector<SDValue, 16> Packs;
-  for (unsigned Index = 0; Index < NumElts; Index += 2) {
-    SDValue PkSrc = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SrcPkVT, Src,
-                                DAG.getConstant(Index, DL, MVT::i32));
-    SDValue PkDst = DAG.getNode(Opc, DL, DstPkVT, PkSrc,
-                                DAG.getTargetConstant(0, DL, MVT::i32));
-    Packs.push_back(PkDst);
-  }
+  unsigned Opc = Op.getOpcode();
+  SDValue Flags = Op.getOperand(1);
+  EVT HalfDstVT = EVT::getVectorVT(*DAG.getContext(), DstVT.getScalarType(),
+                                   NumElts / 2);
+  SDValue OpLo = DAG.getNode(Opc, DL, HalfDstVT, Lo, Flags);
+  SDValue OpHi = DAG.getNode(Opc, DL, HalfDstVT, Hi, Flags);
 
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Packs);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, OpLo, OpHi);
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
@@ -6939,7 +6930,7 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     assert(Subtarget->hasCvtPkF16F32Inst() && "support v_cvt_pk_f16_f32");
     if (SrcVT.getScalarType() != MVT::f32)
       return SDValue();
-    return SplitFP_ROUNDVectorToPacks(Op, DAG);
+    return DstVT == MVT::v2f16 ? Op : splitFP_ROUNDVectorOp(Op, DAG);
   }
 
   if (SrcVT.getScalarType() != MVT::f64)

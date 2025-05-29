@@ -223,6 +223,13 @@ static LegalityPredicate numElementsNotEven(unsigned TypeIdx) {
   };
 }
 
+static LegalityPredicate numElementsPowerOf2(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.isVector() && isPowerOf2_32(QueryTy.getNumElements());
+  };
+}
+
 static bool isRegisterSize(const GCNSubtarget &ST, unsigned Size) {
   return ((ST.useRealTrue16Insts() && Size == 16) || Size % 32 == 0) &&
          Size <= MaxRegisterSize;
@@ -1063,7 +1070,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
   if (ST.hasCvtPkF16F32Inst()) {
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}})
-        .customFor({{V4S16, V4S32}, {V8S16, V8S32}});
+        .fewerElementsIf(all(elementTypeIs(0, S16), vectorWiderThan(0, 32),
+                             numElementsPowerOf2(0), elementTypeIs(1, S32)),
+                         changeTo(0, V2S16));
   } else {
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
   }
@@ -2165,8 +2174,6 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     return legalizeMinNumMaxNum(Helper, MI);
-  case TargetOpcode::G_FPTRUNC:
-    return legalizeFPTrunc(Helper, MI, MRI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, B);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
@@ -2751,21 +2758,6 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
     return true;
 
   return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
-}
-
-bool AMDGPULegalizerInfo::legalizeFPTrunc(LegalizerHelper &Helper,
-                                          MachineInstr &MI,
-                                          MachineRegisterInfo &MRI) const {
-  Register DstReg = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-  assert(DstTy.isVector() && DstTy.getNumElements() > 2);
-  LLT EltTy = DstTy.getElementType();
-  assert(EltTy == S16 && "Only handle vectors of half");
-
-  // Split vector to packs.
-  LLT PkTy = LLT::fixed_vector(2, EltTy);
-  return Helper.fewerElementsVector(MI, /*TypeIdx=*/0, PkTy) ==
-         LegalizerHelper::Legalized;
 }
 
 bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
