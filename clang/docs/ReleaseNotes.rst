@@ -669,6 +669,7 @@ Bug Fixes in This Version
   base classes. (GH139452)
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 - Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
+- Fixed type mismatch error caused by const structure pointer dereference when builtins parameter is used. (#GH141397)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
