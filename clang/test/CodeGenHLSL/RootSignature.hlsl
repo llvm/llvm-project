@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: !dx.rootsignatures = !{![[#EMPTY_ENTRY:]], ![[#DT_ENTRY:]],
-// CHECK-SAME: ![[#RF_ENTRY:]]}
+// CHECK-SAME: ![[#RF_ENTRY:]], ![[#RC_ENTRY:]]}
 
 // CHECK: ![[#EMPTY_ENTRY]] = !{ptr @EmptyEntry, ![[#EMPTY:]]}
 // CHECK: ![[#EMPTY]] = !{}
@@ -37,6 +37,20 @@ void DescriptorTableEntry() {}
 [shader("compute"), RootSignature(SampleRootFlags)]
 [numthreads(1,1,1)]
 void RootFlagsEntry() {}
+
+// CHECK: ![[#RC_ENTRY]] = !{ptr @RootConstantsEntry, ![[#RC_RS:]]}
+// CHECK: ![[#RC_RS]] = !{![[#ROOT_CONSTANTS:]]}
+// CHECK: ![[#ROOT_CONSTANTS]] = !{!"RootConstants", i32 5, i32 1, i32 2, i32 1}
+
+#define SampleRootConstants \
+  "RootConstants(" \
+  " space = 2, " \
+  " visibility = Shader_Visibility_Pixel, " \
+  " b1, num32BitConstants = 1 " \
+  ")"
+[shader("compute"), RootSignature(SampleRootConstants)]
+[numthreads(1,1,1)]
+void RootConstantsEntry() {}
 
 // Sanity test to ensure no root is added for this function as there is only
 // two entries in !dx.roosignatures
