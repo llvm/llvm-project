@@ -13,6 +13,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Frontend/CompileJobCacheKey.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
@@ -212,8 +213,6 @@ class CompilerInstance : public ModuleLoader {
 
   /// Force an output buffer.
   std::unique_ptr<llvm::raw_pwrite_stream> OutputStream;
-
-  void createCASDatabases();
 
   CompilerInstance(const CompilerInstance &) = delete;
   void operator=(const CompilerInstance &) = delete;
@@ -753,6 +752,15 @@ public:
         getInvocation().getModuleHash(getDiagnostics()));
   }
 
+  CompilerInvocation getCacheCanonicalInvocation() {
+    if (!CAS)
+      return *Invocation;
+
+    CompilerInvocation Copy(*Invocation);
+    canonicalizeCASCompilerInvocation(*CAS, Copy);
+    return Copy;
+  }
+
   /// Create the AST context.
   void createASTContext();
 
@@ -994,6 +1002,10 @@ public:
                            StringRef Provider);
 
   ModuleCache &getModuleCache() const { return *ModCache; }
+
+  std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
+            std::shared_ptr<llvm::cas::ActionCache>>
+  createCASDatabases();
 };
 
 } // end namespace clang

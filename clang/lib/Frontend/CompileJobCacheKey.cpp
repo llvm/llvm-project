@@ -67,9 +67,7 @@ static llvm::cas::CASID createCompileJobCacheKeyForArgs(
   return llvm::cantFail(Builder.create(CAS)).getID();
 }
 
-static std::optional<llvm::cas::CASID>
-createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
-                             CompilerInvocation CI) {
+static void canonicalizeForCacheKey(CompilerInvocation &CI) {
   FrontendOptions &FrontendOpts = CI.getFrontendOpts();
   DependencyOutputOptions &DepOpts = CI.getDependencyOutputOpts();
 
@@ -136,7 +134,12 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
     // These are intended for caching introspection, they are not cached.
     return Remark.starts_with("compile-job-cache");
   });
+}
 
+static std::optional<llvm::cas::CASID>
+createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
+                             CompilerInvocation CI) {
+  canonicalizeForCacheKey(CI);
   // Generate a new command-line in case Invocation has been canonicalized.
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
@@ -182,7 +185,7 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
 }
 
 static CompileJobCachingOptions
-canonicalizeForCaching(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
+canonicalizeForCaching(const llvm::cas::ObjectStore &CAS,
                        CompilerInvocation &Invocation) {
   CompileJobCachingOptions Opts;
   FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
@@ -220,6 +223,12 @@ canonicalizeForCaching(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
   return Opts;
 }
 
+void clang::canonicalizeCASCompilerInvocation(const ObjectStore &CAS,
+                                              CompilerInvocation &CI) {
+  (void)canonicalizeForCaching(CAS, CI);
+  canonicalizeForCacheKey(CI);
+}
+
 std::optional<std::pair<llvm::cas::CASID, llvm::cas::CASID>>
 clang::canonicalizeAndCreateCacheKeys(ObjectStore &CAS,
                                       ActionCache &Cache,
@@ -231,7 +240,7 @@ clang::canonicalizeAndCreateCacheKeys(ObjectStore &CAS,
   CASOptions CASOpts(CI.getCASOpts());
   CASOpts.freezeConfig(Diags);
 
-  Opts = canonicalizeForCaching(CAS, Diags, CI);
+  Opts = canonicalizeForCaching(CAS, CI);
   auto CacheKey = createCompileJobCacheKeyImpl(CAS, Diags, CI);
   if (!CacheKey)
     return std::nullopt;
@@ -265,7 +274,7 @@ clang::canonicalizeAndCreateCacheKeys(ObjectStore &CAS,
   CI.getFrontendOpts().CASInputFileCacheKey.clear();
 
   CompilerInvocation CICopy = CI;
-  (void)canonicalizeForCaching(CAS, Diags, CICopy);
+  (void)canonicalizeForCaching(CAS, CICopy);
   auto CanonicalCacheKey = createCompileJobCacheKeyImpl(CAS, Diags, CICopy);
   if (!CanonicalCacheKey)
     return std::nullopt;
@@ -277,7 +286,7 @@ std::optional<llvm::cas::CASID>
 clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
                                 const CompilerInvocation &OriginalCI) {
   CompilerInvocation CI(OriginalCI);
-  (void)canonicalizeForCaching(CAS, Diags, CI);
+  (void)canonicalizeForCaching(CAS, CI);
   return createCompileJobCacheKeyImpl(CAS, Diags, std::move(CI));
 }
 
@@ -285,7 +294,7 @@ std::optional<llvm::cas::CASID>
 clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
                                 const CowCompilerInvocation &OriginalCI) {
   CompilerInvocation CI(OriginalCI);
-  (void)canonicalizeForCaching(CAS, Diags, CI);
+  (void)canonicalizeForCaching(CAS, CI);
   return createCompileJobCacheKeyImpl(CAS, Diags, std::move(CI));
 }
 

@@ -296,7 +296,7 @@ std::optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   if (!CacheCompileJob)
     return std::nullopt;
 
-  std::tie(CAS, Cache) = Invocation.getCASOpts().getOrCreateDatabases(Diags);
+  std::tie(CAS, Cache) = Clang.createCASDatabases();
   if (!CAS || !Cache)
     return 1; // Exit with error!
 

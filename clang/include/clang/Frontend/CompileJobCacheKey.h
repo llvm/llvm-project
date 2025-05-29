@@ -79,6 +79,9 @@ llvm::Error printCompileJobCacheKey(llvm::cas::ObjectStore &CAS,
                                     const llvm::cas::CASID &Key,
                                     llvm::raw_ostream &OS);
 
+void canonicalizeCASCompilerInvocation(const llvm::cas::ObjectStore &CAS,
+                                       CompilerInvocation &CI);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_FRONTEND_COMPILEJOBCACHEKEY_H

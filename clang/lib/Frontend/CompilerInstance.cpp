@@ -957,13 +957,16 @@ llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputBackend() {
   return getOutputBackend();
 }
 
-void CompilerInstance::createCASDatabases() {
+std::pair<std::shared_ptr<llvm::cas::ObjectStore>,
+          std::shared_ptr<llvm::cas::ActionCache>>
+CompilerInstance::createCASDatabases() {
   // Create a new CAS databases from the CompilerInvocation. Future calls to
   // createFileManager() will use the same CAS.
   std::tie(CAS, ActionCache) =
       getInvocation().getCASOpts().getOrCreateDatabases(
           getDiagnostics(),
           /*CreateEmptyCASOnFailure=*/true);
+  return {CAS, ActionCache};
 }
 
 llvm::cas::ObjectStore &CompilerInstance::getOrCreateObjectStore() {
