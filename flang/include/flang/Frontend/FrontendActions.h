@@ -179,6 +179,7 @@ enum class BackendActionTy {
   Backend_EmitBC,       ///< Emit LLVM bitcode files
   Backend_EmitLL,       ///< Emit human-readable LLVM assembly
   Backend_EmitFIR,      ///< Emit FIR files, possibly lowering via HLFIR
+  Backend_EmitMLIR,     ///< Emit MLIR files, possibly lowering via FIR
   Backend_EmitHLFIR,    ///< Emit HLFIR files before any passes run
 };
 
@@ -216,6 +217,11 @@ protected:
   /// Runs pass pipeline to lower HLFIR into FIR
   void lowerHLFIRToFIR();
 
+  /// Runs pass pipeline to lower FIR into core MLIR
+  /// TODO: Some operations currently do not have corresponding representations
+  /// in the core MLIR dialects, so we lower them directly to the LLVM dialect.
+  void lowerFIRToMLIR();
+
   /// Generates an LLVM IR module from CodeGenAction::mlirModule and saves it
   /// in CodeGenAction::llvmModule.
   void generateLLVMIR();
@@ -230,6 +236,11 @@ public:
 class EmitFIRAction : public CodeGenAction {
 public:
   EmitFIRAction() : CodeGenAction(BackendActionTy::Backend_EmitFIR) {}
+};
+
+class EmitMLIRAction : public CodeGenAction {
+public:
+  EmitMLIRAction() : CodeGenAction(BackendActionTy::Backend_EmitMLIR) {}
 };
 
 class EmitHLFIRAction : public CodeGenAction {
