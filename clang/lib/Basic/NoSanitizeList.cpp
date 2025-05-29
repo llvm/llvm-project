@@ -34,10 +34,10 @@ bool NoSanitizeList::containsGlobal(SanitizerMask Mask, StringRef GlobalName,
 
 bool NoSanitizeList::containsType(SanitizerMask Mask, StringRef MangledTypeName,
                                   StringRef Category) const {
-  auto NoSan = SSCL->inSectionBlame(Mask, "type", FileName, Category);
+  auto NoSan = SSCL->inSectionBlame(Mask, "type", MangledTypeName, Category);
   if (NoSan == llvm::SpecialCaseList::NotFound)
     return false;
-  auto San = SSCL->inSectionBlame(Mask, "type", FileName, "sanitize");
+  auto San = SSCL->inSectionBlame(Mask, "type", MangledTypeName, "sanitize");
   return San == llvm::SpecialCaseList::NotFound || NoSan > San;
 }
 
