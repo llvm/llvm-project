@@ -15,7 +15,7 @@ namespace {
 
 TEST(HLSLRootSignatureTest, NoOverlappingInsertTests) {
   // Ensures that there is never a reported overlap
-  ResourceRange::IMap::Allocator Allocator;
+  ResourceRange::MapT::Allocator Allocator;
   ResourceRange Range(Allocator);
 
   RangeInfo A;
@@ -56,7 +56,7 @@ TEST(HLSLRootSignatureTest, NoOverlappingInsertTests) {
 TEST(HLSLRootSignatureTest, SingleOverlappingInsertTests) {
   // Ensures that we correctly report an overlap when we insert a range that
   // overlaps with one other range but does not cover (replace) it
-  ResourceRange::IMap::Allocator Allocator;
+  ResourceRange::MapT::Allocator Allocator;
   ResourceRange Range(Allocator);
 
   RangeInfo A;
@@ -93,7 +93,7 @@ TEST(HLSLRootSignatureTest, MultipleOverlappingInsertTests) {
   // Ensures that we correctly report an overlap when inserted range
   // overlaps more than one range and it does not cover (replace) either
   // range. In this case it will just fill in the interval between the two
-  ResourceRange::IMap::Allocator Allocator;
+  ResourceRange::MapT::Allocator Allocator;
   ResourceRange Range(Allocator);
 
   RangeInfo A;
@@ -128,7 +128,7 @@ TEST(HLSLRootSignatureTest, MultipleOverlappingInsertTests) {
 TEST(HLSLRootSignatureTest, CoverInsertTests) {
   // Ensures that we correctly report an overlap when inserted range
   // covers one or more ranges
-  ResourceRange::IMap::Allocator Allocator;
+  ResourceRange::MapT::Allocator Allocator;
   ResourceRange Range(Allocator);
 
   RangeInfo A;
