@@ -966,16 +966,15 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This) {
   if (!This.isZero())
     return true;
 
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-
-  bool IsImplicit = false;
-  if (const auto *E = dyn_cast_if_present<CXXThisExpr>(Loc.asExpr()))
-    IsImplicit = E->isImplicit();
-
-  if (S.getLangOpts().CPlusPlus11)
-    S.FFDiag(Loc, diag::note_constexpr_this) << IsImplicit;
-  else
-    S.FFDiag(Loc);
+  const Expr *E = S.Current->getExpr(OpPC);
+  if (S.getLangOpts().CPlusPlus11) {
+    bool IsImplicit = false;
+    if (const auto *TE = dyn_cast<CXXThisExpr>(E))
+      IsImplicit = TE->isImplicit();
+    S.FFDiag(E, diag::note_constexpr_this) << IsImplicit;
+  } else {
+    S.FFDiag(E);
+  }
 
   return false;
 }
