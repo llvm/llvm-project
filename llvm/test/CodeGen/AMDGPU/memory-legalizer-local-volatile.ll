@@ -28,7 +28,7 @@ define amdgpu_kernel void @local_volatile_load_0(
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX6-NEXT:    ds_read_b32 v0, v0
-; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -43,6 +43,7 @@ define amdgpu_kernel void @local_volatile_load_0(
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    ds_read_b32 v2, v0
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -90,7 +91,7 @@ define amdgpu_kernel void @local_volatile_load_0(
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s4
 ; SKIP-CACHE-INV-NEXT:    ds_read_b32 v0, v0
-; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -169,7 +170,7 @@ define amdgpu_kernel void @local_volatile_load_1(
 ; GFX6-NEXT:    v_add_i32_e64 v0, s[4:5], s4, v0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    ds_read_b32 v0, v0
-; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -186,6 +187,7 @@ define amdgpu_kernel void @local_volatile_load_1(
 ; GFX7-NEXT:    v_add_i32_e64 v0, s[6:7], s6, v0
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    ds_read_b32 v2, v0
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -239,7 +241,7 @@ define amdgpu_kernel void @local_volatile_load_1(
 ; SKIP-CACHE-INV-NEXT:    v_add_i32_e64 v0, s[4:5], s4, v0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    ds_read_b32 v0, v0
-; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -330,6 +332,7 @@ define amdgpu_kernel void @local_volatile_store_0(
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX6-NEXT:    ds_write_b32 v0, v1
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: local_volatile_store_0:
@@ -343,6 +346,7 @@ define amdgpu_kernel void @local_volatile_store_0(
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX7-NEXT:    ds_write_b32 v0, v1
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX10-WGP-LABEL: local_volatile_store_0:
@@ -380,6 +384,7 @@ define amdgpu_kernel void @local_volatile_store_0(
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: local_volatile_store_0:
@@ -461,6 +466,7 @@ define amdgpu_kernel void @local_volatile_store_1(
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX6-NEXT:    ds_write_b32 v0, v1
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    s_endpgm
 ;
 ; GFX7-LABEL: local_volatile_store_1:
@@ -476,6 +482,7 @@ define amdgpu_kernel void @local_volatile_store_1(
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX7-NEXT:    ds_write_b32 v0, v1
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_endpgm
 ;
 ; GFX10-WGP-LABEL: local_volatile_store_1:
@@ -517,6 +524,7 @@ define amdgpu_kernel void @local_volatile_store_1(
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
 ; GFX11-WGP-LABEL: local_volatile_store_1:
@@ -610,7 +618,7 @@ define amdgpu_kernel void @local_volatile_workgroup_acquire_load(
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX6-NEXT:    ds_read_b32 v1, v0
-; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    ds_write_b32 v0, v1
@@ -624,7 +632,7 @@ define amdgpu_kernel void @local_volatile_workgroup_acquire_load(
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX7-NEXT:    ds_read_b32 v1, v0
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    ds_write_b32 v0, v1
@@ -663,7 +671,7 @@ define amdgpu_kernel void @local_volatile_workgroup_acquire_load(
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s1
 ; SKIP-CACHE-INV-NEXT:    ds_read_b32 v1, v0
-; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -735,7 +743,7 @@ define amdgpu_kernel void @local_volatile_workgroup_release_store(
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s0
-; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    ds_write_b32 v0, v1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -747,7 +755,7 @@ define amdgpu_kernel void @local_volatile_workgroup_release_store(
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s5
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s4
-; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    ds_write_b32 v0, v1
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -782,7 +790,7 @@ define amdgpu_kernel void @local_volatile_workgroup_release_store(
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s1
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
+; SKIP-CACHE-INV-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;

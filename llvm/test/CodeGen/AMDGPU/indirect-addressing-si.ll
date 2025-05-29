@@ -7807,10 +7807,12 @@ define amdgpu_kernel void @multi_same_block(i32 %arg) {
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, s0
 ; NOOPT-NEXT:    ds_write_b32 v0, v2
+; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    s_mov_b32 m0, -1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0
 ; NOOPT-NEXT:    v_mov_b32_e32 v0, s0
 ; NOOPT-NEXT:    ds_write_b32 v0, v1
+; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    s_endpgm
 ;
 ; SI-MOVREL-LABEL: multi_same_block:

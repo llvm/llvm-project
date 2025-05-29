@@ -404,7 +404,7 @@ define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN_DBG-NEXT:    s_mov_b32 m0, -1
 ; GCN_DBG-NEXT:    ds_read_u8 v0, v0
-; GCN_DBG-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN_DBG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN_DBG-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN_DBG-NEXT:    s_and_b32 s0, 1, s0
 ; GCN_DBG-NEXT:    s_cmp_eq_u32 s0, 1
