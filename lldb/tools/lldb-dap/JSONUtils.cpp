@@ -764,12 +764,12 @@ llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
   if (format && thread.GetDescriptionWithFormat(format, stream).Success()) {
     thread_str = stream.GetData();
   } else {
-    const char *thread_name = thread.GetName();
-    const char *queue_name = thread.GetQueueName();
+    llvm::StringRef thread_name(thread.GetName());
+    llvm::StringRef queue_name(thread.GetQueueName());
 
-    if (thread_name) {
-      thread_str = std::string(thread_name);
-    } else if (queue_name) {
+    if (!thread_name.empty()) {
+      thread_str = thread_name.str();
+    } else if (!queue_name.empty()) {
       auto kind = thread.GetQueue().GetKind();
       std::string queue_kind_label = "";
       if (kind == lldb::eQueueKindSerial) {
