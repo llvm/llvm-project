@@ -3823,6 +3823,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
         source, "This is not a valid ATOMIC UPDATE operation"_err_en_US);
     return;
   default:
+    assert(top.first != atomic::Operator::Identity && "Handle this separately");
     context_.Say(source,
         "The %s operator is not a valid ATOMIC UPDATE operation"_err_en_US,
         atomic::ToString(top.first));
@@ -3852,6 +3853,8 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
           "The atomic variable %s should appear as an argument in the update operation"_err_en_US,
           atom.AsFortran());
     } else {
+      assert(
+          top.first != atomic::Operator::Identity && "Handle this separately");
       context_.Say(rsrc,
           "The atomic variable %s should occur exactly once among the arguments of the top-level %s operator"_err_en_US,
           atom.AsFortran(), atomic::ToString(top.first));
@@ -3898,16 +3901,20 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
     } else if (IsSameOrConvertOf(arg1, atom)) {
       CheckStorageOverlap(atom, {arg0}, condSource);
     } else {
+      assert(
+          top.first != atomic::Operator::Identity && "Handle this separately");
       context_.Say(assignSource,
           "An argument of the %s operator should be the target of the assignment"_err_en_US,
           atomic::ToString(top.first));
     }
     break;
   }
+  case atomic::Operator::Identity:
   case atomic::Operator::True:
   case atomic::Operator::False:
     break;
   default:
+    assert(top.first != atomic::Operator::Identity && "Handle this separately");
     context_.Say(condSource,
         "The %s operator is not a valid condition for ATOMIC operation"_err_en_US,
         atomic::ToString(top.first));
