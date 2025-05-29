@@ -171,6 +171,8 @@ void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
 MDNode *MetadataBuilder::BuildRootSignature() {
   for (const RootElement &Element : Elements) {
     MDNode *ElementMD = nullptr;
+    if (const auto &Flags = std::get_if<RootFlags>(&Element))
+      ElementMD = BuildRootFlags(*Flags);
     if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
       ElementMD = BuildDescriptorTableClause(*Clause);
     if (const auto &Table = std::get_if<DescriptorTable>(&Element))
@@ -185,6 +187,15 @@ MDNode *MetadataBuilder::BuildRootSignature() {
   }
 
   return MDNode::get(Ctx, GeneratedMetadata);
+}
+
+MDNode *MetadataBuilder::BuildRootFlags(const RootFlags &Flags) {
+  IRBuilder<> Builder(Ctx);
+  return MDNode::get(Ctx, {
+                              MDString::get(Ctx, "RootFlags"),
+                              ConstantAsMetadata::get(
+                                  Builder.getInt32(llvm::to_underlying(Flags))),
+                          });
 }
 
 MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {

@@ -188,6 +188,7 @@ public:
 
 private:
   /// Define the various builders for the different metadata types
+  MDNode *BuildRootFlags(const RootFlags &Flags);
   MDNode *BuildDescriptorTable(const DescriptorTable &Table);
   MDNode *BuildDescriptorTableClause(const DescriptorTableClause &Clause);
 

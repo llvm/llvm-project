@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: !dx.rootsignatures = !{![[#EMPTY_ENTRY:]], ![[#DT_ENTRY:]]}
+// CHECK: !dx.rootsignatures = !{![[#EMPTY_ENTRY:]], ![[#DT_ENTRY:]],
+// CHECK-SAME: ![[#RF_ENTRY:]]}
 
 // CHECK: ![[#EMPTY_ENTRY]] = !{ptr @EmptyEntry, ![[#EMPTY:]]}
 // CHECK: ![[#EMPTY]] = !{}
@@ -23,6 +24,19 @@ void EmptyEntry() {}
 [shader("compute"), RootSignature(SampleDescriptorTable)]
 [numthreads(1,1,1)]
 void DescriptorTableEntry() {}
+
+// CHECK: ![[#RF_ENTRY]] = !{ptr @RootFlagsEntry, ![[#RF_RS:]]}
+// CHECK: ![[#RF_RS]] = !{![[#ROOT_FLAGS:]]}
+// CHECK: ![[#ROOT_FLAGS]] = !{!"RootFlags", i32 2114}
+
+#define SampleRootFlags \
+  "RootFlags( " \
+  " Deny_Vertex_Shader_Root_Access | Allow_Stream_Output | " \
+  " sampler_heap_directly_indexed " \
+  ")"
+[shader("compute"), RootSignature(SampleRootFlags)]
+[numthreads(1,1,1)]
+void RootFlagsEntry() {}
 
 // Sanity test to ensure no root is added for this function as there is only
 // two entries in !dx.roosignatures
