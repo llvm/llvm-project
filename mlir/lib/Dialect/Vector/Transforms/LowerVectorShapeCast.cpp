@@ -79,7 +79,7 @@ namespace {
 /// The greatest common divisor (gcd) of the first dimension preceding the
 /// common suffix is gcd(4,6) = 2. The algorithm implemented here will operate
 /// on vectors with shapes that are `multiples` of (what we define as) the
-/// 'atomic size', 2x7x11. The atomic size is `gcd` x `common-suffix`.
+/// 'atomic shape', 2x7x11. The atomic shape is `gcd` x `common-suffix`.
 ///
 ///         vector<2x2x3x4x7x11xi8> to
 ///             vector<8x6x7x11xi8>
@@ -87,17 +87,17 @@ namespace {
 ///                      ^              --->    gcd(4,6) is 2 | |
 ///                                                         | | |
 ///                                                         v v v
-///                                  atomic size   <-----   2x7x11
+///                                 atomic shape   <-----   2x7x11
 ///
 ///
 ///
-/// The decomposition implemented in this patterns consists of a sequence of
+/// The decomposition implemented in this pattern consists of a sequence of
 /// repeated steps:
 ///
 ///  (1) Extract vectors from the suffix of the source.
 ///      In our example this is 2x2x3x4x7x11 -> 4x7x11.
 ///
-///  (2) Do extract_strided_slice down to the atomic size.
+///  (2) Do extract_strided_slice down to the atomic shape.
 ///      In our example this is 4x7x11 -> 2x7x11.
 ///
 ///  (3) Do insert_strided_slice to the suffix of the result.
@@ -130,7 +130,8 @@ public:
 
     if (sourceType.isScalable() || resultType.isScalable())
       return rewriter.notifyMatchFailure(
-          op, "shape_cast lowering not handled by this pattern");
+          op,
+          "shape_cast where vectors are scalable not handled by this pattern");
 
     const ArrayRef<int64_t> sourceShape = sourceType.getShape();
     const ArrayRef<int64_t> resultShape = resultType.getShape();
@@ -332,7 +333,8 @@ public:
     // from >= 2-D scalable vectors or scalable vectors of fixed vectors.
     if (!isTrailingDimScalable(sourceVectorType) ||
         !isTrailingDimScalable(resultVectorType)) {
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "trailing dims are not scalable, not handled by this pattern");
     }
 
     // The sizes of the trailing dimension of the source and result vectors, the
