@@ -396,11 +396,11 @@ class StackColoring {
 
     /// Which slots are marked as LIVE_OUT, coming out of each basic block.
     BitVector LiveOut;
+
+    bool isEmpty() { return Begin.empty(); }
   };
 
-  /// Maps active slots (per bit) for each basic block.
-  using LivenessMap = DenseMap<const MachineBasicBlock *, BlockLifetimeInfo>;
-  LivenessMap BlockLiveness;
+  SmallVector<BlockLifetimeInfo, 0> BlockLiveness;
 
   /// Maps basic blocks to a serial number.
   SmallVector<const MachineBasicBlock *, 8> BasicBlockNumbering;
@@ -438,9 +438,6 @@ public:
   bool run(MachineFunction &Func, bool OnlyRemoveMarkers = false);
 
 private:
-  /// Used in collectMarkers
-  using BlockBitVecMap = DenseMap<const MachineBasicBlock *, BitVector>;
-
   /// Debug.
   void dump() const;
   void dumpIntervals() const;
@@ -538,9 +535,7 @@ LLVM_DUMP_METHOD void StackColoring::dumpBV(const char *tag,
 }
 
 LLVM_DUMP_METHOD void StackColoring::dumpBB(MachineBasicBlock *MBB) const {
-  LivenessMap::const_iterator BI = BlockLiveness.find(MBB);
-  assert(BI != BlockLiveness.end() && "Block not found");
-  const BlockLifetimeInfo &BlockInfo = BI->second;
+  const BlockLifetimeInfo &BlockInfo = BlockLiveness[MBB->getNumber()];
 
   dumpBV("BEGIN", BlockInfo.Begin);
   dumpBV("END", BlockInfo.End);
@@ -624,7 +619,7 @@ bool StackColoring::isLifetimeStartOrEnd(const MachineInstr &MI,
 
 unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   unsigned MarkersFound = 0;
-  BlockBitVecMap SeenStartMap;
+  SmallVector<BitVector> SeenStartMap;
   InterestingSlots.clear();
   InterestingSlots.resize(NumSlot);
   ConservativeSlots.clear();
@@ -634,6 +629,8 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   SmallVector<int, 8> NumStartLifetimes(NumSlot, 0);
   SmallVector<int, 8> NumEndLifetimes(NumSlot, 0);
 
+  SeenStartMap.resize(MF->getNumBlockIDs());
+
   // Step 1: collect markers and populate the "InterestingSlots"
   // and "ConservativeSlots" sets.
   for (MachineBasicBlock *MBB : depth_first(MF)) {
@@ -642,10 +639,11 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
     // to this bb).
     BitVector BetweenStartEnd;
     BetweenStartEnd.resize(NumSlot);
+    SeenStartMap[MBB->getNumber()].resize(NumSlot);
     for (const MachineBasicBlock *Pred : MBB->predecessors()) {
-      BlockBitVecMap::const_iterator I = SeenStartMap.find(Pred);
-      if (I != SeenStartMap.end()) {
-        BetweenStartEnd |= I->second;
+      BitVector &PredSet = SeenStartMap[Pred->getNumber()];
+      if (!PredSet.empty()) {
+        BetweenStartEnd |= PredSet;
       }
     }
 
@@ -691,7 +689,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
         }
       }
     }
-    BitVector &SeenStart = SeenStartMap[MBB];
+    BitVector &SeenStart = SeenStartMap[MBB->getNumber()];
     SeenStart |= BetweenStartEnd;
   }
   if (!MarkersFound) {
@@ -718,6 +716,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
 
   LLVM_DEBUG(dumpBV("Conservative slots", ConservativeSlots));
 
+  BlockLiveness.resize(MF->getNumBlockIDs());
   // Step 2: compute begin/end sets for each block
 
   // NOTE: We use a depth-first iteration to ensure that we obtain a
@@ -727,7 +726,7 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
     BasicBlockNumbering.push_back(MBB);
 
     // Keep a reference to avoid repeated lookups.
-    BlockLifetimeInfo &BlockInfo = BlockLiveness[MBB];
+    BlockLifetimeInfo &BlockInfo = BlockLiveness[MBB->getNumber()];
 
     BlockInfo.Begin.resize(NumSlot);
     BlockInfo.End.resize(NumSlot);
@@ -784,19 +783,19 @@ void StackColoring::calculateLocalLiveness() {
 
     for (const MachineBasicBlock *BB : BasicBlockNumbering) {
       // Use an iterator to avoid repeated lookups.
-      LivenessMap::iterator BI = BlockLiveness.find(BB);
-      assert(BI != BlockLiveness.end() && "Block not found");
-      BlockLifetimeInfo &BlockInfo = BI->second;
+      BlockLifetimeInfo &BlockInfo = BlockLiveness[BB->getNumber()];
+      if (BlockInfo.isEmpty())
+        continue;
 
       // Compute LiveIn by unioning together the LiveOut sets of all preds.
       LocalLiveIn.clear();
       for (MachineBasicBlock *Pred : BB->predecessors()) {
-        LivenessMap::const_iterator I = BlockLiveness.find(Pred);
+        BlockLifetimeInfo &PrefInfo = BlockLiveness[Pred->getNumber()];
         // PR37130: transformations prior to stack coloring can
         // sometimes leave behind statically unreachable blocks; these
         // can be safely skipped here.
-        if (I != BlockLiveness.end())
-          LocalLiveIn |= I->second.LiveOut;
+        if (!PrefInfo.isEmpty())
+          LocalLiveIn |= PrefInfo.LiveOut;
       }
 
       // Compute LiveOut by subtracting out lifetimes that end in this
@@ -840,7 +839,7 @@ void StackColoring::calculateLiveIntervals(unsigned NumSlots) {
     DefinitelyInUse.resize(NumSlots);
 
     // Start the interval of the slots that we previously found to be 'in-use'.
-    BlockLifetimeInfo &MBBLiveness = BlockLiveness[&MBB];
+    BlockLifetimeInfo &MBBLiveness = BlockLiveness[MBB.getNumber()];
     for (int pos = MBBLiveness.LiveIn.find_first(); pos != -1;
          pos = MBBLiveness.LiveIn.find_next(pos)) {
       Starts[pos] = Indexes->getMBBStartIdx(&MBB);
