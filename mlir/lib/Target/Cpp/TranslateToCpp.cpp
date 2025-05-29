@@ -70,8 +70,8 @@ inline LogicalResult interleaveCommaWithError(const Container &c,
 
 template <typename Container, typename UnaryFunctor>
 inline LogicalResult interleaveWithNewLineWithError(const Container &c,
-                                              raw_ostream &os,
-                                              UnaryFunctor eachFn) {
+                                                    raw_ostream &os,
+                                                    UnaryFunctor eachFn) {
   return interleaveWithError(c.begin(), c.end(), eachFn,
                              [&]() { os << ";\n"; });
 }
@@ -1234,8 +1234,9 @@ static LogicalResult printOperation(CppEmitter &emitter,
       // TODO: Determine the best long-term strategy for external functions.
       // Currently, we're skipping over this functionOp.
       // We have considered using emitWarning() which would return
-      // InFlightDiagnostic which seems can be automatically converted to LogicalResult since
-      // this is done in emitAttributes where emitError is converted to LogicalResult. However, it requires that we pass in a
+      // InFlightDiagnostic which seems can be automatically converted to
+      // LogicalResult since this is done in emitAttributes where emitError is
+      // converted to LogicalResult. However, it requires that we pass in a
       // location which at first glance we don't have in this scope. Open to
       // further discussion on this.
       os << "Warning: Cannot process external function '"
