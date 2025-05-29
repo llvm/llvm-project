@@ -941,15 +941,13 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
   } else {
     assert(MI.getOpcode() == RISCV::PseudoVSETVLI ||
            MI.getOpcode() == RISCV::PseudoVSETVLIX0);
-    Register AVLReg = MI.getOperand(1).getReg();
-    assert((AVLReg != RISCV::X0 || MI.getOperand(0).getReg() != RISCV::X0) &&
-           "Can't handle X0, X0 vsetvli yet");
-    if (AVLReg == RISCV::X0)
+    if (MI.getOpcode() == RISCV::PseudoVSETVLIX0)
       NewInfo.setAVLVLMAX();
     else if (MI.getOperand(1).isUndef())
       // Otherwise use an AVL of 1 to avoid depending on previous vl.
       NewInfo.setAVLImm(1);
     else {
+      Register AVLReg = MI.getOperand(1).getReg();
       VNInfo *VNI = getVNInfoFromReg(AVLReg, MI, LIS);
       NewInfo.setAVLRegDef(VNI, AVLReg);
     }
