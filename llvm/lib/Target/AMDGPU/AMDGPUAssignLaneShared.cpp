@@ -141,10 +141,9 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
   };
   // If the function makes any unknown call, assume the worst case that it can
   // access all variables accessed by functions whose address escaped.
-  for (auto &K : Func2GVs) {
-    Function *F = K.first;
-    if (FunctionMakesUnknownCall(F))
-      set_union(K.second, FuzzyUsedGVs);
+  for (Function &F : M) {
+    if (!F.isDeclaration() && FunctionMakesUnknownCall(&F))
+      set_union(Func2GVs[&F], FuzzyUsedGVs);
   }
   // For each GV, find the set of wavegroup kernel that uses it directly or
   // indirectly.
