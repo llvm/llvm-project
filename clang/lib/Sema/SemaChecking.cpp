@@ -2907,7 +2907,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     }
 
-    if (!Context.hasSameUnqualifiedType(MagnitudeTy, SignTy)) {
+    if (MagnitudeTy.getCanonicalType() != SignTy.getCanonicalType()) {
       return Diag(Sign.get()->getBeginLoc(),
                   diag::err_typecheck_call_different_arg_types)
              << MagnitudeTy << SignTy;
@@ -5265,7 +5265,7 @@ bool Sema::BuiltinComplex(CallExpr *TheCall) {
 
   Expr *Real = TheCall->getArg(0);
   Expr *Imag = TheCall->getArg(1);
-  if (!Context.hasSameUnqualifiedType(Real->getType(), Imag->getType())) {
+  if (!Context.hasSameType(Real->getType(), Imag->getType())) {
     return Diag(Real->getBeginLoc(),
                 diag::err_typecheck_call_different_arg_types)
            << Real->getType() << Imag->getType()
@@ -15607,8 +15607,8 @@ bool Sema::BuiltinElementwiseTernaryMath(
   }
 
   for (int I = 1; I < 3; ++I) {
-    if (!Context.hasSameUnqualifiedType(Args[0]->getType(),
-                                        Args[I]->getType())) {
+    if (Args[0]->getType().getCanonicalType() !=
+        Args[I]->getType().getCanonicalType()) {
       return Diag(Args[0]->getBeginLoc(),
                   diag::err_typecheck_call_different_arg_types)
              << Args[0]->getType() << Args[I]->getType();
