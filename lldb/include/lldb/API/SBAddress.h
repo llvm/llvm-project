@@ -11,7 +11,6 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
-#include "lldb/API/SBTarget.h"
 
 namespace lldb {
 
@@ -58,12 +57,6 @@ public:
   // or data address using "void SBAddress::SetLoadAddress(...)" or
   // "lldb::SBAddress SBTarget::ResolveLoadAddress (...)".
   lldb::SBSymbolContext GetSymbolContext(uint32_t resolve_scope);
-
-  /// Same as the previous function, but uses the given target in the symbol
-  /// context. This can help to resolve things that require the target,
-  // for example it's necessary in order to apply source map on SBLineEntry.
-  lldb::SBSymbolContext GetSymbolContext(const SBTarget &target,
-                                         uint32_t resolve_scope);
 
   // The following functions grab individual objects for a given address and
   // are less efficient if you want more than one symbol related objects. Use
@@ -128,9 +121,6 @@ protected:
   SBAddress(const lldb_private::Address &address);
 
   void SetAddress(const lldb_private::Address &address);
-
-  void CalculateSymbolContext(lldb_private::SymbolContext &sc,
-                              uint32_t resolve_scope);
 
 private:
   std::unique_ptr<lldb_private::Address> m_opaque_up;
