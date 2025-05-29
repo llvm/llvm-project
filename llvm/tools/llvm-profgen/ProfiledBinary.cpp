@@ -341,12 +341,6 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                 ~(PageSize - 1U));
         TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
       }
-      // else if ((Phdr.p_flags & ELF::PF_R) && !TextSegmentOffsets.empty()) {
-      //   if (RecordDataSegment) {
-      //     ReadOnlyDataSegmentOffsets.push_back(Phdr.p_offset &
-      //                                          ~(PageSize - 1U));
-      //   }
-      // }
     }
   }
 
