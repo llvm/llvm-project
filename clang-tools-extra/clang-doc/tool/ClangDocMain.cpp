@@ -389,7 +389,7 @@ Example usage for a project using a compile commands database:
 
   // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory)) {
-  ExitOnErr(llvm::createFileError(OutDirectory, Err));
+    ExitOnErr(llvm::createFileError(OutDirectory, Err));
   }
 
   // Run the generator.
