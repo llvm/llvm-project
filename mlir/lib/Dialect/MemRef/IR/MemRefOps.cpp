@@ -1057,7 +1057,7 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
         }
       } // else dim.getIndex is a block argument to reshape->getBlock and
         // dominates reshape
-    } // Check condition 2
+    }   // Check condition 2
     else if (dim->getBlock() != reshape->getBlock() &&
              !dim.getIndex().getParentRegion()->isProperAncestor(
                  reshape->getParentRegion())) {
@@ -1840,6 +1840,15 @@ LogicalResult ReinterpretCastOp::verify() {
   // Match sizes in result memref type and in static_sizes attribute.
   for (auto [idx, resultSize, expectedSize] :
        llvm::enumerate(resultType.getShape(), getStaticSizes())) {
+    // Check that dynamic sizes are not mixed with static sizes
+    if (ShapedType::isDynamic(resultSize) &&
+        !ShapedType::isDynamic(expectedSize))
+      return emitError(
+          "expected size is static, but result type dimension is dynamic ");
+    if (!ShapedType::isDynamic(resultSize) &&
+        ShapedType::isDynamic(expectedSize))
+      return emitError(
+          "expected size is dynamic, but result type dimension is static ");
     if (!ShapedType::isDynamic(resultSize) && resultSize != expectedSize)
       return emitError("expected result type with size = ")
              << (ShapedType::isDynamic(expectedSize)
@@ -1859,6 +1868,15 @@ LogicalResult ReinterpretCastOp::verify() {
 
   // Match offset in result memref type and in static_offsets attribute.
   int64_t expectedOffset = getStaticOffsets().front();
+  // Check that dynamic offset is not mixed with static offset
+  if (ShapedType::isDynamic(resultOffset) &&
+      !ShapedType::isDynamic(expectedOffset))
+    return emitError(
+        "expected offset is static, but result type offset is dynamic");
+  if (!ShapedType::isDynamic(resultOffset) &&
+      ShapedType::isDynamic(expectedOffset))
+    return emitError(
+        "expected offset is dynamic, but result type offset is static");
   if (!ShapedType::isDynamic(resultOffset) && resultOffset != expectedOffset)
     return emitError("expected result type with offset = ")
            << (ShapedType::isDynamic(expectedOffset)
@@ -2011,7 +2029,7 @@ public:
       // Second, check the sizes.
       if (!llvm::equal(extractStridedMetadata.getConstifiedMixedSizes(),
                        op.getConstifiedMixedSizes()))
-          return false;
+        return false;
 
       // Finally, check the offset.
       assert(op.getMixedOffsets().size() == 1 &&
