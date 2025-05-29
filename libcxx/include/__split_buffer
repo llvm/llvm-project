@@ -239,18 +239,18 @@ public:
           return false;
 
         return true;
+      } else {
+        if (__begin_ < __first_)
+          return false;
+
+        if (capacity() < size())
+          return false;
+
+        if (end() < __begin_)
+          return false;
+
+        return true;
       }
-
-      if (__begin_ < __first_)
-        return false;
-
-      if (capacity() < size())
-        return false;
-
-      if (end() < __begin_)
-        return false;
-
-      return true;
     }
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __is_full() const _NOEXCEPT {
