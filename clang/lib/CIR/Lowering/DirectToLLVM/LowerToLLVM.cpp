@@ -1880,9 +1880,12 @@ mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
   //     __builtin_shufflevector(V, I)
   // is implemented as this pseudocode, where the for loop is unrolled
   // and N is the number of elements:
-  //     masked = I & (N-1)
-  //     for (i in 0 <= i < N)
-  //       result[i] = V[masked[i]]
+  //
+  // result = undef
+  // maskbits = NextPowerOf2(N - 1)
+  // masked = I & maskbits
+  // for (i in 0 <= i < N)
+  //    result[i] = V[masked[i]]
   mlir::Location loc = op.getLoc();
   mlir::Value input = adaptor.getVec();
   mlir::Type llvmIndexVecType =
@@ -1892,21 +1895,19 @@ mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
   uint64_t numElements =
       mlir::cast<cir::VectorType>(op.getVec().getType()).getSize();
 
-  if (!llvm::isPowerOf2_64(numElements))
-    return op.emitError() << "unsupported VecShuffleDynamic for VectorType "
-                             "with size not power of 2";
-
+  uint64_t maskBits = llvm::NextPowerOf2(numElements - 1) - 1;
   mlir::Value maskValue = rewriter.create<mlir::LLVM::ConstantOp>(
-      loc, llvmIndexType,
-      mlir::IntegerAttr::get(llvmIndexType, numElements - 1));
+      loc, llvmIndexType, rewriter.getIntegerAttr(llvmIndexType, maskBits));
   mlir::Value maskVector =
       rewriter.create<mlir::LLVM::UndefOp>(loc, llvmIndexVecType);
+
   for (uint64_t i = 0; i < numElements; ++i) {
-    mlir::Value iValue =
+    mlir::Value idxValue =
         rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), i);
     maskVector = rewriter.create<mlir::LLVM::InsertElementOp>(
-        loc, maskVector, maskValue, iValue);
+        loc, maskVector, maskValue, idxValue);
   }
+
   mlir::Value maskedIndices = rewriter.create<mlir::LLVM::AndOp>(
       loc, llvmIndexVecType, adaptor.getIndices(), maskVector);
   mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(
