@@ -426,8 +426,8 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
   LogicalResult matchAndRewrite(arith::ScalingExtFOp op,
                                 PatternRewriter &rewriter) const final {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
-    auto inputOperand = op.getIn();
-    auto scaleOperand = op.getScale();
+    Value inputOperand = op.getIn();
+    Value scaleOperand = op.getScale();
     if (!llvm::isa<Float8E8M0FNUType>(getElementTypeOrSelf(scaleOperand))) {
       return rewriter.notifyMatchFailure(
           op, "scaling extf is not using scale operand of type f8E8M0FNU");
