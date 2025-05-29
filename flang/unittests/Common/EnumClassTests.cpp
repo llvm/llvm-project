@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gtest/gtest.h"
 #include "flang/Common/enum-class.h"
 #include "flang/Common/template.h"
-#include "gtest/gtest.h"
 
 using namespace Fortran::common;
 using namespace std;
 
-ENUM_CLASS(TestEnum, One, Two, 
-            Three)
+ENUM_CLASS(TestEnum, One, Two, Three)
 ENUM_CLASS_EXTRA(TestEnum)
 
 TEST(EnumClassTest, EnumToString) {

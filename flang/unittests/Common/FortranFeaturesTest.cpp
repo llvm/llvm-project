@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gtest/gtest.h"
 #include "flang/Common/enum-class.h"
 #include "flang/Support/Fortran-features.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "gtest/gtest.h"
 
 namespace Fortran::common {
 
@@ -34,7 +34,7 @@ TEST(EnumClassTest, SplitCamelCase) {
   if (parts[1].compare(llvm::StringRef("P", 1))) {
     ADD_FAILURE() << "Second part is not Name";
   }
- 
+
   parts = splitCamelCase("OPName");
   ASSERT_EQ(parts.size(), (size_t)2);
 
@@ -114,13 +114,15 @@ TEST(EnumClassTest, equalLowerCaseWithCamelCaseWord) {
   EXPECT_TRUE(equalLowerCaseWithCamelCaseWord("op555", "op555"));
 }
 
-std::optional<std::pair<bool, TestEnumExtra>> parseCLITestEnumExtraOption(llvm::StringRef input) {
-  return parseCLIEnum<TestEnumExtra>(input, FindTestEnumExtraIndex); 
+std::optional<std::pair<bool, TestEnumExtra>> parseCLITestEnumExtraOption(
+    llvm::StringRef input) {
+  return parseCLIEnum<TestEnumExtra>(input, FindTestEnumExtraIndex);
 }
 
 TEST(EnumClassTest, parseCLIEnumOption) {
   auto result = parseCLITestEnumExtraOption("no-twenty-one");
-  auto expected = std::pair<bool, TestEnumExtra>(false, TestEnumExtra::TwentyOne);
+  auto expected =
+      std::pair<bool, TestEnumExtra>(false, TestEnumExtra::TwentyOne);
   ASSERT_EQ(result, std::optional{expected});
   result = parseCLITestEnumExtraOption("twenty-one");
   expected = std::pair<bool, TestEnumExtra>(true, TestEnumExtra::TwentyOne);
@@ -132,10 +134,12 @@ TEST(EnumClassTest, parseCLIEnumOption) {
   expected = std::pair<bool, TestEnumExtra>(true, TestEnumExtra::FortyTwo);
   ASSERT_EQ(result, std::optional{expected});
   result = parseCLITestEnumExtraOption("no-seven-seven-seven");
-  expected = std::pair<bool, TestEnumExtra>(false, TestEnumExtra::SevenSevenSeven);
+  expected =
+      std::pair<bool, TestEnumExtra>(false, TestEnumExtra::SevenSevenSeven);
   ASSERT_EQ(result, std::optional{expected});
   result = parseCLITestEnumExtraOption("seven-seven-seven");
-  expected = std::pair<bool, TestEnumExtra>(true, TestEnumExtra::SevenSevenSeven);
+  expected =
+      std::pair<bool, TestEnumExtra>(true, TestEnumExtra::SevenSevenSeven);
   ASSERT_EQ(result, std::optional{expected});
 }
 
