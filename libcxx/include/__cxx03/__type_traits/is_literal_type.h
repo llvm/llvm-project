@@ -19,8 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS
-_LIBCPP_DEPRECATED_IN_CXX17 is_literal_type : public integral_constant<bool, __is_literal_type(_Tp)> {};
+struct _LIBCPP_TEMPLATE_VIS is_literal_type : public integral_constant<bool, __is_literal_type(_Tp)> {};
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -28,7 +28,7 @@ const char *BoltRevision =
 
 namespace opts {
 
-bool HeatmapMode = false;
+HeatmapModeKind HeatmapMode = HM_None;
 bool BinaryAnalysisMode = false;
 
 cl::OptionCategory BoltCategory("BOLT generic options");
@@ -123,6 +123,10 @@ cl::opt<bool> HeatmapPrintMappings(
     cl::desc("print mappings in the legend, between characters/blocks and text "
              "sections (default false)"),
     cl::Optional, cl::cat(HeatmapCategory));
+
+cl::opt<std::string> HeatmapOutput("heatmap",
+                                   cl::desc("print heatmap to a given file"),
+                                   cl::Optional, cl::cat(HeatmapCategory));
 
 cl::opt<bool> HotData("hot-data",
                       cl::desc("hot data symbols support (relocation mode)"),

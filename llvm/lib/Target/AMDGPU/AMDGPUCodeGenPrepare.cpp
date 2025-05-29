@@ -26,7 +26,6 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -47,10 +46,10 @@ static cl::opt<bool> WidenLoads(
   cl::init(false));
 
 static cl::opt<bool> Widen16BitOps(
-  "amdgpu-codegenprepare-widen-16-bit-ops",
-  cl::desc("Widen uniform 16-bit instructions to 32-bit in AMDGPUCodeGenPrepare"),
-  cl::ReallyHidden,
-  cl::init(true));
+    "amdgpu-codegenprepare-widen-16-bit-ops",
+    cl::desc(
+        "Widen uniform 16-bit instructions to 32-bit in AMDGPUCodeGenPrepare"),
+    cl::ReallyHidden, cl::init(false));
 
 static cl::opt<bool>
     BreakLargePHIs("amdgpu-codegenprepare-break-large-phis",
@@ -1685,7 +1684,10 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
             // return the new value. Just insert a scalar copy and defer
             // expanding it.
             NewElt = Builder.CreateBinOp(Opc, NumEltN, DenEltN);
-            Div64ToExpand.push_back(cast<BinaryOperator>(NewElt));
+            // CreateBinOp does constant folding. If the operands are constant,
+            // it will return a Constant instead of a BinaryOperator.
+            if (auto *NewEltBO = dyn_cast<BinaryOperator>(NewElt))
+              Div64ToExpand.push_back(NewEltBO);
           }
         }
 

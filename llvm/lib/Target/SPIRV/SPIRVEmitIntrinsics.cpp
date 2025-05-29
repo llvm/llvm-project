@@ -13,7 +13,6 @@
 
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
-#include "SPIRVMetadata.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -673,10 +672,16 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
         // This call is supposed to index into an array
         Ty = HandleType->getTypeParameter(0);
-        assert(Ty->isArrayTy() &&
-               "spv_resource_getpointer indexes into an array, so the type of "
-               "the buffer should be an array.");
-        Ty = Ty->getArrayElementType();
+        if (Ty->isArrayTy())
+          Ty = Ty->getArrayElementType();
+        else {
+          TargetExtType *BufferTy = cast<TargetExtType>(Ty);
+          assert(BufferTy->getTargetExtName() == "spirv.Layout");
+          Ty = BufferTy->getTypeParameter(0);
+          assert(Ty && Ty->isStructTy());
+          uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
+          Ty = cast<StructType>(Ty)->getElementType(Index);
+        }
       } else {
         llvm_unreachable("Unknown handle type for spv_resource_getpointer.");
       }
@@ -1081,15 +1086,19 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       return;
     Value *Op0 = Ref->getOperand(0);
     Value *Op1 = Ref->getOperand(1);
-    Type *ElemTy0 = GR->findDeducedElementType(Op0);
+    bool Incomplete0 = isTodoType(Op0);
+    bool Incomplete1 = isTodoType(Op1);
     Type *ElemTy1 = GR->findDeducedElementType(Op1);
+    Type *ElemTy0 = (Incomplete0 && !Incomplete1 && ElemTy1)
+                        ? nullptr
+                        : GR->findDeducedElementType(Op0);
     if (ElemTy0) {
       KnownElemTy = ElemTy0;
-      Incomplete = isTodoType(Op0);
+      Incomplete = Incomplete0;
       Ops.push_back(std::make_pair(Op1, 1));
     } else if (ElemTy1) {
       KnownElemTy = ElemTy1;
-      Incomplete = isTodoType(Op1);
+      Incomplete = Incomplete1;
       Ops.push_back(std::make_pair(Op0, 0));
     }
   } else if (CallInst *CI = dyn_cast<CallInst>(I)) {
@@ -1108,8 +1117,6 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
   IRBuilder<> B(Ctx);
   for (auto &OpIt : Ops) {
     Value *Op = OpIt.first;
-    if (Op->use_empty())
-      continue;
     if (AskOps && !AskOps->contains(Op))
       continue;
     Type *AskTy = nullptr;

@@ -128,7 +128,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     RootSignature
 
-    DescriptorTable RootConstants
+    RootFlags DescriptorTable RootConstants StaticSampler
 
     num32BitConstants
 
@@ -136,8 +136,23 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
     space visibility flags
     numDescriptors offset
 
+    mipLODBias
+
     unbounded
     DESCRIPTOR_RANGE_OFFSET_APPEND
+
+    allow_input_assembler_input_layout
+    deny_vertex_shader_root_access
+    deny_hull_shader_root_access
+    deny_domain_shader_root_access
+    deny_geometry_shader_root_access
+    deny_pixel_shader_root_access
+    deny_amplification_shader_root_access
+    deny_mesh_shader_root_access
+    allow_stream_output
+    local_root_signature
+    cbv_srv_uav_heap_directly_indexed
+    sampler_heap_directly_indexed
 
     DATA_VOLATILE
     DATA_STATIC_WHILE_SET_AT_EXECUTE

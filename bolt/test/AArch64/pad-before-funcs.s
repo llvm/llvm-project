@@ -8,7 +8,7 @@
 
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
-# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -Wl,--section-start=.text=0x4000
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -Wl,--image-base=0x3000,--section-start=.text=0x4000
 # RUN: llvm-bolt %t.exe -o %t.bolt.0 --pad-funcs-before=_start:0
 # RUN: llvm-bolt %t.exe -o %t.bolt.4 --pad-funcs-before=_start:4
 # RUN: llvm-bolt %t.exe -o %t.bolt.8 --pad-funcs-before=_start:8

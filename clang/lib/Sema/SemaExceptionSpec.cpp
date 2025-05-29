@@ -700,12 +700,11 @@ bool Sema::handlerCanCatch(QualType HandlerType, QualType ExceptionType) {
     //    -- a qualification conversion
     //    -- a function pointer conversion
     bool LifetimeConv;
-    QualType Result;
     // FIXME: Should we treat the exception as catchable if a lifetime
     // conversion is required?
     if (IsQualificationConversion(ExceptionType, HandlerType, false,
                                   LifetimeConv) ||
-        IsFunctionConversion(ExceptionType, HandlerType, Result))
+        IsFunctionConversion(ExceptionType, HandlerType))
       return true;
 
     //    -- a standard pointer conversion [...]

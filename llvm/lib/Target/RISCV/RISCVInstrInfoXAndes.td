@@ -135,6 +135,16 @@ class NDSRVInstRR<bits<7> funct7, string opcodestr>
   let mayStore = 0;
 }
 
+class NDSRVInstLEA<bits<7> funct7, string opcodestr>
+    : RVInstR<funct7, 0b000, OPC_CUSTOM_2,
+              (outs GPR:$rd), (ins GPR:$rs2, GPR:$rs1),
+              opcodestr, "$rd, $rs1, $rs2">,
+      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
 // GP: ADDI, LB, LBU
 class NDSRVInstLBGP<bits<2> funct2, string opcodestr>
     : RVInst<(outs GPR:$rd), (ins simm18:$imm18),
@@ -305,6 +315,100 @@ class NDSRVInstSDGP<bits<3> funct3, string opcodestr>
   let mayStore = 1;
 }
 
+class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins VR:$vs2, FPR32:$rs1, VMaskOp:$vm),
+             opcodestr # "." # "vf", "$vd, $rs1, $vs2$vm", [], InstFormatR>,
+      SchedBinaryMC<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF"> {
+  bits<5> vs2;
+  bits<5> rs1;
+  bits<5> vd;
+  bit vm;
+
+  let Inst{31-26} = funct6;
+  let Inst{25} = vm;
+  let Inst{24-20} = vs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+
+  let RVVConstraint = VMConstraint;
+}
+
+class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins VR:$vs1, VR:$vs2, VMaskOp:$vm),
+             opcodestr # "." # "vv", "$vd, $vs1, $vs2$vm", [], InstFormatR>,
+      SchedBinaryMC<"WriteVIMulAddV", "ReadVIMulAddV", "ReadVIMulAddV"> {
+  bits<5> vs2;
+  bits<5> vs1;
+  bits<5> vd;
+  bit vm;
+
+  let Inst{31-26} = funct6;
+  let Inst{25} = vm;
+  let Inst{24-20} = vs2;
+  let Inst{19-15} = vs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+
+  let RVVConstraint = VMConstraint;
+}
+
+//===----------------------------------------------------------------------===//
+// Multiclass
+//===----------------------------------------------------------------------===//
+
+let fprclass = !cast<RegisterClass>("FPR32") in
+def SCALAR_F16_FPR32 : FPR_Info<16>;
+
+let hasSideEffects = 0 in
+multiclass VPseudoVFPMAD_VF_RM {
+  foreach m = SCALAR_F16_FPR32.MxList in {
+    defm "" : VPseudoBinaryV_VF_RM<m, SCALAR_F16_FPR32, 0>,
+              SchedBinary<"WriteVFMulAddF", "ReadVFMulAddV", "ReadVFMulAddF",
+                          m.MX,  SCALAR_F16_FPR32.SEW, forcePassthruRead=true>;
+  }
+}
+
+multiclass VPatVFPMADBinaryV_VX_RM<string intrinsic, string instruction,
+                                   list<VTypeInfo> vtilist> {
+  foreach vti = vtilist in {
+    defvar kind = "V"#vti.ScalarSuffix;
+    defm : VPatBinaryRoundingMode<intrinsic, instruction#"_"#kind#"_"#vti.LMul.MX,
+                                  vti.Vector, vti.Vector, f32, vti.Mask,
+                                  vti.Log2SEW, vti.RegClass,
+                                  vti.RegClass, FPR32>;
+  }
+}
+
+multiclass VPseudoVD4DOT_VV {
+  foreach m = [V_MF2, V_M1, V_M2, V_M4, V_M8] in {
+    defm "" : VPseudoBinaryV_VV<m>,
+              SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
+                          forcePassthruRead=true>;
+  }
+}
+
+multiclass VPatTernaryVD4DOT_VV<string intrinsic, string instruction,
+                                list<VTypeInfoToWide> vtilist> {
+  foreach vtiToWti = vtilist in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    let Predicates = GetVTypePredicates<wti>.Predicates in
+    defm : VPatTernaryWithPolicy<intrinsic, instruction, "VV",
+                                 wti.Vector, vti.Vector, vti.Vector,
+                                 wti.Mask, wti.Log2SEW, vti.LMul,
+                                 wti.RegClass, vti.RegClass, vti.RegClass>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // XAndesPerf
 //===----------------------------------------------------------------------===//
@@ -321,9 +425,9 @@ def NDS_BNEC : NDSRVInstBC<0b110, "nds.bnec">;
 def NDS_BFOS : NDSRVInstBFO<0b011, "nds.bfos">;
 def NDS_BFOZ : NDSRVInstBFO<0b010, "nds.bfoz">;
 
-def NDS_LEA_H : NDSRVInstRR<0b0000101, "nds.lea.h">;
-def NDS_LEA_W : NDSRVInstRR<0b0000110, "nds.lea.w">;
-def NDS_LEA_D : NDSRVInstRR<0b0000111, "nds.lea.d">;
+def NDS_LEA_H : NDSRVInstLEA<0b0000101, "nds.lea.h">;
+def NDS_LEA_W : NDSRVInstLEA<0b0000110, "nds.lea.w">;
+def NDS_LEA_D : NDSRVInstLEA<0b0000111, "nds.lea.d">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def NDS_ADDIGP : NDSRVInstLBGP<0b01, "nds.addigp">;
@@ -345,14 +449,100 @@ def NDS_FLMISM  : NDSRVInstRR<0b0010011, "nds.flmism">;
 } // Predicates = [HasVendorXAndesPerf]
 
 let Predicates = [HasVendorXAndesPerf, IsRV64] in {
-def NDS_LEA_B_ZE : NDSRVInstRR<0b0001000, "nds.lea.b.ze">;
-def NDS_LEA_H_ZE : NDSRVInstRR<0b0001001, "nds.lea.h.ze">;
-def NDS_LEA_W_ZE : NDSRVInstRR<0b0001010, "nds.lea.w.ze">;
-def NDS_LEA_D_ZE : NDSRVInstRR<0b0001011, "nds.lea.d.ze">;
+def NDS_LEA_B_ZE : NDSRVInstLEA<0b0001000, "nds.lea.b.ze">;
+def NDS_LEA_H_ZE : NDSRVInstLEA<0b0001001, "nds.lea.h.ze">;
+def NDS_LEA_W_ZE : NDSRVInstLEA<0b0001010, "nds.lea.w.ze">;
+def NDS_LEA_D_ZE : NDSRVInstLEA<0b0001011, "nds.lea.d.ze">;
 
 def NDS_LWUGP : NDSRVInstLWGP<0b110, "nds.lwugp">;
 def NDS_LDGP  : NDSRVInstLDGP<0b011, "nds.ldgp">;
 
 def NDS_SDGP  : NDSRVInstSDGP<0b111, "nds.sdgp">;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
+
+//===----------------------------------------------------------------------===//
+// XAndesVPackFPH
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesVPackFPH],
+    Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
+def NDS_VFPMADT_VF : NDSRVInstVFPMAD<0b000010, "nds.vfpmadt">;
+def NDS_VFPMADB_VF : NDSRVInstVFPMAD<0b000011, "nds.vfpmadb">;
+}
+
+//===----------------------------------------------------------------------===//
+// XAndesVDot
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesVDot], Uses = [VL, VTYPE] in {
+def NDS_VD4DOTS_VV  : NDSRVInstVD4DOT<0b000100, "nds.vd4dots">;
+def NDS_VD4DOTU_VV  : NDSRVInstVD4DOT<0b000111, "nds.vd4dotu">;
+def NDS_VD4DOTSU_VV : NDSRVInstVD4DOT<0b000101, "nds.vd4dotsu">;
+}
 } // DecoderNamespace = "XAndes"
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesPerf] in {
+
+def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (NDS_BFOS GPR:$rs1, 15, 0)>;
+def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (NDS_BFOS GPR:$rs1, 7, 0)>;
+def : Pat<(sext_inreg (XLenVT GPR:$rs1), i1), (NDS_BFOS GPR:$rs1, 0, 0)>;
+
+defm : ShxAddPat<1, NDS_LEA_H>;
+defm : ShxAddPat<2, NDS_LEA_W>;
+defm : ShxAddPat<3, NDS_LEA_D>;
+
+def : CSImm12MulBy4Pat<NDS_LEA_W>;
+def : CSImm12MulBy8Pat<NDS_LEA_D>;
+} // Predicates = [HasVendorXAndesPerf]
+
+let Predicates = [HasVendorXAndesPerf, IsRV64] in {
+
+defm : ADD_UWPat<NDS_LEA_B_ZE>;
+
+defm : ShxAdd_UWPat<1, NDS_LEA_H_ZE>;
+defm : ShxAdd_UWPat<2, NDS_LEA_W_ZE>;
+defm : ShxAdd_UWPat<3, NDS_LEA_D_ZE>;
+
+defm : Sh1Add_UWPat<NDS_LEA_H_ZE>;
+defm : Sh2Add_UWPat<NDS_LEA_W_ZE>;
+defm : Sh3Add_UWPat<NDS_LEA_D_ZE>;
+
+def : Sh1AddPat<NDS_LEA_H_ZE>;
+def : Sh2AddPat<NDS_LEA_W_ZE>;
+def : Sh3AddPat<NDS_LEA_D_ZE>;
+} // Predicates = [HasVendorXAndesPerf, IsRV64]
+
+let Predicates = [HasVendorXAndesVPackFPH],
+    mayRaiseFPException = true in {
+defm PseudoNDS_VFPMADT : VPseudoVFPMAD_VF_RM;
+defm PseudoNDS_VFPMADB : VPseudoVFPMAD_VF_RM;
+} // Predicates = [HasVendorXAndesVPackFPH]
+
+defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadt", "PseudoNDS_VFPMADT", AllFP16Vectors>;
+defm : VPatVFPMADBinaryV_VX_RM<"int_riscv_nds_vfpmadb", "PseudoNDS_VFPMADB", AllFP16Vectors>;
+
+let Predicates = [HasVendorXAndesVDot] in {
+defm PseudoNDS_VD4DOTS  : VPseudoVD4DOT_VV;
+defm PseudoNDS_VD4DOTU  : VPseudoVD4DOT_VV;
+defm PseudoNDS_VD4DOTSU : VPseudoVD4DOT_VV;
+}
+
+defset list<VTypeInfoToWide> AllQuadWidenableVD4DOTVectors = {
+  def : VTypeInfoToWide<VI8MF2,  VI32MF2>;
+  def : VTypeInfoToWide<VI8M1,   VI32M1>;
+  def : VTypeInfoToWide<VI8M2,   VI32M2>;
+  def : VTypeInfoToWide<VI8M4,   VI32M4>;
+  def : VTypeInfoToWide<VI8M8,   VI32M8>;
+  def : VTypeInfoToWide<VI16M1,  VI64M1>;
+  def : VTypeInfoToWide<VI16M2,  VI64M2>;
+  def : VTypeInfoToWide<VI16M4,  VI64M4>;
+  def : VTypeInfoToWide<VI16M8,  VI64M8>;
+}
+
+defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dots", "PseudoNDS_VD4DOTS", AllQuadWidenableVD4DOTVectors>;
+defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotu", "PseudoNDS_VD4DOTU", AllQuadWidenableVD4DOTVectors>;
+defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU", AllQuadWidenableVD4DOTVectors>;

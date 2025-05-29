@@ -10188,7 +10188,7 @@ multiclass SIMDScalarLShiftDTied<bit U, bits<5> opc, string asm,
   def d : BaseSIMDScalarShiftTied<U, opc, {1,?,?,?,?,?,?},
                               FPR64, FPR64, vecshiftL64, asm,
             [(set (v1i64 FPR64:$dst), (OpNode (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn),
-                                                   (i32 vecshiftR64:$imm)))]> {
+                                                   (i32 vecshiftL64:$imm)))]> {
     let Inst{21-16} = imm{5-0};
   }
 }

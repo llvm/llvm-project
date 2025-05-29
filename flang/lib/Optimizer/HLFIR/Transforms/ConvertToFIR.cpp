@@ -414,10 +414,11 @@ class DesignateOpConversion
     auto attrs = designate.getIsTripletAttr();
     for (auto isTriplet : attrs.asArrayRef()) {
       // Coordinate of the first element are the index and triplets lower
-      // bounds
+      // bounds.
       firstElementIndices.push_back(indices[i]);
       i = i + (isTriplet ? 3 : 1);
     }
+
     mlir::Type originalDesignateType = designate.getResult().getType();
     const bool isVolatile = fir::isa_volatile_type(originalDesignateType);
     mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy, isVolatile);

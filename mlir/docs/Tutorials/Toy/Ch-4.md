@@ -159,7 +159,20 @@ def GenericCallOp : Toy_Op<"generic_call",
 
 In the above we also use the `DeclareOpInterfaceMethods` directive to
 auto-declare all of the interface methods in the class declaration of
-GenericCallOp. We have already provided the definition in the `extraClassDeclaration`
+`GenericCallOp`. However, using this directive with `CallOpInterface`
+includes methods for handling argument and result attributes. Therefore,
+we need to add these specifically named attributes to our `GenericCallOp`
+definition:
+
+```tablegen
+let arguments = (ins
+  ...
+  OptionalAttr<DictArrayAttr>:$arg_attrs,
+  OptionalAttr<DictArrayAttr>:$res_attrs
+);
+
+
+We have already provided the definition in the `extraClassDeclaration`
 field of the `FuncOp` class:
 
 ```c++

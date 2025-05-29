@@ -389,7 +389,7 @@ ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
 VALUE_CODEGENOPT(InlineMaxStackSize, 32, UINT_MAX)
 
 // Vector functions library to use.
-ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 3, llvm::driver::VectorLibrary::NoLibrary)
+ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 4, llvm::driver::VectorLibrary::NoLibrary)
 
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
@@ -482,6 +482,9 @@ CODEGENOPT(StaticClosure, 1, 0)
 
 /// Assume that UAVs/SRVs may alias
 CODEGENOPT(ResMayAlias, 1, 0)
+
+/// Enables unwind v2 (epilog) information for x64 Windows.
+CODEGENOPT(WinX64EHUnwindV2, 1, 0)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"

@@ -666,7 +666,6 @@ lldb::SBValue SBValue::CreateBoolValue(const char *name, bool value) {
 SBValue SBValue::GetChildAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
-  const bool can_create_synthetic = false;
   lldb::DynamicValueType use_dynamic = eNoDynamicValues;
   TargetSP target_sp;
   if (m_opaque_sp)
@@ -675,24 +674,24 @@ SBValue SBValue::GetChildAtIndex(uint32_t idx) {
   if (target_sp)
     use_dynamic = target_sp->GetPreferDynamicValue();
 
-  return GetChildAtIndex(idx, use_dynamic, can_create_synthetic);
+  return GetChildAtIndex(idx, use_dynamic, /*treat_as_array=*/false);
 }
 
 SBValue SBValue::GetChildAtIndex(uint32_t idx,
                                  lldb::DynamicValueType use_dynamic,
-                                 bool can_create_synthetic) {
-  LLDB_INSTRUMENT_VA(this, idx, use_dynamic, can_create_synthetic);
-
-  lldb::ValueObjectSP child_sp;
-
+                                 bool treat_as_array) {
+  LLDB_INSTRUMENT_VA(this, idx, use_dynamic, treat_as_array);
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
+
+  lldb::ValueObjectSP child_sp;
   if (value_sp) {
     const bool can_create = true;
-    child_sp = value_sp->GetChildAtIndex(idx);
-    if (can_create_synthetic && !child_sp) {
+    if (treat_as_array &&
+        (value_sp->IsPointerType() || value_sp->IsArrayType()))
       child_sp = value_sp->GetSyntheticArrayMember(idx, can_create);
-    }
+    else
+      child_sp = value_sp->GetChildAtIndex(idx);
   }
 
   SBValue sb_value;

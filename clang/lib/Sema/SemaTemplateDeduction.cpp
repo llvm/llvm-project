@@ -1333,7 +1333,7 @@ bool Sema::isSameOrCompatibleFunctionType(QualType P, QualType A) {
     return Context.hasSameType(P, A);
 
   // Noreturn and noexcept adjustment.
-  if (QualType AdjustedParam; IsFunctionConversion(P, A, AdjustedParam))
+  if (QualType AdjustedParam; TryFunctionConversion(P, A, AdjustedParam))
     P = AdjustedParam;
 
   // FIXME: Compatible calling conventions.
@@ -2474,6 +2474,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::Pipe:
     case Type::ArrayParameter:
     case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -2946,6 +2947,7 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
       LocalInstantiationScope Scope(S);
       MultiLevelTemplateArgumentList Args(Template, CTAI.SugaredConverted,
                                           /*Final=*/true);
+      Sema::ArgPackSubstIndexRAII OnlySubstNonPackExpansion(S, std::nullopt);
 
       if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,
@@ -3732,8 +3734,7 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
     // FIXME: Resolve core issue (no number yet): if the original P is a
     // reference type and the transformed A is function type "noexcept F",
     // the deduced A can be F.
-    QualType Tmp;
-    if (A->isFunctionType() && S.IsFunctionConversion(A, DeducedA, Tmp))
+    if (A->isFunctionType() && S.IsFunctionConversion(A, DeducedA))
       return TemplateDeductionResult::Success;
 
     Qualifiers AQuals = A.getQualifiers();
@@ -3770,11 +3771,10 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
   // Also allow conversions which merely strip __attribute__((noreturn)) from
   // function types (recursively).
   bool ObjCLifetimeConversion = false;
-  QualType ResultTy;
   if ((A->isAnyPointerType() || A->isMemberPointerType()) &&
       (S.IsQualificationConversion(A, DeducedA, false,
                                    ObjCLifetimeConversion) ||
-       S.IsFunctionConversion(A, DeducedA, ResultTy)))
+       S.IsFunctionConversion(A, DeducedA)))
     return TemplateDeductionResult::Success;
 
   //    - If P is a class and P has the form simple-template-id, then the
@@ -4434,6 +4434,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     bool PartialOverloading, bool AggregateDeductionCandidate,
     bool PartialOrdering, QualType ObjectType,
     Expr::Classification ObjectClassification,
+    bool ForOverloadSetAddressResolution,
     llvm::function_ref<bool(ArrayRef<QualType>)> CheckNonDependent) {
   if (FunctionTemplate->isInvalidDecl())
     return TemplateDeductionResult::Invalid;
@@ -4442,7 +4443,15 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   unsigned NumParams = Function->getNumParams();
   bool HasExplicitObject = false;
   int ExplicitObjectOffset = 0;
-  if (Function->hasCXXExplicitFunctionObjectParameter()) {
+
+  // [C++26] [over.call.func]p3
+  // If the primary-expression is the address of an overload set,
+  // the argument list is the same as the expression-list in the call.
+  // Otherwise, the argument list is the expression-list in the call augmented
+  // by the addition of an implied object argument as in a qualified function
+  // call.
+  if (!ForOverloadSetAddressResolution &&
+      Function->hasCXXExplicitFunctionObjectParameter()) {
     HasExplicitObject = true;
     ExplicitObjectOffset = 1;
   }
@@ -6985,6 +6994,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::UnresolvedUsing:
   case Type::Pipe:
   case Type::BitInt:
+  case Type::HLSLInlineSpirv:
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base)

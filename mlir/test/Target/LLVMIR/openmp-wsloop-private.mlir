@@ -37,7 +37,7 @@ llvm.func @wsloop_private_(%arg0: !llvm.ptr {fir.bindc_name = "y"}) attributes {
   %7 = llvm.mlir.constant(10 : i32) : i32
   %8 = llvm.mlir.constant(0 : i32) : i32
   omp.parallel {
-    omp.wsloop private(@_QFwsloop_privateEc_firstprivate_ref_c8 %5 -> %arg1, @_QFwsloop_privateEi_private_ref_i32 %3 -> %arg2 : !llvm.ptr, !llvm.ptr) reduction(@max_f32 %1 -> %arg3 : !llvm.ptr) {
+    omp.wsloop private(@_QFwsloop_privateEc_firstprivate_ref_c8 %5 -> %arg1, @_QFwsloop_privateEi_private_ref_i32 %3 -> %arg2 : !llvm.ptr, !llvm.ptr) private_barrier reduction(@max_f32 %1 -> %arg3 : !llvm.ptr) {
       omp.loop_nest (%arg4) : i32 = (%8) to (%7) inclusive step (%6) {
         omp.yield
       }
@@ -66,6 +66,8 @@ llvm.func @wsloop_private_(%arg0: !llvm.ptr {fir.bindc_name = "y"}) attributes {
 // CHECK: [[PRIVATE_CPY_BB:.*]]:
 // CHECK:   %[[CHR_VAL:.*]] = load [1 x i8], ptr %{{.*}}, align 1
 // CHECK:   store [1 x i8] %[[CHR_VAL]], ptr %[[CHR]], align 1
+// CHECK:   %[[THREAD_NUM:.*]] = call i32 @__kmpc_global_thread_num({{.*}})
+// CHECK:   call void @__kmpc_barrier({{.*}}, i32 %[[THREAD_NUM]])
 // CHECK:   br label %[[RED_INIT_BB:.*]]
 
 // Third, check that reduction init took place.
