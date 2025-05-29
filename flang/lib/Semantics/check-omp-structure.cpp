@@ -3606,10 +3606,33 @@ OmpStructureChecker::CheckUpdateCapture(
   //    subexpression of the right-hand side.
   // 2. An assignment could be a capture (cbc) if the right-hand side is
   //    a variable (or a function ref), with potential type conversions.
-  bool cbu1{IsSubexpressionOf(as1.lhs, as1.rhs)};
-  bool cbu2{IsSubexpressionOf(as2.lhs, as2.rhs)};
-  bool cbc1{IsVarOrFunctionRef(GetConvertInput(as1.rhs))};
-  bool cbc2{IsVarOrFunctionRef(GetConvertInput(as2.rhs))};
+  bool cbu1{IsSubexpressionOf(as1.lhs, as1.rhs)}; // Can as1 be an update?
+  bool cbu2{IsSubexpressionOf(as2.lhs, as2.rhs)}; // Can as2 be an update?
+  bool cbc1{IsVarOrFunctionRef(GetConvertInput(as1.rhs))}; // Can 1 be capture?
+  bool cbc2{IsVarOrFunctionRef(GetConvertInput(as2.rhs))}; // Can 2 be capture?
+
+  // We want to diagnose cases where both assignments cannot be an update,
+  // or both cannot be a capture, as well as cases where either assignment
+  // cannot be any of these two.
+  //
+  // If we organize these boolean values into a matrix
+  //   |cbu1 cbu2|
+  //   |cbc1 cbc2|
+  // then we want to diagnose cases where the matrix has a zero (i.e. "false")
+  // row or column, including the case where everything is zero. All these
+  // cases correspond to the determinant of the matrix being 0, which suggests
+  // that checking the det may be a convenient diagnostic check. There is only
+  // one additional case where the det is 0, which is when the matrx is all 1
+  // ("true"). The "all true" case represents the situation where both
+  // assignments could be an update as well as a capture. On the other hand,
+  // whenever det != 0, the roles of the update and the capture can be
+  // unambiguously assigned to as1 and as2 [1].
+  //
+  // [1] This can be easily verified by hand: there are 10 2x2 matrices with
+  // det = 0, leaving 6 cases where det != 0:
+  //   0 1   0 1   1 0   1 0   1 1   1 1
+  //   1 0   1 1   0 1   1 1   0 1   1 0
+  // In each case the classification is unambiguous.
 
   //     |cbu1 cbu2|
   // det |cbc1 cbc2| = cbu1*cbc2 - cbu2*cbc1
