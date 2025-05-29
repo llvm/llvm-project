@@ -626,13 +626,14 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
 static void legalizeAndOptimizeInductions(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
-  VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
-    if (!PhiR)
-      continue;
+  SmallVector<VPWidenInductionRecipe *, 4> InductionPhis;
+  for (VPRecipeBase &R : HeaderVPBB->phis())
+    if (auto *IV = dyn_cast<VPWidenInductionRecipe>(&R))
+      InductionPhis.push_back(IV);
 
+  bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
+  VPBuilder Builder;
+  for (VPWidenInductionRecipe *PhiR : reverse(InductionPhis)) {
     // Try to narrow wide and replicating recipes to uniform recipes, based on
     // VPlan analysis.
     // TODO: Apply to all recipes in the future, to replace legacy uniformity
@@ -642,7 +643,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       auto *Def = dyn_cast<VPSingleDefRecipe>(U);
       auto *RepR = dyn_cast<VPReplicateRecipe>(U);
       // Skip recipes that shouldn't be narrowed.
-      if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
+      if (!Def ||
+          !isa<VPReplicateRecipe, VPWidenRecipe, VPWidenGEPRecipe>(Def) ||
           Def->getNumUsers() == 0 || !Def->getUnderlyingValue() ||
           (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
         continue;
@@ -655,11 +657,13 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
                                           Def->operands(), /*IsUniform*/ true);
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
+      Def->eraseFromParent();
     }
 
+    Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
     // Replace wide pointer inductions which have only their scalars used by
     // PtrAdd(IndStart, ScalarIVSteps (0, Step)).
-    if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(&Phi)) {
+    if (auto *PtrIV = dyn_cast<VPWidenPointerInductionRecipe>(PhiR)) {
       if (!PtrIV->onlyScalarsGenerated(Plan.hasScalableVF()))
         continue;
 
@@ -680,7 +684,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
 
     // Replace widened induction with scalar steps for users that only use
     // scalars.
-    auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    auto *WideIV = cast<VPWidenIntOrFpInductionRecipe>(PhiR);
     if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
           return U->usesScalars(WideIV);
         }))
@@ -2118,6 +2122,12 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
         VPValue *NewMask = GetNewMask(L->getMask());
         return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
       })
+      .Case<VPWidenStridedLoadRecipe>([&](VPWidenStridedLoadRecipe *L) {
+        VPValue *NewMask = GetNewMask(L->getMask());
+        return new VPWidenStridedLoadRecipe(
+            *cast<LoadInst>(&L->getIngredient()), L->getAddr(), L->getStride(),
+            &EVL, NewMask, *L, L->getDebugLoc());
+      })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
         return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
@@ -2216,7 +2226,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           NumDefVal <= 1 &&
           "Only supports recipes with a single definition or without users.");
       EVLRecipe->insertBefore(CurRecipe);
-      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
+      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe,
+              VPWidenStridedLoadRecipe>(EVLRecipe)) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
       }
@@ -2517,6 +2528,75 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
   }
   for (VPRegionBlock *R : LoopRegions)
     R->dissolveToCFGLoop();
+}
+
+void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
+                                               VFRange &Range) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  SmallVector<VPRecipeBase *> ToErase;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
+      // TODO: support strided store
+      // TODO: support strided accesses with stride not equal to -1
+      if (!MemR || !isa<VPWidenLoadRecipe>(MemR) || !MemR->isReverse())
+        continue;
+
+      Instruction &Ingredient = MemR->getIngredient();
+      Type *ElementTy = getLoadStoreType(&Ingredient);
+
+      auto IsProfitable = [&](ElementCount VF) -> bool {
+        Type *DataTy = toVectorTy(ElementTy, VF);
+        const Align Alignment = getLoadStoreAlignment(&Ingredient);
+        if (!Ctx.TTI.isLegalStridedLoadStore(DataTy, Alignment))
+          return false;
+        const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
+        const InstructionCost StridedLoadStoreCost =
+            Ctx.TTI.getStridedMemoryOpCost(
+                Ingredient.getOpcode(), DataTy,
+                getLoadStorePointerOperand(&Ingredient), MemR->isMasked(),
+                Alignment, Ctx.CostKind, &Ingredient);
+        return StridedLoadStoreCost < CurrentCost;
+      };
+
+      if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
+                                                              Range))
+        continue;
+
+      // The stride of consecutive reverse access must be -1.
+      int64_t Stride = -1;
+      auto *VecEndPtr = cast<VPVectorEndPointerRecipe>(MemR->getAddr());
+      VPValue *Ptr = VecEndPtr->getPtr();
+      auto *GEP = dyn_cast<GetElementPtrInst>(
+          Ptr->getUnderlyingValue()->stripPointerCasts());
+      // Create a new vector pointer for strided access.
+      auto *NewPtr = new VPVectorPointerRecipe(Ptr, ElementTy, /*Stride=*/true,
+                                               GEP ? GEP->getNoWrapFlags()
+                                                   : GEPNoWrapFlags::none(),
+                                               VecEndPtr->getDebugLoc());
+      NewPtr->insertBefore(MemR);
+
+      auto *LoadR = cast<VPWidenLoadRecipe>(MemR);
+      auto *LI = cast<LoadInst>(&Ingredient);
+      const DataLayout &DL = LI->getDataLayout();
+      auto *StrideTy = DL.getIndexType(LI->getPointerOperand()->getType());
+      VPValue *StrideVPV = Plan.getOrAddLiveIn(
+          ConstantInt::get(StrideTy, Stride * DL.getTypeAllocSize(ElementTy)));
+      auto *StridedLoad = new VPWidenStridedLoadRecipe(
+          *LI, NewPtr, StrideVPV, &Plan.getVF(), LoadR->getMask(), *LoadR,
+          LoadR->getDebugLoc());
+      StridedLoad->insertBefore(LoadR);
+      LoadR->replaceAllUsesWith(StridedLoad);
+
+      ToErase.append({LoadR, VecEndPtr});
+    }
+  }
+
+  for (VPRecipeBase *R : ToErase)
+    R->eraseFromParent();
 }
 
 // Expand VPExtendedReductionRecipe to VPWidenCastRecipe + VPReductionRecipe.
