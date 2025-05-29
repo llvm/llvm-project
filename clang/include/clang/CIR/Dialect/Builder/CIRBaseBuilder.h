@@ -423,13 +423,14 @@ public:
   };
 
   //
-  // Alignement and size helpers
+  // Alignment and size helpers
   //
 
   // Note that mlir::IntegerType is used instead of cir::IntType here because we
   // don't need sign information for these to be useful, so keep it simple.
 
-  // For 0 alignment, return an empty attribute.
+  // For 0 alignment, any overload of `getAlignmentAttr` returns an empty
+  // attribute.
   mlir::IntegerAttr getAlignmentAttr(clang::CharUnits alignment) {
     return getAlignmentAttr(alignment.getQuantity());
   }
