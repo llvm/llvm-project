@@ -1468,6 +1468,11 @@ static unsigned SizeOfCallExprInstance(Expr::StmtClass SC) {
 }
 #endif
 
+// changing the size of SourceLocation, CallExpr, and
+// subclasses requires careful considerations
+static_assert(sizeof(SourceLocation) == 4 && sizeof(CXXOperatorCallExpr) == 32,
+              "we assume CXXOperatorCallExpr is 32 bytes");
+
 CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
                    ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
                    SourceLocation RParenLoc, FPOptionsOverride FPFeatures,
