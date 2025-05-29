@@ -5,6 +5,74 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Tweak to automatically generate stubs for pure virtual methods inherited from
+// base classes.
+//
+// Purpose:
+//   - Simplifies making a derived class concrete by automating the creation of
+//     required method overrides from abstract bases.
+//
+// Tweak Summary:
+//
+// 1. Activation Conditions (prepare):
+//    - The tweak activates when the cursor is over a C++ class definition.
+//    - The class must be abstract (it, or its base classes, have unimplemented
+//      pure virtual functions).
+//    - It must also inherit from at least one other abstract class.
+//
+// 2. Identifying Missing Methods:
+//    - The tweak scans the inheritance hierarchy of the current class.
+//    - It identifies all unique pure virtual methods from base classes
+//      that are not yet implemented or overridden.
+//    - These missing methods are then grouped by their original access
+//      specifier (e.g., public, protected).
+//
+// 3. Code Generation and Insertion:
+//    - For each group of missing methods, stubs are inserted.
+//    - If an access specifier section (like `public:`) exists, stubs are
+//      inserted there; otherwise, a new section is created and appended.
+//    - Each generated stub includes the `override` keyword, a `// TODO:`
+//      comment, and a `static_assert(false, ...)` to force a compile-time
+//      error if the method remains unimplemented.
+//    - The base method's signature is adjusted (e.g., `virtual` and `= 0`
+//      are removed for the override).
+//
+// 4. Code Action Provided:
+//    - A single code action titled "Override pure virtual methods" is offered.
+//    - Applying this action results in a single source file modification
+//      containing all the generated method stubs.
+//
+// Example:
+//
+//  class Base {
+//  public:
+//    virtual void publicMethod() = 0;
+//  protected:
+//    virtual auto privateMethod() const -> int = 0;
+//  };
+//
+// Before:
+//                              // cursor here
+//  class Derived : public Base {}^;
+//
+// After:
+//
+// class Derived : public Base {
+//  public:
+//   void publicMethod() override {
+//     // TODO: Implement this pure virtual method.
+//     static_assert(false, "Method `publicMethod` is not implemented.");
+//   }
+//
+//  protected:
+//   auto privateMethod() const -> int override {
+//     // TODO: Implement this pure virtual method.
+//     static_assert(false, "Method `privateMethod` is not implemented.");
+//   }
+// };
+//
+//===----------------------------------------------------------------------===//
 
 #include "refactor/Tweak.h"
 #include "support/Token.h"
@@ -146,7 +214,8 @@ bool hasAbstractBaseAncestor(const clang::CXXRecordDecl *CurrentDecl) {
       });
 }
 
-// Check if the current class has any pure virtual method to be implemented.
+// The tweak is available if the selection is over an abstract C++ class
+// definition that also inherits from at least one other abstract class.
 bool OverridePureVirtuals::prepare(const Selection &Sel) {
   const SelectionTree::Node *Node = Sel.ASTSelection.commonAncestor();
   if (!Node)
@@ -165,8 +234,11 @@ bool OverridePureVirtuals::prepare(const Selection &Sel) {
          hasAbstractBaseAncestor(CurrentDeclDef);
 }
 
-// Collects all pure virtual methods that are missing an override in
-// CurrentDecl, grouped by their original access specifier.
+// Collects all pure virtual methods from base classes that `CurrentDeclDef` has
+// not yet overridden, grouped by their original access specifier.
+//
+// Results are stored in `MissingMethodsByAccess` and `AccessSpecifierLocations`
+// is also populated.
 void OverridePureVirtuals::collectMissingPureVirtuals() {
   if (!CurrentDeclDef)
     return;
