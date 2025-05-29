@@ -45,9 +45,9 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         optimized_variable = self.dap_server.get_local_variable("argc")
 
-        expected_value: str = optimized_variable["value"]
+        value: str = optimized_variable["value"]
         self.assertTrue(
-            expected_value.startswith("<error:"),
+            value.startswith("<error:"),
             f"expect error for value: '{expected_value}'",
         )
         error_msg = optimized_variable["$__lldb_extensions"]["error"]
