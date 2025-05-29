@@ -4710,11 +4710,6 @@ getLastSameOrNeg(const MachineOperand *Op, const MachineRegisterInfo &MRI,
   return LastSameOrNeg;
 }
 
-static bool isInlinableFPConstant(const MachineOperand &Op,
-                                  const SIInstrInfo &TII) {
-  return TII.isInlineConstant(Op.getFPImm()->getValueAPF());
-}
-
 static bool isSameBitWidth(const MachineOperand *Op1, const MachineOperand *Op2,
                            const MachineRegisterInfo &MRI) {
   unsigned Width1 = MRI.getType(Op1->getReg()).getSizeInBits();
