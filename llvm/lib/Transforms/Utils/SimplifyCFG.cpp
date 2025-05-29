@@ -3457,17 +3457,17 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
 using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
 
-static bool reachesUsed(BasicBlock *BB,
-                        const BlocksSet &UsedInNonLocalBlocksSet,
+static bool reachesUsed(BasicBlock *BB, BlocksSet &ReachesNonLocalUses,
                         BlocksSet &VisitedBlocksSet) {
+  if (ReachesNonLocalUses.contains(BB))
+    return true;
   if (!VisitedBlocksSet.insert(BB).second)
     return false;
-
-  if (UsedInNonLocalBlocksSet.contains(BB))
-    return true;
   for (BasicBlock *Succ : successors(BB))
-    if (reachesUsed(Succ, UsedInNonLocalBlocksSet, VisitedBlocksSet))
+    if (reachesUsed(Succ, ReachesNonLocalUses, VisitedBlocksSet)) {
+      ReachesNonLocalUses.insert(BB);
       return true;
+    }
   return false;
 }
 
@@ -3565,8 +3565,8 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   // Check that the block is small enough and record which non-local blocks use
   // values defined in the block.
 
-  BlocksSet UsedInNonLocalBlocksSet;
-  if (!blockIsSimpleEnoughToThreadThrough(BB, UsedInNonLocalBlocksSet))
+  BlocksSet ReachesNonLocalUses;
+  if (!blockIsSimpleEnoughToThreadThrough(BB, ReachesNonLocalUses))
     return false;
 
   for (const auto &Pair : KnownValues) {
@@ -3587,7 +3587,7 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
 
     // Only revector to RealDest if no values defined in BB are live.
     BlocksSet VisitedBlocksSet;
-    if (reachesUsed(RealDest, UsedInNonLocalBlocksSet, VisitedBlocksSet))
+    if (reachesUsed(RealDest, ReachesNonLocalUses, VisitedBlocksSet))
       continue;
 
     LLVM_DEBUG({
