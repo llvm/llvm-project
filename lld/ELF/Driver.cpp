@@ -2924,25 +2924,23 @@ static void readSecurityNotes(Ctx &ctx) {
 
     if (ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform !=
         f->aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform)
-      Err(ctx)
-          << "incompatible values of AArch64 PAuth Platform Values found\n>>> "
-          << referenceFileName << ": 0x"
-          << toHex(ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform,
-                   /*LowerCase=*/true)
-          << "\n>>> " << f << ": 0x"
-          << toHex(f->aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform,
-                   /*LowerCase=*/true);
+      Err(ctx) << "incompatible AArch64 PAuth Platform Values\n>>> "
+               << referenceFileName << ": 0x"
+               << toHex(ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform,
+                        /*LowerCase=*/true)
+               << "\n>>> " << f << ": 0x"
+               << toHex(f->aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform,
+                        /*LowerCase=*/true);
 
     if (ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion !=
         f->aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion)
-      Err(ctx)
-          << "incompatible values of AArch64 PAuth Version Values found\n>>> "
-          << referenceFileName << ": 0x"
-          << toHex(ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion,
-                   /*LowerCase=*/true)
-          << "\n>>> " << f << ": 0x"
-          << toHex(f->aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion,
-                   /*LowerCase=*/true);
+      Err(ctx) << "incompatible AArch64 PAuth Version Values\n>>> "
+               << referenceFileName << ": 0x"
+               << toHex(ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion,
+                        /*LowerCase=*/true)
+               << "\n>>> " << f << ": 0x"
+               << toHex(f->aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion,
+                        /*LowerCase=*/true);
   }
 
   // Force enable Shadow Stack.
