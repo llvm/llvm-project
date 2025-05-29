@@ -548,7 +548,7 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   // -pedantic-errors modes, which *map* warnings/extensions to errors.
   if (State->SuppressSystemWarnings && Loc.isValid() &&
       SM.isInSystemHeader(SM.getExpansionLoc(Loc))) {
-    bool ShowInSystemHeader = false;
+    bool ShowInSystemHeader = true;
     if (IsCustomDiag)
       ShowInSystemHeader =
           CustomDiagInfo->getDescription(DiagID).ShouldShowInSystemHeader();
@@ -562,7 +562,7 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   if (State->SuppressSystemWarnings && Loc.isValid() &&
       SM.isInSystemMacro(Loc)) {
 
-    bool ShowInSystemMacro = false;
+    bool ShowInSystemMacro = true;
     if (const StaticDiagInfoRec *Rec = GetDiagInfo(DiagID))
       ShowInSystemMacro = Rec->WarnShowInSystemMacro;
 
