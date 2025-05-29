@@ -55,13 +55,13 @@ void RootConstantsEntry() {}
 // CHECK: ![[#RD_ENTRY]] = !{ptr @RootDescriptorsEntry, ![[#RD_RS:]]}
 // CHECK: ![[#RD_RS]] = !{![[#ROOT_CBV:]], ![[#ROOT_UAV:]], ![[#ROOT_SRV:]]}
 // CHECK: ![[#ROOT_CBV]] = !{!"RootCBV", i32 0, i32 0, i32 0, i32 4}
-// CHECK: ![[#ROOT_UAV]] = !{!"RootUAV", i32 0, i32 0, i32 0, i32 2}
-// CHECK: ![[#ROOT_SRV]] = !{!"RootSRV", i32 0, i32 0, i32 0, i32 4}
+// CHECK: ![[#ROOT_UAV]] = !{!"RootUAV", i32 0, i32 42, i32 3, i32 2}
+// CHECK: ![[#ROOT_SRV]] = !{!"RootSRV", i32 4, i32 0, i32 0, i32 2}
 
 #define SampleRootDescriptors \
   "CBV(b0), " \
-  "UAV(u0), " \
-  "SRV(t0)"
+  "UAV(space = 3, u42), " \
+  "SRV(t0, visibility = Shader_Visibility_Geometry, flags = Data_Volatile)"
 [shader("compute"), RootSignature(SampleRootDescriptors)]
 [numthreads(1,1,1)]
 void RootDescriptorsEntry() {}
