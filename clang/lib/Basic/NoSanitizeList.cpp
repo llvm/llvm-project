@@ -27,6 +27,15 @@ NoSanitizeList::NoSanitizeList(const std::vector<std::string> &NoSanitizePaths,
 
 NoSanitizeList::~NoSanitizeList() = default;
 
+bool NoSanitizeList::containsPrefix(SanitizerMask Mask, StringRef Prefix,
+                                    StringRef Name, StringRef Category) const {
+  auto NoSan = SSCL->inSectionBlame(Mask, Prefix, Name, Category);
+  if (NoSan == llvm::SpecialCaseList::NotFound)
+    return false;
+  auto San = SSCL->inSectionBlame(Mask, Prefix, Name, "sanitize");
+  return San == llvm::SpecialCaseList::NotFound || NoSan > San;
+}
+
 bool NoSanitizeList::containsGlobal(SanitizerMask Mask, StringRef GlobalName,
                                     StringRef Category) const {
   return SSCL->inSection(Mask, "global", GlobalName, Category);
@@ -34,7 +43,7 @@ bool NoSanitizeList::containsGlobal(SanitizerMask Mask, StringRef GlobalName,
 
 bool NoSanitizeList::containsType(SanitizerMask Mask, StringRef MangledTypeName,
                                   StringRef Category) const {
-  return SSCL->inSection(Mask, "type", MangledTypeName, Category);
+  return containsPrefix(Mask, "type", MangledTypeName, Category);
 }
 
 bool NoSanitizeList::containsFunction(SanitizerMask Mask,
@@ -44,11 +53,7 @@ bool NoSanitizeList::containsFunction(SanitizerMask Mask,
 
 bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
                                   StringRef Category) const {
-  auto NoSan = SSCL->inSectionBlame(Mask, "src", FileName, Category);
-  if (NoSan == llvm::SpecialCaseList::NotFound)
-    return false;
-  auto San = SSCL->inSectionBlame(Mask, "src", FileName, "sanitize");
-  return San == llvm::SpecialCaseList::NotFound || NoSan > San;
+  return containsPrefix(Mask, "src", FileName, Category);
 }
 
 bool NoSanitizeList::containsMainFile(SanitizerMask Mask, StringRef FileName,
