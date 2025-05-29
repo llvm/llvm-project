@@ -34,6 +34,20 @@
 #define MAP_PRIVATE 2
 #define MAP_ANON 0x20
 
+// For other platforms that use platform linux
+#ifndef SIGILL
+#define SIGILL 4
+#endif
+#ifndef SIGBUS
+#define SIGBUS 7
+#endif
+#ifndef SIGFPE
+#define SIGFPE 8
+#endif
+#ifndef SIGSEGV
+#define SIGSEGV 11
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_linux;
