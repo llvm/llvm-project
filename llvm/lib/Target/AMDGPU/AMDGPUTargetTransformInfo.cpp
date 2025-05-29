@@ -685,6 +685,8 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
   case Intrinsic::copysign:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
   case Intrinsic::canonicalize:
   // There's a small benefit to using vector ops in the legalized code.
   case Intrinsic::round:
@@ -742,6 +744,23 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::copysign:
     return NElts * getFullRateInstrCost();
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum: {
+    // Instruction + 2 canonicalizes. For cases that need type promotion, we the
+    // promotion takes the place of the canonicalize.
+    unsigned NumOps = 3;
+    if (const IntrinsicInst *II = ICA.getInst()) {
+      // Directly legal with ieee=0
+      // TODO: Not directly legal with strictfp
+      if (fpenvIEEEMode(*II) == KnownIEEEMode::Off)
+        NumOps = 1;
+    }
+
+    unsigned BaseRate =
+        SLT == MVT::f64 ? get64BitInstrCost(CostKind) : getFullRateInstrCost();
+    InstRate = BaseRate * NumOps;
+    break;
+  }
   case Intrinsic::canonicalize: {
     InstRate =
         SLT == MVT::f64 ? get64BitInstrCost(CostKind) : getFullRateInstrCost();

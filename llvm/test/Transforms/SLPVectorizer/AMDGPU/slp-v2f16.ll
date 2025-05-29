@@ -360,3 +360,43 @@ bb:
   store half %tmp16, ptr addrspace(1) %tmp14, align 2
   ret void
 }
+
+; FIXME: Should not vectorize on gfx8
+; GCN-LABEL: @minimumnum_combine_v2f16
+; GFX8: call <2 x half> @llvm.minimumnum.v2f16
+; GFX9: call <2 x half> @llvm.minimumnum.v2f16
+define void @minimumnum_combine_v2f16(ptr addrspace(1) %arg) {
+bb:
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %tmp1 = zext i32 %tmp to i64
+  %tmp2 = getelementptr inbounds half, ptr addrspace(1) %arg, i64 %tmp1
+  %tmp3 = load half, ptr addrspace(1) %tmp2, align 2
+  %tmp4 = call half @llvm.minimumnum.f16(half %tmp3, half 1.000000e+00)
+  store half %tmp4, ptr addrspace(1) %tmp2, align 2
+  %tmp5 = add nuw nsw i64 %tmp1, 1
+  %tmp6 = getelementptr inbounds half, ptr addrspace(1) %arg, i64 %tmp5
+  %tmp7 = load half, ptr addrspace(1) %tmp6, align 2
+  %tmp8 = call half @llvm.minimumnum.f16(half %tmp7, half 1.000000e+00)
+  store half %tmp8, ptr addrspace(1) %tmp6, align 2
+  ret void
+}
+
+; FIXME: Should not vectorize on gfx8
+; GCN-LABEL: @maximumnum_combine_v2f16
+; GFX8: call <2 x half> @llvm.maximumnum.v2f16
+; GFX9: call <2 x half> @llvm.maximumnum.v2f16
+define void @maximumnum_combine_v2f16(ptr addrspace(1) %arg) {
+bb:
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %tmp1 = zext i32 %tmp to i64
+  %tmp2 = getelementptr inbounds half, ptr addrspace(1) %arg, i64 %tmp1
+  %tmp3 = load half, ptr addrspace(1) %tmp2, align 2
+  %tmp4 = call half @llvm.maximumnum.f16(half %tmp3, half 1.000000e+00)
+  store half %tmp4, ptr addrspace(1) %tmp2, align 2
+  %tmp5 = add nuw nsw i64 %tmp1, 1
+  %tmp6 = getelementptr inbounds half, ptr addrspace(1) %arg, i64 %tmp5
+  %tmp7 = load half, ptr addrspace(1) %tmp6, align 2
+  %tmp8 = call half @llvm.maximumnum.f16(half %tmp7, half 1.000000e+00)
+  store half %tmp8, ptr addrspace(1) %tmp6, align 2
+  ret void
+}
