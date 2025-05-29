@@ -1069,7 +1069,6 @@ text_encoding cctype
 text_encoding compare
 text_encoding cstdint
 text_encoding cstdio
-text_encoding cstdlib
 text_encoding cstring
 text_encoding cwchar
 text_encoding cwctype
