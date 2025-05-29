@@ -136,7 +136,7 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
     space visibility flags
     numDescriptors offset
 
-    mipLODBias
+    mipLODBias maxAnisotropy minLOD maxLOD
 
     unbounded
     DESCRIPTOR_RANGE_OFFSET_APPEND
