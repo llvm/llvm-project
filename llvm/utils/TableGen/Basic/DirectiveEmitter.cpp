@@ -83,8 +83,8 @@ static std::vector<RecordWithSpelling>
 getSpellings(ArrayRef<const Record *> Records) {
   std::vector<RecordWithSpelling> List;
   for (const Record *R : Records) {
-    Clause C(R);
-    llvm::transform(C.getSpellings(), std::back_inserter(List),
+    BaseRecord Rec(R);
+    llvm::transform(Rec.getSpellings(), std::back_inserter(List),
                     [R](Spelling::Value V) { return std::make_pair(R, V); });
   }
   return List;
