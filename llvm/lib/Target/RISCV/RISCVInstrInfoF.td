@@ -736,13 +736,6 @@ def : LdPat<load, LW_INX, f32>;
 def : StPat<store, SW_INX, GPRF32, f32>;
 } // Predicates = [HasStdExtZfinx]
 
-/// Floating-point environment
-let Predicates = [HasStdExtFOrZfinx] in {
-def : Pat<(XLenVT (get_fpenv)), (CSRRS SysRegFCSR.Encoding, (XLenVT X0))>;
-def : Pat<(set_fpenv (XLenVT GPR:$rs)), (CSRRW SysRegFCSR.Encoding, GPR:$rs)>;
-def : Pat<(reset_fpenv), (CSRRW SysRegFCSR.Encoding, (XLenVT X0))>;
-}
-
 let Predicates = [HasStdExtF, IsRV32] in {
 // Moves (no conversion)
 def : Pat<(bitconvert (i32 GPR:$rs1)), (FMV_W_X GPR:$rs1)>;

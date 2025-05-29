@@ -3,6 +3,8 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs | FileCheck %s
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+zfinx -verify-machineinstrs | FileCheck %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+zfinx -verify-machineinstrs | FileCheck %s
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+f -verify-machineinstrs -O0 | FileCheck %s
+; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs -O0 | FileCheck %s
 
 define iXLen @func_get_fpenv() {
 ; CHECK-LABEL: func_get_fpenv:
