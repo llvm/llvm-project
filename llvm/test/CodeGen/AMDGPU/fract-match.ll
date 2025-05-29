@@ -2996,19 +2996,30 @@ entry:
 }
 
 define float @safe_math_fract_f32_minimum(float %x, ptr addrspace(1) writeonly captures(none) %ip) {
-; IR-LABEL: define float @safe_math_fract_f32_minimum(
-; IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    [[UNO:%.*]] = fcmp uno float [[X]], 0.000000e+00
-; IR-NEXT:    [[COND:%.*]] = select i1 [[UNO]], float [[X]], float [[MIN]]
-; IR-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-; IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
-; IR-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
-; IR-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
-; IR-NEXT:    ret float [[COND6]]
+; GFX6-IR-LABEL: define float @safe_math_fract_f32_minimum(
+; GFX6-IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    [[UNO:%.*]] = fcmp uno float [[X]], 0.000000e+00
+; GFX6-IR-NEXT:    [[COND:%.*]] = select i1 [[UNO]], float [[X]], float [[MIN]]
+; GFX6-IR-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
+; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; GFX6-IR-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
+; GFX6-IR-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; GFX6-IR-NEXT:    ret float [[COND6]]
+;
+; IR-FRACT-LABEL: define float @safe_math_fract_f32_minimum(
+; IR-FRACT-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
+; IR-FRACT-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; IR-FRACT-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
+; IR-FRACT-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; IR-FRACT-NEXT:    ret float [[COND6]]
 ;
 ; GFX6-LABEL: safe_math_fract_f32_minimum:
 ; GFX6:       ; %bb.0: ; %entry
@@ -3035,20 +3046,14 @@ define float @safe_math_fract_f32_minimum(float %x, ptr addrspace(1) writeonly c
 ; GFX7-LABEL: safe_math_fract_f32_minimum:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v3, v0
-; GFX7-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX7-NEXT:    v_min_f32_e32 v5, 0x3f7fffff, v4
-; GFX7-NEXT:    v_mov_b32_e32 v6, 0x7fc00000
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v4, v4
-; GFX7-NEXT:    v_cndmask_b32_e32 v4, v6, v5, vcc
-; GFX7-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX7-NEXT:    s_mov_b32 s8, 0x7f800000
 ; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
+; GFX7-NEXT:    v_fract_f32_e32 v4, v0
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s8
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
+; GFX7-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX7-NEXT:    buffer_store_dword v3, v[1:2], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -3057,16 +3062,10 @@ define float @safe_math_fract_f32_minimum(float %x, ptr addrspace(1) writeonly c
 ; GFX8-LABEL: safe_math_fract_f32_minimum:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v3, v0
-; GFX8-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX8-NEXT:    v_min_f32_e32 v5, 0x3f7fffff, v4
-; GFX8-NEXT:    v_mov_b32_e32 v6, 0x7fc00000
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v4, v4
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v6, v5, vcc
-; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX8-NEXT:    s_mov_b32 s4, 0x7f800000
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
+; GFX8-NEXT:    v_fract_f32_e32 v4, v0
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
+; GFX8-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX8-NEXT:    global_store_dword v[1:2], v3, off
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -3075,18 +3074,12 @@ define float @safe_math_fract_f32_minimum(float %x, ptr addrspace(1) writeonly c
 ; GFX11-LABEL: safe_math_fract_f32_minimum:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v3, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX11-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX11-NEXT:    v_min_f32_e32 v5, 0x3f7fffff, v4
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v4, v4
-; GFX11-NEXT:    v_cndmask_b32_e32 v4, 0x7fc00000, v5, vcc_lo
-; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc_lo
+; GFX11-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc_lo
+; GFX11-NEXT:    v_floor_f32_e32 v4, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX11-NEXT:    global_store_b32 v[1:2], v4, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_minimum:
@@ -3096,17 +3089,12 @@ define float @safe_math_fract_f32_minimum(float %x, ptr addrspace(1) writeonly c
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v3, v0
-; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX12-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX12-NEXT:    v_minimum_f32 v4, 0x3f7fffff, v4
-; GFX12-NEXT:    s_wait_alu 0xfffd
-; GFX12-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc_lo
+; GFX12-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
+; GFX12-NEXT:    v_floor_f32_e32 v4, v0
 ; GFX12-NEXT:    s_wait_alu 0xfffd
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[1:2], v4, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -3122,19 +3110,30 @@ entry:
 }
 
 define float @safe_math_fract_f32_minimum_swap(float %x, ptr addrspace(1) writeonly captures(none) %ip) {
-; IR-LABEL: define float @safe_math_fract_f32_minimum_swap(
-; IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    [[UNO:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; IR-NEXT:    [[COND:%.*]] = select i1 [[UNO]], float [[MIN]], float [[X]]
-; IR-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-; IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
-; IR-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
-; IR-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
-; IR-NEXT:    ret float [[COND6]]
+; GFX6-IR-LABEL: define float @safe_math_fract_f32_minimum_swap(
+; GFX6-IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    [[UNO:%.*]] = fcmp ord float [[X]], 0.000000e+00
+; GFX6-IR-NEXT:    [[COND:%.*]] = select i1 [[UNO]], float [[MIN]], float [[X]]
+; GFX6-IR-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
+; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; GFX6-IR-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
+; GFX6-IR-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; GFX6-IR-NEXT:    ret float [[COND6]]
+;
+; IR-FRACT-LABEL: define float @safe_math_fract_f32_minimum_swap(
+; IR-FRACT-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
+; IR-FRACT-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; IR-FRACT-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
+; IR-FRACT-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; IR-FRACT-NEXT:    ret float [[COND6]]
 ;
 ; GFX6-LABEL: safe_math_fract_f32_minimum_swap:
 ; GFX6:       ; %bb.0: ; %entry
@@ -3161,20 +3160,14 @@ define float @safe_math_fract_f32_minimum_swap(float %x, ptr addrspace(1) writeo
 ; GFX7-LABEL: safe_math_fract_f32_minimum_swap:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v3, v0
-; GFX7-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX7-NEXT:    v_min_f32_e32 v5, 0x3f7fffff, v4
-; GFX7-NEXT:    v_mov_b32_e32 v6, 0x7fc00000
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v4, v4
-; GFX7-NEXT:    v_cndmask_b32_e32 v4, v6, v5, vcc
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; GFX7-NEXT:    s_mov_b32 s8, 0x7f800000
 ; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc
+; GFX7-NEXT:    v_fract_f32_e32 v4, v0
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s8
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
+; GFX7-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX7-NEXT:    buffer_store_dword v3, v[1:2], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -3183,16 +3176,10 @@ define float @safe_math_fract_f32_minimum_swap(float %x, ptr addrspace(1) writeo
 ; GFX8-LABEL: safe_math_fract_f32_minimum_swap:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v3, v0
-; GFX8-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX8-NEXT:    v_min_f32_e32 v5, 0x3f7fffff, v4
-; GFX8-NEXT:    v_mov_b32_e32 v6, 0x7fc00000
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v4, v4
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v6, v5, vcc
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; GFX8-NEXT:    s_mov_b32 s4, 0x7f800000
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc
+; GFX8-NEXT:    v_fract_f32_e32 v4, v0
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
+; GFX8-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX8-NEXT:    global_store_dword v[1:2], v3, off
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -3201,18 +3188,12 @@ define float @safe_math_fract_f32_minimum_swap(float %x, ptr addrspace(1) writeo
 ; GFX11-LABEL: safe_math_fract_f32_minimum_swap:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v3, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX11-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX11-NEXT:    v_min_f32_e32 v5, 0x3f7fffff, v4
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v4, v4
-; GFX11-NEXT:    v_cndmask_b32_e32 v4, 0x7fc00000, v5, vcc_lo
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc_lo
+; GFX11-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc_lo
+; GFX11-NEXT:    v_floor_f32_e32 v4, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX11-NEXT:    global_store_b32 v[1:2], v4, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_minimum_swap:
@@ -3222,17 +3203,12 @@ define float @safe_math_fract_f32_minimum_swap(float %x, ptr addrspace(1) writeo
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v3, v0
-; GFX12-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX12-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX12-NEXT:    v_minimum_f32 v4, 0x3f7fffff, v4
-; GFX12-NEXT:    s_wait_alu 0xfffd
-; GFX12-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc_lo
+; GFX12-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
+; GFX12-NEXT:    v_floor_f32_e32 v4, v0
 ; GFX12-NEXT:    s_wait_alu 0xfffd
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[1:2], v4, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -3248,19 +3224,30 @@ entry:
 }
 
 define float @safe_math_fract_f32_minimumnum(float %x, ptr addrspace(1) writeonly captures(none) %ip) {
-; IR-LABEL: define float @safe_math_fract_f32_minimumnum(
-; IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimumnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    [[UNO:%.*]] = fcmp uno float [[X]], 0.000000e+00
-; IR-NEXT:    [[COND:%.*]] = select i1 [[UNO]], float [[X]], float [[MIN]]
-; IR-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-; IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
-; IR-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
-; IR-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
-; IR-NEXT:    ret float [[COND6]]
+; GFX6-IR-LABEL: define float @safe_math_fract_f32_minimumnum(
+; GFX6-IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimumnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    [[UNO:%.*]] = fcmp uno float [[X]], 0.000000e+00
+; GFX6-IR-NEXT:    [[COND:%.*]] = select i1 [[UNO]], float [[X]], float [[MIN]]
+; GFX6-IR-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
+; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; GFX6-IR-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
+; GFX6-IR-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; GFX6-IR-NEXT:    ret float [[COND6]]
+;
+; IR-FRACT-LABEL: define float @safe_math_fract_f32_minimumnum(
+; IR-FRACT-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
+; IR-FRACT-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; IR-FRACT-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
+; IR-FRACT-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; IR-FRACT-NEXT:    ret float [[COND6]]
 ;
 ; GFX6-LABEL: safe_math_fract_f32_minimumnum:
 ; GFX6:       ; %bb.0: ; %entry
@@ -3284,17 +3271,14 @@ define float @safe_math_fract_f32_minimumnum(float %x, ptr addrspace(1) writeonl
 ; GFX7-LABEL: safe_math_fract_f32_minimumnum:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v3, v0
-; GFX7-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX7-NEXT:    v_min_f32_e32 v4, 0x3f7fffff, v4
-; GFX7-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX7-NEXT:    s_mov_b32 s8, 0x7f800000
 ; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
+; GFX7-NEXT:    v_fract_f32_e32 v4, v0
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s8
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
+; GFX7-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX7-NEXT:    buffer_store_dword v3, v[1:2], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -3303,13 +3287,10 @@ define float @safe_math_fract_f32_minimumnum(float %x, ptr addrspace(1) writeonl
 ; GFX8-LABEL: safe_math_fract_f32_minimumnum:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v3, v0
-; GFX8-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX8-NEXT:    v_min_f32_e32 v4, 0x3f7fffff, v4
-; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
 ; GFX8-NEXT:    s_mov_b32 s4, 0x7f800000
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
+; GFX8-NEXT:    v_fract_f32_e32 v4, v0
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
+; GFX8-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX8-NEXT:    global_store_dword v[1:2], v3, off
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -3318,16 +3299,12 @@ define float @safe_math_fract_f32_minimumnum(float %x, ptr addrspace(1) writeonl
 ; GFX11-LABEL: safe_math_fract_f32_minimumnum:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v3, v0
-; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX11-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX11-NEXT:    v_min_f32_e32 v4, 0x3f7fffff, v4
-; GFX11-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc_lo
+; GFX11-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc_lo
+; GFX11-NEXT:    v_floor_f32_e32 v4, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX11-NEXT:    global_store_b32 v[1:2], v4, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_minimumnum:
@@ -3337,17 +3314,12 @@ define float @safe_math_fract_f32_minimumnum(float %x, ptr addrspace(1) writeonl
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v3, v0
-; GFX12-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX12-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX12-NEXT:    v_min_num_f32_e32 v4, 0x3f7fffff, v4
-; GFX12-NEXT:    s_wait_alu 0xfffd
-; GFX12-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc_lo
+; GFX12-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
+; GFX12-NEXT:    v_floor_f32_e32 v4, v0
 ; GFX12-NEXT:    s_wait_alu 0xfffd
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[1:2], v4, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -3363,19 +3335,30 @@ entry:
 }
 
 define float @safe_math_fract_f32_minimumnum_swap(float %x, ptr addrspace(1) writeonly captures(none) %ip) {
-; IR-LABEL: define float @safe_math_fract_f32_minimumnum_swap(
-; IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimumnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    [[UNO:%.*]] = fcmp ord float [[X]], 0.000000e+00
-; IR-NEXT:    [[COND:%.*]] = select i1 [[UNO]], float [[MIN]], float [[X]]
-; IR-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-; IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
-; IR-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
-; IR-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
-; IR-NEXT:    ret float [[COND6]]
+; GFX6-IR-LABEL: define float @safe_math_fract_f32_minimumnum_swap(
+; GFX6-IR-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimumnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    [[UNO:%.*]] = fcmp ord float [[X]], 0.000000e+00
+; GFX6-IR-NEXT:    [[COND:%.*]] = select i1 [[UNO]], float [[MIN]], float [[X]]
+; GFX6-IR-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
+; GFX6-IR-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; GFX6-IR-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
+; GFX6-IR-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; GFX6-IR-NEXT:    ret float [[COND6]]
+;
+; IR-FRACT-LABEL: define float @safe_math_fract_f32_minimumnum_swap(
+; IR-FRACT-SAME: float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[IP:%.*]]) #[[ATTR0]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; IR-FRACT-NEXT:    [[COND:%.*]] = call float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
+; IR-FRACT-NEXT:    [[CMPINF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; IR-FRACT-NEXT:    [[COND6:%.*]] = select i1 [[CMPINF]], float 0.000000e+00, float [[COND]]
+; IR-FRACT-NEXT:    store float [[FLOOR]], ptr addrspace(1) [[IP]], align 4
+; IR-FRACT-NEXT:    ret float [[COND6]]
 ;
 ; GFX6-LABEL: safe_math_fract_f32_minimumnum_swap:
 ; GFX6:       ; %bb.0: ; %entry
@@ -3399,17 +3382,14 @@ define float @safe_math_fract_f32_minimumnum_swap(float %x, ptr addrspace(1) wri
 ; GFX7-LABEL: safe_math_fract_f32_minimumnum_swap:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v3, v0
-; GFX7-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX7-NEXT:    v_min_f32_e32 v4, 0x3f7fffff, v4
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; GFX7-NEXT:    s_mov_b32 s8, 0x7f800000
 ; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc
+; GFX7-NEXT:    v_fract_f32_e32 v4, v0
 ; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s8
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s4, s6
 ; GFX7-NEXT:    s_mov_b32 s5, s6
+; GFX7-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX7-NEXT:    buffer_store_dword v3, v[1:2], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -3418,13 +3398,10 @@ define float @safe_math_fract_f32_minimumnum_swap(float %x, ptr addrspace(1) wri
 ; GFX8-LABEL: safe_math_fract_f32_minimumnum_swap:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v3, v0
-; GFX8-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX8-NEXT:    v_min_f32_e32 v4, 0x3f7fffff, v4
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
 ; GFX8-NEXT:    s_mov_b32 s4, 0x7f800000
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc
+; GFX8-NEXT:    v_fract_f32_e32 v4, v0
 ; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
+; GFX8-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX8-NEXT:    global_store_dword v[1:2], v3, off
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
@@ -3433,16 +3410,12 @@ define float @safe_math_fract_f32_minimumnum_swap(float %x, ptr addrspace(1) wri
 ; GFX11-LABEL: safe_math_fract_f32_minimumnum_swap:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v3, v0
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX11-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX11-NEXT:    v_min_f32_e32 v4, 0x3f7fffff, v4
-; GFX11-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc_lo
+; GFX11-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc_lo
+; GFX11-NEXT:    v_floor_f32_e32 v4, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX11-NEXT:    global_store_b32 v[1:2], v4, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_minimumnum_swap:
@@ -3452,17 +3425,12 @@ define float @safe_math_fract_f32_minimumnum_swap(float %x, ptr addrspace(1) wri
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v3, v0
-; GFX12-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v4, v0, v3
-; GFX12-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX12-NEXT:    v_min_num_f32_e32 v4, 0x3f7fffff, v4
-; GFX12-NEXT:    s_wait_alu 0xfffd
-; GFX12-NEXT:    v_cndmask_b32_e32 v4, v0, v4, vcc_lo
+; GFX12-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
+; GFX12-NEXT:    v_floor_f32_e32 v4, v0
 ; GFX12-NEXT:    s_wait_alu 0xfffd
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
+; GFX12-NEXT:    global_store_b32 v[1:2], v4, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -3478,13 +3446,19 @@ entry:
 }
 
 define float @basic_fract_f32_nonans_minimumnum(float nofpclass(nan) %x) {
-; IR-LABEL: define float @basic_fract_f32_nonans_minimumnum(
-; IR-SAME: float nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimumnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    ret float [[MIN]]
+; GFX6-IR-LABEL: define float @basic_fract_f32_nonans_minimumnum(
+; GFX6-IR-SAME: float nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimumnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    ret float [[MIN]]
+;
+; IR-FRACT-LABEL: define float @basic_fract_f32_nonans_minimumnum(
+; IR-FRACT-SAME: float nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[MIN:%.*]] = call nnan float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    ret float [[MIN]]
 ;
 ; GFX6-LABEL: basic_fract_f32_nonans_minimumnum:
 ; GFX6:       ; %bb.0: ; %entry
@@ -3497,26 +3471,19 @@ define float @basic_fract_f32_nonans_minimumnum(float nofpclass(nan) %x) {
 ; GFX7-LABEL: basic_fract_f32_nonans_minimumnum:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v1, v0
-; GFX7-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX7-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX7-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: basic_fract_f32_nonans_minimumnum:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v1, v0
-; GFX8-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX8-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX8-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: basic_fract_f32_nonans_minimumnum:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: basic_fract_f32_nonans_minimumnum:
@@ -3526,10 +3493,7 @@ define float @basic_fract_f32_nonans_minimumnum(float nofpclass(nan) %x) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v1, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX12-NEXT:    v_min_num_f32_e32 v0, 0x3f7fffff, v0
+; GFX12-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -3539,13 +3503,19 @@ entry:
 }
 
 define float @basic_fract_f32_nonans_minimum(float nofpclass(nan) %x) {
-; IR-LABEL: define float @basic_fract_f32_nonans_minimum(
-; IR-SAME: float nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    ret float [[MIN]]
+; GFX6-IR-LABEL: define float @basic_fract_f32_nonans_minimum(
+; GFX6-IR-SAME: float nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call float @llvm.minimum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    ret float [[MIN]]
+;
+; IR-FRACT-LABEL: define float @basic_fract_f32_nonans_minimum(
+; IR-FRACT-SAME: float nofpclass(nan) [[X:%.*]]) #[[ATTR0]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[MIN:%.*]] = call nnan float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    ret float [[MIN]]
 ;
 ; GFX6-LABEL: basic_fract_f32_nonans_minimum:
 ; GFX6:       ; %bb.0: ; %entry
@@ -3561,35 +3531,19 @@ define float @basic_fract_f32_nonans_minimum(float nofpclass(nan) %x) {
 ; GFX7-LABEL: basic_fract_f32_nonans_minimum:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v1, v0
-; GFX7-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX7-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v0
-; GFX7-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GFX7-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX7-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: basic_fract_f32_nonans_minimum:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v1, v0
-; GFX8-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX8-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v0
-; GFX8-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GFX8-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX8-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: basic_fract_f32_nonans_minimum:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v0
-; GFX11-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0x7fc00000, v1, vcc_lo
+; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: basic_fract_f32_nonans_minimum:
@@ -3599,10 +3553,7 @@ define float @basic_fract_f32_nonans_minimum(float nofpclass(nan) %x) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v1, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX12-NEXT:    v_minimum_f32 v0, 0x3f7fffff, v0
+; GFX12-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -3612,13 +3563,19 @@ entry:
 }
 
 define float @nnan_minimum_fract_f32(float %x) {
-; IR-LABEL: define float @nnan_minimum_fract_f32(
-; IR-SAME: float [[X:%.*]]) #[[ATTR0]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = tail call nnan float @llvm.minimum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    ret float [[MIN]]
+; GFX6-IR-LABEL: define float @nnan_minimum_fract_f32(
+; GFX6-IR-SAME: float [[X:%.*]]) #[[ATTR0]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call nnan float @llvm.minimum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    ret float [[MIN]]
+;
+; IR-FRACT-LABEL: define float @nnan_minimum_fract_f32(
+; IR-FRACT-SAME: float [[X:%.*]]) #[[ATTR0]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[MIN:%.*]] = call nnan float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    ret float [[MIN]]
 ;
 ; GFX6-LABEL: nnan_minimum_fract_f32:
 ; GFX6:       ; %bb.0: ; %entry
@@ -3631,26 +3588,19 @@ define float @nnan_minimum_fract_f32(float %x) {
 ; GFX7-LABEL: nnan_minimum_fract_f32:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v1, v0
-; GFX7-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX7-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX7-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: nnan_minimum_fract_f32:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v1, v0
-; GFX8-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX8-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX8-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: nnan_minimum_fract_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: nnan_minimum_fract_f32:
@@ -3660,10 +3610,7 @@ define float @nnan_minimum_fract_f32(float %x) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v1, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX12-NEXT:    v_minimum_f32 v0, 0x3f7fffff, v0
+; GFX12-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -3673,13 +3620,19 @@ entry:
 }
 
 define float @nnan_minimumnum_fract_f32(float %x) {
-; IR-LABEL: define float @nnan_minimumnum_fract_f32(
-; IR-SAME: float [[X:%.*]]) #[[ATTR0]] {
-; IR-NEXT:  [[ENTRY:.*:]]
-; IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
-; IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
-; IR-NEXT:    [[MIN:%.*]] = tail call nnan float @llvm.minimumnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
-; IR-NEXT:    ret float [[MIN]]
+; GFX6-IR-LABEL: define float @nnan_minimumnum_fract_f32(
+; GFX6-IR-SAME: float [[X:%.*]]) #[[ATTR0]] {
+; GFX6-IR-NEXT:  [[ENTRY:.*:]]
+; GFX6-IR-NEXT:    [[FLOOR:%.*]] = tail call float @llvm.floor.f32(float [[X]])
+; GFX6-IR-NEXT:    [[SUB:%.*]] = fsub float [[X]], [[FLOOR]]
+; GFX6-IR-NEXT:    [[MIN:%.*]] = tail call nnan float @llvm.minimumnum.f32(float [[SUB]], float 0x3FEFFFFFE0000000)
+; GFX6-IR-NEXT:    ret float [[MIN]]
+;
+; IR-FRACT-LABEL: define float @nnan_minimumnum_fract_f32(
+; IR-FRACT-SAME: float [[X:%.*]]) #[[ATTR0]] {
+; IR-FRACT-NEXT:  [[ENTRY:.*:]]
+; IR-FRACT-NEXT:    [[MIN:%.*]] = call nnan float @llvm.amdgcn.fract.f32(float [[X]])
+; IR-FRACT-NEXT:    ret float [[MIN]]
 ;
 ; GFX6-LABEL: nnan_minimumnum_fract_f32:
 ; GFX6:       ; %bb.0: ; %entry
@@ -3692,26 +3645,19 @@ define float @nnan_minimumnum_fract_f32(float %x) {
 ; GFX7-LABEL: nnan_minimumnum_fract_f32:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_floor_f32_e32 v1, v0
-; GFX7-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX7-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX7-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: nnan_minimumnum_fract_f32:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_floor_f32_e32 v1, v0
-; GFX8-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX8-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX8-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: nnan_minimumnum_fract_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_floor_f32_e32 v1, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: nnan_minimumnum_fract_f32:
@@ -3721,10 +3667,7 @@ define float @nnan_minimumnum_fract_f32(float %x) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_floor_f32_e32 v1, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX12-NEXT:    v_min_num_f32_e32 v0, 0x3f7fffff, v0
+; GFX12-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
