@@ -392,8 +392,8 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (Params->MaxAnisotropy.has_value())
     Sampler.MaxAnisotropy = Params->MaxAnisotropy.value();
 
-  if (Params->ComparisonFunc.has_value())
-    Sampler.ComparisonFunc = Params->ComparisonFunc.value();
+  if (Params->CompFunc.has_value())
+    Sampler.CompFunc = Params->CompFunc.value();
 
   if (Params->BorderColor.has_value())
     Sampler.BorderColor = Params->BorderColor.value();
@@ -777,7 +777,7 @@ RootSignatureParser::parseStaticSamplerParams() {
 
     // `comparisonFunc` `=` COMPARISON_FUNC
     if (tryConsumeExpectedToken(TokenKind::kw_comparisonFunc)) {
-      if (Params.ComparisonFunc.has_value()) {
+      if (Params.CompFunc.has_value()) {
         getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
@@ -786,10 +786,10 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto ComparisonFunc = parseComparisonFunc();
-      if (!ComparisonFunc.has_value())
+      auto CompFunc = parseComparisonFunc();
+      if (!CompFunc.has_value())
         return std::nullopt;
-      Params.ComparisonFunc = ComparisonFunc;
+      Params.CompFunc = CompFunc;
     }
 
     // `borderColor` `=` STATIC_BORDER_COLOR
