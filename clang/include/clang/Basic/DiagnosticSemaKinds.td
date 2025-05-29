@@ -6065,7 +6065,7 @@ def err_undeclared_use : Error<"use of undeclared %0">;
 def warn_deprecated : Warning<"%0 is deprecated">,
     InGroup<DeprecatedDeclarations>;
 def warn_deprecated_switch_case : Warning<warn_deprecated.Summary>,
-    InGroup<DeprecatedSwitchCase>;
+    InGroup<DeprecatedDeclarationsSwitchCase>;
 def note_from_diagnose_if : Note<"from 'diagnose_if' attribute on %0:">;
 def warn_property_method_deprecated :
     Warning<"property access is using %0 method which is deprecated">,
@@ -12997,6 +12997,9 @@ def err_hlsl_expect_arg_const_int_one_or_neg_one: Error<
   "argument %0 must be constant integer 1 or -1">;
 def err_invalid_hlsl_resource_type: Error<
   "invalid __hlsl_resource_t type attributes">;
+
+def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
+def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

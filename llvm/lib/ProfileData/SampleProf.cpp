@@ -20,6 +20,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <system_error>
@@ -126,9 +127,33 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   return Result;
 }
 
+std::error_code SampleRecord::serialize(
+    raw_ostream &OS, const MapVector<FunctionId, uint32_t> &NameTable) const {
+  encodeULEB128(getSamples(), OS);
+  encodeULEB128(getCallTargets().size(), OS);
+  for (const auto &J : getSortedCallTargets()) {
+    FunctionId Callee = J.first;
+    uint64_t CalleeSamples = J.second;
+    if (auto NameIndexIter = NameTable.find(Callee);
+        NameIndexIter != NameTable.end()) {
+      encodeULEB128(NameIndexIter->second, OS);
+    } else {
+      // If the callee is not in the name table, we cannot serialize it.
+      return sampleprof_error::truncated_name_table;
+    }
+    encodeULEB128(CalleeSamples, OS);
+  }
+  return sampleprof_error::success;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 #endif
+
+void LineLocation::serialize(raw_ostream &OS) {
+  encodeULEB128(LineOffset, OS);
+  encodeULEB128(Discriminator, OS);
+}
 
 /// Print the sample record to the stream \p OS indented by \p Indent.
 void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {

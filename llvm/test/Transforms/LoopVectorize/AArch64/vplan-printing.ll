@@ -14,7 +14,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -47,6 +47,10 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[EXTRACT]]> from middle.block)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<[[VEC_TC]]>, ir<0>
 ; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<[[RED_RESULT]]>, ir<0>
@@ -65,10 +69,6 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:   IR   %add = add i32 %mul, %accum
 ; CHECK-NEXT:   IR   %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:   IR   %exitcond.not = icmp eq i64 %iv.next, 1024
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[EXTRACT]]> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK: VPlan 'Final VPlan for VF={8,16},UF={1}' {

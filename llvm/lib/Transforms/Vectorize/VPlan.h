@@ -4221,7 +4221,8 @@ public:
   /// that this relies on unneeded branches to the scalar tail loop being
   /// removed.
   bool hasScalarTail() const {
-    return getScalarPreheader()->getNumPredecessors() != 0;
+    return !(getScalarPreheader()->getNumPredecessors() == 0 ||
+             getScalarPreheader()->getSinglePredecessor() == getEntry());
   }
 };
 
