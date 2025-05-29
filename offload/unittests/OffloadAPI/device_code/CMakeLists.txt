@@ -61,6 +61,7 @@ endif()
 
 add_offload_test_device_code(foo.c foo)
 add_offload_test_device_code(bar.c bar)
+add_offload_test_device_code(noargs.c noargs)
 
 add_custom_target(OffloadUnitTestsDeviceBins DEPENDS ${BIN_PATHS})
 

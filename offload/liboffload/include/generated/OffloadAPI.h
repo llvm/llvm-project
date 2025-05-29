@@ -692,6 +692,7 @@ typedef struct ol_kernel_launch_size_args_t {
 ///
 /// @details
 ///    - If a queue is not specified, kernel execution happens synchronously
+///    - ArgumentsData may be set to NULL (to indicate no parameters)
 ///
 /// @returns
 ///     - ::OL_RESULT_SUCCESS
@@ -699,13 +700,14 @@ typedef struct ol_kernel_launch_size_args_t {
 ///     - ::OL_ERRC_DEVICE_LOST
 ///     - ::OL_ERRC_INVALID_ARGUMENT
 ///         + `Queue == NULL && EventOut != NULL`
+///     - ::OL_ERRC_INVALID_ARGUMENT
+///         + `ArgumentsSize > 0 && ArgumentsData == NULL`
 ///     - ::OL_ERRC_INVALID_DEVICE
 ///         + If Queue is non-null but does not belong to Device
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
 ///         + `NULL == Device`
 ///         + `NULL == Kernel`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == ArgumentsData`
 ///         + `NULL == LaunchSizeArgs`
 OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernel(
     // [in][optional] handle of the queue
@@ -714,7 +716,7 @@ OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernel(
     ol_device_handle_t Device,
     // [in] handle of the kernel
     ol_kernel_handle_t Kernel,
-    // [in] pointer to the kernel argument struct
+    // [in][optional] pointer to the kernel argument struct
     const void *ArgumentsData,
     // [in] size of the kernel argument struct
     size_t ArgumentsSize,
