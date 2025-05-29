@@ -21,6 +21,7 @@ add_flang_library(flangPasses
   MLIRPass
   MLIRReconcileUnrealizedCasts
   MLIRSCFToControlFlow
+  MLIRSCFToOpenMP
   MLIRSupport
   MLIRTransforms
 )
