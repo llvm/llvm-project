@@ -1521,43 +1521,31 @@ void PPCRegisterInfo::lowerDMRSpilling(MachineBasicBlock::iterator II,
   const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
 
   auto spillDMR = [&](Register SrcReg, int BEIdx, int LEIdx) {
-    Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
-    Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
-    Register VSRpReg2 = MF.getRegInfo().createVirtualRegister(RC);
-    Register VSRpReg3 = MF.getRegInfo().createVirtualRegister(RC);
+    auto spillWACC = [&](unsigned Opc, unsigned RegIdx, int IdxBE, int IdxLE) {
+      Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
+      Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
 
-    BuildMI(MBB, II, DL, TII.get(PPC::DMXXEXTFDMR512), VSRpReg0)
-        .addDef(VSRpReg1)
-        .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_wacc_lo));
+      BuildMI(MBB, II, DL, TII.get(Opc), VSRpReg0)
+          .addDef(VSRpReg1)
+          .addReg(TargetRegisterInfo::getSubReg(SrcReg, RegIdx));
 
-    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                          .addReg(VSRpReg0, RegState::Kill),
-                      FrameIndex, IsLittleEndian ? LEIdx : BEIdx);
-    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                          .addReg(VSRpReg1, RegState::Kill),
-                      FrameIndex, IsLittleEndian ? LEIdx - 32 : BEIdx + 32);
-
-    BuildMI(MBB, II, DL, TII.get(PPC::DMXXEXTFDMR512_HI), VSRpReg2)
-        .addDef(VSRpReg3)
-        .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_wacc_hi));
-
-    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                          .addReg(VSRpReg2, RegState::Kill),
-                      FrameIndex, IsLittleEndian ? LEIdx - 64 : BEIdx + 64);
-    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                          .addReg(VSRpReg3, RegState::Kill),
-                      FrameIndex, IsLittleEndian ? BEIdx : LEIdx);
+      addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                            .addReg(VSRpReg0, RegState::Kill),
+                        FrameIndex, IsLittleEndian ? IdxLE : IdxBE);
+      addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                            .addReg(VSRpReg1, RegState::Kill),
+                        FrameIndex, IsLittleEndian ? IdxLE - 32 : IdxBE + 32);
+    };
+    spillWACC(PPC::DMXXEXTFDMR512, PPC::sub_wacc_lo, BEIdx, LEIdx);
+    spillWACC(PPC::DMXXEXTFDMR512_HI, PPC::sub_wacc_hi, BEIdx + 64, LEIdx - 64);
   };
 
+  Register SrcReg = MI.getOperand(0).getReg();
   if (MI.getOpcode() == PPC::SPILL_DMRP) {
-    spillDMR(
-        TargetRegisterInfo::getSubReg(MI.getOperand(0).getReg(), PPC::sub_dmr1),
-        0, 96);
-    spillDMR(
-        TargetRegisterInfo::getSubReg(MI.getOperand(0).getReg(), PPC::sub_dmr0),
-        128, 224);
+    spillDMR(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_dmr1), 0, 96);
+    spillDMR(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_dmr0), 128, 224);
   } else
-    spillDMR(MI.getOperand(0).getReg(), 0, 96);
+    spillDMR(SrcReg, 0, 96);
 
   // Discard the pseudo instruction.
   MBB.erase(II);
@@ -1577,12 +1565,13 @@ void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
   const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
 
   auto restoreDMR = [&](Register DestReg, int BEIdx, int LEIdx) {
-    auto restoreWACC = [&](unsigned Opc, unsigned RegIdx, int IdxBE, int IdxLE) {
+    auto restoreWACC = [&](unsigned Opc, unsigned RegIdx, int IdxBE,
+                           int IdxLE) {
       Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
       Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
 
       addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg0),
-                        FrameIndex, IsLittleEndian ? IdxLE: IdxBE);
+                        FrameIndex, IsLittleEndian ? IdxLE : IdxBE);
       addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg1),
                         FrameIndex, IsLittleEndian ? IdxLE - 32 : IdxBE + 32);
 
@@ -1593,18 +1582,16 @@ void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
           .addReg(VSRpReg1, RegState::Kill);
     };
     restoreWACC(PPC::DMXXINSTDMR512, PPC::sub_wacc_lo, BEIdx, LEIdx);
-    restoreWACC(PPC::DMXXINSTDMR512_HI, PPC::sub_wacc_hi, BEIdx+64, LEIdx-64);
+    restoreWACC(PPC::DMXXINSTDMR512_HI, PPC::sub_wacc_hi, BEIdx + 64,
+                LEIdx - 64);
   };
 
+  Register DestReg = MI.getOperand(0).getReg();
   if (MI.getOpcode() == PPC::RESTORE_DMRP) {
-    restoreDMR(
-        TargetRegisterInfo::getSubReg(MI.getOperand(0).getReg(), PPC::sub_dmr1),
-        0, 96);
-    restoreDMR(
-        TargetRegisterInfo::getSubReg(MI.getOperand(0).getReg(), PPC::sub_dmr0),
-        128, 224);
+    restoreDMR(TargetRegisterInfo::getSubReg(DestReg, PPC::sub_dmr1), 0, 96);
+    restoreDMR(TargetRegisterInfo::getSubReg(DestReg, PPC::sub_dmr0), 128, 224);
   } else
-    restoreDMR(MI.getOperand(0).getReg(), 0, 96);
+    restoreDMR(DestReg, 0, 96);
 
   // Discard the pseudo instruction.
   MBB.erase(II);
