@@ -89,14 +89,6 @@ struct ThreadData {
   int signo = 0;
 };
 
-class ELFLinuxSigInfo {
-public:
-  static lldb_private::Status Parse(const lldb_private::DataExtractor &data,
-                                    const lldb_private::ArchSpec &arch,
-                                    const lldb::PlatformSP platform_sp,
-                                    ThreadData &thread_data);
-};
-
 // PRPSINFO structure's size differs based on architecture.
 // This is the layout in the x86-64 arch case.
 // In the i386 case we parse it manually and fill it again
