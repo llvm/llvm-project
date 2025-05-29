@@ -1422,7 +1422,7 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
   ArrayRef<int> Mask;
   auto *NonConstArg = find_if_not(II->args(), IsaPred<Constant>);
   if (!NonConstArg ||
-      !match(NonConstArg, m_Shuffle(m_Value(X), m_Undef(), m_Mask(Mask))))
+      !match(NonConstArg, m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))
     return nullptr;
 
   // At least 1 operand must have 1 use because we are creating 2 instructions.
@@ -1433,7 +1433,7 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
   SmallVector<Value *, 4> NewArgs;
   Type *SrcTy = X->getType();
   for (Value *Arg : II->args()) {
-    if (match(Arg, m_Shuffle(m_Value(X), m_Undef(), m_SpecificMask(Mask))) &&
+    if (match(Arg, m_Shuffle(m_Value(X), m_Poison(), m_SpecificMask(Mask))) &&
         X->getType() == SrcTy)
       NewArgs.push_back(X);
     else if (match(Arg, m_ImmConstant(C))) {

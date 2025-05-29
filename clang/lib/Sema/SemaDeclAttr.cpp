@@ -53,6 +53,7 @@
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaSPIRV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
@@ -3194,6 +3195,17 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
     }
   }
 
+  if (Context.getTargetInfo().getTriple().isLoongArch()) {
+    for (const auto &Feature : ParsedAttrs.Features) {
+      StringRef CurFeature = Feature;
+      if (CurFeature.starts_with("!arch=")) {
+        StringRef ArchValue = CurFeature.split("=").second.trim();
+        return Diag(LiteralLoc, diag::err_attribute_unsupported)
+               << "target(arch=..)" << ArchValue;
+      }
+    }
+  }
+
   if (ParsedAttrs.Duplicate != "")
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Duplicate << None << ParsedAttrs.Duplicate << Target;
@@ -5852,12 +5864,13 @@ static void handleBuiltinAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   bool IsAArch64 = S.Context.getTargetInfo().getTriple().isAArch64();
   bool IsARM = S.Context.getTargetInfo().getTriple().isARM();
   bool IsRISCV = S.Context.getTargetInfo().getTriple().isRISCV();
+  bool IsSPIRV = S.Context.getTargetInfo().getTriple().isSPIRV();
   bool IsHLSL = S.Context.getLangOpts().HLSL;
   if ((IsAArch64 && !S.ARM().SveAliasValid(BuiltinID, AliasName)) ||
       (IsARM && !S.ARM().MveAliasValid(BuiltinID, AliasName) &&
        !S.ARM().CdeAliasValid(BuiltinID, AliasName)) ||
       (IsRISCV && !S.RISCV().isAliasValid(BuiltinID, AliasName)) ||
-      (!IsAArch64 && !IsARM && !IsRISCV && !IsHLSL)) {
+      (!IsAArch64 && !IsARM && !IsRISCV && !IsHLSL && !IsSPIRV)) {
     S.Diag(AL.getLoc(), diag::err_attribute_builtin_alias) << AL;
     return;
   }
