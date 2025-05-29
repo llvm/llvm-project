@@ -1577,31 +1577,23 @@ void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
   const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
 
   auto restoreDMR = [&](Register DestReg, int BEIdx, int LEIdx) {
-    Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
-    Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
-    Register VSRpReg2 = MF.getRegInfo().createVirtualRegister(RC);
-    Register VSRpReg3 = MF.getRegInfo().createVirtualRegister(RC);
+    auto restoreWACC = [&](unsigned Opc, unsigned RegIdx, int IdxBE, int IdxLE) {
+      Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
+      Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
 
-    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg0),
-                      FrameIndex, IsLittleEndian ? LEIdx : BEIdx);
-    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg1),
-                      FrameIndex, IsLittleEndian ? LEIdx - 32 : BEIdx + 32);
+      addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg0),
+                        FrameIndex, IsLittleEndian ? IdxLE: IdxBE);
+      addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg1),
+                        FrameIndex, IsLittleEndian ? IdxLE - 32 : IdxBE + 32);
 
-    BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512),
-            TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_lo))
-        .addReg(VSRpReg0, RegState::Kill)
-        .addReg(VSRpReg1, RegState::Kill);
-
-    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg2),
-                      FrameIndex, IsLittleEndian ? LEIdx - 64 : BEIdx + 64);
-    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg3),
-                      FrameIndex, IsLittleEndian ? BEIdx : LEIdx);
-
-    // Kill virtual registers (killedRegState::Killed).
-    BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512_HI),
-            TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_hi))
-        .addReg(VSRpReg2, RegState::Kill)
-        .addReg(VSRpReg3, RegState::Kill);
+      // Kill virtual registers (killedRegState::Killed).
+      BuildMI(MBB, II, DL, TII.get(Opc),
+              TargetRegisterInfo::getSubReg(DestReg, RegIdx))
+          .addReg(VSRpReg0, RegState::Kill)
+          .addReg(VSRpReg1, RegState::Kill);
+    };
+    restoreWACC(PPC::DMXXINSTDMR512, PPC::sub_wacc_lo, BEIdx, LEIdx);
+    restoreWACC(PPC::DMXXINSTDMR512_HI, PPC::sub_wacc_hi, BEIdx+64, LEIdx-64);
   };
 
   if (MI.getOpcode() == PPC::RESTORE_DMRP) {
