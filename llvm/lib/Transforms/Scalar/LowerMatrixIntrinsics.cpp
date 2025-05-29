@@ -234,7 +234,7 @@ static bool isUniformShape(Value *V) {
   if (I->isBinaryOp())
     return true;
 
-  if (auto *Cast = dyn_cast<CastInst>(V))
+  if (auto *Cast = dyn_cast<CastInst>(V)) {
     switch (Cast->getOpcode()) {
     case llvm::Instruction::Trunc:
     case llvm::Instruction::ZExt:
@@ -259,6 +259,8 @@ static bool isUniformShape(Value *V) {
     case llvm::Instruction::CastOpsEnd:
       llvm_unreachable("not an actual cast op");
     }
+    llvm_unreachable("unhandled cast opcode");
+  }
 
   switch (I->getOpcode()) {
   case Instruction::FNeg:
