@@ -129,8 +129,6 @@ static bool checkGenericCastToPtr(Sema &SemaRef, CallExpr *Call) {
     AddrSpace = SemaRef.LangOpts.isSYCL() ? LangAS::sycl_private
                                           : LangAS::opencl_private;
     break;
-  default:
-    llvm_unreachable("Invalid builtin function");
   }
   Qual.setAddressSpace(AddrSpace);
   Call->setType(SemaRef.getASTContext().getPointerType(
