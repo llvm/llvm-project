@@ -811,6 +811,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
+  PB.registerPipelineStartEPCallback(
+      [this](ModulePassManager &PM, OptimizationLevel Level) {
+        PM.addPass(AMDGPUExpandFeaturePredicatesPass(*this));
+      });
+
   PB.registerPipelineEarlySimplificationEPCallback(
       [](ModulePassManager &PM, OptimizationLevel Level,
          ThinOrFullLTOPhase Phase) {
