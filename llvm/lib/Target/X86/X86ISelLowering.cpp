@@ -44789,7 +44789,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     // Only known if known in both the LHS and RHS.
     Known = Known.intersectWith(Known2);
-    break;
+    return false;
   }
   case X86ISD::BEXTR:
   case X86ISD::BEXTRI: {
