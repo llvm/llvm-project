@@ -10,7 +10,6 @@
 #include "flang/Common/idioms.h"
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::common {
 

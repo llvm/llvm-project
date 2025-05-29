@@ -11,9 +11,7 @@
 
 #include "Fortran.h"
 #include "flang/Common/enum-set.h"
-#include "flang/Common/idioms.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/ADT/StringRef.h"
 #include <optional>
 #include <vector>
 
