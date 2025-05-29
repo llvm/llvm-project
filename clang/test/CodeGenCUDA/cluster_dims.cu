@@ -21,3 +21,18 @@ __global__ void __cluster_dims__(constint, constint / 2, 1) test_constant() {}
 
 // CHECK: "amdgpu-cluster-dims"="0,0,0"
 __global__ void __no_cluster__ test_no_cluster() {}
+
+// CHECK: "amdgpu-cluster-dims"="7,1,1"
+template<unsigned a>
+__global__ void __cluster_dims__(a) test_template_1d() {}
+template __global__ void test_template_1d<7>();
+
+// CHECK: "amdgpu-cluster-dims"="2,6,1"
+template<unsigned a, unsigned b>
+__global__ void __cluster_dims__(a, b) test_template_2d() {}
+template __global__ void test_template_2d<2, 6>();
+
+// CHECK: "amdgpu-cluster-dims"="1,2,3"
+template<unsigned a, unsigned b, unsigned c>
+__global__ void __cluster_dims__(a, b, c) test_template_3d() {}
+template __global__ void test_template_3d<1, 2, 3>();
