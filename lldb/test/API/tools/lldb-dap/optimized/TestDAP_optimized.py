@@ -48,7 +48,7 @@ class TestDAP_optimized(lldbdap_testcase.DAPTestCaseBase):
         value: str = optimized_variable["value"]
         self.assertTrue(
             value.startswith("<error:"),
-            f"expect error for value: '{expected_value}'",
+            f"expect error for value: '{value}'",
         )
         error_msg = optimized_variable["$__lldb_extensions"]["error"]
         self.assertTrue(
