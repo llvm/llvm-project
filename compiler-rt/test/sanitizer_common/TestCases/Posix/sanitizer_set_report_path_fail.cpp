@@ -12,8 +12,9 @@ int main(int argc, char **argv) {
     sprintf(buff, "%s/report", argv[0]);
     // ERROR1: Can't create directory: {{.*}}
   } else {
+    // Try setting a path that is too large.
     snprintf(buff, sizeof(buff), "%04095d", 42);
-    // ERROR2: Path is too long: 00000000
+    // ERROR2: Path is too long: 00000000...
   }
   __sanitizer_set_report_path(buff);
 }

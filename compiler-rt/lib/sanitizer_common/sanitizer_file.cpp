@@ -164,7 +164,8 @@ void ReportFile::SetReportPath(const char *path) {
       const char *message = "ERROR: Path is too long: ";
       WriteToFile(kStderrFd, message, internal_strlen(message));
       WriteToFile(kStderrFd, path, 8);
-      WriteToFile(kStderrFd, "\n", internal_strlen("\n"));
+      message = "...\n";
+      WriteToFile(kStderrFd, message, internal_strlen(message));
       Die();
     }
   }
