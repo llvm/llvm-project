@@ -2828,6 +2828,13 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  case BuiltinType::Id:                                                        \
+    mangleArtificialTagType(TagTypeKind::Struct, #Name, {"__clang"});          \
+    break;
+#define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits)
+#include "clang/Basic/AArch64ACLETypes.def"
+
     // Issue an error for any type not explicitly handled.
   default:
     Error(Range.getBegin(), "built-in type: ",
