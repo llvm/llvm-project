@@ -11,8 +11,6 @@ define void @loadf64() {
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
           i32 0, i32 1, i32 1, i32 0, i1 false)
 
-  ret void
-
   ; check we load an <2 x i32> instead of a double
   ; CHECK-NOT: call {double, i1} @llvm.dx.resource.load.typedbuffer
   ; CHECK: [[L0:%.*]] = call { <2 x i32>, i1 }
@@ -23,14 +21,10 @@ define void @loadf64() {
 
   ; check we extract the two i32 and construct a double
   ; CHECK: [[D0:%.*]] = extractvalue { <2 x i32>, i1 } [[L0]], 0
-  ; CHECK: [[Lo:%.*]] = extractelement <2 x i32> [[D0]], i64 0
-  ; CHECK: [[Hi:%.*]] = extractelement <2 x i32> [[D0]], i64 1
+  ; CHECK: [[Lo:%.*]] = extractelement <2 x i32> [[D0]], i32 0
+  ; CHECK: [[Hi:%.*]] = extractelement <2 x i32> [[D0]], i32 1
   ; CHECK: [[DBL:%.*]] = call double @llvm.dx.asdouble.i32(i32 [[Lo]], i32 [[Hi]])
-  ; construct a new {double, i1}
-  ; CHECK: [[CB:%.*]] = extractvalue { <2 x i32>, i1 } [[L0]], 1
-  ; CHECK: [[S1:%.*]] = insertvalue { double, i1 } poison, double [[DBL]], 0
-  ; CHECK: [[S2:%.*]] = insertvalue { double, i1 } [[S1]], i1 [[CB]], 1
-  ; CHECK: extractvalue { double, i1 } [[S2]], 0
+  ; CHECK-NOT: extractvalue { double, i1 }
   %data0 = extractvalue {double, i1} %load0, 0
   ret void
 }
@@ -53,19 +47,15 @@ define void @loadv2f64() {
 
   ; check we extract the 4 i32 and construct a <2 x double>
   ; CHECK: [[D0:%.*]] = extractvalue { <4 x i32>, i1 } [[L0]], 0
-  ; CHECK: [[Lo1:%.*]] = extractelement <4 x i32> [[D0]], i64 0
-  ; CHECK: [[Hi1:%.*]] = extractelement <4 x i32> [[D0]], i64 1
-  ; CHECK: [[Lo2:%.*]] = extractelement <4 x i32> [[D0]], i64 2
-  ; CHECK: [[Hi2:%.*]] = extractelement <4 x i32> [[D0]], i64 3
+  ; CHECK: [[Lo1:%.*]] = extractelement <4 x i32> [[D0]], i32 0
+  ; CHECK: [[Hi1:%.*]] = extractelement <4 x i32> [[D0]], i32 1
+  ; CHECK: [[Lo2:%.*]] = extractelement <4 x i32> [[D0]], i32 2
+  ; CHECK: [[Hi2:%.*]] = extractelement <4 x i32> [[D0]], i32 3
   ; CHECK: [[Dbl1:%.*]] = call double @llvm.dx.asdouble.i32(i32 [[Lo1]], i32 [[Hi1]])
-  ; CHECK: [[Vec:%.*]] = insertelement <2 x double> poison, double [[Dbl1]], i64 0
+  ; CHECK: [[Vec:%.*]] = insertelement <2 x double> poison, double [[Dbl1]], i32 0
   ; CHECK: [[Dbl2:%.*]] = call double @llvm.dx.asdouble.i32(i32 [[Lo2]], i32 [[Hi2]])
-  ; CHECK: [[Vec2:%.*]] = insertelement <2 x double> [[Vec]], double [[Dbl2]], i64 1
-  ; construct a new {<2 x double>, i1}
-  ; CHECK: [[CB:%.*]] = extractvalue { <4 x i32>, i1 } [[L0]], 1
-  ; CHECK: [[S1:%.*]] = insertvalue { <2 x double>, i1 } poison, <2 x double> [[Vec2]], 0
-  ; CHECK: [[S2:%.*]] = insertvalue { <2 x double>, i1 } [[S1]], i1 [[CB]], 1
-  ; CHECK: extractvalue { <2 x double>, i1 } [[S2]], 0
+  ; CHECK: [[Vec2:%.*]] = insertelement <2 x double> [[Vec]], double [[Dbl2]], i32 1
+  ; CHECK-NOT: extractvalue { <2 x double>, i1 }
   %data0 = extractvalue { <2 x double>, i1 } %load0, 0
   ret void
 }
@@ -80,8 +70,6 @@ define void @loadf64WithCheckBit() {
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
           i32 0, i32 1, i32 1, i32 0, i1 false)
 
-  ret void
-
   ; check we load an <2 x i32> instead of a double
   ; CHECK-NOT: call {double, i1} @llvm.dx.resource.load.typedbuffer
   ; CHECK: [[L0:%.*]] = call { <2 x i32>, i1 }
@@ -92,16 +80,12 @@ define void @loadf64WithCheckBit() {
 
   ; check we extract the two i32 and construct a double
   ; CHECK: [[D0:%.*]] = extractvalue { <2 x i32>, i1 } [[L0]], 0
-  ; CHECK: [[Lo:%.*]] = extractelement <2 x i32> [[D0]], i64 0
-  ; CHECK: [[Hi:%.*]] = extractelement <2 x i32> [[D0]], i64 1
+  ; CHECK: [[Lo:%.*]] = extractelement <2 x i32> [[D0]], i32 0
+  ; CHECK: [[Hi:%.*]] = extractelement <2 x i32> [[D0]], i32 1
   ; CHECK: [[DBL:%.*]] = call double @llvm.dx.asdouble.i32(i32 [[Lo]], i32 [[Hi]])
-  ; construct a new {double, i1}
-  ; CHECK: [[CB:%.*]] = extractvalue { <2 x i32>, i1 } [[L0]], 1
-  ; CHECK: [[S1:%.*]] = insertvalue { double, i1 } poison, double [[DBL]], 0
-  ; CHECK: [[S2:%.*]] = insertvalue { double, i1 } [[S1]], i1 [[CB]], 1
-  ; CHECK: extractvalue { double, i1 } [[S2]], 0
   %data0 = extractvalue {double, i1} %load0, 0
-  ; CHECK: extractvalue { double, i1 } [[S2]], 1
+  ; CHECK: extractvalue { <2 x i32>, i1 } [[L0]], 1
+  ; CHECK-NOT: extractvalue { double, i1 }
   %cb = extractvalue {double, i1} %load0, 1
   ret void
 }
