@@ -15,32 +15,10 @@ void DataAccessPerfReader::parsePerfTraces() {
   parsePerfTrace(PerfTraceFilename);
 }
 
-static void testPerfSampleRecordRegex() {
-  std::regex logRegex(
-      R"(^.*?PERF_RECORD_SAMPLE\(.*?\):\s*(\d+)\/(\d+):\s*(0x[0-9a-fA-F]+)\s+period:\s*\d+\s+addr:\s*(0x[0-9a-fA-F]+)$)");
-
-  std::smatch testMatch;
-  const std::string testLine =
-      "2193330181938979 0xa88 [0x48]: PERF_RECORD_SAMPLE(IP, 0x4002): "
-      "1807344/1807344: 0x260b45 period: 100 addr: 0x200630";
-  if (std::regex_search(testLine, testMatch, logRegex)) {
-    if (testMatch.size() != 5) {
-      exitWithError("Regex did not match expected number of groups.");
-    }
-    for (size_t i = 0; i < testMatch.size(); ++i) {
-      errs() << "Group " << i << ": " << testMatch[i] << "\n";
-    }
-    // errs() << "Test line matched successfully.\n";
-  } else {
-    exitWithError("Test line did not match regex.");
-  }
-}
-
 // Ignore mmap events.
 void DataAccessPerfReader::parsePerfTrace(StringRef PerfTrace) {
   std::regex logRegex(
       R"(^.*?PERF_RECORD_SAMPLE\(.*?\):\s*(\d+)\/(\d+):\s*(0x[0-9a-fA-F]+)\s+period:\s*\d+\s+addr:\s*(0x[0-9a-fA-F]+)$)");
-  uint64_t UnmatchedLine = 0, MatchedLine = 0;
 
   auto BufferOrErr = MemoryBuffer::getFile(PerfTrace);
   std::error_code EC = BufferOrErr.getError();
@@ -52,17 +30,22 @@ void DataAccessPerfReader::parsePerfTrace(StringRef PerfTrace) {
     StringRef Line = *LineIt;
 
     // Parse MMAP event from perf trace.
+    // Parse MMAP event from perf trace.
     // Construct a binary from the binary file path.
     PerfScriptReader::MMapEvent MMap;
     if (Line.contains("PERF_RECORD_MMAP2")) {
       if (PerfScriptReader::extractMMapEventForBinary(Binary, Line, MMap)) {
-        errs() << "MMap event found: "
-               << "PID: " << MMap.PID
-               << ", Address: " << format("0x%llx", MMap.Address)
-               << ", Size: " << MMap.Size << ", Offset: " << MMap.Offset
-               << ", Binary Path: " << MMap.BinaryPath << "\n";
+        // TODO: This is a hack to avoid mapping binary address for data section
+        // mappings.
         if (MMap.Offset == 0) {
           updateBinaryAddress(MMap);
+          errs() << "Binary base address is "
+                 << format("0x%" PRIx64, Binary->getBaseAddress())
+                 << " and preferred base address is "
+                 << format("0x%" PRIx64, Binary->getPreferredBaseAddress())
+                 << " and first loadable address is "
+                 << format("0x%" PRIx64, Binary->getFirstLoadableAddress())
+                 << "\n";
         }
       }
       continue;
@@ -72,14 +55,6 @@ void DataAccessPerfReader::parsePerfTrace(StringRef PerfTrace) {
       // Skip lines that do not contain "PERF_RECORD_SAMPLE".
       continue;
     }
-    // errs() << "Processing line: " << Line << "\n";
-
-    // if (IPSampleRegex.match(Line, &Matches)) {
-    //   errs() << "IP Captured: " << Matches.size() << "\n";
-    // }
-    // if (DataAddressRegex.match(Line, &Matches)) {
-    //   errs() << "Data Address Captured: " << Matches.size() << "\n";
-    // }
 
     std::smatch matches;
     const std::string LineStr = Line.str();
@@ -89,41 +64,29 @@ void DataAccessPerfReader::parsePerfTrace(StringRef PerfTrace) {
         continue;
 
       uint64_t DataAddress = std::stoull(matches[4].str(), nullptr, 16);
-      uint64_t IP = std::stoull(matches[3].str(), nullptr, 16);
-      int32_t PID = std::stoi(matches[1].str());
-      // if (DataAddress == 0x200630) {
-      //   errs() << "Find data address at 0x200630, IP: " << format("0x%llx",
-      //   IP)
-      //          << " pid is " << PID << "\n";
-      // }
 
-      // errs() << matches.size() << " matches found in line: " << LineStr <<
-      // "\n"; for (const auto &Match : matches) {
-      //   errs() << "Match: " << Match.str() << "\n";
-      // }
+      // Skip addresses out of the specified PT_LOAD section for data.
+      if (DataAddress < DataMMap.Address ||
+          DataAddress >= DataMMap.Address + DataMMap.Size)
+        continue;
+
+      int32_t PID = std::stoi(matches[1].str());
       //  Check if the PID matches the filter.
 
       if (PIDFilter && *PIDFilter != PID) {
         continue;
       }
 
+      uint64_t IP = std::stoull(matches[3].str(), nullptr, 16);
       // Extract the address and count.
-
       uint64_t CanonicalDataAddress =
-          Binary->canonicalizeVirtualAddress(DataAddress);
-      // errs() << "Data address is " << format("0x" PRIx64 ":", DataAddress)
-      //        << " Canonical data address is "
-      //        << format("0x" PRIx64 ":", CanonicalDataAddress) << "\n";
-      AddressToCount[CanonicalDataAddress] += 1;
-      MatchedLine++;
-    } else {
-      // errs() << "\tNo match found for line: " << Line << "\n";
-      UnmatchedLine++;
+          canonicalizeDataAddress(DataAddress, *Binary, DataMMap, DataSegment);
+
+      uint64_t CanonicalIPAddress = Binary->canonicalizeVirtualAddress(IP);
+
+      AddressMap[CanonicalIPAddress][CanonicalDataAddress] += 1;
     }
   }
-
-  errs() << "Total unmatched lines: " << UnmatchedLine << "\t"
-         << "Matched lines: " << MatchedLine << "\n";
 }
 
 }  // namespace llvm

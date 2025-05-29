@@ -206,8 +206,7 @@ int main(int argc, const char *argv[]) {
   } else {
     assert(Binary.get() &&
            "Binary should be initialized for data access profile");
-    errs() << "binary text segment offset is "
-           << format("0x%" PRIx64 ":", Binary->getTextSegmentOffset()) << "\n";
+    
     // data access profile.
     SmallVector<StringRef, 4> PerfTraces{PerfScriptFilename};
     auto Reader = std::make_unique<DataAccessPerfReader>(
