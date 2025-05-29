@@ -438,6 +438,9 @@ DIDerivedType *DIBuilder::createVariantMemberType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     Constant *Discriminant, DINode::DIFlags Flags, DIType *Ty) {
+  // "ExtraData" is overloaded for bit fields and for variants, so
+  // make sure to disallow this.
+  assert((Flags & DINode::FlagBitField) == 0);
   return DIDerivedType::get(
       VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), Ty, SizeInBits, AlignInBits, OffsetInBits,
