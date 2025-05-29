@@ -515,11 +515,14 @@ void Sema::Initialize() {
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
-  if (Context.getTargetInfo().hasAArch64SVETypes() ||
+  if (Context.getTargetInfo().hasAArch64ACLETypes() ||
       (Context.getAuxTargetInfo() &&
-       Context.getAuxTargetInfo()->hasAArch64SVETypes())) {
+       Context.getAuxTargetInfo()->hasAArch64ACLETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId)                                        \
   addImplicitTypedef(#Name, Context.SingletonId);
+#define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
+  addImplicitTypedef(                                                          \
+      #Name, Context.getVectorType(Context.BaseType, NumEls, VectorKind));
 #include "clang/Basic/AArch64ACLETypes.def"
   }
 
