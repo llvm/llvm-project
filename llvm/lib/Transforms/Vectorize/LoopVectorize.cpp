@@ -4643,12 +4643,12 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
       const RecurrenceDescriptor &RdxDesc = PhiDescriptorPair.second;
       // When finding the min width used by the recurrence we need to account
       // for casts on the input operands of the recurrence.
-      MinWidth = std::min<unsigned>(
-          MinWidth, std::min<unsigned>(
-                        RdxDesc.getMinWidthCastToRecurrenceTypeInBits(),
-                        RdxDesc.getRecurrenceType()->getScalarSizeInBits()));
-      MaxWidth = std::max<unsigned>(
-          MaxWidth, RdxDesc.getRecurrenceType()->getScalarSizeInBits());
+      MinWidth = std::min(
+          MinWidth,
+          std::min(RdxDesc.getMinWidthCastToRecurrenceTypeInBits(),
+                   RdxDesc.getRecurrenceType()->getScalarSizeInBits()));
+      MaxWidth = std::max(MaxWidth,
+                          RdxDesc.getRecurrenceType()->getScalarSizeInBits());
     }
   } else {
     for (Type *T : ElementTypesInLoop) {
