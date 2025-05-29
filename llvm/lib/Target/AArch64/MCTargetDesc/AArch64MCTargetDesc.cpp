@@ -302,6 +302,20 @@ void AArch64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
   };
   for (const auto &I : RegMap)
     MRI->mapLLVMRegToCVReg(I.Reg, static_cast<int>(I.CVReg));
+  static constexpr MCRegister IgnoredRegs[] = {
+      AArch64::Z0,  AArch64::Z1,  AArch64::Z2,  AArch64::Z3,  AArch64::Z4,
+      AArch64::Z5,  AArch64::Z6,  AArch64::Z7,  AArch64::Z8,  AArch64::Z9,
+      AArch64::Z10, AArch64::Z11, AArch64::Z12, AArch64::Z13, AArch64::Z14,
+      AArch64::Z15, AArch64::Z16, AArch64::Z17, AArch64::Z18, AArch64::Z19,
+      AArch64::Z20, AArch64::Z21, AArch64::Z22, AArch64::Z23, AArch64::Z24,
+      AArch64::Z25, AArch64::Z26, AArch64::Z27, AArch64::Z28, AArch64::Z29,
+      AArch64::Z30, AArch64::Z31, AArch64::P0,  AArch64::P1,  AArch64::P2,
+      AArch64::P3,  AArch64::P4,  AArch64::P5,  AArch64::P6,  AArch64::P7,
+      AArch64::P8,  AArch64::P9,  AArch64::P10, AArch64::P11, AArch64::P12,
+      AArch64::P13, AArch64::P14, AArch64::P15,
+  };
+  for (const auto &R : IgnoredRegs)
+    MRI->ignoreCVReg(R);
 }
 
 bool AArch64_MC::isHForm(const MCInst &MI, const MCInstrInfo *MCII) {

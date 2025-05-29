@@ -16,6 +16,7 @@
 #define LLVM_MC_MCREGISTERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
@@ -190,6 +191,7 @@ private:
   const DwarfLLVMRegPair *EHDwarf2LRegs;      // Dwarf to LLVM regs mapping EH
   DenseMap<MCRegister, int> L2SEHRegs;        // LLVM to SEH regs mapping
   DenseMap<MCRegister, int> L2CVRegs;         // LLVM to CV regs mapping
+  DenseSet<MCRegister> IgnoredCVRegs;
 
   mutable std::vector<std::vector<MCPhysReg>> RegAliasesCache;
   ArrayRef<MCPhysReg> getCachedAliasesOf(MCRegister R) const;
@@ -351,6 +353,12 @@ public:
 
   void mapLLVMRegToCVReg(MCRegister LLVMReg, int CVReg) {
     L2CVRegs[LLVMReg] = CVReg;
+  }
+
+  void ignoreCVReg(MCRegister LLVMReg) { IgnoredCVRegs.insert(LLVMReg); }
+
+  bool isIgnoredCVReg(MCRegister LLVMReg) const {
+    return IgnoredCVRegs.contains(LLVMReg);
   }
 
   /// This method should return the register where the return
