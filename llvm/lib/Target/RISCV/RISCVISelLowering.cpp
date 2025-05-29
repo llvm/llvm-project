@@ -20735,7 +20735,7 @@ bool RISCVTargetLowering::SimplifyDemandedBitsForTargetNode(
     bool IsGORC = Op.getOpcode() == RISCVISD::ORC_B;
     // For BREV8, we need to do BREV8 on the demanded bits.
     // For ORC_B, any bit in the output demandeds all bits from the same byte.
-    // So we need to do ORC_B on the demanded ibts.
+    // So we need to do ORC_B on the demanded bits.
     APInt DemandedBits =
         APInt(BitWidth, computeGREVOrGORC(OriginalDemandedBits.getZExtValue(),
                                           7, IsGORC));
