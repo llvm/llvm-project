@@ -33,6 +33,12 @@ __global__ void __cluster_dims__(32, 2, 4) test_too_large_dim_0() {} // common-e
 // amd-error@+1 {{only a maximum of 16 thread blocks in a cluster is supported}}
 __global__ void __cluster_dims__(4, 4, 4) test_too_large_dim_1() {} // NS-error {{__cluster_dims__ is not supported for this GPU architecture}}
 
+// cuda-error@+3 {{only a maximum of 8 thread blocks in a cluster is supported}}
+// amd-error@+2 {{only a maximum of 16 thread blocks in a cluster is supported}}
+template<unsigned a, unsigned b, unsigned c>
+__global__ void __cluster_dims__(a, b, c) test_too_large_dim_template() {} // NS-error {{__cluster_dims__ is not supported for this GPU architecture}}
+template __global__ void test_too_large_dim_template<4, 4, 4>(); // common-note {{in instantiation of function template specialization 'test_too_large_dim_template<4U, 4U, 4U>' requested here}}
+
 int none_const_int = 4;
 
 //NS-error@+1 {{__cluster_dims__ is not supported for this GPU architecture}}
