@@ -10,6 +10,7 @@
 # serve to show the default.
 
 from datetime import date
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -28,16 +29,15 @@ extensions = [
     "sphinx.ext.autodoc",
 ]
 
-# When building man pages, we do not use the markdown pages,
-# So, we can continue without the myst_parser dependencies.
-# Doing so reduces dependencies of some packaged llvm distributions.
+
 try:
     import myst_parser
 
     extensions.append("myst_parser")
 except ImportError:
-    if not tags.has("builder-man"):
-        raise
+    raise ImportError(
+        "myst_parser is required to build documentation, including man pages."
+    )
 
 
 # Add any paths that contain templates here, relative to this directory.
