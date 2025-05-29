@@ -1218,7 +1218,6 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFast
 //===----------------------------------------------------------------------===//
 // Scaling ExtFOp
 //===----------------------------------------------------------------------===//
-// TODO Remove rouding mode attr for EXtf
 def Arith_ScalingExtFOp
     : Arith_Op<
           "scaling_extf", [Pure, SameInputOutputTensorDims,
