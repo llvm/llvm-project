@@ -211,8 +211,8 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
                    Builder.getInt32(llvm::to_underlying(Constants.Visibility))),
                ConstantAsMetadata::get(Builder.getInt32(Constants.Reg.Number)),
                ConstantAsMetadata::get(Builder.getInt32(Constants.Space)),
-               ConstantAsMetadata::get(Builder.getInt32(
-                   Constants.Num32BitConstants)),
+               ConstantAsMetadata::get(
+                   Builder.getInt32(Constants.Num32BitConstants)),
            });
 }
 
@@ -224,8 +224,8 @@ MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   return MDNode::get(
       Ctx, {
                MDString::get(Ctx, OS.str()),
-               ConstantAsMetadata::get(
-                   Builder.getInt32(llvm::to_underlying(Descriptor.Visibility))),
+               ConstantAsMetadata::get(Builder.getInt32(
+                   llvm::to_underlying(Descriptor.Visibility))),
                ConstantAsMetadata::get(Builder.getInt32(Descriptor.Reg.Number)),
                ConstantAsMetadata::get(Builder.getInt32(Descriptor.Space)),
                ConstantAsMetadata::get(
