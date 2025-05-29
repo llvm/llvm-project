@@ -303,6 +303,26 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           RS.ParametersContainer.addParameter(Header, Descriptor);
           break;
         }
+        case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+          const DXContainerYAML::DescriptorTableYaml &TableYaml =
+              P.RootSignature->Parameters.getOrInsertTable(L);
+          mcdxbc::DescriptorTable Table;
+          for (const auto &R : TableYaml.Ranges) {
+
+            dxbc::RTS0::v2::DescriptorRange Range;
+            Range.RangeType = R.RangeType;
+            Range.NumDescriptors = R.NumDescriptors;
+            Range.BaseShaderRegister = R.BaseShaderRegister;
+            Range.RegisterSpace = R.RegisterSpace;
+            Range.OffsetInDescriptorsFromTableStart =
+                R.OffsetInDescriptorsFromTableStart;
+            if (RS.Version > 1)
+              Range.Flags = R.getEncodedFlags();
+            Table.Ranges.push_back(Range);
+          }
+          RS.ParametersContainer.addParameter(Header, Table);
+          break;
+        }
         default:
           // Handling invalid parameter type edge case. We intentionally let
           // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order

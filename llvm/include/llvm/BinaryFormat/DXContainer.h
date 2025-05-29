@@ -163,12 +163,24 @@ enum class RootDescriptorFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
+enum class DescriptorRangeFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
 enum class RootParameterType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
 ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+
+#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
+enum class DescriptorRangeType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
 
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
@@ -588,6 +600,21 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
 
 namespace RTS0 {
 namespace v1 {
+struct DescriptorRange {
+  uint32_t RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t OffsetInDescriptorsFromTableStart;
+  void swapBytes() {
+    sys::swapByteOrder(RangeType);
+    sys::swapByteOrder(NumDescriptors);
+    sys::swapByteOrder(BaseShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
+  }
+};
+
 struct RootDescriptor {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
@@ -652,6 +679,14 @@ struct RootDescriptor : public v1::RootDescriptor {
 
   void swapBytes() {
     v1::RootDescriptor::swapBytes();
+    sys::swapByteOrder(Flags);
+  }
+};
+
+struct DescriptorRange : public v1::DescriptorRange {
+  uint32_t Flags;
+  void swapBytes() {
+    v1::DescriptorRange::swapBytes();
     sys::swapByteOrder(Flags);
   }
 };
