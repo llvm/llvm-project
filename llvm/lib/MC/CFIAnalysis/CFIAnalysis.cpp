@@ -93,8 +93,8 @@ CFIAnalysis::CFIAnalysis(MCContext &Context, MCInstrInfo const &MCII,
                                                false)] =
       RegisterCFIState::createOffsetFromCFAVal(0); // sp's old value is CFA
 
-  State.RegisterCFIStates[MCRI->getDwarfRegNum(EMCIA->getFlagsReg(), false)] =
-      RegisterCFIState::createUndefined(); // Flags cannot be caller-saved
+  // State.RegisterCFIStates[MCRI->getDwarfRegNum(EMCIA->getFlagsReg(), false)] =
+  //     RegisterCFIState::createUndefined(); // Flags cannot be caller-saved
 
   // Applying the prologue after default assumptions to overwrite them.
   for (auto &&PrologueCFIDirective : PrologueCFIDirectives) {
