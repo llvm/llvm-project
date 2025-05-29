@@ -20745,10 +20745,8 @@ bool RISCVTargetLowering::SimplifyDemandedBitsForTargetNode(
 
     // To compute zeros for ORC_B, we need to invert the value and invert it
     // back after. This inverting is harmless for BREV8.
-    Known.Zero =
-        ~computeGREVOrGORC(~Known2.Zero.getZExtValue(), 7, IsGORC);
-    Known.One =
-        computeGREVOrGORC(Known2.One.getZExtValue(), 7, IsGORC);
+    Known.Zero = ~computeGREVOrGORC(~Known2.Zero.getZExtValue(), 7, IsGORC);
+    Known.One = computeGREVOrGORC(Known2.One.getZExtValue(), 7, IsGORC);
     return false;
   }
   }
