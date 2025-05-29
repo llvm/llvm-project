@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/geometric/clc_normalize.h>
-#include <clc/opencl/clc.h>
+#ifndef __CLC_GEOMETRIC_CLC_NORMALIZE_H__
+#define __CLC_GEOMETRIC_CLC_NORMALIZE_H__
 
-#define FUNCTION normalize
 #define __CLC_GEOMETRIC_RET_GENTYPE
-#define __CLC_BODY <clc/geometric/unary_def.inc>
-
+#define __CLC_FUNCTION __clc_normalize
+#define __CLC_BODY <clc/geometric/unary_decl.inc>
 #include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION
+#undef __CLC_GEOMETRIC_RET_GENTYPE
+
+#endif // __CLC_GEOMETRIC_CLC_NORMALIZE_H__
