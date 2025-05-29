@@ -25,11 +25,15 @@
 ; CHECK: Offset: [SP+0-268 x vscale], Type: Spill, Align: 2, Size: vscale x 2
 ; CHECK: Offset: [SP+0-270 x vscale], Type: Spill, Align: 2, Size: vscale x 2
 ; CHECK: Offset: [SP+0-272 x vscale], Type: Spill, Align: 2, Size: vscale x 2
-; CHECK: Offset: [SP-16-272 x vscale], Type: Spill, Align: 16, Size: 8
-; CHECK: Offset: [SP-24-272 x vscale], Type: Spill, Align: 8, Size: 8
-; CHECK: Offset: [SP-32-272 x vscale], Type: Spill, Align: 8, Size: 8
-; CHECK: Offset: [SP-32-288 x vscale], Type: Variable, Align: 16, Size: vscale x 16
-; CHECK: Offset: [SP-48-288 x vscale], Type: Variable, Align: 8, Size: 16
+; CHECK: Offset: [SP+0-274 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK: Offset: [SP+0-276 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK: Offset: [SP+0-278 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK: Offset: [SP+0-280 x vscale], Type: Spill, Align: 2, Size: vscale x 2
+; CHECK: Offset: [SP-16-288 x vscale], Type: Spill, Align: 16, Size: 8
+; CHECK: Offset: [SP-24-288 x vscale], Type: Spill, Align: 8, Size: 8
+; CHECK: Offset: [SP-32-288 x vscale], Type: Spill, Align: 8, Size: 8
+; CHECK: Offset: [SP-32-304 x vscale], Type: Variable, Align: 16, Size: vscale x 16
+; CHECK: Offset: [SP-48-304 x vscale], Type: Variable, Align: 8, Size: 16
 
 declare void @g10(ptr,ptr)
 define void @f10(i64 %n, <vscale x 2 x i64> %x) "frame-pointer"="all" {

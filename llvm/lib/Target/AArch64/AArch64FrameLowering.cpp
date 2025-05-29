@@ -3184,6 +3184,12 @@ static void computeCalleeSaveRegisterPairs(
         RPI.isPaired()) // RPI.FrameIdx must be the lower index of the pair
       RPI.FrameIdx = CSI[i + RegInc].getFrameIdx();
 
+    // Realign the scalable offset if necesary.  This is relevant when
+    // spilling predicates on Windows.
+    if (RPI.isScalable() && ScalableByteOffset % Scale != 0) {
+      ScalableByteOffset = alignTo(ScalableByteOffset, Scale);
+    }
+
     int OffsetPre = RPI.isScalable() ? ScalableByteOffset : ByteOffset;
     assert(OffsetPre % Scale == 0);
 

@@ -622,7 +622,7 @@ def CSR_Darwin_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
                                                         LR, FP, X19, X20, X21, X22,
                                                         X23, X24, X25, X26, X27, X28)>;
 
-def CSR_Win_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "P%u", 4, 11),
+def CSR_Win_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "P%u", 4, 15),
                                                      (sequence "Z%u", 8, 23),
                                                      X19, X20, X21, X22, X23, X24,
                                                      X25, X26, X27, X28, FP, LR)>;
