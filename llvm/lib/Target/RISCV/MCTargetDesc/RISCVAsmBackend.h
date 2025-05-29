@@ -21,7 +21,6 @@ namespace llvm {
 class MCAssembler;
 class MCObjectTargetWriter;
 class raw_ostream;
-class MCSymbolELF;
 
 class RISCVAsmBackend : public MCAsmBackend {
   const MCSubtargetInfo &STI;
@@ -52,7 +51,7 @@ public:
                            uint64_t &Value) override;
 
   std::optional<StringRef>
-  getVendorIdentifierForFixup(unsigned TargetFixupKind) const;
+  getVendorIdentifierForFixup(unsigned FixupKind) const;
 
   bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
                 uint64_t &FixedValue, bool IsResolved) override;

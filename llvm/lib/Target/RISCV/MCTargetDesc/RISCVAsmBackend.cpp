@@ -699,9 +699,6 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
       (getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel))
     IsResolved = isPCRelFixupResolved(Target.getAddSym(), F);
 
-  if (IsResolved && shouldForceRelocation(Fixup, Target))
-    IsResolved = false;
-
   if (!IsResolved) {
     // Some Fixups require a vendor relocation, record it (directly) before we
     // add the relocation.
