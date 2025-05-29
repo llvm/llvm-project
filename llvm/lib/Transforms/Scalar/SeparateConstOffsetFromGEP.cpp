@@ -1204,23 +1204,18 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
 // Helper function to check if an instruction has at least one GEP user
 bool XorToOrDisjointTransformer::hasGEPUser(const Value *V) {
-  for (const User *U : V->users()) {
-    if (isa<GetElementPtrInst>(U)) {
-      return true;
-    }
-  }
-  return false;
+  return llvm::any_of(V->users(), [](const User *U) {
+    return isa<llvm::GetElementPtrInst>(U);
+  });
 }
 
 bool XorToOrDisjointTransformer::dominatesAllXors(
     BinaryOperator *BaseXor, const XorOpList &XorsInGroup) {
-  for (const auto &XorEntry : XorsInGroup) {
+  return llvm::all_of(XorsInGroup, [&](const auto &XorEntry) {
     BinaryOperator *XorInst = XorEntry.first;
-    if (XorInst != BaseXor && !DT.dominates(BaseXor, XorInst)) {
-      return false;
-    }
-  }
-  return true;
+    // Do not evaluate the BaseXor, otherwise we end up cloning it.
+    return XorInst == BaseXor || DT.dominates(BaseXor, XorInst);
+  });
 }
 
 bool XorToOrDisjointTransformer::processXorGroup(Instruction *OriginalBaseInst,
@@ -1230,9 +1225,9 @@ bool XorToOrDisjointTransformer::processXorGroup(Instruction *OriginalBaseInst,
     return false;
 
   // Sort XorsInGroup by the constant offset value in increasing order.
-  llvm::sort(
-      XorsInGroup.begin(), XorsInGroup.end(),
-      [](const auto &A, const auto &B) { return A.second.ult(B.second); });
+  llvm::sort(XorsInGroup, [](const auto &A, const auto &B) {
+    return A.second.slt(B.second);
+  });
 
   // Dominance check
   // The "base" XOR for dominance purposes is the one with the smallest
@@ -1274,18 +1269,15 @@ bool XorToOrDisjointTransformer::processXorGroup(Instruction *OriginalBaseInst,
     if ((NewConstVal & SmallestConst) != 0) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Cannot transform XOR in function "
                         << F.getName() << ":\n"
-                        << "  New Const: " << NewConstVal << "\n"
-                        << "  Smallest Const: " << SmallestConst << "\n"
+                        << "  New Const: " << NewConstVal
+                        << "  Smallest Const: " << SmallestConst
                         << "  are not disjoint \n");
       continue;
     }
 
     // Disjointness Check 2
-    KnownBits KnownBaseBits(
-        XorWithSmallConst->getType()->getScalarSizeInBits());
-    computeKnownBits(XorWithSmallConst, KnownBaseBits, DL, 0, nullptr,
-                     XorWithSmallConst, &DT);
-    if ((KnownBaseBits.Zero & NewConstVal) == NewConstVal) {
+    if (MaskedValueIsZero(XorWithSmallConst, NewConstVal, SimplifyQuery(DL),
+                          0)) {
       LLVM_DEBUG(dbgs() << DEBUG_TYPE
                         << ": Transforming XOR to OR (disjoint) in function "
                         << F.getName() << ":\n"
@@ -1344,19 +1336,16 @@ bool XorToOrDisjointTransformer::run() {
     if (match(&I, m_CombineAnd(m_Xor(m_Instruction(Op0), m_ConstantInt(C1)),
                                m_BinOp(MatchedXorOp))) &&
         hasGEPUser(MatchedXorOp))
-      XorGroups[Op0].push_back({MatchedXorOp, C1->getValue()});
+      XorGroups[Op0].emplace_back(MatchedXorOp, C1->getValue());
   }
 
   if (XorGroups.empty())
     return false;
 
   // Process each group of XORs
-  for (auto &GroupPair : XorGroups) {
-    Instruction *OriginalBaseInst = GroupPair.first;
-    XorOpList &XorsInGroup = GroupPair.second;
+  for (auto &[OriginalBaseInst, XorsInGroup] : XorGroups)
     if (processXorGroup(OriginalBaseInst, XorsInGroup))
       Changed = true;
-  }
 
   return Changed;
 }
