@@ -12,6 +12,8 @@
 #include "src/unistd/read.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 
+#include <sys/ioctl.h>
+
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
