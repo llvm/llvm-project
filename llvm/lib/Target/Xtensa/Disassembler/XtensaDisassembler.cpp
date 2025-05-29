@@ -114,9 +114,10 @@ static DecodeStatus DecodeMR23RegisterClass(MCInst &Inst, uint64_t RegNo,
 }
 
 const MCPhysReg SRDecoderTable[] = {
-    Xtensa::SAR, 3,  Xtensa::ACCLO,      16, Xtensa::ACCHI,       17,
-    Xtensa::M0,  32, Xtensa::M1,         33, Xtensa::M2,          34,
-    Xtensa::M3,  35, Xtensa::WINDOWBASE, 72, Xtensa::WINDOWSTART, 73};
+    Xtensa::SAR, 3, Xtensa::ACCLO,      16, Xtensa::ACCHI,       17,
+    Xtensa::SCOMPARE1, 12, Xtensa::M0,  32, Xtensa::M1,          33,
+    Xtensa::M2,        34, Xtensa::M3,  35, Xtensa::WINDOWBASE,  72,
+    Xtensa::WINDOWSTART, 73, Xtensa::ATOMCTL, 99};
 
 static DecodeStatus DecodeSRRegisterClass(MCInst &Inst, uint64_t RegNo,
                                           uint64_t Address,

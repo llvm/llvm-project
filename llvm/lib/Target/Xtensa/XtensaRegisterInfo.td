@@ -84,6 +84,9 @@ def SAR : SRReg<3, "sar", ["SAR","3"]>;
 // Boolean Register
 def BREG : SRReg<4, "br", ["BR","4"]>;
 
+// Expected data value for S32C1I operation
+def SCOMPARE1 : SRReg<12, "scompare1", ["SCOMPARE1", "12"]>;
+
 // Windowed Register Option registers
 def WINDOWBASE : SRReg<72, "windowbase", ["WINDOWBASE", "72"]>;
 def WINDOWSTART : SRReg<73, "windowstart", ["WINDOWSTART", "73"]>;
@@ -100,8 +103,11 @@ def MR01 :  RegisterClass<"Xtensa", [i32], 32, (add M0, M1)>;
 def MR23 :  RegisterClass<"Xtensa", [i32], 32, (add M2, M3)>;
 def MR   :  RegisterClass<"Xtensa", [i32], 32, (add MR01, MR23)>;
 
+// Atomic Operation Control
+def ATOMCTL : SRReg<99, "atomctl", ["ATOMCTL", "99"]>;
+
 def SR :  RegisterClass<"Xtensa", [i32], 32, (add
-  LBEG, LEND, LCOUNT, SAR, BREG, MR, WINDOWBASE, WINDOWSTART)>;
+  LBEG, LEND, LCOUNT, SAR, BREG, SCOMPARE1, MR, WINDOWBASE, WINDOWSTART, ATOMCTL)>;
 
 //===----------------------------------------------------------------------===//
 // Boolean registers
