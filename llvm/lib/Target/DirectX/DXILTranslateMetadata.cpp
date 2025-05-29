@@ -409,6 +409,7 @@ public:
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+    AU.addPreserved<DXILResourceBindingWrapperPass>();
   }
 
   bool runOnModule(Module &M) override {
