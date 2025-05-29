@@ -232,3 +232,19 @@ define void @bitcast_2x2_i256_to_v4i64(ptr %in, ptr %out) {
   call void @llvm.matrix.column.major.store(<4 x double> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
+
+define void @bitcast_2x2_4i64_to_i256(ptr %in, ptr %out) {
+; CHECK-LABEL: @bitcast_2x2_4i64_to_i256(
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[IN:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> [[COL_LOAD1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[OP:%.*]] = bitcast <4 x double> [[TMP1]] to i256
+; CHECK-NEXT:    store i256 [[OP]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %inv = call <4 x double> @llvm.matrix.column.major.load(ptr %in, i64 2, i1 false, i32 2, i32 2)
+  %op = bitcast <4 x double> %inv to i256
+  store i256 %op, ptr %out
+  ret void
+}
