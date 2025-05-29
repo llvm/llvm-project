@@ -119,7 +119,6 @@ add_llvm_component_library(LLVMCodeGen
   MachineCycleAnalysis.cpp
   MachineDebugify.cpp
   MachineDomTreeUpdater.cpp
-  MachineFloatingPointPredicateUtils.cpp
   MachineDominanceFrontier.cpp
   MachineDominators.cpp
   MachineFrameInfo.cpp

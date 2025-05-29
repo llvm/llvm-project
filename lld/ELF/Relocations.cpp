@@ -55,7 +55,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/Support/Endian.h"
 #include <algorithm>
 
 using namespace llvm;

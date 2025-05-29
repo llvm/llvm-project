@@ -231,8 +231,20 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
       return;
     }
   } else {
-    assert(cast<VarDecl>(global)->isFileVarDecl() &&
-           "Cannot emit local var decl as global");
+    const auto *vd = cast<VarDecl>(global);
+    assert(vd->isFileVarDecl() && "Cannot emit local var decl as global.");
+    if (vd->isThisDeclarationADefinition() != VarDecl::Definition &&
+        !astContext.isMSStaticDataMemberInlineDefinition(vd)) {
+      assert(!cir::MissingFeatures::openMP());
+      // If this declaration may have caused an inline variable definition to
+      // change linkage, make sure that it's emitted.
+      if (astContext.getInlineVariableDefinitionKind(vd) ==
+          ASTContext::InlineVariableDefinitionKind::Strong)
+        getAddrOfGlobalVar(vd);
+      // Otherwise, we can ignore this declaration. The variable will be emitted
+      // on its first use.
+      return;
+    }
   }
 
   // TODO(CIR): Defer emitting some global definitions until later
@@ -279,21 +291,22 @@ cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
-    // Some global emissions are triggered while emitting a function, e.g.
-    // void s() { const char *s = "yolo"; ... }
-    //
-    // Be sure to insert global before the current function
-    CIRGenFunction *curCGF = cgm.curCGF;
-    if (curCGF)
-      builder.setInsertionPoint(curCGF->curFn);
+    // If an insertion point is provided, we're replacing an existing global,
+    // otherwise, create the new global immediately after the last gloabl we
+    // emitted.
+    if (insertPoint) {
+      builder.setInsertionPoint(insertPoint);
+    } else {
+      // Group global operations together at the top of the module.
+      if (cgm.lastGlobalOp)
+        builder.setInsertionPointAfter(cgm.lastGlobalOp);
+      else
+        builder.setInsertionPointToStart(cgm.getModule().getBody());
+    }
 
     g = builder.create<cir::GlobalOp>(loc, name, t);
-    if (!curCGF) {
-      if (insertPoint)
-        cgm.getModule().insert(insertPoint, g);
-      else
-        cgm.getModule().push_back(g);
-    }
+    if (!insertPoint)
+      cgm.lastGlobalOp = g;
 
     // Default to private until we can judge based on the initializer,
     // since MLIR doesn't allow public declarations.
@@ -365,6 +378,39 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   cir::GlobalOp gv =
       CIRGenModule::createGlobalOp(*this, loc, mangledName, ty,
                                    /*insertPoint=*/entry.getOperation());
+
+  // Handle things which are present even on external declarations.
+  if (d) {
+    if (langOpts.OpenMP && !langOpts.OpenMPSimd)
+      errorNYI(d->getSourceRange(), "OpenMP target global variable");
+
+    gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
+    assert(!cir::MissingFeatures::opGlobalConstant());
+    assert(!cir::MissingFeatures::opGlobalLinkage());
+
+    if (d->getTLSKind())
+      errorNYI(d->getSourceRange(), "thread local global variable");
+
+    assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+    assert(!cir::MissingFeatures::opGlobalPartition());
+    assert(!cir::MissingFeatures::setDSOLocal());
+
+    // If required by the ABI, treat declarations of static data members with
+    // inline initializers as definitions.
+    if (astContext.isMSStaticDataMemberInlineDefinition(d))
+      errorNYI(d->getSourceRange(), "MS static data member inline definition");
+
+    assert(!cir::MissingFeatures::opGlobalSection());
+    assert(!cir::MissingFeatures::opGlobalVisibility());
+
+    // Handle XCore specific ABI requirements.
+    if (getTriple().getArch() == llvm::Triple::xcore)
+      errorNYI(d->getSourceRange(), "XCore specific ABI requirements");
+
+    // We need to check for external const declarations with initializers here,
+    // but the 'isPublic()' part of the check uses the CIRGlobalValueInterface.
+    assert(!cir::MissingFeatures::opGlobalCIRGlobalValueInterface());
+  }
 
   return gv;
 }
@@ -775,7 +821,8 @@ CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd, bool isConstant) {
 
 static cir::GlobalOp generateStringLiteral(mlir::Location loc,
                                            mlir::TypedAttr c, CIRGenModule &cgm,
-                                           StringRef globalName) {
+                                           StringRef globalName,
+                                           CharUnits alignment) {
   assert(!cir::MissingFeatures::addressSpace());
 
   // Create a global variable for this string
@@ -784,7 +831,7 @@ static cir::GlobalOp generateStringLiteral(mlir::Location loc,
       CIRGenModule::createGlobalOp(cgm, loc, globalName, c.getType());
 
   // Set up extra information and add to the module
-  assert(!cir::MissingFeatures::opGlobalAlignment());
+  gv.setAlignmentAttr(cgm.getSize(alignment));
   assert(!cir::MissingFeatures::opGlobalLinkage());
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
@@ -821,6 +868,9 @@ std::string CIRGenModule::getUniqueGlobalName(const std::string &baseName) {
 /// Return a pointer to a constant array for the given string literal.
 cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
                                                       StringRef name) {
+  CharUnits alignment =
+      astContext.getAlignOfGlobalVarInChars(s->getType(), /*VD=*/nullptr);
+
   mlir::Attribute c = getConstantArrayFromStringLiteral(s);
 
   if (getLangOpts().WritableStrings) {
@@ -842,8 +892,8 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
   std::string uniqueName = getUniqueGlobalName(name.str());
   mlir::Location loc = getLoc(s->getSourceRange());
   auto typedC = llvm::cast<mlir::TypedAttr>(c);
-  assert(!cir::MissingFeatures::opGlobalAlignment());
-  cir::GlobalOp gv = generateStringLiteral(loc, typedC, *this, uniqueName);
+  cir::GlobalOp gv =
+      generateStringLiteral(loc, typedC, *this, uniqueName, alignment);
   assert(!cir::MissingFeatures::opGlobalDSOLocal());
 
   assert(!cir::MissingFeatures::sanitizers());
@@ -918,7 +968,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
 void CIRGenModule::setInitializer(cir::GlobalOp &op, mlir::Attribute value) {
   // Recompute visibility when updating initializer.
   op.setInitialValueAttr(value);
-  assert(!cir::MissingFeatures::opGlobalSetVisitibility());
+  assert(!cir::MissingFeatures::opGlobalVisibility());
 }
 
 cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
@@ -1005,6 +1055,24 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
 
   auto result = manglings.insert(std::make_pair(mangledName, gd));
   return mangledDeclNames[canonicalGd] = result.first->first();
+}
+
+void CIRGenModule::emitTentativeDefinition(const VarDecl *d) {
+  assert(!d->getInit() && "Cannot emit definite definitions here!");
+
+  StringRef mangledName = getMangledName(d);
+  mlir::Operation *gv = getGlobalValue(mangledName);
+
+  // If we already have a definition, not declaration, with the same mangled
+  // name, emitting of declaration is not required (and would actually overwrite
+  // the emitted definition).
+  if (gv && !mlir::cast<cir::GlobalOp>(gv).isDeclaration())
+    return;
+
+  assert(!cir::MissingFeatures::deferredDecls());
+
+  // The tentative definition is the only definition.
+  emitGlobalVarDefinition(d);
 }
 
 cir::FuncOp CIRGenModule::getOrCreateCIRFunction(

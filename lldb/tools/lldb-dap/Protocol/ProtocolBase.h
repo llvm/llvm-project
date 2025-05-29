@@ -141,6 +141,11 @@ using Message = std::variant<Request, Response, Event>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
 
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Message &V) {
+  OS << toJSON(V);
+  return OS;
+}
+
 /// On error (whenever `success` is false), the body can provide more details.
 struct ErrorResponseBody {
   /// A structured error message.

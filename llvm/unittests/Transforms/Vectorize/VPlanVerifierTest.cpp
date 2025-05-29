@@ -171,7 +171,7 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   EXPECT_STREQ("Incoming def at index 0 does not dominate incoming block!\n"
                "  EMIT vp<%2> = add ir<0>\n"
                "  does not dominate preheader for\n"
-               "  EMIT vp<%1> = phi [ vp<%2>, preheader ]",
+               "  EMIT-SCALAR vp<%1> = phi [ vp<%2>, preheader ]",
                ::testing::internal::GetCapturedStderr().c_str());
 #else
   EXPECT_STREQ("Incoming def at index 0 does not dominate incoming block!\n", ::

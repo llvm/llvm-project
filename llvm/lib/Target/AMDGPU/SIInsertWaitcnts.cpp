@@ -189,9 +189,9 @@ VmemType getVmemType(const MachineInstr &Inst) {
   // We have to make an additional check for isVSAMPLE here since some
   // instructions don't have a sampler, but are still classified as sampler
   // instructions for the purposes of e.g. waitcnt.
-  return BaseInfo->BVH                                         ? VMEM_BVH
-         : (BaseInfo->Sampler || SIInstrInfo::isVSAMPLE(Inst)) ? VMEM_SAMPLER
-                                                               : VMEM_NOSAMPLER;
+  bool HasSampler =
+      BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst);
+  return BaseInfo->BVH ? VMEM_BVH : HasSampler ? VMEM_SAMPLER : VMEM_NOSAMPLER;
 }
 
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
@@ -2656,7 +2656,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   // Keep iterating over the blocks in reverse post order, inserting and
   // updating s_waitcnt where needed, until a fix point is reached.
   for (auto *MBB : ReversePostOrderTraversal<MachineFunction *>(&MF))
-    BlockInfos.insert({MBB, BlockInfo()});
+    BlockInfos.try_emplace(MBB);
 
   std::unique_ptr<WaitcntBrackets> Brackets;
   bool Repeat;

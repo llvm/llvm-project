@@ -16,10 +16,12 @@
 #include "Utils.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Semantics/attr.h"
@@ -52,6 +54,15 @@ DataSharingProcessor::DataSharingProcessor(
     parser::Walk(functionParserNode, visitor);
   });
 }
+
+DataSharingProcessor::DataSharingProcessor(lower::AbstractConverter &converter,
+                                           semantics::SemanticsContext &semaCtx,
+                                           lower::pft::Evaluation &eval,
+                                           bool useDelayedPrivatization,
+                                           lower::SymMap &symTable)
+    : DataSharingProcessor(converter, semaCtx, {}, eval,
+                           /*shouldCollectPreDeterminedSymols=*/false,
+                           useDelayedPrivatization, symTable) {}
 
 void DataSharingProcessor::processStep1(
     mlir::omp::PrivateClauseOps *clauseOps) {
@@ -174,7 +185,8 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
 
 void DataSharingProcessor::copyFirstPrivateSymbol(
     const semantics::Symbol *sym, mlir::OpBuilder::InsertPoint *copyAssignIP) {
-  if (sym->test(semantics::Symbol::Flag::OmpFirstPrivate))
+  if (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
+      sym->test(semantics::Symbol::Flag::LocalityLocalInit))
     converter.copyHostAssociateVar(*sym, copyAssignIP);
 }
 
@@ -497,9 +509,9 @@ void DataSharingProcessor::privatize(mlir::omp::PrivateClauseOps *clauseOps) {
     if (const auto *commonDet =
             sym->detailsIf<semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects())
-        doPrivatize(&*mem, clauseOps);
+        privatizeSymbol(&*mem, clauseOps);
     } else
-      doPrivatize(sym, clauseOps);
+      privatizeSymbol(sym, clauseOps);
   }
 }
 
@@ -516,149 +528,48 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
     }
 }
 
-void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
-                                       mlir::omp::PrivateClauseOps *clauseOps) {
+void DataSharingProcessor::privatizeSymbol(
+    const semantics::Symbol *symToPrivatize,
+    mlir::omp::PrivateClauseOps *clauseOps) {
   if (!useDelayedPrivatization) {
-    cloneSymbol(sym);
-    copyFirstPrivateSymbol(sym);
+    cloneSymbol(symToPrivatize);
+    copyFirstPrivateSymbol(symToPrivatize);
     return;
   }
 
-  lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
-  assert(hsb && "Host symbol box not found");
-  hlfir::Entity entity{hsb.getAddr()};
-  bool cannotHaveNonDefaultLowerBounds = !entity.mayHaveNonDefaultLowerBounds();
+  auto initGen = [&](mlir::omp::PrivateClauseOp result, mlir::Type argType) {
+    lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*symToPrivatize);
+    assert(hsb && "Host symbol box not found");
+    hlfir::Entity entity{hsb.getAddr()};
+    bool cannotHaveNonDefaultLowerBounds =
+        !entity.mayHaveNonDefaultLowerBounds();
 
-  mlir::Location symLoc = hsb.getAddr().getLoc();
-  std::string privatizerName = sym->name().ToString() + ".privatizer";
-  bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
+    mlir::Region &initRegion = result.getInitRegion();
+    mlir::Location symLoc = hsb.getAddr().getLoc();
+    mlir::Block *initBlock = firOpBuilder.createBlock(
+        &initRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
 
-  mlir::Value privVal = hsb.getAddr();
-  mlir::Type allocType = privVal.getType();
-  if (!mlir::isa<fir::PointerType>(privVal.getType()))
-    allocType = fir::unwrapRefType(privVal.getType());
+    bool emitCopyRegion =
+        symToPrivatize->test(semantics::Symbol::Flag::OmpFirstPrivate);
 
-  if (auto poly = mlir::dyn_cast<fir::ClassType>(allocType)) {
-    if (!mlir::isa<fir::PointerType>(poly.getEleTy()) && isFirstPrivate)
-      TODO(symLoc, "create polymorphic host associated copy");
-  }
+    populateByRefInitAndCleanupRegions(
+        converter, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
+        result.getInitPrivateArg(), result.getInitMoldArg(),
+        result.getDeallocRegion(),
+        emitCopyRegion ? omp::DeclOperationKind::FirstPrivate
+                       : omp::DeclOperationKind::Private,
+        symToPrivatize, cannotHaveNonDefaultLowerBounds);
+    // TODO: currently there are false positives from dead uses of the mold
+    // arg
+    if (result.initReadsFromMold())
+      mightHaveReadHostSym.insert(symToPrivatize);
+  };
 
-  // fir.array<> cannot be converted to any single llvm type and fir helpers
-  // are not available in openmp to llvmir translation so we cannot generate
-  // an alloca for a fir.array type there. Get around this by boxing all
-  // arrays.
-  if (mlir::isa<fir::SequenceType>(allocType)) {
-    entity = genVariableBox(symLoc, firOpBuilder, entity);
-    privVal = entity.getBase();
-    allocType = privVal.getType();
-  }
-
-  if (mlir::isa<fir::BaseBoxType>(privVal.getType())) {
-    // Boxes should be passed by reference into nested regions:
-    auto oldIP = firOpBuilder.saveInsertionPoint();
-    firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-    auto alloca = firOpBuilder.create<fir::AllocaOp>(symLoc, privVal.getType());
-    firOpBuilder.restoreInsertionPoint(oldIP);
-    firOpBuilder.create<fir::StoreOp>(symLoc, privVal, alloca);
-    privVal = alloca;
-  }
-
-  mlir::Type argType = privVal.getType();
-
-  mlir::omp::PrivateClauseOp privatizerOp = [&]() {
-    auto moduleOp = firOpBuilder.getModule();
-    auto uniquePrivatizerName = fir::getTypeAsString(
-        allocType, converter.getKindMap(),
-        converter.mangleName(*sym) +
-            (isFirstPrivate ? "_firstprivate" : "_private"));
-
-    if (auto existingPrivatizer =
-            moduleOp.lookupSymbol<mlir::omp::PrivateClauseOp>(
-                uniquePrivatizerName))
-      return existingPrivatizer;
-
-    mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
-    firOpBuilder.setInsertionPointToStart(moduleOp.getBody());
-    auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
-        symLoc, uniquePrivatizerName, allocType,
-        isFirstPrivate ? mlir::omp::DataSharingClauseType::FirstPrivate
-                       : mlir::omp::DataSharingClauseType::Private);
-    fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
-    lower::SymMapScope outerScope(symTable);
-
-    // Populate the `init` region.
-    // We need to initialize in the following cases:
-    // 1. The allocation was for a derived type which requires initialization
-    //    (this can be skipped if it will be initialized anyway by the copy
-    //    region, unless the derived type has allocatable components)
-    // 2. The allocation was for any kind of box
-    // 3. The allocation was for a boxed character
-    const bool needsInitialization =
-        (Fortran::lower::hasDefaultInitialization(sym->GetUltimate()) &&
-         (!isFirstPrivate || hlfir::mayHaveAllocatableComponent(allocType))) ||
-        mlir::isa<fir::BaseBoxType>(allocType) ||
-        mlir::isa<fir::BoxCharType>(allocType);
-    if (needsInitialization) {
-      mlir::Region &initRegion = result.getInitRegion();
-      mlir::Block *initBlock = firOpBuilder.createBlock(
-          &initRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
-
-      populateByRefInitAndCleanupRegions(
-          converter, symLoc, argType, /*scalarInitValue=*/nullptr, initBlock,
-          result.getInitPrivateArg(), result.getInitMoldArg(),
-          result.getDeallocRegion(),
-          isFirstPrivate ? DeclOperationKind::FirstPrivate
-                         : DeclOperationKind::Private,
-          sym, cannotHaveNonDefaultLowerBounds);
-      // TODO: currently there are false positives from dead uses of the mold
-      // arg
-      if (result.initReadsFromMold())
-        mightHaveReadHostSym.insert(sym);
-    }
-
-    // Populate the `copy` region if this is a `firstprivate`.
-    if (isFirstPrivate) {
-      mlir::Region &copyRegion = result.getCopyRegion();
-      // First block argument corresponding to the original/host value while
-      // second block argument corresponding to the privatized value.
-      mlir::Block *copyEntryBlock = firOpBuilder.createBlock(
-          &copyRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
-      firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
-
-      auto addSymbol = [&](unsigned argIdx, bool force = false) {
-        symExV.match(
-            [&](const fir::MutableBoxValue &box) {
-              symTable.addSymbol(
-                  *sym, fir::substBase(box, copyRegion.getArgument(argIdx)),
-                  force);
-            },
-            [&](const auto &box) {
-              symTable.addSymbol(*sym, copyRegion.getArgument(argIdx), force);
-            });
-      };
-
-      addSymbol(0, true);
-      lower::SymMapScope innerScope(symTable);
-      addSymbol(1);
-
-      auto ip = firOpBuilder.saveInsertionPoint();
-      copyFirstPrivateSymbol(sym, &ip);
-
-      firOpBuilder.create<mlir::omp::YieldOp>(
-          hsb.getAddr().getLoc(), symTable.shallowLookupSymbol(*sym).getAddr());
-    }
-
-    return result;
-  }();
-
-  if (clauseOps) {
-    clauseOps->privateSyms.push_back(mlir::SymbolRefAttr::get(privatizerOp));
-    clauseOps->privateVars.push_back(privVal);
-  }
-
-  symToPrivatizer[sym] = privatizerOp;
+  Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
+                                  mlir::omp::PrivateClauseOps>(
+      converter, firOpBuilder, symTable, initGen, allPrivatizedSymbols,
+      symToPrivatize, clauseOps);
 }
-
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

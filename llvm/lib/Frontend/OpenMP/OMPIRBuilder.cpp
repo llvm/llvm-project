@@ -7089,8 +7089,12 @@ static Expected<Function *> createOutlinedFunction(
     if (auto *Const = dyn_cast<Constant>(Input))
       convertUsersOfConstantsToInstructions(Const, Func, false);
 
+    // Collect users before iterating over them to avoid invalidating the
+    // iteration in case a user uses Input more than once (e.g. a call
+    // instruction).
+    SetVector<User *> Users(Input->users().begin(), Input->users().end());
     // Collect all the instructions
-    for (User *User : make_early_inc_range(Input->users()))
+    for (User *User : make_early_inc_range(Users))
       if (auto *Instr = dyn_cast<Instruction>(User))
         if (Instr->getFunction() == Func)
           Instr->replaceUsesOfWith(Input, InputCopy);

@@ -1,16 +1,11 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s
 
 int a[10];
 // CHECK: @a = dso_local global [10 x i32] zeroinitializer
 
 int aa[10][5];
 // CHECK: @aa = dso_local global [10 x [5 x i32]] zeroinitializer
-
-extern int b[10];
-// CHECK: @b = dso_local global [10 x i32] zeroinitializer
-
-extern int bb[10][5];
-// CHECK: @bb = dso_local global [10 x [5 x i32]] zeroinitializer
 
 int c[10] = {};
 // CHECK: @c = dso_local global [10 x i32] zeroinitializer
@@ -29,6 +24,18 @@ int e[10] = {1, 2};
 int f[5] = {1, 2};
 // CHECK: @f = dso_local global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
 
+extern int b[10];
+// CHECK: @b = external dso_local global [10 x i32]
+
+extern int bb[10][5];
+// CHECK: @bb = external dso_local global [10 x [5 x i32]]
+
+// This function is only here to make sure the external globals are emitted.
+void reference_externs() {
+  b;
+  bb;
+}
+
 void func() {
   int arr[10];
   int e = arr[0];
@@ -40,7 +47,7 @@ void func() {
 // CHECK-NEXT: %[[INIT_2:.*]] = alloca i32, i64 1, align 4
 // CHECK-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
 // CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 0
-// CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
+// CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 16
 // CHECK-NEXT: store i32 %[[TMP]], ptr %[[INIT]], align 4
 // CHECK-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
 // CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 1
