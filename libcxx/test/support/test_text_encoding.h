@@ -19,7 +19,7 @@ struct encoding_pair {
   const char* name;
 };
 
-constexpr std::array<const encoding_pair, 882> all_encoding_data{ {
+constexpr std::array<const encoding_pair, 882> all_encoding_data{{
 
     {1, ""},
     {2, ""},
@@ -903,8 +903,7 @@ constexpr std::array<const encoding_pair, 882> all_encoding_data{ {
     {2259, "csTIS620"},
     {2260, "CP50220"},
     {2260, "csCP50220"},
-  }
-};
+}};
 
 constexpr std::array<const encoding_pair, 256> unique_encoding_data{{
     {3, "ANSI_X3.4-1968"},

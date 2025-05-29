@@ -441,11 +441,13 @@ public:
       _LIBCPP_HIDE_FROM_ABI constexpr __iterator(const __encoding_data* __enc_d) noexcept
           : __data_(__enc_d), __mib_rep_(__enc_d ? __enc_d->__mib_rep_ : 0) {}
 
-      _LIBCPP_HIDE_FROM_ABI constexpr bool __can_dereference() const { return __data_ && __data_->__mib_rep_ == __mib_rep_; }
+      _LIBCPP_HIDE_FROM_ABI constexpr bool __can_dereference() const {
+        return __data_ && __data_->__mib_rep_ == __mib_rep_;
+      }
 
       // default iterator is a sentinel
-      const __encoding_data* __data_       = nullptr;
-      __id_rep __mib_rep_ = 0;
+      const __encoding_data* __data_ = nullptr;
+      __id_rep __mib_rep_            = 0;
     };
 
     constexpr __iterator begin() const { return __iterator{__view_data_}; }
