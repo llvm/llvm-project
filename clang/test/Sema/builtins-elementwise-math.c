@@ -1208,7 +1208,7 @@ typedef struct {
   float3 b;
 } struct_float3;
 // This example uncovered a bug #141397 :
-// Type missmach error when 'builtin-elementwise-math' arguments have different qualifiers, this should be a well-formed
+// Type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed
 float3 foo(float3 a,const struct_float3* hi) {
   float3 b = __builtin_elementwise_max((float3)(0.0f), a);
   return __builtin_elementwise_pow(b, hi->b.yyy);
