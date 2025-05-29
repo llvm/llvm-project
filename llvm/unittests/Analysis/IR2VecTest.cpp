@@ -31,6 +31,7 @@ public:
   TestableEmbedder(const Function &F, const Vocab &V, unsigned Dim)
       : Embedder(F, V, Dim) {}
   void computeEmbeddings() const override {}
+  void computeEmbeddings(const BasicBlock &BB) const override {}
   using Embedder::lookupVocab;
   static void addVectors(Embedding &Dst, const Embedding &Src) {
     Embedder::addVectors(Dst, Src);
@@ -226,6 +227,15 @@ TEST(IR2VecTest, GetBBVecMap) {
   // BB vector should be sum of add and ret: {1.29, 2.31} + {0.0, 0.0} =
   // {1.29, 2.31}
   EXPECT_THAT(BBMap.at(Env.BB),
+              ElementsAre(DoubleNear(1.29, 1e-6), DoubleNear(2.31, 1e-6)));
+}
+
+TEST(IR2VecTest, GetBBVector) {
+  GetterTestEnv Env;
+  const auto &BBVec = Env.Emb->getBBVector(*Env.BB);
+
+  EXPECT_EQ(BBVec.size(), 2u);
+  EXPECT_THAT(BBVec,
               ElementsAre(DoubleNear(1.29, 1e-6), DoubleNear(2.31, 1e-6)));
 }
 
