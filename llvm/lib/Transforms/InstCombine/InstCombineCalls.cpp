@@ -1401,26 +1401,25 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
 /// try to shuffle after the intrinsic.
 Instruction *
 InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
-  // TODO: This should be extended to handle other intrinsics like fshl, ctpop,
-  //       etc. Use llvm::isTriviallyVectorizable() and related to determine
-  //       which intrinsics are safe to shuffle?
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::smax:
-  case Intrinsic::smin:
-  case Intrinsic::umax:
-  case Intrinsic::umin:
-  case Intrinsic::fma:
-  case Intrinsic::fshl:
-  case Intrinsic::fshr:
-    break;
-  default:
+  if (!isTriviallyVectorizable(II->getIntrinsicID()))
     return nullptr;
-  }
+
+  assert(isSafeToSpeculativelyExecute(II) &&
+         "Trivially vectorizable but not safe to speculatively execute?");
+
+  // fabs is canonicalized to fabs (shuffle ...) in foldShuffleOfUnaryOps, so
+  // avoid undoing it.
+  if (match(II, m_FAbs(m_Value())))
+    return nullptr;
 
   Value *X;
   Constant *C;
   ArrayRef<int> Mask;
-  auto *NonConstArg = find_if_not(II->args(), IsaPred<Constant>);
+  auto *NonConstArg = find_if_not(II->args(), [&II](Use &Arg) {
+    return isa<Constant>(Arg.get()) ||
+           isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(),
+                                              Arg.getOperandNo(), nullptr);
+  });
   if (!NonConstArg ||
       !match(NonConstArg, m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))
     return nullptr;
@@ -1432,11 +1431,15 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
   // See if all arguments are shuffled with the same mask.
   SmallVector<Value *, 4> NewArgs;
   Type *SrcTy = X->getType();
-  for (Value *Arg : II->args()) {
-    if (match(Arg, m_Shuffle(m_Value(X), m_Poison(), m_SpecificMask(Mask))) &&
-        X->getType() == SrcTy)
+  for (Use &Arg : II->args()) {
+    if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(),
+                                           Arg.getOperandNo(), nullptr))
+      NewArgs.push_back(Arg);
+    else if (match(&Arg,
+                   m_Shuffle(m_Value(X), m_Poison(), m_SpecificMask(Mask))) &&
+             X->getType() == SrcTy)
       NewArgs.push_back(X);
-    else if (match(Arg, m_ImmConstant(C))) {
+    else if (match(&Arg, m_ImmConstant(C))) {
       // If it's a constant, try find the constant that would be shuffled to C.
       if (Constant *ShuffledC =
               unshuffleConstant(Mask, C, cast<VectorType>(SrcTy)))

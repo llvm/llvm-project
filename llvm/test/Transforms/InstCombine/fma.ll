@@ -974,11 +974,9 @@ define <2 x half> @fma_negone_vec_partial_undef(<2 x half> %x, <2 x half> %y) {
 
 define <2 x float> @fmuladd_unary_shuffle_ops(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @fmuladd_unary_shuffle_ops(
-; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <2 x float> [[Y:%.*]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[C:%.*]] = shufflevector <2 x float> [[Z:%.*]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[A]], <2 x float> [[B]], <2 x float> [[C]])
-; CHECK-NEXT:    ret <2 x float> [[R]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <2 x float> [[R]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x float> [[R1]]
 ;
   %a = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> <i32 1, i32 0>
   %b = shufflevector <2 x float> %y, <2 x float> poison, <2 x i32> <i32 1, i32 0>
