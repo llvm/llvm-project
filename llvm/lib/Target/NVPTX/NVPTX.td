@@ -36,18 +36,19 @@ class FeaturePTX<int version>:
 
 foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
               60, 61, 62, 70, 72, 75, 80, 86, 87,
-              89, 90, 100, 101, 103, 120, 121] in
+              89, 90] in
   def SM#sm: FeatureSM<""#sm, !mul(sm, 10)>;
 
-// Arch-specific targets. PTX for these is not compatible with any other
-// architectures.
-foreach sm = [90, 100, 101, 103, 120, 121] in {
-  def SM#sm#a : FeatureSM<""#sm#"a", !add(!mul(sm, 10), 1)>;
-}
+// Full SM version for sm_90a is 901
+def SM90a: FeatureSM<"90a", 901>;
 
-// Family-specific targets. PTX for these is compatible within the same family.
 foreach sm = [100, 101, 103, 120, 121] in {
-  def SM#sm#f : FeatureSM<""#sm#"f", !add(!mul(sm, 10), 2)>;
+  def SM#sm: FeatureSM<""#sm, !mul(sm, 10)>;
+  // Arch-specific targets. PTX for these is not compatible with any other
+  // architectures.
+  def SM#sm#a: FeatureSM<""#sm#"a", !add(!mul(sm, 10), 1)>;
+  // Family-specific targets. PTX for these is compatible within the same family.
+  def SM#sm#f: FeatureSM<""#sm#"f", !add(!mul(sm, 10), 2)>;
 }
 
 foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65,
