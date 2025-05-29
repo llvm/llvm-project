@@ -656,7 +656,6 @@ void privatizeSymbol(
                              : converter.lookupOneLevelUpSymbol(*sym);
   assert(hsb && "Host symbol box not found");
   hlfir::Entity entity{hsb.getAddr()};
-  bool cannotHaveNonDefaultLowerBounds = !entity.mayHaveNonDefaultLowerBounds();
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
   std::string privatizerName = sym->name().ToString() + ".privatizer";
