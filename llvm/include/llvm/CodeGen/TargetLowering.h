@@ -3390,8 +3390,10 @@ public:
   /// Return true if pulling a binary operation into a select with an identity
   /// constant is profitable. This is the inverse of an IR transform.
   /// Example: X + (Cond ? Y : 0) --> Cond ? (X + Y) : X
-  virtual bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                                    EVT VT) const {
+  virtual bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                                    unsigned SelectOpcode,
+                                                    SDValue X,
+                                                    SDValue Y) const {
     return false;
   }
 
