@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++11 -fptrauth-intrinsics -fptrauth-calls -emit-llvm -o - -triple=arm64-apple-ios %s | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 -fptrauth-intrinsics -fptrauth-calls -emit-llvm -o - -triple=aarch64-linux-gnu %s | FileCheck %s
-// RUN: %clang_cc1 -std=c++11 -fptrauth-intrinsics -fptrauth-calls -emit-llvm -o - -triple=arm64-apple-ios -fclang-abi-compat=4 %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fptrauth-intrinsics -fptrauth-calls -emit-llvm -o - -triple=arm64-apple-ios -mllvm -ptrauth-emit-wrapper-globals=0 %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fptrauth-intrinsics -fptrauth-calls -emit-llvm -o - -triple=aarch64-linux-gnu -mllvm -ptrauth-emit-wrapper-globals=0 %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -fptrauth-intrinsics -fptrauth-calls -emit-llvm -o - -triple=arm64-apple-ios -fclang-abi-compat=4 -mllvm -ptrauth-emit-wrapper-globals=0 %s | FileCheck %s
 
 // clang previously emitted an incorrect discriminator for the member function
 // pointer because of a bug in the mangler.
