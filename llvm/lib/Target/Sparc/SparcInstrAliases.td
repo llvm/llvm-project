@@ -333,19 +333,19 @@ multiclass reg_cond_alias<string rcond, int condVal> {
 
 // Instruction aliases for compare-and-branch.
 multiclass cwb_cond_alias<string cond, int condVal> {
-  def : InstAlias<!strconcat(!strconcat("cwb", cond), " $rs1, $rs2, $imm"),
+  def : InstAlias<"cwb" # cond # " $rs1, $rs2, $imm",
                   (CWBCONDrr cbtarget:$imm, condVal, IntRegs:$rs1, IntRegs:$rs2)>,
                   Requires<[HasOSA2011]>;
-  def : InstAlias<!strconcat(!strconcat("cwb", cond), " $rs1, $simm5, $imm"),
+  def : InstAlias<"cwb" # cond # " $rs1, $simm5, $imm",
                   (CWBCONDri cbtarget:$imm, condVal, IntRegs:$rs1, simm5Op:$simm5)>,
                   Requires<[HasOSA2011]>;
 }
 
 multiclass cxb_cond_alias<string cond, int condVal> {
-  def : InstAlias<!strconcat(!strconcat("cxb", cond), " $rs1, $rs2, $imm"),
+  def : InstAlias<"cxb" # cond # " $rs1, $rs2, $imm",
                   (CXBCONDrr cbtarget:$imm, condVal, IntRegs:$rs1, IntRegs:$rs2)>,
                   Requires<[HasOSA2011]>;
-  def : InstAlias<!strconcat(!strconcat("cxb", cond), " $rs1, $simm5, $imm"),
+  def : InstAlias<"cxb" # cond # " $rs1, $simm5, $imm",
                   (CXBCONDri cbtarget:$imm, condVal, IntRegs:$rs1, simm5Op:$simm5)>,
                   Requires<[HasOSA2011]>;
 }
@@ -441,8 +441,7 @@ defm : cwb_cond_alias<"pos",  0b1110>;
 defm : cwb_cond_alias<"neg",  0b0110>;
 defm : cwb_cond_alias<"vc",   0b1111>;
 defm : cwb_cond_alias<"vs",   0b0111>;
-let EmitPriority = 0 in
-{
+let EmitPriority = 0 in {
   defm : cwb_cond_alias<"geu",  0b1101>; // same as cc
   defm : cwb_cond_alias<"lu",   0b0101>; // same as cs
 }
@@ -461,8 +460,7 @@ defm : cxb_cond_alias<"pos",  0b1110>;
 defm : cxb_cond_alias<"neg",  0b0110>;
 defm : cxb_cond_alias<"vc",   0b1111>;
 defm : cxb_cond_alias<"vs",   0b0111>;
-let EmitPriority = 0 in
-{
+let EmitPriority = 0 in {
   defm : cxb_cond_alias<"geu",  0b1101>; // same as cc
   defm : cxb_cond_alias<"lu",   0b0101>; // same as cs
 }
@@ -727,6 +725,6 @@ def : InstAlias<"sir", (SIR 0), 0>;
 
 // pause reg_or_imm -> wrasr %g0, reg_or_imm, %asr27
 let Predicates = [HasOSA2011] in {
-def : InstAlias<"pause $rs2", (WRASRrr ASR27, G0, IntRegs:$rs2), 1>;
-def : InstAlias<"pause $simm13", (WRASRri ASR27, G0, simm13Op:$simm13), 1>;
+  def : InstAlias<"pause $rs2", (WRASRrr ASR27, G0, IntRegs:$rs2), 1>;
+  def : InstAlias<"pause $simm13", (WRASRri ASR27, G0, simm13Op:$simm13), 1>;
 } // Predicates = [HasOSA2011]

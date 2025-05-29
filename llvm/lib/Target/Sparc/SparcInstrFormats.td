@@ -104,7 +104,7 @@ class F2_4<bit annul, bit pred, dag outs, dag ins,
 
 class F2_5<bit cc, dag outs, dag ins, string asmstr,
            list<dag> pattern = [], InstrItinClass itin = NoItinerary>
-   : InstSP<outs, ins, asmstr, pattern, itin> {
+    : InstSP<outs, ins, asmstr, pattern, itin> {
   bits<10> imm10;
   bits<5>  rs1;
   bits<5>  rs2;
@@ -126,7 +126,7 @@ class F2_5<bit cc, dag outs, dag ins, string asmstr,
 
 class F2_6<bit cc, dag outs, dag ins, string asmstr,
            list<dag> pattern = [], InstrItinClass itin = NoItinerary>
-   : InstSP<outs, ins, asmstr, pattern, itin> {
+    : InstSP<outs, ins, asmstr, pattern, itin> {
   bits<10> imm10;
   bits<5>  rs1;
   bits<5>  simm5;
