@@ -10,7 +10,7 @@
 export namespace std {
 #if _LIBCPP_STD_VER >= 26
   using ::std::hash;
-  using std::text_encoding;
   using ::std::ranges::enable_borrowed_range;
+  using ::std::text_encoding;
 #endif
 } // namespace std
