@@ -755,7 +755,8 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
 
 The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
-``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
+``__builtin_elementwise_sub_sat``, ``__builtin_elementwise_clz``,
+``__builtin_elementwise_ctz`` can be called in a ``constexpr`` context.
 
 No implicit promotion of integer types takes place. The mixing of integer types
 of different sizes and signs is forbidden in binary and ternary builtins.
@@ -847,6 +848,14 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 semantics, see `LangRef
                                                 <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                                 for the comparison.
+ T __builtin_elementwise_clz(T x[, T y])        return the number of leading 0 bits in the first argument. If          integer types
+                                                the first argument is 0 and an optional second argument is provided,
+                                                the second argument is returned. If the first argument is 0 but only
+                                                one argument is provided, the result is undefined.
+ T __builtin_elementwise_ctz(T x[, T y])        return the number of trailing 0 bits in the first argument. If         integer types
+                                                the first argument is 0 and an optional second argument is provided,
+                                                the second argument is returned. If the first argument is 0 but only
+                                                one argument is provided, the result is undefined.
 ============================================== ====================================================================== =========================================
 
 
