@@ -273,9 +273,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
     if (MBBI->isMetaInstruction())
       continue;
 
-    if (MBBI->getOpcode() == RISCV::PseudoVSETVLI ||
-        MBBI->getOpcode() == RISCV::PseudoVSETVLIX0 ||
-        MBBI->getOpcode() == RISCV::PseudoVSETIVLI) {
+    if (RISCVInstrInfo::isVectorConfigInstr(*MBBI)) {
       // There is a vsetvli between COPY and source define instruction.
       // vy = def_vop ...  (producing instruction)
       // ...
