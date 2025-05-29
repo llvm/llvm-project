@@ -768,6 +768,7 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
       S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
   assert(PtrT == PT_Ptr &&
          "Unsupported pointer type passed to __builtin_addressof()");
+  (void)PtrT;
   return true;
 }
 
