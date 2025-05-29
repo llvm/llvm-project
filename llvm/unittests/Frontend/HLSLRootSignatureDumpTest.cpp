@@ -108,4 +108,73 @@ TEST(HLSLRootSignatureTest, DescriptorTableDump) {
   EXPECT_EQ(Out, Expected);
 }
 
+TEST(HLSLRootSignatureTest, DefaultRootConstantsDump) {
+  RootConstants Constants;
+  Constants.Num32BitConstants = 1;
+  Constants.Reg = {RegisterType::BReg, 3};
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Constants;
+  OS.flush();
+
+  std::string Expected = "RootConstants(num32BitConstants = 1, b3, space = 0, "
+                         "visibility = All)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, SetRootConstantsDump) {
+  RootConstants Constants;
+  Constants.Num32BitConstants = 983;
+  Constants.Reg = {RegisterType::BReg, 34593};
+  Constants.Space = 7;
+  Constants.Visibility = ShaderVisibility::Pixel;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Constants;
+  OS.flush();
+
+  std::string Expected = "RootConstants(num32BitConstants = 983, b34593, "
+                         "space = 7, visibility = Pixel)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, NoneRootFlagsDump) {
+  RootFlags Flags = RootFlags::None;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Flags;
+  OS.flush();
+
+  std::string Expected = "RootFlags(None)";
+  EXPECT_EQ(Out, Expected);
+}
+
+TEST(HLSLRootSignatureTest, AllRootFlagsDump) {
+  RootFlags Flags = RootFlags::ValidFlags;
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << Flags;
+  OS.flush();
+
+  std::string Expected = "RootFlags("
+                         "AllowInputAssemblerInputLayout | "
+                         "DenyVertexShaderRootAccess | "
+                         "DenyHullShaderRootAccess | "
+                         "DenyDomainShaderRootAccess | "
+                         "DenyGeometryShaderRootAccess | "
+                         "DenyPixelShaderRootAccess | "
+                         "AllowStreamOutput | "
+                         "LocalRootSignature | "
+                         "DenyAmplificationShaderRootAccess | "
+                         "DenyMeshShaderRootAccess | "
+                         "CBVSRVUAVHeapDirectlyIndexed | "
+                         "SamplerHeapDirectlyIndexed)";
+
+  EXPECT_EQ(Out, Expected);
+}
+
 } // namespace
