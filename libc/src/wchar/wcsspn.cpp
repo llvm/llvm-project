@@ -10,7 +10,6 @@
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
-#include "src/__support/CPP/bitset.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
