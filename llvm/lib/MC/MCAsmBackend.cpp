@@ -24,6 +24,9 @@
 
 using namespace llvm;
 
+MCAsmBackend::MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation)
+    : Endian(Endian), LinkerRelaxation(LinkerRelaxation) {}
+
 MCAsmBackend::~MCAsmBackend() = default;
 
 MCContext &MCAsmBackend::getContext() const { return Asm->getContext(); }
