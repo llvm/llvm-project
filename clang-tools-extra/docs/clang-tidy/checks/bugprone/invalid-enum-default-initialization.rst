@@ -16,7 +16,8 @@ enumerator values).
 
 The checker emits a warning only if an enum variable is default-initialized
 (contrary to not initialized) and the enum type does not have an enumerator with
-value of 0. The enum type can be scoped or non-scoped enum.
+value of 0. The enum type can be scoped or non-scoped enum. Unions are not
+handled by the check (if it contains a member of enum type).
 
 .. code-block:: c++
 
@@ -48,3 +49,24 @@ value of 0. The enum type can be scoped or non-scoped enum.
   };
 
   S2 VarS2{}; // warn: member 'B' is initialized to 0
+
+The check applies to initialization of arrays or structures with initialization
+lists in C code too. In these cases elements not specified in the list (and have
+enum type) are set to 0.
+
+.. code-block:: c
+
+  enum Enum1 {
+    Enum1_A = 1,
+    Enum1_B
+  };
+  struct Struct1 {
+    int a;
+    enum Enum1 b;
+  };
+
+  enum Enum1 Array1[2] = {Enum1_A}; // warn: omitted elements are initialized to 0
+  enum Enum1 Array2[2][2] = {{Enum1_A}, {Enum1_A}}; // warn: last element of both nested arrays is initialized to 0
+  enum Enum1 Array3[2][2] = {{Enum1_A, Enum1_A}}; // warn: elements of second array are initialized to 0
+
+  struct Struct1 S1 = {1}; // warn: element 'b' is initialized to 0

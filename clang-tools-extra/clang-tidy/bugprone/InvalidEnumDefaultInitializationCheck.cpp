@@ -8,6 +8,7 @@
 
 #include "InvalidEnumDefaultInitializationCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/TypeVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <algorithm>
 
@@ -17,9 +18,10 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
-AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
-  const EnumDecl *Definition = Node.getDefinition();
-  return Definition && Node.isComplete() && !Node.enumerators().empty() &&
+bool isCompleteAndHasNoZeroValue(const EnumDecl *D) {
+  const EnumDecl *Definition = D->getDefinition();
+  return Definition && Definition->isComplete() &&
+         !Definition->enumerators().empty() &&
          std::none_of(Definition->enumerator_begin(),
                       Definition->enumerator_end(),
                       [](const EnumConstantDecl *Value) {
@@ -27,15 +29,63 @@ AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
                       });
 }
 
+AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
+  return isCompleteAndHasNoZeroValue(&Node);
+}
+
+// Find an initialization which initializes the value (if it has enum type) to a
+// default zero value.
 AST_MATCHER(Expr, isEmptyInit) {
   if (isa<CXXScalarValueInitExpr>(&Node))
     return true;
   if (isa<ImplicitValueInitExpr>(&Node))
     return true;
-  if (const auto *Init = dyn_cast<InitListExpr>(&Node))
-    return Init->getNumInits() == 0;
+  if (const auto *Init = dyn_cast<InitListExpr>(&Node)) {
+    if (Init->getNumInits() == 0)
+      return true;
+  }
   return false;
 }
+
+AST_MATCHER(InitListExpr, hasArrayFiller) { return Node.hasArrayFiller(); }
+
+// Check if any type has a "child" type that is an enum without zero value.
+// The "child" type can be an array element type or member type of a record
+// type (or a recursive combination of these). In this case, if the "root" type
+// is statically initialized, the enum component is initialized to zero.
+class FindEnumMember : public TypeVisitor<FindEnumMember, bool> {
+public:
+  const EnumType *FoundEnum = nullptr;
+
+  bool VisitType(const Type *T) {
+    const Type *DesT = T->getUnqualifiedDesugaredType();
+    if (DesT != T)
+      return Visit(DesT);
+    return false;
+  }
+  bool VisitArrayType(const ArrayType *T) {
+    return Visit(T->getElementType()->getUnqualifiedDesugaredType());
+  }
+  bool VisitConstantArrayType(const ConstantArrayType *T) {
+    return Visit(T->getElementType()->getUnqualifiedDesugaredType());
+  }
+  bool VisitEnumType(const EnumType *T) {
+    if (isCompleteAndHasNoZeroValue(T->getDecl())) {
+      FoundEnum = T;
+      return true;
+    }
+    return false;
+  }
+  bool VisitRecordType(const RecordType *T) {
+    const RecordDecl *RD = T->getDecl();
+    if (RD->isUnion())
+      return false;
+    auto VisitField = [this](const FieldDecl *F) {
+      return Visit(F->getType()->getUnqualifiedDesugaredType());
+    };
+    return llvm::any_of(RD->fields(), VisitField);
+  }
+};
 
 } // namespace
 
@@ -43,25 +93,43 @@ InvalidEnumDefaultInitializationCheck::InvalidEnumDefaultInitializationCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
 
-bool InvalidEnumDefaultInitializationCheck::isLanguageVersionSupported(
-    const LangOptions &LangOpts) const {
-  return LangOpts.CPlusPlus;
-}
-
 void InvalidEnumDefaultInitializationCheck::registerMatchers(
     MatchFinder *Finder) {
+  auto EnumWithoutZeroValue = enumType(
+      hasDeclaration(enumDecl(isCompleteAndHasNoZeroValue()).bind("enum")));
+  auto EnumOrArrayOfEnum = qualType(hasUnqualifiedDesugaredType(
+      anyOf(EnumWithoutZeroValue,
+            arrayType(hasElementType(qualType(
+                hasUnqualifiedDesugaredType(EnumWithoutZeroValue)))))));
   Finder->addMatcher(
-      expr(isEmptyInit(),
-           hasType(hasUnqualifiedDesugaredType(enumType(hasDeclaration(
-               enumDecl(isCompleteAndHasNoZeroValue()).bind("enum"))))))
-          .bind("expr"),
-      this);
+      expr(isEmptyInit(), hasType(EnumOrArrayOfEnum)).bind("expr"), this);
+
+  // Array initialization can contain an "array filler" for the (syntactically)
+  // unspecified elements. This expression is not found by AST matchers and can
+  // have any type (the array's element type). This is an implicitly generated
+  // initialization, so if the type contains somewhere an enum without zero
+  // enumerator, the zero initialization applies here. We search this array
+  // element type for the specific enum type manually when this matcher matches.
+  Finder->addMatcher(initListExpr(hasArrayFiller()).bind("array_filler_expr"),
+                     this);
 }
 
 void InvalidEnumDefaultInitializationCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *InitExpr = Result.Nodes.getNodeAs<Expr>("expr");
   const auto *Enum = Result.Nodes.getNodeAs<EnumDecl>("enum");
+  if (!InitExpr) {
+    const auto *InitList =
+        Result.Nodes.getNodeAs<InitListExpr>("array_filler_expr");
+    // Initialization of omitted array elements with array filler was found.
+    // Check the type for enum without zero value.
+    FindEnumMember Finder;
+    if (!Finder.Visit(InitList->getArrayFiller()->getType().getTypePtr()))
+      return;
+    InitExpr = InitList;
+    Enum = Finder.FoundEnum->getDecl();
+  }
+
   if (!InitExpr || !Enum)
     return;
 
@@ -99,7 +167,8 @@ void InvalidEnumDefaultInitializationCheck::check(
       }
     }
     // If still not found a source location, omit the warning.
-    // FIXME: All such cases should be fixed to make the checker more precise.
+    // Ideally all such cases (if they exist) should be handled to make the
+    // check more precise.
     if (Loc.isInvalid())
       return;
   }

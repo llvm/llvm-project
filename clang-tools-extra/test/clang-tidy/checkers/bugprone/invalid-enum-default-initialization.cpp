@@ -57,9 +57,13 @@ void f2() {
   // CHECK-NOTES: :[[@LINE-1]]:13: warning: enum value of type 'Enum1' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
   // CHECK-NOTES: :8:12: note: enum is defined here
   Enum1 C[5] = {{}};
-  // CHECK-NOTES: :[[@LINE-1]]:17: warning: enum value of type 'Enum1' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
+  // CHECK-NOTES: :[[@LINE-1]]:16: warning: enum value of type 'Enum1' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
+  // CHECK-NOTES: :8:12: note: enum is defined here
+  // CHECK-NOTES: :[[@LINE-3]]:17: warning: enum value of type 'Enum1' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
   // CHECK-NOTES: :8:12: note: enum is defined here
   Enum1 D[5] = {}; // FIMXE: warn for this?
+  // CHECK-NOTES: :[[@LINE-1]]:16: warning: enum value of type 'Enum1' initialized with invalid value of 0, enum doesn't have a zero-value enumerator
+  // CHECK-NOTES: :8:12: note: enum is defined here
 }
 
 struct S1 {
@@ -99,6 +103,11 @@ struct S4 : public S3 {
   int Z;
 };
 
+struct S5 {
+  S2 X[3];
+  int Y;
+};
+
 S2 VarS2{};
 // CHECK-NOTES: :[[@LINE-1]]:9: warning: enum value of type 'Enum1' initialized with invalid value of 0
 // CHECK-NOTES: :8:12: note: enum is defined here
@@ -114,6 +123,9 @@ S4 VarS4{};
 // CHECK-NOTES: :8:12: note: enum is defined here
 // CHECK-NOTES: :[[@LINE-3]]:10: warning: enum value of type 'Enum2' initialized with invalid value of 0
 // CHECK-NOTES: :13:6: note: enum is defined here
+S5 VarS5{};
+// CHECK-NOTES: :[[@LINE-1]]:10: warning: enum value of type 'Enum1' initialized with invalid value of 0
+// CHECK-NOTES: :8:12: note: enum is defined here
 
 enum class EnumFwd;
 
