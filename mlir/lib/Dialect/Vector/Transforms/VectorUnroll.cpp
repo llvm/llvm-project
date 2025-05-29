@@ -658,14 +658,23 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(originalShape, *targetShape)) {
       Value newSrc;
-      // Scalar to vector broadcast.
       if (!srcType) {
+        // Scalar to vector broadcast.
         newSrc = broadcastOp.getSource();
       } else {
+        // Vector to vector broadcast.
         int64_t rank = srcType.getRank();
-        auto srcOffsets = llvm::ArrayRef<int64_t>(offsets).take_back(rank);
-        auto srcShape = llvm::ArrayRef<int64_t>(*targetShape).take_back(rank);
-        auto srcStrides = llvm::ArrayRef<int64_t>(strides).take_back(rank);
+        SmallVector<int64_t> srcOffsets(offsets.end() - rank, offsets.end());
+        SmallVector<int64_t> srcShape(targetShape->end() - rank,
+                                      targetShape->end());
+        SmallVector<int64_t> srcStrides(strides.end() - rank, strides.end());
+        // addjust the offset and shape for src if the corresponding dim is 1.
+        for (int64_t i = 0; i < rank; ++i) {
+          if (srcType.getDimSize(i) == 1) {
+            srcOffsets[i] = 0;
+            srcShape[i] = 1;
+          }
+        }
         newSrc = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
             loc, broadcastOp.getSource(), srcOffsets, srcShape, srcStrides);
       }
