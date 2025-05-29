@@ -188,25 +188,16 @@ static void printMF(raw_ostream &OS, const MachineModuleInfo &MMI,
   YamlMF.IsOutlined = MF.isOutlined();
   YamlMF.UseDebugInstrRef = MF.useDebugInstrRef();
 
-  YamlMF.Legalized = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::Legalized);
-  YamlMF.RegBankSelected = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::RegBankSelected);
-  YamlMF.Selected = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::Selected);
-  YamlMF.FailedISel = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::FailedISel);
-  YamlMF.FailsVerification = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::FailsVerification);
-  YamlMF.TracksDebugUserValues = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksDebugUserValues);
-
-  YamlMF.NoPHIs = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoPHIs);
-  YamlMF.IsSSA = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::IsSSA);
-  YamlMF.NoVRegs = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoVRegs);
+  const MachineFunctionProperties &Props = MF.getProperties();
+  YamlMF.Legalized = Props.hasLegalized();
+  YamlMF.RegBankSelected = Props.hasRegBankSelected();
+  YamlMF.Selected = Props.hasSelected();
+  YamlMF.FailedISel = Props.hasFailedISel();
+  YamlMF.FailsVerification = Props.hasFailsVerification();
+  YamlMF.TracksDebugUserValues = Props.hasTracksDebugUserValues();
+  YamlMF.NoPHIs = Props.hasNoPHIs();
+  YamlMF.IsSSA = Props.hasIsSSA();
+  YamlMF.NoVRegs = Props.hasNoVRegs();
 
   convertMRI(YamlMF, MF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   MachineModuleSlotTracker &MST = State.MST;

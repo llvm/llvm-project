@@ -216,7 +216,7 @@ bool EarliestEscapeAnalysis::isNotCapturedBefore(const Value *Object,
   if (!isIdentifiedFunctionLocal(Object))
     return false;
 
-  auto Iter = EarliestEscapes.insert({Object, nullptr});
+  auto Iter = EarliestEscapes.try_emplace(Object);
   if (Iter.second) {
     Instruction *EarliestCapture = FindEarliestCapture(
         Object, *const_cast<Function *>(DT.getRoot()->getParent()),

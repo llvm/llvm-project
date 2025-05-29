@@ -2910,45 +2910,47 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
           .v.statement;
   const auto &stmt1Var{std::get<parser::Variable>(stmt1.t)};
   const auto &stmt1Expr{std::get<parser::Expr>(stmt1.t)};
+  const auto *v1 = GetExpr(context_, stmt1Var);
+  const auto *e1 = GetExpr(context_, stmt1Expr);
 
   const parser::AssignmentStmt &stmt2 =
       std::get<parser::OmpAtomicCapture::Stmt2>(atomicCaptureConstruct.t)
           .v.statement;
   const auto &stmt2Var{std::get<parser::Variable>(stmt2.t)};
   const auto &stmt2Expr{std::get<parser::Expr>(stmt2.t)};
+  const auto *v2 = GetExpr(context_, stmt2Var);
+  const auto *e2 = GetExpr(context_, stmt2Expr);
 
-  if (semantics::checkForSingleVariableOnRHS(stmt1)) {
-    CheckAtomicCaptureStmt(stmt1);
-    if (semantics::checkForSymbolMatch(stmt2)) {
-      // ATOMIC CAPTURE construct is of the form [capture-stmt, update-stmt]
-      CheckAtomicUpdateStmt(stmt2);
+  if (e1 && v1 && e2 && v2) {
+    if (semantics::checkForSingleVariableOnRHS(stmt1)) {
+      CheckAtomicCaptureStmt(stmt1);
+      if (semantics::checkForSymbolMatch(v2, e2)) {
+        // ATOMIC CAPTURE construct is of the form [capture-stmt, update-stmt]
+        CheckAtomicUpdateStmt(stmt2);
+      } else {
+        // ATOMIC CAPTURE construct is of the form [capture-stmt, write-stmt]
+        CheckAtomicWriteStmt(stmt2);
+      }
+      if (!(*e1 == *v2)) {
+        context_.Say(stmt1Expr.source,
+            "Captured variable/array element/derived-type component %s expected to be assigned in the second statement of ATOMIC CAPTURE construct"_err_en_US,
+            stmt1Expr.source);
+      }
+    } else if (semantics::checkForSymbolMatch(v1, e1) &&
+        semantics::checkForSingleVariableOnRHS(stmt2)) {
+      // ATOMIC CAPTURE construct is of the form [update-stmt, capture-stmt]
+      CheckAtomicUpdateStmt(stmt1);
+      CheckAtomicCaptureStmt(stmt2);
+      // Variable updated in stmt1 should be captured in stmt2
+      if (!(*v1 == *e2)) {
+        context_.Say(stmt1Var.GetSource(),
+            "Updated variable/array element/derived-type component %s expected to be captured in the second statement of ATOMIC CAPTURE construct"_err_en_US,
+            stmt1Var.GetSource());
+      }
     } else {
-      // ATOMIC CAPTURE construct is of the form [capture-stmt, write-stmt]
-      CheckAtomicWriteStmt(stmt2);
-    }
-    auto *v{stmt2Var.typedExpr.get()};
-    auto *e{stmt1Expr.typedExpr.get()};
-    if (v && e && !(v->v == e->v)) {
       context_.Say(stmt1Expr.source,
-          "Captured variable/array element/derived-type component %s expected to be assigned in the second statement of ATOMIC CAPTURE construct"_err_en_US,
-          stmt1Expr.source);
+          "Invalid ATOMIC CAPTURE construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]"_err_en_US);
     }
-  } else if (semantics::checkForSymbolMatch(stmt1) &&
-      semantics::checkForSingleVariableOnRHS(stmt2)) {
-    // ATOMIC CAPTURE construct is of the form [update-stmt, capture-stmt]
-    CheckAtomicUpdateStmt(stmt1);
-    CheckAtomicCaptureStmt(stmt2);
-    // Variable updated in stmt1 should be captured in stmt2
-    auto *v{stmt1Var.typedExpr.get()};
-    auto *e{stmt2Expr.typedExpr.get()};
-    if (v && e && !(v->v == e->v)) {
-      context_.Say(stmt1Var.GetSource(),
-          "Updated variable/array element/derived-type component %s expected to be captured in the second statement of ATOMIC CAPTURE construct"_err_en_US,
-          stmt1Var.GetSource());
-    }
-  } else {
-    context_.Say(stmt1Expr.source,
-        "Invalid ATOMIC CAPTURE construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]"_err_en_US);
   }
 }
 

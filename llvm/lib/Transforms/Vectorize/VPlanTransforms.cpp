@@ -27,8 +27,8 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
@@ -939,12 +939,12 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
   }
 }
 
-/// Try to fold \p R using TargetFolder to a constant. Will succeed and return a
-/// non-nullptr Value for a handled \p Opcode if all \p Operands are constant.
-static Value *tryToConstantFold(const VPRecipeBase &R, unsigned Opcode,
-                                ArrayRef<VPValue *> Operands,
-                                const DataLayout &DL,
-                                VPTypeAnalysis &TypeInfo) {
+/// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
+/// non-nullptr Value for a handled \p Opcode if corresponding \p Operands are
+/// foldable live-ins.
+static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
+                               ArrayRef<VPValue *> Operands,
+                               const DataLayout &DL, VPTypeAnalysis &TypeInfo) {
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
     if (!Op->isLiveIn() || !Op->getLiveInIRValue())
@@ -952,7 +952,7 @@ static Value *tryToConstantFold(const VPRecipeBase &R, unsigned Opcode,
     Ops.push_back(Op->getLiveInIRValue());
   }
 
-  TargetFolder Folder(DL);
+  InstSimplifyFolder Folder(DL);
   if (Instruction::isBinaryOp(Opcode))
     return Folder.FoldBinOp(static_cast<Instruction::BinaryOps>(Opcode), Ops[0],
                             Ops[1]);
@@ -994,15 +994,16 @@ static Value *tryToConstantFold(const VPRecipeBase &R, unsigned Opcode,
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
 
-  // Constant folding.
+  // Simplification of live-in IR values for SingleDef recipes using
+  // InstSimplifyFolder.
   if (TypeSwitch<VPRecipeBase *, bool>(&R)
           .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
                 VPReplicateRecipe>([&](auto *I) {
             VPlan *Plan = R.getParent()->getPlan();
             const DataLayout &DL =
                 Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
-            Value *V = tryToConstantFold(*I, I->getOpcode(), I->operands(), DL,
-                                         TypeInfo);
+            Value *V = tryToFoldLiveIns(*I, I->getOpcode(), I->operands(), DL,
+                                        TypeInfo);
             if (V)
               I->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
             return V;
@@ -1177,7 +1178,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (!RepR && !isa<VPWidenRecipe>(&R))
         continue;
-      if (RepR && RepR->isSingleScalar())
+      if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
       auto *RepOrWidenR = cast<VPSingleDefRecipe>(&R);
@@ -1809,8 +1810,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         if (OpSizeInBits == NewResSizeInBits)
           continue;
         assert(OpSizeInBits > NewResSizeInBits && "nothing to truncate");
-        auto [ProcessedIter, IterIsEmpty] =
-            ProcessedTruncs.insert({Op, nullptr});
+        auto [ProcessedIter, IterIsEmpty] = ProcessedTruncs.try_emplace(Op);
         VPWidenCastRecipe *NewOp =
             IterIsEmpty
                 ? new VPWidenCastRecipe(Instruction::Trunc, Op, NewResTy)
@@ -1836,7 +1836,7 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
-    if (VPBB->getNumSuccessors() != 2 ||
+    if (VPBB->getNumSuccessors() != 2 || VPBB == Plan.getEntry() ||
         !match(&VPBB->back(), m_BranchOnCond(m_True())))
       continue;
 
@@ -2545,14 +2545,14 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   const InductionDescriptor &ID = WidenIVR->getInductionDescriptor();
   Instruction::BinaryOps AddOp;
   Instruction::BinaryOps MulOp;
-  std::optional<FastMathFlags> FMFs;
+  VPIRFlags Flags;
   if (ID.getKind() == InductionDescriptor::IK_IntInduction) {
     AddOp = Instruction::Add;
     MulOp = Instruction::Mul;
   } else {
     AddOp = ID.getInductionOpcode();
     MulOp = Instruction::FMul;
-    FMFs = ID.getInductionBinOp()->getFastMathFlags();
+    Flags = ID.getInductionBinOp()->getFastMathFlags();
   }
 
   // If the phi is truncated, truncate the start and step values.
@@ -2577,8 +2577,9 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
 
   // FIXME: The newly created binary instructions should contain nsw/nuw
   // flags, which can be found from the original scalar operations.
-  Init = Builder.createNaryOp(MulOp, {Init, SplatStep}, FMFs);
-  Init = Builder.createNaryOp(AddOp, {SplatStart, Init}, FMFs, {}, "induction");
+  Init = Builder.createNaryOp(MulOp, {Init, SplatStep}, Flags);
+  Init =
+      Builder.createNaryOp(AddOp, {SplatStart, Init}, Flags, {}, "induction");
 
   // Create the widened phi of the vector IV.
   auto *WidePHI = new VPWidenPHIRecipe(WidenIVR->getPHINode(), nullptr,
@@ -2603,14 +2604,14 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
       VF =
           Builder.createScalarCast(Instruction::CastOps::Trunc, VF, StepTy, DL);
 
-    Inc = Builder.createNaryOp(MulOp, {Step, VF}, FMFs);
+    Inc = Builder.createNaryOp(MulOp, {Step, VF}, Flags);
     Inc = Builder.createNaryOp(VPInstruction::Broadcast, Inc);
     Prev = WidePHI;
   }
 
   VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
   Builder.setInsertPoint(ExitingBB, ExitingBB->getTerminator()->getIterator());
-  auto *Next = Builder.createNaryOp(AddOp, {Prev, Inc}, FMFs,
+  auto *Next = Builder.createNaryOp(AddOp, {Prev, Inc}, Flags,
                                     WidenIVR->getDebugLoc(), "vec.ind.next");
 
   WidePHI->addOperand(Next);
@@ -2619,17 +2620,30 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   WidenIVR->eraseFromParent();
 }
 
+void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
+  // Replace loop regions with explicity CFG.
+  SmallVector<VPRegionBlock *> LoopRegions;
+  for (VPRegionBlock *R : VPBlockUtils::blocksOnly<VPRegionBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    if (!R->isReplicator())
+      LoopRegions.push_back(R);
+  }
+  for (VPRegionBlock *R : LoopRegions)
+    R->dissolveToCFGLoop();
+}
+
 // Expand VPExtendedReductionRecipe to VPWidenCastRecipe + VPReductionRecipe.
 static void expandVPExtendedReduction(VPExtendedReductionRecipe *ExtRed) {
   VPWidenCastRecipe *Ext;
   // Only ZExt contains non-neg flags.
   if (ExtRed->isZExt())
     Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
-                                ExtRed->getResultType(), ExtRed->isNonNeg(),
+                                ExtRed->getResultType(), *ExtRed,
                                 ExtRed->getDebugLoc());
   else
     Ext = new VPWidenCastRecipe(ExtRed->getExtOpcode(), ExtRed->getVecOp(),
-                                ExtRed->getResultType(), ExtRed->getDebugLoc());
+                                ExtRed->getResultType(), {},
+                                ExtRed->getDebugLoc());
 
   auto *Red = new VPReductionRecipe(
       ExtRed->getRecurrenceKind(), FastMathFlags(), ExtRed->getChainOp(), Ext,
@@ -2652,12 +2666,12 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
   if (MulAcc->isExtended()) {
     Type *RedTy = MulAcc->getResultType();
     if (MulAcc->isZExt())
-      Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
-                                  RedTy, MulAcc->isNonNeg(),
-                                  MulAcc->getDebugLoc());
+      Op0 = new VPWidenCastRecipe(
+          MulAcc->getExtOpcode(), MulAcc->getVecOp0(), RedTy,
+          VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg()), MulAcc->getDebugLoc());
     else
       Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
-                                  RedTy, MulAcc->getDebugLoc());
+                                  RedTy, {}, MulAcc->getDebugLoc());
     Op0->getDefiningRecipe()->insertBefore(MulAcc);
     // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
     // VPWidenCastRecipe.
@@ -2665,12 +2679,13 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
       Op1 = Op0;
     } else {
       if (MulAcc->isZExt())
-        Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
-                                    RedTy, MulAcc->isNonNeg(),
-                                    MulAcc->getDebugLoc());
+        Op1 = new VPWidenCastRecipe(
+            MulAcc->getExtOpcode(), MulAcc->getVecOp1(), RedTy,
+            VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg()),
+            MulAcc->getDebugLoc());
       else
         Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
-                                    RedTy, MulAcc->getDebugLoc());
+                                    RedTy, {}, MulAcc->getDebugLoc());
       Op1->getDefiningRecipe()->insertBefore(MulAcc);
     }
   } else {
@@ -2749,14 +2764,14 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
             Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
       }
 
-      std::optional<FastMathFlags> FMFs;
+      VPIRFlags Flags;
       if (IVTy->isFloatingPointTy())
-        FMFs = VPI->getFastMathFlags();
+        Flags = {VPI->getFastMathFlags()};
 
       unsigned MulOpc =
           IVTy->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
       VPInstruction *Mul = Builder.createNaryOp(
-          MulOpc, {VectorStep, ScalarStep}, FMFs, R.getDebugLoc());
+          MulOpc, {VectorStep, ScalarStep}, Flags, R.getDebugLoc());
       VectorStep = Mul;
       VPI->replaceAllUsesWith(VectorStep);
       ToRemove.push_back(VPI);

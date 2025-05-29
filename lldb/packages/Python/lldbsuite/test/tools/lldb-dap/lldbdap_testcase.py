@@ -1,9 +1,20 @@
 import os
 import time
-from typing import Optional
+from typing import Dict, Optional, TYPE_CHECKING
 import uuid
 
-import dap_server
+if TYPE_CHECKING:
+    # FIXME: Add mypy and typing_extensions to the requirements.txt once all
+    # build bots support the library.
+    from typing_extensions import Unpack
+
+from dap_server import (
+    DebugAdapterServer,
+    Source,
+    Response,
+    AttachArguments,
+    LaunchArguments,
+)
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 import lldbgdbserverutils
@@ -17,7 +28,7 @@ class DAPTestCaseBase(TestBase):
 
     def create_debug_adapter(
         self,
-        lldbDAPEnv: Optional[dict[str, str]] = None,
+        env: Optional[Dict[str, str]] = None,
         connection: Optional[str] = None,
     ):
         """Create the Visual Studio Code debug adapter"""
@@ -25,21 +36,21 @@ class DAPTestCaseBase(TestBase):
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
         log_file_path = self.getBuildArtifact("dap.txt")
-        self.dap_server = dap_server.DebugAdapterServer(
+        self.dap_server = DebugAdapterServer(
             executable=self.lldbDAPExec,
             connection=connection,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
-            env=lldbDAPEnv,
+            env=env,
         )
 
     def build_and_create_debug_adapter(
         self,
-        lldbDAPEnv: Optional[dict[str, str]] = None,
-        dictionary: Optional[dict] = None,
+        adapter_env: Optional[Dict[str, str]] = None,
+        dictionary: Optional[Dict] = None,
     ):
         self.build(dictionary=dictionary)
-        self.create_debug_adapter(lldbDAPEnv)
+        self.create_debug_adapter(adapter_env)
 
     def build_and_create_debug_adapter_for_attach(self):
         """Variant of build_and_create_debug_adapter that builds a uniquely
@@ -55,8 +66,24 @@ class DAPTestCaseBase(TestBase):
         Each object in data is 1:1 mapping with the entry in lines.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        response = self.dap_server.request_setBreakpoints(source_path, lines, data)
+        response = self.dap_server.request_setBreakpoints(
+            Source(source_path), lines, data
+        )
         if response is None or not response["success"]:
+            return []
+        breakpoints = response["body"]["breakpoints"]
+        breakpoint_ids = []
+        for breakpoint in breakpoints:
+            breakpoint_ids.append("%i" % (breakpoint["id"]))
+        return breakpoint_ids
+
+    def set_source_breakpoints_assembly(self, source_reference, lines, data=None):
+        response = self.dap_server.request_setBreakpoints(
+            Source(source_reference=source_reference),
+            lines,
+            data,
+        )
+        if response is None:
             return []
         breakpoints = response["body"]["breakpoints"]
         breakpoint_ids = []
@@ -87,6 +114,18 @@ class DAPTestCaseBase(TestBase):
             time.sleep(0.5)
         return False
 
+    def assertResponseSuccess(self, response: Response):
+        self.assertIsNotNone(response)
+        self.assertIn("success", response)
+        if not response.get("success", False):
+            cmd = response.get("command", "<not set>")
+            msg = f"command ({cmd}) failed"
+            if "message" in response:
+                msg += " " + str(response["message"])
+            if "body" in response and response["body"] and "error" in response["body"]:
+                msg += " " + str(response["body"]["error"]["format"])
+            self.fail(msg)
+
     def verify_breakpoint_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
@@ -116,7 +155,7 @@ class DAPTestCaseBase(TestBase):
                 # location.
                 description = body["description"]
                 for breakpoint_id in breakpoint_ids:
-                    match_desc = "breakpoint %s." % (breakpoint_id)
+                    match_desc = f"breakpoint {breakpoint_id}."
                     if match_desc in description:
                         return
         self.assertTrue(False, f"breakpoint not hit, stopped_events={stopped_events}")
@@ -312,6 +351,9 @@ class DAPTestCaseBase(TestBase):
         self.do_continue()
         return self.dap_server.wait_for_stopped(timeout)
 
+    def continue_to_breakpoint(self, breakpoint_id: str, timeout=DEFAULT_TIMEOUT):
+        self.continue_to_breakpoints((breakpoint_id), timeout)
+
     def continue_to_breakpoints(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids, timeout)
@@ -361,7 +403,7 @@ class DAPTestCaseBase(TestBase):
         disconnectAutomatically=True,
         sourceInitFile=False,
         expectFailure=False,
-        **kwargs,
+        **kwargs: "Unpack[AttachArguments]",
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and attach to the process.
@@ -388,12 +430,13 @@ class DAPTestCaseBase(TestBase):
 
     def launch(
         self,
-        program=None,
+        program: str,
+        /,
         *,
         sourceInitFile=False,
         disconnectAutomatically=True,
         expectFailure=False,
-        **kwargs,
+        **kwargs: "Unpack[LaunchArguments]",
     ):
         """Sending launch request to dap"""
 
@@ -409,7 +452,8 @@ class DAPTestCaseBase(TestBase):
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_launch(program, **kwargs)
+        kwargs["program"] = program
+        response = self.dap_server.request_launch(**kwargs)
         if expectFailure:
             return response
         if not (response and response["success"]):
@@ -420,17 +464,17 @@ class DAPTestCaseBase(TestBase):
 
     def build_and_launch(
         self,
-        program,
+        program: str,
+        /,
         *,
-        lldbDAPEnv: Optional[dict[str, str]] = None,
-        **kwargs,
+        adapter_env: Optional[Dict[str, str]] = None,
+        **kwargs: "Unpack[LaunchArguments]",
     ):
         """Build the default Makefile target, create the DAP debug adapter,
         and launch the process.
         """
-        self.build_and_create_debug_adapter(lldbDAPEnv)
+        self.build_and_create_debug_adapter(adapter_env)
         self.assertTrue(os.path.exists(program), "executable must exist")
-
         return self.launch(program, **kwargs)
 
     def getBuiltinDebugServerTool(self):

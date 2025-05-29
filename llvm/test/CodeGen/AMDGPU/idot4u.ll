@@ -1451,8 +1451,8 @@ define amdgpu_kernel void @udot4_multiuse_add1(ptr addrspace(1) %src1,
 ; GFX11-DL-NEXT:    v_bfe_u32 v3, v0, 8, 8
 ; GFX11-DL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-DL-NEXT:    v_dot4_u32_u8 v0, v1, v0, s0
-; GFX11-DL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-DL-NEXT:    s_add_i32 s0, s0, s0
+; GFX11-DL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-DL-NEXT:    v_mul_u32_u24_e32 v2, v2, v3
 ; GFX11-DL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DL-NEXT:    v_add3_u32 v0, s0, v2, v0
@@ -5919,10 +5919,10 @@ define amdgpu_kernel void @idot4_acc32_v16i8(ptr addrspace(1) %src1,
 ; GFX11-DL-NEXT:    global_load_b32 v0, v4, s[2:3]
 ; GFX11-DL-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-DL-NEXT:    v_perm_b32 v1, v3, v2, 0x7050002
-; GFX11-DL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-DL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-DL-NEXT:    v_perm_b32 v0, v0, v0, 0x3020001
-; GFX11-DL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DL-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-DL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-DL-NEXT:    v_dot4_u32_u8 v0, v1, v0, 0
 ; GFX11-DL-NEXT:    global_store_b32 v2, v0, s[4:5]
 ; GFX11-DL-NEXT:    s_endpgm

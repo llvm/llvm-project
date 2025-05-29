@@ -115,7 +115,7 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     thisPtr = emitLValue(base);
   }
 
-  if (const CXXConstructorDecl *ctor = dyn_cast<CXXConstructorDecl>(md)) {
+  if (isa<CXXConstructorDecl>(md)) {
     cgm.errorNYI(ce->getSourceRange(),
                  "emitCXXMemberOrOperatorMemberCallExpr: constructor call");
     return RValue::get(nullptr);
@@ -129,29 +129,29 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
       cgm.errorNYI(ce->getSourceRange(),
                    "emitCXXMemberOrOperatorMemberCallExpr: trivial assignment");
       return RValue::get(nullptr);
-    } else {
-      assert(md->getParent()->mayInsertExtraPadding() &&
-             "unknown trivial member function");
     }
+
+    assert(md->getParent()->mayInsertExtraPadding() &&
+           "unknown trivial member function");
   }
 
   // Compute the function type we're calling
   const CXXMethodDecl *calleeDecl = md;
   const CIRGenFunctionInfo *fInfo = nullptr;
-  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(calleeDecl)) {
+  if (isa<CXXDestructorDecl>(calleeDecl)) {
     cgm.errorNYI(ce->getSourceRange(),
                  "emitCXXMemberOrOperatorMemberCallExpr: destructor call");
     return RValue::get(nullptr);
-  } else {
-    fInfo = &cgm.getTypes().arrangeCXXMethodDeclaration(calleeDecl);
   }
+
+  fInfo = &cgm.getTypes().arrangeCXXMethodDeclaration(calleeDecl);
 
   mlir::Type ty = cgm.getTypes().getFunctionType(*fInfo);
 
   assert(!cir::MissingFeatures::sanitizers());
   assert(!cir::MissingFeatures::emitTypeCheck());
 
-  if (const auto *dtor = dyn_cast<CXXDestructorDecl>(calleeDecl)) {
+  if (isa<CXXDestructorDecl>(calleeDecl)) {
     cgm.errorNYI(ce->getSourceRange(),
                  "emitCXXMemberOrOperatorMemberCallExpr: destructor call");
     return RValue::get(nullptr);

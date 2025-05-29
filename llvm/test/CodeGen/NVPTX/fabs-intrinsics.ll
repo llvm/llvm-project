@@ -18,12 +18,12 @@ declare <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat>)
 define float @fabs_float(float %a) {
 ; CHECK-LABEL: fabs_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [fabs_float_param_0];
-; CHECK-NEXT:    abs.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [fabs_float_param_0];
+; CHECK-NEXT:    abs.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.fabs.f32(float %a)
   ret float %ret
@@ -32,12 +32,12 @@ define float @fabs_float(float %a) {
 define float @fabs_float_ftz(float %a) {
 ; CHECK-LABEL: fabs_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [fabs_float_ftz_param_0];
-; CHECK-NEXT:    abs.ftz.f32 %f2, %f1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f2;
+; CHECK-NEXT:    ld.param.b32 %r1, [fabs_float_ftz_param_0];
+; CHECK-NEXT:    abs.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %ret = call float @llvm.nvvm.fabs.ftz.f32(float %a)
   ret float %ret
@@ -46,12 +46,12 @@ define float @fabs_float_ftz(float %a) {
 define double @fabs_double(double %a) {
 ; CHECK-LABEL: fabs_double(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %fd1, [fabs_double_param_0];
-; CHECK-NEXT:    abs.f64 %fd2, %fd1;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %fd2;
+; CHECK-NEXT:    ld.param.b64 %rd1, [fabs_double_param_0];
+; CHECK-NEXT:    abs.f64 %rd2, %rd1;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %ret = call double @llvm.nvvm.fabs.f64(double %a)
   ret double %ret

@@ -196,73 +196,148 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &);
 
 namespace PAuthGadgetScanner {
 
+// The report classes are designed to be used in an immutable manner.
+// When an issue report is constructed in multiple steps, an attempt is made
+// to distinguish intermediate and final results at the type level.
+//
+// Here is an overview of issue life-cycle:
+// * an analysis (SrcSafetyAnalysis at now, DstSafetyAnalysis will be added
+//   later to support the detection of authentication oracles) computes register
+//   state for each instruction in the function.
+// * for each instruction, it is checked whether it is a gadget of some kind,
+//   taking the computed state into account. If a gadget is found, its kind
+//   and location are stored into a subclass of Diagnostic wrapped into
+//   PartialReport<ReqT>.
+// * if any issue is to be reported for the function, the same analysis is
+//   re-run to collect extra information to provide to the user. Which extra
+//   information can be requested depends on the particular analysis (for
+//   example, SrcSafetyAnalysis is able to compute the set of instructions
+//   clobbering the particular register, thus ReqT is MCPhysReg). At this stage,
+//   `FinalReport`s are created.
+//
+// Here, the subclasses of Diagnostic store the pieces of information which
+// are kept unchanged since they are collected on the first run of the analysis.
+// PartialReport<T>::RequestedDetails, on the other hand, is replaced with
+// FinalReport::Details computed by the second run of the analysis.
+
 /// Description of a gadget kind that can be detected. Intended to be
-/// statically allocated to be attached to reports by reference.
+/// statically allocated and attached to reports by reference.
 class GadgetKind {
   const char *Description;
 
 public:
+  /// Wraps a description string which must be a string literal.
   GadgetKind(const char *Description) : Description(Description) {}
 
   StringRef getDescription() const { return Description; }
 };
 
-/// Base report located at some instruction, without any additional information.
-struct Report {
+/// Basic diagnostic information, which is kept unchanged since it is collected
+/// on the first run of the analysis.
+struct Diagnostic {
   MCInstReference Location;
 
-  Report(MCInstReference Location) : Location(Location) {}
-  virtual ~Report() {}
+  Diagnostic(MCInstReference Location) : Location(Location) {}
+  virtual ~Diagnostic() {}
 
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const = 0;
-
-  // The two methods below are called by Analysis::computeDetailedInfo when
-  // iterating over the reports.
-  virtual ArrayRef<MCPhysReg> getAffectedRegisters() const { return {}; }
-  virtual void setOverwritingInstrs(ArrayRef<MCInstReference> Instrs) {}
 
   void printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
                       StringRef IssueKind) const;
 };
 
-struct GadgetReport : public Report {
+struct GadgetDiagnostic : public Diagnostic {
   // The particular kind of gadget that is detected.
   const GadgetKind &Kind;
-  // The set of registers related to this gadget report (possibly empty).
-  SmallVector<MCPhysReg, 1> AffectedRegisters;
-  // The instructions that clobber the affected registers.
-  // There is no one-to-one correspondence with AffectedRegisters: for example,
-  // the same register can be overwritten by different instructions in different
-  // preceding basic blocks.
-  SmallVector<MCInstReference> OverwritingInstrs;
 
-  GadgetReport(const GadgetKind &Kind, MCInstReference Location,
-               MCPhysReg AffectedRegister)
-      : Report(Location), Kind(Kind), AffectedRegisters({AffectedRegister}) {}
+  GadgetDiagnostic(const GadgetKind &Kind, MCInstReference Location)
+      : Diagnostic(Location), Kind(Kind) {}
 
   void generateReport(raw_ostream &OS, const BinaryContext &BC) const override;
-
-  ArrayRef<MCPhysReg> getAffectedRegisters() const override {
-    return AffectedRegisters;
-  }
-
-  void setOverwritingInstrs(ArrayRef<MCInstReference> Instrs) override {
-    OverwritingInstrs.assign(Instrs.begin(), Instrs.end());
-  }
 };
 
 /// Report with a free-form message attached.
-struct GenericReport : public Report {
+struct GenericDiagnostic : public Diagnostic {
   std::string Text;
-  GenericReport(MCInstReference Location, StringRef Text)
-      : Report(Location), Text(Text) {}
+  GenericDiagnostic(MCInstReference Location, StringRef Text)
+      : Diagnostic(Location), Text(Text) {}
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const override;
 };
 
+/// Extra information about an issue collected on the slower, detailed,
+/// run of the analysis.
+class ExtraInfo {
+public:
+  virtual void print(raw_ostream &OS, const MCInstReference Location) const = 0;
+
+  virtual ~ExtraInfo() {}
+};
+
+class ClobberingInfo : public ExtraInfo {
+  SmallVector<MCInstReference> ClobberingInstrs;
+
+public:
+  ClobberingInfo(ArrayRef<MCInstReference> Instrs) : ClobberingInstrs(Instrs) {}
+
+  void print(raw_ostream &OS, const MCInstReference Location) const override;
+};
+
+/// A brief version of a report that can be further augmented with the details.
+///
+/// A half-baked report produced on the first run of the analysis. An extra,
+/// analysis-specific information may be requested to be collected on the
+/// second run.
+template <typename T> struct PartialReport {
+  PartialReport(std::shared_ptr<Diagnostic> Issue,
+                const std::optional<T> RequestedDetails)
+      : Issue(Issue), RequestedDetails(RequestedDetails) {}
+
+  std::shared_ptr<Diagnostic> Issue;
+  std::optional<T> RequestedDetails;
+};
+
+/// A final version of the report.
+struct FinalReport {
+  FinalReport(std::shared_ptr<Diagnostic> Issue,
+              std::shared_ptr<ExtraInfo> Details)
+      : Issue(Issue), Details(Details) {}
+
+  std::shared_ptr<Diagnostic> Issue;
+  std::shared_ptr<ExtraInfo> Details;
+};
+
 struct FunctionAnalysisResult {
-  std::vector<std::shared_ptr<Report>> Diagnostics;
+  std::vector<FinalReport> Diagnostics;
+};
+
+/// A helper class storing per-function context to be instantiated by Analysis.
+class FunctionAnalysisContext {
+  BinaryContext &BC;
+  BinaryFunction &BF;
+  MCPlusBuilder::AllocatorIdTy AllocatorId;
+  FunctionAnalysisResult Result;
+
+  bool PacRetGadgetsOnly;
+
+  void findUnsafeUses(SmallVector<PartialReport<MCPhysReg>> &Reports);
+  void augmentUnsafeUseReports(ArrayRef<PartialReport<MCPhysReg>> Reports);
+
+  /// Process the reports which do not have to be augmented, and remove them
+  /// from Reports.
+  void handleSimpleReports(SmallVector<PartialReport<MCPhysReg>> &Reports);
+
+public:
+  FunctionAnalysisContext(BinaryFunction &BF,
+                          MCPlusBuilder::AllocatorIdTy AllocatorId,
+                          bool PacRetGadgetsOnly)
+      : BC(BF.getBinaryContext()), BF(BF), AllocatorId(AllocatorId),
+        PacRetGadgetsOnly(PacRetGadgetsOnly) {}
+
+  void run();
+
+  const FunctionAnalysisResult &getResult() const { return Result; }
 };
 
 class Analysis : public BinaryFunctionPass {
@@ -271,12 +346,6 @@ class Analysis : public BinaryFunctionPass {
 
   void runOnFunction(BinaryFunction &Function,
                      MCPlusBuilder::AllocatorIdTy AllocatorId);
-  FunctionAnalysisResult findGadgets(BinaryFunction &BF,
-                                     MCPlusBuilder::AllocatorIdTy AllocatorId);
-
-  void computeDetailedInfo(BinaryFunction &BF,
-                           MCPlusBuilder::AllocatorIdTy AllocatorId,
-                           FunctionAnalysisResult &Result);
 
   std::map<const BinaryFunction *, FunctionAnalysisResult> AnalysisResults;
   std::mutex AnalysisResultsMutex;

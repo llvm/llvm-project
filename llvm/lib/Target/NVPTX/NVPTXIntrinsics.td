@@ -67,15 +67,6 @@ class THREADMASK_INFO<bit sync> {
 // Synchronization and shuffle functions
 //-----------------------------------
 let isConvergent = true in {
-def INT_BARRIER0 : NVPTXInst<(outs), (ins),
-                  "bar.sync \t0;",
-      [(int_nvvm_barrier0)]>;
-def INT_BARRIERN : NVPTXInst<(outs), (ins Int32Regs:$src1),
-                  "bar.sync \t$src1;",
-      [(int_nvvm_barrier_n i32:$src1)]>;
-def INT_BARRIER : NVPTXInst<(outs), (ins Int32Regs:$src1, Int32Regs:$src2),
-                  "bar.sync \t$src1, $src2;",
-      [(int_nvvm_barrier i32:$src1, i32:$src2)]>;
 def INT_BARRIER0_POPC : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
   !strconcat("{{ \n\t",
              ".reg .pred \t%p1; \n\t",
@@ -102,9 +93,6 @@ def INT_BARRIER0_OR : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
              "}}"),
       [(set i32:$dst, (int_nvvm_barrier0_or i32:$pred))]>;
 
-def INT_BAR_SYNC : NVPTXInst<(outs), (ins i32imm:$i), "bar.sync \t$i;",
-                             [(int_nvvm_bar_sync imm:$i)]>;
-
 def INT_BAR_WARP_SYNC_I : NVPTXInst<(outs), (ins i32imm:$i), "bar.warp.sync \t$i;",
                              [(int_nvvm_bar_warp_sync imm:$i)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
@@ -112,29 +100,44 @@ def INT_BAR_WARP_SYNC_R : NVPTXInst<(outs), (ins Int32Regs:$i), "bar.warp.sync \
                              [(int_nvvm_bar_warp_sync i32:$i)]>,
         Requires<[hasPTX<60>, hasSM<30>]>;
 
-def INT_BARRIER_SYNC_I : NVPTXInst<(outs), (ins i32imm:$i), "barrier.sync \t$i;",
-                                   [(int_nvvm_barrier_sync imm:$i)]>,
-        Requires<[hasPTX<60>, hasSM<30>]>;
-def INT_BARRIER_SYNC_R : NVPTXInst<(outs), (ins Int32Regs:$i), "barrier.sync \t$i;",
-                                   [(int_nvvm_barrier_sync i32:$i)]>,
-        Requires<[hasPTX<60>, hasSM<30>]>;
+multiclass BARRIER1<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
+  def _i : BasicNVPTXInst<(outs), (ins i32imm:$i), asmstr,
+                          [(intrinsic imm:$i)]>,
+           Requires<requires>;
 
-def INT_BARRIER_SYNC_CNT_RR : NVPTXInst<(outs), (ins Int32Regs:$id, Int32Regs:$cnt),
-                 "barrier.sync \t$id, $cnt;",
-                 [(int_nvvm_barrier_sync_cnt i32:$id, i32:$cnt)]>,
-        Requires<[hasPTX<60>, hasSM<30>]>;
-def INT_BARRIER_SYNC_CNT_RI : NVPTXInst<(outs), (ins Int32Regs:$id, i32imm:$cnt),
-                 "barrier.sync \t$id, $cnt;",
-                 [(int_nvvm_barrier_sync_cnt i32:$id, imm:$cnt)]>,
-        Requires<[hasPTX<60>, hasSM<30>]>;
-def INT_BARRIER_SYNC_CNT_IR : NVPTXInst<(outs), (ins i32imm:$id, Int32Regs:$cnt),
-                 "barrier.sync \t$id, $cnt;",
-                 [(int_nvvm_barrier_sync_cnt imm:$id, i32:$cnt)]>,
-        Requires<[hasPTX<60>, hasSM<30>]>;
-def INT_BARRIER_SYNC_CNT_II : NVPTXInst<(outs), (ins i32imm:$id, i32imm:$cnt),
-                 "barrier.sync \t$id, $cnt;",
-                 [(int_nvvm_barrier_sync_cnt imm:$id, imm:$cnt)]>,
-        Requires<[hasPTX<60>, hasSM<30>]>;
+  def _r : BasicNVPTXInst<(outs), (ins Int32Regs:$i), asmstr,
+                          [(intrinsic i32:$i)]>,
+           Requires<requires>;
+}
+
+multiclass BARRIER2<string asmstr, Intrinsic intrinsic, list<Predicate> requires = []> {
+  def _rr : BasicNVPTXInst<(outs), (ins Int32Regs:$i, Int32Regs:$j), asmstr,
+                          [(intrinsic i32:$i, i32:$j)]>,
+            Requires<requires>;
+
+  def _ri : BasicNVPTXInst<(outs), (ins Int32Regs:$i, i32imm:$j), asmstr,
+                          [(intrinsic i32:$i, imm:$j)]>,
+            Requires<requires>;
+
+  def _ir : BasicNVPTXInst<(outs), (ins i32imm:$i, Int32Regs:$j), asmstr,
+                          [(intrinsic imm:$i, i32:$j)]>,
+            Requires<requires>;
+
+  def _ii : BasicNVPTXInst<(outs), (ins i32imm:$i, i32imm:$j), asmstr,
+                          [(intrinsic imm:$i, imm:$j)]>,
+            Requires<requires>;
+}
+
+// Note the "bar.sync" variants could be renamed to the equivalent corresponding
+// "barrier.*.aligned" variants. We use the older syntax for compatibility with
+// older versions of the PTX ISA.
+defm BARRIER_CTA_SYNC_ALIGNED_ALL : BARRIER1<"bar.sync", int_nvvm_barrier_cta_sync_aligned_all>;
+defm BARRIER_CTA_SYNC_ALIGNED : BARRIER2<"bar.sync", int_nvvm_barrier_cta_sync_aligned_count>;
+defm BARRIER_CTA_ARRIVE_ALIGNED : BARRIER2<"bar.arrive", int_nvvm_barrier_cta_arrive_aligned_count>;
+
+defm BARRIER_CTA_SYNC_ALL : BARRIER1<"barrier.sync", int_nvvm_barrier_cta_sync_all, [hasPTX<60>]>;
+defm BARRIER_CTA_SYNC : BARRIER2<"barrier.sync", int_nvvm_barrier_cta_sync_count, [hasPTX<60>]>;
+defm BARRIER_CTA_ARRIVE : BARRIER2<"barrier.arrive", int_nvvm_barrier_cta_arrive_count, [hasPTX<60>]>;
 
 class INT_BARRIER_CLUSTER<string variant, Intrinsic Intr,
                           list<Predicate> Preds = [hasPTX<78>, hasSM<90>]>:
@@ -541,52 +544,50 @@ multiclass CP_ASYNC_BULK_S2G_INTR<bit has_ch> {
       [(int_nvvm_cp_async_bulk_shared_cta_to_global_bytemask addr:$dst, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0), i16:$mask)]>,
       Requires<[hasPTX<86>, hasSM<100>]>;
 }
-defm CP_ASYNC_BULK_S2G    : CP_ASYNC_BULK_S2G_INTR<0>;
-defm CP_ASYNC_BULK_S2G_CH : CP_ASYNC_BULK_S2G_INTR<1>;
+defm CP_ASYNC_BULK_S2G    : CP_ASYNC_BULK_S2G_INTR<has_ch = 0>;
+defm CP_ASYNC_BULK_S2G_CH : CP_ASYNC_BULK_S2G_INTR<has_ch = 1>;
 
-multiclass CP_ASYNC_BULK_G2S<NVPTXRegClass rc> {
-  def NAME: NVPTXInst<(outs),
-            (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size),
-            !strconcat(CpAsyncBulkStr<0, 0>.G2S, " [$dst], [$src], $size, [$mbar];"), []>,
-            Requires<[hasPTX<80>, hasSM<90>]>;
-  def NAME # _MC: NVPTXInst<(outs),
-                  (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int16Regs:$mc),
-                  !strconcat(CpAsyncBulkStr<1, 0>.G2S, " [$dst], [$src], $size, [$mbar], $mc;"), []>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
-  def NAME # _CH: NVPTXInst<(outs),
-                  (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
-                  !strconcat(CpAsyncBulkStr<0, 1>.G2S, " [$dst], [$src], $size, [$mbar], $ch;"), []>,
-                  Requires<[hasPTX<80>, hasSM<90>]>;
-  def NAME # _MC_CH: NVPTXInst<(outs),
-                     (ins rc:$dst, rc:$mbar, Int64Regs:$src, Int32Regs:$size, Int16Regs:$mc, Int64Regs:$ch),
-                     !strconcat(CpAsyncBulkStr<1, 1>.G2S, " [$dst], [$src], $size, [$mbar], $mc, $ch;"), []>,
-                     Requires<[hasPTX<80>, hasSM<90>]>;
+multiclass CP_ASYNC_BULK_G2S_INTR<bit has_ch> {
+  defvar Intr = int_nvvm_cp_async_bulk_global_to_shared_cluster;
+
+  def NAME : NVPTXInst<(outs),
+      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
+           Int32Regs:$size, Int16Regs:$mask, Int64Regs:$ch),
+      !if(has_ch,
+          CpAsyncBulkStr<0, 1>.G2S # " [$dst], [$src], $size, [$mbar], $ch;",
+          CpAsyncBulkStr<0, 0>.G2S # " [$dst], [$src], $size, [$mbar];"),
+      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i16:$mask, i64:$ch, 0, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<80>, hasSM<90>]>;
+
+  def NAME # _MC : NVPTXInst<(outs),
+      (ins ADDR:$dst, ADDR:$mbar, ADDR:$src,
+           Int32Regs:$size, Int16Regs:$mask, Int64Regs:$ch),
+      !if(has_ch,
+          CpAsyncBulkStr<1, 1>.G2S # " [$dst], [$src], $size, [$mbar], $mask, $ch;",
+          CpAsyncBulkStr<1, 0>.G2S # " [$dst], [$src], $size, [$mbar], $mask;"),
+      [(Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i16:$mask, i64:$ch, -1, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<80>, hasSM<90>]>;
 }
-defm CP_ASYNC_BULK_G2S : CP_ASYNC_BULK_G2S<Int64Regs>;
-defm CP_ASYNC_BULK_G2S_SHARED32 : CP_ASYNC_BULK_G2S<Int32Regs>;
+defm CP_ASYNC_BULK_G2S    : CP_ASYNC_BULK_G2S_INTR<has_ch = 0>;
+defm CP_ASYNC_BULK_G2S_CH : CP_ASYNC_BULK_G2S_INTR<has_ch = 1>;
 
-multiclass CP_ASYNC_BULK_CTA_TO_CLUSTER<NVPTXRegClass rc> {
-  def NAME: NVPTXInst<(outs),
-            (ins rc:$dst, rc:$mbar, rc:$src, Int32Regs:$size),
-            !strconcat(CpAsyncBulkStr<0, 0>.C2C, " [$dst], [$src], $size, [$mbar];"),
-            [(int_nvvm_cp_async_bulk_shared_cta_to_cluster rc:$dst, rc:$mbar, rc:$src, Int32Regs:$size)]>,
-            Requires<[hasPTX<80>, hasSM<90>]>;
+def CP_ASYNC_BULK_CTA_TO_CLUSTER : NVPTXInst<(outs),
+  (ins ADDR:$dst, ADDR:$mbar, ADDR:$src, Int32Regs:$size),
+  CpAsyncBulkStr<0, 0>.C2C # " [$dst], [$src], $size, [$mbar];",
+  [(int_nvvm_cp_async_bulk_shared_cta_to_cluster addr:$dst, addr:$mbar, addr:$src, i32:$size)]>,
+  Requires<[hasPTX<80>, hasSM<90>]>;
+
+multiclass CP_ASYNC_BULK_PREFETCH_INTR<bit has_ch> {
+  def NAME : NVPTXInst<(outs), (ins ADDR:$src, Int32Regs:$size, Int64Regs:$ch),
+      !if(has_ch,
+          "cp.async.bulk.prefetch.L2.global.L2::cache_hint" # " [$src], $size, $ch;",
+          "cp.async.bulk.prefetch.L2.global" # " [$src], $size;"),
+      [(int_nvvm_cp_async_bulk_prefetch_L2 addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0))]>,
+      Requires<[hasPTX<80>, hasSM<90>]>;
 }
-defm CP_ASYNC_BULK_CTA_TO_CLUSTER : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int64Regs>;
-defm CP_ASYNC_BULK_CTA_TO_CLUSTER_SHARED32 : CP_ASYNC_BULK_CTA_TO_CLUSTER<Int32Regs>;
+defm CP_ASYNC_BULK_PREFETCH    : CP_ASYNC_BULK_PREFETCH_INTR<has_ch = 0>;
+defm CP_ASYNC_BULK_PREFETCH_CH : CP_ASYNC_BULK_PREFETCH_INTR<has_ch = 1>;
 
-//------------------------------
-// Bulk Copy Prefetch Functions
-//------------------------------
-def CP_ASYNC_BULK_PREFETCH : NVPTXInst<(outs),
-                             (ins Int64Regs:$src, Int32Regs:$size),
-                             "cp.async.bulk.prefetch.L2.global [$src], $size;", []>,
-                             Requires<[hasPTX<80>, hasSM<90>]>;
-
-def CP_ASYNC_BULK_PREFETCH_CH : NVPTXInst<(outs),
-                                (ins Int64Regs:$src, Int32Regs:$size, Int64Regs:$ch),
-                                "cp.async.bulk.prefetch.L2.global.L2::cache_hint [$src], $size, $ch;", []>,
-                                Requires<[hasPTX<80>, hasSM<90>]>;
 //-------------------------------------
 // TMA Async Bulk Tensor Copy Functions
 //-------------------------------------
@@ -1025,8 +1026,23 @@ class F_MATH_3<string OpcStr, NVPTXRegClass t_regclass,
 // MISC
 //
 
-def INT_NVVM_PRMT : F_MATH_3<"prmt.b32 \t$dst, $src0, $src1, $src2;", Int32Regs,
-  Int32Regs, Int32Regs, Int32Regs, int_nvvm_prmt>;
+class PRMT3Pat<Intrinsic prmt_intrinsic, PatLeaf prmt_mode>
+    : Pat<(prmt_intrinsic i32:$a, i32:$b, i32:$c),
+          (PRMT_B32rrr $a, $b, $c, prmt_mode)>;
+
+class PRMT2Pat<Intrinsic prmt_intrinsic, PatLeaf prmt_mode>
+    : Pat<(prmt_intrinsic i32:$a, i32:$c),
+          (PRMT_B32rir $a, (i32 0), $c, prmt_mode)>;
+
+def : PRMT3Pat<int_nvvm_prmt,      PrmtNONE>;
+def : PRMT3Pat<int_nvvm_prmt_f4e,  PrmtF4E>;
+def : PRMT3Pat<int_nvvm_prmt_b4e,  PrmtB4E>;
+
+def : PRMT2Pat<int_nvvm_prmt_rc8,  PrmtRC8>;
+def : PRMT2Pat<int_nvvm_prmt_ecl,  PrmtECL>;
+def : PRMT2Pat<int_nvvm_prmt_ecr,  PrmtECR>;
+def : PRMT2Pat<int_nvvm_prmt_rc16, PrmtRC16>;
+
 
 def INT_NVVM_NANOSLEEP_I : NVPTXInst<(outs), (ins i32imm:$i), "nanosleep.u32 \t$i;",
                              [(int_nvvm_nanosleep imm:$i)]>,

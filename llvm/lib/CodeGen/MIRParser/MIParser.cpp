@@ -326,7 +326,7 @@ PerFunctionMIParsingState::PerFunctionMIParsingState(MachineFunction &MF,
 }
 
 VRegInfo &PerFunctionMIParsingState::getVRegInfo(Register Num) {
-  auto I = VRegInfos.insert(std::make_pair(Num, nullptr));
+  auto I = VRegInfos.try_emplace(Num);
   if (I.second) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
     VRegInfo *Info = new (Allocator) VRegInfo;
@@ -339,7 +339,7 @@ VRegInfo &PerFunctionMIParsingState::getVRegInfo(Register Num) {
 VRegInfo &PerFunctionMIParsingState::getVRegInfoNamed(StringRef RegName) {
   assert(RegName != "" && "Expected named reg.");
 
-  auto I = VRegInfosNamed.insert(std::make_pair(RegName.str(), nullptr));
+  auto I = VRegInfosNamed.try_emplace(RegName.str());
   if (I.second) {
     VRegInfo *Info = new (Allocator) VRegInfo;
     Info->VReg = MF.getRegInfo().createIncompleteVirtualRegister(RegName);
