@@ -245,14 +245,14 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ;
 ; RV32ZBKB-LABEL: test_bitreverse_i8:
 ; RV32ZBKB:       # %bb.0:
-; RV32ZBKB-NEXT:    rev8 a0, a0
+; RV32ZBKB-NEXT:    slli a0, a0, 24
 ; RV32ZBKB-NEXT:    brev8 a0, a0
 ; RV32ZBKB-NEXT:    srli a0, a0, 24
 ; RV32ZBKB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: test_bitreverse_i8:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    rev8 a0, a0
+; RV64ZBKB-NEXT:    slli a0, a0, 56
 ; RV64ZBKB-NEXT:    brev8 a0, a0
 ; RV64ZBKB-NEXT:    srli a0, a0, 56
 ; RV64ZBKB-NEXT:    ret
