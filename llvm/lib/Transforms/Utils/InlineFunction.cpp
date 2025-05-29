@@ -828,12 +828,13 @@ static void removeCallsiteMetadata(CallBase *Call) {
 }
 
 static void updateMemprofMetadata(CallBase *CI,
-                                  const std::vector<Metadata *> &MIBList) {
+                                  const std::vector<Metadata *> &MIBList,
+                                  OptimizationRemarkEmitter *ORE) {
   assert(!MIBList.empty());
   // Remove existing memprof, which will either be replaced or may not be needed
   // if we are able to use a single allocation type function attribute.
   removeMemProfMetadata(CI);
-  CallStackTrie CallStack;
+  CallStackTrie CallStack(ORE);
   for (Metadata *MIB : MIBList)
     CallStack.addCallStack(cast<MDNode>(MIB));
   bool MemprofMDAttached = CallStack.buildAndAttachMIBMetadata(CI);
@@ -848,7 +849,8 @@ static void updateMemprofMetadata(CallBase *CI,
 // the call that was inlined.
 static void propagateMemProfHelper(const CallBase *OrigCall,
                                    CallBase *ClonedCall,
-                                   MDNode *InlinedCallsiteMD) {
+                                   MDNode *InlinedCallsiteMD,
+                                   OptimizationRemarkEmitter *ORE) {
   MDNode *OrigCallsiteMD = ClonedCall->getMetadata(LLVMContext::MD_callsite);
   MDNode *ClonedCallsiteMD = nullptr;
   // Check if the call originally had callsite metadata, and update it for the
@@ -891,7 +893,7 @@ static void propagateMemProfHelper(const CallBase *OrigCall,
     return;
   }
   if (NewMIBList.size() < OrigMemProfMD->getNumOperands())
-    updateMemprofMetadata(ClonedCall, NewMIBList);
+    updateMemprofMetadata(ClonedCall, NewMIBList, ORE);
 }
 
 // Update memprof related metadata (!memprof and !callsite) based on the
@@ -902,7 +904,8 @@ static void propagateMemProfHelper(const CallBase *OrigCall,
 static void
 propagateMemProfMetadata(Function *Callee, CallBase &CB,
                          bool ContainsMemProfMetadata,
-                         const ValueMap<const Value *, WeakTrackingVH> &VMap) {
+                         const ValueMap<const Value *, WeakTrackingVH> &VMap,
+                         OptimizationRemarkEmitter *ORE) {
   MDNode *CallsiteMD = CB.getMetadata(LLVMContext::MD_callsite);
   // Only need to update if the inlined callsite had callsite metadata, or if
   // there was any memprof metadata inlined.
@@ -925,7 +928,7 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
       removeCallsiteMetadata(ClonedCall);
       continue;
     }
-    propagateMemProfHelper(OrigCall, ClonedCall, CallsiteMD);
+    propagateMemProfHelper(OrigCall, ClonedCall, CallsiteMD, ORE);
   }
 }
 
@@ -2473,7 +2476,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                         bool MergeAttributes,
                                         AAResults *CalleeAAR,
                                         bool InsertLifetime,
-                                        Function *ForwardVarArgsTo) {
+                                        Function *ForwardVarArgsTo,
+                                        OptimizationRemarkEmitter *ORE) {
   assert(CB.getParent() && CB.getFunction() && "Instruction not in function!");
 
   // FIXME: we don't inline callbr yet.
@@ -2807,8 +2811,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // inlined function which use the same param.
     AddParamAndFnBasicAttributes(CB, VMap, InlinedFunctionInfo);
 
-    propagateMemProfMetadata(CalledFunc, CB,
-                             InlinedFunctionInfo.ContainsMemProfMetadata, VMap);
+    propagateMemProfMetadata(
+        CalledFunc, CB, InlinedFunctionInfo.ContainsMemProfMetadata, VMap, ORE);
 
     // Propagate metadata on the callsite if necessary.
     PropagateCallSiteMetadata(CB, FirstNewBlock, Caller->end());

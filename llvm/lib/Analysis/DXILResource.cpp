@@ -21,7 +21,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <climits>
 #include <cstdint>
 #include <optional>
 
@@ -531,8 +530,7 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
   }
 }
 
-GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty,
-                                           StringRef Name) {
+GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty) {
   assert(!Symbol && "Symbol has already been created");
   Symbol = new GlobalVariable(M, Ty, /*isConstant=*/true,
                               GlobalValue::ExternalLinkage,
@@ -659,6 +657,9 @@ ResourceInfo::getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const {
 
 void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
                          const DataLayout &DL) const {
+  if (!Name.empty())
+    OS << "  Name: " << Name << "\n";
+
   if (Symbol) {
     OS << "  Symbol: ";
     Symbol->printAsOperand(OS);
@@ -706,6 +707,30 @@ static bool isUpdateCounterIntrinsic(Function &F) {
   return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
 }
 
+StringRef dxil::getResourceNameFromBindingCall(CallInst *CI) {
+  Value *Op = nullptr;
+  switch (CI->getCalledFunction()->getIntrinsicID()) {
+  default:
+    llvm_unreachable("unexpected handle creation intrinsic");
+  case Intrinsic::dx_resource_handlefrombinding:
+  case Intrinsic::dx_resource_handlefromimplicitbinding:
+    Op = CI->getArgOperand(5);
+    break;
+  }
+
+  auto *GV = dyn_cast<llvm::GlobalVariable>(Op);
+  if (!GV)
+    return "";
+
+  auto *CA = dyn_cast<ConstantDataArray>(GV->getInitializer());
+  assert(CA && CA->isString() && "expected constant string");
+  StringRef Name = CA->getAsString();
+  // strip trailing 0
+  if (Name.ends_with('\0'))
+    Name = Name.drop_back(1);
+  return Name;
+}
+
 void DXILResourceMap::populateResourceInfos(Module &M,
                                             DXILResourceTypeMap &DRTM) {
   SmallVector<std::tuple<CallInst *, ResourceInfo, ResourceTypeInfo>> CIToInfos;
@@ -731,8 +756,11 @@ void DXILResourceMap::populateResourceInfos(Module &M,
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
           uint32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+          StringRef Name = getResourceNameFromBindingCall(CI);
+
           ResourceInfo RI =
-              ResourceInfo{/*RecordID=*/0, Space, LowerBound, Size, HandleTy};
+              ResourceInfo{/*RecordID=*/0, Space,    LowerBound,
+                           Size,           HandleTy, Name};
 
           CIToInfos.emplace_back(CI, RI, RTI);
         }
@@ -892,10 +920,11 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
     uint32_t Space;
     uint32_t LowerBound;
     uint32_t UpperBound;
+    Value *Name;
     Binding(ResourceClass RC, uint32_t Space, uint32_t LowerBound,
-            uint32_t UpperBound)
-        : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound) {
-    }
+            uint32_t UpperBound, Value *Name)
+        : RC(RC), Space(Space), LowerBound(LowerBound), UpperBound(UpperBound),
+          Name(Name) {}
   };
   SmallVector<Binding> Bindings;
 
@@ -920,6 +949,7 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
               cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
           int32_t Size =
               cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+          Value *Name = CI->getArgOperand(5);
 
           // negative size means unbounded resource array;
           // upper bound register overflow should be detected in Sema
@@ -927,7 +957,7 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
                  "upper bound register overflow");
           uint32_t UpperBound = Size < 0 ? UINT32_MAX : LowerBound + Size - 1;
           Bindings.emplace_back(RTI.getResourceClass(), Space, LowerBound,
-                                UpperBound);
+                                UpperBound, Name);
         }
       break;
     }
@@ -946,8 +976,9 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
 
   // remove duplicates
   Binding *NewEnd = llvm::unique(Bindings, [](auto &LHS, auto &RHS) {
-    return std::tie(LHS.RC, LHS.Space, LHS.LowerBound, LHS.UpperBound) ==
-           std::tie(RHS.RC, RHS.Space, RHS.LowerBound, RHS.UpperBound);
+    return std::tie(LHS.RC, LHS.Space, LHS.LowerBound, LHS.UpperBound,
+                    LHS.Name) == std::tie(RHS.RC, RHS.Space, RHS.LowerBound,
+                                          RHS.UpperBound, RHS.Name);
   });
   if (NewEnd != Bindings.end())
     Bindings.erase(NewEnd);
@@ -987,8 +1018,6 @@ void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
       if (B.UpperBound < UINT32_MAX)
         S->FreeRanges.emplace_back(B.UpperBound + 1, UINT32_MAX);
     } else {
-      // FIXME: This only detects overlapping bindings that are not an exact
-      // match (llvm/llvm-project#110723)
       OverlappingBinding = true;
       if (B.UpperBound < UINT32_MAX)
         LastFreeRange.LowerBound =

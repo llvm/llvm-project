@@ -2145,8 +2145,12 @@ bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
   return C && C->getAPIntValue().ule(10);
 }
 
-bool RISCVTargetLowering::shouldFoldSelectWithIdentityConstant(unsigned Opcode,
-                                                               EVT VT) const {
+bool RISCVTargetLowering::shouldFoldSelectWithIdentityConstant(
+    unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
+    SDValue Y) const {
+  if (SelectOpcode != ISD::VSELECT)
+    return false;
+
   // Only enable for rvv.
   if (!VT.isVector() || !Subtarget.hasVInstructions())
     return false;
