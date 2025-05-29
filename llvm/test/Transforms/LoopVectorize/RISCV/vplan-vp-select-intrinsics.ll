@@ -31,8 +31,8 @@
  ; IF-EVL-NEXT: Successor(s): vector.body
  ; IF-EVL-EMPTY:
  ; IF-EVL-NEXT: vector.body:
- ; IF-EVL-NEXT:   EMIT vp<[[IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[IV_NEXT_EXIT:%.+]]>, vector.body ]
- ; IF-EVL-NEXT:   EMIT vp<[[EVL_PHI:%.+]]>  = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[IV_NEX:%.+]]>, vector.body ]
+ ; IF-EVL-NEXT:   EMIT-SCALAR vp<[[IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[IV_NEXT_EXIT:%.+]]>, vector.body ]
+ ; IF-EVL-NEXT:   EMIT-SCALAR vp<[[EVL_PHI:%.+]]>  = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[IV_NEX:%.+]]>, vector.body ]
  ; IF-EVL-NEXT:   EMIT vp<[[AVL:%.+]]> = sub ir<%N>, vp<[[EVL_PHI]]>
  ; IF-EVL-NEXT:   EMIT vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
  ; IF-EVL-NEXT:   CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%b>, vp<[[EVL_PHI]]>
