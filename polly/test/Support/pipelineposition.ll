@@ -81,4 +81,4 @@ return:
 
 ; INLINED3-LABEL: Function: caller
 ; INLINED3:       Schedule :=
-; INLINED3-NEXT:    [n] -> { Stmt_body_i_us[i0, i1] -> [i0, i1] };
+; INLINED3-NEXT:    [n] -> { Stmt_body_i[i0, i1] -> [i0, i1] };
