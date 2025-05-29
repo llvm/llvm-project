@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/SipHash.h"
 
 namespace clang {
@@ -416,6 +417,13 @@ static bool interp__builtin_copysign(InterpState &S, CodePtr OpPC,
   Copy.copySign(Arg2.getAPFloat());
   S.Stk.push<Floating>(Floating(Copy));
 
+  return true;
+}
+
+static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame) {
+  APFloat Result = exp(S.Stk.peek<Floating>().getAPFloat());
+  S.Stk.push<Floating>(Floating(Result));
   return true;
 }
 
@@ -2314,6 +2322,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     if (!interp__builtin_copysign(S, OpPC, Frame))
       return false;
     break;
+
+  case Builtin::BI__builtin_exp:
+  case Builtin::BI__builtin_expl:
+  case Builtin::BI__builtin_expf16:
+  case Builtin::BI__builtin_expf128:
+    return false;
+  case Builtin::BI__builtin_expf:
+#ifdef LLVM_INTEGRATE_LIBC
+    if (!interp__builtin_exp(S, OpPC, Frame))
+      return false;
+    break;
+#else
+    return false;
+#endif // LLVM_INTEGRATE_LIBC
 
   case Builtin::BI__builtin_fmin:
   case Builtin::BI__builtin_fminf:

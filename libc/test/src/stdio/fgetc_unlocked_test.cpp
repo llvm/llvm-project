@@ -20,7 +20,7 @@
 #include "test/UnitTest/Test.h"
 
 #include "hdr/stdio_macros.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 
 class LlvmLibcGetcTest : public LIBC_NAMESPACE::testing::Test {
 public:

@@ -8356,4 +8356,11 @@ TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
 }
 
+#ifdef LLVM_INTEGRATE_LIBC
+TEST(APFloatTest, expf) {
+  EXPECT_EQ(1.0f, exp(APFloat(0.0f)).convertToFloat());
+  EXPECT_EQ(0x1.5bf0a8p1f, exp(APFloat(1.0f)).convertToFloat());
+}
+#endif // LLVM_INTEGRATE_LIBC
+
 } // namespace

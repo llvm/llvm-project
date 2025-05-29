@@ -385,3 +385,6 @@ if "system-aix" in config.available_features:
 # possibly be present in system and user configuration files, so disable
 # default configs for the test runs.
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+
+if config.llvm_integrate_libc:
+    config.available_features.add("llvm_integrate_libc")

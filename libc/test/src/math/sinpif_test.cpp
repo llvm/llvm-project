@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/sinpif.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/src/math/sdcomp26094.h"

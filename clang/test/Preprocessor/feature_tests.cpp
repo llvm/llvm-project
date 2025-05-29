@@ -64,6 +64,16 @@
 #error Clang should have these constexpr builtins
 #endif
 
+#ifdef LLVM_INTEGRATE_LIBC
+#if !__has_constexpr_builtin(__builtin_expf)
+#error Clang should have these constexpr builtins
+#endif
+#else
+#if __has_constexpr_builtin(__builtin_expf)
+#error This builtin should not be constexpr in Clang
+#endif
+#endif // LLVM_INTEGRATE_LIBC
+
 #if !__has_constexpr_builtin(__builtin_convertvector)
 #error Clang should have these constexpr builtins
 #endif

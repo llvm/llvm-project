@@ -1522,6 +1522,7 @@ public:
   friend int ilogb(const APFloat &Arg) { return ilogb(Arg.getIEEE()); }
   friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
+  friend APFloat exp(const APFloat &X);
   friend IEEEFloat;
   friend DoubleAPFloat;
 };
@@ -1564,6 +1565,8 @@ inline APFloat neg(APFloat X) {
   X.changeSign();
   return X;
 }
+
+APFloat exp(const APFloat &X);
 
 /// Implements IEEE-754 2008 minNum semantics. Returns the smaller of the
 /// 2 arguments if both are not NaN. If either argument is a qNaN, returns the

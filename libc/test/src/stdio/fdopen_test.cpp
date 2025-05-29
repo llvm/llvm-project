@@ -9,7 +9,7 @@
 #include "src/stdio/fdopen.h"
 
 #include "hdr/fcntl_macros.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fgets.h"

@@ -633,6 +633,16 @@ endif()
 
 set(LLVM_ENABLE_Z3_SOLVER_DEFAULT "${Z3_FOUND}")
 
+set(LLVM_INTEGRATE_LIBC "OFF" CACHE STRING "Use LLVM libc codes directly if available.")
+
+if(LLVM_INTEGRATE_LIBC)
+  message(STATUS "LLVM_INTEGRATE_LIBC is ${LLVM_INTEGRATE_LIBC}")
+  include(FindLibcCommonUtils)
+  if(NOT TARGET llvm-libc-common-utilities)
+    message(STATUS "LLVM_INTEGRATE_LIBC is set but cannot find LLVM libc at ${libc_path}.")
+    set(LLVM_INTEGRATE_LIBC OFF)
+  endif()
+endif()
 
 if( LLVM_TARGETS_TO_BUILD STREQUAL "all" )
   set( LLVM_TARGETS_TO_BUILD ${LLVM_ALL_TARGETS} )

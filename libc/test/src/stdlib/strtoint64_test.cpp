@@ -8,9 +8,9 @@
 
 #include <stdint.h>
 
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
-#include "src/errno/libc_errno.h"
 
 #include "StrtolTest.h"
 #include "test/UnitTest/Test.h"

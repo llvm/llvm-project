@@ -101,7 +101,7 @@ test infrastructure itself can be affected. To avoid perturbing the unit test
 infrastructure around the setting of ``errno``, the following rules are to be
 followed:
 
-#. A special macro named ``libc_errno`` defined in ``src/errno/libc_errno.h``
+#. A special macro named ``libc_errno`` defined in ``src/__support/libc_errno.h``
    should be used when setting ``errno`` from libc runtime code. For example,
    code to set ``errno`` to ``EINVAL`` should be:
 
@@ -117,7 +117,7 @@ followed:
    `ErrorOr <https://github.com/llvm/llvm-project/blob/main/libc/src/__support/error_or.h>`_
    to return error values.
 
-#. The header file ``src/errno/libc_errno.h`` is shipped as part of the target
+#. The header file ``src/__support/libc_errno.h`` is shipped as part of the target
    corresponding to the ``errno`` entrypoint ``libc.src.errno.errno``. We do
    not in general allow dependencies between entrypoints. However, the ``errno``
    entrypoint is the only exceptional entrypoint on which other entrypoints

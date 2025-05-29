@@ -133,4 +133,7 @@
    and to 0 otherwise. */
 #cmakedefine01 LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
 
+/* Define if LLVM and clang uses LLVM libc for constexpr math computations. */
+#cmakedefine LLVM_INTEGRATE_LIBC
+
 #endif
