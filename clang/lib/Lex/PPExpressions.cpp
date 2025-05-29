@@ -979,3 +979,48 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
   return EvaluateDirectiveExpression(IfNDefMacro, Tok, EvaluatedDefined,
                                      CheckForEoD);
 }
+
+static std::optional<CXXStandardLibraryVersionInfo>
+getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
+                             CXXStandardLibraryVersionInfo::Library Lib) {
+  MacroInfo *Macro = PP.getMacroInfo(PP.getIdentifierInfo(MacroName));
+
+  if (!Macro || Macro->getNumTokens() != 1)
+    return std::nullopt;
+
+  const Token &RevisionDateTok = Macro->getReplacementToken(0);
+
+  bool Invalid = false;
+  llvm::SmallVector<char, 10> Buffer;
+  llvm::StringRef RevisionDate =
+      PP.getSpelling(RevisionDateTok, Buffer, &Invalid);
+  if (!Invalid) {
+    unsigned Value;
+    // We don't use NumericParser to avoid diagnostics
+    if (!RevisionDate.consumeInteger(10, Value))
+      return CXXStandardLibraryVersionInfo{
+          CXXStandardLibraryVersionInfo::LibStdCXX, Value};
+  }
+  return CXXStandardLibraryVersionInfo{CXXStandardLibraryVersionInfo::Unknown,
+                                       0};
+}
+
+std::optional<unsigned> Preprocessor::getStdLibCxxVersion() {
+  if (!CXXStandardLibraryVersion)
+    CXXStandardLibraryVersion = getCXXStandardLibraryVersion(
+        *this, "__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX);
+  if (!CXXStandardLibraryVersion)
+    return std::nullopt;
+
+  if (CXXStandardLibraryVersion->Lib ==
+      CXXStandardLibraryVersionInfo::LibStdCXX)
+    return CXXStandardLibraryVersion->Version;
+  return std::nullopt;
+}
+
+bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(unsigned FixedVersion) {
+  std::optional<unsigned> Ver = getStdLibCxxVersion();
+  if (!Ver)
+    return false;
+  return *Ver < FixedVersion;
+}
