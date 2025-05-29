@@ -36,7 +36,7 @@ TEST(LlvmLibcSysIoctlTest, NullAndTestFileFIONREAD) {
 
   // Now, with a file known to have a non-zero size
   constexpr const char TEST_MSG[] = "ioctl test";
-  constexpr ssize_t TEST_MSG_SIZE = sizeof(TEST_MSG) - 1;
+  constexpr int TEST_MSG_SIZE = sizeof(TEST_MSG) - 1;
   constexpr const char *TEST_FILE = "testdata/ioctl.test";
   int test_file_fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
   ASSERT_GT(test_file_fd, 0);
