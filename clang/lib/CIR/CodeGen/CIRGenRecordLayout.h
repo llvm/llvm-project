@@ -34,8 +34,6 @@ namespace clang::CIRGen {
 /// byte-sequence this bitfield falls within. Let's assume the following C
 /// struct:
 ///
-/// struct:
-///
 ///   struct S {
 ///     char a, b, c;
 ///     unsigned bits : 3;
@@ -65,7 +63,7 @@ namespace clang::CIRGen {
 ///     !cir.ptr<!u16i>, %2 : !u32i) -> !u32i
 ///     cir.return
 ///   }
-////
+///
 struct CIRGenBitFieldInfo {
   /// The offset within a contiguous run of bitfields that are represented as
   /// a single "field" within the cir.record type. This offset is in bits.
