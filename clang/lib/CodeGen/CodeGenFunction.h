@@ -599,7 +599,7 @@ public:
 
     // ApplyDebugLocation is undeclared: CGDebugInfo.h is not #included in this
     // header due to overhead (b384d6d6ccc8f4452cd7086061c657ce76b41224)
-    void *ApplyTrapDI;
+    void *ApplyTrapDI = nullptr;
 
   public:
     SanitizerScope(CodeGenFunction *CGF,

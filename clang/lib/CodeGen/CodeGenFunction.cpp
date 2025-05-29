@@ -2759,6 +2759,7 @@ CodeGenFunction::SanitizerScope::SanitizerScope(
   assert(!CGF->IsSanitizerScope);
   CGF->IsSanitizerScope = true;
 
+  assert(!this->ApplyTrapDI);
   this->ApplyTrapDI =
       new ApplyDebugLocation(*CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals));
 }
@@ -2767,6 +2768,7 @@ CodeGenFunction::SanitizerScope::~SanitizerScope() {
   CGF->IsSanitizerScope = false;
 
   delete ((ApplyDebugLocation *)this->ApplyTrapDI);
+  this->ApplyTrapDI = nullptr;
 }
 
 void CodeGenFunction::InsertHelper(llvm::Instruction *I,
