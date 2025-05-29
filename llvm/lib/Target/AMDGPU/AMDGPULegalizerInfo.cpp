@@ -1061,9 +1061,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
-  if (ST.hasCvtPkF16F32Inst())
-    FPTruncActions.legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}});
-  else
+  if (ST.hasCvtPkF16F32Inst()) {
+    FPTruncActions.legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}})
+                  .customFor({{V4S16, V4S32}, {V8S16, V8S32}});
+  } else
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
   FPTruncActions.scalarize(0).lower();
 
@@ -2163,6 +2164,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     return legalizeMinNumMaxNum(Helper, MI);
+  case TargetOpcode::G_FPTRUNC:
+    return legalizeFPTrunc(Helper, MI, MRI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, B);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
@@ -2747,6 +2750,20 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
     return true;
 
   return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
+}
+
+bool AMDGPULegalizerInfo::legalizeFPTrunc(LegalizerHelper &Helper,
+                                          MachineInstr &MI,
+                                          MachineRegisterInfo &MRI) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  assert (DstTy.isVector() && DstTy.getNumElements() > 2);
+  LLT EltTy = DstTy.getElementType();
+  assert (EltTy == S16 && "Only handle vectors of half");
+
+  // Split vector to packs.
+  return Helper.fewerElementsVector(MI, 0, LLT::fixed_vector(2, EltTy)) ==
+         LegalizerHelper::Legalized;
 }
 
 bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
