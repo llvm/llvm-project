@@ -20,6 +20,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/Casting.h"
 
 #include <memory>
@@ -66,6 +67,10 @@ struct CIRRecordLowering final {
     return MemberInfo(offset, MemberInfo::InfoKind::Field, data);
   }
 
+  // Layout routines.
+  void setBitFieldInfo(const FieldDecl *fd, CharUnits startOffset,
+                       mlir::Type storageType);
+
   void lower();
   void lowerUnion();
 
@@ -77,6 +82,8 @@ struct CIRRecordLowering final {
   void accumulateBases(const CXXRecordDecl *cxxRecordDecl);
   void accumulateVPtrs();
   void accumulateFields();
+  void accumulateBitFields(RecordDecl::field_iterator field,
+                           RecordDecl::field_iterator fieldEnd);
 
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
@@ -86,6 +93,9 @@ struct CIRRecordLowering final {
 
   CharUnits getSize(mlir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
+  }
+  CharUnits getSizeInBits(mlir::Type ty) {
+    return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
   }
   CharUnits getAlignment(mlir::Type Ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
@@ -124,6 +134,17 @@ struct CIRRecordLowering final {
   mlir::Type getStorageType(const CXXRecordDecl *RD) {
     return cirGenTypes.getCIRGenRecordLayout(RD).getBaseSubobjectCIRType();
   }
+  // This is different from LLVM traditional codegen because CIRGen uses arrays
+  // of bytes instead of arbitrary-sized integers. This is important for packed
+  // structures support.
+  mlir::Type getBitfieldStorageType(unsigned numBits) {
+    unsigned alignedBits = llvm::alignTo(numBits, astContext.getCharWidth());
+    if (cir::isValidFundamentalIntWidth(alignedBits))
+      return builder.getUIntNTy(alignedBits);
+
+    mlir::Type type = getCharType();
+    return cir::ArrayType::get(type, alignedBits / astContext.getCharWidth());
+  }
 
   mlir::Type getStorageType(const FieldDecl *fieldDecl) {
     mlir::Type type = cirGenTypes.convertTypeForMem(fieldDecl->getType());
@@ -157,6 +178,7 @@ struct CIRRecordLowering final {
   std::vector<MemberInfo> members;
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
+  llvm::DenseMap<const FieldDecl *, CIRGenBitFieldInfo> bitFields;
   llvm::DenseMap<const FieldDecl *, unsigned> fieldIdxMap;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> nonVirtualBases;
   cir::CIRDataLayout dataLayout;
@@ -185,6 +207,32 @@ CIRRecordLowering::CIRRecordLowering(CIRGenTypes &cirGenTypes,
       dataLayout(cirGenTypes.getCGModule().getModule()),
       zeroInitializable(true), zeroInitializableAsBase(true), packed(packed),
       padded(false) {}
+
+void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
+                                        CharUnits startOffset,
+                                        mlir::Type storageType) {
+  CIRGenBitFieldInfo &info = bitFields[fd->getCanonicalDecl()];
+  info.isSigned = fd->getType()->isSignedIntegerOrEnumerationType();
+  info.offset =
+      (unsigned)(getFieldBitOffset(fd) - astContext.toBits(startOffset));
+  info.size = fd->getBitWidthValue();
+  info.storageSize = getSizeInBits(storageType).getQuantity();
+  info.storageOffset = startOffset;
+  info.storageType = storageType;
+  info.name = fd->getName();
+
+  if (info.size > info.storageSize)
+    info.size = info.storageSize;
+  // Reverse the bit offsets for big endian machines. Because we represent
+  // a bitfield as a single large integer load, we can imagine the bits
+  // counting from the most-significant-bit instead the
+  // least-significant-bit.
+  assert(!cir::MissingFeatures::isBigEndian());
+
+  info.volatileStorageSize = 0;
+  info.volatileOffset = 0;
+  info.volatileStorageOffset = CharUnits::Zero();
+}
 
 void CIRRecordLowering::lower() {
   if (recordDecl->isUnion()) {
@@ -233,6 +281,8 @@ void CIRRecordLowering::fillOutputFields() {
             fieldTypes.size() - 1;
       // A field without storage must be a bitfield.
       assert(!cir::MissingFeatures::bitfields());
+      if (!member.data)
+        setBitFieldInfo(member.fieldDecl, member.offset, fieldTypes.back());
     } else if (member.kind == MemberInfo::InfoKind::Base) {
       nonVirtualBases[member.cxxRecordDecl] = fieldTypes.size() - 1;
     }
@@ -240,16 +290,107 @@ void CIRRecordLowering::fillOutputFields() {
   }
 }
 
-void CIRRecordLowering::accumulateFields() {
-  for (const FieldDecl *field : recordDecl->fields()) {
-    if (field->isBitField()) {
-      cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                         "accumulate bitfields");
+void CIRRecordLowering::accumulateBitFields(
+    RecordDecl::field_iterator field, RecordDecl::field_iterator fieldEnd) {
+  // Run stores the first element of the current run of bitfields.  FieldEnd is
+  // used as a special value to note that we don't have a current run.  A
+  // bitfield run is a contiguous collection of bitfields that can be stored in
+  // the same storage block.  Zero-sized bitfields and bitfields that would
+  // cross an alignment boundary break a run and start a new one.
+  RecordDecl::field_iterator run = fieldEnd;
+  // Tail is the offset of the first bit off the end of the current run.  It's
+  // used to determine if the ASTRecordLayout is treating these two bitfields as
+  // contiguous.  StartBitOffset is offset of the beginning of the Run.
+  uint64_t startBitOffset, tail = 0;
+  assert(!cir::MissingFeatures::isDiscreteBitFieldABI());
+
+  // Check if OffsetInRecord (the size in bits of the current run) is better
+  // as a single field run. When OffsetInRecord has legal integer width, and
+  // its bitfield offset is naturally aligned, it is better to make the
+  // bitfield a separate storage component so as it can be accessed directly
+  // with lower cost.
+  auto isBetterAsSingleFieldRun = [&](uint64_t offsetInRecord,
+                                      uint64_t startBitOffset,
+                                      uint64_t nextTail = 0) {
+    if (!cirGenTypes.getCGModule().getCodeGenOpts().FineGrainedBitfieldAccesses)
+      return false;
+    cirGenTypes.getCGModule().errorNYI(field->getSourceRange(),
+                                       "NYI FineGrainedBitfield");
+    return true;
+  };
+
+  // The start field is better as a single field run.
+  bool startFieldAsSingleRun = false;
+  for (;;) {
+    // Check to see if we need to start a new run.
+    if (run == fieldEnd) {
+      // If we're out of fields, return.
+      if (field == fieldEnd)
+        break;
+      // Any non-zero-length bitfield can start a new run.
+      if (!field->isZeroLengthBitField()) {
+        run = field;
+        startBitOffset = getFieldBitOffset(*field);
+        tail = startBitOffset + field->getBitWidthValue();
+        startFieldAsSingleRun =
+            isBetterAsSingleFieldRun(tail - startBitOffset, startBitOffset);
+      }
       ++field;
+      continue;
+    }
+
+    // If the start field of a new run is better as a single run, or if current
+    // field (or consecutive fields) is better as a single run, or if current
+    // field has zero width bitfield and either UseZeroLengthBitfieldAlignment
+    // or UseBitFieldTypeAlignment is set to true, or if the offset of current
+    // field is inconsistent with the offset of previous field plus its offset,
+    // skip the block below and go ahead to emit the storage. Otherwise, try to
+    // add bitfields to the run.
+    uint64_t nextTail = tail;
+    if (field != fieldEnd)
+      nextTail += field->getBitWidthValue();
+
+    if (!startFieldAsSingleRun && field != fieldEnd &&
+        !isBetterAsSingleFieldRun(tail - startBitOffset, startBitOffset,
+                                  nextTail) &&
+        (!field->isZeroLengthBitField() ||
+         (!astContext.getTargetInfo().useZeroLengthBitfieldAlignment() &&
+          !astContext.getTargetInfo().useBitFieldTypeAlignment())) &&
+        tail == getFieldBitOffset(*field)) {
+      tail = nextTail;
+      ++field;
+      continue;
+    }
+
+    // We've hit a break-point in the run and need to emit a storage field.
+    mlir::Type type = getBitfieldStorageType(tail - startBitOffset);
+
+    // Add the storage member to the record and set the bitfield info for all of
+    // the bitfields in the run. Bitfields get the offset of their storage but
+    // come afterward and remain there after a stable sort.
+    members.push_back(makeStorageInfo(bitsToCharUnits(startBitOffset), type));
+    for (; run != field; ++run)
+      members.push_back(MemberInfo(bitsToCharUnits(startBitOffset),
+                                   MemberInfo::InfoKind::Field, nullptr, *run));
+    run = fieldEnd;
+    startFieldAsSingleRun = false;
+  }
+}
+
+void CIRRecordLowering::accumulateFields() {
+  for (RecordDecl::field_iterator field = recordDecl->field_begin(),
+                                  fieldEnd = recordDecl->field_end();
+       field != fieldEnd;) {
+    if (field->isBitField()) {
+      RecordDecl::field_iterator start = field;
+      // Iterate to gather the list of bitfields.
+      for (++field; field != fieldEnd && field->isBitField(); ++field)
+        ;
+      accumulateBitFields(start, field);
     } else if (!field->isZeroSize(astContext)) {
-      members.push_back(MemberInfo(bitsToCharUnits(getFieldBitOffset(field)),
+      members.push_back(MemberInfo(bitsToCharUnits(getFieldBitOffset(*field)),
                                    MemberInfo::InfoKind::Field,
-                                   getStorageType(field), field));
+                                   getStorageType(*field), *field));
       ++field;
     } else {
       // TODO(cir): do we want to do anything special about zero size members?
@@ -382,6 +523,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
 
   // Add all the field numbers.
   rl->fieldIdxMap.swap(lowering.fieldIdxMap);
+
+  rl->bitFields.swap(lowering.bitFields);
 
   // Dump the layout, if requested.
   if (getASTContext().getLangOpts().DumpRecordLayouts) {
