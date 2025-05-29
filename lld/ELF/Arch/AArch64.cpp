@@ -1044,9 +1044,7 @@ AArch64BtiPac::AArch64BtiPac(Ctx &ctx) : AArch64(ctx) {
   // instructions.
 
   if (ctx.arg.zPacPlt) {
-    if (ctx.aarch64PauthAbiCoreInfo.has_value() &&
-        (ctx.aarch64PauthAbiCoreInfo->platform != 0 ||
-         ctx.aarch64PauthAbiCoreInfo->version != 0))
+    if (ctx.aarch64PauthAbiCoreInfo && ctx.aarch64PauthAbiCoreInfo->isValid())
       pacEntryKind = PEK_Auth;
     else
       pacEntryKind = PEK_AuthHint;

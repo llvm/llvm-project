@@ -142,6 +142,14 @@ enum class ReportPolicy { None, Warning, Error };
 struct AArch64PauthAbiCoreInfo {
   uint64_t platform;
   uint64_t version;
+  bool isValid() const { return platform || version; }
+  static constexpr size_t size() { return sizeof(platform) + sizeof(version); }
+  bool operator==(const AArch64PauthAbiCoreInfo &other) const {
+    return platform == other.platform && version == other.version;
+  }
+  bool operator!=(const AArch64PauthAbiCoreInfo &other) const {
+    return !(*this == other);
+  }
 };
 
 struct SymbolVersion {
