@@ -1233,6 +1233,11 @@ static LogicalResult printOperation(CppEmitter &emitter,
     if (functionOp.isExternal()) {
       // TODO: Determine the best long-term strategy for external functions.
       // Currently, we're skipping over this functionOp.
+      // We have considered using emitWarning() which would return
+      // InFlightDiagnostic which seems can be automatically converted to LogicalResult since
+      // this is done in emitAttributes where emitError is converted to LogicalResult. However, it requires that we pass in a
+      // location which at first glance we don't have in this scope. Open to
+      // further discussion on this.
       os << "Warning: Cannot process external function '"
          << functionOp.getName() << "'. "
          << "This functionOp lacks a body so we will skip over it.";
@@ -1255,6 +1260,9 @@ static LogicalResult printOperation(CppEmitter &emitter,
   if (failed(emitter.emitTypes(functionOp.getLoc(),
                                functionOp.getFunctionType().getResults())))
     return failure();
+  // TODO: We may wanna consider having the name of the function be execute in
+  // the case that we want to emit a class instead of main. Leaving as is for
+  // now to make the change smaller.
   os << " " << functionOp.getName();
 
   os << "(";
