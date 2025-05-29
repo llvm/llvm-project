@@ -94,7 +94,7 @@ instructions to execute at run time, and we expect a load and store for ``x``:
   }
 
   $ clang -O1 -g -fopenmp --offload-arch=native test.c -o test \
-        -fprofile-generate -Xarch_device -fprofile-update=atomic
+        -fprofile-generate -fprofile-update=atomic
 
   $ LLVM_PROFILE_FILE=test.profraw ./test 2 4
   16.000000
@@ -112,5 +112,5 @@ instructions to execute at run time, and we expect a load and store for ``x``:
   test.c:4:0: in function 'test', ProfileFloatingPointOpCount = 4
   test.c:4:0: in function 'test', ProfileFloatingPointBytesMoved = 0
 
-While ``-Xarch_device -fprofile-update=atomic`` is not required for the simple
-example above, it can be critical while profiling parallel code.
+While ``-fprofile-update=atomic`` is not required for the simple example above,
+it can be critical while profiling parallel code.
