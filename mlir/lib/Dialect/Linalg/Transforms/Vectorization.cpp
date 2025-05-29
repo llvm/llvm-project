@@ -1659,9 +1659,10 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vectorToStore,
                static_cast<size_t>(vecToStoreType.getRank()) &&
            "Insufficient number of input vector sizes!");
     // Update the inBounds attribute.
-    for (unsigned i = 0; i < destRank; i++)
-      inBoundsVal[i] = (destShape[i] == inputVecSizesForLeadingDims[i]) &&
-                       !ShapedType::isDynamic(destShape[i]);
+    for (unsigned i = 0; i < vecToStoreRank; i++)
+      inBoundsVal[i] =
+          (destShape[i] == inputVecSizesForLeadingDims[i]) &&
+          !ShapedType::isDynamic(destShape[destRank - vecToStoreRank + i]);
   }
 
   // If missing, initialize the write indices to 0.
@@ -1670,7 +1671,7 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vectorToStore,
              "Invalid number of write indices!");
   if (writeIndices.empty()) {
     auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-    writeIndices = SmallVector<Value>(destRank, zero);
+    writeIndices.assign(destRank, zero);
   }
 
   // Generate the xfer_write Op
@@ -1826,8 +1827,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
       transposeOp.getResult().getType().getElementType());
   Operation *write = createWriteOrMaskedWrite(
       rewriter, loc, transposeOp.getResult(), dest,
-      /*inputVecSizesForLeadingDims=*/inputVectorSizes, /*writeIndices=*/{},
-      /*useInBoundsInsteadOfMasking=*/false);
+      /*inputVecSizesForLeadingDims=*/inputVectorSizes);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -2000,8 +2000,7 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
       loc, reifiedReturnShapes[0], padOp.getResultType().getElementType());
   Operation *write = createWriteOrMaskedWrite(
       rewriter, loc, maskedRead, dest,
-      /*inputVecSizesForLeadingDims=*/inputVectorSizes, {},
-      /*useInBoundsInsteadOfMasking=*/false);
+      /*inputVecSizesForLeadingDims=*/inputVectorSizes);
   newResults.push_back(write->getResult(0));
   return success();
 }
@@ -3007,22 +3006,14 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
         sliceOp.getLoc(), elemType, rewriter.getZeroAttr(elemType));
   }
 
-  // 2. Get the vector shape and in-bounds attributes
+  // 2. Get the vector shape
   SmallVector<int64_t> vecShape;
-  SmallVector<bool> readInBounds;
-  SmallVector<bool> writeInBounds;
   size_t rankDiff = resultType.getRank() - sourceType.getRank();
   for (int64_t i = 0, end = sourceType.getRank(); i < end; ++i) {
     if (!inputVectorSizes.empty()) {
       vecShape.push_back(inputVectorSizes[i]);
-      readInBounds.push_back(false);
-      writeInBounds.push_back(false);
     } else if (!sourceType.isDynamicDim(i)) {
       vecShape.push_back(sourceType.getDimSize(i));
-      // Source shape is statically known: Neither read nor write are
-      // out-of-bounds.
-      readInBounds.push_back(true);
-      writeInBounds.push_back(true);
     } else if (!resultType.isDynamicDim(i)) {
       // Source shape is not statically known, but result shape is.
       // Vectorize with size of result shape. This may be larger than the
@@ -3030,16 +3021,9 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
       // FIXME: Using rankDiff implies that the source tensor is inserted at
       // the end of the destination tensor. However, that's not required.
       vecShape.push_back(resultType.getDimSize(rankDiff + i));
-      // Read may be out-of-bounds because the result size could be larger
-      // than the source size.
-      readInBounds.push_back(false);
-      // Write will be in-bounds provided that the corresponding write idx is 0.
-      // To keep this logic simple, conservatively mark as out-of-bounds.
-      writeInBounds.push_back(false);
     } else {
       // Neither source nor result dim of padOp is static. Cannot vectorize
       // the copy.
-      // TODO: Add support for masking
       return failure();
     }
   }
@@ -3052,13 +3036,15 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   SmallVector<Value> readIndices(
       vecType.getRank(), rewriter.create<arith::ConstantIndexOp>(loc, 0));
   Value read = mlir::vector::createReadOrMaskedRead(
-      rewriter, loc, source, vecType.getShape(), padValue);
+      rewriter, loc, source, vecType.getShape(), padValue,
+      /*useInBoundsInsteadOfMasking=*/inputVectorSizes.empty());
 
   // Create write
   auto writeIndices =
       getValueOrCreateConstantIndexOp(rewriter, loc, sliceOp.getMixedOffsets());
   Operation *write = createWriteOrMaskedWrite(
-      rewriter, loc, read, sliceOp.getDest(), vecType.getShape(), writeIndices);
+      rewriter, loc, read, sliceOp.getDest(), vecType.getShape(), writeIndices,
+      /*useInBoundsInsteadOfMasking=*/inputVectorSizes.empty());
 
   // 4. Finalize
   newResults.push_back(write->getResult(0));
