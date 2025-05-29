@@ -238,10 +238,10 @@ private:
     return true;
   }
 
-  template <typename T>
-  bool levelCheckRank(Operation *op, const T &v,
+  // Perform the Level Rank check on the tensor type.
+  bool levelCheckRank(Operation *op, const Type typeToCheck,
                       const StringRef operandOrResult, int32_t highest_rank) {
-    if (ShapedType type = dyn_cast<ShapedType>(v.getType())) {
+    if (ShapedType type = dyn_cast<ShapedType>(typeToCheck)) {
       if (!type.hasRank()) {
         op->emitOpError() << "failed level check: unranked tensor";
         return false;
@@ -255,9 +255,21 @@ private:
     return true;
   }
 
-  // Perform the Level tensor size check on the input tensor.
-  bool levelCheckSize(Operation *op, const Value &v,
+  // Perform the Level Rank check on the tensor value.
+  bool levelCheckRank(Operation *op, const Value &v,
+                      const StringRef operandOrResult, int32_t highest_rank) {
+    return levelCheckRank(op, v.getType(), operandOrResult, highest_rank);
+  }
+
+  // Perform the Level tensor size check on the tensor type.
+  bool levelCheckSize(Operation *op, const Type &typeToCheck,
                       const StringRef operandOrResult);
+
+  // Perform the Level tensor size check on the tensor value.
+  bool levelCheckSize(Operation *op, const Value &v,
+                      const StringRef operandOrResult) {
+    return levelCheckSize(op, v.getType(), operandOrResult);
+  }
 
   // Level check sizes of all operands and results of the operation.
   template <typename T>
@@ -282,15 +294,6 @@ private:
     for (auto v : op->getOperands()) {
       if (!levelCheckRank(op, v, "operand", tosaLevel.MAX_RANK))
         return false;
-    }
-
-    if (!op->getAttrs().empty()) {
-      for (NamedAttribute attr : op->getAttrs()) {
-        if (auto elemAttr = dyn_cast<ElementsAttr>(attr.getValue())) {
-          if (!levelCheckRank(op, elemAttr, "attribute", tosaLevel.MAX_RANK))
-            return false;
-        }
-      }
     }
 
     for (auto v : op->getResults()) {
@@ -596,6 +599,26 @@ bool TosaValidation::levelCheckRanks(tosa::IfOp tosaOp) {
   return true;
 }
 
+template <>
+bool TosaValidation::levelCheckRanks(tosa::VariableOp tosaOp) {
+  auto op = tosaOp.getOperation();
+  auto variableType = getVariableType(tosaOp);
+  if (!levelCheckRank(op, variableType, "variable type", tosaLevel.MAX_RANK))
+    return false;
+
+  return true;
+}
+
+template <>
+bool TosaValidation::levelCheckSizes(tosa::VariableOp tosaOp) {
+  auto op = tosaOp.getOperation();
+  auto variableType = getVariableType(tosaOp);
+  if (!levelCheckSize(op, variableType, "variable type"))
+    return false;
+
+  return true;
+}
+
 bool TosaValidation::levelCheckRanksAndSizes(Operation *op) {
 #define CHECK_RANKS_AND_SIZES(tosaOp)                                          \
   if (isa<tosa::tosaOp##Op>(op)) {                                             \
@@ -714,10 +737,10 @@ bool TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   return true;
 }
 
-// Perform the Level tensor size check
-bool TosaValidation::levelCheckSize(Operation *op, const Value &v,
+// Perform the Level tensor size check on the tensor type.
+bool TosaValidation::levelCheckSize(Operation *op, const Type &typeToCheck,
                                     const StringRef operandOrResult) {
-  if (ShapedType type = dyn_cast<ShapedType>(v.getType())) {
+  if (ShapedType type = dyn_cast<ShapedType>(typeToCheck)) {
     if (!type.hasRank()) {
       op->emitOpError() << "failed level check: unranked tensor";
       return false;
@@ -800,18 +823,21 @@ inline bool CompatibleTypes(const mlir::Type &type,
 }
 
 bool TosaValidation::CheckVariable(Operation *op) {
-  if (isa<mlir::tosa::VariableOp>(op)) {
-    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+  if (auto variableOp = dyn_cast<mlir::tosa::VariableOp>(op)) {
+    mlir::StringAttr nameAttr = variableOp.getNameAttr();
 
     if (variablesMap.count(nameAttr)) {
       op->emitOpError() << "name has already been declared";
       return false;
     }
 
-    auto typeAttr = cast<mlir::TypeAttr>(op->getAttr("type"));
-    mlir::Type type = typeAttr.getValue();
+    auto elementType = variableOp.getType();
+    DenseIntElementsAttr varShapeAttr = variableOp.getVarShape();
+    SmallVector<int64_t> shape = to_vector(varShapeAttr.getValues<int64_t>());
+    RankedTensorType variableType =
+        RankedTensorType::get(ArrayRef<int64_t>(shape), elementType);
 
-    variablesMap[nameAttr] = type;
+    variablesMap[nameAttr] = variableType;
   }
 
   return true;
