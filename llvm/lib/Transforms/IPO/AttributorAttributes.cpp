@@ -12542,39 +12542,44 @@ struct AAInvariantLoadPointerImpl
     : public StateWrapper<BitIntegerState<uint8_t, 7>, AAInvariantLoadPointer,
                           uint8_t> {
   // load invariance is implied by, but not equivalent to IS_NOALIAS |
-  // IS_READONLY, as load invariance is also implied by all underlying objects
+  // IS_NOEFFECT, as load invariance is also implied by all underlying objects
   // being load invariant.
   //
-  // IS_INVARIANT is set to indicate that the contents of the pointer are
-  // *known* to be invariant.
+  // IS_KNOWN_INVARIANT is set to indicate that the contents of the pointer are
+  // *known* to be invariant, and is therefore a pessimistic bit.
   enum {
-    IS_INVARIANT = 1 << 0,
+    IS_KNOWN_INVARIANT = 1 << 0,
     IS_NOALIAS = 1 << 1,
-    IS_READONLY = 1 << 2,
+    IS_NOEFFECT = 1 << 2,
+
+    IS_IMPLIED_INVARIANT = IS_NOALIAS | IS_NOEFFECT,
   };
-  static_assert(getBestState() == (IS_INVARIANT | IS_NOALIAS | IS_READONLY),
+  static_assert(getBestState() == (IS_KNOWN_INVARIANT | IS_IMPLIED_INVARIANT),
                 "Unexpected best state!");
 
   using Base = StateWrapper<BitIntegerState<uint8_t, 7>, AAInvariantLoadPointer,
                             uint8_t>;
 
-  // the BitIntegerState is optimistic about noalias and readonly, but
-  // pessimistic about invariance
+  // the BitIntegerState is optimistic about IS_NOALIAS and IS_NOEFFECT, but
+  // pessimistic about IS_KNOWN_INVARIANT
   AAInvariantLoadPointerImpl(const IRPosition &IRP, Attributor &A)
-      : Base(IRP, IS_NOALIAS | IS_READONLY) {}
+      : Base(IRP, IS_IMPLIED_INVARIANT) {}
 
   void initialize(Attributor &A) final {
-    // conservatively assume that the pointer's contents are not invariant,
-    // until proven otherwise.
-    removeAssumedBits(IS_INVARIANT);
+    removeAssumedBits(IS_KNOWN_INVARIANT);
   }
 
   bool isKnownInvariant() const final {
-    return isKnown(IS_INVARIANT) || isKnown(IS_NOALIAS | IS_READONLY);
+    return isKnown(IS_KNOWN_INVARIANT) || isKnown(IS_IMPLIED_INVARIANT);
   }
 
   bool isAssumedInvariant() const final {
-    return isAssumed(IS_INVARIANT) || isAssumed(IS_NOALIAS | IS_READONLY);
+    if (isAssumed(IS_KNOWN_INVARIANT) || isAssumed(IS_IMPLIED_INVARIANT))
+      return true;
+    // if the function is callable, optimistically assume that invariance can be
+    // inferred from the caller
+    const auto *F = getAssociatedFunction();
+    return F && isCallableCC(F->getCallingConv());
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
@@ -12583,8 +12588,12 @@ struct AAInvariantLoadPointerImpl
 
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
-    Changed |= updateNoAlias(A);
-    Changed |= updateReadOnly(A);
+    Changed |= checkNoAlias(A);
+    Changed |= checkNoEffect(A);
+
+    // try to infer invariance from underlying objects
+    const auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(
+        getIRPosition(), this, DepClassTy::REQUIRED);
 
     bool UsedAssumedInformation = false;
     const auto IsInvariantLoadIfPointer = [&](const Value &V) {
@@ -12601,16 +12610,12 @@ struct AAInvariantLoadPointerImpl
       UsedAssumedInformation = true;
       return true;
     };
-
-    const auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(
-        getIRPosition(), this, DepClassTy::REQUIRED);
-
     if (!AUO->forallUnderlyingObjects(IsInvariantLoadIfPointer))
       return indicatePessimisticFixpoint();
 
     if (!UsedAssumedInformation) {
       // pointer is known (not assumed) to be invariant
-      addKnownBits(IS_INVARIANT);
+      addKnownBits(IS_KNOWN_INVARIANT);
       return indicateOptimisticFixpoint() | Changed;
     }
 
@@ -12639,8 +12644,6 @@ struct AAInvariantLoadPointerImpl
         return true;
 
       if (auto *LI = dyn_cast<LoadInst>(I)) {
-        if (LI->isVolatile() || LI->isAtomic())
-          return true;
 
         LI->setMetadata(LLVMContext::MD_invariant_load,
                         MDNode::get(LI->getContext(), {}));
@@ -12664,8 +12667,8 @@ struct AAInvariantLoadPointerImpl
   /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {}
 
-protected:
-  ChangeStatus updateNoAlias(Attributor &A) {
+private:
+  ChangeStatus checkNoAlias(Attributor &A) {
     if (isKnown(IS_NOALIAS) || !isAssumed(IS_NOALIAS))
       return ChangeStatus::UNCHANGED;
 
@@ -12710,8 +12713,8 @@ protected:
     return ChangeStatus::UNCHANGED;
   }
 
-  ChangeStatus updateReadOnly(Attributor &A) {
-    if (isKnown(IS_READONLY) || !isAssumed(IS_READONLY))
+  ChangeStatus checkNoEffect(Attributor &A) {
+    if (isKnown(IS_NOEFFECT) || !isAssumed(IS_NOEFFECT))
       return ChangeStatus::UNCHANGED;
 
     const auto *F = getAssociatedFunction();
@@ -12720,8 +12723,18 @@ protected:
       return ChangeStatus::UNCHANGED;
 
     if (isCallableCC(F->getCallingConv())) {
-      // readonly attribute is only useful if applicable program-wide
-      removeAssumedBits(IS_READONLY);
+      // effects cannot be tracked outside of function call;
+      // conservatively assume pointer has effectful uses
+      removeAssumedBits(IS_NOEFFECT);
+      return ChangeStatus::CHANGED;
+    }
+
+    const auto HasNoSideEffects = [](const Use &U, bool &) {
+      const auto *I = dyn_cast<LoadInst>(U.getUser());
+      return !I || !I->mayHaveSideEffects();
+    };
+    if (!A.checkForAllUses(HasNoSideEffects, *this, getAssociatedValue())) {
+      removeAssumedBits(IS_NOEFFECT);
       return ChangeStatus::CHANGED;
     }
 
@@ -12729,12 +12742,12 @@ protected:
     if (const auto *AMemoryBehavior = A.getOrCreateAAFor<AAMemoryBehavior>(
             getIRPosition(), this, DepClassTy::REQUIRED)) {
       if (!AMemoryBehavior->isAssumedReadOnly()) {
-        removeAssumedBits(IS_READONLY);
+        removeAssumedBits(IS_NOEFFECT);
         return ChangeStatus::CHANGED;
       }
 
       if (AMemoryBehavior->isKnownReadOnly()) {
-        addKnownBits(IS_READONLY);
+        addKnownBits(IS_NOEFFECT);
         return ChangeStatus::UNCHANGED;
       }
 
@@ -12743,13 +12756,13 @@ protected:
 
     if (const auto *Arg = getAssociatedArgument()) {
       if (Arg->onlyReadsMemory()) {
-        addKnownBits(IS_READONLY);
+        addKnownBits(IS_NOEFFECT);
         return ChangeStatus::UNCHANGED;
       }
 
       // readonly information is not provided, and cannot be inferred from
       // AAMemoryBehavior
-      removeAssumedBits(IS_READONLY);
+      removeAssumedBits(IS_NOEFFECT);
       return ChangeStatus::CHANGED;
     }
 
