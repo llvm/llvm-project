@@ -4385,8 +4385,14 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
   for (auto &P : VPlans) {
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
                                P->vectorFactors().end());
-    auto RUs = ::calculateRegisterUsage(*P, VFs, TTI, CM.ValuesToIgnore);
-    for (auto [VF, RU] : zip_equal(VFs, RUs)) {
+
+    SmallVector<LoopVectorizationCostModel::RegisterUsage, 8> RUs;
+    if (CM.useMaxBandwidth(TargetTransformInfo::RGK_ScalableVector) ||
+        CM.useMaxBandwidth(TargetTransformInfo::RGK_FixedWidthVector))
+      RUs = ::calculateRegisterUsage(*P, VFs, TTI, CM.ValuesToIgnore);
+
+    for (unsigned I = 0; I < VFs.size(); I++) {
+      ElementCount VF = VFs[I];
       // The cost for scalar VF=1 is already calculated, so ignore it.
       if (VF.isScalar())
         continue;
@@ -4396,7 +4402,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       if (CM.useMaxBandwidth(VF.isScalable()
                                  ? TargetTransformInfo::RGK_ScalableVector
                                  : TargetTransformInfo::RGK_FixedWidthVector) &&
-          RU.exceedsMaxNumRegs(TTI))
+          RUs[I].exceedsMaxNumRegs(TTI))
         continue;
 
       InstructionCost C = CM.expectedCost(VF);
@@ -7447,8 +7453,14 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   for (auto &P : VPlans) {
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
                                P->vectorFactors().end());
-    auto RUs = ::calculateRegisterUsage(*P, VFs, TTI, CM.ValuesToIgnore);
-    for (auto [VF, RU] : zip_equal(VFs, RUs)) {
+
+    SmallVector<LoopVectorizationCostModel::RegisterUsage, 8> RUs;
+    if (CM.useMaxBandwidth(TargetTransformInfo::RGK_ScalableVector) ||
+        CM.useMaxBandwidth(TargetTransformInfo::RGK_FixedWidthVector))
+      RUs = ::calculateRegisterUsage(*P, VFs, TTI, CM.ValuesToIgnore);
+
+    for (unsigned I = 0; I < VFs.size(); I++) {
+      ElementCount VF = VFs[I];
       if (VF.isScalar())
         continue;
       if (!ForceVectorization && !willGenerateVectors(*P, VF, TTI)) {
@@ -7473,7 +7485,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
       if (CM.useMaxBandwidth(VF.isScalable()
                                  ? TargetTransformInfo::RGK_ScalableVector
                                  : TargetTransformInfo::RGK_FixedWidthVector) &&
-          RU.exceedsMaxNumRegs(TTI)) {
+          RUs[I].exceedsMaxNumRegs(TTI)) {
         LLVM_DEBUG(dbgs() << "LV(REG): Not considering vector loop of width "
                           << VF << " because it uses too many registers\n");
         continue;
