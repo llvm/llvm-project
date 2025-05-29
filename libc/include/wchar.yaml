@@ -27,6 +27,14 @@ functions:
     return_type: wint_t
     arguments:
       - type: int
+  - name: wmemset
+    standards:
+      - stdc
+    return_type: wchar_t*
+    arguments:
+      - type: wchar_t*
+      - type: wchar_t
+      - type: size_t
   - name: wcschr
     standards:
       - stdc
