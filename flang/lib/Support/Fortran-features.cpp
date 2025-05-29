@@ -11,6 +11,10 @@
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/StringExtras.h"
 
+// Debugging
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
+
 namespace Fortran::common {
 
 LanguageFeatureControl::LanguageFeatureControl() {
@@ -95,119 +99,99 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
 }
 
-// Split a string with camel case into the individual words.
-// Note, the small vector is just an array of a few pointers and lengths
-// into the original input string. So all this allocation should be pretty
-// cheap.
-llvm::SmallVector<llvm::StringRef> splitCamelCase(llvm::StringRef input) {
-  using namespace llvm;
-  if (input.empty()) {
-    return {};
-  }
-  SmallVector<StringRef> parts{};
-  parts.reserve(input.size());
-  auto check = [&input](size_t j, function_ref<bool(char)> predicate) {
-    return j < input.size() && predicate(input[j]);
-  };
-  size_t i{0};
-  size_t startWord = i;
-  for (; i < input.size(); i++) {
-    if ((check(i, isUpper) && check(i + 1, isUpper) && check(i + 2, isLower)) ||
-        ((check(i, isLower) || check(i, isDigit)) && check(i + 1, isUpper))) {
-      parts.push_back(StringRef(input.data() + startWord, i - startWord + 1));
-      startWord = i + 1;
-    }
-  }
-  parts.push_back(llvm::StringRef(input.data() + startWord, i - startWord));
-  return parts;
-}
-
-// Split a string whith hyphens into the individual words.
-llvm::SmallVector<llvm::StringRef> splitHyphenated(llvm::StringRef input) {
-  auto parts = llvm::SmallVector<llvm::StringRef>{};
-  llvm::SplitString(input, parts, "-");
-  return parts;
-}
-
-// Check if two strings are equal while normalizing case for the
-// right word which is assumed to be a single word in camel case.
-bool equalLowerCaseWithCamelCaseWord(llvm::StringRef l, llvm::StringRef r) {
-  size_t ls = l.size();
-  if (ls != r.size())
+// Namespace for helper functions for parsing CLI options
+// used instead of static so that there can be unit tests for these
+// functions.
+namespace FortranFeaturesHelpers {
+// Check if Lower Case Hyphenated words are equal to Camel Case words.
+// Because of out use case we know that 'r' the camel case string is
+// well formed in the sense that it is a sequence [a-zA-Z]+[a-zA-Z0-9]*.
+// This is checked in the enum-class.h file.
+bool LowerHyphEqualCamelCase(llvm::StringRef l, llvm::StringRef r) {
+  size_t ls{l.size()}, rs{r.size()};
+  if (ls < rs) {
     return false;
-  size_t j{0};
-  // Process the upper case characters.
-  for (; j < ls; j++) {
-    char rc = r[j];
-    char rc2l = llvm::toLower(rc);
-    if (rc == rc2l) {
-      // Past run of Uppers Case;
-      break;
-    }
-    if (l[j] != rc2l)
-      return false;
   }
-  // Process the lower case characters.
-  for (; j < ls; j++) {
-    if (l[j] != r[j]) {
-      return false;
+  bool atStartOfWord{true};
+  size_t wordCount{0}, j; // j is the number of word characters checked in r.
+  for (; j < rs; j++) {
+    if (wordCount + j >= ls) {
+      // `l` was shorter once the hiphens were removed.
+      // If r is null terminated, then we are good.
+      return r[j] == '\0';
     }
+    if (atStartOfWord) {
+      if (llvm::isUpper(r[j])) {
+        // Upper Case Run
+        if (l[wordCount + j] != llvm::toLower(r[j])) {
+          return false;
+        }
+      } else {
+        atStartOfWord = false;
+        if (l[wordCount + j] != r[j]) {
+          return false;
+        }
+      }
+    } else {
+      if (llvm::isUpper(r[j])) {
+        atStartOfWord = true;
+        if (l[wordCount + j] != '-') {
+          return false;
+        }
+        ++wordCount;
+        if (l[wordCount + j] != llvm::toLower(r[j])) {
+          return false;
+        }
+      } else if (l[wordCount + j] != r[j]) {
+        return false;
+      }
+    }
+  }
+  // If there are more characters in l after processing all the characters in r.
+  // then fail unless the string is null terminated.
+  if (ls > wordCount + j) {
+    return l[wordCount + j] == '\0';
   }
   return true;
 }
 
 // Parse a CLI enum option return the enum index and whether it should be
 // enabled (true) or disabled (false).
-std::optional<std::pair<bool, int>> parseCLIEnumIndex(
-    llvm::StringRef input, std::function<std::optional<int>(Predicate)> find) {
-  auto parts = splitHyphenated(input);
-  bool negated = false;
-  if (parts.size() >= 1 && !parts[0].compare(llvm::StringRef("no", 2))) {
+template <typename T>
+optional<std::pair<bool, T>> ParseCLIEnum(
+    llvm::StringRef input, EnumClass::FindIndexType findIndex) {
+  bool negated{false};
+  if (input.starts_with("no-")) {
     negated = true;
-    // Remove the "no" part
-    parts = llvm::SmallVector<llvm::StringRef>(parts.begin() + 1, parts.end());
+    input = input.drop_front(3);
   }
-  size_t chars = 0;
-  for (auto p : parts) {
-    chars += p.size();
-  }
-  auto pred = [&](auto s) {
-    if (chars != s.size()) {
-      return false;
-    }
-    auto ccParts = splitCamelCase(s);
-    auto num_ccParts = ccParts.size();
-    if (parts.size() != num_ccParts) {
-      return false;
-    }
-    for (size_t i{0}; i < num_ccParts; i++) {
-      if (!equalLowerCaseWithCamelCaseWord(parts[i], ccParts[i])) {
-        return false;
-      }
-    }
-    return true;
-  };
-  auto cast = [negated](int x) { return std::pair{!negated, x}; };
-  return fmap<int, std::pair<bool, int>>(find(pred), cast);
+  EnumClass::Predicate predicate{
+      [input](llvm::StringRef r) { return LowerHyphEqualCamelCase(input, r); }};
+  optional<T> x = EnumClass::Find<T>(predicate, findIndex);
+  return MapOption<T, std::pair<bool, T>>(
+      x, [negated](T x) { return std::pair{!negated, x}; });
 }
 
-std::optional<std::pair<bool, LanguageFeature>> parseCLILanguageFeature(
+optional<std::pair<bool, UsageWarning>> parseCLIUsageWarning(
     llvm::StringRef input) {
-  return parseCLIEnum<LanguageFeature>(input, FindLanguageFeatureIndex);
+  return ParseCLIEnum<UsageWarning>(input, FindUsageWarningIndex);
 }
 
-std::optional<std::pair<bool, UsageWarning>> parseCLIUsageWarning(
+optional<std::pair<bool, LanguageFeature>> parseCLILanguageFeature(
     llvm::StringRef input) {
-  return parseCLIEnum<UsageWarning>(input, FindUsageWarningIndex);
+  return ParseCLIEnum<LanguageFeature>(input, FindLanguageFeatureIndex);
 }
+
+} // namespace FortranFeaturesHelpers
 
 // Take a string from the CLI and apply it to the LanguageFeatureControl.
 // Return true if the option was applied recognized.
 bool LanguageFeatureControl::applyCLIOption(llvm::StringRef input) {
-  if (auto result = parseCLILanguageFeature(input)) {
+  if (auto result = FortranFeaturesHelpers::parseCLILanguageFeature(input)) {
     EnableWarning(result->second, result->first);
     return true;
-  } else if (auto result = parseCLIUsageWarning(input)) {
+  } else if (auto result =
+                 FortranFeaturesHelpers::parseCLIUsageWarning(input)) {
     EnableWarning(result->second, result->first);
     return true;
   }
@@ -277,11 +261,10 @@ void ForEachEnum(std::function<void(ENUM)> f) {
 
 void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
   warnAllLanguage_ = yes;
-  disableAllWarnings_ = yes ? false : disableAllWarnings_;
-  // should be equivalent to: reset().flip() set ...
-  ForEachEnum<LanguageFeature, LanguageFeature_enumSize>(
-      [&](LanguageFeature f) { warnLanguage_.set(f, yes); });
+  warnLanguage_.reset();
   if (yes) {
+    disableAllWarnings_ = false;
+    warnLanguage_.flip();
     // These three features do not need to be warned about,
     // but we do want their feature flags.
     warnLanguage_.set(LanguageFeature::OpenMP, false);
@@ -292,8 +275,10 @@ void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
 
 void LanguageFeatureControl::WarnOnAllUsage(bool yes) {
   warnAllUsage_ = yes;
-  disableAllWarnings_ = yes ? false : disableAllWarnings_;
-  ForEachEnum<UsageWarning, UsageWarning_enumSize>(
-      [&](UsageWarning w) { warnUsage_.set(w, yes); });
+  warnUsage_.reset();
+  if (yes) {
+    disableAllWarnings_ = false;
+    warnUsage_.flip();
+  }
 }
 } // namespace Fortran::common

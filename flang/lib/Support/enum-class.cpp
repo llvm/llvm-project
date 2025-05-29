@@ -8,19 +8,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Common/enum-class.h"
+#include "flang/Common/optional.h"
 #include <functional>
-#include <optional>
-namespace Fortran::common {
 
-std::optional<int> FindEnumIndex(
-    std::function<bool(const std::string_view)> pred, int size,
+namespace Fortran::common::EnumClass {
+
+optional<std::size_t> FindIndex(
+    std::function<bool(const std::string_view)> pred, size_t size,
     const std::string_view *names) {
-  for (int i = 0; i < size; ++i) {
+  for (size_t i = 0; i < size; ++i) {
     if (pred(names[i])) {
       return i;
     }
   }
-  return std::nullopt;
+  return nullopt;
 }
 
-} // namespace Fortran::common
+} // namespace Fortran::common::EnumClass

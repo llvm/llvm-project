@@ -133,21 +133,5 @@ private:
   bool disableAllWarnings_{false};
 };
 
-// Parse a CLI enum option return the enum index and whether it should be
-// enabled (true) or disabled (false). Just exposed for the template below.
-std::optional<std::pair<bool, int>> parseCLIEnumIndex(
-    llvm::StringRef input, std::function<std::optional<int>(Predicate)> find);
-
-template <typename ENUM>
-std::optional<std::pair<bool, ENUM>> parseCLIEnum(
-    llvm::StringRef input, std::function<std::optional<int>(Predicate)> find) {
-  using To = std::pair<bool, ENUM>;
-  using From = std::pair<bool, int>;
-  static std::function<To(From)> cast = [](From x) {
-    return std::pair{x.first, static_cast<ENUM>(x.second)};
-  };
-  return fmap(parseCLIEnumIndex(input, find), cast);
-}
-
 } // namespace Fortran::common
 #endif // FORTRAN_SUPPORT_FORTRAN_FEATURES_H_
