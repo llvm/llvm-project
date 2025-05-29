@@ -1148,9 +1148,9 @@ void ClauseProcessor::processMapObjects(
         typeSpec = &object.sym()->GetType()->derivedTypeSpec();
 
       if (typeSpec) {
-        mapperIdName = typeSpec->name().ToString() + ".default";
-        mapperIdName =
-            converter.mangleName(mapperIdName, *typeSpec->GetScope());
+        mapperIdName = typeSpec->name().ToString() + ".omp.default.mapper";
+        if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
+          mapperIdName = converter.mangleName(mapperIdName, sym->owner());
       }
     }
   };
