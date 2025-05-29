@@ -1110,7 +1110,7 @@ def SaturationModeAttr : EnumAttr<NVVM_Dialect, SaturationMode, "sat_mode"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_CvtFloatToTF32Op : NVVM_Op<"cvt.float.to.tf32"> {
+def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
   let summary = "Convert the given float input to TF32";
   let description = [{
     This Op converts the given f32 input to tf32.
@@ -1139,24 +1139,24 @@ def NVVM_CvtFloatToTF32Op : NVVM_Op<"cvt.float.to.tf32"> {
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::CvtFloatToTF32Op::getIntrinsicID($rnd, $sat, $relu);
+    auto intId = NVVM::ConvertFloatToTF32Op::getIntrinsicID($rnd, $sat, $relu);
     $res = createIntrinsicCall(builder, intId, {$src});
   }];
 }
 
-def CVTFP6E2M3 : I32EnumAttrCase<"E2M3", 0, "e2m3">;
-def CVTFP6E3M2 : I32EnumAttrCase<"E3M2", 1, "e3m2">;
+def ConvertFP6E2M3 : I32EnumAttrCase<"E2M3", 0, "e2m3">;
+def ConvertFP6E3M2 : I32EnumAttrCase<"E3M2", 1, "e3m2">;
 
-def CVTFP6Type : I32EnumAttr<"CVTFP6Type", "NVVM CVTFP6Type kind",
-  [CVTFP6E2M3, CVTFP6E3M2]> {
+def ConvertFP6Type : I32EnumAttr<"ConvertFP6Type", "NVVM ConvertFP6Type kind",
+  [ConvertFP6E2M3, ConvertFP6E3M2]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-def CVTFP6TypeAttr : EnumAttr<NVVM_Dialect, CVTFP6Type, "cvt_fp6_type"> {
+def ConvertFP6TypeAttr : EnumAttr<NVVM_Dialect, ConvertFP6Type, "convert_fp6_type"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_CvtF32x2ToF6x2Op : NVVM_Op<"cvt.f32x2.to.f6x2"> {
+def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
   let summary = "Convert a pair of float inputs to f6x2";
   let description = [{
     This Op converts each of the given float inputs to the specified fp6 type.
@@ -1176,19 +1176,19 @@ def NVVM_CvtF32x2ToF6x2Op : NVVM_Op<"cvt.f32x2.to.f6x2"> {
 
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins 
-    CVTFP6TypeAttr:$type,
+    ConvertFP6TypeAttr:$type,
     F32:$a,
     F32:$b,
     DefaultValuedAttr<BoolAttr, "false">:$relu);
   let assemblyFormat = "$type $a `,` $b attr-dict `:` type($dst)";
   
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::CVTFP6Type,
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP6Type,
                                               bool hasRelu);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::CvtF32x2ToF6x2Op::getIntrinsicID($type, $relu);
+    auto intId = NVVM::ConvertF32x2ToF6x2Op::getIntrinsicID($type, $relu);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
@@ -1198,20 +1198,20 @@ def NVVM_CvtF32x2ToF6x2Op : NVVM_Op<"cvt.f32x2.to.f6x2"> {
   }];
 }
 
-def CVTFP8E4M3 : I32EnumAttrCase<"E4M3", 0, "e4m3">;
-def CVTFP8E5M2 : I32EnumAttrCase<"E5M2", 1, "e5m2">;
-def CVTFP8UE8M0 : I32EnumAttrCase<"UE8M0", 2, "ue8m0">;
+def ConvertFP8E4M3 : I32EnumAttrCase<"E4M3", 0, "e4m3">;
+def ConvertFP8E5M2 : I32EnumAttrCase<"E5M2", 1, "e5m2">;
+def ConvertFP8UE8M0 : I32EnumAttrCase<"UE8M0", 2, "ue8m0">;
 
-def CVTFP8Type : I32EnumAttr<"CVTFP8Type", "NVVM CVTFP8Type kind",
-  [CVTFP8E4M3, CVTFP8E5M2, CVTFP8UE8M0]> {
+def ConvertFP8Type : I32EnumAttr<"ConvertFP8Type", "NVVM ConvertFP8Type kind",
+  [ConvertFP8E4M3, ConvertFP8E5M2, ConvertFP8UE8M0]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
-def CVTFP8TypeAttr : EnumAttr<NVVM_Dialect, CVTFP8Type, "cvt_fp8_type"> {
+def ConvertFP8TypeAttr : EnumAttr<NVVM_Dialect, ConvertFP8Type, "convert_fp8_type"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_CvtF32x2ToF8x2Op : NVVM_Op<"cvt.f32x2.to.f8x2"> {
+def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
   let summary = "Convert a pair of float inputs to f8x2";
   let description = [{
     This Op converts each of the given float inputs to the specified fp8 type.
@@ -1232,7 +1232,7 @@ def NVVM_CvtF32x2ToF8x2Op : NVVM_Op<"cvt.f32x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    CVTFP8TypeAttr:$type,
+    ConvertFP8TypeAttr:$type,
     F32:$a,
     F32:$b,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
@@ -1241,14 +1241,14 @@ def NVVM_CvtF32x2ToF8x2Op : NVVM_Op<"cvt.f32x2.to.f8x2"> {
   let assemblyFormat = "$type $a `,` $b attr-dict `:` type($dst)";
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::CVTFP8Type to,
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP8Type to,
                                               NVVM::FPRoundingMode rnd,
                                               NVVM::SaturationMode sat,
                                               bool hasRelu);
   }];
   
   string llvmBuilder = [{
-    auto intId = NVVM::CvtF32x2ToF8x2Op::getIntrinsicID($type, $rnd, $sat, $relu);
+    auto intId = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicID($type, $rnd, $sat, $relu);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
@@ -1258,7 +1258,7 @@ def NVVM_CvtF32x2ToF8x2Op : NVVM_Op<"cvt.f32x2.to.f8x2"> {
   }];
 }
 
-def NVVM_CvtF16x2ToF8x2Op : NVVM_Op<"cvt.f16x2.to.f8x2"> {
+def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
   let summary = "Convert an f16x2 input to f8x2";
   let description = [{
     This Op converts the given f16 inputs in an f16x2 vector to the specified 
@@ -1280,18 +1280,18 @@ def NVVM_CvtF16x2ToF8x2Op : NVVM_Op<"cvt.f16x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    CVTFP8TypeAttr:$type,
+    ConvertFP8TypeAttr:$type,
     VectorOfLengthAndType<[2], [F16]>:$a,
     DefaultValuedAttr<BoolAttr, "false">:$relu);
   let assemblyFormat = "$type $a attr-dict `:` type($a) `->` type($dst)";
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::CVTFP8Type to,
+    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP8Type to,
                                               bool hasRelu);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::CvtF16x2ToF8x2Op::getIntrinsicID($type, $relu);
+    auto intId = NVVM::ConvertF16x2ToF8x2Op::getIntrinsicID($type, $relu);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
@@ -1301,7 +1301,7 @@ def NVVM_CvtF16x2ToF8x2Op : NVVM_Op<"cvt.f16x2.to.f8x2"> {
   }];
 }
 
-def NVVM_CvtBF16x2ToF8x2Op : NVVM_Op<"cvt.bf16x2.to.f8x2"> {
+def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   let summary = "Convert a pair of bf16 inputs to f8x2";
   let description = [{
     This Op converts the given bf16 inputs in a bf16x2 vector to the specified 
@@ -1323,7 +1323,7 @@ def NVVM_CvtBF16x2ToF8x2Op : NVVM_Op<"cvt.bf16x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    CVTFP8TypeAttr:$type,
+    ConvertFP8TypeAttr:$type,
     VectorOfLengthAndType<[2], [BF16]>:$a,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat);
@@ -1335,7 +1335,7 @@ def NVVM_CvtBF16x2ToF8x2Op : NVVM_Op<"cvt.bf16x2.to.f8x2"> {
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::CvtBF16x2ToF8x2Op::getIntrinsicID($rnd, $sat);
+    auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($rnd, $sat);
     llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
@@ -2344,6 +2344,49 @@ def NVVM_PrefetchTensorMapOp : NVVM_Op<"prefetch.tensormap",
   }];
 }
 
+def NVVM_CpAsyncBulkPrefetchOp : NVVM_Op<"cp.async.bulk.prefetch"> {
+  let summary = "Async bulk prefetch from global memory to L2 cache";
+  let description = [{
+    Initiates an asynchronous prefetch of data from the location
+    specified by `srcMem` to the L2 cache.
+
+    The `l2CacheHint` operand is optional, and it is used to specify cache
+    eviction policy that may be used during the memory access.
+
+    Example:
+    ```mlir
+      nvvm.cp.async.bulk.prefetch %src, %size : !llvm.ptr<1>
+
+      // with l2_cache_hint
+      nvvm.cp.async.bulk.prefetch %src, %size l2_cache_hint = %ch : !llvm.ptr<1>
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-prefetch)
+  }];
+
+  let arguments = (ins
+    LLVM_PointerGlobal:$srcMem,
+    I32:$size,
+    Optional<I64>:$l2CacheHint);
+
+  let assemblyFormat = [{
+    $srcMem `,` $size (`l2_cache_hint` `=` $l2CacheHint^ )?
+    attr-dict  `:` type($srcMem)
+  }];
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
+}
+
 def NVVM_CpAsyncBulkTensorPrefetchOp :
   NVVM_Op<"cp.async.bulk.tensor.prefetch", [AttrSizedOperandSegments]> {
   let arguments = (ins
@@ -3327,6 +3370,70 @@ def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMa<[100, 101]>]> {
   string llvmBuilder = [{
     auto id = NVVM::Tcgen05CpOp::getIntrinsicID(*op);
     createIntrinsicCall(builder, id, {$taddr, $smem_desc});
+  }];
+}
+
+def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
+  let summary = "Constructs a Shared Memory descriptor for MMA Operands A or B";
+  let description = [{
+    The `nvvm.tcgen05_mma_smem_desc` constructs a Shared Memory descriptor
+    for tcgen05.mma. This descriptor is a 64-bit value which describes the
+    properties of multiplicand matrix in shared memory including its location
+    in the shared memory of the current CTA.
+
+    +-----------+------+------------------------------------------------------+
+    | Bit-field | Size | Description                                          |
+    +-----------+------+------------------------------------------------------+
+    | 0-13      | 14   | Matrix start address                                 |
+    | 14-15     | 2    | Reserved                                             |
+    | 16-29     | 14   | Leading dim relative-offset (or) absolute-address    |
+    | 30-31     | 2    | Reserved                                             |
+    | 32-45     | 14   | Stride dimension byte offset                         |
+    | 46-48     | 3    | Fixed constant value of 0b001                        |
+    | 49-51     | 3    | Matrix base offset                                   |
+    | 52        | 1    | Leading dimension stride mode:                       |
+    |           |      |   0: byte offset relative                            |
+    |           |      |   1: byte address absolute                           |
+    | 53-60     | 8    | Fixed constant value of 0xb00000000                  |
+    | 61-63     | 3    | Swizzling mode:                                      |
+    |           |      |   0: No swizzling                                    |
+    |           |      |   1: 128-Byte with 32B atomic swizzling              |
+    |           |      |   2: 128-Byte swizzling                              |
+    |           |      |   4: 64-Byte swizzling                               |
+    |           |      |   6: 32-Byte swizzling                               |
+    |           |      |   (Values 3, 5 and 7 are invalid)                    |
+    +-----------+------+------------------------------------------------------+    
+
+    Example:
+    ```mlir
+      %desc = nvvm.tcgen05.mma_smem_desc (%startAddr, %leadingDimOffset, %strideDimOffset,
+                                          %baseOffset, %leadingDimMode, %swizzleMode) : (i32, i32, i32, i8, i1, i8) -> i64
+    ```
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-shared-memory-descriptor)
+  }];
+
+  let arguments = (ins
+      I32:$startAddr,        // Matrix A or B start address (bits 13-0)
+      I32:$leadingDimOffset, // Matrix A or B leading dim byte offset (bits 29-16)
+      I32:$strideDimOffset,  // Matrix A or B stride  dim byte offset (bits 45-32)
+      I8:$baseOffset,        // Matrix A or B base offset (bits 51-49)
+      I1:$leadingDimMode,    // Matrix A or B leading dim mode (bit 52)
+      I8:$swizzleMode        // Swizzle mode (bits 63-61)
+  );
+
+  let results = (outs I64:$res);
+
+  let assemblyFormat = [{
+    `(` operands `)` attr-dict `:` `(` type(operands) `)` `->` type($res)
+  }];
+
+  let extraClassDeclaration = [{
+    static void createSmemDescriptor(Operation &op, LLVM::ModuleTranslation &mt,
+                                     llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    NVVM::Tcgen05MmaSmemDescOp::createSmemDescriptor(*op, moduleTranslation, builder);
   }];
 }
 

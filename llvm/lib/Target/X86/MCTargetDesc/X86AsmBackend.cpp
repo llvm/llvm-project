@@ -178,8 +178,7 @@ public:
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
 
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                    const MCFixup &, const MCValue &, uint64_t,
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &, uint64_t,
                                     bool) const override;
 
   void relaxInstruction(MCInst &Inst,
@@ -736,8 +735,7 @@ bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
           MI.getOperand(MI.getNumOperands() - 1 - SkipOperands).isExpr());
 }
 
-bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                                 const MCFixup &Fixup,
+bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  const MCValue &Target,
                                                  uint64_t Value,
                                                  bool Resolved) const {
@@ -880,7 +878,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
   // disabled by default to eliminate the -g vs non -g difference.
   DenseSet<MCFragment *> LabeledFragments;
   for (const MCSymbol &S : Asm.symbols())
-    LabeledFragments.insert(S.getFragment(false));
+    LabeledFragments.insert(S.getFragment());
 
   for (MCSection &Sec : Asm) {
     if (!Sec.isText())

@@ -564,8 +564,7 @@ public:
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, const MCValue &,
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, const MCValue &,
                                     uint64_t Value,
                                     bool Resolved) const override {
     MCInst const &MCB = *RelaxedMCB;

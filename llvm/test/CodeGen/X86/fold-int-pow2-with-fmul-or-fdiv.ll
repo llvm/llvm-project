@@ -389,7 +389,7 @@ define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ;
 ; CHECK-FMA-LABEL: fmul_pow2_8xhalf:
 ; CHECK-FMA:       # %bb.0:
-; CHECK-FMA-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
+; CHECK-FMA-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
 ; CHECK-FMA-NEXT:    vpsllvw %xmm0, %xmm1, %xmm0
 ; CHECK-FMA-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; CHECK-FMA-NEXT:    vcvtdq2ps %ymm0, %ymm0
@@ -649,12 +649,26 @@ define <8 x half> @fdiv_pow2_8xhalf(<8 x i16> %i) {
 ; CHECK-SSE-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX-LABEL: fdiv_pow2_8xhalf:
-; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    vpsllw $10, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [28672,28672,28672,28672,28672,28672,28672,28672]
-; CHECK-AVX-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
-; CHECK-AVX-NEXT:    retq
+; CHECK-AVX2-LABEL: fdiv_pow2_8xhalf:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vpsllw $10, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [28672,28672,28672,28672,28672,28672,28672,28672]
+; CHECK-AVX2-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-NO-FASTFMA-LABEL: fdiv_pow2_8xhalf:
+; CHECK-NO-FASTFMA:       # %bb.0:
+; CHECK-NO-FASTFMA-NEXT:    vpsllw $10, %xmm0, %xmm0
+; CHECK-NO-FASTFMA-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [28672,28672,28672,28672,28672,28672,28672,28672]
+; CHECK-NO-FASTFMA-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
+; CHECK-NO-FASTFMA-NEXT:    retq
+;
+; CHECK-FMA-LABEL: fdiv_pow2_8xhalf:
+; CHECK-FMA:       # %bb.0:
+; CHECK-FMA-NEXT:    vpsllw $10, %xmm0, %xmm0
+; CHECK-FMA-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [28672,28672,28672,28672,28672,28672,28672,28672]
+; CHECK-FMA-NEXT:    vpsubw %xmm0, %xmm1, %xmm0
+; CHECK-FMA-NEXT:    retq
   %p2 = shl <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, %i
   %p2_f = uitofp <8 x i16> %p2 to <8 x half>
   %r = fdiv <8 x half> <half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000, half 0xH7000>, %p2_f
@@ -1135,7 +1149,7 @@ define <2 x half> @fmul_pow_shl_cnt_vec_fail_to_large(<2 x i16> %cnt) nounwind {
 ;
 ; CHECK-FMA-LABEL: fmul_pow_shl_cnt_vec_fail_to_large:
 ; CHECK-FMA:       # %bb.0:
-; CHECK-FMA-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2]
+; CHECK-FMA-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2,2,2,2,2,2,2,2]
 ; CHECK-FMA-NEXT:    vpsllvw %xmm0, %xmm1, %xmm0
 ; CHECK-FMA-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; CHECK-FMA-NEXT:    vcvtdq2ps %ymm0, %ymm0

@@ -292,14 +292,13 @@ private:
 
   void writeHeader(const MCAssembler &Asm);
 
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
 
   void executePostLayoutBinding() override;
   void prepareImports(SmallVectorImpl<wasm::WasmImport> &Imports,
                       MCAssembler &Asm);
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 
   uint64_t writeOneObject(MCAssembler &Asm, DwoMode Mode);
 
@@ -476,18 +475,17 @@ void WasmObjectWriter::executePostLayoutBinding() {
   }
 }
 
-void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
-                                        const MCFragment *Fragment,
+void WasmObjectWriter::recordRelocation(const MCFragment &F,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue) {
   // The WebAssembly backend should never generate FKF_IsPCRel fixups
-  assert(!(Asm.getBackend().getFixupKindInfo(Fixup.getKind()).Flags &
+  assert(!(Asm->getBackend().getFixupKindInfo(Fixup.getKind()).Flags &
            MCFixupKindInfo::FKF_IsPCRel));
 
-  const auto &FixupSection = cast<MCSectionWasm>(*Fragment->getParent());
+  const auto &FixupSection = cast<MCSectionWasm>(*F.getParent());
   uint64_t C = Target.getConstant();
-  uint64_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
-  MCContext &Ctx = Asm.getContext();
+  uint64_t FixupOffset = Asm->getFragmentOffset(F) + Fixup.getOffset();
+  MCContext &Ctx = getContext();
   bool IsLocRel = false;
 
   if (const auto *RefB = Target.getSubSym()) {
@@ -515,7 +513,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
       return;
     }
     IsLocRel = true;
-    C += FixupOffset - Asm.getSymbolOffset(SymB);
+    C += FixupOffset - Asm->getSymbolOffset(SymB);
   }
 
   // We either rejected the fixup or folded B into C at this point.
@@ -525,13 +523,6 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
   if (FixupSection.getName().starts_with(".init_array")) {
     SymA->setUsedInInitArray();
     return;
-  }
-
-  if (SymA->isVariable()) {
-    const MCExpr *Expr = SymA->getVariableValue();
-    if (const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr))
-      if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF)
-        llvm_unreachable("weakref used in reloc not yet implemented");
   }
 
   // Put any constant offset in an addend. Offsets can be negative, and
@@ -571,7 +562,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     if (!SectionSymbol)
       report_fatal_error("section symbol is required for relocation");
 
-    C += Asm.getSymbolOffset(*SymA);
+    C += Asm->getSymbolOffset(*SymA);
     SymA = cast<MCSymbolWasm>(SectionSymbol);
   }
 
@@ -592,7 +583,7 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
         report_fatal_error("__indirect_function_table symbol has wrong type");
       // Ensure that __indirect_function_table reaches the output.
       Sym->setNoStrip();
-      Asm.registerSymbol(*Sym);
+      Asm->registerSymbol(*Sym);
     }
   }
 
@@ -1435,17 +1426,17 @@ void WasmObjectWriter::prepareImports(
   }
 }
 
-uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t WasmObjectWriter::writeObject() {
   support::endian::Writer MainWriter(*OS, llvm::endianness::little);
   W = &MainWriter;
   if (IsSplitDwarf) {
-    uint64_t TotalSize = writeOneObject(Asm, DwoMode::NonDwoOnly);
+    uint64_t TotalSize = writeOneObject(*Asm, DwoMode::NonDwoOnly);
     assert(DwoOS);
     support::endian::Writer DwoWriter(*DwoOS, llvm::endianness::little);
     W = &DwoWriter;
-    return TotalSize + writeOneObject(Asm, DwoMode::DwoOnly);
+    return TotalSize + writeOneObject(*Asm, DwoMode::DwoOnly);
   } else {
-    return writeOneObject(Asm, DwoMode::AllSections);
+    return writeOneObject(*Asm, DwoMode::AllSections);
   }
 }
 
@@ -1899,7 +1890,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       assert(llvm::all_of(DataFrag.getContents(), [](char C) { return !C; }));
       for (const MCFixup &Fixup : DataFrag.getFixups()) {
         assert(Fixup.getKind() ==
-               MCFixup::getKindForSize(is64Bit() ? 8 : 4, false));
+               MCFixup::getDataKindForSize(is64Bit() ? 8 : 4));
         const MCExpr *Expr = Fixup.getValue();
         auto *SymRef = dyn_cast<MCSymbolRefExpr>(Expr);
         if (!SymRef)
@@ -1929,7 +1920,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     writeGlobalSection(Globals);
     writeExportSection(Exports);
     const MCSymbol *IndirectFunctionTable =
-        Asm.getContext().lookupSymbol("__indirect_function_table");
+        getContext().lookupSymbol("__indirect_function_table");
     writeElemSection(cast_or_null<const MCSymbolWasm>(IndirectFunctionTable),
                      TableElems);
     writeDataCountSection();

@@ -165,8 +165,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                                  const MCFixup &Fixup,
+bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                   const MCValue &,
                                                   uint64_t Value,
                                                   bool Resolved) const {

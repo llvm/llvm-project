@@ -99,8 +99,6 @@ class FactSet;
 /// particular point in program execution.  Currently, a fact is a capability,
 /// along with additional information, such as where it was acquired, whether
 /// it is exclusive or shared, etc.
-///
-/// FIXME: this analysis does not currently support re-entrant locking.
 class FactEntry : public CapabilityExpr {
 public:
   enum FactEntryKind { Lockable, ScopedLockable };
@@ -168,6 +166,8 @@ private:
 public:
   FactID newFact(std::unique_ptr<FactEntry> Entry) {
     Facts.push_back(std::move(Entry));
+    assert(Facts.size() - 1 <= std::numeric_limits<FactID>::max() &&
+           "FactID space exhausted");
     return static_cast<unsigned short>(Facts.size() - 1);
   }
 
@@ -233,6 +233,20 @@ public:
       return true;
     }
     return false;
+  }
+
+  std::optional<FactID> replaceLock(FactManager &FM, iterator It,
+                                    std::unique_ptr<FactEntry> Entry) {
+    if (It == end())
+      return std::nullopt;
+    FactID F = FM.newFact(std::move(Entry));
+    *It = F;
+    return F;
+  }
+
+  std::optional<FactID> replaceLock(FactManager &FM, const CapabilityExpr &CapE,
+                                    std::unique_ptr<FactEntry> Entry) {
+    return replaceLock(FM, findLockIter(FM, CapE), std::move(Entry));
   }
 
   iterator findLockIter(FactManager &FM, const CapabilityExpr &CapE) {
@@ -855,10 +869,18 @@ static void findBlockLocations(CFG *CFGraph,
 namespace {
 
 class LockableFactEntry : public FactEntry {
+private:
+  /// Reentrancy depth: incremented when a capability has been acquired
+  /// reentrantly (after initial acquisition). Always 0 for non-reentrant
+  /// capabilities.
+  unsigned int ReentrancyDepth = 0;
+
 public:
   LockableFactEntry(const CapabilityExpr &CE, LockKind LK, SourceLocation Loc,
                     SourceKind Src = Acquired)
       : FactEntry(Lockable, CE, LK, Loc, Src) {}
+
+  unsigned int getReentrancyDepth() const { return ReentrancyDepth; }
 
   void
   handleRemovalFromIntersection(const FactSet &FSet, FactManager &FactMan,
@@ -872,8 +894,13 @@ public:
 
   void handleLock(FactSet &FSet, FactManager &FactMan, const FactEntry &entry,
                   ThreadSafetyHandler &Handler) const override {
-    Handler.handleDoubleLock(entry.getKind(), entry.toString(), loc(),
-                             entry.loc());
+    if (std::unique_ptr<FactEntry> RFact = tryReenter(entry.kind())) {
+      // This capability has been reentrantly acquired.
+      FSet.replaceLock(FactMan, entry, std::move(RFact));
+    } else {
+      Handler.handleDoubleLock(entry.getKind(), entry.toString(), loc(),
+                               entry.loc());
+    }
   }
 
   void handleUnlock(FactSet &FSet, FactManager &FactMan,
@@ -881,10 +908,37 @@ public:
                     bool FullyRemove,
                     ThreadSafetyHandler &Handler) const override {
     FSet.removeLock(FactMan, Cp);
-    if (!Cp.negative()) {
+
+    if (std::unique_ptr<FactEntry> RFact = leaveReentrant()) {
+      // This capability remains reentrantly acquired.
+      FSet.addLock(FactMan, std::move(RFact));
+    } else if (!Cp.negative()) {
       FSet.addLock(FactMan, std::make_unique<LockableFactEntry>(
                                 !Cp, LK_Exclusive, UnlockLoc));
     }
+  }
+
+  // Return an updated FactEntry if we can acquire this capability reentrant,
+  // nullptr otherwise.
+  std::unique_ptr<LockableFactEntry> tryReenter(LockKind ReenterKind) const {
+    if (!reentrant())
+      return nullptr;
+    if (kind() != ReenterKind)
+      return nullptr;
+    auto NewFact = std::make_unique<LockableFactEntry>(*this);
+    NewFact->ReentrancyDepth++;
+    return NewFact;
+  }
+
+  // Return an updated FactEntry if we are releasing a capability previously
+  // acquired reentrant, nullptr otherwise.
+  std::unique_ptr<LockableFactEntry> leaveReentrant() const {
+    if (!ReentrancyDepth)
+      return nullptr;
+    assert(reentrant());
+    auto NewFact = std::make_unique<LockableFactEntry>(*this);
+    NewFact->ReentrancyDepth--;
+    return NewFact;
   }
 
   static bool classof(const FactEntry *A) {
@@ -992,10 +1046,14 @@ private:
   void lock(FactSet &FSet, FactManager &FactMan, const CapabilityExpr &Cp,
             LockKind kind, SourceLocation loc,
             ThreadSafetyHandler *Handler) const {
-    if (const FactEntry *Fact = FSet.findLock(FactMan, Cp)) {
-      if (Handler)
-        Handler->handleDoubleLock(Cp.getKind(), Cp.toString(), Fact->loc(),
-                                  loc);
+    if (const auto It = FSet.findLockIter(FactMan, Cp); It != FSet.end()) {
+      const auto &Fact = cast<LockableFactEntry>(FactMan[*It]);
+      if (std::unique_ptr<FactEntry> RFact = Fact.tryReenter(kind)) {
+        // This capability has been reentrantly acquired.
+        FSet.replaceLock(FactMan, It, std::move(RFact));
+      } else if (Handler) {
+        Handler->handleDoubleLock(Cp.getKind(), Cp.toString(), Fact.loc(), loc);
+      }
     } else {
       FSet.removeLock(FactMan, !Cp);
       FSet.addLock(FactMan,
@@ -1005,7 +1063,14 @@ private:
 
   void unlock(FactSet &FSet, FactManager &FactMan, const CapabilityExpr &Cp,
               SourceLocation loc, ThreadSafetyHandler *Handler) const {
-    if (FSet.findLock(FactMan, Cp)) {
+    if (const auto It = FSet.findLockIter(FactMan, Cp); It != FSet.end()) {
+      const auto &Fact = cast<LockableFactEntry>(FactMan[*It]);
+      if (std::unique_ptr<FactEntry> RFact = Fact.leaveReentrant()) {
+        // This capability remains reentrantly acquired.
+        FSet.replaceLock(FactMan, It, std::move(RFact));
+        return;
+      }
+
       FSet.removeLock(FactMan, Cp);
       FSet.addLock(FactMan,
                    std::make_unique<LockableFactEntry>(!Cp, LK_Exclusive, loc));
@@ -1065,7 +1130,8 @@ public:
                       const CFGBlock* PredBlock,
                       const CFGBlock *CurrBlock);
 
-  bool join(const FactEntry &a, const FactEntry &b, bool CanModify);
+  bool join(const FactEntry &A, const FactEntry &B, SourceLocation JoinLoc,
+            LockErrorKind EntryLEK);
 
   void intersectAndWarn(FactSet &EntrySet, const FactSet &ExitSet,
                         SourceLocation JoinLoc, LockErrorKind EntryLEK,
@@ -1283,7 +1349,6 @@ void ThreadSafetyAnalyzer::addLock(FactSet &FSet,
                                       Entry->loc(), Entry->getKind());
   }
 
-  // FIXME: Don't always warn when we have support for reentrant locks.
   if (const FactEntry *Cp = FSet.findLock(FactMan, *Entry)) {
     if (!Entry->asserted())
       Cp->handleLock(FSet, FactMan, *Entry, Handler);
@@ -1808,15 +1873,15 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     assert(!Self);
     const auto *TagT = Exp->getType()->getAs<TagType>();
     if (D->hasAttrs() && TagT && Exp->isPRValue()) {
-      std::pair<til::LiteralPtr *, StringRef> Placeholder =
-          Analyzer->SxBuilder.createThisPlaceholder(Exp);
+      til::LiteralPtr *Placeholder =
+          Analyzer->SxBuilder.createVariable(nullptr);
       [[maybe_unused]] auto inserted =
-          Analyzer->ConstructedObjects.insert({Exp, Placeholder.first});
+          Analyzer->ConstructedObjects.insert({Exp, Placeholder});
       assert(inserted.second && "Are we visiting the same expression again?");
       if (isa<CXXConstructExpr>(Exp))
-        Self = Placeholder.first;
+        Self = Placeholder;
       if (TagT->getDecl()->hasAttr<ScopedLockableAttr>())
-        Scp = CapabilityExpr(Placeholder.first, Placeholder.second, false);
+        Scp = CapabilityExpr(Placeholder, Exp->getType(), /*Neg=*/false);
     }
 
     assert(Loc.isInvalid());
@@ -1954,12 +2019,13 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       if (DeclaredLocks.empty())
         continue;
       CapabilityExpr Cp(Analyzer->SxBuilder.translate(Arg, nullptr),
-                        StringRef("mutex"), false);
+                        StringRef("mutex"), /*Neg=*/false, /*Reentrant=*/false);
       if (const auto *CBTE = dyn_cast<CXXBindTemporaryExpr>(Arg->IgnoreCasts());
           Cp.isInvalid() && CBTE) {
         if (auto Object = Analyzer->ConstructedObjects.find(CBTE->getSubExpr());
             Object != Analyzer->ConstructedObjects.end())
-          Cp = CapabilityExpr(Object->second, StringRef("mutex"), false);
+          Cp = CapabilityExpr(Object->second, StringRef("mutex"), /*Neg=*/false,
+                              /*Reentrant=*/false);
       }
       const FactEntry *Fact = FSet.findLock(Analyzer->FactMan, Cp);
       if (!Fact) {
@@ -2254,11 +2320,28 @@ void BuildLockset::VisitReturnStmt(const ReturnStmt *S) {
 /// Given two facts merging on a join point, possibly warn and decide whether to
 /// keep or replace.
 ///
-/// \param CanModify Whether we can replace \p A by \p B.
 /// \return  false if we should keep \p A, true if we should take \p B.
 bool ThreadSafetyAnalyzer::join(const FactEntry &A, const FactEntry &B,
-                                bool CanModify) {
-  if (A.kind() != B.kind()) {
+                                SourceLocation JoinLoc,
+                                LockErrorKind EntryLEK) {
+  // Whether we can replace \p A by \p B.
+  const bool CanModify = EntryLEK != LEK_LockedSomeLoopIterations;
+  unsigned int ReentrancyDepthA = 0;
+  unsigned int ReentrancyDepthB = 0;
+
+  if (const auto *LFE = dyn_cast<LockableFactEntry>(&A))
+    ReentrancyDepthA = LFE->getReentrancyDepth();
+  if (const auto *LFE = dyn_cast<LockableFactEntry>(&B))
+    ReentrancyDepthB = LFE->getReentrancyDepth();
+
+  if (ReentrancyDepthA != ReentrancyDepthB) {
+    Handler.handleMutexHeldEndOfScope(B.getKind(), B.toString(), B.loc(),
+                                      JoinLoc, EntryLEK,
+                                      /*ReentrancyMismatch=*/true);
+    // Pick the FactEntry with the greater reentrancy depth as the "good"
+    // fact to reduce potential later warnings.
+    return CanModify && ReentrancyDepthA < ReentrancyDepthB;
+  } else if (A.kind() != B.kind()) {
     // For managed capabilities, the destructor should unlock in the right mode
     // anyway. For asserted capabilities no unlocking is needed.
     if ((A.managed() || A.asserted()) && (B.managed() || B.asserted())) {
@@ -2304,8 +2387,7 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &EntrySet,
 
     FactSet::iterator EntryIt = EntrySet.findLockIter(FactMan, ExitFact);
     if (EntryIt != EntrySet.end()) {
-      if (join(FactMan[*EntryIt], ExitFact,
-               EntryLEK != LEK_LockedSomeLoopIterations))
+      if (join(FactMan[*EntryIt], ExitFact, JoinLoc, EntryLEK))
         *EntryIt = Fact;
     } else if (!ExitFact.managed() || EntryLEK == LEK_LockedAtEndOfFunction) {
       ExitFact.handleRemovalFromIntersection(ExitSet, FactMan, JoinLoc,
@@ -2468,7 +2550,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       }
       if (UnderlyingLocks.empty())
         continue;
-      CapabilityExpr Cp(SxBuilder.createVariable(Param), StringRef(), false);
+      CapabilityExpr Cp(SxBuilder.createVariable(Param), StringRef(),
+                        /*Neg=*/false, /*Reentrant=*/false);
       auto ScopedEntry = std::make_unique<ScopedLockableFactEntry>(
           Cp, Param->getLocation(), FactEntry::Declared);
       for (const CapabilityExpr &M : UnderlyingLocks)

@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyDiagnosticConsumer.h"
-#include "../ClangTidyForceLinker.h"
 #include "../ClangTidyModule.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"

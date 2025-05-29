@@ -41,7 +41,7 @@ class raw_ostream;
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {
 protected: // Can only create subclasses.
-  MCAsmBackend(llvm::endianness Endian, bool LinkerRelaxation = false);
+  MCAsmBackend(llvm::endianness Endian) : Endian(Endian) {}
 
   MCAssembler *Asm = nullptr;
 
@@ -55,10 +55,6 @@ public:
   void setAssembler(MCAssembler *A) { Asm = A; }
 
   MCContext &getContext() const;
-
-  /// True for RISC-V and LoongArch. Relaxable relocations are marked with a
-  /// RELAX relocation.
-  bool allowLinkerRelaxation() const { return LinkerRelaxation; }
 
   /// Return true if this target might automatically pad instructions and thus
   /// need to emit padding enable/disable directives around sensative code.
@@ -147,8 +143,7 @@ public:
 
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
-  virtual bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                            const MCFixup &, const MCValue &,
+  virtual bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &,
                                             uint64_t, bool Resolved) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
@@ -217,9 +212,6 @@ public:
   // Return STI for fragments of type MCRelaxableFragment and MCDataFragment
   // with hasInstructions() == true.
   static const MCSubtargetInfo *getSubtargetInfo(const MCFragment &F);
-
-private:
-  const bool LinkerRelaxation;
 };
 
 } // end namespace llvm

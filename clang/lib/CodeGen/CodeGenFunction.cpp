@@ -36,6 +36,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
@@ -283,6 +284,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::Pipe:
     case Type::BitInt:
     case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       return TEK_Scalar;
 
     // Complexes.
@@ -1506,6 +1508,11 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     // Disable debug info indefinitely for this function
     DebugInfo = nullptr;
   }
+  // Finalize function debug info on exit.
+  auto Cleanup = llvm::make_scope_exit([this] {
+    if (CGDebugInfo *DI = getDebugInfo())
+      DI->completeFunction();
+  });
 
   // The function might not have a body if we're generating thunks for a
   // function declaration.
@@ -2473,6 +2480,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
     case Type::BitInt:
+    case Type::HLSLInlineSpirv:
       llvm_unreachable("type class is never variably-modified!");
 
     case Type::Elaborated:
