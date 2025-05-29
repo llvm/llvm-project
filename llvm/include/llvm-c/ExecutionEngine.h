@@ -23,6 +23,7 @@
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"
+#include "llvm/Support/Compiler.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
