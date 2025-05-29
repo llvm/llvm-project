@@ -15,10 +15,24 @@
 
 namespace lldb_dap {
 
-static llvm::Expected<protocol::DataBreakpointInfoResponseBody>
+namespace {
+std::vector<protocol::DataBreakpointAccessType>
+GetBreakpointAccessTypes(lldb::SBMemoryRegionInfo region) {
+  std::vector<protocol::DataBreakpointAccessType> types;
+  if (region.IsReadable())
+    types.emplace_back(protocol::eDataBreakpointAccessTypeRead);
+  if (region.IsWritable())
+    types.emplace_back(protocol::eDataBreakpointAccessTypeWrite);
+  if (region.IsReadable() && region.IsWritable())
+    types.emplace_back(protocol::eDataBreakpointAccessTypeReadWrite);
+
+  return types;
+}
+
+llvm::Expected<protocol::DataBreakpointInfoResponseBody>
 HandleDataBreakpointBytes(DAP &dap,
                           const protocol::DataBreakpointInfoArguments &args) {
-  llvm::StringRef raw_address = args.name;
+  const llvm::StringRef raw_address = args.name;
 
   lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
   if (raw_address.getAsInteger<lldb::addr_t>(0, load_addr)) {
@@ -35,29 +49,35 @@ HandleDataBreakpointBytes(DAP &dap,
   const uint32_t byte_size =
       args.bytes.value_or(dap.target.GetAddressByteSize());
 
-  protocol::DataBreakpointInfoResponseBody response;
-  response.dataId = llvm::formatv("{:x-}/{}", load_addr, byte_size);
-
   lldb::SBMemoryRegionInfo region;
   lldb::SBError err =
       dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
-  // Only lldb-server supports "qMemoryRegionInfo". So, don't fail this
-  // request if SBProcess::GetMemoryRegionInfo returns error.
-  if (err.Success() && !(region.IsReadable() || region.IsWritable())) {
+  std::vector<protocol::DataBreakpointAccessType> access_types =
+      GetBreakpointAccessTypes(region);
+
+  protocol::DataBreakpointInfoResponseBody response;
+  if (err.Fail()) {
+    response.dataId = std::nullopt;
+    response.description = err.GetCString();
+    return response;
+  }
+
+  if (access_types.empty()) {
+    response.dataId = std::nullopt;
     response.description = llvm::formatv(
         "memory region for address {} has no read or write permissions",
         load_addr);
-
-  } else {
-    response.description =
-        llvm::formatv("{} bytes at {:x}", byte_size, load_addr);
-    response.accessTypes = {protocol::eDataBreakpointAccessTypeRead,
-                            protocol::eDataBreakpointAccessTypeWrite,
-                            protocol::eDataBreakpointAccessTypeReadWrite};
+    return response;
   }
+
+  response.dataId = llvm::formatv("{:x-}/{}", load_addr, byte_size);
+  response.description =
+      llvm::formatv("{} bytes at {:x}", byte_size, load_addr);
+  response.accessTypes = std::move(access_types);
 
   return response;
 }
+} // namespace
 
 /// Obtains information on a possible data breakpoint that could be set on an
 /// expression or variable. Clients should only call this request if the
