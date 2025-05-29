@@ -606,25 +606,23 @@ define i1 @almost_immediate_neg_ugt_64(i64 %x) {
 define i1 @cmn_nsw(i32 %a, i32 %b) {
 ; CHECK-LABEL: cmn_nsw:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg w8, w1
-; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    cmn w0, w1
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
-%sub = sub nsw i32 0, %b
-%cmp = icmp sgt i32 %a, %sub
-ret i1 %cmp
+  %sub = sub nsw i32 0, %b
+  %cmp = icmp sgt i32 %a, %sub
+  ret i1 %cmp
 }
 
 define i1 @cmn_nsw_64(i64 %a, i64 %b) {
 ; CHECK-LABEL: cmn_nsw_64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg x8, x1
-; CHECK-NEXT:    cmp x0, x8
+; CHECK-NEXT:    cmn x0, x1
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
-%sub = sub nsw i64 0, %b
-%cmp = icmp sgt i64 %a, %sub
-ret i1 %cmp
+  %sub = sub nsw i64 0, %b
+  %cmp = icmp sgt i64 %a, %sub
+  ret i1 %cmp
 }
 
 define i1 @cmn_nsw_neg(i32 %a, i32 %b) {
@@ -634,9 +632,9 @@ define i1 @cmn_nsw_neg(i32 %a, i32 %b) {
 ; CHECK-NEXT:    cmp w0, w8
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
-%sub = sub i32 0, %b
-%cmp = icmp sgt i32 %a, %sub
-ret i1 %cmp
+  %sub = sub i32 0, %b
+  %cmp = icmp sgt i32 %a, %sub
+  ret i1 %cmp
 }
 
 define i1 @cmn_nsw_neg_64(i64 %a, i64 %b) {
@@ -646,7 +644,7 @@ define i1 @cmn_nsw_neg_64(i64 %a, i64 %b) {
 ; CHECK-NEXT:    cmp x0, x8
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
-%sub = sub i64 0, %b
-%cmp = icmp sgt i64 %a, %sub
-ret i1 %cmp
+  %sub = sub i64 0, %b
+  %cmp = icmp sgt i64 %a, %sub
+  ret i1 %cmp
 }
