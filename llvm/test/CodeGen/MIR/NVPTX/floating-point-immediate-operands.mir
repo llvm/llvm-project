@@ -50,7 +50,7 @@ body: |
   ; CHECK: %6:int32regs = FADD_rnf32ri %5, float 6.250000e+00
     %6 = FADD_rnf32ri %5, float 6.250000e+00
     %7 = FMUL_rnf32rr %6, %4
-    StoreRetvalF32 %7, 0
+    StoreRetvalI32 %7, 0
     Return
 ...
 ---
@@ -76,6 +76,6 @@ body: |
   ; CHECK: %6:int32regs = FADD_rnf32ri %5, float 0x7FF8000000000000
     %6 = FADD_rnf32ri %5, float 0x7FF8000000000000
     %7 = FMUL_rnf32rr %6, %4
-    StoreRetvalF32 %7, 0
+    StoreRetvalI32 %7, 0
     Return
 ...
