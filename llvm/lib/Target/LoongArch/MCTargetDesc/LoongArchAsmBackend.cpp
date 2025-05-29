@@ -450,13 +450,13 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
       const MCSection &SecCur = *F.getParent();
 
       // Fallback for PCRel relocations.
-      if ((&SecA != &SecB) && (&SecB == &SecCur))
+      if (&SecA != &SecB && &SecB == &SecCur)
         return Fallback();
 
       // In SecA == SecB case. If the linker relaxation is disabled, the
       // FixedValue has already been calculated out in evaluateFixup,
       // return true and avoid record relocations.
-      if ((&SecA == &SecB) && !STI.hasFeature(LoongArch::FeatureRelax))
+      if (&SecA == &SecB && !STI.hasFeature(LoongArch::FeatureRelax))
         return true;
     }
 
