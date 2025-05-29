@@ -2815,7 +2815,7 @@ static std::optional<AnalyzedCondStmt> AnalyzeConditionalStmt(
         }
       } else {
         AnalyzedCondStmt result{std::move(*maybeCond), stmt.source,
-            GetActionStmt(std::get<parser::Block>(s.t))};
+            GetActionStmt(std::get<parser::Block>(s.t)), SourcedActionStmt{}};
         if (result.ift.stmt) {
           return result;
         }
