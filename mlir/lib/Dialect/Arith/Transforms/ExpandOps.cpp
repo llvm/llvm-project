@@ -460,6 +460,7 @@ struct ScalingTruncFOpConverter
 
     // normalize scale by exponent of the max normal value in result type as per
     // the OCP MXFP spec
+    // https://github.com/microsoft/microxcaling/blob/7bc41952de394f5cc5e782baf132e7c7542eb4e4/mx/mx_ops.py#L277
     const llvm::fltSemantics &resultFltSemantics =
         llvm::cast<FloatType>(resultETy).getFloatSemantics();
     int maxExponent = APFloat::semanticsMaxExponent(resultFltSemantics);
@@ -472,7 +473,11 @@ struct ScalingTruncFOpConverter
     Value unbiasedScale = b.create<arith::SubIOp>(scaleI32, c127);
     Value normalizedUnbiasedScale =
         b.create<arith::SubIOp>(unbiasedScale, cMaxNormalExponent);
-    // clamp scale exponent
+    // clamp scale exponent as per spec
+    // https://github.com/microsoft/microxcaling/blob/7bc41952de394f5cc5e782baf132e7c7542eb4e4/mx/mx_ops.py#L282
+    // upper limit of 127 will be mapped to biased value of 255 and will be
+    // bitcasted to 0xFF in F8E8M0 which will be converted to f32 NaNs using
+    // extf
     Value clampUpperCond = b.create<arith::CmpIOp>(
         arith::CmpIPredicate::sgt, normalizedUnbiasedScale, c127);
     Value clampLowerCond = b.create<arith::CmpIOp>(
@@ -480,13 +485,12 @@ struct ScalingTruncFOpConverter
     Value clampedScale = b.create<arith::SelectOp>(
         clampUpperCond, c127,
         b.create<arith::SelectOp>(clampLowerCond, cNeg127,
-                                  normalizedUnbiasedScale),
-        normalizedUnbiasedScale);
+                                  normalizedUnbiasedScale));
     Value biasedScale = b.create<arith::AddIOp>(clampedScale, c127);
     Value biasedScaleI8 = b.create<arith::TruncIOp>(i8Ty, biasedScale);
     Value biasedScaleF8 = b.create<arith::BitcastOp>(f8Ty, biasedScaleI8);
     Value scaleF32 = b.create<arith::ExtFOp>(f32Ty, biasedScaleF8);
-    // flush denorms, for that check if exponent part of input operand is zero
+    // flush denorms by checking if exponent part of input operand is zero
     // or not.
     Value inputExponent = b.create<arith::TruncFOp>(scaleETy, inputOperand);
     Value inputExponentU8 = b.create<arith::BitcastOp>(i8Ty, inputExponent);
@@ -497,8 +501,9 @@ struct ScalingTruncFOpConverter
     Value flushedInput =
         b.create<arith::SelectOp>(cmpCond, inputTyZero, inputOperand);
     Value result = b.create<arith::DivFOp>(flushedInput, scaleF32);
-    // TODO check if any sort of clamping is required or not
-    Value resultCast = b.create<arith::TruncFOp>(resultTy, result);
+    // propagate rounding mode and fast math attributes
+    Value resultCast = b.create<arith::TruncFOp>(
+        resultTy, result, op.getRoundingmodeAttr(), op.getFastmathAttr());
     rewriter.replaceOp(op, resultCast);
     return success();
   }
