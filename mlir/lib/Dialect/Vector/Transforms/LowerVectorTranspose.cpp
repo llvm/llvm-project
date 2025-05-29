@@ -337,7 +337,7 @@ public:
           rewriter.create<vector::ShapeCastOp>(loc, flattenedType, input);
       auto rows = rewriter.getI32IntegerAttr(resType.getShape()[0]);
       auto columns = rewriter.getI32IntegerAttr(resType.getShape()[1]);
-      Value trans = rewriter.create<vector::FlatTransposeOp>(
+      Value trans = rewriter.create<LLVM::MatrixTransposeOp>(
           loc, flattenedType, matrix, rows, columns);
       rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, trans);
       return success();

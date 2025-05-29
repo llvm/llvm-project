@@ -1271,12 +1271,11 @@ public:
 ///    %mtb = maybe_transpose
 ///    %flattened_a = vector.shape_cast %mta
 ///    %flattened_b = vector.shape_cast %mtb
-///    %flattened_d = vector.matrix_multiply %flattened_a, %flattened_b
+///    %flattened_d = llvm.intr.matrix.multiply %flattened_a, %flattened_b
 ///    %mtd = vector.shape_cast %flattened_d
 ///    %d = maybe_untranspose %mtd
 ///    %e = add %c, %d
 /// ```
-/// `vector.matrix_multiply` later lowers to `llvm.matrix.multiply`.
 //
 /// This only kicks in when vectorContractLowering is set to `Matmul`.
 /// vector.transpose operations are inserted if the vector.contract op is not a
@@ -1353,8 +1352,12 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
       VectorType::get(rhsType.getNumElements(), rhsType.getElementType());
   rhs = rew.create<vector::ShapeCastOp>(loc, flattenedRHSType, rhs);
 
-  Value mul = rew.create<vector::MatmulOp>(loc, lhs, rhs, lhsRows, lhsColumns,
-                                           rhsColumns);
+  Value mul = rew.create<LLVM::MatrixMultiplyOp>(
+      loc,
+      VectorType::get(lhsRows * rhsColumns,
+                      cast<VectorType>(lhs.getType()).getElementType()),
+      lhs, rhs, lhsRows, lhsColumns, rhsColumns);
+
   mul = rew.create<vector::ShapeCastOp>(
       loc,
       VectorType::get({lhsRows, rhsColumns},

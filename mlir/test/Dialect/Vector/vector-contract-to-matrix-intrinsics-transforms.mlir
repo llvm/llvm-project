@@ -29,7 +29,7 @@
 //      CHECK:  %[[b5:.*]] = vector.insert_strided_slice %[[b4]], %[[b3]] {offsets = [6], strides = [1]} : vector<3xf32> into vector<12xf32>
 //      CHECK:  %[[b6:.*]] = vector.extract %[[B]][3] : vector<3xf32> from vector<4x3xf32>
 //      CHECK:  %[[b7:.*]] = vector.insert_strided_slice %[[b6]], %[[b5]] {offsets = [9], strides = [1]} : vector<3xf32> into vector<12xf32>
-//      CHECK:  %[[mm1:.*]] = vector.matrix_multiply %[[a3]], %[[b7]] {lhs_columns = 4 : i32, lhs_rows = 2 : i32, rhs_columns = 3 : i32} : (vector<8xf32>, vector<12xf32>) -> vector<6xf32>
+//      CHECK:  %[[mm1:.*]] = llvm.intr.matrix.multiply %[[a3]], %[[b7]] {lhs_columns = 4 : i32, lhs_rows = 2 : i32, rhs_columns = 3 : i32} : (vector<8xf32>, vector<12xf32>) -> vector<6xf32>
 //      CHECK:  %[[mm2:.*]] = vector.extract_strided_slice %[[mm1]] {offsets = [0], sizes = [3], strides = [1]} : vector<6xf32> to vector<3xf32>
 //      CHECK:  %[[mm3:.*]] = vector.insert %[[mm2]], %[[ub_1]] [0] : vector<3xf32> into vector<2x3xf32>
 //      CHECK:  %[[mm4:.*]] = vector.extract_strided_slice %[[mm1]] {offsets = [3], sizes = [3], strides = [1]} : vector<6xf32> to vector<3xf32>
@@ -44,7 +44,7 @@ func.func @matmul(%arg0: vector<2x4xf32>,
 }
 
 // CHECK-LABEL: func @matmul_scalable
-// CHECK-NOT: vector.matrix_multiply
+// CHECK-NOT: llvm.intr.matrix.multiply
 func.func @matmul_scalable(%arg0: vector<2x4xf32>,
                            %arg1: vector<4x[3]xf32>,
                            %arg2: vector<2x[3]xf32>) -> vector<2x[3]xf32> {
