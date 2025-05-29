@@ -56,14 +56,16 @@ using namespace clang;
 using namespace CodeGen;
 
 namespace clang {
-// TODO: Introduce frontend options to enabled per sanitizers, similar to
-// `fsanitize-trap`.
+// TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
+//       by -fsanitize-skip-hot-cutoff
 llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 } // namespace clang
 
+// TODO: consider deprecating ClArrayBoundsPseudoFn; functionality is subsumed
+//       by -fsanitize-annotate-debug-info
 static llvm::cl::opt<bool> ClArrayBoundsPseudoFn(
     "array-bounds-pseudofn", llvm::cl::Hidden, llvm::cl::Optional,
     llvm::cl::desc("Emit debug info that places array-bounds instrumentation "
