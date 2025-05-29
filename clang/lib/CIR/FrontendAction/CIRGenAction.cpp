@@ -135,6 +135,10 @@ public:
     }
     }
   }
+
+  void CompleteTentativeDefinition(VarDecl *D) override {
+    Gen->CompleteTentativeDefinition(D);
+  }
 };
 } // namespace cir
 

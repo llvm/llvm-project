@@ -22,10 +22,8 @@ subroutine linear_clause_02(arg_01, arg_02)
     real, intent(in) :: arg_01(:)
 
     !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
-    !ERROR: The list item 'arg_02' specified without the REF 'linear-modifier' must be of INTEGER type
     !ERROR: If the `linear-modifier` is REF or UVAL, the list item 'arg_02' must be a dummy argument without the VALUE attribute
     !$omp declare simd linear(uval(arg_02))
-    !ERROR: The type of 'arg_02' has already been implicitly declared
     integer, value, intent(in) :: arg_02
 
     !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead

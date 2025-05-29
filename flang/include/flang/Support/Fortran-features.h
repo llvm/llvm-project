@@ -56,7 +56,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
     IgnoreIrrelevantAttributes, Unsigned, ContiguousOkForSeqAssociation, AmbiguousStructureConstructor,
     // Maybe not a real language feature, but let's keep it here for now
-    AmdMemoryAllocator)
+    ForwardRefExplicitTypeDummy, AmdMemoryAllocator)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
