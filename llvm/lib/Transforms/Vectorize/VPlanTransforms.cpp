@@ -1841,9 +1841,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   }
 }
 
-/// Remove BranchOnCond recipes with true conditions together with removing
-/// dead edges to their successors.
-static void removeBranchOnCondTrue(VPlan &Plan) {
+/// Remove BranchOnCond recipes with true or false conditions together with
+/// removing dead edges to their successors.
+static void removeBranchOnConst(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
@@ -1871,7 +1871,8 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
     // from these recipes.
     for (VPRecipeBase &R : make_early_inc_range(*RemovedSucc)) {
       if (isa<VPIRPhi>(&R)) {
-        assert(RemovedSucc->getNumPredecessors() == 1);
+        assert(RemovedSucc->getNumPredecessors() == 1 &&
+               "VPIRPhis must have a single predecessor");
         cast<VPIRPhi>(&R)->removeIncomingValue(VPBB);
         continue;
       }
@@ -1909,7 +1910,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
-  runPass(removeBranchOnCondTrue, Plan);
+  runPass(removeBranchOnConst, Plan);
   runPass(removeDeadRecipes, Plan);
 
   runPass(createAndOptimizeReplicateRegions, Plan);

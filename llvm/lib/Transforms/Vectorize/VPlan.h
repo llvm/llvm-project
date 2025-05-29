@@ -1122,7 +1122,9 @@ public:
     return getAsRecipe()->getNumOperands();
   }
 
-  void removeIncomingValue(VPBlockBase *VPB) const;
+  /// Removes the incoming value corresponding to \p IncomingBlock, which must
+  /// be a predecessor.
+  void removeIncomingValue(VPBlockBase *IncomingBlock) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3715,15 +3717,6 @@ private:
 inline const VPBasicBlock *
 VPPhiAccessors::getIncomingBlock(unsigned Idx) const {
   return getAsRecipe()->getParent()->getCFGPredecessor(Idx);
-}
-
-inline void VPPhiAccessors::removeIncomingValue(VPBlockBase *VPB) const {
-  VPRecipeBase *R = const_cast<VPRecipeBase *>(getAsRecipe());
-  const VPBasicBlock *Parent = R->getParent();
-  assert(R->getNumOperands() == Parent->getNumPredecessors());
-  auto I = find(Parent->getPredecessors(), VPB);
-  R->getOperand(I - Parent->getPredecessors().begin())->removeUser(*R);
-  R->removeOperand(I - Parent->getPredecessors().begin());
 }
 
 /// A special type of VPBasicBlock that wraps an existing IR basic block.

@@ -2380,10 +2380,14 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
 
   // We just connected a new block to the scalar preheader. Update all
   // VPPhis by adding an incoming value for it, replicating the last value.
+  unsigned NumPredecessors = ScalarPH->getNumPredecessors();
+  (void)NumPredecessors;
   for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
     auto *ResumePhi = cast<VPPhi>(&R);
     ResumePhi->addOperand(
         ResumePhi->getOperand(ResumePhi->getNumOperands() - 1));
+    assert(ResumePhi->getNumIncoming() == NumPredecessors &&
+           "must have incoming values for all operands");
   }
 }
 

@@ -502,10 +502,8 @@ void VPlanTransforms::prepareForVectorization(
                                    cast<VPBasicBlock>(LatchVPB), Range);
         HandledUncountableEarlyExit = true;
       } else {
-        for (VPRecipeBase &R : cast<VPIRBasicBlock>(EB)->phis()) {
-          if (auto *PhiR = dyn_cast<VPIRPhi>(&R))
-            PhiR->removeIncomingValue(Pred);
-        }
+        for (VPRecipeBase &R : EB->phis())
+          cast<VPIRPhi>(&R)->removeIncomingValue(Pred);
       }
       cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
@@ -530,15 +528,6 @@ void VPlanTransforms::prepareForVectorization(
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
 
-  // If needed, add a check in the middle block to see if we have completed
-  // all of the iterations in the first vector loop.  Three cases:
-  // 1) If we require a scalar epilogue, there is no conditional branch as
-  //    we unconditionally branch to the scalar preheader.  Remove the recipes
-  //    from the exit blocks.
-  // 2) If (N - N%VF) == N, then we *don't* need to run the remainder.
-  //    Thus if tail is to be folded, we know we don't need to run the
-  //    remainder and we can set the condition to true.
-  // 3) Otherwise, construct a runtime check.
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
   // Also connect the entry block to the scalar preheader.
   // TODO: Also introduce a branch recipe together with the minimum trip count
@@ -546,28 +535,44 @@ void VPlanTransforms::prepareForVectorization(
   VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
   Plan.getEntry()->swapSuccessors();
 
-  if (MiddleVPBB->getNumSuccessors() != 2)
+  // If MiddleVPBB has a single successor the original loop exits via the latch
+  // and the single successor must be the scalar preheader. There's no need to
+  // add a runtime check to MiddleVPBB.
+  if (MiddleVPBB->getNumSuccessors() == 1) {
+    assert(MiddleVPBB->getSingleSuccessor() == ScalarPH &&
+           "must have ScalarPH as single successor");
     return;
+  }
 
-  auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
-  // Here we use the same DebugLoc as the scalar loop latch terminator instead
-  // of the corresponding compare because they may have ended up with
-  // different line numbers and we want to avoid awkward line stepping while
-  // debugging. Eg. if the compare has got a line number inside the loop.
+  assert(MiddleVPBB->getNumSuccessors() == 2 && "must have 2 successors");
+
+  // If needed, add a check in the middle block to see if we have completed
+  // all of the iterations in the first vector loop.
+  // Three cases:
+  // 1) If we require a scalar epilogue, the scalar ph must execute. Set the
+  //    condition to false.
+  // 2) If (N - N%VF) == N, then we *don't* need to run the
+  //    remainder. Thus if tail is to be folded, we know we don't need to run
+  //    the remainder and we can set the condition to true.
+  // 3) Otherwise, construct a runtime check.
+
+  // We use the same DebugLoc as the scalar loop latch terminator instead of
+  // the corresponding compare because they may have ended up with different
+  // line numbers and we want to avoid awkward line stepping while debugging.
+  // E.g., if the compare has got a line number inside the loop.
+  DebugLoc LatchDL = TheLoop->getLoopLatch()->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;
-  if (TailFolded)
-    Cmp = Plan.getOrAddLiveIn(ConstantInt::getTrue(
-        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
-  else if (!RequiresScalarEpilogueCheck)
+  if (!RequiresScalarEpilogueCheck)
     Cmp = Plan.getOrAddLiveIn(ConstantInt::getFalse(
+        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+  else if (TailFolded)
+    Cmp = Plan.getOrAddLiveIn(ConstantInt::getTrue(
         IntegerType::getInt1Ty(TripCount->getType()->getContext())));
   else
     Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
-                             &Plan.getVectorTripCount(),
-                             ScalarLatchTerm->getDebugLoc(), "cmp.n");
-  Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp},
-                       ScalarLatchTerm->getDebugLoc());
+                             &Plan.getVectorTripCount(), LatchDL, "cmp.n");
+  Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp}, LatchDL);
 }
 
 void VPlanTransforms::createLoopRegions(VPlan &Plan) {
