@@ -29,7 +29,6 @@
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/TarWriter.h"
 #include <atomic>
-#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -141,8 +140,8 @@ enum class GcsPolicy { Implicit, Never, Always };
 enum class ReportPolicy { None, Warning, Error };
 
 struct AArch64PauthAbiCoreInfo {
-  uint64_t aarch64PauthAbiPlatform;
-  uint64_t aarch64PauthAbiVersion;
+  uint64_t platform;
+  uint64_t version;
 };
 
 struct SymbolVersion {

@@ -2848,10 +2848,9 @@ static void readSecurityNotes(Ctx &ctx) {
       referenceFileName = (*it)->getName();
     }
   }
-  bool hasValidPauthAbiCoreInfo =
-      ctx.aarch64PauthAbiCoreInfo.has_value() &&
-      (ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform != 0 ||
-       ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion != 0);
+  bool hasValidPauthAbiCoreInfo = ctx.aarch64PauthAbiCoreInfo.has_value() &&
+                                  (ctx.aarch64PauthAbiCoreInfo->platform != 0 ||
+                                   ctx.aarch64PauthAbiCoreInfo->version != 0);
 
   auto report = [&](ReportPolicy policy) -> ELFSyncStream {
     return {ctx, toDiagLevel(policy)};
@@ -2923,24 +2922,24 @@ static void readSecurityNotes(Ctx &ctx) {
       continue;
     }
 
-    if (ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform !=
-        f->aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform)
+    if (ctx.aarch64PauthAbiCoreInfo->platform !=
+        f->aarch64PauthAbiCoreInfo->platform)
       Err(ctx) << "incompatible AArch64 PAuth Platform Values\n>>> "
                << referenceFileName << ": 0x"
-               << toHex(ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform,
+               << toHex(ctx.aarch64PauthAbiCoreInfo->platform,
                         /*LowerCase=*/true)
                << "\n>>> " << f << ": 0x"
-               << toHex(f->aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform,
+               << toHex(f->aarch64PauthAbiCoreInfo->platform,
                         /*LowerCase=*/true);
 
-    if (ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion !=
-        f->aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion)
+    if (ctx.aarch64PauthAbiCoreInfo->version !=
+        f->aarch64PauthAbiCoreInfo->version)
       Err(ctx) << "incompatible AArch64 PAuth Version Values\n>>> "
                << referenceFileName << ": 0x"
-               << toHex(ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion,
+               << toHex(ctx.aarch64PauthAbiCoreInfo->version,
                         /*LowerCase=*/true)
                << "\n>>> " << f << ": 0x"
-               << toHex(f->aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion,
+               << toHex(f->aarch64PauthAbiCoreInfo->version,
                         /*LowerCase=*/true);
   }
 

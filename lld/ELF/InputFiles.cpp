@@ -961,11 +961,9 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
                        "is invalid: expected 16 bytes, but got "
                     << size);
       }
-      f.aarch64PauthAbiCoreInfo.emplace();
-      f.aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform =
-          support::endian::read64<ELFT::Endianness>(&desc[0]);
-      f.aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion =
-          support::endian::read64<ELFT::Endianness>(&desc[8]);
+      f.aarch64PauthAbiCoreInfo = {
+          support::endian::read64<ELFT::Endianness>(&desc[0]),
+          support::endian::read64<ELFT::Endianness>(&desc[8])};
     }
 
     // Padding is present in the note descriptor, if necessary.

@@ -347,10 +347,8 @@ void GnuPropertySection::writeTo(uint8_t *buf) {
   if (ctx.aarch64PauthAbiCoreInfo) {
     write32(ctx, buf + offset + 0, GNU_PROPERTY_AARCH64_FEATURE_PAUTH);
     write32(ctx, buf + offset + 4, sizeof(uint64_t) * 2);
-    write64(ctx, buf + offset + 8,
-            ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform);
-    write64(ctx, buf + offset + 16,
-            ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion);
+    write64(ctx, buf + offset + 8, ctx.aarch64PauthAbiCoreInfo->platform);
+    write64(ctx, buf + offset + 16, ctx.aarch64PauthAbiCoreInfo->version);
   }
 }
 
