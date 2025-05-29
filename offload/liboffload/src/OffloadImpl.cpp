@@ -416,18 +416,20 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
 
   // If no queue is given the memcpy will be synchronous
   auto QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
-  Error Res = Error::success();
 
   if (DstDevice == HostDevice()) {
-    Res = SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl);
+    if (auto Res =
+            SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl))
+      return Res;
   } else if (SrcDevice == HostDevice()) {
-    Res = DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl);
+    if (auto Res =
+            DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
+      return Res;
   } else {
-    Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device, DstPtr,
-                                          Size, QueueImpl);
+    if (auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
+                                                   DstPtr, Size, QueueImpl))
+      return Res;
   }
-  if (Res)
-    return Res;
 
   if (EventOut)
     *EventOut = makeEvent(Queue);
