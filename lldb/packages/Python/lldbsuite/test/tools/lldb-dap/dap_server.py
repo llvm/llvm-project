@@ -25,7 +25,6 @@ from typing import (
     Literal,
     Callable,
     TypeVar,
-    Generic,
     cast,
     TYPE_CHECKING,
 )
@@ -40,28 +39,28 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-class Event(TypedDict, Generic[T]):
+class Event(TypedDict):
     type: Literal["event"]
     seq: Literal[0]
     event: str
-    body: Optional[T]
+    body: Optional[dict]
 
 
-class Request(TypedDict, Generic[T]):
+class Request(TypedDict):
     type: Literal["request"]
     seq: int
     command: str
-    arguments: Optional[T]
+    arguments: Optional[dict]
 
 
-class Response(TypedDict, Generic[T]):
+class Response(TypedDict):
     type: Literal["response"]
     seq: Literal[0]
     request_seq: int
     success: bool
     command: str
     message: Optional[str]
-    body: Optional[T]
+    body: Optional[dict]
 
 
 class AttachOrLaunchArguments(TypedDict, total=False):
@@ -757,7 +756,7 @@ class DebugCommunication(object):
             "command": "attach",
             "type": "request",
             "seq": 0,
-            "arguments": attach_args,
+            "arguments": cast(dict, attach_args),
         }
         return self._send_recv(command_dict)
 
@@ -949,7 +948,7 @@ class DebugCommunication(object):
             "type": "request",
             "seq": 0,
             "command": "launch",
-            "arguments": kwargs,
+            "arguments": cast(dict, kwargs),
         }
         return self._send_recv(command_dict)
 
