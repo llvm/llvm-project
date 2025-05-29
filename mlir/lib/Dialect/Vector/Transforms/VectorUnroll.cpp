@@ -631,14 +631,69 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
+  UnrollBroadcastPattern(MLIRContext *context,
+                         const vector::UnrollVectorOptions &options,
+                         PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::BroadcastOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    auto targetShape = getTargetShape(options, broadcastOp);
+    if (!targetShape)
+      return failure();
+
+    Location loc = broadcastOp.getLoc();
+    VectorType srcType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    VectorType resType = broadcastOp.getResultVectorType();
+    VectorType newType =
+        resType.cloneWith(*targetShape, resType.getElementType());
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, resType, rewriter.getZeroAttr(resType));
+
+    SmallVector<int64_t> originalShape = *broadcastOp.getShapeForUnroll();
+    SmallVector<int64_t> strides(originalShape.size(), 1);
+
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(originalShape, *targetShape)) {
+      Value newSrc;
+      // Scalar to vector broadcast.
+      if (!srcType) {
+        newSrc = broadcastOp.getSource();
+      } else {
+        int64_t rank = srcType.getRank();
+        auto srcOffsets = llvm::ArrayRef<int64_t>(offsets).drop_front(rank);
+        auto srcShape = llvm::ArrayRef<int64_t>(*targetShape).drop_front(rank);
+        auto srcStrides = llvm::ArrayRef<int64_t>(strides).drop_front(rank);
+        newSrc = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+            loc, broadcastOp.getSource(), srcOffsets, srcShape, srcStrides);
+      }
+
+      Operation *newOp = cloneOpWithOperandsAndTypes(rewriter, loc, broadcastOp,
+                                                     newSrc, newType);
+
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, newOp->getResult(0), result, offsets, strides);
+    }
+
+    rewriter.replaceOp(broadcastOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
     RewritePatternSet &patterns, const UnrollVectorOptions &options,
     PatternBenefit benefit) {
-  patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
-               UnrollContractionPattern, UnrollElementwisePattern,
-               UnrollReductionPattern, UnrollMultiReductionPattern,
-               UnrollTransposePattern, UnrollGatherPattern>(
-      patterns.getContext(), options, benefit);
+  patterns
+      .add<UnrollTransferReadPattern, UnrollTransferWritePattern,
+           UnrollContractionPattern, UnrollElementwisePattern,
+           UnrollReductionPattern, UnrollMultiReductionPattern,
+           UnrollTransposePattern, UnrollGatherPattern, UnrollBroadcastPattern>(
+          patterns.getContext(), options, benefit);
 }
