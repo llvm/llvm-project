@@ -153,10 +153,8 @@ public:
                : llvm::ArrayRef<const semantics::Symbol *>();
   }
 
-  template <typename OpType = mlir::omp::PrivateClauseOp,
-            typename OperandsStructType = mlir::omp::PrivateClauseOps>
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
-                       OperandsStructType *clauseOps);
+                       mlir::omp::PrivateClauseOps *clauseOps);
 };
 
 } // namespace omp

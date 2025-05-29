@@ -20721,6 +20721,34 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   return 1;
 }
 
+bool RISCVTargetLowering::SimplifyDemandedBitsForTargetNode(
+    SDValue Op, const APInt &OriginalDemandedBits,
+    const APInt &OriginalDemandedElts, KnownBits &Known, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
+  unsigned BitWidth = OriginalDemandedBits.getBitWidth();
+
+  switch (Op.getOpcode()) {
+  case RISCVISD::BREV8: {
+    KnownBits Known2;
+    APInt DemandedBits =
+        APInt(BitWidth, computeGREVOrGORC(OriginalDemandedBits.getZExtValue(),
+                                          7, /*IsGORC=*/false));
+    if (SimplifyDemandedBits(Op.getOperand(0), DemandedBits,
+                             OriginalDemandedElts, Known2, TLO, Depth + 1))
+      return true;
+
+    Known.Zero =
+        computeGREVOrGORC(Known2.Zero.getZExtValue(), 7, /*IsGORC=*/false);
+    Known.One =
+        computeGREVOrGORC(Known2.One.getZExtValue(), 7, /*IsGORC=*/false);
+    return false;
+  }
+  }
+
+  return TargetLowering::SimplifyDemandedBitsForTargetNode(
+      Op, OriginalDemandedBits, OriginalDemandedElts, Known, TLO, Depth);
+}
+
 bool RISCVTargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
