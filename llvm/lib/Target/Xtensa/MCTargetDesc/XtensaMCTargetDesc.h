@@ -57,6 +57,9 @@ bool isValidAddrOffsetForOpcode(unsigned Opcode, int64_t Offset);
 
 // Verify if it's correct to use a special register.
 bool checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits);
+
+// Get Xtensa User Register by register encoding value.
+MCRegister getUserRegister(unsigned Code);
 } // namespace Xtensa
 } // end namespace llvm
 
