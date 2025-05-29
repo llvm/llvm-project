@@ -718,9 +718,6 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
 
-  if (SLT == MVT::f64)
-    return LT.first * NElts * get64BitInstrCost(CostKind);
-
   if ((ST->hasVOP3PInsts() && (SLT == MVT::f16 || SLT == MVT::i16)) ||
       (ST->hasPackedFP32Ops() && SLT == MVT::f32))
     NElts = (NElts + 1) / 2;
@@ -731,6 +728,11 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   switch (ICA.getID()) {
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
+    if (SLT == MVT::f64) {
+      InstRate = get64BitInstrCost(CostKind);
+      break;
+    }
+
     if ((SLT == MVT::f32 && ST->hasFastFMAF32()) || SLT == MVT::f16)
       InstRate = getFullRateInstrCost();
     else {
@@ -741,8 +743,8 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::copysign:
     return NElts * getFullRateInstrCost();
   case Intrinsic::canonicalize: {
-    assert(SLT != MVT::f64);
-    InstRate = getFullRateInstrCost();
+    InstRate =
+        SLT == MVT::f64 ? get64BitInstrCost(CostKind) : getFullRateInstrCost();
     break;
   }
   case Intrinsic::uadd_sat:
