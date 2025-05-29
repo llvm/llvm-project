@@ -1341,7 +1341,7 @@ def Arith_ScalingTruncFOp
     assuming quantization axis is the last axis. 
     Original scales values therefore would be of shape `<dim1 x dim2 x ... x dimN-1 x (dimN/blockSize)>`. 
     `arith.scaling_truncf` operation is an elementwise operation. Therefore, before calling into `arith.scaling_truncf`, if `blockSize != 1` then 
-    scales must be broadcasted appropariately to make it of same shape as the input operand.
+    Scales must be broadcast appropriately to ensure they are of the same shape as the input operand.
     Internally arith.scaling_truncf does the following:
     ```
     scaleETy = get_type(scale)
