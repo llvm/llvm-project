@@ -20,6 +20,8 @@ static_library("ProfileData") {
     "MemProf.cpp",
     "MemProfRadixTree.cpp",
     "MemProfReader.cpp",
+    "MemProfSummary.cpp",
+    "MemProfSummaryBuilder.cpp",
     "PGOCtxProfReader.cpp",
     "PGOCtxProfWriter.cpp",
     "ProfileSummaryBuilder.cpp",

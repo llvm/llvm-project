@@ -626,7 +626,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
 
     return createFindLastIVReduction(Builder, ReducedPartRdx,
-                                     State.get(getOperand(1), true), RdxDesc);
+                                     State.get(getOperand(1), true),
+                                     RdxDesc.getSentinelValue());
   }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
@@ -688,7 +689,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
       // descriptor.
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
         ReducedPartRdx =
-            createAnyOfReduction(Builder, ReducedPartRdx, RdxDesc, OrigPhi);
+            createAnyOfReduction(Builder, ReducedPartRdx,
+                                 RdxDesc.getRecurrenceStartValue(), OrigPhi);
       else
         ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
 
