@@ -1284,7 +1284,8 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
   // That's it. We can't rule out any more cases with the data we have.
 
   CodeGenFunction::SanitizerScope SanScope(
-      &CGF, {SanitizerKind::SO_ImplicitUnsignedIntegerTruncation,
+      &CGF, {SanitizerKind::SO_ImplicitIntegerSignChange,
+             SanitizerKind::SO_ImplicitUnsignedIntegerTruncation,
              SanitizerKind::SO_ImplicitSignedIntegerTruncation});
 
   std::pair<ScalarExprEmitter::ImplicitConversionCheckKind,
