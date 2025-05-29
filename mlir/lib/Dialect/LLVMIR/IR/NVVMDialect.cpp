@@ -1205,11 +1205,48 @@ LogicalResult NVVM::VoteSyncOp::verify() {
   return success();
 }
 
-llvm::Value *
-NVVM::DotAccumulate4WayOp::getPackedArg(llvm::Value *arg,
-                                        llvm::IRBuilderBase &builder) {
-  return builder.CreateBitCast(arg,
-                               llvm::Type::getInt32Ty(builder.getContext()));
+/// Packs the given `field` into the `result`.
+/// The `result` is 64-bits and each `field` can be 32-bits or narrower.
+static llvm::Value *
+packValInto64Bits(llvm::IRBuilderBase &builder,
+                  llvm::Value *result, // the `result` (unset bits are zero)
+                  llvm::Value *field,  // `field` to pack into `result`
+                  unsigned sizeInBits, // Size of `field` in bits
+                  unsigned start) {    // Starting bit within `result`
+  field = builder.CreateZExtOrBitCast(field, builder.getInt32Ty());
+
+  unsigned mask = (sizeInBits < 32 ? ((1u << sizeInBits) - 1) : 0xffffffffu);
+  if (mask != 0xffffffffu)
+    field = builder.CreateAnd(field, builder.getInt32(mask));
+
+  field = builder.CreateZExtOrBitCast(field, builder.getInt64Ty());
+  field = builder.CreateShl(field, start);
+
+  return builder.CreateOr(result, field);
+}
+
+void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
+                                                LLVM::ModuleTranslation &mt,
+                                                llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05MmaSmemDescOp>(op);
+  llvm::Value *smemDesc = builder.getInt64(0);
+
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getStartAddr()), 14, 0);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getLeadingDimOffset()), 14, 16);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getStrideDimOffset()), 14, 32);
+
+  smemDesc = packValInto64Bits(builder, smemDesc, builder.getInt32(1), 3, 46);
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getBaseOffset()), 3, 49);
+  smemDesc = packValInto64Bits(
+      builder, smemDesc, mt.lookupValue(thisOp.getLeadingDimMode()), 1, 52);
+  smemDesc = packValInto64Bits(builder, smemDesc,
+                               mt.lookupValue(thisOp.getSwizzleMode()), 3, 61);
+
+  mt.mapValue(thisOp.getRes()) = smemDesc;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1648,24 +1685,31 @@ static void nvvmInferResultRanges(Operation *op, Value result,
   }
 }
 
-llvm::Intrinsic::ID
-DotAccumulate4WayOp::getIntrinsicID(NVVM::DotAccumulate4WayType a_type,
-                                    NVVM::DotAccumulate4WayType b_type) {
-  bool is_a_siext = a_type == NVVM::DotAccumulate4WayType::S8;
-  bool is_b_siext = b_type == NVVM::DotAccumulate4WayType::S8;
-  unsigned type = (is_a_siext << 1) | is_b_siext;
-  switch (type) {
-  case 0:
-    return llvm::Intrinsic::nvvm_idp4a_u_u;
-  case 1:
-    return llvm::Intrinsic::nvvm_idp4a_u_s;
-  case 2:
-    return llvm::Intrinsic::nvvm_idp4a_s_u;
-  case 3:
-    return llvm::Intrinsic::nvvm_idp4a_s_s;
-  default:
-    llvm_unreachable("Invalid DP4a type");
-  }
+static llvm::Value *getAsPackedI32(llvm::Value *arg,
+                                   llvm::IRBuilderBase &builder) {
+  return builder.CreateBitCast(arg,
+                               llvm::Type::getInt32Ty(builder.getContext()));
+}
+
+NVVM::IDArgPair DotAccumulate4WayOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::DotAccumulate4WayOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getA()), builder));
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getB()), builder));
+  args.push_back(mt.lookupValue(curOp.getC()));
+
+  bool isASigned = curOp.getAType() == NVVM::DotAccumulateType::SIGNED;
+  bool isBSigned = curOp.getBType() == NVVM::DotAccumulateType::SIGNED;
+  unsigned type = (isASigned << 1) | isBSigned;
+  const llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_idp4a_u_u,
+      llvm::Intrinsic::nvvm_idp4a_u_s,
+      llvm::Intrinsic::nvvm_idp4a_s_u,
+      llvm::Intrinsic::nvvm_idp4a_s_s,
+  };
+  return {ids[type], args};
 }
 
 //===----------------------------------------------------------------------===//

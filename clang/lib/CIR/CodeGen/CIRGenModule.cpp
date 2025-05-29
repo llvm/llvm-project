@@ -231,8 +231,20 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
       return;
     }
   } else {
-    assert(cast<VarDecl>(global)->isFileVarDecl() &&
-           "Cannot emit local var decl as global");
+    const auto *vd = cast<VarDecl>(global);
+    assert(vd->isFileVarDecl() && "Cannot emit local var decl as global.");
+    if (vd->isThisDeclarationADefinition() != VarDecl::Definition &&
+        !astContext.isMSStaticDataMemberInlineDefinition(vd)) {
+      assert(!cir::MissingFeatures::openMP());
+      // If this declaration may have caused an inline variable definition to
+      // change linkage, make sure that it's emitted.
+      if (astContext.getInlineVariableDefinitionKind(vd) ==
+          ASTContext::InlineVariableDefinitionKind::Strong)
+        getAddrOfGlobalVar(vd);
+      // Otherwise, we can ignore this declaration. The variable will be emitted
+      // on its first use.
+      return;
+    }
   }
 
   // TODO(CIR): Defer emitting some global definitions until later
@@ -279,21 +291,22 @@ cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
-    // Some global emissions are triggered while emitting a function, e.g.
-    // void s() { const char *s = "yolo"; ... }
-    //
-    // Be sure to insert global before the current function
-    CIRGenFunction *curCGF = cgm.curCGF;
-    if (curCGF)
-      builder.setInsertionPoint(curCGF->curFn);
+    // If an insertion point is provided, we're replacing an existing global,
+    // otherwise, create the new global immediately after the last gloabl we
+    // emitted.
+    if (insertPoint) {
+      builder.setInsertionPoint(insertPoint);
+    } else {
+      // Group global operations together at the top of the module.
+      if (cgm.lastGlobalOp)
+        builder.setInsertionPointAfter(cgm.lastGlobalOp);
+      else
+        builder.setInsertionPointToStart(cgm.getModule().getBody());
+    }
 
     g = builder.create<cir::GlobalOp>(loc, name, t);
-    if (!curCGF) {
-      if (insertPoint)
-        cgm.getModule().insert(insertPoint, g);
-      else
-        cgm.getModule().push_back(g);
-    }
+    if (!insertPoint)
+      cgm.lastGlobalOp = g;
 
     // Default to private until we can judge based on the initializer,
     // since MLIR doesn't allow public declarations.
@@ -1042,6 +1055,24 @@ StringRef CIRGenModule::getMangledName(GlobalDecl gd) {
 
   auto result = manglings.insert(std::make_pair(mangledName, gd));
   return mangledDeclNames[canonicalGd] = result.first->first();
+}
+
+void CIRGenModule::emitTentativeDefinition(const VarDecl *d) {
+  assert(!d->getInit() && "Cannot emit definite definitions here!");
+
+  StringRef mangledName = getMangledName(d);
+  mlir::Operation *gv = getGlobalValue(mangledName);
+
+  // If we already have a definition, not declaration, with the same mangled
+  // name, emitting of declaration is not required (and would actually overwrite
+  // the emitted definition).
+  if (gv && !mlir::cast<cir::GlobalOp>(gv).isDeclaration())
+    return;
+
+  assert(!cir::MissingFeatures::deferredDecls());
+
+  // The tentative definition is the only definition.
+  emitGlobalVarDefinition(d);
 }
 
 cir::FuncOp CIRGenModule::getOrCreateCIRFunction(

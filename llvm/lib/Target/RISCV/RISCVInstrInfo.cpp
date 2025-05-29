@@ -273,9 +273,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
     if (MBBI->isMetaInstruction())
       continue;
 
-    if (MBBI->getOpcode() == RISCV::PseudoVSETVLI ||
-        MBBI->getOpcode() == RISCV::PseudoVSETVLIX0 ||
-        MBBI->getOpcode() == RISCV::PseudoVSETIVLI) {
+    if (RISCVInstrInfo::isVectorConfigInstr(*MBBI)) {
       // There is a vsetvli between COPY and source define instruction.
       // vy = def_vop ...  (producing instruction)
       // ...
@@ -4189,6 +4187,33 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
       MI.getOperand(2).ChangeToImmediate(0);
       MI.setDesc(get(RISCV::ADDI));
       return true;
+    }
+    break;
+  case RISCV::BEQ:
+  case RISCV::BNE:
+    // b{eq,ne} zero, rs, imm => b{eq,ne} rs, zero, imm
+    if (MI.getOperand(0).getReg() == RISCV::X0) {
+      MachineOperand MO0 = MI.getOperand(0);
+      MI.removeOperand(0);
+      MI.insert(MI.operands_begin() + 1, {MO0});
+    }
+    break;
+  case RISCV::BLTU:
+    // bltu zero, rs, imm => bne rs, zero, imm
+    if (MI.getOperand(0).getReg() == RISCV::X0) {
+      MachineOperand MO0 = MI.getOperand(0);
+      MI.removeOperand(0);
+      MI.insert(MI.operands_begin() + 1, {MO0});
+      MI.setDesc(get(RISCV::BNE));
+    }
+    break;
+  case RISCV::BGEU:
+    // bgeu zero, rs, imm => beq rs, zero, imm
+    if (MI.getOperand(0).getReg() == RISCV::X0) {
+      MachineOperand MO0 = MI.getOperand(0);
+      MI.removeOperand(0);
+      MI.insert(MI.operands_begin() + 1, {MO0});
+      MI.setDesc(get(RISCV::BEQ));
     }
     break;
   }
