@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/Transforms/Passes.h"
-
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "mlir/IR/PDLPatternMatch.h.inc"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/APFloat.h"
+#include <cstdint>
 
 namespace mlir {
 namespace arith {
@@ -417,6 +420,7 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
     auto inputOperand = op.getIn();
     auto scaleOperand = op.getScale();
     Type resultTy = op.getType();
+    // extf on scale will essentially create f32 number that is 2^scale
     Value scaleExt = b.create<arith::ExtFOp>(resultTy, scaleOperand);
     Value inputExt = b.create<arith::ExtFOp>(resultTy, inputOperand);
     Value result = b.create<arith::MulFOp>(inputExt, scaleExt);
@@ -433,13 +437,58 @@ struct ScalingTruncFOpConverter
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     auto inputOperand = op.getIn();
     auto scaleOperand = op.getScale();
+    auto scaleTy = scaleOperand.getType();
+    if (!llvm::isa<Float8E8M0FNUType>(getElementTypeOrSelf(scaleOperand))) {
+      return rewriter.notifyMatchFailure(
+          op, "scaling truncf is not using scale operand of type f8E8M0FNU");
+    }
+    auto scaleETy = getElementTypeOrSelf(scaleOperand);
     Type resultTy = op.getType();
+    Type resultETy = getElementTypeOrSelf(op.getOut());
+
     Type inputTy = inputOperand.getType();
-    Value scaleExt = b.create<arith::ExtFOp>(inputTy, scaleOperand);
-    // flush denorms, check if exponent part of input operand is zero or not.
-    Type f8E8M0Ty = cloneToShapedType(inputTy, b.getF8E8M0Type());
-    Type i8Ty = cloneToShapedType(inputTy, b.getI8Type());
-    Value inputExponent = b.create<arith::TruncFOp>(f8E8M0Ty, inputOperand);
+    Type inputETy = getElementTypeOrSelf(inputOperand);
+    if (!inputETy.isF32()) {
+      inputOperand = b.create<arith::ExtFOp>(b.getF32Type(), inputOperand);
+      inputETy = getElementTypeOrSelf(inputOperand);
+    }
+
+    Type i8Ty = cloneToShapedType(resultTy, b.getI8Type());
+    Type i32Ty = cloneToShapedType(resultTy, b.getI32Type());
+    Type f32Ty = cloneToShapedType(resultTy, b.getF32Type());
+    Type f8Ty = cloneToShapedType(scaleTy, b.getF8E8M0Type());
+
+    // normalize scale by exponent of the max normal value in result type as per
+    // the OCP MXFP spec
+    const llvm::fltSemantics &resultFltSemantics =
+        llvm::cast<FloatType>(resultETy).getFloatSemantics();
+    int maxExponent = APFloat::semanticsMaxExponent(resultFltSemantics);
+    Value cMaxNormalExponent =
+        createConst(op->getLoc(), i32Ty, maxExponent, rewriter);
+    Value c127 = createConst(op->getLoc(), i32Ty, 127, rewriter);
+    Value cNeg127 = createConst(op->getLoc(), i32Ty, -127, rewriter);
+    Value scaleI8 = b.create<arith::BitcastOp>(i8Ty, scaleOperand);
+    Value scaleI32 = b.create<arith::ExtSIOp>(i32Ty, scaleI8);
+    Value unbiasedScale = b.create<arith::SubIOp>(scaleI32, c127);
+    Value normalizedUnbiasedScale =
+        b.create<arith::SubIOp>(unbiasedScale, cMaxNormalExponent);
+    // clamp scale exponent
+    Value clampUpperCond = b.create<arith::CmpIOp>(
+        arith::CmpIPredicate::sgt, normalizedUnbiasedScale, c127);
+    Value clampLowerCond = b.create<arith::CmpIOp>(
+        arith::CmpIPredicate::slt, normalizedUnbiasedScale, cNeg127);
+    Value clampedScale = b.create<arith::SelectOp>(
+        clampUpperCond, c127,
+        b.create<arith::SelectOp>(clampLowerCond, cNeg127,
+                                  normalizedUnbiasedScale),
+        normalizedUnbiasedScale);
+    Value biasedScale = b.create<arith::AddIOp>(clampedScale, c127);
+    Value biasedScaleI8 = b.create<arith::TruncIOp>(i8Ty, biasedScale);
+    Value biasedScaleF8 = b.create<arith::BitcastOp>(f8Ty, biasedScaleI8);
+    Value scaleF32 = b.create<arith::ExtFOp>(f32Ty, biasedScaleF8);
+    // flush denorms, for that check if exponent part of input operand is zero
+    // or not.
+    Value inputExponent = b.create<arith::TruncFOp>(scaleETy, inputOperand);
     Value inputExponentU8 = b.create<arith::BitcastOp>(i8Ty, inputExponent);
     Value cI8Zero = createConst(op.getLoc(), i8Ty, 0x00, rewriter);
     Value cmpCond = b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, cI8Zero,
@@ -447,7 +496,8 @@ struct ScalingTruncFOpConverter
     Value inputTyZero = createConst(op.getLoc(), inputTy, 0, rewriter);
     Value flushedInput =
         b.create<arith::SelectOp>(cmpCond, inputTyZero, inputOperand);
-    Value result = b.create<arith::DivFOp>(flushedInput, scaleExt);
+    Value result = b.create<arith::DivFOp>(flushedInput, scaleF32);
+    // TODO check if any sort of clamping is required or not
     Value resultCast = b.create<arith::TruncFOp>(resultTy, result);
     rewriter.replaceOp(op, resultCast);
     return success();
