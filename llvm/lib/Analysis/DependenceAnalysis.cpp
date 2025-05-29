@@ -1826,13 +1826,10 @@ bool isRemainderZero(const SCEVConstant *Dividend,
 // (see also weakZeroDstSIVtest)
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
-                                        const SCEV *SrcConst,
-                                        const SCEV *DstConst,
-                                        const Loop *CurSrcLoop,
-                                        const Loop *CurDstLoop, unsigned Level,
-                                        FullDependence &Result,
-                                        Constraint &NewConstraint) const {
+bool DependenceInfo::weakZeroSrcSIVtest(
+    const SCEV *DstCoeff, const SCEV *SrcConst, const SCEV *DstConst,
+    const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
+    FullDependence &Result, Constraint &NewConstraint) const {
   // For the WeakSIV test, it's possible the loop isn't common to
   // the Src and Dst loops. If it isn't, then there's no need to
   // record a direction.
@@ -1937,13 +1934,10 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
 // (see also weakZeroSrcSIVtest)
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
-                                        const SCEV *SrcConst,
-                                        const SCEV *DstConst,
-                                        const Loop *CurSrcLoop,
-                                        const Loop *CurDstLoop, unsigned Level,
-                                        FullDependence &Result,
-                                        Constraint &NewConstraint) const {
+bool DependenceInfo::weakZeroDstSIVtest(
+    const SCEV *SrcCoeff, const SCEV *SrcConst, const SCEV *DstConst,
+    const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
+    FullDependence &Result, Constraint &NewConstraint) const {
   // For the WeakSIV test, it's possible the loop isn't common to the
   // Src and Dst loops. If it isn't, then there's no need to record a direction.
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (dst) SIV test\n");
@@ -2015,7 +2009,6 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   }
   return false;
 }
-
 
 // exactRDIVtest - Tests the RDIV subscript pair for dependence.
 // Things of the form [c1 + a*i] and [c2 + b*j],

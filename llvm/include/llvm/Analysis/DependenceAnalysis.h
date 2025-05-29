@@ -578,8 +578,8 @@ namespace llvm {
     /// This lets us allocate vectors MaxLevels in length, with room for every
     /// distinct loop referenced in both the source and destination subscripts.
     /// The variable SrcLevels is the nesting depth of the source instruction.
-    /// It's used to help calculate distinct loops referenced by the destination.
-    /// Here's the map from loops to levels:
+    /// It's used to help calculate distinct loops referenced by the
+    /// destination. Here's the map from loops to levels:
     ///            0 - unused
     ///            1 - outermost common loop
     ///          ... - other common loops
