@@ -262,8 +262,8 @@ public:
 
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
 
-  static std::unique_ptr<CheckerProgramPointTag> DeallocSentTag;
-  static std::unique_ptr<CheckerProgramPointTag> CastFailTag;
+  static std::unique_ptr<SimpleProgramPointTag> DeallocSentTag;
+  static std::unique_ptr<SimpleProgramPointTag> CastFailTag;
 
   /// Track Objective-C and CoreFoundation objects.
   bool TrackObjCAndCFObjects = false;
@@ -347,23 +347,22 @@ public:
                                     SymbolRef sid, RefVal V,
                                     SmallVectorImpl<SymbolRef> &Leaked) const;
 
-  ProgramStateRef
-  handleAutoreleaseCounts(ProgramStateRef state, ExplodedNode *Pred,
-                          const ProgramPointTag *Tag, CheckerContext &Ctx,
-                          SymbolRef Sym,
-                          RefVal V,
-                          const ReturnStmt *S=nullptr) const;
+  ProgramStateRef handleAutoreleaseCounts(ProgramStateRef state,
+                                          ExplodedNode *Pred,
+                                          CheckerContext &Ctx, SymbolRef Sym,
+                                          RefVal V,
+                                          const ReturnStmt *S = nullptr) const;
 
   ExplodedNode *processLeaks(ProgramStateRef state,
                              SmallVectorImpl<SymbolRef> &Leaked,
                              CheckerContext &Ctx,
                              ExplodedNode *Pred = nullptr) const;
 
-  static const CheckerProgramPointTag &getDeallocSentTag() {
+  static const SimpleProgramPointTag &getDeallocSentTag() {
     return *DeallocSentTag;
   }
 
-  static const CheckerProgramPointTag &getCastFailTag() { return *CastFailTag; }
+  static const SimpleProgramPointTag &getCastFailTag() { return *CastFailTag; }
 
 private:
   /// Perform the necessary checks and state adjustments at the end of the
