@@ -1118,6 +1118,7 @@ Miscellaneous Clang Crashes Fixed
 
 - Fixed a crash when an unscoped enumeration declared by an opaque-enum-declaration within a class template
   with a dependent underlying type is subject to integral promotion. (#GH117960)
+- Fix code completion crash involving PCH serialzied templates. (#GH139019)
 
 OpenACC Specific Changes
 ------------------------
