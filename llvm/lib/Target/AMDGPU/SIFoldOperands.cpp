@@ -777,24 +777,6 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
       return true;
   }
 
-  // Check the case where we might introduce a second constant operand to a
-  // scalar instruction
-  if (TII->isSALU(MI->getOpcode())) {
-    const MCInstrDesc &InstDesc = MI->getDesc();
-    const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
-
-    // Fine if the operand can be encoded as an inline constant
-    if (!OpToFold->isReg() && !TII->isInlineConstant(*OpToFold, OpInfo)) {
-      // Otherwise check for another constant
-      for (unsigned i = 0, e = InstDesc.getNumOperands(); i != e; ++i) {
-        auto &Op = MI->getOperand(i);
-        if (OpNo != i && !Op.isReg() &&
-            !TII->isInlineConstant(Op, InstDesc.operands()[i]))
-          return false;
-      }
-    }
-  }
-
   appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
   return true;
 }
