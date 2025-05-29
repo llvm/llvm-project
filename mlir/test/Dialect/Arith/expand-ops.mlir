@@ -306,7 +306,40 @@ func.func @truncf_vector_bf16_to_f8E8M0FNU(%arg0 : vector<4xbf16>) -> vector<4xf
 
 // CHECK-LABEL: @truncf_vector_bf16_to_f8E8M0FNU
 // CHECK-NOT: arith.truncf
+// CHECK: return
 
+// -----
+
+func.func @scaling_truncf_f32_to_f4E2M1FN(%arg0 : f32, %arg1: f8E8M0FNU) -> f4E2M1FN {
+    %0 = arith.scaling_truncf %arg0, %arg1 : f32, f8E8M0FNU to f4E2M1FN
+    return %0 : f4E2M1FN
+}
+
+// SCHECK-LABEL: @scaling_truncf_f32_to_f4E2M1FN
+// SCHECK: %[[C2:.+]] = arith.constant 2 : i32
+// SCHECK: %[[C127:.+]] = arith.constant 127 : i32
+// SCHECK: %[[CN127:.+]] = arith.constant -127 : i32
+// SCHECK: %[[BITCASTI8:.+]] =  arith.bitcast %arg1 : f8E8M0FNU to i8
+// SCHECK: %[[EXTI:.+]] = arith.extsi %[[BITCASTI8]] : i8 to i32
+// SCHECK: %[[UNBIASEDSCALE:.+]] = arith.subi %[[EXTI]], %[[C127]] : i32
+// SCHECK: %[[NORMALIZED:.+]] = arith.subi %[[UNBIASEDSCALE]], %[[C2]] : i32
+// SCHECK: %[[UPPERCOND:.+]] = arith.cmpi sgt, %[[NORMALIZED]], %[[C127]] : i32
+// SCHECK: %[[LOWERCOND:.+]] = arith.cmpi slt, %[[NORMALIZED]], %[[CN127]] : i32
+// SCHECK: %[[LOWERSELECT:.+]] = arith.select %[[LOWERCOND]], %[[CN127]], %[[NORMALIZED]] : i32
+// SCHECK: %[[UPPERSELECT:.+]] = arith.select %[[UPPERCOND]], %[[C127]], %[[LOWERSELECT]] : i32
+// SCHECK: %[[BIASED:.+]] = arith.addi %[[UPPERSELECT]], %[[C127]] : i32
+// SCHECK: %[[BIASEDI8:.+]] = arith.trunci %[[BIASED]] : i32 to i8
+// SCHECK: %[[BITCASTF8:.+]] = arith.bitcast %[[BIASEDI8]] : i8 to f8E8M0FNU
+// SCHECK: %[[EXPSCALE:.+]] = arith.extf %[[BITCASTF8]] : f8E8M0FNU to f32
+// SCHECK: %[[INPUTEXP:.+]] = arith.truncf %arg0 : f32 to f8E8M0FNU
+// SCHECK: %[[INPUTEXPI8:.+]] = arith.bitcast %[[INPUTEXP]] : f8E8M0FNU to i8
+// SCHECK: %[[C0:.+]] = arith.constant 0 : i8
+// SCHECK: %[[FLUSHCOND:.+]] = arith.cmpi eq, %[[C0]], %[[INPUTEXPI8]] : i8
+// SCHECK: %[[CF0:.+]] = arith.constant 0.000000e+00 : f32
+// SCHECK: %[[FLUSHINPUT:.+]] = arith.select %[[FLUSHCOND]], %[[CF0]], %arg0 : f32
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[FLUSHINPUT]], %[[EXPSCALE]] : f32
+// SCHECK: %[[RESULT:.+]] = arith.truncf %[[DIVF]] : f32 to f4E2M1FN
+// SCHECK: return %[[RESULT]]
 // -----
 
 func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {
