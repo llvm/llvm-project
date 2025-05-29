@@ -43,7 +43,7 @@ TEST(LlvmLibcWMemcmpTest, CompareToEmpty) {
   // lhs is nonempty, should result in a value greater than 0.
   const wchar_t *lhs = L"az";
   const wchar_t *rhs = L"";
-  EXPECT_GT(LIBC_NAMESPACE::wmemcmp(lhs, rhs, 2), 0);
+  EXPECT_GT(LIBC_NAMESPACE::wmemcmp(lhs, rhs, 1), 0);
 }
 
 TEST(LlvmLibcWMemcmpTest, LhsAfterRhsLexicallyLong) {
