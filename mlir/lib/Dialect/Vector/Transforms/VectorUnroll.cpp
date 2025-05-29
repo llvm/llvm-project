@@ -663,9 +663,9 @@ struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
         newSrc = broadcastOp.getSource();
       } else {
         int64_t rank = srcType.getRank();
-        auto srcOffsets = llvm::ArrayRef<int64_t>(offsets).drop_front(rank);
-        auto srcShape = llvm::ArrayRef<int64_t>(*targetShape).drop_front(rank);
-        auto srcStrides = llvm::ArrayRef<int64_t>(strides).drop_front(rank);
+        auto srcOffsets = llvm::ArrayRef<int64_t>(offsets).take_back(rank);
+        auto srcShape = llvm::ArrayRef<int64_t>(*targetShape).take_back(rank);
+        auto srcStrides = llvm::ArrayRef<int64_t>(strides).take_back(rank);
         newSrc = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
             loc, broadcastOp.getSource(), srcOffsets, srcShape, srcStrides);
       }
