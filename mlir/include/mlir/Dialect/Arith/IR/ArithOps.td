@@ -1219,17 +1219,16 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFast
 // Scaling ExtFOp
 //===----------------------------------------------------------------------===//
 // TODO Remove rouding mode attr for EXtf
-def Arith_ScalingExtFOp :
-    Arith_Op<"scaling_extf",
-      [Pure, 
-       SameInputOutputTensorDims, 
-       DeclareOpInterfaceMethods<ArithFastMathInterface>, 
-       DeclareOpInterfaceMethods<CastOpInterface>]>,
-    Arguments<(ins FloatLike:$in,
-                   FloatLike:$scale,
-                   OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
-    Results<(outs FloatLike:$out)> {
-  let summary = "cast from floating-point to larger floating-point using provided scales";
+def Arith_ScalingExtFOp
+    : Arith_Op<
+          "scaling_extf", [Pure, SameInputOutputTensorDims,
+                           DeclareOpInterfaceMethods<ArithFastMathInterface>,
+                           DeclareOpInterfaceMethods<CastOpInterface>]>,
+      Arguments<(ins FloatLike:$in, FloatLike:$scale,
+          OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+      Results<(outs FloatLike:$out)> {
+  let summary =
+      "cast from floating-point to larger floating-point using provided scales";
   let description = [{
     Implements micro-scaling floating point ExtF op. It expects both scales and input operand to be of same shape. 
     Scale operand is expected to be of type f8E8M0. But that can be relaxed in future.  
@@ -1251,7 +1250,8 @@ def Arith_ScalingExtFOp :
     It propagates NaN values. Therefore if either scale or input operand element value is a NaN then output element value will also be a NaN.
   }];
   let hasVerifier = 1;
-  let assemblyFormat = [{ $in `,` $scale (`fastmath` `` $fastmath^)? attr-dict `:` type($in) `,` type($scale) `to` type($out)}];
+  let assemblyFormat =
+      [{ $in `,` $scale (`fastmath` `` $fastmath^)? attr-dict `:` type($in) `,` type($scale) `to` type($out)}];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1323,19 +1323,18 @@ def Arith_TruncFOp :
 // Scaling TruncFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_ScalingTruncFOp :
-    Arith_Op<"scaling_truncf",
-      [Pure, 
-       SameInputOutputTensorDims, 
-       DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
-       DeclareOpInterfaceMethods<ArithFastMathInterface>, 
-       DeclareOpInterfaceMethods<CastOpInterface>]>,
-    Arguments<(ins FloatLike:$in,
-                   FloatLike:$scale,
-                   OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
-                   OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
-    Results<(outs FloatLike:$out)> {
-  let summary = "cast from floating-point to narrower floating-point with scales";
+def Arith_ScalingTruncFOp
+    : Arith_Op<"scaling_truncf",
+               [Pure, SameInputOutputTensorDims,
+                DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
+                DeclareOpInterfaceMethods<ArithFastMathInterface>,
+                DeclareOpInterfaceMethods<CastOpInterface>]>,
+      Arguments<(ins FloatLike:$in, FloatLike:$scale,
+          OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
+          OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+      Results<(outs FloatLike:$out)> {
+  let summary =
+      "cast from floating-point to narrower floating-point with scales";
   let description = [{
     This operation implements micro-scaling (OCP MXFP) quantization of input using provided scale values.
     This quantization usually happens over a block of values. All values in that block share same scale value for quantization purposes. 
@@ -1359,7 +1358,8 @@ def Arith_ScalingTruncFOp :
 
   }];
   let hasVerifier = 1;
-  let assemblyFormat = [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:` type($in) `,` type($scale) `to` type($out)}];
+  let assemblyFormat =
+      [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:` type($in) `,` type($scale) `to` type($out)}];
 }
 
 //===----------------------------------------------------------------------===//
