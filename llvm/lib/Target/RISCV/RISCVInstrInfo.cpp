@@ -4189,6 +4189,24 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
       return true;
     }
     break;
+  case RISCV::BLTU:
+    // bltu zero, rs, imm => bne rs, zero, imm
+    if (MI.getOperand(0).getReg() == RISCV::X0) {
+      MachineOperand MO0 = MI.getOperand(0);
+      MI.removeOperand(0);
+      MI.insert(MI.operands_begin() + 1, {MO0});
+      MI.setDesc(get(RISCV::BNE));
+    }
+    break;
+  case RISCV::BGEU:
+    // bgeu zero, rs, imm => beq rs, zero, imm
+    if (MI.getOperand(0).getReg() == RISCV::X0) {
+      MachineOperand MO0 = MI.getOperand(0);
+      MI.removeOperand(0);
+      MI.insert(MI.operands_begin() + 1, {MO0});
+      MI.setDesc(get(RISCV::BEQ));
+    }
+    break;
   }
   return false;
 }
