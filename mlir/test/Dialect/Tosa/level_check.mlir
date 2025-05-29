@@ -443,7 +443,7 @@ func.func @test_rescale_rank_invalid(%arg0: tensor<1x1x1x1x13x21x3xi8>) -> tenso
 
 // -----
 func.func @test_const(%arg0 : tensor<1x1xi32>) -> tensor<1x1x1x1x1x1x1xi32> {
-  // expected-error@+1 {{'tosa.const' op failed level check: attribute rank(shape) <= MAX_RANK}}
+  // expected-error@+1 {{'tosa.const' op failed level check: result rank(shape) <= MAX_RANK}}
   %0 = "tosa.const"() {values = dense<0> : tensor<1x1x1x1x1x1x1xi32>} : () -> tensor<1x1x1x1x1x1x1xi32>
   return %0: tensor<1x1x1x1x1x1x1xi32>
 }
@@ -1089,7 +1089,8 @@ func.func @test_scatter_tensor_size_invalid(%arg0: tensor<13x210000000x3xf32>, %
 // -----
 
 func.func @test_variable_read_write_tensor_size_invalid() -> () {
-  tosa.variable @stored_var = dense<3.14> : tensor<536870912xf32>
+  // expected-error@+1 {{'tosa.variable' op failed level check: variable type tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  tosa.variable @stored_var : tensor<536870912xf32>
   // expected-error@+1 {{'tosa.variable_read' op failed level check: result tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %0 = tosa.variable_read @stored_var : tensor<536870912xf32>
   // expected-error@+1 {{'tosa.variable_write' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
@@ -1156,8 +1157,8 @@ func.func @test_cond_if_rank_invalid(%arg0: tensor<1x1x1x1x1x1x1x1xf32>, %arg1: 
 // -----
 
 func.func @test_variable_read_write_rank_invalid() -> () {
-  // expected-error@+1 {{'tosa.variable' op failed level check: attribute rank(shape) <= MAX_RANK}}
-  tosa.variable @stored_var = dense<3.14> : tensor<1x1x1x1x1x1x1x1xf32>
+  // expected-error@+1 {{'tosa.variable' op failed level check: variable type rank(shape) <= MAX_RANK}}
+  tosa.variable @stored_var : tensor<1x1x1x1x1x1x1x1xf32>
   // expected-error@+1 {{'tosa.variable_read' op failed level check: result rank(shape) <= MAX_RANK}}
   %0 = tosa.variable_read @stored_var : tensor<1x1x1x1x1x1x1x1xf32>
   // expected-error@+1 {{'tosa.variable_write' op failed level check: operand rank(shape) <= MAX_RANK}}
