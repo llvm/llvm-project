@@ -17,8 +17,6 @@
 #include <cstdint>
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
-extern llvm::cl::opt<bool> enableDelayedPrivatization;
-extern llvm::cl::opt<bool> enableDelayedPrivatizationStaging;
 
 namespace fir {
 class FirOpBuilder;
@@ -163,6 +161,11 @@ void genObjectList(const ObjectList &objects,
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
                                      mlir::Location loc);
 
+bool collectLoopRelatedInfo(
+    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
+    mlir::omp::LoopRelatedClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

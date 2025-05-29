@@ -20,13 +20,13 @@ define amdgpu_kernel void @s_lshr_v2i16(ptr addrspace(1) %out, <2 x i16> %lhs, <
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_and_b32 s4, s2, 0xffff
-; VI-NEXT:    s_lshr_b32 s2, s2, 16
-; VI-NEXT:    s_lshr_b32 s5, s3, 16
-; VI-NEXT:    s_lshr_b32 s2, s2, s5
-; VI-NEXT:    s_lshr_b32 s3, s4, s3
-; VI-NEXT:    s_lshl_b32 s2, s2, 16
-; VI-NEXT:    s_or_b32 s2, s3, s2
+; VI-NEXT:    s_lshr_b32 s4, s3, 16
+; VI-NEXT:    s_lshr_b32 s5, s2, 16
+; VI-NEXT:    s_and_b32 s2, s2, 0xffff
+; VI-NEXT:    s_lshr_b32 s4, s5, s4
+; VI-NEXT:    s_lshr_b32 s2, s2, s3
+; VI-NEXT:    s_lshl_b32 s3, s4, 16
+; VI-NEXT:    s_or_b32 s2, s2, s3
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s2

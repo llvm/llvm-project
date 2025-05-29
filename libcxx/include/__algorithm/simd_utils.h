@@ -26,7 +26,9 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 // TODO: Find out how altivec changes things and allow vectorizations there too.
-#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_CLANG_VER) && !defined(__ALTIVEC__)
+// TODO: Simplify this condition once we stop building with AppleClang 15 in the CI.
+#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(__ALTIVEC__) &&                         \
+    !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600)
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 1
 #else
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
@@ -51,20 +53,20 @@ struct __get_as_integer_type_impl;
 
 template <>
 struct __get_as_integer_type_impl<1> {
-  using type = uint8_t;
+  using type _LIBCPP_NODEBUG = uint8_t;
 };
 
 template <>
 struct __get_as_integer_type_impl<2> {
-  using type = uint16_t;
+  using type _LIBCPP_NODEBUG = uint16_t;
 };
 template <>
 struct __get_as_integer_type_impl<4> {
-  using type = uint32_t;
+  using type _LIBCPP_NODEBUG = uint32_t;
 };
 template <>
 struct __get_as_integer_type_impl<8> {
-  using type = uint64_t;
+  using type _LIBCPP_NODEBUG = uint64_t;
 };
 
 template <class _Tp>

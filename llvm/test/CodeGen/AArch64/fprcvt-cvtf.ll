@@ -210,15 +210,20 @@ define <1 x float> @scvtf_f32i64_simple(<1 x i64> %x) {
 ; CHECK-LABEL: scvtf_f32i64_simple:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    scvtf s0, d0
+; CHECK-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NO-FPRCVT-LABEL: scvtf_f32i64_simple:
 ; CHECK-NO-FPRCVT:       // %bb.0:
 ; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NO-FPRCVT-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NO-FPRCVT-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    fmov x8, d0
+; CHECK-NO-FPRCVT-NEXT:    movi d1, #0000000000000000
+; CHECK-NO-FPRCVT-NEXT:    scvtf s0, x8
+; CHECK-NO-FPRCVT-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NO-FPRCVT-NEXT:    fmov d0, d1
 ; CHECK-NO-FPRCVT-NEXT:    ret
  %conv = sitofp <1 x i64> %x to <1 x float>
  ret <1 x float> %conv
@@ -426,15 +431,20 @@ define <1 x float> @ucvtf_f32i64_simple(<1 x i64> %x) {
 ; CHECK-LABEL: ucvtf_f32i64_simple:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    ucvtf s0, d0
+; CHECK-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-NO-FPRCVT-LABEL: ucvtf_f32i64_simple:
 ; CHECK-NO-FPRCVT:       // %bb.0:
 ; CHECK-NO-FPRCVT-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NO-FPRCVT-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NO-FPRCVT-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-NO-FPRCVT-NEXT:    fmov x8, d0
+; CHECK-NO-FPRCVT-NEXT:    movi d1, #0000000000000000
+; CHECK-NO-FPRCVT-NEXT:    ucvtf s0, x8
+; CHECK-NO-FPRCVT-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-NO-FPRCVT-NEXT:    fmov d0, d1
 ; CHECK-NO-FPRCVT-NEXT:    ret
  %conv = uitofp <1 x i64> %x to <1 x float>
  ret <1 x float> %conv

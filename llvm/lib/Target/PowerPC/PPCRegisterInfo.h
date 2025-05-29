@@ -76,6 +76,9 @@ public:
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF, unsigned Kind=0) const override;
 
+  const TargetRegisterClass *
+  getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
+
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
 
@@ -175,6 +178,10 @@ public:
 
   bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const override {
     return Reg == PPC::LR || Reg == PPC::LR8;
+  }
+
+  bool isVirtualFrameRegister(MCRegister Reg) const override {
+    return Reg == PPC::FP || Reg == PPC::FP8;
   }
 };
 

@@ -28,6 +28,8 @@ namespace {
 class FunctionAttrPass : public fir::impl::FunctionAttrBase<FunctionAttrPass> {
 public:
   FunctionAttrPass(const fir::FunctionAttrOptions &options) {
+    instrumentFunctionEntry = options.instrumentFunctionEntry;
+    instrumentFunctionExit = options.instrumentFunctionExit;
     framePointerKind = options.framePointerKind;
     noInfsFPMath = options.noInfsFPMath;
     noNaNsFPMath = options.noNaNsFPMath;
@@ -72,6 +74,14 @@ void FunctionAttrPass::runOnOperation() {
 
   auto llvmFuncOpName =
       mlir::OperationName(mlir::LLVM::LLVMFuncOp::getOperationName(), context);
+  if (!instrumentFunctionEntry.empty())
+    func->setAttr(mlir::LLVM::LLVMFuncOp::getInstrumentFunctionEntryAttrName(
+                      llvmFuncOpName),
+                  mlir::StringAttr::get(context, instrumentFunctionEntry));
+  if (!instrumentFunctionExit.empty())
+    func->setAttr(mlir::LLVM::LLVMFuncOp::getInstrumentFunctionExitAttrName(
+                      llvmFuncOpName),
+                  mlir::StringAttr::get(context, instrumentFunctionExit));
   if (noInfsFPMath)
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getNoInfsFpMathAttrName(llvmFuncOpName),

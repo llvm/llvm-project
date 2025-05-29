@@ -462,7 +462,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
         FunctionType::get(ns_str_ty, CFSCWB_arg_types, false);
 
     // Build the constant containing the pointer to the function
-    PointerType *CFSCWB_ptr_ty = PointerType::getUnqual(CFSCWB_ty);
+    PointerType *CFSCWB_ptr_ty = PointerType::getUnqual(m_module->getContext());
     Constant *CFSCWB_addr_int =
         ConstantInt::get(m_intptr_ty, CFStringCreateWithBytes_addr, false);
     m_CFStringCreateWithBytes = {
@@ -814,7 +814,7 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
         FunctionType::get(sel_ptr_type, srN_arg_types, false);
 
     // Build the constant containing the pointer to the function
-    PointerType *srN_ptr_ty = PointerType::getUnqual(srN_type);
+    PointerType *srN_ptr_ty = PointerType::getUnqual(m_module->getContext());
     Constant *srN_addr_int =
         ConstantInt::get(m_intptr_ty, sel_registerName_addr, false);
     m_sel_registerName = {srN_type,
@@ -1031,7 +1031,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       //
       // We also do this for any user-declared persistent variables.
       compiler_type = compiler_type.GetPointerType();
-      value_type = PointerType::get(global_variable->getType(), 0);
+      value_type = PointerType::getUnqual(global_variable->getContext());
     } else {
       value_type = global_variable->getType();
     }

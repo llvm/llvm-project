@@ -20,7 +20,8 @@ HeapProfileRecords:
           TotalLifetime:   1000000
           TotalLifetimeAccessDensity: 1
     CallSites:
-      - - { Function: _Z3foov, LineOffset: 6, Column: 12, IsInlineFrame: false }
+      - Frames:
+        - { Function: _Z3foov, LineOffset: 6, Column: 12, IsInlineFrame: false }
 ...
 
 ;--- memprof-call-site-at-alloc-site.ll

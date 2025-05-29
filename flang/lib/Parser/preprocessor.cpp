@@ -101,7 +101,7 @@ TokenSequence Definition::Tokenize(const std::vector<std::string> &argNames,
         continue;
       }
     }
-    result.Put(token, firstToken + j, 1);
+    result.AppendRange(token, firstToken + j, 1);
   }
   return result;
 }
@@ -170,7 +170,7 @@ static TokenSequence TokenPasting(TokenSequence &&text) {
       }
     } else if (pasting && text.TokenAt(j).IsBlank()) {
     } else {
-      result.Put(text, j, 1);
+      result.AppendRange(text, j, 1);
       pasting = false;
     }
   }
@@ -223,7 +223,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
         CHECK(resultSize > 0 &&
             result.TokenAt(resultSize - 1) == replacement_.TokenAt(prev - 1));
         result.pop_back();
-        result.Put(Stringify(args[index], prescanner.allSources()));
+        result.CopyAll(Stringify(args[index], prescanner.allSources()));
       } else {
         const TokenSequence *arg{&args[index]};
         std::optional<TokenSequence> replaced;
@@ -243,7 +243,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
             }
           }
         }
-        result.Put(DEREF(arg));
+        result.CopyAll(DEREF(arg));
       }
     } else if (bytes == 11 && isVariadic_ &&
         token.ToString() == "__VA_ARGS__") {
@@ -254,7 +254,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
         if (k > argumentCount()) {
           result.Put(","s, commaProvenance);
         }
-        result.Put(args[k]);
+        result.CopyAll(args[k]);
       }
     } else if (bytes == 10 && isVariadic_ && token.ToString() == "__VA_OPT__" &&
         j + 2 < tokens && replacement_.TokenAt(j + 1).OnlyNonBlank() == '(' &&
@@ -274,7 +274,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
           }
         }
       }
-      result.Put(replacement_, j);
+      result.AppendRange(replacement_, j);
     }
   }
   return TokenPasting(std::move(result));
@@ -301,8 +301,82 @@ void Preprocessor::DefineStandardMacros() {
   Define("__TIMESTAMP__"s, "__TIMESTAMP__"s);
 }
 
+static const std::string idChars{
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789"s};
+
+static std::optional<std::vector<std::string>> TokenizeMacroNameAndArgs(
+    const std::string &str) {
+  // TODO: variadic macros on the command line (?)
+  std::vector<std::string> names;
+  for (std::string::size_type at{0};;) {
+    auto nameStart{str.find_first_not_of(" "s, at)};
+    if (nameStart == str.npos) {
+      return std::nullopt;
+    }
+    auto nameEnd{str.find_first_not_of(idChars, nameStart)};
+    if (nameEnd == str.npos) {
+      return std::nullopt;
+    }
+    auto punc{str.find_first_not_of(" "s, nameEnd)};
+    if (punc == str.npos) {
+      return std::nullopt;
+    }
+    if ((at == 0 && str[punc] != '(') ||
+        (at > 0 && str[punc] != ',' && str[punc] != ')')) {
+      return std::nullopt;
+    }
+    names.push_back(str.substr(nameStart, nameEnd - nameStart));
+    at = punc + 1;
+    if (str[punc] == ')') {
+      if (str.find_first_not_of(" "s, at) != str.npos) {
+        return std::nullopt;
+      } else {
+        return names;
+      }
+    }
+  }
+}
+
+TokenSequence Preprocessor::TokenizeMacroBody(const std::string &str) {
+  TokenSequence tokens;
+  Provenance provenance{allSources_.AddCompilerInsertion(str).start()};
+  auto end{str.size()};
+  for (std::string::size_type at{0}; at < end;) {
+    // Alternate between tokens that are identifiers (and therefore subject
+    // to argument replacement) and those that are not.
+    auto start{str.find_first_of(idChars, at)};
+    if (start == str.npos) {
+      tokens.Put(str.substr(at), provenance + at);
+      break;
+    } else if (start > at) {
+      tokens.Put(str.substr(at, start - at), provenance + at);
+    }
+    at = str.find_first_not_of(idChars, start + 1);
+    if (at == str.npos) {
+      tokens.Put(str.substr(start), provenance + start);
+      break;
+    } else {
+      tokens.Put(str.substr(start, at - start), provenance + start);
+    }
+  }
+  return tokens;
+}
+
 void Preprocessor::Define(const std::string &macro, const std::string &value) {
-  definitions_.emplace(SaveTokenAsName(macro), Definition{value, allSources_});
+  if (auto lhs{TokenizeMacroNameAndArgs(macro)}) {
+    // function-like macro
+    CharBlock macroName{SaveTokenAsName(lhs->front())};
+    auto iter{lhs->begin()};
+    ++iter;
+    std::vector<std::string> argNames{iter, lhs->end()};
+    auto rhs{TokenizeMacroBody(value)};
+    definitions_.emplace(std::make_pair(macroName,
+        Definition{
+            argNames, rhs, 0, rhs.SizeInTokens(), /*isVariadic=*/false}));
+  } else { // keyword macro
+    definitions_.emplace(
+        SaveTokenAsName(macro), Definition{value, allSources_});
+  }
 }
 
 void Preprocessor::Undefine(std::string macro) { definitions_.erase(macro); }
@@ -338,18 +412,18 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
           inIfExpression](std::size_t after, const TokenSequence &replacement,
           std::size_t pFLMOffset) {
         if (after < input.SizeInTokens()) {
-          result.Put(replacement, 0, pFLMOffset);
+          result.AppendRange(replacement, 0, pFLMOffset);
           TokenSequence suffix;
-          suffix.Put(
+          suffix.AppendRange(
               replacement, pFLMOffset, replacement.SizeInTokens() - pFLMOffset);
-          suffix.Put(input, after, input.SizeInTokens() - after);
+          suffix.AppendRange(input, after, input.SizeInTokens() - after);
           auto further{ReplaceMacros(
               suffix, prescanner, partialFunctionLikeMacro, inIfExpression)};
           if (partialFunctionLikeMacro && *partialFunctionLikeMacro) {
             // still not closed
             **partialFunctionLikeMacro += result.SizeInTokens();
           }
-          result.Put(further);
+          result.CopyAll(further);
           return true;
         } else {
           if (partialFunctionLikeMacro) {
@@ -362,7 +436,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
   for (; j < tokens; ++j) {
     CharBlock token{input.TokenAt(j)};
     if (token.IsBlank() || !IsLegalIdentifierStart(token[0])) {
-      result.Put(input, j);
+      result.AppendRange(input, j);
       continue;
     }
     // Process identifier in replacement text.
@@ -388,12 +462,12 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       }
     }
     if (it == definitions_.end()) {
-      result.Put(input, j);
+      result.AppendRange(input, j);
       continue;
     }
     Definition *def{&it->second};
     if (def->isDisabled()) {
-      result.Put(input, j);
+      result.AppendRange(input, j);
       continue;
     }
     if (!def->isFunctionLike()) {
@@ -444,7 +518,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
         ProvenanceRange use{input.GetTokenProvenanceRange(j)};
         ProvenanceRange newRange{
             allSources_.AddMacroCall(from, use, replaced.ToString())};
-        result.Put(replaced, newRange);
+        result.CopyWithProvenance(replaced, newRange);
       }
     } else {
       // Possible function-like macro call.  Skip spaces and newlines to see
@@ -461,10 +535,10 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       if (!leftParen) {
         if (partialFunctionLikeMacro) {
           *partialFunctionLikeMacro = result.SizeInTokens();
-          result.Put(input, j, tokens - j);
+          result.AppendRange(input, j, tokens - j);
           return result;
         } else {
-          result.Put(input, j);
+          result.AppendRange(input, j);
           continue;
         }
       }
@@ -491,11 +565,11 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       }
       if (k >= tokens && partialFunctionLikeMacro) {
         *partialFunctionLikeMacro = result.SizeInTokens();
-        result.Put(input, j, tokens - j);
+        result.AppendRange(input, j, tokens - j);
         return result;
       } else if (k >= tokens || argStart.size() < def->argumentCount() ||
           (argStart.size() > def->argumentCount() && !def->isVariadic())) {
-        result.Put(input, j);
+        result.AppendRange(input, j);
         continue;
       }
       std::vector<TokenSequence> args;
@@ -520,7 +594,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
         ProvenanceRange use{input.GetIntervalProvenanceRange(j, k - j)};
         ProvenanceRange newRange{
             allSources_.AddMacroCall(from, use, replaced.ToString())};
-        result.Put(replaced, newRange);
+        result.CopyWithProvenance(replaced, newRange);
       }
       j = k; // advance to the terminal ')'
     }
@@ -684,7 +758,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
             dir.GetIntervalProvenanceRange(j, tokens - j),
             "#else: excess tokens at end of directive"_port_en_US);
       }
-    } else if (ifStack_.empty()) {
+    }
+    if (ifStack_.empty()) {
       prescanner.Say(dir.GetTokenProvenanceRange(dirOffset),
           "#else: not nested within #if, #ifdef, or #ifndef"_err_en_US);
     } else if (ifStack_.top() != CanDeadElseAppear::Yes) {
@@ -840,6 +915,15 @@ CharBlock Preprocessor::SaveTokenAsName(const CharBlock &t) {
 
 bool Preprocessor::IsNameDefined(const CharBlock &token) {
   return definitions_.find(token) != definitions_.end();
+}
+
+bool Preprocessor::IsNameDefinedEmpty(const CharBlock &token) {
+  if (auto it{definitions_.find(token)}; it != definitions_.end()) {
+    const Definition &def{it->second};
+    return !def.isFunctionLike() && def.replacement().SizeInChars() == 0;
+  } else {
+    return false;
+  }
 }
 
 bool Preprocessor::IsFunctionLikeDefinition(const CharBlock &token) {

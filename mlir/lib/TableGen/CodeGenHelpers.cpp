@@ -27,7 +27,7 @@ using namespace mlir::tblgen;
 static std::string getUniqueOutputLabel(const RecordKeeper &records,
                                         StringRef tag) {
   // Use the input file name when generating a unique name.
-  std::string inputFilename = records.getInputFilename();
+  StringRef inputFilename = records.getInputFilename();
 
   // Drop all but the base filename.
   StringRef nameRef = sys::path::filename(inputFilename);
@@ -65,6 +65,7 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints(
 
 //===----------------------------------------------------------------------===//
 // Constraint Getters
+//===----------------------------------------------------------------------===//
 
 StringRef StaticVerifierFunctionEmitter::getTypeConstraintFn(
     const Constraint &constraint) const {
@@ -100,6 +101,7 @@ StringRef StaticVerifierFunctionEmitter::getRegionConstraintFn(
 
 //===----------------------------------------------------------------------===//
 // Constraint Emission
+//===----------------------------------------------------------------------===//
 
 /// Code templates for emitting type, attribute, successor, and region
 /// constraints. Each of these templates require the following arguments:
@@ -234,6 +236,7 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
 
 //===----------------------------------------------------------------------===//
 // Constraint Uniquing
+//===----------------------------------------------------------------------===//
 
 /// An attribute constraint that references anything other than itself and the
 /// current op cannot be generically extracted into a function. Most

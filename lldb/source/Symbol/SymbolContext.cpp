@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
@@ -870,6 +871,38 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
   }
 
   return nullptr; // no error; we just didn't find anything
+}
+
+Mangled SymbolContext::GetPossiblyInlinedFunctionName() const {
+  auto get_mangled = [this]() {
+    if (function)
+      return function->GetMangled();
+
+    if (symbol)
+      return symbol->GetMangled();
+
+    return Mangled{};
+  };
+
+  if (!block)
+    return get_mangled();
+
+  const Block *inline_block = block->GetContainingInlinedBlock();
+  if (!inline_block)
+    return get_mangled();
+
+  const InlineFunctionInfo *inline_info =
+      inline_block->GetInlinedFunctionInfo();
+  if (!inline_info)
+    return get_mangled();
+
+  // If we do have an inlined frame name, return that.
+  if (const Mangled &inline_name = inline_info->GetMangled())
+    return inline_name;
+
+  // Sometimes an inline frame may not have mangling information,
+  // but does have a valid name.
+  return Mangled{inline_info->GetName().AsCString()};
 }
 
 //

@@ -72,7 +72,7 @@ public:
   virtual ~OptionValue() = default;
 
   OptionValue(const OptionValue &other);
-  
+
   OptionValue& operator=(const OptionValue &other);
 
   // Subclasses should override these functions
@@ -93,15 +93,7 @@ public:
   virtual void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                          uint32_t dump_mask) = 0;
 
-  // TODO: make this function pure virtual after implementing it in all
-  // child classes.
-  virtual llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) {
-    // Return nullptr which will create a llvm::json::Value() that is a NULL
-    // value. No setting should ever really have a NULL value in JSON. This
-    // indicates an error occurred and if/when we add a FromJSON() it will know
-    // to fail if someone tries to set it with a NULL JSON value.
-    return nullptr;
-  }
+  virtual llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const = 0;
 
   virtual Status
   SetValueFromString(llvm::StringRef value,
@@ -330,6 +322,10 @@ public:
 
   bool SetValueAs(ArchSpec v) { return SetArchSpecValue(v); }
 
+  bool SetValueAs(const FormatEntity::Entry &v) {
+    return SetFormatEntityValue(v);
+  }
+
   template <typename T, std::enable_if_t<std::is_enum_v<T>, bool> = true>
   bool SetValueAs(T t) {
     return SetEnumerationValue(t);
@@ -387,8 +383,10 @@ private:
   bool SetUUIDValue(const UUID &uuid);
 
   const FormatEntity::Entry *GetFormatEntity() const;
+  bool SetFormatEntityValue(const FormatEntity::Entry &entry);
+
   const RegularExpression *GetRegexValue() const;
-  
+
   mutable std::mutex m_mutex;
 };
 

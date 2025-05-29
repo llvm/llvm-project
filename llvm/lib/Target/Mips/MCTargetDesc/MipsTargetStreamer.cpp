@@ -1118,9 +1118,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   Sec->setAlignment(Align(4));
 
   MCSymbol *Sym = Context.getOrCreateSymbol(Name);
-  const MCSymbolRefExpr *ExprRef =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Context);
-
+  const auto *ExprRef = MCSymbolRefExpr::create(Sym, Context);
   OS.emitValueImpl(ExprRef, 4);
 
   OS.emitIntValue(GPRInfoSet ? GPRBitMask : 0, 4); // reg_mask
@@ -1143,8 +1141,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   MCSymbol *CurPCSym = Context.createTempSymbol();
   OS.emitLabel(CurPCSym);
   const MCExpr *Size = MCBinaryExpr::createSub(
-      MCSymbolRefExpr::create(CurPCSym, MCSymbolRefExpr::VK_None, Context),
-      ExprRef, Context);
+      MCSymbolRefExpr::create(CurPCSym, Context), ExprRef, Context);
 
   // The ELFObjectWriter can determine the absolute size as it has access to
   // the layout information of the assembly file, so a size expression rather

@@ -619,17 +619,17 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectImpl(
 }
 
 UnwindPlanSP ABISysV_s390x::CreateFunctionEntryUnwindPlan() {
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our Call Frame Address is the stack pointer value + 160
-  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r15_s390x, 160);
+  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r15_s390x, 160);
 
   // The previous PC is in r14
-  row->SetRegisterLocationToRegister(dwarf_pswa_s390x, dwarf_r14_s390x, true);
+  row.SetRegisterLocationToRegister(dwarf_pswa_s390x, dwarf_r14_s390x, true);
 
   // All other registers are the same.
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("s390x at-func-entry default");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;

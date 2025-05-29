@@ -33,7 +33,7 @@ bb:
 define amdgpu_kernel void @test_mfma_f32_16x16x2bf16(ptr addrspace(1) %arg) #0 {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
-  %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x2bf16(<2 x i16> undef, <2 x i16> undef, <16 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x2bf16(<2 x i16> poison, <2 x i16> poison, <16 x float> %in.1, i32 0, i32 0, i32 0)
   store <16 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
@@ -43,7 +43,7 @@ bb:
 define amdgpu_kernel void @test_mfma_f32_4x4x2bf16(ptr addrspace(1) %arg) #0 {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
-  %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x2bf16(<2 x i16> undef, <2 x i16> undef, <4 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x2bf16(<2 x i16> poison, <2 x i16> poison, <4 x float> %in.1, i32 0, i32 0, i32 0)
   store <4 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
@@ -53,7 +53,7 @@ bb:
 define amdgpu_kernel void @test_mfma_f32_32x32x4bf16(ptr addrspace(1) %arg) #0 {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
-  %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x4bf16(<2 x i16> undef, <2 x i16> undef, <16 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x4bf16(<2 x i16> poison, <2 x i16> poison, <16 x float> %in.1, i32 0, i32 0, i32 0)
   store <16 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
@@ -63,7 +63,7 @@ bb:
 define amdgpu_kernel void @test_mfma_f32_16x16x8bf16(ptr addrspace(1) %arg) #0 {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
-  %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x8bf16(<2 x i16> undef, <2 x i16> undef, <4 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x8bf16(<2 x i16> poison, <2 x i16> poison, <4 x float> %in.1, i32 0, i32 0, i32 0)
   store <4 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
@@ -73,7 +73,7 @@ bb:
 define amdgpu_kernel void @test_mfma_f32_32x32x4bf16_1k(ptr addrspace(1) %arg) #0 {
 bb:
   %in.1 = load <32 x float>, ptr addrspace(1) %arg
-  %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x4bf16.1k(<4 x i16> undef, <4 x i16> undef, <32 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.1 = tail call <32 x float> @llvm.amdgcn.mfma.f32.32x32x4bf16.1k(<4 x i16> poison, <4 x i16> poison, <32 x float> %in.1, i32 0, i32 0, i32 0)
   store <32 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
@@ -83,7 +83,7 @@ bb:
 define amdgpu_kernel void @test_mfma_f32_16x16x4bf16_1k(ptr addrspace(1) %arg) #0 {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
-  %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x4bf16.1k(<4 x i16> undef, <4 x i16> undef, <16 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x4bf16.1k(<4 x i16> poison, <4 x i16> poison, <16 x float> %in.1, i32 0, i32 0, i32 0)
   store <16 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
@@ -93,7 +93,7 @@ bb:
 define amdgpu_kernel void @test_mfma_f32_4x4x4bf16_1k(ptr addrspace(1) %arg) #0 {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
-  %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x4bf16.1k(<4 x i16> undef, <4 x i16> undef, <4 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.4x4x4bf16.1k(<4 x i16> poison, <4 x i16> poison, <4 x float> %in.1, i32 0, i32 0, i32 0)
   store <4 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
@@ -103,7 +103,7 @@ bb:
 define amdgpu_kernel void @test_mfma_f32_32x32x8bf16_1k(ptr addrspace(1) %arg) #0 {
 bb:
   %in.1 = load <16 x float>, ptr addrspace(1) %arg
-  %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8bf16.1k(<4 x i16> undef, <4 x i16> undef, <16 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8bf16.1k(<4 x i16> poison, <4 x i16> poison, <16 x float> %in.1, i32 0, i32 0, i32 0)
   store <16 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }
@@ -113,7 +113,7 @@ bb:
 define amdgpu_kernel void @test_mfma_f32_16x16x16bf16_1k(ptr addrspace(1) %arg) #0 {
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
-  %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16bf16.1k(<4 x i16> undef, <4 x i16> undef, <4 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16bf16.1k(<4 x i16> poison, <4 x i16> poison, <4 x float> %in.1, i32 0, i32 0, i32 0)
   store <4 x float> %mai.1, ptr addrspace(1) %arg
   ret void
 }

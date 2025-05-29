@@ -2028,6 +2028,13 @@ TEST_P(ASTMatchersTest, TemplateArgumentCountIs) {
   EXPECT_TRUE(
       notMatches("template<typename T> struct C {}; C<int> c;",
                  templateSpecializationType(templateArgumentCountIs(2))));
+
+  const char *FuncTemplateCode =
+      "template<typename T> T f(); auto v = f<int>();";
+  EXPECT_TRUE(
+      matches(FuncTemplateCode, functionDecl(templateArgumentCountIs(1))));
+  EXPECT_TRUE(
+      notMatches(FuncTemplateCode, functionDecl(templateArgumentCountIs(2))));
 }
 
 TEST_P(ASTMatchersTest, IsIntegral) {

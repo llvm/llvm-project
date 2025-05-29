@@ -129,7 +129,7 @@ public:
     weightPadding[3] =
         (weightHeight % stride[0]) ? (stride[0] - weightHeight % stride[0]) : 0;
     weightPadding[5] =
-        weightWidth % stride[1] ? stride[1] - weightWidth % stride[1] : 0;
+        (weightWidth % stride[1]) ? (stride[1] - weightWidth % stride[1]) : 0;
 
     Value weightPaddingVal =
         getTosaConstShape(rewriter, op->getLoc(), weightPadding);

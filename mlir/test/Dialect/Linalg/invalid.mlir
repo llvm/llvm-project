@@ -949,6 +949,28 @@ func.func @transpose_invalid_permutation(%input: tensor<16x32x64xf32>,
 
 // -----
 
+func.func @transpose_out_of_range_permutation(%input: tensor<16x32x64xf32>,
+    %init: tensor<32x64x16xf32>) -> tensor<32x64x16xf32> {
+  // expected-error @+1 {{'linalg.transpose' op permutation is not valid}}
+  %transpose = linalg.transpose
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<32x64x16xf32>)
+      permutation = [1, 2, 3]
+  func.return %transpose : tensor<32x64x16xf32>
+}
+
+// -----
+
+func.func @transpose_negative_permutation(%input: tensor<16x32x64xf32>,
+    %init: tensor<32x64x16xf32>) -> tensor<32x64x16xf32> {
+  // expected-error @+1 {{'linalg.transpose' op permutation is not valid}}
+  %transpose = linalg.transpose
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<32x64x16xf32>)
+      permutation = [1, 2, -1]
+  func.return %transpose : tensor<32x64x16xf32>
+}
+// -----
 func.func @transpose_permutated_dims_mismatch(%input: tensor<16x32x64xf32>,
     %init: tensor<32x64x16xf32>) -> tensor<32x64x16xf32> {
   // expected-error @+1 {{'linalg.transpose' op dim(result, 0) = 32 doesn't match dim(input, permutation[0]) = 16}}
@@ -1342,10 +1364,10 @@ func.func @invalid_bcast_batch_matmul_a(%arg0: memref<?xf32>, %arg1: memref<?x?x
 
 // -----
 
-func.func @invalid_multi_dim_bcast_expr_batch_matmul_a(%arg0: memref<?x?xf32>, %arg1: memref<?x?x?xf32>, %arg2: memref<?x?x?xf32>) {
+func.func @invalid_single_dim_bcast_expr_batch_matmul_a(%arg0: memref<?x?xf32>, %arg1: memref<?x?x?xf32>, %arg2: memref<?x?x?xf32>) {
   // expected-error @+1 {{'linalg.batch_matmul' op Invalid broadcast requested}}
   linalg.batch_matmul indexing_maps = [
-                       affine_map<(d0, d1, d2, d3) -> (d0, d3)>,
+                       affine_map<(d0, d1, d2, d3) -> (d3, d0)>,
                        affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
                        affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
                      ]
@@ -1355,14 +1377,14 @@ func.func @invalid_multi_dim_bcast_expr_batch_matmul_a(%arg0: memref<?x?xf32>, %
 
 // -----
 
-func.func @invalid_multi_dim_bcast_expr_batch_matmul_b(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?x?xf32>) {
+func.func @invalid_single_dim_bcast_expr_batch_matmul_B(%A: memref<?x?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?x?xf32>) {
   // expected-error @+1 {{'linalg.batch_matmul' op Invalid broadcast requested}}
   linalg.batch_matmul indexing_maps = [
                        affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
                        affine_map<(d0, d1, d2, d3) -> (d3, d0)>,
                        affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
                      ]
-                     ins(%arg0, %arg1 : memref<?x?x?xf32>, memref<?x?xf32>) outs(%arg2: memref<?x?x?xf32>)
+                     ins(%A, %B : memref<?x?x?xf32>, memref<?x?xf32>) outs(%C: memref<?x?x?xf32>)
   return
 }
 
@@ -1461,6 +1483,205 @@ func.func @invalid_C_map_result_dim_batch_matmul(%arg0: memref<?x?x?xf32>, %arg1
     return
 }
 
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// linalg.batch_reduce_matmul
+//===----------------------------------------------------------------------===//
+
+func.func @missing_one_indexing_map(%arg0: memref<?x?x?xf32>,
+     %arg1: memref<?x?x?xf32>, %arg2: memref<?x?xf32>) {
+     // expected-error @+1 {{Indexing_map attribute must have 3 affine maps}}
+     linalg.batch_reduce_matmul
+         indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>,
+                          affine_map<(batch, m, n, k) -> (batch, n, k)>]
+         ins(%arg0, %arg1 : memref<?x?x?xf32>, memref<?x?x?xf32>)
+         outs(%arg2: memref<?x?xf32>)
+     return
+}
+
+// -----
+
+func.func @missing_two_indexing_map(%arg0: memref<?x?x?xf32>,
+     %arg1: memref<?x?x?xf32>, %arg2: memref<?x?xf32>) {
+     // expected-error @+1 {{Indexing_map attribute must have 3 affine maps}}
+     linalg.batch_reduce_matmul
+         indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>]
+         ins(%arg0, %arg1 : memref<?x?x?xf32>, memref<?x?x?xf32>)
+         outs(%arg2: memref<?x?xf32>)
+     return
+
+}
+
+// -----
+
+func.func @missing_indexing_map(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>, %arg2: memref<?x?xf32>) {
+  // expected-error @+1 {{expected attribute value}}
+  linalg.batch_reduce_matmul indexing_maps = [
+                       ,
+                       affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                       affine_map<(batch, m, n, k) -> (m, n)>]
+      ins(%arg0, %arg1 : memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%arg2 :memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_dim_expr_A(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{Unexpected result dim expression (outside the set of default result dims)}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (batch, n, k)>,
+                       affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                       affine_map<(batch, m, n, k) -> (m, n)>]
+      ins(%A, %B : memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%C :memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_dim_expr_B(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{Unexpected result dim expression (outside the set of default result dims)}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>,
+                       affine_map<(batch, m, n, k) -> (batch, k, m)>,
+                       affine_map<(batch, m, n, k) -> (m, n)>]
+      ins(%A, %B : memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%C :memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_bcast_A(%A: memref<?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{Invalid broadcast requested}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (batch)>,
+                       affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                       affine_map<(batch, m, n, k) -> (m, n)>]
+      ins(%A, %B : memref<?xf32>, memref<?x?x?xf32>)
+      outs(%C: memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_multi_dim_bcast_expr_A(%A: memref<?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{Invalid broadcast requested}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (k, batch)>,
+                       affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                       affine_map<(batch, m, n, k) -> (m, n)>]
+      ins(%A, %B : memref<?x?xf32>, memref<?x?x?xf32>)
+      outs(%C: memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_multi_dim_bcast_expr_B(%A: memref<?x?x?xf32>, %B: memref<?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{Invalid broadcast requested}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>,
+                       affine_map<(batch, m, n, k) -> (k, batch)>,
+                       affine_map<(batch, m, n, k) -> (m, n)>]
+      ins(%A, %B : memref<?x?x?xf32>, memref<?x?xf32>)
+      outs(%C: memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_bcast_B(%A: memref<?x?x?xf32>, %B: memref<?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{Invalid broadcast requested}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>,
+                       affine_map<(batch, m, n, k) -> (n)>,
+                       affine_map<(batch, m, n, k) -> (batch, m, n)>]
+      ins(%A, %B : memref<?x?x?xf32>, memref<?xf32>)
+      outs(%C: memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_batch_dim_A(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{Invalid batch dimension expression}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (m, batch, k)>,
+                       affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                       affine_map<(batch, m, n, k) -> (m, n)>]
+      ins(%A, %B : memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%C :memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_batch_dim_B(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{Invalid batch dimension expression}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>,
+                       affine_map<(batch, m, n, k) -> (n, k, batch)>,
+                       affine_map<(batch, m, n, k) -> (m, n)>]
+      ins(%A, %B : memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%C :memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_A_map_result_num(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{no. of result dim expressions exceeds 3.}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k, k)>,
+                       affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                       affine_map<(batch, m, n, k) -> (m, n)>]
+      ins(%A, %B: memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%C: memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_B_map_result_num(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{no. of result dim expressions exceeds 3.}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>,
+                       affine_map<(batch, m, n, k) -> (batch, k, n, k)>,
+                       affine_map<(batch, m, n, k) -> (m, n)>]
+      ins(%A, %B: memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%C: memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_C_map_result_num(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{expects 2 dims, but got (1).}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>,
+                       affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                       affine_map<(batch, m, n, k) -> (m)>]
+      ins(%A, %B: memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%C: memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @invalid_C_map_result_dim(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>, %C: memref<?x?xf32>) {
+  // expected-error @+1 {{Invalid output map result dimension.}}
+  linalg.batch_reduce_matmul
+      indexing_maps = [affine_map<(batch, m, n, k) -> (batch, m, k)>,
+                       affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                       affine_map<(batch, m, n, k) -> (m, k)>]
+      ins(%A, %B: memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%C: memref<?x?xf32>)
+  return
+}
 
 // -----
 
@@ -1643,4 +1864,13 @@ func.func @unpack_static_inner_tile_size_and_dynamic_output_shape(
   // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x?x4xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+func.func @reduce_non_operation_name(%arg0: tensor<4xf32>, %arg1: tensor<f32>) -> tensor<f32> {
+  // expected-error @below {{expected bare identifier or keyword}}
+  %0 = linalg.reduce {@reduce_fusion_elementwise} ins(
+    %arg0: tensor<4xf32>) outs(%arg1: tensor<f32>) dimensions = [0]
+  return %0 : tensor<f32>
 }

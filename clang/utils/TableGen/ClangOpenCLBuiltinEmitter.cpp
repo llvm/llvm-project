@@ -1175,9 +1175,7 @@ StringRef OpenCLBuiltinFileEmitterBase::emitTypeExtensionGuards(
       // The TypeExtensions are space-separated in the .td file.
       SmallVector<StringRef, 2> ExtVec;
       TypeExt.split(ExtVec, " ");
-      for (const auto Ext : ExtVec) {
-        ExtSet.insert(Ext);
-      }
+      ExtSet.insert_range(ExtVec);
     }
   }
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/Dialect/Quant.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
@@ -192,6 +193,61 @@ int32_t mlirUniformQuantizedPerAxisTypeGetQuantizedDimension(MlirType type) {
 
 bool mlirUniformQuantizedPerAxisTypeIsFixedPoint(MlirType type) {
   return cast<quant::UniformQuantizedPerAxisType>(unwrap(type)).isFixedPoint();
+}
+
+//===---------------------------------------------------------------------===//
+// UniformQuantizedSubChannelType
+//===---------------------------------------------------------------------===//
+
+bool mlirTypeIsAUniformQuantizedSubChannelType(MlirType type) {
+  return isa<quant::UniformQuantizedSubChannelType>(unwrap(type));
+}
+
+MlirType mlirUniformQuantizedSubChannelTypeGet(
+    unsigned flags, MlirType storageType, MlirType expressedType,
+    MlirAttribute scalesAttr, MlirAttribute zeroPointsAttr, intptr_t nDims,
+    int32_t *quantizedDimensions, int64_t *blockSizes, int64_t storageTypeMin,
+    int64_t storageTypeMax) {
+  auto scales = dyn_cast<mlir::DenseElementsAttr>(unwrap(scalesAttr));
+  auto zeroPoints = dyn_cast<mlir::DenseElementsAttr>(unwrap(zeroPointsAttr));
+
+  if (!scales || !zeroPoints) {
+    return {};
+  }
+
+  return wrap(quant::UniformQuantizedSubChannelType::get(
+      flags, unwrap(storageType), unwrap(expressedType), scales, zeroPoints,
+      llvm::ArrayRef<int32_t>(quantizedDimensions, nDims),
+      llvm::ArrayRef<int64_t>(blockSizes, nDims), storageTypeMin,
+      storageTypeMax));
+}
+
+intptr_t mlirUniformQuantizedSubChannelTypeGetNumBlockSizes(MlirType type) {
+  return cast<quant::UniformQuantizedSubChannelType>(unwrap(type))
+      .getBlockSizes()
+      .size();
+}
+
+int32_t mlirUniformQuantizedSubChannelTypeGetQuantizedDimension(MlirType type,
+                                                                intptr_t pos) {
+  return cast<quant::UniformQuantizedSubChannelType>(unwrap(type))
+      .getQuantizedDimensions()[pos];
+}
+
+int64_t mlirUniformQuantizedSubChannelTypeGetBlockSize(MlirType type,
+                                                       intptr_t pos) {
+  return cast<quant::UniformQuantizedSubChannelType>(unwrap(type))
+      .getBlockSizes()[pos];
+}
+
+MlirAttribute mlirUniformQuantizedSubChannelTypeGetScales(MlirType type) {
+  return wrap(
+      cast<quant::UniformQuantizedSubChannelType>(unwrap(type)).getScales());
+}
+
+MlirAttribute mlirUniformQuantizedSubChannelTypeGetZeroPoints(MlirType type) {
+  return wrap(cast<quant::UniformQuantizedSubChannelType>(unwrap(type))
+                  .getZeroPoints());
 }
 
 //===---------------------------------------------------------------------===//

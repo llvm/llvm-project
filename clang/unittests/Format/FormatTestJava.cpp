@@ -158,6 +158,8 @@ TEST_F(FormatTestJava, AnonymousClasses) {
 
 TEST_F(FormatTestJava, EnumDeclarations) {
   verifyFormat("enum SomeThing { ABC, CDE }");
+  // A C++ keyword should not mess things up.
+  verifyFormat("enum union { ABC, CDE }");
   verifyFormat("enum SomeThing {\n"
                "  ABC,\n"
                "  CDE,\n"
@@ -787,6 +789,63 @@ TEST_F(FormatTestJava, AlignCaseArrows) {
                "default                 -> i = 0;\n"
                "};",
                Style);
+}
+
+TEST_F(FormatTestJava, TextBlock) {
+  verifyNoChange("String myStr = \"\"\"\n"
+                 "hello\n"
+                 "there\n"
+                 "\"\"\";");
+
+  verifyNoChange("String tb = \"\"\"\n"
+                 "            the new\"\"\";");
+
+  verifyNoChange("System.out.println(\"\"\"\n"
+                 "    This is the first line\n"
+                 "    This is the second line\n"
+                 "    \"\"\");");
+
+  verifyNoChange("void writeHTML() {\n"
+                 "  String html = \"\"\" \n"
+                 "                <html>\n"
+                 "                    <p>Hello World.</p>\n"
+                 "                </html>\n"
+                 "\"\"\";\n"
+                 "  writeOutput(html);\n"
+                 "}");
+
+  verifyNoChange("String colors = \"\"\"\t\n"
+                 "    red\n"
+                 "    green\n"
+                 "    blue\"\"\".indent(4);");
+
+  verifyNoChange("String code = \"\"\"\n"
+                 "    String source = \\\"\"\"\n"
+                 "        String message = \"Hello, World!\";\n"
+                 "        System.out.println(message);\n"
+                 "        \\\"\"\";\n"
+                 "    \"\"\";");
+
+  verifyNoChange(
+      "class Outer {\n"
+      "  void printPoetry() {\n"
+      "    String lilacs = \"\"\"\n"
+      "Passing the apple-tree blows of white and pink in the orchards\n"
+      "\"\"\";\n"
+      "    System.out.println(lilacs);\n"
+      "  }\n"
+      "}");
+
+  verifyNoChange("String name = \"\"\"\r\n"
+                 "        red\n"
+                 "        green\n"
+                 "        blue\\\n"
+                 "    \"\"\";");
+
+  verifyFormat("String name = \"\"\"Pat Q. Smith\"\"\";");
+
+  verifyNoChange("String name = \"\"\"\n"
+                 "              Pat Q. Smith");
 }
 
 } // namespace

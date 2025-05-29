@@ -57,13 +57,24 @@ Error PGOCtxProfileReader::unsupported(const Twine &Msg) {
   return make_error<InstrProfError>(instrprof_error::unsupported_version, Msg);
 }
 
-bool PGOCtxProfileReader::canEnterBlockWithID(PGOCtxProfileBlockIDs ID) {
+bool PGOCtxProfileReader::tryGetNextKnownBlockID(PGOCtxProfileBlockIDs &ID) {
   auto Blk = advance();
   if (!Blk) {
     consumeError(Blk.takeError());
     return false;
   }
-  return Blk->Kind == BitstreamEntry::SubBlock && Blk->ID == ID;
+  if (Blk->Kind != BitstreamEntry::SubBlock)
+    return false;
+  if (PGOCtxProfileBlockIDs::FIRST_VALID > Blk->ID ||
+      PGOCtxProfileBlockIDs::LAST_VALID < Blk->ID)
+    return false;
+  ID = static_cast<PGOCtxProfileBlockIDs>(Blk->ID);
+  return true;
+}
+
+bool PGOCtxProfileReader::canEnterBlockWithID(PGOCtxProfileBlockIDs ID) {
+  PGOCtxProfileBlockIDs Test = {};
+  return tryGetNextKnownBlockID(Test) && Test == ID;
 }
 
 Error PGOCtxProfileReader::enterBlockWithID(PGOCtxProfileBlockIDs ID) {
@@ -71,33 +82,50 @@ Error PGOCtxProfileReader::enterBlockWithID(PGOCtxProfileBlockIDs ID) {
   return Error::success();
 }
 
+// Note: we use PGOCtxProfContext for flat profiles also, as the latter are
+// structurally similar. Alternative modeling here seems a bit overkill at the
+// moment.
 Expected<std::pair<std::optional<uint32_t>, PGOCtxProfContext>>
 PGOCtxProfileReader::readProfile(PGOCtxProfileBlockIDs Kind) {
   assert((Kind == PGOCtxProfileBlockIDs::ContextRootBlockID ||
-          Kind == PGOCtxProfileBlockIDs::ContextNodeBlockID) &&
+          Kind == PGOCtxProfileBlockIDs::ContextNodeBlockID ||
+          Kind == PGOCtxProfileBlockIDs::FlatProfileBlockID) &&
          "Unexpected profile kind");
   RET_ON_ERR(enterBlockWithID(Kind));
 
   std::optional<ctx_profile::GUID> Guid;
   std::optional<SmallVector<uint64_t, 16>> Counters;
   std::optional<uint32_t> CallsiteIndex;
-
+  std::optional<uint64_t> TotalEntryCount;
+  std::optional<CtxProfFlatProfile> Unhandled;
   SmallVector<uint64_t, 1> RecordValues;
 
   const bool ExpectIndex = Kind == PGOCtxProfileBlockIDs::ContextNodeBlockID;
+  const bool IsRoot = Kind == PGOCtxProfileBlockIDs::ContextRootBlockID;
   // We don't prescribe the order in which the records come in, and we are ok
   // if other unsupported records appear. We seek in the current subblock until
   // we get all we know.
   auto GotAllWeNeed = [&]() {
     return Guid.has_value() && Counters.has_value() &&
-           (!ExpectIndex || CallsiteIndex.has_value());
+           (!ExpectIndex || CallsiteIndex.has_value()) &&
+           (!IsRoot || TotalEntryCount.has_value()) &&
+           (!IsRoot || Unhandled.has_value());
   };
+
   while (!GotAllWeNeed()) {
     RecordValues.clear();
     EXPECT_OR_RET(Entry, advance());
-    if (Entry->Kind != BitstreamEntry::Record)
+    if (Entry->Kind != BitstreamEntry::Record) {
+      if (IsRoot && Entry->Kind == BitstreamEntry::SubBlock &&
+          Entry->ID == PGOCtxProfileBlockIDs::UnhandledBlockID) {
+        RET_ON_ERR(enterBlockWithID(PGOCtxProfileBlockIDs::UnhandledBlockID));
+        Unhandled = CtxProfFlatProfile();
+        RET_ON_ERR(loadFlatProfileList(*Unhandled));
+        continue;
+      }
       return wrongValue(
           "Expected records before encountering more subcontexts");
+    }
     EXPECT_OR_RET(ReadRecord,
                   Cursor.readRecord(bitc::UNABBREV_RECORD, RecordValues));
     switch (*ReadRecord) {
@@ -112,12 +140,20 @@ PGOCtxProfileReader::readProfile(PGOCtxProfileBlockIDs Kind) {
         return wrongValue("Empty counters. At least the entry counter (one "
                           "value) was expected");
       break;
-    case PGOCtxProfileRecords::CalleeIndex:
+    case PGOCtxProfileRecords::CallsiteIndex:
       if (!ExpectIndex)
         return wrongValue("The root context should not have a callee index");
       if (RecordValues.size() != 1)
         return wrongValue("The callee index should have exactly one value");
       CallsiteIndex = RecordValues[0];
+      break;
+    case PGOCtxProfileRecords::TotalRootEntryCount:
+      if (!IsRoot)
+        return wrongValue("Non-root has a total entry count record");
+      if (RecordValues.size() != 1)
+        return wrongValue(
+            "The root total entry count record should have exactly one value");
+      TotalEntryCount = RecordValues[0];
       break;
     default:
       // OK if we see records we do not understand, like records (profile
@@ -126,7 +162,8 @@ PGOCtxProfileReader::readProfile(PGOCtxProfileBlockIDs Kind) {
     }
   }
 
-  PGOCtxProfContext Ret(*Guid, std::move(*Counters));
+  PGOCtxProfContext Ret(*Guid, std::move(*Counters), TotalEntryCount,
+                        std::move(Unhandled));
 
   while (canEnterBlockWithID(PGOCtxProfileBlockIDs::ContextNodeBlockID)) {
     EXPECT_OR_RET(SC, readProfile(PGOCtxProfileBlockIDs::ContextNodeBlockID));
@@ -176,22 +213,48 @@ Error PGOCtxProfileReader::readMetadata() {
 }
 
 Error PGOCtxProfileReader::loadContexts(CtxProfContextualProfiles &P) {
-  if (canEnterBlockWithID(PGOCtxProfileBlockIDs::ContextsSectionBlockID)) {
-    RET_ON_ERR(enterBlockWithID(PGOCtxProfileBlockIDs::ContextsSectionBlockID));
-    while (canEnterBlockWithID(PGOCtxProfileBlockIDs::ContextRootBlockID)) {
-      EXPECT_OR_RET(E, readProfile(PGOCtxProfileBlockIDs::ContextRootBlockID));
-      auto Key = E->second.guid();
-      if (!P.insert({Key, std::move(E->second)}).second)
-        return wrongValue("Duplicate roots");
-    }
+  RET_ON_ERR(enterBlockWithID(PGOCtxProfileBlockIDs::ContextsSectionBlockID));
+  while (canEnterBlockWithID(PGOCtxProfileBlockIDs::ContextRootBlockID)) {
+    EXPECT_OR_RET(E, readProfile(PGOCtxProfileBlockIDs::ContextRootBlockID));
+    auto Key = E->second.guid();
+    if (!P.insert({Key, std::move(E->second)}).second)
+      return wrongValue("Duplicate roots");
   }
   return Error::success();
+}
+
+Error PGOCtxProfileReader::loadFlatProfileList(CtxProfFlatProfile &P) {
+  while (canEnterBlockWithID(PGOCtxProfileBlockIDs::FlatProfileBlockID)) {
+    EXPECT_OR_RET(E, readProfile(PGOCtxProfileBlockIDs::FlatProfileBlockID));
+    auto Guid = E->second.guid();
+    if (!P.insert({Guid, std::move(E->second.counters())}).second)
+      return wrongValue("Duplicate flat profile entries");
+  }
+  return Error::success();
+}
+
+Error PGOCtxProfileReader::loadFlatProfiles(CtxProfFlatProfile &P) {
+  RET_ON_ERR(
+      enterBlockWithID(PGOCtxProfileBlockIDs::FlatProfilesSectionBlockID));
+  return loadFlatProfileList(P);
 }
 
 Expected<PGOCtxProfile> PGOCtxProfileReader::loadProfiles() {
   RET_ON_ERR(readMetadata());
   PGOCtxProfile Ret;
-  RET_ON_ERR(loadContexts(Ret.Contexts));
+  PGOCtxProfileBlockIDs Test = {};
+  for (auto I = 0; I < 2; ++I) {
+    if (!tryGetNextKnownBlockID(Test))
+      break;
+    if (Test == PGOCtxProfileBlockIDs::ContextsSectionBlockID) {
+      RET_ON_ERR(loadContexts(Ret.Contexts));
+    } else if (Test == PGOCtxProfileBlockIDs::FlatProfilesSectionBlockID) {
+      RET_ON_ERR(loadFlatProfiles(Ret.FlatProfiles));
+    } else {
+      return wrongValue("Unexpected section");
+    }
+  }
+
   return std::move(Ret);
 }
 
@@ -239,9 +302,13 @@ void toYaml(yaml::Output &Out,
   Out.endSequence();
 }
 
+void toYaml(yaml::Output &Out, const CtxProfFlatProfile &Flat);
+
 void toYaml(yaml::Output &Out, GlobalValue::GUID Guid,
             const SmallVectorImpl<uint64_t> &Counters,
-            const PGOCtxProfContext::CallsiteMapTy &Callsites) {
+            const PGOCtxProfContext::CallsiteMapTy &Callsites,
+            std::optional<uint64_t> TotalRootEntryCount = std::nullopt,
+            CtxProfFlatProfile Unhandled = {}) {
   yaml::EmptyContext Empty;
   Out.beginMapping();
   void *SaveInfo = nullptr;
@@ -250,6 +317,11 @@ void toYaml(yaml::Output &Out, GlobalValue::GUID Guid,
     Out.preflightKey("Guid", /*Required=*/true, /*SameAsDefault=*/false,
                      UseDefault, SaveInfo);
     yaml::yamlize(Out, Guid, true, Empty);
+    Out.postflightKey(nullptr);
+  }
+  if (TotalRootEntryCount) {
+    Out.preflightKey("TotalRootEntryCount", true, false, UseDefault, SaveInfo);
+    yaml::yamlize(Out, *TotalRootEntryCount, true, Empty);
     Out.postflightKey(nullptr);
   }
   {
@@ -264,6 +336,14 @@ void toYaml(yaml::Output &Out, GlobalValue::GUID Guid,
     Out.endFlowSequence();
     Out.postflightKey(nullptr);
   }
+
+  if (!Unhandled.empty()) {
+    assert(TotalRootEntryCount.has_value());
+    Out.preflightKey("Unhandled", false, false, UseDefault, SaveInfo);
+    toYaml(Out, Unhandled);
+    Out.postflightKey(nullptr);
+  }
+
   if (!Callsites.empty()) {
     Out.preflightKey("Callsites", true, false, UseDefault, SaveInfo);
     toYaml(Out, Callsites);
@@ -271,21 +351,42 @@ void toYaml(yaml::Output &Out, GlobalValue::GUID Guid,
   }
   Out.endMapping();
 }
+
+void toYaml(yaml::Output &Out, const CtxProfFlatProfile &Flat) {
+  void *SaveInfo = nullptr;
+  Out.beginSequence();
+  size_t ElemID = 0;
+  for (const auto &[Guid, Counters] : Flat) {
+    Out.preflightElement(ElemID++, SaveInfo);
+    toYaml(Out, Guid, Counters, {});
+    Out.postflightElement(nullptr);
+  }
+  Out.endSequence();
+}
+
 void toYaml(yaml::Output &Out, const PGOCtxProfContext &Ctx) {
-  toYaml(Out, Ctx.guid(), Ctx.counters(), Ctx.callsites());
+  if (Ctx.isRoot())
+    toYaml(Out, Ctx.guid(), Ctx.counters(), Ctx.callsites(),
+           Ctx.getTotalRootEntryCount(), Ctx.getUnhandled());
+  else
+    toYaml(Out, Ctx.guid(), Ctx.counters(), Ctx.callsites());
 }
 
 } // namespace
 
-void llvm::convertCtxProfToYaml(raw_ostream &OS,
-                                const PGOCtxProfile &Profiles) {
+void llvm::convertCtxProfToYaml(raw_ostream &OS, const PGOCtxProfile &Profile) {
   yaml::Output Out(OS);
   void *SaveInfo = nullptr;
   bool UseDefault = false;
   Out.beginMapping();
-  if (!Profiles.Contexts.empty()) {
+  if (!Profile.Contexts.empty()) {
     Out.preflightKey("Contexts", false, false, UseDefault, SaveInfo);
-    toYaml(Out, Profiles.Contexts);
+    toYaml(Out, Profile.Contexts);
+    Out.postflightKey(nullptr);
+  }
+  if (!Profile.FlatProfiles.empty()) {
+    Out.preflightKey("FlatProfiles", false, false, UseDefault, SaveInfo);
+    toYaml(Out, Profile.FlatProfiles);
     Out.postflightKey(nullptr);
   }
   Out.endMapping();

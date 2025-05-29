@@ -1173,7 +1173,7 @@ bool FastISel::selectCall(const User *I) {
 
     MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                                       TII.get(TargetOpcode::INLINEASM));
-    MIB.addExternalSymbol(IA->getAsmString().c_str());
+    MIB.addExternalSymbol(IA->getAsmString().data());
     MIB.addImm(ExtraInfo);
 
     const MDNode *SrcLoc = Call->getMetadata("srcloc");
@@ -1854,17 +1854,12 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
   }
 
   case Instruction::Unreachable: {
-    if (TM.Options.TrapUnreachable) {
-      if (TM.Options.NoTrapAfterNoreturn) {
-        const auto *Call =
-            dyn_cast_or_null<CallInst>(cast<Instruction>(I)->getPrevNode());
-        if (Call && Call->doesNotReturn())
-          return true;
-      }
+    auto UI = cast<UnreachableInst>(I);
+    if (!UI->shouldLowerToTrap(TM.Options.TrapUnreachable,
+                               TM.Options.NoTrapAfterNoreturn))
+      return true;
 
-      return fastEmit_(MVT::Other, MVT::Other, ISD::TRAP) != 0;
-    }
-    return true;
+    return fastEmit_(MVT::Other, MVT::Other, ISD::TRAP) != 0;
   }
 
   case Instruction::Alloca:

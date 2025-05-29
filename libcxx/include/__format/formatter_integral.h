@@ -404,17 +404,17 @@ __format_integer(_Tp __value, _FormatContext& __ctx, __format_spec::__parsed_spe
 //
 
 template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __bool_strings;
+struct __bool_strings;
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS __bool_strings<char> {
+struct __bool_strings<char> {
   static constexpr string_view __true{"true"};
   static constexpr string_view __false{"false"};
 };
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
-struct _LIBCPP_TEMPLATE_VIS __bool_strings<wchar_t> {
+struct __bool_strings<wchar_t> {
   static constexpr wstring_view __true{L"true"};
   static constexpr wstring_view __false{L"false"};
 };

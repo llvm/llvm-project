@@ -28,6 +28,7 @@ class Function;
 class LLVMContext;
 class Module;
 class AttributeList;
+class AttributeSet;
 
 /// This namespace contains an enum with a value for every intrinsic/builtin
 /// function known by LLVM. The enum values are returned by
@@ -85,7 +86,10 @@ namespace Intrinsic {
   ID lookupIntrinsicID(StringRef Name);
 
   /// Return the attributes for an intrinsic.
-  AttributeList getAttributes(LLVMContext &C, ID id);
+  AttributeList getAttributes(LLVMContext &C, ID id, FunctionType *FT);
+
+  /// Return the function attributes for an intrinsic.
+  AttributeSet getFnAttributes(LLVMContext &C, ID id);
 
   /// Look up the Function declaration of the intrinsic \p id in the Module
   /// \p M. If it does not exist, add a declaration and return it. Otherwise,
@@ -147,10 +151,7 @@ namespace Intrinsic {
       Argument,
       ExtendArgument,
       TruncArgument,
-      HalfVecArgument,
-      OneThirdVecArgument,
-      OneFifthVecArgument,
-      OneSeventhVecArgument,
+      OneNthEltsVecArgument,
       SameVecWidthArgument,
       VecOfAnyPtrsToElt,
       VecElementArgument,
@@ -162,9 +163,6 @@ namespace Intrinsic {
       AArch64Svcount,
     } Kind;
 
-    // These three have to be contiguous.
-    static_assert(OneFifthVecArgument == OneThirdVecArgument + 1 &&
-                  OneSeventhVecArgument == OneFifthVecArgument + 1);
     union {
       unsigned Integer_Width;
       unsigned Float_Width;
@@ -183,18 +181,14 @@ namespace Intrinsic {
 
     unsigned getArgumentNumber() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
-             Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == OneThirdVecArgument || Kind == OneFifthVecArgument ||
-             Kind == OneSeventhVecArgument || Kind == SameVecWidthArgument ||
+             Kind == TruncArgument || Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
       return Argument_Info >> 3;
     }
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
-             Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == OneThirdVecArgument || Kind == OneFifthVecArgument ||
-             Kind == OneSeventhVecArgument || Kind == SameVecWidthArgument ||
+             Kind == TruncArgument || Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
       return (ArgKind)(Argument_Info & 7);
@@ -206,8 +200,14 @@ namespace Intrinsic {
       assert(Kind == VecOfAnyPtrsToElt);
       return Argument_Info >> 16;
     }
+    // OneNthEltsVecArguments uses both a divisor N and a reference argument for
+    // the full-width vector to match
+    unsigned getVectorDivisor() const {
+      assert(Kind == OneNthEltsVecArgument);
+      return Argument_Info >> 16;
+    }
     unsigned getRefArgNumber() const {
-      assert(Kind == VecOfAnyPtrsToElt);
+      assert(Kind == VecOfAnyPtrsToElt || Kind == OneNthEltsVecArgument);
       return Argument_Info & 0xFFFF;
     }
 

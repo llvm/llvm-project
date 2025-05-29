@@ -253,8 +253,8 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
     // Create an empty module when the MIR file is empty.
     NoMIRDocuments = true;
     auto M = std::make_unique<Module>(Filename, Context);
-    if (auto LayoutOverride =
-            DataLayoutCallback(M->getTargetTriple(), M->getDataLayoutStr()))
+    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple().str(),
+                                                 M->getDataLayoutStr()))
       M->setDataLayout(*LayoutOverride);
     return M;
   }
@@ -277,8 +277,8 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
   } else {
     // Create an new, empty module.
     M = std::make_unique<Module>(Filename, Context);
-    if (auto LayoutOverride =
-            DataLayoutCallback(M->getTargetTriple(), M->getDataLayoutStr()))
+    if (auto LayoutOverride = DataLayoutCallback(M->getTargetTriple().str(),
+                                                 M->getDataLayoutStr()))
       M->setDataLayout(*LayoutOverride);
     NoLLVMIR = true;
   }
@@ -434,7 +434,7 @@ bool MIRParserImpl::computeFunctionProperties(
   MF.setHasInlineAsm(HasInlineAsm);
 
   if (HasTiedOps && AllTiedOpsRewritten)
-    Properties.set(MachineFunctionProperties::Property::TiedOpsRewritten);
+    Properties.setTiedOpsRewritten();
 
   if (ComputedPropertyHelper(YamlMF.IsSSA, isSSA(MF),
                              MachineFunctionProperties::Property::IsSSA)) {
@@ -551,26 +551,24 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
 
   MF.setCallsEHReturn(YamlMF.CallsEHReturn);
   MF.setCallsUnwindInit(YamlMF.CallsUnwindInit);
-  MF.setHasEHCatchret(YamlMF.HasEHCatchret);
+  MF.setHasEHContTarget(YamlMF.HasEHContTarget);
   MF.setHasEHScopes(YamlMF.HasEHScopes);
   MF.setHasEHFunclets(YamlMF.HasEHFunclets);
   MF.setIsOutlined(YamlMF.IsOutlined);
 
+  MachineFunctionProperties &Props = MF.getProperties();
   if (YamlMF.Legalized)
-    MF.getProperties().set(MachineFunctionProperties::Property::Legalized);
+    Props.setLegalized();
   if (YamlMF.RegBankSelected)
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::RegBankSelected);
+    Props.setRegBankSelected();
   if (YamlMF.Selected)
-    MF.getProperties().set(MachineFunctionProperties::Property::Selected);
+    Props.setSelected();
   if (YamlMF.FailedISel)
-    MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+    Props.setFailedISel();
   if (YamlMF.FailsVerification)
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::FailsVerification);
+    Props.setFailsVerification();
   if (YamlMF.TracksDebugUserValues)
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::TracksDebugUserValues);
+    Props.setTracksDebugUserValues();
 
   PerFunctionMIParsingState PFS(MF, SM, IRSlots, *Target);
   if (parseRegisterInfo(PFS, YamlMF))

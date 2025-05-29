@@ -289,7 +289,7 @@ TEST_CONSTEXPR_CXX26 void test() {
     vec[5]                             = 6;
     getGlobalMemCounter()->throw_after = 0;
     std::stable_partition(
-        forward_iterator<int*>(vec.data()), forward_iterator<int*>(vec.data() + vec.size()), [](int i) {
+        bidirectional_iterator<int*>(vec.data()), bidirectional_iterator<int*>(vec.data() + vec.size()), [](int i) {
           return i < 5;
         });
     assert(std::is_partitioned(vec.begin(), vec.end(), [](int i) { return i < 5; }));

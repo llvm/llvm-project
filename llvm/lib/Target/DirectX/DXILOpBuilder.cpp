@@ -473,15 +473,14 @@ namespace dxil {
 // would have been done at the time the module M is constructed in the earlier
 // stages of compilation.
 DXILOpBuilder::DXILOpBuilder(Module &M) : M(M), IRB(M.getContext()) {
-  Triple TT(Triple(M.getTargetTriple()));
+  const Triple &TT = M.getTargetTriple();
   DXILVersion = TT.getDXILVersion();
   ShaderStage = TT.getEnvironment();
   // Ensure Environment type is known
   if (ShaderStage == Triple::UnknownEnvironment) {
-    report_fatal_error(
+    reportFatalUsageError(
         Twine(DXILVersion.getAsString()) +
-            ": Unknown Compilation Target Shader Stage specified ",
-        /*gen_crash_diag*/ false);
+        ": Unknown Compilation Target Shader Stage specified ");
   }
 }
 

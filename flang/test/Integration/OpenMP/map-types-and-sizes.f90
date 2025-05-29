@@ -6,7 +6,7 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-!RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -flang-deprecated-no-hlfir %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=51 -fopenmp-targets=amdgcn-amd-amdhsa -flang-deprecated-no-hlfir %s -o - | FileCheck %s
 
 !===============================================================================
 ! Check MapTypes for target implicit captures
@@ -38,6 +38,37 @@ subroutine mapType_ptr
      a = 10
   !$omp end target
 end subroutine mapType_ptr
+
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 4]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 4097]
+subroutine map_present_target_data
+  integer :: x
+!$omp target data map(present, to: x)
+!$omp end target data
+end subroutine
+
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 4]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 4097]
+subroutine map_present_update
+  integer :: x
+!$omp target update to(present: x)
+end subroutine
+
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 4]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 1027]
+subroutine map_close
+  integer :: x
+!$omp target data map(close, tofrom: x)
+!$omp end target data
+end subroutine
+
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 4]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 8195]
+subroutine map_ompx_hold
+  integer :: x
+!$omp target data map(ompx_hold, tofrom: x)
+!$omp end target data
+end subroutine
 
 !CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [4 x i64] [i64 0, i64 24, i64 8, i64 0]
 !CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [4 x i64] [i64 32, i64 281474976711169, i64 281474976711171, i64 281474976711187]

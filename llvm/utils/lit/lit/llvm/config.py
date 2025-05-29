@@ -355,6 +355,14 @@ class LLVMConfig(object):
 
         return False
 
+    # Normalize 3-field target triple to 4-field triple with "unknown" as environment
+    def normalize_triple(self, triple):
+        compoments = triple.split("-", maxsplit=3)
+        if len(compoments) == 4:
+            return triple
+        assert len(compoments) == 3
+        return triple + "-unknown"
+
     def make_itanium_abi_triple(self, triple):
         m = re.match(r"(\w+)-(\w+)-(\w+)", triple)
         if not m:
@@ -665,7 +673,9 @@ class LLVMConfig(object):
             self.config.substitutions.append(
                 (
                     "%itanium_abi_triple",
-                    self.make_itanium_abi_triple(self.config.target_triple),
+                    self.normalize_triple(
+                        self.make_itanium_abi_triple(self.config.target_triple)
+                    ),
                 )
             )
             self.config.substitutions.append(

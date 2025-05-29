@@ -99,6 +99,7 @@ private:
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
 
+  unsigned XSfmmTE = 0;
   unsigned ZvlLen = 0;
   unsigned RVVVectorBitsMin;
   unsigned RVVVectorBitsMax;
@@ -354,6 +355,7 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const override {
     return TuneInfo->MaxPrefetchIterationsAhead;
   };
+  bool enableWritePrefetching() const override { return true; }
 
   unsigned getMinimumJumpTableEntries() const;
 

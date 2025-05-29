@@ -23,6 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
@@ -342,8 +343,7 @@ static bool shouldCoalesceFragments(Function &F) {
   // has not been explicitly set and instruction-referencing is turned on.
   switch (CoalesceAdjacentFragmentsOpt) {
   case cl::boolOrDefault::BOU_UNSET:
-    return debuginfoShouldUseDebugInstrRef(
-        Triple(F.getParent()->getTargetTriple()));
+    return debuginfoShouldUseDebugInstrRef(F.getParent()->getTargetTriple());
   case cl::boolOrDefault::BOU_TRUE:
     return true;
   case cl::boolOrDefault::BOU_FALSE:
@@ -898,8 +898,8 @@ public:
         Worklist.push(RPONumber);
         ++RPONumber;
       }
-      LiveIn.init(RPONumber);
-      LiveOut.init(RPONumber);
+      LiveIn.reserve(RPONumber);
+      LiveOut.reserve(RPONumber);
     }
 
     // Perform the traversal.
@@ -1103,6 +1103,8 @@ public:
   using UntaggedStoreAssignmentMap =
       DenseMap<const Instruction *,
                SmallVector<std::pair<VariableID, at::AssignmentInfo>>>;
+  using UnknownStoreAssignmentMap =
+      DenseMap<const Instruction *, SmallVector<VariableID>>;
 
 private:
   /// The highest numbered VariableID for partially promoted variables plus 1,
@@ -1113,6 +1115,9 @@ private:
   /// Map untagged stores to the variable fragments they assign to. Used by
   /// processUntaggedInstruction.
   UntaggedStoreAssignmentMap UntaggedStoreVars;
+  /// Map untagged unknown stores (e.g. strided/masked store intrinsics)
+  /// to the variables they may assign to. Used by processUntaggedInstruction.
+  UnknownStoreAssignmentMap UnknownStoreVars;
 
   // Machinery to defer inserting dbg.values.
   using InstInsertMap = MapVector<VarLocInsertPt, SmallVector<VarLocInfo>>;
@@ -1355,6 +1360,8 @@ private:
   /// Update \p LiveSet after encountering an instruciton without a DIAssignID
   /// attachment, \p I.
   void processUntaggedInstruction(Instruction &I, BlockInfo *LiveSet);
+  void processUnknownStoreToVariable(Instruction &I, VariableID &Var,
+                                     BlockInfo *LiveSet);
   void processDbgAssign(AssignRecord Assign, BlockInfo *LiveSet);
   void processDbgVariableRecord(DbgVariableRecord &DVR, BlockInfo *LiveSet);
   void processDbgValue(
@@ -1604,6 +1611,45 @@ void AssignmentTrackingLowering::processNonDbgInstruction(
     processUntaggedInstruction(I, LiveSet);
 }
 
+void AssignmentTrackingLowering::processUnknownStoreToVariable(
+    Instruction &I, VariableID &Var, BlockInfo *LiveSet) {
+  // We may have assigned to some unknown fragment of the variable, so
+  // treat the memory assignment as unknown for now.
+  addMemDef(LiveSet, Var, Assignment::makeNoneOrPhi());
+  // If we weren't already using a memory location, we don't need to do
+  // anything more.
+  if (getLocKind(LiveSet, Var) != LocKind::Mem)
+    return;
+  // If there is a live debug value for this variable, fall back to using
+  // that.
+  Assignment DbgAV = LiveSet->getAssignment(BlockInfo::Debug, Var);
+  if (DbgAV.Status != Assignment::NoneOrPhi && DbgAV.Source) {
+    LLVM_DEBUG(dbgs() << "Switching to fallback debug value: ";
+               DbgAV.dump(dbgs()); dbgs() << "\n");
+    setLocKind(LiveSet, Var, LocKind::Val);
+    emitDbgValue(LocKind::Val, DbgAV.Source, &I);
+    return;
+  }
+  // Otherwise, find a suitable insert point, before the next instruction or
+  // DbgRecord after I.
+  auto InsertBefore = getNextNode(&I);
+  assert(InsertBefore && "Shouldn't be inserting after a terminator");
+
+  // Get DILocation for this assignment.
+  DebugVariable V = FnVarLocs->getVariable(Var);
+  DILocation *InlinedAt = const_cast<DILocation *>(V.getInlinedAt());
+  const DILocation *DILoc = DILocation::get(
+      Fn.getContext(), 0, 0, V.getVariable()->getScope(), InlinedAt);
+
+  VarLocInfo VarLoc;
+  VarLoc.VariableID = static_cast<VariableID>(Var);
+  VarLoc.Expr = DIExpression::get(I.getContext(), {});
+  VarLoc.Values = RawLocationWrapper(
+      ValueAsMetadata::get(PoisonValue::get(Type::getInt1Ty(I.getContext()))));
+  VarLoc.DL = DILoc;
+  InsertBeforeMap[InsertBefore].push_back(VarLoc);
+}
+
 void AssignmentTrackingLowering::processUntaggedInstruction(
     Instruction &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
   // Interpret stack stores that are not tagged as an assignment in memory for
@@ -1619,8 +1665,21 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
   // "early", for example.
   assert(!I.hasMetadata(LLVMContext::MD_DIAssignID));
   auto It = UntaggedStoreVars.find(&I);
-  if (It == UntaggedStoreVars.end())
+  if (It == UntaggedStoreVars.end()) {
+    // It is possible that we have an untagged unknown store, i.e. one that
+    // cannot be represented as a simple (base, offset, size) - in this case we
+    // should undef the memory location of the variable, as if we had a tagged
+    // store that did not match the current assignment.
+    // FIXME: It should be possible to support these stores, but it would
+    // require more extensive changes to our representation of assignments.
+    if (auto UnhandledStoreIt = UnknownStoreVars.find(&I);
+        UnhandledStoreIt != UnknownStoreVars.end()) {
+      LLVM_DEBUG(dbgs() << "Processing untagged unknown store " << I << "\n");
+      for (auto &Var : UnhandledStoreIt->second)
+        processUnknownStoreToVariable(I, Var, LiveSet);
+    }
     return; // No variables associated with the store destination.
+  }
 
   LLVM_DEBUG(dbgs() << "processUntaggedInstruction on UNTAGGED INST " << I
                     << "\n");
@@ -2123,6 +2182,26 @@ getUntaggedStoreAssignmentInfo(const Instruction &I, const DataLayout &Layout) {
   return std::nullopt;
 }
 
+AllocaInst *getUnknownStore(const Instruction &I, const DataLayout &Layout) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return nullptr;
+  Intrinsic::ID ID = II->getIntrinsicID();
+  if (ID != Intrinsic::experimental_vp_strided_store &&
+      ID != Intrinsic::masked_store && ID != Intrinsic::vp_scatter &&
+      ID != Intrinsic::masked_scatter && ID != Intrinsic::vp_store &&
+      ID != Intrinsic::masked_compressstore)
+    return nullptr;
+  Value *MemOp = II->getArgOperand(1);
+  // We don't actually use the constant offset for now, but we may in future,
+  // and the non-accumulating versions do not support a vector of pointers.
+  APInt Offset(Layout.getIndexTypeSizeInBits(MemOp->getType()), 0);
+  Value *Base = MemOp->stripAndAccumulateConstantOffsets(Layout, Offset, true);
+  // For Base pointers that are not an alloca instruction we don't need to do
+  // anything, and simply return nullptr.
+  return dyn_cast<AllocaInst>(Base);
+}
+
 DbgDeclareInst *DynCastToDbgDeclare(DbgVariableIntrinsic *DVI) {
   return dyn_cast<DbgDeclareInst>(DVI);
 }
@@ -2145,7 +2224,8 @@ DbgVariableRecord *DynCastToDbgDeclare(DbgVariableRecord *DVR) {
 /// subsequent variables are either stack homed or fully promoted.
 ///
 /// Finally, populate UntaggedStoreVars with a mapping of untagged stores to
-/// the stored-to variable fragments.
+/// the stored-to variable fragments, and UnknownStoreVars with a mapping
+/// of untagged unknown stores to the stored-to variable aggregates.
 ///
 /// These tasks are bundled together to reduce the number of times we need
 /// to iterate over the function as they can be achieved together in one pass.
@@ -2153,6 +2233,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
     Function &Fn, FunctionVarLocsBuilder *FnVarLocs,
     const DenseSet<DebugAggregate> &VarsWithStackSlot,
     AssignmentTrackingLowering::UntaggedStoreAssignmentMap &UntaggedStoreVars,
+    AssignmentTrackingLowering::UnknownStoreAssignmentMap &UnknownStoreVars,
     unsigned &TrackedVariablesVectorSize) {
   DenseSet<DebugVariable> Seen;
   // Map of Variable: [Fragments].
@@ -2161,7 +2242,8 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   // - dbg.declare    -> add single location variable record
   // - dbg.*          -> Add fragments to FragmentMap
   // - untagged store -> Add fragments to FragmentMap and update
-  //                     UntaggedStoreVars.
+  //                     UntaggedStoreVars, or add to UnknownStoreVars if
+  //                     we can't determine the fragment overlap.
   // We need to add fragments for untagged stores too so that we can correctly
   // clobber overlapped fragment locations later.
   SmallVector<DbgDeclareInst *> InstDeclares;
@@ -2224,6 +2306,25 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
           HandleDbgAssignForStore(DAI);
         for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(Info->Base))
           HandleDbgAssignForStore(DVR);
+      } else if (auto *AI = getUnknownStore(I, Fn.getDataLayout())) {
+        // Find markers linked to this alloca.
+        auto HandleDbgAssignForUnknownStore = [&](auto *Assign) {
+          // Because we can't currently represent the fragment info for this
+          // store, we treat it as an unusable store to the whole variable.
+          DebugVariable DV =
+              DebugVariable(Assign->getVariable(), std::nullopt,
+                            Assign->getDebugLoc().getInlinedAt());
+          DebugAggregate DA = {DV.getVariable(), DV.getInlinedAt()};
+          if (!VarsWithStackSlot.contains(DA))
+            return;
+
+          // Cache this info for later.
+          UnknownStoreVars[&I].push_back(FnVarLocs->insertVariable(DV));
+        };
+        for (DbgAssignIntrinsic *DAI : at::getAssignmentMarkers(AI))
+          HandleDbgAssignForUnknownStore(DAI);
+        for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(AI))
+          HandleDbgAssignForUnknownStore(DVR);
       }
     }
   }
@@ -2298,7 +2399,7 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   // neither does LiveDebugVariables) because that is difficult to do and
   // appears to be rare occurance.
   VarContains = buildOverlapMapAndRecordDeclares(
-      Fn, FnVarLocs, *VarsWithStackSlot, UntaggedStoreVars,
+      Fn, FnVarLocs, *VarsWithStackSlot, UntaggedStoreVars, UnknownStoreVars,
       TrackedVariablesVectorSize);
 
   // Prepare for traversal.
@@ -2319,8 +2420,8 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
       Worklist.push(RPONumber);
       ++RPONumber;
     }
-    LiveIn.init(RPONumber);
-    LiveOut.init(RPONumber);
+    LiveIn.reserve(RPONumber);
+    LiveOut.reserve(RPONumber);
   }
 
   // Perform the traversal.
@@ -2613,13 +2714,13 @@ removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
         NumDefsScanned++;
         DebugVariable Key(FnVarLocs.getVariable(Loc.VariableID).getVariable(),
                           std::nullopt, Loc.DL.getInlinedAt());
-        auto VMI = VariableMap.find(Key);
+        auto [VMI, Inserted] = VariableMap.try_emplace(Key);
 
         // Update the map if we found a new value/expression describing the
         // variable, or if the variable wasn't mapped already.
-        if (VMI == VariableMap.end() || VMI->second.first != Loc.Values ||
+        if (Inserted || VMI->second.first != Loc.Values ||
             VMI->second.second != Loc.Expr) {
-          VariableMap[Key] = {Loc.Values, Loc.Expr};
+          VMI->second = {Loc.Values, Loc.Expr};
           NewDefs.push_back(Loc);
           continue;
         }
@@ -2679,7 +2780,6 @@ removeUndefDbgLocsFromEntryBlock(const BasicBlock *BB,
   };
 
   bool Changed = false;
-  DenseMap<DebugVariable, std::pair<Value *, DIExpression *>> VariableMap;
 
   // Scan over the entire block, not just over the instructions mapped by
   // FnVarLocs, because wedges in FnVarLocs may only be separated by debug

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeGenPGO.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CoverageMappingGen.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -1357,6 +1358,9 @@ void CodeGenPGO::setProfileVersion(llvm::Module &M) {
 
     IRLevelVersionVariable->setVisibility(llvm::GlobalValue::HiddenVisibility);
     llvm::Triple TT(M.getTargetTriple());
+    if (TT.isGPU())
+      IRLevelVersionVariable->setVisibility(
+          llvm::GlobalValue::ProtectedVisibility);
     if (TT.supportsCOMDAT()) {
       IRLevelVersionVariable->setLinkage(llvm::GlobalValue::ExternalLinkage);
       IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
@@ -1482,7 +1486,7 @@ CodeGenFunction::createProfileWeights(ArrayRef<uint64_t> Weights) const {
     return nullptr;
 
   // Check for empty weights.
-  uint64_t MaxWeight = *std::max_element(Weights.begin(), Weights.end());
+  uint64_t MaxWeight = *llvm::max_element(Weights);
   if (MaxWeight == 0)
     return nullptr;
 
@@ -1508,4 +1512,15 @@ CodeGenFunction::createProfileWeightsForLoop(const Stmt *Cond,
     return nullptr;
   return createProfileWeights(LoopCount,
                               std::max(*CondCount, LoopCount) - LoopCount);
+}
+
+void CodeGenFunction::incrementProfileCounter(const Stmt *S,
+                                              llvm::Value *StepV) {
+  if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
+      !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
+      !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
+    auto AL = ApplyDebugLocation::CreateArtificial(*this);
+    PGO.emitCounterSetOrIncrement(Builder, S, StepV);
+  }
+  PGO.setCurrentStmt(S);
 }

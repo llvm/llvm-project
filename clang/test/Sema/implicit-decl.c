@@ -13,7 +13,7 @@ typedef unsigned char Boolean;
 extern int printf(__const char *__restrict __format, ...); // both-note{{'printf' declared here}}
 void func(void) {
    int32_t *vector[16];
-   const char compDesc[16 + 1];
+   const char compDesc[16 + 1] = { 0 };
    int32_t compCount = 0;
    if (_CFCalendarDecomposeAbsoluteTimeV(compDesc, vector, compCount)) { // expected-error {{call to undeclared function '_CFCalendarDecomposeAbsoluteTimeV'; ISO C99 and later do not support implicit function declarations}} \
                                                                             expected-note {{previous implicit declaration}} \

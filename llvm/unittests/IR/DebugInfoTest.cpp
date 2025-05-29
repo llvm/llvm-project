@@ -413,6 +413,24 @@ TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
   DIVariable::deleteTemporary(DataLocation);
 }
 
+TEST(DIBuilder, CreateArrayWithBitStride) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Constant *Ci = ConstantInt::get(Int32Ty, 7);
+  Metadata *CM = ConstantAsMetadata::get(Ci);
+
+  StringRef ArrayNameExp = "AnArray";
+  DICompositeType *NamedArray =
+      DIB.createArrayType(nullptr, ArrayNameExp, nullptr, 0, 8, 8, nullptr, {},
+                          nullptr, nullptr, nullptr, nullptr, CM);
+  EXPECT_EQ(NamedArray->getTag(), dwarf::DW_TAG_array_type);
+  EXPECT_EQ(NamedArray->getRawBitStride(), CM);
+  EXPECT_EQ(NamedArray->getBitStrideConst(), Ci);
+}
+
 TEST(DIBuilder, CreateSetType) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));
@@ -481,6 +499,40 @@ TEST(DIBuilder, DIEnumerator) {
 
   auto *E2 = DIEnumerator::getIfExists(Ctx, I2, I1.isSigned(), "name");
   EXPECT_FALSE(E2);
+}
+
+TEST(DIBuilder, FixedPointType) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+
+  DIFixedPointType *Ty = DIB.createBinaryFixedPointType(
+      {}, 32, 0, dwarf::DW_ATE_signed_fixed, DINode::FlagZero, -4);
+  EXPECT_TRUE(Ty);
+  EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointBinary);
+  EXPECT_TRUE(Ty->getFactor() == -4);
+  EXPECT_TRUE(Ty->getEncoding() == dwarf::DW_ATE_signed_fixed);
+  EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
+
+  Ty = DIB.createDecimalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+                                       DINode::FlagZero, -7);
+  EXPECT_TRUE(Ty);
+  EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointDecimal);
+  EXPECT_TRUE(Ty->getFactor() == -7);
+  EXPECT_TRUE(Ty->getEncoding() == dwarf::DW_ATE_unsigned_fixed);
+  EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
+
+  APSInt Num(APInt(32, 1));
+  APSInt Denom(APInt(33, 72));
+  Ty = DIB.createRationalFixedPointType({}, 32, 0, dwarf::DW_ATE_unsigned_fixed,
+                                        DINode::FlagZero, Num, Denom);
+  EXPECT_TRUE(Ty);
+  EXPECT_TRUE(Ty->getKind() == DIFixedPointType::FixedPointRational);
+  EXPECT_TRUE(Ty->getFactorRaw() == 0);
+  EXPECT_TRUE(Ty->getNumerator() == Num);
+  EXPECT_TRUE(Ty->getDenominator() == Denom);
+  EXPECT_TRUE(Ty->getEncoding() == dwarf::DW_ATE_unsigned_fixed);
+  EXPECT_TRUE(Ty->getTag() == dwarf::DW_TAG_base_type);
 }
 
 TEST(DbgAssignIntrinsicTest, replaceVariableLocationOp) {

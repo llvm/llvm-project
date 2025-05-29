@@ -48,12 +48,6 @@ MaxNumOfInstsBetweenNewValueStoreAndTFR("max-num-inst-between-tfr-and-nv-store",
                    cl::desc("Maximum distance between a tfr feeding a store we "
                             "consider the store still to be newifiable"));
 
-namespace llvm {
-  FunctionPass *createHexagonCopyToCombine();
-  void initializeHexagonCopyToCombinePass(PassRegistry&);
-}
-
-
 namespace {
 
 class HexagonCopyToCombine : public MachineFunctionPass  {
@@ -81,8 +75,7 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:

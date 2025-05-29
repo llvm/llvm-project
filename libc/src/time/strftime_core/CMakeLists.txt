@@ -18,10 +18,8 @@ add_header_library(
     libc.src.__support.str_to_integer
 )
 
-add_object_library(
+add_header_library(
   converter
-  SRCS
-    converter.cpp
   HDRS
     converter.h
     num_converter.h
@@ -36,10 +34,8 @@ add_object_library(
     libc.src.__support.integer_to_string
 )
 
-add_object_library(
+add_header_library(
   strftime_main
-  SRCS
-    strftime_main.cpp
   HDRS
     strftime_main.h
   DEPENDS

@@ -4,13 +4,13 @@
 
 # LLVM libc unittest library.
 
-load("//libc:libc_build_rules.bzl", "libc_support_library")
+load("//libc/test:libc_test_rules.bzl", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
-libc_support_library(
+libc_test_library(
     name = "test_logger",
     srcs = ["TestLogger.cpp"],
     hdrs = ["TestLogger.h"],
@@ -29,7 +29,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "LibcUnitTest",
     srcs = [
         "BazelFilePath.cpp",
@@ -73,7 +73,19 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
+    name = "errno_test_helpers",
+    hdrs = [
+        "ErrnoCheckingTest.h",
+    ],
+    deps = [
+        ":LibcUnitTest",
+        "//libc:__support_macros_config",
+        "//libc:errno",
+    ],
+)
+
+libc_test_library(
     name = "fp_test_helpers",
     srcs = [
         "FEnvSafeTest.cpp",
@@ -108,7 +120,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "memory_matcher",
     srcs = [
         "MemoryMatcher.cpp",
@@ -127,7 +139,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "printf_matcher",
     srcs = [
         "PrintfMatcher.cpp",
@@ -144,7 +156,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "string_utils",
     hdrs = [
         "StringUtils.h",

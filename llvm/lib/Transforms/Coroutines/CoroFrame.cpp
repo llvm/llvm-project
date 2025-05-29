@@ -785,7 +785,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   // fields confilicts with each other.
   unsigned UnknownTypeNum = 0;
   for (unsigned Index = 0; Index < FrameTy->getNumElements(); Index++) {
-    if (!OffsetCache.contains(Index))
+    auto OCIt = OffsetCache.find(Index);
+    if (OCIt == OffsetCache.end())
       continue;
 
     std::string Name;
@@ -797,8 +798,8 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
     Type *Ty = FrameTy->getElementType(Index);
     assert(Ty->isSized() && "We can't handle type which is not sized.\n");
     SizeInBits = Layout.getTypeSizeInBits(Ty).getFixedValue();
-    AlignInBits = OffsetCache[Index].first * 8;
-    OffsetInBits = OffsetCache[Index].second * 8;
+    AlignInBits = OCIt->second.first * 8;
+    OffsetInBits = OCIt->second.second * 8;
 
     if (auto It = NameCache.find(Index); It != NameCache.end()) {
       Name = It->second.str();

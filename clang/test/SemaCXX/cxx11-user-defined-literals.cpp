@@ -150,18 +150,18 @@ namespace bad_names {
         operator // expected-error {{expected identifier}}
             ""_q<'a'>;
 
-    T::template operator""_q<'a'>(); // expected-error {{non-namespace scope 'T::' cannot have a literal operator member}} expected-error +{{}}
-    T::template operator""_q<'a'>::X; // expected-error {{non-namespace scope 'T::' cannot have a literal operator member}} expected-error +{{}}
-    T::operator""_q<'a'>(); // expected-error {{non-namespace scope 'T::' cannot have a literal operator member}} expected-error +{{}}
-    typename T::template operator""_q<'a'> a; // expected-error {{non-namespace scope 'T::' cannot have a literal operator member}} expected-error +{{}}
+    T::template operator""_q<'a'>(); // expected-error {{non-namespace scope 'T' cannot have a literal operator member}} expected-error +{{}}
+    T::template operator""_q<'a'>::X; // expected-error {{non-namespace scope 'T' cannot have a literal operator member}} expected-error +{{}}
+    T::operator""_q<'a'>(); // expected-error {{non-namespace scope 'T' cannot have a literal operator member}} expected-error +{{}}
+    typename T::template operator""_q<'a'> a; // expected-error {{non-namespace scope 'T' cannot have a literal operator member}} expected-error +{{}}
     typename T::operator""_q(""); // expected-error +{{}} expected-note {{to match}}
-    T::operator""_q(""); // expected-error {{non-namespace scope 'T::' cannot have a literal operator member}}
+    T::operator""_q(""); // expected-error {{non-namespace scope 'T' cannot have a literal operator member}}
 
     bad_names::operator""_x<'a', 'b', 'c'>();
   };
 
   struct S {};
   void g() {
-    S::operator""_q(); // expected-error {{non-namespace scope 'S::' cannot have a literal operator member}}
+    S::operator""_q(); // expected-error {{non-namespace scope 'S' cannot have a literal operator member}}
   }
 }

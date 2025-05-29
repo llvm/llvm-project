@@ -1066,7 +1066,7 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
 }
 
 bool DWARFASTParserClang::ParseObjCMethod(
-    const ObjCLanguage::MethodName &objc_method, const DWARFDIE &die,
+    const ObjCLanguage::ObjCMethodName &objc_method, const DWARFDIE &die,
     CompilerType clang_type, const ParsedDWARFTypeAttributes &attrs,
     bool is_variadic) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -1318,9 +1318,9 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   if (attrs.name) {
     bool type_handled = false;
     if (tag == DW_TAG_subprogram || tag == DW_TAG_inlined_subroutine) {
-      if (std::optional<const ObjCLanguage::MethodName> objc_method =
-              ObjCLanguage::MethodName::Create(attrs.name.GetStringRef(),
-                                               true)) {
+      if (std::optional<const ObjCLanguage::ObjCMethodName> objc_method =
+              ObjCLanguage::ObjCMethodName::Create(attrs.name.GetStringRef(),
+                                                   true)) {
         type_handled =
             ParseObjCMethod(*objc_method, die, clang_type, attrs, is_variadic);
       } else if (is_cxx_method) {
@@ -1531,8 +1531,7 @@ void DWARFASTParserClang::ParseInheritance(
     const lldb::ModuleSP &module_sp,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     ClangASTImporter::LayoutInfo &layout_info) {
-  auto ast =
-      class_clang_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto ast = class_clang_type.GetTypeSystem<TypeSystemClang>();
   if (ast == nullptr)
     return;
 
@@ -1837,7 +1836,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
-  metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
+  if (!attrs.is_forward_declaration)
+    metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
   if (ParseTemplateParameterInfos(die, template_param_infos)) {
@@ -2478,8 +2478,8 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(
     std::unique_ptr<Declaration> decl_up;
     if (decl_file || decl_line || decl_column)
       decl_up = std::make_unique<Declaration>(
-          die.GetCU()->GetFile(decl_file ? *decl_file : 0),
-          decl_line ? *decl_line : 0, decl_column ? *decl_column : 0);
+          die.GetCU()->GetFile(decl_file.value_or(0)), decl_line.value_or(0),
+          decl_column.value_or(0));
 
     SymbolFileDWARF *dwarf = die.GetDWARF();
     // Supply the type _only_ if it has already been parsed
@@ -2753,16 +2753,16 @@ PropertyAttributes::PropertyAttributes(const DWARFDIE &die) {
   // Check if the property getter/setter were provided as full names.
   // We want basenames, so we extract them.
   if (prop_getter_name && prop_getter_name[0] == '-') {
-    std::optional<const ObjCLanguage::MethodName> prop_getter_method =
-        ObjCLanguage::MethodName::Create(prop_getter_name, true);
+    std::optional<const ObjCLanguage::ObjCMethodName> prop_getter_method =
+        ObjCLanguage::ObjCMethodName::Create(prop_getter_name, true);
     if (prop_getter_method)
       prop_getter_name =
           ConstString(prop_getter_method->GetSelector()).GetCString();
   }
 
   if (prop_setter_name && prop_setter_name[0] == '-') {
-    std::optional<const ObjCLanguage::MethodName> prop_setter_method =
-        ObjCLanguage::MethodName::Create(prop_setter_name, true);
+    std::optional<const ObjCLanguage::ObjCMethodName> prop_setter_method =
+        ObjCLanguage::ObjCMethodName::Create(prop_setter_name, true);
     if (prop_setter_method)
       prop_setter_name =
           ConstString(prop_setter_method->GetSelector()).GetCString();
@@ -2822,7 +2822,7 @@ llvm::Expected<llvm::APInt> DWARFASTParserClang::ExtractIntFromFormValue(
     const CompilerType &int_type, const DWARFFormValue &form_value) const {
   clang::QualType qt = ClangUtil::GetQualType(int_type);
   assert(qt->isIntegralOrEnumerationType());
-  auto ts_ptr = int_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto ts_ptr = int_type.GetTypeSystem<TypeSystemClang>();
   if (!ts_ptr)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "TypeSystem not clang");
@@ -3130,8 +3130,7 @@ bool DWARFASTParserClang::ParseChildMembers(
   FieldInfo last_field_info;
 
   ModuleSP module_sp = parent_die.GetDWARF()->GetObjectFile()->GetModule();
-  auto ts = class_clang_type.GetTypeSystem();
-  auto ast = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast = class_clang_type.GetTypeSystem<TypeSystemClang>();
   if (ast == nullptr)
     return false;
 

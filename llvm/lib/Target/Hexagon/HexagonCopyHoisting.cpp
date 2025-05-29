@@ -28,20 +28,13 @@ using namespace llvm;
 static cl::opt<std::string> CPHoistFn("cphoistfn", cl::Hidden, cl::desc(""),
                                       cl::init(""));
 
-namespace llvm {
-void initializeHexagonCopyHoistingPass(PassRegistry &Registry);
-FunctionPass *createHexagonCopyHoisting();
-} // namespace llvm
-
 namespace {
 
 class HexagonCopyHoisting : public MachineFunctionPass {
 
 public:
   static char ID;
-  HexagonCopyHoisting() : MachineFunctionPass(ID), MFN(nullptr), MRI(nullptr) {
-    initializeHexagonCopyHoistingPass(*PassRegistry::getPassRegistry());
-  }
+  HexagonCopyHoisting() : MachineFunctionPass(ID), MFN(nullptr), MRI(nullptr) {}
 
   StringRef getPassName() const override { return "Hexagon Copy Hoisting"; }
 

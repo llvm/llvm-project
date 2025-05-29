@@ -417,8 +417,7 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
     return;
 
   // There is no advantage to doing this pre-RA.
-  if (!MF->getProperties().hasProperty(
-          MachineFunctionProperties::Property::NoVRegs))
+  if (!MF->getProperties().hasNoVRegs())
     return;
 
   if (TII->hasAnyModifiersSet(MI))
@@ -841,8 +840,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
   unsigned VCCReg = ST->isWave32() ? AMDGPU::VCC_LO : AMDGPU::VCC;
 
-  std::vector<unsigned> I1Defs;
-
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
                                                   BI != BE; ++BI) {
 
@@ -953,8 +950,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
       if (TII->isMIMG(MI.getOpcode()) &&
           ST->getGeneration() >= AMDGPUSubtarget::GFX10 &&
-          MF.getProperties().hasProperty(
-              MachineFunctionProperties::Property::NoVRegs)) {
+          MF.getProperties().hasNoVRegs()) {
         shrinkMIMG(MI);
         continue;
       }
@@ -973,11 +969,13 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         continue;
       }
 
-      if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
-        // If there is no chance we will shrink it and use VCC as sdst to get
-        // a 32 bit form try to replace dead sdst with NULL.
+      // If there is no chance we will shrink it and use VCC as sdst to get
+      // a 32 bit form try to replace dead sdst with NULL.
+      if (TII->isVOP3(MI.getOpcode())) {
         tryReplaceDeadSDST(MI);
-        continue;
+        if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
+          continue;
+        }
       }
 
       if (!TII->canShrink(MI, *MRI)) {
@@ -1063,9 +1061,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       // fold an immediate into the shrunk instruction as a literal operand. In
       // GFX10 VOP3 instructions can take a literal operand anyway, so there is
       // no advantage to doing this.
-      if (ST->hasVOP3Literal() &&
-          !MF.getProperties().hasProperty(
-              MachineFunctionProperties::Property::NoVRegs))
+      if (ST->hasVOP3Literal() && !MF.getProperties().hasNoVRegs())
         continue;
 
       if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&

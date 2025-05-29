@@ -210,5 +210,3 @@ entry:
   ret ptr addrspace(1) %call
 }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

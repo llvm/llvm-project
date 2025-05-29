@@ -178,7 +178,7 @@ namespace std {
 */
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/optional>
+#  include <__cxx03/__config>
 #else
 #  include <__assert>
 #  include <__compare/compare_three_way_result.h>
@@ -210,6 +210,7 @@ namespace std {
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_object.h>
 #  include <__type_traits/is_reference.h>
+#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_scalar.h>
 #  include <__type_traits/is_swappable.h>
@@ -590,6 +591,7 @@ public:
 
   using __trivially_relocatable _LIBCPP_NODEBUG =
       conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, optional, void>;
+  using __replaceable _LIBCPP_NODEBUG = conditional_t<__is_replaceable_v<_Tp>, optional, void>;
 
 private:
   // Disable the reference extension using this static assert.
@@ -1268,7 +1270,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr optional<_Tp> make_optional(initializer_list<_Up
 }
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS hash< __enable_hash_helper<optional<_Tp>, remove_const_t<_Tp>> > {
+struct hash< __enable_hash_helper<optional<_Tp>, remove_const_t<_Tp>> > {
 #    if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
   _LIBCPP_DEPRECATED_IN_CXX17 typedef optional<_Tp> argument_type;
   _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;

@@ -26,7 +26,7 @@ namespace dependencies {
 
 /// A callback to lookup module outputs for "-fmodule-file=", "-o" etc.
 using LookupModuleOutputCallback =
-    std::function<std::string(const ModuleID &, ModuleOutputKind)>;
+    llvm::function_ref<std::string(const ModuleDeps &, ModuleOutputKind)>;
 
 /// Graph of modular dependencies.
 using ModuleDepsGraph = std::vector<ModuleDeps>;
@@ -208,19 +208,21 @@ class CallbackActionController : public DependencyActionController {
 public:
   virtual ~CallbackActionController();
 
+  static std::string lookupUnreachableModuleOutput(const ModuleDeps &MD,
+                                                   ModuleOutputKind Kind) {
+    llvm::report_fatal_error("unexpected call to lookupModuleOutput");
+  };
+
   CallbackActionController(LookupModuleOutputCallback LMO)
       : LookupModuleOutput(std::move(LMO)) {
     if (!LookupModuleOutput) {
-      LookupModuleOutput = [](const ModuleID &,
-                              ModuleOutputKind) -> std::string {
-        llvm::report_fatal_error("unexpected call to lookupModuleOutput");
-      };
+      LookupModuleOutput = lookupUnreachableModuleOutput;
     }
   }
 
-  std::string lookupModuleOutput(const ModuleID &ID,
+  std::string lookupModuleOutput(const ModuleDeps &MD,
                                  ModuleOutputKind Kind) override {
-    return LookupModuleOutput(ID, Kind);
+    return LookupModuleOutput(MD, Kind);
   }
 
 private:

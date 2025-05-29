@@ -17,8 +17,11 @@ namespace llvm {
 
 class PGOCtxProfFlatteningPass
     : public PassInfoMixin<PGOCtxProfFlatteningPass> {
+  const bool IsPreThinlink;
+
 public:
-  explicit PGOCtxProfFlatteningPass() = default;
+  explicit PGOCtxProfFlatteningPass(bool IsPreThinlink)
+      : IsPreThinlink(IsPreThinlink) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 } // namespace llvm

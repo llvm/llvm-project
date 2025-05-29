@@ -682,7 +682,7 @@ define <vscale x 2 x i64> @fcvtzu_d_nxv2f64(<vscale x 2 x double> %a) {
 define <vscale x 2 x half> @scvtf_h_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: scvtf_h_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.h, p0/m, #-1.00000000
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 2 x i1> %a to <vscale x 2 x half>
@@ -722,7 +722,7 @@ define <vscale x 2 x half> @scvtf_h_nxv2i64(<vscale x 2 x i64> %a) {
 define <vscale x 3 x half> @scvtf_h_nxv3i1(<vscale x 3 x i1> %a) {
 ; CHECK-LABEL: scvtf_h_nxv3i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.h, p0/m, #-1.00000000
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 3 x i1> %a to <vscale x 3 x half>
@@ -742,7 +742,7 @@ define <vscale x 3 x half> @scvtf_h_nxv3i16(<vscale x 3 x i16> %a) {
 define <vscale x 4 x half> @scvtf_h_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: scvtf_h_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.h, p0/m, #-1.00000000
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 4 x i1> %a to <vscale x 4 x half>
@@ -772,7 +772,7 @@ define <vscale x 4 x half> @scvtf_h_nxv4i32(<vscale x 4 x i32> %a) {
 define <vscale x 7 x half> @scvtf_h_nxv7i1(<vscale x 7 x i1> %a) {
 ; CHECK-LABEL: scvtf_h_nxv7i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.h, p0/m, #-1.00000000
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 7 x i1> %a to <vscale x 7 x half>
@@ -792,7 +792,7 @@ define <vscale x 7 x half> @scvtf_h_nxv7i16(<vscale x 7 x i16> %a) {
 define <vscale x 8 x half> @scvtf_h_nxv8i1(<vscale x 8 x i1> %a) {
 ; CHECK-LABEL: scvtf_h_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.h, p0/m, #-1.00000000
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 8 x i1> %a to <vscale x 8 x half>
@@ -812,7 +812,7 @@ define <vscale x 8 x half> @scvtf_h_nxv8i16(<vscale x 8 x i16> %a) {
 define <vscale x 2 x float> @scvtf_s_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: scvtf_s_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.s, p0/m, #-1.00000000
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 2 x i1> %a to <vscale x 2 x float>
@@ -842,7 +842,7 @@ define <vscale x 2 x float> @scvtf_s_nxv2i64(<vscale x 2 x i64> %a) {
 define <vscale x 3 x float> @scvtf_s_nxv3i1(<vscale x 3 x i1> %a) {
 ; CHECK-LABEL: scvtf_s_nxv3i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.s, p0/m, #-1.00000000
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 3 x i1> %a to <vscale x 3 x float>
@@ -862,7 +862,7 @@ define <vscale x 3 x float> @scvtf_s_nxv3i32(<vscale x 3 x i32> %a) {
 define <vscale x 4 x float> @scvtf_s_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: scvtf_s_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.s, p0/m, #-1.00000000
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 4 x i1> %a to <vscale x 4 x float>
@@ -882,7 +882,7 @@ define <vscale x 4 x float> @scvtf_s_nxv4i32(<vscale x 4 x i32> %a) {
 define <vscale x 2 x double> @scvtf_d_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: scvtf_d_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.d, p0/m, #-1.00000000
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 2 x i1> %a to <vscale x 2 x double>
@@ -914,7 +914,7 @@ define <vscale x 2 x double> @scvtf_d_nxv2i64(<vscale x 2 x i64> %a) {
 define <vscale x 2 x half> @ucvtf_h_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: ucvtf_h_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.h, p0/m, #1.00000000
 ; CHECK-NEXT:    ret
   %res = uitofp <vscale x 2 x i1> %a to <vscale x 2 x half>
@@ -954,7 +954,7 @@ define <vscale x 2 x half> @ucvtf_h_nxv2i64(<vscale x 2 x i64> %a) {
 define <vscale x 3 x half> @ucvtf_h_nxv3i1(<vscale x 3 x i1> %a) {
 ; CHECK-LABEL: ucvtf_h_nxv3i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.h, p0/m, #1.00000000
 ; CHECK-NEXT:    ret
   %res = uitofp <vscale x 3 x i1> %a to <vscale x 3 x half>
@@ -984,7 +984,7 @@ define <vscale x 3 x half> @ucvtf_h_nxv3i32(<vscale x 3 x i32> %a) {
 define <vscale x 4 x half> @ucvtf_h_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: ucvtf_h_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.h, p0/m, #1.00000000
 ; CHECK-NEXT:    ret
   %res = uitofp <vscale x 4 x i1> %a to <vscale x 4 x half>
@@ -1014,7 +1014,7 @@ define <vscale x 4 x half> @ucvtf_h_nxv4i32(<vscale x 4 x i32> %a) {
 define <vscale x 8 x half> @ucvtf_h_nxv8i1(<vscale x 8 x i1> %a) {
 ; CHECK-LABEL: ucvtf_h_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.h, p0/m, #1.00000000
 ; CHECK-NEXT:    ret
   %res = uitofp <vscale x 8 x i1> %a to <vscale x 8 x half>
@@ -1034,7 +1034,7 @@ define <vscale x 8 x half> @ucvtf_h_nxv8i16(<vscale x 8 x i16> %a) {
 define <vscale x 2 x float> @ucvtf_s_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: ucvtf_s_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.s, p0/m, #1.00000000
 ; CHECK-NEXT:    ret
   %res = uitofp <vscale x 2 x i1> %a to <vscale x 2 x float>
@@ -1064,7 +1064,7 @@ define <vscale x 2 x float> @ucvtf_s_nxv2i64(<vscale x 2 x i64> %a) {
 define <vscale x 4 x float> @ucvtf_s_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: ucvtf_s_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.s, p0/m, #1.00000000
 ; CHECK-NEXT:    ret
   %res = uitofp <vscale x 4 x i1> %a to <vscale x 4 x float>
@@ -1084,7 +1084,7 @@ define <vscale x 4 x float> @ucvtf_s_nxv4i32(<vscale x 4 x i32> %a) {
 define <vscale x 2 x double> @ucvtf_d_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: ucvtf_d_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov z0.d, p0/m, #1.00000000
 ; CHECK-NEXT:    ret
   %res = uitofp <vscale x 2 x i1> %a to <vscale x 2 x double>

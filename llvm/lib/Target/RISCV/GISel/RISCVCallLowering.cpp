@@ -552,7 +552,6 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (!FLI.CanLowerReturn)
     insertSRetIncomingArgument(F, SplitArgInfos, FLI.DemoteRegister, MRI, DL);
 
-  SmallVector<Type *, 4> TypeList;
   unsigned Index = 0;
   for (auto &Arg : F.args()) {
     // Construct the ArgInfo object from destination register and argument type.
@@ -608,7 +607,6 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       MIRBuilder.buildInstr(RISCV::ADJCALLSTACKDOWN);
 
   SmallVector<ArgInfo, 32> SplitArgInfos;
-  SmallVector<ISD::OutputArg, 8> Outs;
   for (auto &AInfo : Info.OrigArgs) {
     // Handle any required unmerging of split value types from a given VReg into
     // physical registers. ArgInfo objects are constructed correspondingly and

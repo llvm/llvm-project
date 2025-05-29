@@ -34,27 +34,22 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
                                           MAB.getTargetOptions().getABIName()));
   setFlagsFromFeatures(STI);
-  // `j label` in `.option norelax; j label; .option relax; ...; label:` needs a
-  // relocation to ensure the jump target is correct after linking. This is due
-  // to a limitation that shouldForceRelocation has to make the decision upfront
-  // without knowing a possibly future .option relax. When RISCVAsmParser is used,
-  // its ParseInstruction may call setForceRelocs as well.
-  if (STI.hasFeature(RISCV::FeatureRelax))
-    static_cast<RISCVAsmBackend &>(MAB).setForceRelocs();
 }
 
 RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
   return static_cast<RISCVELFStreamer &>(Streamer);
 }
 
-void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionExact() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionNoExact() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionPIC() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoPIC() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionRVC() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionNoRVC() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionRelax() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoRelax() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionRVC() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionNoRVC() {}
 
 void RISCVTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
   getStreamer().setAttributeItem(Attribute, Value, /*OverwriteExisting=*/true);

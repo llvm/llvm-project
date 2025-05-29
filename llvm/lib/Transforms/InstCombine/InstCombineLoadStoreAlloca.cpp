@@ -360,7 +360,10 @@ void PointerReplacer::replace(Instruction *I) {
 
     IC.InsertNewInstWith(NewI, LT->getIterator());
     IC.replaceInstUsesWith(*LT, NewI);
-    WorkMap[LT] = NewI;
+    // LT has actually been replaced by NewI. It is useless to insert LT into
+    // the map. Instead, we insert NewI into the map to indicate this is the
+    // replacement (new value).
+    WorkMap[NewI] = NewI;
   } else if (auto *PHI = dyn_cast<PHINode>(I)) {
     Type *NewTy = getReplacement(PHI->getIncomingValue(0))->getType();
     auto *NewPHI = PHINode::Create(NewTy, PHI->getNumIncomingValues(),

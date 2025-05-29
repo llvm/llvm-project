@@ -5,16 +5,12 @@ define amdgpu_kernel void @v_ashr_pk_i8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
 ; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v1, 0xffffff80
-; GFX950-NEXT:    v_mov_b32_e32 v2, 0x7f
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_ashr_i32 s1, s1, s2
-; GFX950-NEXT:    s_ashr_i32 s0, s0, s2
-; GFX950-NEXT:    v_med3_i32 v3, s0, v1, v2
-; GFX950-NEXT:    v_med3_i32 v1, s1, v1, v2
-; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
-; GFX950-NEXT:    v_or_b32_sdwa v1, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX950-NEXT:    s_and_b32 s2, s2, 31
+; GFX950-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-NEXT:    v_ashr_pk_i8_i32 v1, s0, v1, v2
 ; GFX950-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX950-NEXT:    s_endpgm
   %insert.0 = insertelement <2 x i32> poison, i32 %src0, i64 0
@@ -36,15 +32,12 @@ define amdgpu_kernel void @v_ashr_pk_u8_i32(ptr addrspace(1) %out, i32 %src0, i3
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
 ; GFX950-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
-; GFX950-NEXT:    v_mov_b32_e32 v1, 0xff
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    s_ashr_i32 s1, s1, s2
-; GFX950-NEXT:    s_ashr_i32 s0, s0, s2
-; GFX950-NEXT:    v_med3_i32 v2, s0, 0, v1
-; GFX950-NEXT:    v_med3_i32 v1, s1, 0, v1
-; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
-; GFX950-NEXT:    v_or_b32_e32 v1, v2, v1
+; GFX950-NEXT:    s_and_b32 s2, s2, 31
+; GFX950-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-NEXT:    v_mov_b32_e32 v2, s2
+; GFX950-NEXT:    v_ashr_pk_u8_i32 v1, s0, v1, v2
 ; GFX950-NEXT:    global_store_short v0, v1, s[6:7]
 ; GFX950-NEXT:    s_endpgm
   %insert.0 = insertelement <2 x i32> poison, i32 %src0, i64 0

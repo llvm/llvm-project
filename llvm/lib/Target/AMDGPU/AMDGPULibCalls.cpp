@@ -13,7 +13,6 @@
 
 #include "AMDGPU.h"
 #include "AMDGPULibFunc.h"
-#include "GCNSubtarget.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1361,6 +1360,11 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   bool const isSin = fInfo.getId() == AMDGPULibFunc::EI_SIN;
 
   Value *CArgVal = FPOp->getOperand(0);
+
+  // TODO: Constant fold the call
+  if (isa<ConstantData>(CArgVal))
+    return false;
+
   CallInst *CI = cast<CallInst>(FPOp);
 
   Function *F = B.GetInsertBlock()->getParent();

@@ -24,7 +24,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -50,7 +49,8 @@ class SPIRVAsmPrinter : public AsmPrinter {
 public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), ST(nullptr), TII(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), ST(nullptr), TII(nullptr) {}
+  static char ID;
   bool ModuleSectionsEmitted;
   const SPIRVSubtarget *ST;
   const SPIRVInstrInfo *TII;
@@ -611,6 +611,9 @@ void SPIRVAsmPrinter::outputModuleSections() {
   outputModuleSection(SPIRV::MB_DebugNames);
   // 7c. Debug: all OpModuleProcessed instructions.
   outputModuleSection(SPIRV::MB_DebugModuleProcessed);
+  // xxx. SPV_INTEL_memory_access_aliasing instructions go before 8.
+  // "All annotation instructions"
+  outputModuleSection(SPIRV::MB_AliasingInsts);
   // 8. All annotation instructions (all decorations).
   outputAnnotations(*M);
   // 9. All type declarations (OpTypeXXX instructions), all constant
@@ -631,6 +634,11 @@ bool SPIRVAsmPrinter::doInitialization(Module &M) {
   // We need to call the parent's one explicitly.
   return AsmPrinter::doInitialization(M);
 }
+
+char SPIRVAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(SPIRVAsmPrinter, "spirv-asm-printer", "SPIRV Assembly Printer",
+                false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVAsmPrinter() {

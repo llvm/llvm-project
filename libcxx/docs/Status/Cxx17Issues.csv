@@ -252,6 +252,7 @@
 "`LWG2760 <https://wg21.link/LWG2760>`__","non-const basic_string::data should not invalidate iterators","2016-11 (Issaquah)","|Complete|","",""
 "`LWG2765 <https://wg21.link/LWG2765>`__","Did LWG 1123 go too far?","2016-11 (Issaquah)","|Complete|","",""
 "`LWG2767 <https://wg21.link/LWG2767>`__","not_fn call_wrapper can form invalid types","2016-11 (Issaquah)","|Complete|","",""
+"`LWG2770 <https://wg21.link/LWG2770>`__","``tuple_size<const T>`` specialization is not SFINAE compatible and breaks decomposition declarations","2016-11 (Issaquah)","|Complete|","21",""
 "`LWG2771 <https://wg21.link/LWG2771>`__","Broken Effects of some basic_string::compare functions in terms of basic_string_view","2016-11 (Issaquah)","|Complete|","",""
 "`LWG2773 <https://wg21.link/LWG2773>`__","Making std::ignore constexpr","2016-11 (Issaquah)","|Complete|","",""
 "`LWG2777 <https://wg21.link/LWG2777>`__","basic_string_view::copy should use char_traits::copy","2016-11 (Issaquah)","|Complete|","",""

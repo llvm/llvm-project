@@ -913,6 +913,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       if (CondConstant)
         incrementProfileCounter(&S);
       if (Executed) {
+        MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
         RunCleanupsScope ExecutedScope(*this);
         EmitStmt(Executed);
       }
@@ -952,10 +953,13 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // there is a 'return' within the body, but this is particularly beneficial
   // when one if-stmt is nested within another if-stmt so that all of the MC/DC
   // updates are kept linear and consistent.
-  if (!CGM.getCodeGenOpts().MCDCCoverage)
-    EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock, ThenCount, LH);
-  else {
+  if (!CGM.getCodeGenOpts().MCDCCoverage) {
+    EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock, ThenCount, LH,
+                         /*ConditionalOp=*/nullptr,
+                         /*ConditionalDecl=*/S.getConditionVariable());
+  } else {
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+    MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
     Builder.CreateCondBr(BoolCondVal, ThenBlock, ElseBlock);
   }
 
@@ -1099,6 +1103,8 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // execution of the loop body.
   llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
 
+  MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
+
   // while(1) is common, avoid extra exit blocks.  Be sure
   // to correctly handle break/continue though.
   llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal);
@@ -1124,7 +1130,15 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
     if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
       BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
           BoolCondVal, Stmt::getLikelihood(S.getBody()));
-    Builder.CreateCondBr(BoolCondVal, LoopBody, ExitBlock, Weights);
+    auto *I = Builder.CreateCondBr(BoolCondVal, LoopBody, ExitBlock, Weights);
+    // Key Instructions: Emit the condition and branch as separate source
+    // location atoms otherwise we may omit a step onto the loop condition in
+    // favour of the `while` keyword.
+    // FIXME: We could have the branch as the backup location for the condition,
+    // which would probably be a better experience. Explore this later.
+    if (auto *CondI = dyn_cast<llvm::Instruction>(BoolCondVal))
+      addInstToNewSourceAtom(CondI, nullptr);
+    addInstToNewSourceAtom(I, nullptr);
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
@@ -1236,9 +1250,18 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // As long as the condition is true, iterate the loop.
   if (EmitBoolCondBranch) {
     uint64_t BackedgeCount = getProfileCount(S.getBody()) - ParentCount;
-    Builder.CreateCondBr(
+    auto *I = Builder.CreateCondBr(
         BoolCondVal, LoopBody, LoopExit.getBlock(),
         createProfileWeightsForLoop(S.getCond(), BackedgeCount));
+
+    // Key Instructions: Emit the condition and branch as separate source
+    // location atoms otherwise we may omit a step onto the loop condition in
+    // favour of the closing brace.
+    // FIXME: We could have the branch as the backup location for the condition,
+    // which would probably be a better experience (no jumping to the brace).
+    if (auto *CondI = dyn_cast<llvm::Instruction>(BoolCondVal))
+      addInstToNewSourceAtom(CondI, nullptr);
+    addInstToNewSourceAtom(I, nullptr);
   }
 
   LoopStack.pop();
@@ -1332,6 +1355,9 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // C99 6.8.5p2/p4: The first substatement is executed if the expression
     // compares unequal to 0.  The condition must be a scalar type.
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+
+    MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
+
     llvm::MDNode *Weights =
         createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
     if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
@@ -1662,7 +1688,7 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
     EmitStopPoint(&S);
 
   for (const auto *I : S.decls())
-    EmitDecl(*I);
+    EmitDecl(*I, /*EvaluateConditionDecl=*/true);
 }
 
 void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
@@ -2227,7 +2253,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
       // Emit the condition variable if needed inside the entire cleanup scope
       // used by this special case for constant folded switches.
       if (S.getConditionVariable())
-        EmitDecl(*S.getConditionVariable());
+        EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/true);
 
       // At this point, we are no longer "within" a switch instance, so
       // we can temporarily enforce this to ensure that any embedded case
@@ -2259,6 +2285,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   if (S.getConditionVariable())
     EmitDecl(*S.getConditionVariable());
   llvm::Value *CondV = EmitScalarExpr(S.getCond());
+  MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
 
   // Create basic block to hold stuff that comes after switch
   // statement. We also need to create a default block now so that
@@ -2266,6 +2293,21 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
+  addInstToNewSourceAtom(SwitchInsn, CondV);
+
+  if (HLSLControlFlowAttr != HLSLControlFlowHintAttr::SpellingNotCalculated) {
+    llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+    llvm::ConstantInt *BranchHintConstant =
+        HLSLControlFlowAttr ==
+                HLSLControlFlowHintAttr::Spelling::Microsoft_branch
+            ? llvm::ConstantInt::get(CGM.Int32Ty, 1)
+            : llvm::ConstantInt::get(CGM.Int32Ty, 2);
+    llvm::Metadata *Vals[] = {MDHelper.createString("hlsl.controlflow.hint"),
+                              MDHelper.createConstant(BranchHintConstant)};
+    SwitchInsn->setMetadata("hlsl.controlflow.hint",
+                            llvm::MDNode::get(CGM.getLLVMContext(), Vals));
+  }
+
   if (PGO.haveRegionCounts()) {
     // Walk the SwitchCase list to find how many there are.
     uint64_t DefaultCount = 0;
@@ -2576,11 +2618,14 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
 
   // Slap the source location of the inline asm into a !srcloc metadata on the
   // call.
-  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S))
-    Result.setMetadata("srcloc",
-                       getAsmSrcLocInfo(gccAsmStmt->getAsmString(), CGF));
-  else {
-    // At least put the line number on MS inline asm blobs.
+  const StringLiteral *SL;
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S);
+      gccAsmStmt &&
+      (SL = dyn_cast<StringLiteral>(gccAsmStmt->getAsmStringExpr()))) {
+    Result.setMetadata("srcloc", getAsmSrcLocInfo(SL, CGF));
+  } else {
+    // At least put the line number on MS inline asm blobs and GCC asm constexpr
+    // strings.
     llvm::Constant *Loc =
         llvm::ConstantInt::get(CGF.Int64Ty, S.getAsmLoc().getRawEncoding());
     Result.setMetadata("srcloc",
@@ -2695,9 +2740,9 @@ static void EmitHipStdParUnsupportedAsm(CodeGenFunction *CGF,
                                         const AsmStmt &S) {
   constexpr auto Name = "__ASM__hipstdpar_unsupported";
 
-  StringRef Asm;
+  std::string Asm;
   if (auto GCCAsm = dyn_cast<GCCAsmStmt>(&S))
-    Asm = GCCAsm->getAsmString()->getString();
+    Asm = GCCAsm->getAsmString();
 
   auto &Ctx = CGF->CGM.getLLVMContext();
 
@@ -3040,7 +3085,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
   // Clobbers
   for (unsigned i = 0, e = S.getNumClobbers(); i != e; i++) {
-    StringRef Clobber = S.getClobber(i);
+    std::string Clobber = S.getClobber(i);
 
     if (Clobber == "memory")
       ReadOnly = ReadNone = false;
@@ -3061,7 +3106,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         if (Constraints.find("=&A") != std::string::npos)
           continue;
         std::string::size_type position1 =
-            Constraints.find("={" + Clobber.str() + "}");
+            Constraints.find("={" + Clobber + "}");
         if (position1 != std::string::npos) {
           Constraints.insert(position1 + 1, "&");
           continue;

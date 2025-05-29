@@ -16,8 +16,6 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
-    "aix/HostInfoAIX.cpp",
-    "common/Alarm.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",
@@ -51,6 +49,7 @@ static_library("Host") {
     "common/UDPSocket.cpp",
     "common/XML.cpp",
     "common/ZipFileResolver.cpp",
+    "posix/Support.cpp",
   ]
 
   if (lldb_enable_libedit) {
@@ -88,6 +87,13 @@ static_library("Host") {
       "posix/MainLoopPosix.cpp",
       "posix/PipePosix.cpp",
       "posix/ProcessLauncherPosixFork.cpp",
+    ]
+  }
+
+  if (current_os == "aix") {
+    sources += [
+      "aix/Host.cpp",
+      "aix/HostInfoAIX.cpp",
     ]
   }
 

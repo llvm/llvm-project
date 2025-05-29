@@ -399,8 +399,8 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
 
   // Do not insert a TransposeOp, instead we fold the reshape and its attribute.
   llvm::SmallVector<int64_t> newShape;
-  if (!tosa::getConstShapeValue(reshapeOp.getShape().getDefiningOp(),
-                                newShape)) {
+  if (!tosa::getConstShapeValues(reshapeOp.getShape().getDefiningOp(),
+                                 newShape)) {
     // this mean shape is not constant
     return std::nullopt;
   }
@@ -418,7 +418,7 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
 std::optional<Value> TosaReduceTransposes::buildMappedToValue(
     ConstOp constOp, const DenseMap<Value, Value> &valuesMap,
     IRRewriter &rewriter, ArrayRef<int32_t> hoistedPerms) {
-  auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(constOp.getValue());
+  auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(constOp.getValues());
   if (!denseAttr)
     return std::nullopt;
   auto maybeNewDenseAttr = transposeDenseAttribute(denseAttr, hoistedPerms);

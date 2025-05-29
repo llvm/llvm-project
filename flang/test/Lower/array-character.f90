@@ -46,19 +46,19 @@ end program p
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 6 : i32
 ! CHECK:           %[[VAL_14:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_10]], %{{.*}}, %{{.*}}) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_16:.*]] = fir.embox %[[VAL_9]]#1(%[[VAL_15]]) : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>) -> !fir.box<!fir.array<3x!fir.char<1,4>>>
+! CHECK:           %[[VAL_16:.*]] = fir.embox %[[VAL_9]]#0(%[[VAL_15]]) : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>) -> !fir.box<!fir.array<3x!fir.char<1,4>>>
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.box<!fir.array<3x!fir.char<1,4>>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_14]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:           %[[VAL_19:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_14]]) fastmath<contract> : (!fir.ref<i8>) -> i32
-! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.ref<!fir.array<3x!fir.char<1,4>>>) -> !fir.ref<!fir.char<1,4>>
+! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.ref<!fir.array<3x!fir.char<1,4>>>) -> !fir.ref<!fir.char<1,4>>
 ! CHECK:           %[[VAL_21:.*]] = fir.emboxchar %[[VAL_20]], %[[VAL_0]] : (!fir.ref<!fir.char<1,4>>, index) -> !fir.boxchar<1>
-! CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_9]]#1 : (!fir.ref<!fir.array<3x!fir.char<1,4>>>) -> !fir.ref<!fir.char<1,4>>
+! CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.array<3x!fir.char<1,4>>>) -> !fir.ref<!fir.char<1,4>>
 ! CHECK:           %[[VAL_23:.*]] = fir.emboxchar %[[VAL_22]], %[[VAL_6]] : (!fir.ref<!fir.char<1,4>>, index) -> !fir.boxchar<1>
 ! CHECK:           fir.call @_QPissue(%[[VAL_21]], %[[VAL_23]]) fastmath<contract> : (!fir.boxchar<1>, !fir.boxchar<1>) -> ()
 ! CHECK:           %[[VAL_24:.*]] = arith.constant 6 : i32
 ! CHECK:           %[[VAL_28:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_24]], %{{.*}}, %{{.*}}) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_29:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_30:.*]] = fir.embox %[[VAL_4]]#1(%[[VAL_29]]) : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>) -> !fir.box<!fir.array<3x!fir.char<1,4>>>
+! CHECK:           %[[VAL_30:.*]] = fir.embox %[[VAL_4]]#0(%[[VAL_29]]) : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>) -> !fir.box<!fir.array<3x!fir.char<1,4>>>
 ! CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.box<!fir.array<3x!fir.char<1,4>>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_32:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_28]], %[[VAL_31]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:           %[[VAL_33:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_28]]) fastmath<contract> : (!fir.ref<i8>) -> i32
@@ -78,7 +78,7 @@ end
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_8]]) typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.4x3xc1.0"} : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.ref<!fir.array<4x!fir.char<1,3>>>)
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_9]]#1(%[[VAL_10]]) : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
+! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_9]]#0(%[[VAL_10]]) : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.array<4x!fir.char<1,3>>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_13:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_4]], %[[VAL_12]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:           %[[VAL_14:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_4]]) fastmath<contract> : (!fir.ref<i8>) -> i32
@@ -90,7 +90,7 @@ end
 ! CHECK:           %[[VAL_23:.*]] = fir.shape %[[VAL_21]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_20]](%[[VAL_23]]) typeparams %[[VAL_22]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.4x3xc1.0"} : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.ref<!fir.array<4x!fir.char<1,3>>>)
 ! CHECK:           %[[VAL_25:.*]] = fir.shape %[[VAL_21]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_26:.*]] = fir.embox %[[VAL_24]]#1(%[[VAL_25]]) : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
+! CHECK:           %[[VAL_26:.*]] = fir.embox %[[VAL_24]]#0(%[[VAL_25]]) : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
 ! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (!fir.box<!fir.array<4x!fir.char<1,3>>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_28:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_19]], %[[VAL_27]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:           %[[VAL_29:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_19]]) fastmath<contract> : (!fir.ref<i8>) -> i32
@@ -102,7 +102,7 @@ end
 ! CHECK:           %[[VAL_38:.*]] = fir.shape %[[VAL_36]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_39:.*]]:2 = hlfir.declare %[[VAL_35]](%[[VAL_38]]) typeparams %[[VAL_37]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.4x3xc1.0"} : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.ref<!fir.array<4x!fir.char<1,3>>>)
 ! CHECK:           %[[VAL_40:.*]] = fir.shape %[[VAL_36]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_41:.*]] = fir.embox %[[VAL_39]]#1(%[[VAL_40]]) : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
+! CHECK:           %[[VAL_41:.*]] = fir.embox %[[VAL_39]]#0(%[[VAL_40]]) : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
 ! CHECK:           %[[VAL_42:.*]] = fir.convert %[[VAL_41]] : (!fir.box<!fir.array<4x!fir.char<1,3>>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_43:.*]] = fir.call @_FortranAioOutputDescriptor(%[[VAL_34]], %[[VAL_42]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:           %[[VAL_44:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_34]]) fastmath<contract> : (!fir.ref<i8>) -> i32
