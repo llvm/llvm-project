@@ -503,6 +503,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         return false;
       [[fallthrough]];
     case RISCV::REM:
+    case RISCV::BREV8:
     case RISCV::ANDI:
     case RISCV::ORI:
     case RISCV::XORI:

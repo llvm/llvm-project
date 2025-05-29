@@ -42,7 +42,6 @@ define signext i32 @brev8_i32(i32 signext %a) nounwind {
 ; RV64ZBKB-LABEL: brev8_i32:
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    brev8 a0, a0
-; RV64ZBKB-NEXT:    sext.w a0, a0
 ; RV64ZBKB-NEXT:    ret
   %val = call i32 @llvm.riscv.brev8.i32(i32 %a)
   ret i32 %val
