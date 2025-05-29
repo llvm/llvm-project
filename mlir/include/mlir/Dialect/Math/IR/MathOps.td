@@ -560,6 +560,31 @@ def Math_ErfOp : Math_FloatUnaryOp<"erf"> {
   let hasFolder = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// ErfcOp
+//===----------------------------------------------------------------------===//
+
+def Math_ErfcOp : Math_FloatUnaryOp<"erfc"> {
+  let summary = "complementary error function of the specified value";
+  let description = [{
+
+    The `erfc` operation computes the complementary error function, defined as
+    1-erf(x). This function is part of libm and is needed for accuracy, since
+    simply calculating 1-erf(x) when x is close to 1 will give inaccurate results.
+    It takes one operand of floating point type (i.e., scalar,
+    tensor or vector) and returns one result of the same type. It has no
+    standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar error function value.
+    %a = math.erfc %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
 
 //===----------------------------------------------------------------------===//
 // ExpOp
@@ -711,6 +736,7 @@ def Math_IsFiniteOp : Math_FloatClassificationOp<"isfinite"> {
     %f = math.isfinite %a : f32
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -729,6 +755,7 @@ def Math_IsInfOp : Math_FloatClassificationOp<"isinf"> {
     %f = math.isinf %a : f32
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -747,6 +774,7 @@ def Math_IsNaNOp : Math_FloatClassificationOp<"isnan"> {
     %f = math.isnan %a : f32
     ```
   }];
+  let hasFolder = 1;
 }
 
 
@@ -766,6 +794,7 @@ def Math_IsNormalOp : Math_FloatClassificationOp<"isnormal"> {
     %f = math.isnormal %a : f32
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

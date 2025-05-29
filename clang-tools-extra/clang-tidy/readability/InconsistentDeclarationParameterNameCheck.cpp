@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InconsistentDeclarationParameterNameCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
-
-#include <functional>
 
 using namespace clang::ast_matchers;
 
@@ -343,9 +340,7 @@ void InconsistentDeclarationParameterNameCheck::check(
 
 void InconsistentDeclarationParameterNameCheck::markRedeclarationsAsVisited(
     const FunctionDecl *OriginalDeclaration) {
-  for (const FunctionDecl *Redecl : OriginalDeclaration->redecls()) {
-    VisitedDeclarations.insert(Redecl);
-  }
+  VisitedDeclarations.insert_range(OriginalDeclaration->redecls());
 }
 
 } // namespace clang::tidy::readability

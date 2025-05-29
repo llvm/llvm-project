@@ -10,6 +10,7 @@ add_flang_library(HLFIRTransforms
   ScheduleOrderedAssignments.cpp
   SimplifyHLFIRIntrinsics.cpp
   OptimizedBufferization.cpp
+  PropagateFortranVariableAttributes.cpp
 
   DEPENDS
   CUFAttrsIncGen

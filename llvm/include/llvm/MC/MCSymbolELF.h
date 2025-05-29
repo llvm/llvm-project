@@ -38,8 +38,8 @@ public:
 
   bool isBindingSet() const;
 
-  void setIsWeakrefUsedInReloc() const;
-  bool isWeakrefUsedInReloc() const;
+  void setIsWeakref() const;
+  bool isWeakref() const;
 
   void setIsSignature() const;
   bool isSignature() const;

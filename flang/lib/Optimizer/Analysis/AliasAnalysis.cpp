@@ -51,27 +51,6 @@ static bool hasGlobalOpTargetAttr(mlir::Value v, fir::AddrOfOp op) {
       v, fir::GlobalOp::getTargetAttrName(globalOpName));
 }
 
-static mlir::Value
-getOriginalDef(mlir::Value v,
-               fir::AliasAnalysis::Source::Attributes &attributes,
-               bool &isCapturedInInternalProcedure) {
-  mlir::Operation *defOp;
-  bool breakFromLoop = false;
-  while (!breakFromLoop && (defOp = v.getDefiningOp())) {
-    llvm::TypeSwitch<Operation *>(defOp)
-        .Case<fir::ConvertOp>([&](fir::ConvertOp op) { v = op.getValue(); })
-        .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
-          v = op.getMemref();
-          auto varIf = llvm::cast<fir::FortranVariableOpInterface>(defOp);
-          attributes |= getAttrsFromVariable(varIf);
-          isCapturedInInternalProcedure |=
-              varIf.isCapturedInInternalProcedure();
-        })
-        .Default([&](auto op) { breakFromLoop = true; });
-  }
-  return v;
-}
-
 static bool isEvaluateInMemoryBlockArg(mlir::Value v) {
   if (auto evalInMem = llvm::dyn_cast_or_null<hlfir::EvaluateInMemoryOp>(
           v.getParentRegion()->getParentOp()))
@@ -129,6 +108,14 @@ bool AliasAnalysis::isPointerReference(mlir::Type ty) {
 bool AliasAnalysis::Source::isTargetOrPointer() const {
   return attributes.test(Attribute::Pointer) ||
          attributes.test(Attribute::Target);
+}
+
+bool AliasAnalysis::Source::isTarget() const {
+  return attributes.test(Attribute::Target);
+}
+
+bool AliasAnalysis::Source::isPointer() const {
+  return attributes.test(Attribute::Pointer);
 }
 
 bool AliasAnalysis::Source::isDummyArgument() const {
@@ -553,6 +540,20 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           v = op.getVar();
           defOp = v.getDefiningOp();
         })
+        .Case<hlfir::AssociateOp>([&](auto op) {
+          mlir::Value source = op.getSource();
+          if (fir::isa_trivial(source.getType())) {
+            // Trivial values will always use distinct temp memory,
+            // so we can classify this as Allocate and stop.
+            type = SourceKind::Allocate;
+            breakFromLoop = true;
+          } else {
+            // AssociateOp may reuse the expression storage,
+            // so we have to trace further.
+            v = source;
+            defOp = v.getDefiningOp();
+          }
+        })
         .Case<fir::AllocaOp, fir::AllocMemOp>([&](auto op) {
           // Unique memory allocation.
           type = SourceKind::Allocate;
@@ -562,6 +563,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // Skip ConvertOp's and track further through the operand.
           v = op->getOperand(0);
           defOp = v.getDefiningOp();
+        })
+        .Case<fir::PackArrayOp>([&](auto op) {
+          // The packed array is not distinguishable from the original
+          // array, so skip PackArrayOp and track further through
+          // the array operand.
+          v = op.getArray();
+          defOp = v.getDefiningOp();
+          approximateSource = true;
         })
         .Case<fir::BoxAddrOp>([&](auto op) {
           v = op->getOperand(0);
@@ -608,31 +617,32 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             if (mlir::isa<fir::PointerType>(boxTy.getEleTy()))
               attributes.set(Attribute::Pointer);
 
-            auto def = getOriginalDef(op.getMemref(), attributes,
-                                      isCapturedInInternalProcedure);
-            if (auto addrOfOp = def.template getDefiningOp<fir::AddrOfOp>()) {
-              global = addrOfOp.getSymbol();
+            auto boxSrc = getSource(op.getMemref());
+            attributes |= boxSrc.attributes;
+            approximateSource |= boxSrc.approximateSource;
+            isCapturedInInternalProcedure |=
+                boxSrc.isCapturedInInternalProcedure;
 
-              if (hasGlobalOpTargetAttr(def, addrOfOp))
-                attributes.set(Attribute::Target);
-
+            global = llvm::dyn_cast<mlir::SymbolRefAttr>(boxSrc.origin.u);
+            if (global) {
               type = SourceKind::Global;
+            } else {
+              auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
+              // TODO: Add support to fir.allocmem
+              if (auto allocOp = def.template getDefiningOp<fir::AllocaOp>()) {
+                v = def;
+                defOp = v.getDefiningOp();
+                type = SourceKind::Allocate;
+              } else if (isDummyArgument(def)) {
+                defOp = nullptr;
+                v = def;
+              } else {
+                type = SourceKind::Indirect;
+              }
             }
-            // TODO: Add support to fir.allocmem
-            else if (auto allocOp =
-                         def.template getDefiningOp<fir::AllocaOp>()) {
-              v = def;
-              defOp = v.getDefiningOp();
-              type = SourceKind::Allocate;
-            } else if (isDummyArgument(def)) {
-              defOp = nullptr;
-              v = def;
-            }
-
             breakFromLoop = true;
             return;
           }
-
           // No further tracking for addresses loaded from memory for now.
           type = SourceKind::Indirect;
           breakFromLoop = true;

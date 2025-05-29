@@ -6,29 +6,29 @@ target datalayout = "e-p:64:64"
 
 declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 
-; CHECK-DAG: @__typeid_single_global_addr = external hidden global [0 x i8]
-; CHECK-DAG: @__typeid_inline6_global_addr = external hidden global [0 x i8]
+; CHECK-DAG: @__typeid_single_global_addr = external hidden global [0 x i8], code_model "small"
+; CHECK-DAG: @__typeid_inline6_global_addr = external hidden global [0 x i8], code_model "small"
 ; X86-DAG: @__typeid_inline6_align = external hidden global [0 x i8], !absolute_symbol !0
 ; X86-DAG: @__typeid_inline6_size_m1 = external hidden global [0 x i8], !absolute_symbol !1
 ; X86-DAG: @__typeid_inline6_inline_bits = external hidden global [0 x i8], !absolute_symbol !2
-; CHECK-DAG: @__typeid_inline5_global_addr = external hidden global [0 x i8]
+; CHECK-DAG: @__typeid_inline5_global_addr = external hidden global [0 x i8], code_model "small"
 ; X86-DAG: @__typeid_inline5_align = external hidden global [0 x i8], !absolute_symbol !0
 ; X86-DAG: @__typeid_inline5_size_m1 = external hidden global [0 x i8], !absolute_symbol !3
 ; X86-DAG: @__typeid_inline5_inline_bits = external hidden global [0 x i8], !absolute_symbol !4
-; CHECK-DAG: @__typeid_bytearray32_global_addr = external hidden global [0 x i8]
+; CHECK-DAG: @__typeid_bytearray32_global_addr = external hidden global [0 x i8], code_model "small"
 ; X86-DAG: @__typeid_bytearray32_align = external hidden global [0 x i8], !absolute_symbol !0
 ; X86-DAG: @__typeid_bytearray32_size_m1 = external hidden global [0 x i8], !absolute_symbol !4
 ; CHECK-DAG: @__typeid_bytearray32_byte_array = external hidden global [0 x i8]
 ; X86-DAG: @__typeid_bytearray32_bit_mask = external hidden global [0 x i8], !absolute_symbol !0
-; CHECK-DAG: @__typeid_bytearray7_global_addr = external hidden global [0 x i8]
+; CHECK-DAG: @__typeid_bytearray7_global_addr = external hidden global [0 x i8], code_model "small"
 ; X86-DAG: @__typeid_bytearray7_align = external hidden global [0 x i8], !absolute_symbol !0
 ; X86-DAG: @__typeid_bytearray7_size_m1 = external hidden global [0 x i8], !absolute_symbol !5
 ; CHECK-DAG: @__typeid_bytearray7_byte_array = external hidden global [0 x i8]
 ; X86-DAG: @__typeid_bytearray7_bit_mask = external hidden global [0 x i8], !absolute_symbol !0
-; CHECK-DAG: @__typeid_allones32_global_addr = external hidden global [0 x i8]
+; CHECK-DAG: @__typeid_allones32_global_addr = external hidden global [0 x i8], code_model "small"
 ; X86-DAG: @__typeid_allones32_align = external hidden global [0 x i8], !absolute_symbol !0
 ; X86-DAG: @__typeid_allones32_size_m1 = external hidden global [0 x i8], !absolute_symbol !4
-; CHECK-DAG: @__typeid_allones7_global_addr = external hidden global [0 x i8]
+; CHECK-DAG: @__typeid_allones7_global_addr = external hidden global [0 x i8], code_model "small"
 ; X86-DAG: @__typeid_allones7_align = external hidden global [0 x i8], !absolute_symbol !0
 ; X86-DAG: @__typeid_allones7_size_m1 = external hidden global [0 x i8], !absolute_symbol !5
 

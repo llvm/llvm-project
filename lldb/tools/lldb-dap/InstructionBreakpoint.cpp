@@ -9,25 +9,25 @@
 
 #include "InstructionBreakpoint.h"
 #include "DAP.h"
-#include "JSONUtils.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBTarget.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace lldb_dap {
 
-// Instruction Breakpoint
-InstructionBreakpoint::InstructionBreakpoint(DAP &d,
-                                             const llvm::json::Object &obj)
-    : Breakpoint(d, obj), instructionAddressReference(LLDB_INVALID_ADDRESS),
-      offset(GetSigned(obj, "offset", 0)) {
-  GetString(obj, "instructionReference")
-      .getAsInteger(0, instructionAddressReference);
-  instructionAddressReference += offset;
+InstructionBreakpoint::InstructionBreakpoint(
+    DAP &d, const protocol::InstructionBreakpoint &breakpoint)
+    : Breakpoint(d, breakpoint.condition, breakpoint.hitCondition),
+      m_instruction_address_reference(LLDB_INVALID_ADDRESS),
+      m_offset(breakpoint.offset.value_or(0)) {
+  llvm::StringRef instruction_reference(breakpoint.instructionReference);
+  instruction_reference.getAsInteger(0, m_instruction_address_reference);
+  m_instruction_address_reference += m_offset;
 }
 
 void InstructionBreakpoint::SetBreakpoint() {
-  bp = dap.target.BreakpointCreateByAddress(instructionAddressReference);
+  m_bp =
+      m_dap.target.BreakpointCreateByAddress(m_instruction_address_reference);
   Breakpoint::SetBreakpoint();
 }
 

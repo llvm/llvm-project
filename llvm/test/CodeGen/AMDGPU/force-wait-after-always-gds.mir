@@ -1,0 +1,26 @@
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass si-insert-waitcnts %s -o - | FileCheck -check-prefix=GCN %s
+
+---
+# GCN-LABEL: name: test_ordered_count
+# GCN:       bb.0
+# GCN:       DS_ADD_U32
+# GCN:       DS_SUB_U32
+# GCN-NEXT:  S_WAITCNT 64535
+# GCN-NEXT:  $vgpr3 = DS_ORDERED_COUNT
+# GCN-NEXT:  S_WAITCNT 64519
+# GCN-NEXT:  $vgpr4_vgpr5 = DS_ADD_GS_REG_RTN
+# GCN-NEXT:  S_WAITCNT 64519
+# GCN-NEXT:  S_NOP 0
+
+name:   test_ordered_count
+body:    |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    DS_ADD_U32 $vgpr1, $vgpr2, 12, -1, implicit $m0, implicit $exec :: (load store (s32), addrspace 3)
+    DS_SUB_U32 $vgpr1, $vgpr2, 12, 0, implicit $m0, implicit $exec :: (load store (s32), addrspace 2)
+    $vgpr3 = DS_ORDERED_COUNT $vgpr0, 772, implicit $m0, implicit $exec :: (load store (s32), addrspace 3)
+    $vgpr4_vgpr5 = DS_ADD_GS_REG_RTN $vgpr0, 32, implicit $m0, implicit $exec :: (load store (s32), addrspace 3)
+    S_ENDPGM 0
+
+...

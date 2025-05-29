@@ -10,8 +10,7 @@
 define aarch64_sve_vector_pcs <vscale x 4 x i32> @callee_with_many_sve_arg(<vscale x 4 x i32> %z0, <vscale x 4 x i32> %z1, <vscale x 4 x i32> %z2, <vscale x 4 x i32> %z3, <vscale x 4 x i32> %z4, <vscale x 4 x i32> %z5, <vscale x 4 x i32> %z6, <vscale x 4 x i32> %z7, <vscale x 4 x i32> %z8, <vscale x 4 x i32> %z9) {
 ; CHECK: name: callee_with_many_sve_arg
 ; CHECK-DAG: [[BASE:%[0-9]+]]:gpr64common = COPY $x1
-; CHECK-DAG: [[PTRUE:%[0-9]+]]:ppr_3b = PTRUE_S 31
-; CHECK-DAG: [[RES:%[0-9]+]]:zpr = LD1W_IMM killed [[PTRUE]], [[BASE]]
+; CHECK-DAG: [[RES:%[0-9]+]]:zpr = LDR_ZXI [[BASE]], 0
 ; CHECK-DAG: $z0 = COPY [[RES]]
 ; CHECK:     RET_ReallyLR implicit $z0
   ret <vscale x 4 x i32> %z9
@@ -25,9 +24,8 @@ define aarch64_sve_vector_pcs <vscale x 4 x i32> @caller_with_many_sve_arg(<vsca
 ; CHECK-NEXT:     stack-id: scalable-vector
 ; CHECK:      - { id: 1, name: '', type: default, offset: 0, size: 16, alignment: 16,
 ; CHECK-NEXT:     stack-id: scalable-vector
-; CHECK-DAG:  [[PTRUE:%[0-9]+]]:ppr_3b = PTRUE_S 31
-; CHECK-DAG:  ST1W_IMM %{{[0-9]+}}, [[PTRUE]], %stack.1, 0
-; CHECK-DAG:  ST1W_IMM %{{[0-9]+}}, [[PTRUE]], %stack.0, 0
+; CHECK-DAG:  STR_ZXI %{{[0-9]+}}, %stack.1, 0
+; CHECK-DAG:  STR_ZXI %{{[0-9]+}}, %stack.0, 0
 ; CHECK-DAG:  [[BASE2:%[0-9]+]]:gpr64sp = ADDXri %stack.1, 0
 ; CHECK-DAG:  [[BASE1:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0
 ; CHECK-DAG:  $x0 = COPY [[BASE1]]
@@ -266,10 +264,10 @@ define aarch64_sve_vector_pcs [4 x <vscale x 16 x i1>] @callee_with_svepred_arg_
   %r1 = and <vscale x 16 x i1> %p1, %p5
   %r2 = and <vscale x 16 x i1> %p2, %p6
   %r3 = and <vscale x 16 x i1> %p3, %p7
-  %1 = insertvalue  [4 x <vscale x 16 x i1>] undef, <vscale x 16 x i1> %r0, 0
-  %2 = insertvalue  [4 x <vscale x 16 x i1>]    %1, <vscale x 16 x i1> %r1, 1
-  %3 = insertvalue  [4 x <vscale x 16 x i1>]    %2, <vscale x 16 x i1> %r2, 2
-  %4 = insertvalue  [4 x <vscale x 16 x i1>]    %3, <vscale x 16 x i1> %r3, 3
+  %1 = insertvalue  [4 x <vscale x 16 x i1>] poison, <vscale x 16 x i1> %r0, 0
+  %2 = insertvalue  [4 x <vscale x 16 x i1>] %1, <vscale x 16 x i1> %r1, 1
+  %3 = insertvalue  [4 x <vscale x 16 x i1>] %2, <vscale x 16 x i1> %r2, 2
+  %4 = insertvalue  [4 x <vscale x 16 x i1>] %3, <vscale x 16 x i1> %r3, 3
   ret [4 x <vscale x 16 x i1>] %4
 }
 
@@ -288,8 +286,7 @@ define aarch64_sve_vector_pcs <vscale x 4 x i32> @callee_with_many_gpr_sve_arg(i
 ; CHECK: fixedStack:
 ; CHECK:      - { id: 0, type: default, offset: 8, size: 8, alignment: 8, stack-id: default,
 ; CHECK-DAG: [[BASE:%[0-9]+]]:gpr64common = LDRXui %fixed-stack.0, 0
-; CHECK-DAG: [[PTRUE:%[0-9]+]]:ppr_3b = PTRUE_S 31
-; CHECK-DAG: [[RES:%[0-9]+]]:zpr = LD1W_IMM killed [[PTRUE]], killed [[BASE]]
+; CHECK-DAG: [[RES:%[0-9]+]]:zpr = LDR_ZXI killed [[BASE]]
 ; CHECK-DAG: $z0 = COPY [[RES]]
 ; CHECK: RET_ReallyLR implicit $z0
   ret <vscale x 4 x i32> %z9
@@ -303,10 +300,8 @@ define aarch64_sve_vector_pcs <vscale x 4 x i32> @caller_with_many_gpr_sve_arg(i
 ; CHECK-NEXT:     stack-id: scalable-vector
 ; CHECK:      - { id: 1, name: '', type: default, offset: 0, size: 16, alignment: 16,
 ; CHECK-NEXT:     stack-id: scalable-vector
-; CHECK-DAG: [[PTRUE_S:%[0-9]+]]:ppr_3b = PTRUE_S 31
-; CHECK-DAG: [[PTRUE_D:%[0-9]+]]:ppr_3b = PTRUE_D 31
-; CHECK-DAG: ST1D_IMM %{{[0-9]+}}, killed [[PTRUE_D]], %stack.0, 0
-; CHECK-DAG: ST1W_IMM %{{[0-9]+}}, killed [[PTRUE_S]], %stack.1, 0
+; CHECK-DAG: STR_ZXI %{{[0-9]+}}, %stack.0, 0
+; CHECK-DAG: STR_ZXI %{{[0-9]+}}, %stack.1, 0
 ; CHECK-DAG: [[BASE1:%[0-9]+]]:gpr64common = ADDXri %stack.0, 0
 ; CHECK-DAG: [[BASE2:%[0-9]+]]:gpr64common = ADDXri %stack.1, 0
 ; CHECK-DAG: [[SP:%[0-9]+]]:gpr64sp = COPY $sp

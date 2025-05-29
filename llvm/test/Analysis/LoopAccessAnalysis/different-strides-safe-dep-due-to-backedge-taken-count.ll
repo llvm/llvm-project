@@ -106,13 +106,12 @@ exit:
   ret void
 }
 
-define void @unknown_dep_not_known_safe_due_to_backedge_taken_count(ptr %A) {
-; CHECK-LABEL: 'unknown_dep_not_known_safe_due_to_backedge_taken_count'
+define void @backward_dep_known_distance_less_than_btc(ptr %A) {
+; CHECK-LABEL: 'backward_dep_known_distance_less_than_btc'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 8160 bits
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
 ; CHECK-NEXT:            store i32 %add, ptr %gep.mul.2, align 4
 ; CHECK-EMPTY:

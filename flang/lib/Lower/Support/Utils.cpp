@@ -70,18 +70,12 @@ public:
     return getHashValue(x.base()) * 89u - subs;
   }
   static unsigned getHashValue(const Fortran::evaluate::CoarrayRef &x) {
-    unsigned subs = 1u;
-    for (const Fortran::evaluate::Subscript &v : x.subscript())
-      subs -= getHashValue(v);
     unsigned cosubs = 3u;
     for (const Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> &v :
          x.cosubscript())
       cosubs -= getHashValue(v);
-    unsigned syms = 7u;
-    for (const Fortran::evaluate::SymbolRef &v : x.base())
-      syms += getHashValue(v);
-    return syms * 97u - subs - cosubs + getHashValue(x.stat()) + 257u +
-           getHashValue(x.team());
+    return getHashValue(x.base()) * 97u - cosubs + getHashValue(x.stat()) +
+           257u + getHashValue(x.team());
   }
   static unsigned getHashValue(const Fortran::evaluate::NamedEntity &x) {
     if (x.IsSymbol())
@@ -339,7 +333,6 @@ public:
   static bool isEqual(const Fortran::evaluate::CoarrayRef &x,
                       const Fortran::evaluate::CoarrayRef &y) {
     return isEqual(x.base(), y.base()) &&
-           isEqual(x.subscript(), y.subscript()) &&
            isEqual(x.cosubscript(), y.cosubscript()) &&
            isEqual(x.stat(), y.stat()) && isEqual(x.team(), y.team());
   }
@@ -478,9 +471,47 @@ public:
     return isEqual(x.proc(), y.proc()) && isEqual(x.arguments(), y.arguments());
   }
   template <typename A>
+  static bool isEqual(const Fortran::evaluate::ImpliedDo<A> &x,
+                      const Fortran::evaluate::ImpliedDo<A> &y) {
+    return isEqual(x.values(), y.values()) && isEqual(x.lower(), y.lower()) &&
+           isEqual(x.upper(), y.upper()) && isEqual(x.stride(), y.stride());
+  }
+  template <typename A>
+  static bool isEqual(const Fortran::evaluate::ArrayConstructorValues<A> &x,
+                      const Fortran::evaluate::ArrayConstructorValues<A> &y) {
+    using Expr = Fortran::evaluate::Expr<A>;
+    using ImpliedDo = Fortran::evaluate::ImpliedDo<A>;
+    for (const auto &[xValue, yValue] : llvm::zip(x, y)) {
+      bool checkElement = Fortran::common::visit(
+          common::visitors{
+              [&](const Expr &v, const Expr &w) { return isEqual(v, w); },
+              [&](const ImpliedDo &v, const ImpliedDo &w) {
+                return isEqual(v, w);
+              },
+              [&](const Expr &, const ImpliedDo &) { return false; },
+              [&](const ImpliedDo &, const Expr &) { return false; },
+          },
+          xValue.u, yValue.u);
+      if (!checkElement) {
+        return false;
+      }
+    }
+    return true;
+  }
+  static bool isEqual(const Fortran::evaluate::SubscriptInteger &x,
+                      const Fortran::evaluate::SubscriptInteger &y) {
+    return x == y;
+  }
+  template <typename A>
   static bool isEqual(const Fortran::evaluate::ArrayConstructor<A> &x,
                       const Fortran::evaluate::ArrayConstructor<A> &y) {
-    llvm::report_fatal_error("not implemented");
+    bool checkCharacterType = true;
+    if constexpr (A::category == Fortran::common::TypeCategory::Character) {
+      checkCharacterType = isEqual(*x.LEN(), *y.LEN());
+    }
+    using Base = Fortran::evaluate::ArrayConstructorValues<A>;
+    return isEqual((Base)x, (Base)y) &&
+           (x.GetType() == y.GetType() && checkCharacterType);
   }
   static bool isEqual(const Fortran::evaluate::ImpliedDoIndex &x,
                       const Fortran::evaluate::ImpliedDoIndex &y) {

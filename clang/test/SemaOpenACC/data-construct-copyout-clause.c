@@ -58,12 +58,12 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc data copyout((float)ArrayParam[2])
   ;
-  // expected-error@+2{{invalid tag 'invalid' on 'copyout' clause}}
+  // expected-error@+2{{unknown modifier 'invalid' in OpenACC modifier-list on 'copyout' clause}}
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc data copyout(invalid:(float)ArrayParam[2])
   ;
 
-  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
+  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}
   // expected-error@+1{{OpenACC 'copyout' clause is not valid on 'enter data' directive}}
 #pragma acc enter data copyout(LocalInt)
   // expected-error@+2{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}
@@ -71,3 +71,25 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc host_data pcopyout(LocalInt)
   ;
 }
+
+void ModList() {
+  int V1;
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
+#pragma acc data copyout(always, alwaysin, alwaysout, zero, readonly: V1)
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+#pragma acc data copyout(alwaysout: V1)
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
+#pragma acc data copyout(readonly: V1)
+#pragma acc data copyout(always, alwaysin, zero: V1)
+
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
+#pragma acc exit data copyout(always, alwaysin, alwaysout, zero, readonly: V1)
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyout' clause}}
+#pragma acc exit data copyout(alwaysout: V1)
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
+#pragma acc exit data copyout(readonly: V1)
+#pragma acc exit data copyout(always, alwaysin, zero: V1)
+}
+

@@ -117,17 +117,16 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     CInvok->getFrontendOpts().Inputs.push_back(InputFile);
 
     TextDiagnosticPrinter *DiagClient =
-      new TextDiagnosticPrinter(llvm::errs(), new DiagnosticOptions());
+        new TextDiagnosticPrinter(llvm::errs(), CI.getDiagnosticOpts());
     IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-        new DiagnosticsEngine(DiagID, &CI.getDiagnosticOpts(), DiagClient));
+        new DiagnosticsEngine(DiagID, CI.getDiagnosticOpts(), DiagClient));
 
-    std::unique_ptr<CompilerInstance> Clang(
-        new CompilerInstance(CI.getPCHContainerOperations()));
-    Clang->setInvocation(std::move(CInvok));
+    auto Clang = std::make_unique<CompilerInstance>(
+        std::move(CInvok), CI.getPCHContainerOperations());
     Clang->setDiagnostics(Diags.get());
     Clang->setTarget(TargetInfo::CreateTargetInfo(
-        Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
+        Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
     Clang->createFileManager();
     Clang->createSourceManager(Clang->getFileManager());
     Clang->createPreprocessor(TU_Prefix);

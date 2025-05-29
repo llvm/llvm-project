@@ -47,10 +47,6 @@ const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
 
-const Symbol *FindPointerComponent(const Scope &);
-const Symbol *FindPointerComponent(const DerivedTypeSpec &);
-const Symbol *FindPointerComponent(const DeclTypeSpec &);
-const Symbol *FindPointerComponent(const Symbol &);
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
 const Symbol *FindOverriddenBinding(
@@ -222,6 +218,16 @@ inline bool HasCUDAAttr(const Symbol &sym) {
   return false;
 }
 
+inline bool IsCUDAShared(const Symbol &sym) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Shared) {
+      return true;
+    }
+  }
+  return false;
+}
+
 inline bool NeedCUDAAlloc(const Symbol &sym) {
   if (IsDummy(sym)) {
     return false;
@@ -231,6 +237,7 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
         (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
             *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
             *details->cudaDataAttr() == common::CUDADataAttr::Unified ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
             *details->cudaDataAttr() == common::CUDADataAttr::Pinned)) {
       return true;
     }
@@ -630,6 +637,10 @@ using PotentialAndPointerComponentIterator =
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
     const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
+    const DerivedTypeSpec &);
+PotentialAndPointerComponentIterator::const_iterator
+FindPointerPotentialComponent(const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindPointerUltimateComponent(
@@ -753,19 +764,14 @@ inline bool checkForSingleVariableOnRHS(
   return designator != nullptr;
 }
 
-/// Checks if the symbol on the LHS of the assignment statement is present in
-/// the RHS expression.
-inline bool checkForSymbolMatch(
-    const Fortran::parser::AssignmentStmt &assignmentStmt) {
-  const auto &var{std::get<Fortran::parser::Variable>(assignmentStmt.t)};
-  const auto &expr{std::get<Fortran::parser::Expr>(assignmentStmt.t)};
-  const auto *e{Fortran::semantics::GetExpr(expr)};
-  const auto *v{Fortran::semantics::GetExpr(var)};
-  auto varSyms{Fortran::evaluate::GetSymbolVector(*v)};
-  const Fortran::semantics::Symbol &varSymbol{*varSyms.front()};
+/// Checks if the symbol on the LHS is present in the RHS expression.
+inline bool checkForSymbolMatch(const Fortran::semantics::SomeExpr *lhs,
+    const Fortran::semantics::SomeExpr *rhs) {
+  auto lhsSyms{Fortran::evaluate::GetSymbolVector(*lhs)};
+  const Fortran::semantics::Symbol &lhsSymbol{*lhsSyms.front()};
   for (const Fortran::semantics::Symbol &symbol :
-      Fortran::evaluate::GetSymbolVector(*e)) {
-    if (varSymbol == symbol) {
+      Fortran::evaluate::GetSymbolVector(*rhs)) {
+    if (lhsSymbol == symbol) {
       return true;
     }
   }

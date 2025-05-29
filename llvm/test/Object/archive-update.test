@@ -17,7 +17,7 @@ RUN: touch -m -t 200001010000 %t/tmp.older/evenlen || sleep 2.1
 RUN: echo newer > %t/tmp.newer/evenlen
 RUN: touch %t/tmp.newer/evenlen
 
-Create an achive with the newest file
+Create an archive with the newest file
 RUN: llvm-ar rU %t/tmp.a %t/tmp.newer/evenlen
 RUN: llvm-ar p %t/tmp.a | FileCheck --check-prefix=NEWER %s
 

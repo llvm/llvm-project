@@ -1,5 +1,7 @@
 add_llvm_component_library(LLVMProfileData
+  DataAccessProf.cpp
   GCOV.cpp
+  IndexedMemProfData.cpp
   InstrProf.cpp
   InstrProfCorrelator.cpp
   InstrProfReader.cpp
@@ -7,6 +9,9 @@ add_llvm_component_library(LLVMProfileData
   ItaniumManglingCanonicalizer.cpp
   MemProf.cpp
   MemProfReader.cpp
+  MemProfRadixTree.cpp
+  MemProfSummary.cpp
+  MemProfSummaryBuilder.cpp
   PGOCtxProfReader.cpp
   PGOCtxProfWriter.cpp
   ProfileSummaryBuilder.cpp

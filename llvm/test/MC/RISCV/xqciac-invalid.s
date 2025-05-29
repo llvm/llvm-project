@@ -25,7 +25,7 @@ qc.muliadd x0, x10, 1048577
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.muliadd x10
 
-# CHECK-IMM: :[[@LINE+1]]:22: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+# CHECK-IMM: :[[@LINE+1]]:22: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 qc.muliadd x10, x15, 8589934592
 
 # CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)

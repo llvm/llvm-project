@@ -11,8 +11,6 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
-#include "lld/Common/ErrorHandler.h"
-#include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::support::endian;

@@ -112,7 +112,7 @@ BitVector RegScavenger::getRegsAvailable(const TargetRegisterClass *RC) {
   BitVector Mask(TRI->getNumRegs());
   for (Register Reg : *RC)
     if (!isRegUsed(Reg))
-      Mask.set(Reg);
+      Mask.set(Reg.id());
   return Mask;
 }
 
@@ -467,7 +467,7 @@ void llvm::scavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger &RS) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   // Shortcut.
   if (MRI.getNumVirtRegs() == 0) {
-    MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+    MF.getProperties().setNoVRegs();
     return;
   }
 
@@ -489,7 +489,7 @@ void llvm::scavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger &RS) {
   }
 
   MRI.clearVirtRegs();
-  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  MF.getProperties().setNoVRegs();
 }
 
 namespace {

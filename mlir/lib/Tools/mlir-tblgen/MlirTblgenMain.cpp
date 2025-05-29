@@ -70,7 +70,7 @@ static bool findUse(const Init *field, const Init *deprecatedInit,
   }
 
   if (const ListInit *li = dyn_cast<ListInit>(field)) {
-    return memoize(llvm::any_of(li->getValues(), [&](const Init *jt) {
+    return memoize(llvm::any_of(li->getElements(), [&](const Init *jt) {
       return findUse(jt, deprecatedInit, known);
     }));
   }

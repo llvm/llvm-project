@@ -317,8 +317,20 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
   const object::SectionedAddress SecAddress{
       StartAddress, object::SectionedAddress::UndefSection};
 
+  // Attempt to retrieve DW_AT_LLVM_stmt_sequence if present.
+  std::optional<uint64_t> StmtSeqOffset;
+  if (auto StmtSeqAttr = Die.find(llvm::dwarf::DW_AT_LLVM_stmt_sequence)) {
+    // The `DW_AT_LLVM_stmt_sequence` attribute might be set to `UINT64_MAX`
+    // when it refers to an empty line sequence. In such cases, the DWARF linker
+    // will exclude the empty sequence from the final output and assign
+    // `UINT64_MAX` to the `DW_AT_LLVM_stmt_sequence` attribute.
+    uint64_t StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, UINT64_MAX);
+    if (StmtSeqVal != UINT64_MAX)
+      StmtSeqOffset = StmtSeqVal;
+  }
 
-  if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector)) {
+  if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector,
+                                         StmtSeqOffset)) {
     // If we have a DW_TAG_subprogram but no line entries, fall back to using
     // the DW_AT_decl_file an d DW_AT_decl_line if we have both attributes.
     std::string FilePath = Die.getDeclFile(
@@ -609,9 +621,7 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
     if (!FI.CallSites)
       FI.CallSites = CallSiteInfoCollection();
     // Append parsed DWARF callsites:
-    FI.CallSites->CallSites.insert(FI.CallSites->CallSites.end(),
-                                   CSIC.CallSites.begin(),
-                                   CSIC.CallSites.end());
+    llvm::append_range(FI.CallSites->CallSites, CSIC.CallSites);
   }
 }
 
@@ -646,6 +656,11 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
       handleDie(Out, CUI, Die);
+      // Release the line table, once we're done.
+      DICtx.clearLineTableForUnit(CU.get());
+      // Free any DIEs that were allocated by the DWARF parser.
+      // If/when they're needed by other CU's, they'll be recreated.
+      CU->clearDIEs(/*KeepCUDie=*/false, /*KeepDWODIEs=*/false);
     }
   } else {
     // LLVM Dwarf parser is not thread-safe and we need to parse all DWARF up
@@ -658,12 +673,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
     for (const auto &CU : DICtx.compile_units())
       CU->getAbbreviations();
 
-    // Now parse all DIEs in case we have cross compile unit references in a
-    // thread pool.
     DefaultThreadPool pool(hardware_concurrency(NumThreads));
-    for (const auto &CU : DICtx.compile_units())
-      pool.async([&CU]() { CU->getUnitDIE(false /*CUDieOnly*/); });
-    pool.wait();
 
     // Now convert all DWARF to GSYM in a thread pool.
     std::mutex LogMutex;
@@ -671,11 +681,15 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
-        pool.async([this, CUI, &LogMutex, &Out, Die]() mutable {
+        pool.async([this, CUI, &CU, &LogMutex, &Out, Die]() mutable {
           std::string storage;
           raw_string_ostream StrStream(storage);
           OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr);
           handleDie(ThreadOut, CUI, Die);
+          DICtx.clearLineTableForUnit(CU.get());
+          // Free any DIEs that were allocated by the DWARF parser.
+          // If/when they're needed by other CU's, they'll be recreated.
+          CU->clearDIEs(/*KeepCUDie=*/false, /*KeepDWODIEs=*/false);
           // Print ThreadLogStorage lines into an actual stream under a lock
           std::lock_guard<std::mutex> guard(LogMutex);
           if (Out.GetOS()) {
@@ -687,6 +701,9 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
     }
     pool.wait();
   }
+  // Now get rid of all the DIEs that may have been recreated
+  for (const auto &CU : DICtx.compile_units())
+    CU->clearDIEs(/*KeepCUDie=*/false, /*KeepDWODIEs=*/false);
   size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
   Out << "Loaded " << FunctionsAddedCount << " functions from DWARF.\n";
   return Error::success();
@@ -729,7 +746,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
       uint32_t NumDwarfInlineInfos = DwarfInlineInfos.getNumberOfFrames();
       if (NumDwarfInlineInfos == 0) {
         DwarfInlineInfos.addFrame(
-            DICtx.getLineInfoForAddress(SectAddr, DLIS));
+            DICtx.getLineInfoForAddress(SectAddr, DLIS).value_or(DILineInfo()));
       }
 
       // Check for 1 entry that has no file and line info
@@ -770,7 +787,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
           const auto &dii = DwarfInlineInfos.getFrame(Idx);
           gsymFilename = LR->getSourceFile(Idx);
           // Verify function name
-          if (dii.FunctionName.find(gii.Name.str()) != 0)
+          if (!StringRef(dii.FunctionName).starts_with(gii.Name))
             Out << "error: address " << HEX64(Addr) << " DWARF function \""
                 << dii.FunctionName.c_str()
                 << "\" doesn't match GSYM function \"" << gii.Name << "\"\n";

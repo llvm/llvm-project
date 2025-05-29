@@ -709,22 +709,40 @@ let isCall = 1, Defs = [A0] in {
   }
 }
 
+// Windowed call patterns. Currently rotation
+// window by 8 is implemented.
+def : Pat<(Xtensa_callw8 (i32 tglobaladdr:$dst)),
+          (CALL8 tglobaladdr:$dst)>;
+def : Pat<(Xtensa_callw8 (i32 texternalsym:$dst)),
+          (CALL8 texternalsym:$dst)>;
+def : Pat<(Xtensa_callw8 AR:$dst),
+          (CALLX8 AR:$dst)>;
+
 def MOVSP : RRR_Inst<0x00, 0x00, 0x00, (outs AR:$t), (ins AR:$s),
                     "movsp\t$t, $s", []>, Requires<[HasWindowed]> {
   let r = 0x01;
 }
 
+// Use this pseudo operation instead of getCopyToReg function to
+// update SP register.
+let usesCustomInserter = 1, Defs = [SP], Predicates = [HasWindowed] in {
+  def MOVSP_P : Pseudo<(outs), (ins AR:$s),
+                      "!movsp_p\tsp, $s", [(Xtensa_movsp AR:$s)]>;
+}
+
 let isReturn = 1, isTerminator = 1,
     isBarrier = 1, Uses = [A0] in {
   def RETW_N : RRRN_Inst<0x0D, (outs), (ins),
-                        "retw.n", []>, Requires<[HasWindowed, HasDensity]> {
+                        "retw.n", [(Xtensa_retw)]>,
+                        Requires<[HasWindowed, HasDensity]> {
     let r = 0x0F;
     let s = 0;
     let t = 1;
   }
 
   def RETW : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins),
-                       "retw", []>, Requires<[HasWindowed]> {
+                       "retw", [(Xtensa_retw)]>,
+                       Requires<[HasWindowed]> {
     let m = 0x2;
     let n = 0x1;
     let s = 0;
@@ -779,3 +797,196 @@ def ROTW : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins imm8n_7:$imm),
   let s = 0x0;
   let t = imm{3-0};
 }
+
+//===----------------------------------------------------------------------===//
+// Boolean Instructions
+//===----------------------------------------------------------------------===//
+
+def ALL4 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
+                   "all4\t$t, $s", []>, Requires<[HasBoolean]> {
+  let r = 0x9;
+}
+
+def ALL8 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
+                   "all8\t$t, $s", []>, Requires<[HasBoolean]> {
+  let r = 0xB;
+}
+
+def ANDB : RRR_Inst<0x00, 0x02, 0x00, (outs BR:$r), (ins BR:$s, BR:$t),
+                   "andb\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+def ANDBC : RRR_Inst<0x00, 0x02, 0x01, (outs BR:$r), (ins BR:$s, BR:$t),
+                    "andbc\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+def ORB : RRR_Inst<0x00, 0x02, 0x02, (outs BR:$r), (ins BR:$s, BR:$t),
+                  "orb\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+def ORBC : RRR_Inst<0x00, 0x02, 0x03, (outs BR:$r), (ins BR:$s, BR:$t),
+                   "orbc\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+def XORB : RRR_Inst<0x00, 0x02, 0x04, (outs BR:$r), (ins BR:$s, BR:$t),
+                   "xorb\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+
+def ANY4 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
+                   "any4\t$t, $s", []>, Requires<[HasBoolean]> {
+  let r = 0x8;
+}
+
+def ANY8 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
+                   "any8\t$t, $s", []>, Requires<[HasBoolean]> {
+  let r = 0xA;
+}
+
+let isBranch = 1, isTerminator = 1, Predicates = [HasBoolean] in {
+  def BT : RRI8_Inst<0x06, (outs), (ins BR:$b, brtarget:$target),
+                    "bt\t$b, $target", []> {
+    bits<8> target;
+    bits<4> b;
+
+    let r = 0x1;
+    let s = b;
+    let t = 0x7;
+    let imm8 = target;
+  }
+
+  def BF : RRI8_Inst<0x06, (outs), (ins BR:$b, brtarget:$target),
+                    "bf\t$b, $target", []> {
+    bits<8> target;
+    bits<4> b;
+
+    let r = 0x0;
+    let s = b;
+    let t = 0x7;
+    let imm8 = target;
+  }
+}
+
+def : InstAlias<"_BT\t$b, $target", (BT BR:$b, brtarget:$target)>;
+def : InstAlias<"_BF\t$b, $target", (BF BR:$b, brtarget:$target)>;
+
+let Constraints = "$dr = $r,@earlyclobber $dr" in {
+  def MOVF : RRR_Inst<0x00, 0x03, 0x0C, (outs AR:$dr), (ins AR:$r, AR:$s, BR:$t),
+                   "movf\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+
+  def MOVT : RRR_Inst<0x00, 0x03, 0x0D, (outs AR:$dr), (ins AR:$r, AR:$s, BR:$t),
+                   "movt\t$r, $s, $t", []>, Requires<[HasBoolean]>;
+}
+
+//===----------------------------------------------------------------------===//
+// SEXT Instruction
+//===----------------------------------------------------------------------===//
+
+def SEXT : RRR_Inst<0x00, 0x03, 0x02, (outs AR:$r), (ins AR:$s, imm7_22:$imm),
+                   "sext\t$r, $s, $imm", []>, Requires<[HasSEXT]> {
+  bits<4> imm;
+
+  let t = imm;
+}
+
+def : Pat<(i32 (sext_inreg AR:$s, i8)), (SEXT AR:$s, (i32 7))>;
+def : Pat<(i32 (sext_inreg AR:$s, i16)), (SEXT AR:$s, (i32 15))>;
+
+//===----------------------------------------------------------------------===//
+// CLAMPS Instruction
+//===----------------------------------------------------------------------===//
+
+def CLAMPS : RRR_Inst<0x00, 0x03, 0x03, (outs AR:$r), (ins AR:$s, imm7_22:$imm),
+                   "clamps\t$r, $s, $imm", []>, Requires<[HasCLAMPS]> {
+  bits<4> imm;
+
+  let t = imm;
+}
+
+//===----------------------------------------------------------------------===//
+// NSA Instructions
+//===----------------------------------------------------------------------===//
+
+def NSA : RRR_Inst<0x00, 0x00, 0x04, (outs AR:$t), (ins AR:$s),
+                  "nsa\t$t, $s", []>, Requires<[HasNSA]> {
+  let r = 0xE;
+}
+
+def NSAU : RRR_Inst<0x00, 0x00, 0x04, (outs AR:$t), (ins AR:$s),
+                   "nsau\t$t, $s",
+                   [(set AR:$t, (ctlz AR:$s))]>, Requires<[HasNSA]> {
+  let r = 0xF;
+}
+
+//===----------------------------------------------------------------------===//
+// MINMAX Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasMINMAX] in {
+  def MIN   : ArithLogic_RRR<0x04, 0x03, "min", smin, 1>;
+  def MAX   : ArithLogic_RRR<0x05, 0x03, "max", smax, 1>;
+  def MINU  : ArithLogic_RRR<0x06, 0x03, "minu", umin, 1>;
+  def MAXU  : ArithLogic_RRR<0x07, 0x03, "maxu", umax, 1>;
+}
+
+//===----------------------------------------------------------------------===//
+// Loop Instructions
+//===----------------------------------------------------------------------===//
+
+def LOOP : RRI8_Inst<0x06, (outs), (ins AR:$s, ltarget:$target),
+                    "loop\t$s, $target", []>, Requires<[HasLoop]> {
+  bits<8> target;
+
+  let r = 0x08;
+  let t = 0x07;
+  let imm8 = target;
+}
+
+def : InstAlias<"_loop\t$s, $target", (LOOP AR:$s, ltarget:$target)>;
+
+def LOOPGTZ : RRI8_Inst<0x06, (outs), (ins AR:$s, ltarget:$target),
+                       "loopgtz\t$s, $target", []>, Requires<[HasLoop]> {
+  bits<8> target;
+
+  let r = 0x0A;
+  let t = 0x07;
+  let imm8 = target;
+}
+
+def : InstAlias<"_loopgtz\t$s, $target", (LOOPGTZ AR:$s, ltarget:$target)>;
+
+def LOOPNEZ : RRI8_Inst<0x06, (outs), (ins AR:$s, ltarget:$target),
+                       "loopnez\t$s, $target", []>, Requires<[HasLoop]> {
+  bits<8> target;
+
+  let r = 0x09;
+  let t = 0x07;
+  let imm8 = target;
+}
+
+def : InstAlias<"_loopnez\t$s, $target", (LOOPNEZ AR:$s, ltarget:$target)>;
+
+//===----------------------------------------------------------------------===//
+// Mul16 Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasMul16] in {
+  def MUL16S : RRR_Inst<0x00, 0x01, 0x0D, (outs AR:$r), (ins AR:$s, AR:$t),
+                       "mul16s\t$r, $s, $t", []>;
+  def MUL16U : RRR_Inst<0x00, 0x01, 0x0C, (outs AR:$r), (ins AR:$s, AR:$t),
+                       "mul16u\t$r, $s, $t", []>;
+}
+
+//===----------------------------------------------------------------------===//
+// Mul32 Instructions
+//===----------------------------------------------------------------------===//
+
+def MULL  : ArithLogic_RRR<0x08, 0x02, "mull", mul, 1>, Requires<[HasMul32]>;
+def MULUH : ArithLogic_RRR<0x0A, 0x02, "muluh", mulhu, 1>, Requires<[HasMul32High]>;
+def MULSH : ArithLogic_RRR<0x0B, 0x02, "mulsh", mulhs, 1>, Requires<[HasMul32High]>;
+
+//===----------------------------------------------------------------------===//
+// Div32 Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasDiv32] in {
+  def QUOS : ArithLogic_RRR<0x0D, 0x02, "quos", sdiv>;
+  def QUOU : ArithLogic_RRR<0x0C, 0x02, "quou", udiv>;
+  def REMS : ArithLogic_RRR<0x0F, 0x02, "rems", srem>;
+  def REMU : ArithLogic_RRR<0x0E, 0x02, "remu", urem>;
+}
+
+//===----------------------------------------------------------------------===//
+// DSP Instructions
+//===----------------------------------------------------------------------===//
+include "XtensaDSPInstrInfo.td"

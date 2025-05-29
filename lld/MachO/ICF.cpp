@@ -12,10 +12,8 @@
 #include "InputSection.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "UnwindInfoSection.h"
 
 #include "lld/Common/CommonLinkerContext.h"
-#include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -297,15 +295,24 @@ static Symbol *getThunkTargetSymbol(ConcatInputSection *isec) {
 // direct branch thunk rather than containing a full copy of the actual function
 // body.
 void ICF::applySafeThunksToRange(size_t begin, size_t end) {
-  // If the functions we're dealing with are smaller than the thunk size, then
-  // just leave them all as-is - creating thunks would be a net loss.
-  uint32_t thunkSize = target->getICFSafeThunkSize();
-  if (icfInputs[begin]->data.size() <= thunkSize)
-    return;
-
   // When creating a unique ICF thunk, use the first section as the section that
   // all thunks will branch to.
   ConcatInputSection *masterIsec = icfInputs[begin];
+
+  // If the first section is not address significant, sorting guarantees that
+  // there are no address significant functions. So we can skip this range.
+  if (!masterIsec->keepUnique)
+    return;
+
+  // Skip anything that is not a code section.
+  if (!isCodeSection(masterIsec))
+    return;
+
+  // If the functions we're dealing with are smaller than the thunk size, then
+  // just leave them all as-is - creating thunks would be a net loss.
+  uint32_t thunkSize = target->getICFSafeThunkSize();
+  if (masterIsec->data.size() <= thunkSize)
+    return;
 
   // Get the symbol that all thunks will branch to.
   Symbol *masterSym = getThunkTargetSymbol(masterIsec);

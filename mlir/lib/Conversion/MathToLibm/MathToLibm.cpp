@@ -20,7 +20,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTMATHTOLIBM
+#define GEN_PASS_DEF_CONVERTMATHTOLIBMPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -181,6 +181,7 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
   populatePatternsForOp<math::CosOp>(patterns, benefit, ctx, "cosf", "cos");
   populatePatternsForOp<math::CoshOp>(patterns, benefit, ctx, "coshf", "cosh");
   populatePatternsForOp<math::ErfOp>(patterns, benefit, ctx, "erff", "erf");
+  populatePatternsForOp<math::ErfcOp>(patterns, benefit, ctx, "erfcf", "erfc");
   populatePatternsForOp<math::ExpOp>(patterns, benefit, ctx, "expf", "exp");
   populatePatternsForOp<math::Exp2Op>(patterns, benefit, ctx, "exp2f", "exp2");
   populatePatternsForOp<math::ExpM1Op>(patterns, benefit, ctx, "expm1f",
@@ -212,7 +213,7 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
 
 namespace {
 struct ConvertMathToLibmPass
-    : public impl::ConvertMathToLibmBase<ConvertMathToLibmPass> {
+    : public impl::ConvertMathToLibmPassBase<ConvertMathToLibmPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -229,8 +230,4 @@ void ConvertMathToLibmPass::runOnOperation() {
   target.addIllegalDialect<math::MathDialect>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertMathToLibmPass() {
-  return std::make_unique<ConvertMathToLibmPass>();
 }

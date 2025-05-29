@@ -67,6 +67,11 @@ template <typename Enum>
   return static_cast<std::underlying_type_t<Enum>>(E);
 }
 
+// A tag for constructors accepting ranges.
+struct from_range_t {
+  explicit from_range_t() = default;
+};
+inline constexpr from_range_t from_range{};
 } // namespace llvm
 
 #endif // LLVM_ADT_STLFORWARDCOMPAT_H

@@ -11,7 +11,7 @@ lga x1, %lo(1234) # CHECK: :[[@LINE]]:9: error: operand must be a bare symbol na
 lga x1, %hi(foo) # CHECK: :[[@LINE]]:9: error: operand must be a bare symbol name
 lga x1, %lo(foo) # CHECK: :[[@LINE]]:9: error: operand must be a bare symbol name
 
-sw a2, %hi(a_symbol), a3 # CHECK: :[[@LINE]]:8: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
+sw a2, %hi(a_symbol), a3 # CHECK: :[[@LINE]]:8: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 sw a2, %lo(a_symbol), a3 # CHECK: :[[@LINE]]:23: error: invalid operand for instruction
 sw a2, %lo(a_symbol)(a4), a3 # CHECK: :[[@LINE]]:27: error: invalid operand for instruction
 

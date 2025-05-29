@@ -874,8 +874,7 @@ DataFlowSanitizer::DataFlowSanitizer(
   ABIList.set(
       SpecialCaseList::createOrDie(AllABIListFiles, *vfs::getRealFileSystem()));
 
-  for (StringRef v : ClCombineTaintLookupTables)
-    CombineTaintLookupTableNames.insert(v);
+  CombineTaintLookupTableNames.insert_range(ClCombineTaintLookupTables);
 }
 
 TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
@@ -1507,12 +1506,10 @@ bool DataFlowSanitizer::runImpl(
 
   auto GetOrInsertGlobal = [this, &Changed](StringRef Name,
                                             Type *Ty) -> Constant * {
-    Constant *C = Mod->getOrInsertGlobal(Name, Ty);
-    if (GlobalVariable *G = dyn_cast<GlobalVariable>(C)) {
-      Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
-      G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
-    }
-    return C;
+    GlobalVariable *G = Mod->getOrInsertGlobal(Name, Ty);
+    Changed |= G->getThreadLocalMode() != GlobalVariable::InitialExecTLSModel;
+    G->setThreadLocalMode(GlobalVariable::InitialExecTLSModel);
+    return G;
   };
 
   // These globals must be kept in sync with the ones in dfsan.cpp.
@@ -3447,9 +3444,9 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
                                       PN.getIterator());
 
   // Give the shadow phi node valid predecessors to fool SplitEdge into working.
-  Value *UndefShadow = UndefValue::get(ShadowTy);
+  Value *PoisonShadow = PoisonValue::get(ShadowTy);
   for (BasicBlock *BB : PN.blocks())
-    ShadowPN->addIncoming(UndefShadow, BB);
+    ShadowPN->addIncoming(PoisonShadow, BB);
 
   DFSF.setShadow(&PN, ShadowPN);
 
@@ -3457,9 +3454,9 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
   if (DFSF.DFS.shouldTrackOrigins()) {
     OriginPN = PHINode::Create(DFSF.DFS.OriginTy, PN.getNumIncomingValues(), "",
                                PN.getIterator());
-    Value *UndefOrigin = UndefValue::get(DFSF.DFS.OriginTy);
+    Value *PoisonOrigin = PoisonValue::get(DFSF.DFS.OriginTy);
     for (BasicBlock *BB : PN.blocks())
-      OriginPN->addIncoming(UndefOrigin, BB);
+      OriginPN->addIncoming(PoisonOrigin, BB);
     DFSF.setOrigin(&PN, OriginPN);
   }
 

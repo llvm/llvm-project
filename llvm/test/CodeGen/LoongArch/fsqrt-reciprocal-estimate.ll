@@ -55,12 +55,12 @@ define double @frsqrt_f64(double %a) nounwind {
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    addi.w	$sp, $sp, -16
 ; LA32F-NEXT:    st.w	$ra, $sp, 12 
-; LA32F-NEXT:    bl	%plt(sqrt)
+; LA32F-NEXT:    bl	sqrt
 ; LA32F-NEXT:    move	$a2, $a0
 ; LA32F-NEXT:    move	$a3, $a1
 ; LA32F-NEXT:    lu12i.w	$a1, 261888
 ; LA32F-NEXT:    move	$a0, $zero
-; LA32F-NEXT:    bl	%plt(__divdf3)
+; LA32F-NEXT:    bl	__divdf3
 ; LA32F-NEXT:    ld.w	$ra, $sp, 12  
 ; LA32F-NEXT:    addi.w	$sp, $sp, 16
 ; LA32F-NEXT:    ret
@@ -69,12 +69,12 @@ define double @frsqrt_f64(double %a) nounwind {
 ; LA32F-FRECIPE:       # %bb.0:
 ; LA32F-FRECIPE-NEXT:    addi.w	$sp, $sp, -16
 ; LA32F-FRECIPE-NEXT:    st.w	$ra, $sp, 12                    # 4-byte Folded Spill
-; LA32F-FRECIPE-NEXT:    bl	%plt(sqrt)
+; LA32F-FRECIPE-NEXT:    bl	sqrt
 ; LA32F-FRECIPE-NEXT:    move	$a2, $a0
 ; LA32F-FRECIPE-NEXT:    move	$a3, $a1
 ; LA32F-FRECIPE-NEXT:    lu12i.w	$a1, 261888
 ; LA32F-FRECIPE-NEXT:    move	$a0, $zero
-; LA32F-FRECIPE-NEXT:    bl	%plt(__divdf3)
+; LA32F-FRECIPE-NEXT:    bl	__divdf3
 ; LA32F-FRECIPE-NEXT:    ld.w	$ra, $sp, 12                    # 4-byte Folded Reload
 ; LA32F-FRECIPE-NEXT:    addi.w	$sp, $sp, 16
 ; LA32F-FRECIPE-NEXT:    ret
@@ -117,21 +117,21 @@ define double @sqrt_simplify_before_recip_3_uses_f64(double %x, ptr %p1, ptr %p2
 ; LA32F-NEXT:    st.w	$s4, $sp, 4                     # 4-byte Folded Spill
 ; LA32F-NEXT:    move	$fp, $a3
 ; LA32F-NEXT:    move	$s0, $a2
-; LA32F-NEXT:    bl	%plt(sqrt)
+; LA32F-NEXT:    bl	sqrt
 ; LA32F-NEXT:    move	$s1, $a0
 ; LA32F-NEXT:    move	$s2, $a1
 ; LA32F-NEXT:    lu12i.w	$a1, 261888
 ; LA32F-NEXT:    move	$a0, $zero
 ; LA32F-NEXT:    move	$a2, $s1
 ; LA32F-NEXT:    move	$a3, $s2
-; LA32F-NEXT:    bl	%plt(__divdf3)
+; LA32F-NEXT:    bl	__divdf3
 ; LA32F-NEXT:    move	$s3, $a0
 ; LA32F-NEXT:    move	$s4, $a1
 ; LA32F-NEXT:    lu12i.w	$a1, 263248
 ; LA32F-NEXT:    move	$a0, $zero
 ; LA32F-NEXT:    move	$a2, $s1
 ; LA32F-NEXT:    move	$a3, $s2
-; LA32F-NEXT:    bl	%plt(__divdf3)
+; LA32F-NEXT:    bl	__divdf3
 ; LA32F-NEXT:    st.w	$s3, $s0, 0
 ; LA32F-NEXT:    st.w	$s4, $s0, 4
 ; LA32F-NEXT:    st.w	$a0, $fp, 0
@@ -160,21 +160,21 @@ define double @sqrt_simplify_before_recip_3_uses_f64(double %x, ptr %p1, ptr %p2
 ; LA32F-FRECIPE-NEXT:    st.w	$s4, $sp, 4                     # 4-byte Folded Spill
 ; LA32F-FRECIPE-NEXT:    move	$fp, $a3
 ; LA32F-FRECIPE-NEXT:    move	$s0, $a2
-; LA32F-FRECIPE-NEXT:    bl	%plt(sqrt)
+; LA32F-FRECIPE-NEXT:    bl	sqrt
 ; LA32F-FRECIPE-NEXT:    move	$s1, $a0
 ; LA32F-FRECIPE-NEXT:    move	$s2, $a1
 ; LA32F-FRECIPE-NEXT:    lu12i.w	$a1, 261888
 ; LA32F-FRECIPE-NEXT:    move	$a0, $zero
 ; LA32F-FRECIPE-NEXT:    move	$a2, $s1
 ; LA32F-FRECIPE-NEXT:    move	$a3, $s2
-; LA32F-FRECIPE-NEXT:    bl	%plt(__divdf3)
+; LA32F-FRECIPE-NEXT:    bl	__divdf3
 ; LA32F-FRECIPE-NEXT:    move	$s3, $a0
 ; LA32F-FRECIPE-NEXT:    move	$s4, $a1
 ; LA32F-FRECIPE-NEXT:    lu12i.w	$a1, 263248
 ; LA32F-FRECIPE-NEXT:    move	$a0, $zero
 ; LA32F-FRECIPE-NEXT:    move	$a2, $s1
 ; LA32F-FRECIPE-NEXT:    move	$a3, $s2
-; LA32F-FRECIPE-NEXT:    bl	%plt(__divdf3)
+; LA32F-FRECIPE-NEXT:    bl	__divdf3
 ; LA32F-FRECIPE-NEXT:    st.w	$s3, $s0, 0
 ; LA32F-FRECIPE-NEXT:    st.w	$s4, $s0, 4
 ; LA32F-FRECIPE-NEXT:    st.w	$a0, $fp, 0
@@ -247,21 +247,21 @@ define double @sqrt_simplify_before_recip_3_uses_order_f64(double %x, ptr %p1, p
 ; LA32F-NEXT:    st.w	$s4, $sp, 4                     # 4-byte Folded Spill
 ; LA32F-NEXT:    move	$fp, $a3
 ; LA32F-NEXT:    move	$s0, $a2
-; LA32F-NEXT:    bl	%plt(sqrt)
+; LA32F-NEXT:    bl	sqrt
 ; LA32F-NEXT:    move	$s1, $a0
 ; LA32F-NEXT:    move	$s2, $a1
 ; LA32F-NEXT:    lu12i.w	$a1, 263248
 ; LA32F-NEXT:    move	$a0, $zero
 ; LA32F-NEXT:    move	$a2, $s1
 ; LA32F-NEXT:    move	$a3, $s2
-; LA32F-NEXT:    bl	%plt(__divdf3)
+; LA32F-NEXT:    bl	__divdf3
 ; LA32F-NEXT:    move	$s3, $a0
 ; LA32F-NEXT:    move	$s4, $a1
 ; LA32F-NEXT:    lu12i.w	$a1, 263256
 ; LA32F-NEXT:    move	$a0, $zero
 ; LA32F-NEXT:    move	$a2, $s1
 ; LA32F-NEXT:    move	$a3, $s2
-; LA32F-NEXT:    bl	%plt(__divdf3)
+; LA32F-NEXT:    bl	__divdf3
 ; LA32F-NEXT:    st.w	$s3, $s0, 0
 ; LA32F-NEXT:    st.w	$s4, $s0, 4
 ; LA32F-NEXT:    st.w	$a0, $fp, 0
@@ -290,21 +290,21 @@ define double @sqrt_simplify_before_recip_3_uses_order_f64(double %x, ptr %p1, p
 ; LA32F-FRECIPE-NEXT:    st.w	$s4, $sp, 4                     # 4-byte Folded Spill
 ; LA32F-FRECIPE-NEXT:    move	$fp, $a3
 ; LA32F-FRECIPE-NEXT:    move	$s0, $a2
-; LA32F-FRECIPE-NEXT:    bl	%plt(sqrt)
+; LA32F-FRECIPE-NEXT:    bl	sqrt
 ; LA32F-FRECIPE-NEXT:    move	$s1, $a0
 ; LA32F-FRECIPE-NEXT:    move	$s2, $a1
 ; LA32F-FRECIPE-NEXT:    lu12i.w	$a1, 263248
 ; LA32F-FRECIPE-NEXT:    move	$a0, $zero
 ; LA32F-FRECIPE-NEXT:    move	$a2, $s1
 ; LA32F-FRECIPE-NEXT:    move	$a3, $s2
-; LA32F-FRECIPE-NEXT:    bl	%plt(__divdf3)
+; LA32F-FRECIPE-NEXT:    bl	__divdf3
 ; LA32F-FRECIPE-NEXT:    move	$s3, $a0
 ; LA32F-FRECIPE-NEXT:    move	$s4, $a1
 ; LA32F-FRECIPE-NEXT:    lu12i.w	$a1, 263256
 ; LA32F-FRECIPE-NEXT:    move	$a0, $zero
 ; LA32F-FRECIPE-NEXT:    move	$a2, $s1
 ; LA32F-FRECIPE-NEXT:    move	$a3, $s2
-; LA32F-FRECIPE-NEXT:    bl	%plt(__divdf3)
+; LA32F-FRECIPE-NEXT:    bl	__divdf3
 ; LA32F-FRECIPE-NEXT:    st.w	$s3, $s0, 0
 ; LA32F-FRECIPE-NEXT:    st.w	$s4, $s0, 4
 ; LA32F-FRECIPE-NEXT:    st.w	$a0, $fp, 0
@@ -384,28 +384,28 @@ define double @sqrt_simplify_before_recip_4_uses_f64(double %x, ptr %p1, ptr %p2
 ; LA32F-NEXT:    move	$fp, $a4
 ; LA32F-NEXT:    move	$s0, $a3
 ; LA32F-NEXT:    move	$s1, $a2
-; LA32F-NEXT:    bl	%plt(sqrt)
+; LA32F-NEXT:    bl	sqrt
 ; LA32F-NEXT:    move	$s2, $a0
 ; LA32F-NEXT:    move	$s3, $a1
 ; LA32F-NEXT:    lu12i.w	$a1, 261888
 ; LA32F-NEXT:    move	$a0, $zero
 ; LA32F-NEXT:    move	$a2, $s2
 ; LA32F-NEXT:    move	$a3, $s3
-; LA32F-NEXT:    bl	%plt(__divdf3)
+; LA32F-NEXT:    bl	__divdf3
 ; LA32F-NEXT:    move	$s4, $a0
 ; LA32F-NEXT:    move	$s5, $a1
 ; LA32F-NEXT:    lu12i.w	$a1, 263248
 ; LA32F-NEXT:    move	$a0, $zero
 ; LA32F-NEXT:    move	$a2, $s2
 ; LA32F-NEXT:    move	$a3, $s3
-; LA32F-NEXT:    bl	%plt(__divdf3)
+; LA32F-NEXT:    bl	__divdf3
 ; LA32F-NEXT:    move	$s6, $a0
 ; LA32F-NEXT:    move	$s7, $a1
 ; LA32F-NEXT:    lu12i.w	$a1, 263256
 ; LA32F-NEXT:    move	$a0, $zero
 ; LA32F-NEXT:    move	$a2, $s2
 ; LA32F-NEXT:    move	$a3, $s3
-; LA32F-NEXT:    bl	%plt(__divdf3)
+; LA32F-NEXT:    bl	__divdf3
 ; LA32F-NEXT:    st.w	$s4, $s1, 0
 ; LA32F-NEXT:    st.w	$s5, $s1, 4
 ; LA32F-NEXT:    st.w	$s6, $s0, 0
@@ -443,28 +443,28 @@ define double @sqrt_simplify_before_recip_4_uses_f64(double %x, ptr %p1, ptr %p2
 ; LA32F-FRECIPE-NEXT:    move	$fp, $a4
 ; LA32F-FRECIPE-NEXT:    move	$s0, $a3
 ; LA32F-FRECIPE-NEXT:    move	$s1, $a2
-; LA32F-FRECIPE-NEXT:    bl	%plt(sqrt)
+; LA32F-FRECIPE-NEXT:    bl	sqrt
 ; LA32F-FRECIPE-NEXT:    move	$s2, $a0
 ; LA32F-FRECIPE-NEXT:    move	$s3, $a1
 ; LA32F-FRECIPE-NEXT:    lu12i.w	$a1, 261888
 ; LA32F-FRECIPE-NEXT:    move	$a0, $zero
 ; LA32F-FRECIPE-NEXT:    move	$a2, $s2
 ; LA32F-FRECIPE-NEXT:    move	$a3, $s3
-; LA32F-FRECIPE-NEXT:    bl	%plt(__divdf3)
+; LA32F-FRECIPE-NEXT:    bl	__divdf3
 ; LA32F-FRECIPE-NEXT:    move	$s4, $a0
 ; LA32F-FRECIPE-NEXT:    move	$s5, $a1
 ; LA32F-FRECIPE-NEXT:    lu12i.w	$a1, 263248
 ; LA32F-FRECIPE-NEXT:    move	$a0, $zero
 ; LA32F-FRECIPE-NEXT:    move	$a2, $s2
 ; LA32F-FRECIPE-NEXT:    move	$a3, $s3
-; LA32F-FRECIPE-NEXT:    bl	%plt(__divdf3)
+; LA32F-FRECIPE-NEXT:    bl	__divdf3
 ; LA32F-FRECIPE-NEXT:    move	$s6, $a0
 ; LA32F-FRECIPE-NEXT:    move	$s7, $a1
 ; LA32F-FRECIPE-NEXT:    lu12i.w	$a1, 263256
 ; LA32F-FRECIPE-NEXT:    move	$a0, $zero
 ; LA32F-FRECIPE-NEXT:    move	$a2, $s2
 ; LA32F-FRECIPE-NEXT:    move	$a3, $s3
-; LA32F-FRECIPE-NEXT:    bl	%plt(__divdf3)
+; LA32F-FRECIPE-NEXT:    bl	__divdf3
 ; LA32F-FRECIPE-NEXT:    st.w	$s4, $s1, 0
 ; LA32F-FRECIPE-NEXT:    st.w	$s5, $s1, 4
 ; LA32F-FRECIPE-NEXT:    st.w	$s6, $s0, 0

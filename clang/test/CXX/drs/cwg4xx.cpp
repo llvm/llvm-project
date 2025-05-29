@@ -20,7 +20,7 @@ namespace cwg400 { // cwg400: 2.7
   struct A { int a; struct a {}; }; // #cwg400-A
   struct B { int a; struct a {}; }; // #cwg400-B
   struct C : A, B { using A::a; struct a b; };
-  struct D : A, B { 
+  struct D : A, B {
     using A::a;
     // FIXME: we should issue a single diagnostic
     using B::a; // #cwg400-using-B-a
@@ -257,7 +257,7 @@ namespace cwg409 { // cwg409: 2.7
     A::B b2;
     A<T>::B b3;
     A<T*>::B b4;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name A<T *>::B; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::B' is a C++20 extension}}
   };
 } // namespace cwg409
 
@@ -1062,7 +1062,7 @@ namespace cwg471 { // cwg471: 2.8
   //   expected-note@#cwg471-G-using {{declared private here}}
 } // namespace cwg471
 
-namespace cwg472 { // cwg472: no drafting 2011-04
+namespace cwg472 { // cwg472: no open 2011-04
 struct B {
   int i; // #cwg472-i
 };
@@ -1176,7 +1176,7 @@ namespace cwg480 { // cwg480: 2.7
 
   extern int D::*c;
   int A::*d = static_cast<int A::*>(c);
-  // expected-error@-1 {{conversion from pointer to member of class 'cwg480::D' to pointer to member of class 'A' via virtual base 'cwg480::B' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'D' to pointer to member of class 'A' via virtual base 'cwg480::B' is not allowed}}
 
   D *e;
   A *f = e;
@@ -1386,6 +1386,7 @@ namespace cwg488 { // cwg488: 2.9 c++11
     enum E { e };
     f(e);
     // cxx98-error@-1 {{template argument uses local type 'E'}}
+    //   cxx98-note@-2 {{while substituting deduced template arguments}}
   }
 } // namespace cwg488
 

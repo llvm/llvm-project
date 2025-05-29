@@ -20,7 +20,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -314,7 +313,6 @@ void MacOSKeychainAPIChecker::checkPreStmt(const CallExpr *CE,
     RegionArgIsBad = true;
   }
 
-  assert(ArgSM);
   // Is the argument to the call being tracked?
   const AllocationState *AS = State->get<AllocatedData>(ArgSM);
   if (!AS)

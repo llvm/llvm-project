@@ -32,13 +32,13 @@
 
 using namespace llvm;
 
-static MCSymbolRefExpr::VariantKind
-getModifierVariantKind(XtensaCP::XtensaCPModifier Modifier) {
+static XtensaMCExpr::Specifier
+getModifierSpecifier(XtensaCP::XtensaCPModifier Modifier) {
   switch (Modifier) {
   case XtensaCP::no_modifier:
-    return MCSymbolRefExpr::VK_None;
+    return XtensaMCExpr::VK_None;
   case XtensaCP::TPOFF:
-    return MCSymbolRefExpr::VK_TPOFF;
+    return XtensaMCExpr::VK_TPOFF;
   }
   report_fatal_error("Invalid XtensaCPModifier!");
 }
@@ -92,7 +92,7 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
   MCSymbol *LblSym = GetCPISymbol(ACPV->getLabelId());
   auto *TS =
       static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
-  MCSymbolRefExpr::VariantKind VK = getModifierVariantKind(ACPV->getModifier());
+  XtensaMCExpr::Specifier VK = getModifierSpecifier(ACPV->getModifier());
 
   if (ACPV->getModifier() != XtensaCP::no_modifier) {
     std::string SymName(MCSym->getName());
@@ -227,7 +227,7 @@ XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
                                      MachineOperand::MachineOperandType MOTy,
                                      unsigned Offset) const {
   const MCSymbol *Symbol;
-  XtensaMCExpr::VariantKind Kind = XtensaMCExpr::VK_Xtensa_None;
+  XtensaMCExpr::Specifier Kind = XtensaMCExpr::VK_None;
 
   switch (MOTy) {
   case MachineOperand::MO_GlobalAddress:
@@ -256,8 +256,7 @@ XtensaAsmPrinter::LowerSymbolOperand(const MachineOperand &MO,
     report_fatal_error("<unknown operand type>");
   }
 
-  const MCExpr *ME =
-      MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, OutContext);
+  const MCExpr *ME = MCSymbolRefExpr::create(Symbol, OutContext);
   ME = XtensaMCExpr::create(ME, Kind, OutContext);
 
   if (Offset) {
@@ -312,6 +311,11 @@ void XtensaAsmPrinter::lowerToMCInst(const MachineInstr *MI,
       OutMI.addOperand(MCOp);
   }
 }
+
+char XtensaAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(XtensaAsmPrinter, "xtensa-asm-printer",
+                "Xtensa Assembly Printer", false, false)
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaAsmPrinter() {
   RegisterAsmPrinter<XtensaAsmPrinter> A(getTheXtensaTarget());

@@ -28,7 +28,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_EXPANDSTRIDEDMETADATA
+#define GEN_PASS_DEF_EXPANDSTRIDEDMETADATAPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -505,7 +505,6 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
 
   auto [strides, offset] = sourceType.getStridesAndOffset();
 
-  SmallVector<OpFoldResult> groupStrides;
   ArrayRef<int64_t> srcShape = sourceType.getShape();
 
   OpFoldResult lastValidStride = nullptr;
@@ -920,6 +919,35 @@ public:
   }
 };
 
+/// Pattern to replace `extract_strided_metadata(assume_alignment)`
+///
+/// With
+/// \verbatim
+/// extract_strided_metadata(memref)
+/// \endverbatim
+///
+/// Since `assume_alignment` is a view-like op that does not modify the
+/// underlying buffer, offset, sizes, or strides, extracting strided metadata
+/// from its result is equivalent to extracting it from its source. This
+/// canonicalization removes the unnecessary indirection.
+struct ExtractStridedMetadataOpAssumeAlignmentFolder
+    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+public:
+  using OpRewritePattern<memref::ExtractStridedMetadataOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
+                                PatternRewriter &rewriter) const override {
+    auto assumeAlignmentOp =
+        op.getSource().getDefiningOp<memref::AssumeAlignmentOp>();
+    if (!assumeAlignmentOp)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<memref::ExtractStridedMetadataOp>(
+        op, assumeAlignmentOp.getViewSource());
+    return success();
+  }
+};
+
 /// Rewrite memref.extract_aligned_pointer_as_index of a ViewLikeOp to the
 /// source of the ViewLikeOp.
 class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
@@ -1186,6 +1214,7 @@ void memref::populateExpandStridedMetadataPatterns(
                ExtractStridedMetadataOpSubviewFolder,
                ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpMemorySpaceCastFolder,
+               ExtractStridedMetadataOpAssumeAlignmentFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
       patterns.getContext());
 }
@@ -1202,6 +1231,7 @@ void memref::populateResolveExtractStridedMetadataPatterns(
                ExtractStridedMetadataOpReinterpretCastFolder,
                ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpMemorySpaceCastFolder,
+               ExtractStridedMetadataOpAssumeAlignmentFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
       patterns.getContext());
 }
@@ -1213,7 +1243,7 @@ void memref::populateResolveExtractStridedMetadataPatterns(
 namespace {
 
 struct ExpandStridedMetadataPass final
-    : public memref::impl::ExpandStridedMetadataBase<
+    : public memref::impl::ExpandStridedMetadataPassBase<
           ExpandStridedMetadataPass> {
   void runOnOperation() override;
 };
@@ -1224,8 +1254,4 @@ void ExpandStridedMetadataPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   memref::populateExpandStridedMetadataPatterns(patterns);
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> memref::createExpandStridedMetadataPass() {
-  return std::make_unique<ExpandStridedMetadataPass>();
 }

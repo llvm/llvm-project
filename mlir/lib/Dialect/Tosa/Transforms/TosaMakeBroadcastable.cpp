@@ -21,7 +21,7 @@
 
 namespace mlir {
 namespace tosa {
-#define GEN_PASS_DEF_TOSAMAKEBROADCASTABLE
+#define GEN_PASS_DEF_TOSAMAKEBROADCASTABLEPASS
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
 } // namespace tosa
 } // namespace mlir
@@ -169,9 +169,9 @@ struct ConvertTosaOp<tosa::SelectOp> : public OpRewritePattern<tosa::SelectOp> {
   LogicalResult matchAndRewrite(tosa::SelectOp tosaOp,
                                 PatternRewriter &rewriter) const override {
 
-    Value input1 = tosaOp.getPred();
-    Value input2 = tosaOp.getOnTrue();
-    Value input3 = tosaOp.getOnFalse();
+    Value input1 = tosaOp.getInput1();
+    Value input2 = tosaOp.getInput2();
+    Value input3 = tosaOp.getInput3();
     Value output = tosaOp.getResult();
 
     auto outputType = dyn_cast<RankedTensorType>(output.getType());
@@ -219,7 +219,7 @@ namespace {
 /// Pass that enables broadcast by making all input arrays have the same
 /// number of dimensions. Insert RESHAPE operations to lower rank operand
 struct TosaMakeBroadcastable
-    : public tosa::impl::TosaMakeBroadcastableBase<TosaMakeBroadcastable> {
+    : public tosa::impl::TosaMakeBroadcastablePassBase<TosaMakeBroadcastable> {
 public:
   void runOnOperation() override {
     auto func = getOperation();
@@ -250,7 +250,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::tosa::createTosaMakeBroadcastablePass() {
-  return std::make_unique<TosaMakeBroadcastable>();
-}

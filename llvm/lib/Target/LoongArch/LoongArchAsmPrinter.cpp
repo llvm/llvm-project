@@ -90,20 +90,29 @@ bool LoongArchAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         return false;
       }
       break;
-    case 'w': // Print LSX registers.
-      if (MO.getReg().id() >= LoongArch::VR0 &&
-          MO.getReg().id() <= LoongArch::VR31)
-        break;
-      // The modifier is 'w' but the operand is not an LSX register; Report an
-      // unknown operand error.
-      return true;
     case 'u': // Print LASX registers.
-      if (MO.getReg().id() >= LoongArch::XR0 &&
-          MO.getReg().id() <= LoongArch::XR31)
-        break;
-      // The modifier is 'u' but the operand is not an LASX register; Report an
-      // unknown operand error.
-      return true;
+    case 'w': // Print LSX registers.
+    {
+      // If the operand is an LASX, LSX or floating point register, print the
+      // name of LASX or LSX register with the same index in that register
+      // class.
+      unsigned RegID = MO.getReg().id(), FirstReg;
+      if (RegID >= LoongArch::XR0 && RegID <= LoongArch::XR31)
+        FirstReg = LoongArch::XR0;
+      else if (RegID >= LoongArch::VR0 && RegID <= LoongArch::VR31)
+        FirstReg = LoongArch::VR0;
+      else if (RegID >= LoongArch::F0_64 && RegID <= LoongArch::F31_64)
+        FirstReg = LoongArch::F0_64;
+      else if (RegID >= LoongArch::F0 && RegID <= LoongArch::F31)
+        FirstReg = LoongArch::F0;
+      else
+        return true;
+      OS << '$'
+         << LoongArchInstPrinter::getRegisterName(
+                RegID - FirstReg +
+                (ExtraCode[0] == 'u' ? LoongArch::XR0 : LoongArch::VR0));
+      return false;
+    }
       // TODO: handle other extra codes if any.
     }
   }
@@ -256,12 +265,15 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
 
   assert(TM.getTargetTriple().isOSBinFormatELF());
 
-  unsigned Size = getDataLayout().getPointerSize();
   auto *LAFI = MF->getInfo<LoongArchMachineFunctionInfo>();
   unsigned EntrySize = LAFI->getJumpInfoSize();
+  auto JTI = MF->getJumpTableInfo();
 
-  if (0 == EntrySize)
+  if (!JTI || 0 == EntrySize)
     return;
+
+  unsigned Size = getDataLayout().getPointerSize();
+  auto JT = JTI->getJumpTables();
 
   // Emit an additional section to store the correlation info as pairs of
   // addresses, each pair contains the address of a jump instruction (jr) and
@@ -270,14 +282,15 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
       ".discard.tablejump_annotate", ELF::SHT_PROGBITS, 0));
 
   for (unsigned Idx = 0; Idx < EntrySize; ++Idx) {
+    int JTIIdx = LAFI->getJumpInfoJTIIndex(Idx);
+    if (JT[JTIIdx].MBBs.empty())
+      continue;
     OutStreamer->emitValue(
         MCSymbolRefExpr::create(LAFI->getJumpInfoJrMI(Idx)->getPreInstrSymbol(),
                                 OutContext),
         Size);
     OutStreamer->emitValue(
-        MCSymbolRefExpr::create(
-            GetJTISymbol(LAFI->getJumpInfoJTIMO(Idx)->getIndex()), OutContext),
-        Size);
+        MCSymbolRefExpr::create(GetJTISymbol(JTIIdx), OutContext), Size);
   }
 }
 
@@ -287,6 +300,11 @@ bool LoongArchAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   emitXRayTable();
   return true;
 }
+
+char LoongArchAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(LoongArchAsmPrinter, "loongarch-asm-printer",
+                "LoongArch Assembly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchAsmPrinter() {

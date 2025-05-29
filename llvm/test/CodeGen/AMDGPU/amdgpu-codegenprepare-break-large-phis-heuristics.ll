@@ -477,7 +477,7 @@ entry:
 
 then:
   %x.1 = insertelement <5 x double> <double 3.140000e+00, double poison, double poison, double poison, double poison>, double %x, i32 %idx
-  %0 = shufflevector <5 x double> %x.1, <5 x double> <double poison, double poison, double poison, double 6.140000e+00, double 9.900000e+00>, <5 x i32> <i32 0, i32 1, i32 undef, i32 8, i32 9>
+  %0 = shufflevector <5 x double> %x.1, <5 x double> <double poison, double poison, double poison, double 6.140000e+00, double 9.900000e+00>, <5 x i32> <i32 0, i32 1, i32 poison, i32 8, i32 9>
   %x.4 = insertelement <5 x double> %0, double %x, i64 2
   br label %finally
 

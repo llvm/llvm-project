@@ -18,12 +18,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceDbgRecords.h"
-#include "Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 
 using namespace llvm;
 
-static void extractDbgRecordsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceDbgRecordDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &M = WorkItem.getModule();
 
   for (auto &F : M)
@@ -32,8 +33,4 @@ static void extractDbgRecordsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
         for (DbgRecord &DR : llvm::make_early_inc_range(I.getDbgRecordRange()))
           if (!O.shouldKeep())
             DR.eraseFromParent();
-}
-
-void llvm::reduceDbgRecordDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractDbgRecordsFromModule, "Reducing DbgRecords");
 }

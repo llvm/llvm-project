@@ -127,8 +127,8 @@ uint64_t SBType::GetByteSize() {
   LLDB_INSTRUMENT_VA(this);
 
   if (IsValid())
-    if (std::optional<uint64_t> size =
-            m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr))
+    if (std::optional<uint64_t> size = llvm::expectedToOptional(
+            m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr)))
       return *size;
   return 0;
 }
@@ -697,6 +697,7 @@ lldb::SBValue SBType::GetTemplateArgumentValue(lldb::SBTarget target,
   std::optional<CompilerType::IntegralTemplateArgument> arg;
   const bool expand_pack = true;
   switch (GetTemplateArgumentKind(idx)) {
+  case eTemplateArgumentKindStructuralValue:
   case eTemplateArgumentKindIntegral:
     arg = m_opaque_sp->GetCompilerType(false).GetIntegralTemplateArgument(
         idx, expand_pack);
@@ -708,9 +709,8 @@ lldb::SBValue SBType::GetTemplateArgumentValue(lldb::SBTarget target,
   if (!arg)
     return {};
 
-  Scalar value{arg->value};
   DataExtractor data;
-  value.GetData(data);
+  arg->value.GetData(data);
 
   ExecutionContext exe_ctx;
   auto target_sp = target.GetSP();

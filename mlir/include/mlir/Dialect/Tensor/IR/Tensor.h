@@ -47,12 +47,6 @@ SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
 #include "mlir/Dialect/Tensor/IR/TensorOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
-// Tensor Interfaces
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Tensor/IR/TensorInterfaces.h.inc"
-
-//===----------------------------------------------------------------------===//
 // Tensor Dialect Operations
 //===----------------------------------------------------------------------===//
 

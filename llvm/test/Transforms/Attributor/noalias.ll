@@ -293,13 +293,13 @@ define internal void @test9a(ptr %a, ptr %b) {
 ; TUNIT: Function Attrs: memory(readwrite, argmem: none)
 ; TUNIT-LABEL: define {{[^@]+}}@test9a
 ; TUNIT-SAME: () #[[ATTR4:[0-9]+]] {
-; TUNIT-NEXT:    call void @use_i8(ptr noundef align 4294967296 null)
+; TUNIT-NEXT:    call void @use_i8(ptr noundef null)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: memory(readwrite, argmem: none)
 ; CGSCC-LABEL: define {{[^@]+}}@test9a
 ; CGSCC-SAME: () #[[ATTR5:[0-9]+]] {
-; CGSCC-NEXT:    call void @use_i8(ptr noundef align 4294967296 null)
+; CGSCC-NEXT:    call void @use_i8(ptr noundef null)
 ; CGSCC-NEXT:    ret void
 ;
   call void @use_i8(ptr null)

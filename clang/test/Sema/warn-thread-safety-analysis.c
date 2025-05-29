@@ -1,7 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-beta %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-beta -fexperimental-late-parse-attributes -DLATE_PARSING %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -fexperimental-late-parse-attributes -DLATE_PARSING %s
 
 #define LOCKABLE            __attribute__ ((lockable))
+#define REENTRANT_CAPABILITY __attribute__ ((reentrant_capability))
 #define SCOPED_LOCKABLE     __attribute__ ((scoped_lockable))
 #define GUARDED_BY(...)     __attribute__ ((guarded_by(__VA_ARGS__)))
 #define GUARDED_VAR         __attribute__ ((guarded_var))
@@ -23,6 +24,9 @@
 #define SHARED_LOCKS_REQUIRED(...) \
   __attribute__ ((shared_locks_required(__VA_ARGS__)))
 #define NO_THREAD_SAFETY_ANALYSIS  __attribute__ ((no_thread_safety_analysis))
+
+#define __READ_ONCE(x)        (*(const volatile __typeof__(x) *)&(x))
+#define __WRITE_ONCE(x, val)  do { *(volatile __typeof__(x) *)&(x) = (val); } while (0)
 
 // Define the mutex struct.
 // Simplified only for test purpose.
@@ -134,7 +138,9 @@ int main(void) {
   Foo_func3(5);
 
   set_value(&a_, 0); // expected-warning{{calling function 'set_value' requires holding mutex 'foo_.mu_' exclusively}}
+                     // expected-warning@-1{{passing pointer to variable 'a_' requires holding mutex 'foo_.mu_'}}
   get_value(b_); // expected-warning{{calling function 'get_value' requires holding mutex 'foo_.mu_'}}
+                 // expected-warning@-1{{passing pointer 'b_' requires holding mutex 'foo_.mu_'}}
   mutex_exclusive_lock(foo_.mu_);
   set_value(&a_, 1);
   mutex_unlock(foo_.mu_);
@@ -142,9 +148,25 @@ int main(void) {
   (void)(get_value(b_) == 1);
   mutex_unlock(foo_.mu_);
 
+  a_ = 0; // expected-warning{{writing variable 'a_' requires holding mutex 'foo_.mu_'}}
+  __WRITE_ONCE(a_, 0); // expected-warning{{writing variable 'a_' requires holding mutex 'foo_.mu_'}}
+  (void)(a_ == 0); // expected-warning{{reading variable 'a_' requires holding mutex 'foo_.mu_'}}
+  (void)(__READ_ONCE(a_) == 0); // expected-warning{{reading variable 'a_' requires holding mutex 'foo_.mu_'}}
+  *b_ = 0; // expected-warning{{writing the value pointed to by 'b_' requires holding mutex 'foo_.mu_' exclusively}}
+  __WRITE_ONCE(*b_, 0); // expected-warning{{writing the value pointed to by 'b_' requires holding mutex 'foo_.mu_' exclusively}}
+  (void)(*b_ == 0); // expected-warning{{reading the value pointed to by 'b_' requires holding mutex 'foo_.mu_'}}
+  (void)(__READ_ONCE(*b_) == 0); // expected-warning{{reading the value pointed to by 'b_' requires holding mutex 'foo_.mu_'}}
   c_ = 0; // expected-warning{{writing variable 'c_' requires holding any mutex exclusively}}
   (void)(*d_ == 0); // expected-warning{{reading the value pointed to by 'd_' requires holding any mutex}}
   mutex_exclusive_lock(foo_.mu_);
+  a_ = 0;
+  __WRITE_ONCE(a_, 0);
+  (void)(a_ == 0);
+  (void)(__READ_ONCE(a_) == 0);
+  *b_ = 0;
+  __WRITE_ONCE(*b_, 0);
+  (void)(*b_ == 0);
+  (void)(__READ_ONCE(*b_) == 0);
   c_ = 1;
   (void)(*d_ == 1);
   mutex_unlock(foo_.mu_);
@@ -180,6 +202,8 @@ int main(void) {
 #ifdef LATE_PARSING
   late_parsing.a_value_defined_before = 1; // expected-warning{{writing variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late' exclusively}}
   late_parsing.a_ptr_defined_before = 0;
+  set_value(&late_parsing.a_value_defined_before, 0); // expected-warning{{calling function 'set_value' requires holding mutex 'foo_.mu_' exclusively}}
+                                                      // expected-warning@-1{{passing pointer to variable 'a_value_defined_before' requires holding mutex 'a_mutex_defined_late'}}
   mutex_exclusive_lock(late_parsing.a_mutex_defined_late);
   mutex_exclusive_lock(late_parsing.a_mutex_defined_early); // expected-warning{{mutex 'a_mutex_defined_early' must be acquired before 'a_mutex_defined_late'}}
   mutex_exclusive_unlock(late_parsing.a_mutex_defined_early);
@@ -191,6 +215,25 @@ int main(void) {
 #endif
 
   return 0;
+}
+
+/*** Reentrancy test ***/
+struct LOCKABLE REENTRANT_CAPABILITY ReentrantMutex {};
+void reentrant_mutex_lock(struct ReentrantMutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+void reentrant_mutex_unlock(struct ReentrantMutex *mu) UNLOCK_FUNCTION(mu);
+
+struct ReentrantMutex rmu;
+int r_ GUARDED_BY(&rmu);
+
+void test_reentrant(void) {
+  reentrant_mutex_lock(&rmu);
+  r_ = 1;
+  reentrant_mutex_lock(&rmu);
+  r_ = 1;
+  reentrant_mutex_unlock(&rmu);
+  r_ = 1;
+  reentrant_mutex_unlock(&rmu);
+  r_ = 1; // expected-warning{{writing variable 'r_' requires holding mutex 'rmu' exclusively}}
 }
 
 // We had a problem where we'd skip all attributes that follow a late-parsed

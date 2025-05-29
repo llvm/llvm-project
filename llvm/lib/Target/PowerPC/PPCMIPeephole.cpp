@@ -42,7 +42,6 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 
@@ -112,9 +111,7 @@ struct PPCMIPeephole : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
   LiveVariables *LV;
 
-  PPCMIPeephole() : MachineFunctionPass(ID) {
-    initializePPCMIPeepholePass(*PassRegistry::getPassRegistry());
-  }
+  PPCMIPeephole() : MachineFunctionPass(ID) {}
 
 private:
   MachineDominatorTree *MDT;

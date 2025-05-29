@@ -35,11 +35,7 @@ class ResultMap {
 
 public:
   ResultMap(std::initializer_list<std::pair<CallDescription, bool>> Data)
-      : Found(0),
-        Total(std::count_if(Data.begin(), Data.end(),
-                            [](const std::pair<CallDescription, bool> &Pair) {
-                              return Pair.second == true;
-                            })),
+      : Found(0), Total(llvm::count(llvm::make_second_range(Data), true)),
         Impl(std::move(Data)) {}
 
   const bool *lookup(const CallEvent &Call) {
@@ -361,15 +357,8 @@ TEST(CallDescription, AliasNames) {
       std::cont v;
       v.data();
     })code";
-  constexpr StringRef UseStructNameInSpelling = R"code(
-    void foo() {
-      std::container v;
-      v.data();
-    })code";
   const std::string UseAliasInSpellingCode =
       (Twine{AliasNamesCode} + UseAliasInSpelling).str();
-  const std::string UseStructNameInSpellingCode =
-      (Twine{AliasNamesCode} + UseStructNameInSpelling).str();
 
   // Test if the code spells the alias, wile we match against the struct name,
   // and again matching against the alias.

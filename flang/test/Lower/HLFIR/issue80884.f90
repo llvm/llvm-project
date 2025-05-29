@@ -29,4 +29,4 @@ end subroutine
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_17:.*]] = fir.shape_shift %[[VAL_4]], %[[VAL_15]] : (i64, index) -> !fir.shapeshift<1>
 ! CHECK:           %[[VAL_18:.*]] = fir.embox %[[VAL_16]](%[[VAL_17]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-! CHECK:           fir.store %[[VAL_18]] to %[[VAL_2]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:           fir.store %[[VAL_18]] to %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>

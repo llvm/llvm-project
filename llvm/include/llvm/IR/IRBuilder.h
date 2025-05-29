@@ -608,43 +608,33 @@ public:
   /// Create and insert a memset to the specified pointer and the
   /// specified value.
   ///
-  /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
-  /// and noalias tags.
+  /// If the pointer isn't an i8*, it will be converted. If alias metadata is
+  /// specified, it will be added to the instruction.
   CallInst *CreateMemSet(Value *Ptr, Value *Val, uint64_t Size,
                          MaybeAlign Align, bool isVolatile = false,
-                         MDNode *TBAATag = nullptr, MDNode *ScopeTag = nullptr,
-                         MDNode *NoAliasTag = nullptr) {
-    return CreateMemSet(Ptr, Val, getInt64(Size), Align, isVolatile,
-                        TBAATag, ScopeTag, NoAliasTag);
+                         const AAMDNodes &AAInfo = AAMDNodes()) {
+    return CreateMemSet(Ptr, Val, getInt64(Size), Align, isVolatile, AAInfo);
   }
 
   CallInst *CreateMemSet(Value *Ptr, Value *Val, Value *Size, MaybeAlign Align,
-                         bool isVolatile = false, MDNode *TBAATag = nullptr,
-                         MDNode *ScopeTag = nullptr,
-                         MDNode *NoAliasTag = nullptr);
+                         bool isVolatile = false,
+                         const AAMDNodes &AAInfo = AAMDNodes());
 
   CallInst *CreateMemSetInline(Value *Dst, MaybeAlign DstAlign, Value *Val,
                                Value *Size, bool IsVolatile = false,
-                               MDNode *TBAATag = nullptr,
-                               MDNode *ScopeTag = nullptr,
-                               MDNode *NoAliasTag = nullptr);
+                               const AAMDNodes &AAInfo = AAMDNodes());
 
   /// Create and insert an element unordered-atomic memset of the region of
   /// memory starting at the given pointer to the given value.
   ///
-  /// If the pointer isn't an i8*, it will be converted. If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
-  /// and noalias tags.
-  CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
-                                               uint64_t Size, Align Alignment,
-                                               uint32_t ElementSize,
-                                               MDNode *TBAATag = nullptr,
-                                               MDNode *ScopeTag = nullptr,
-                                               MDNode *NoAliasTag = nullptr) {
-    return CreateElementUnorderedAtomicMemSet(Ptr, Val, getInt64(Size),
-                                              Align(Alignment), ElementSize,
-                                              TBAATag, ScopeTag, NoAliasTag);
+  /// If the pointer isn't an i8*, it will be converted. If alias metadata is
+  /// specified, it will be added to the instruction.
+  CallInst *
+  CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val, uint64_t Size,
+                                     Align Alignment, uint32_t ElementSize,
+                                     const AAMDNodes &AAInfo = AAMDNodes()) {
+    return CreateElementUnorderedAtomicMemSet(
+        Ptr, Val, getInt64(Size), Align(Alignment), ElementSize, AAInfo);
   }
 
   CallInst *CreateMalloc(Type *IntPtrTy, Type *AllocTy, Value *AllocSize,
@@ -662,88 +652,72 @@ public:
   /// Generate the IR for a call to the builtin free function.
   CallInst *CreateFree(Value *Source, ArrayRef<OperandBundleDef> Bundles = {});
 
-  CallInst *CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val,
-                                               Value *Size, Align Alignment,
-                                               uint32_t ElementSize,
-                                               MDNode *TBAATag = nullptr,
-                                               MDNode *ScopeTag = nullptr,
-                                               MDNode *NoAliasTag = nullptr);
+  CallInst *
+  CreateElementUnorderedAtomicMemSet(Value *Ptr, Value *Val, Value *Size,
+                                     Align Alignment, uint32_t ElementSize,
+                                     const AAMDNodes &AAInfo = AAMDNodes());
 
   /// Create and insert a memcpy between the specified pointers.
   ///
-  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
+  /// If the pointers aren't i8*, they will be converted.  If alias metadata is
+  /// specified, it will be added to the instruction.
   /// and noalias tags.
   CallInst *CreateMemCpy(Value *Dst, MaybeAlign DstAlign, Value *Src,
                          MaybeAlign SrcAlign, uint64_t Size,
-                         bool isVolatile = false, MDNode *TBAATag = nullptr,
-                         MDNode *TBAAStructTag = nullptr,
-                         MDNode *ScopeTag = nullptr,
-                         MDNode *NoAliasTag = nullptr) {
+                         bool isVolatile = false,
+                         const AAMDNodes &AAInfo = AAMDNodes()) {
     return CreateMemCpy(Dst, DstAlign, Src, SrcAlign, getInt64(Size),
-                        isVolatile, TBAATag, TBAAStructTag, ScopeTag,
-                        NoAliasTag);
+                        isVolatile, AAInfo);
   }
 
-  CallInst *CreateMemTransferInst(
-      Intrinsic::ID IntrID, Value *Dst, MaybeAlign DstAlign, Value *Src,
-      MaybeAlign SrcAlign, Value *Size, bool isVolatile = false,
-      MDNode *TBAATag = nullptr, MDNode *TBAAStructTag = nullptr,
-      MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr);
+  CallInst *CreateMemTransferInst(Intrinsic::ID IntrID, Value *Dst,
+                                  MaybeAlign DstAlign, Value *Src,
+                                  MaybeAlign SrcAlign, Value *Size,
+                                  bool isVolatile = false,
+                                  const AAMDNodes &AAInfo = AAMDNodes());
 
   CallInst *CreateMemCpy(Value *Dst, MaybeAlign DstAlign, Value *Src,
                          MaybeAlign SrcAlign, Value *Size,
-                         bool isVolatile = false, MDNode *TBAATag = nullptr,
-                         MDNode *TBAAStructTag = nullptr,
-                         MDNode *ScopeTag = nullptr,
-                         MDNode *NoAliasTag = nullptr) {
+                         bool isVolatile = false,
+                         const AAMDNodes &AAInfo = AAMDNodes()) {
     return CreateMemTransferInst(Intrinsic::memcpy, Dst, DstAlign, Src,
-                                 SrcAlign, Size, isVolatile, TBAATag,
-                                 TBAAStructTag, ScopeTag, NoAliasTag);
+                                 SrcAlign, Size, isVolatile, AAInfo);
   }
 
-  CallInst *
-  CreateMemCpyInline(Value *Dst, MaybeAlign DstAlign, Value *Src,
-                     MaybeAlign SrcAlign, Value *Size, bool isVolatile = false,
-                     MDNode *TBAATag = nullptr, MDNode *TBAAStructTag = nullptr,
-                     MDNode *ScopeTag = nullptr, MDNode *NoAliasTag = nullptr) {
+  CallInst *CreateMemCpyInline(Value *Dst, MaybeAlign DstAlign, Value *Src,
+                               MaybeAlign SrcAlign, Value *Size,
+                               bool isVolatile = false,
+                               const AAMDNodes &AAInfo = AAMDNodes()) {
     return CreateMemTransferInst(Intrinsic::memcpy_inline, Dst, DstAlign, Src,
-                                 SrcAlign, Size, isVolatile, TBAATag,
-                                 TBAAStructTag, ScopeTag, NoAliasTag);
+                                 SrcAlign, Size, isVolatile, AAInfo);
   }
 
   /// Create and insert an element unordered-atomic memcpy between the
   /// specified pointers.
   ///
-  /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers, respectively.
+  /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers,
+  /// respectively.
   ///
-  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
-  /// and noalias tags.
+  /// If the pointers aren't i8*, they will be converted.  If alias metadata is
+  /// specified, it will be added to the instruction.
   CallInst *CreateElementUnorderedAtomicMemCpy(
       Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
-      uint32_t ElementSize, MDNode *TBAATag = nullptr,
-      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
-      MDNode *NoAliasTag = nullptr);
+      uint32_t ElementSize, const AAMDNodes &AAInfo = AAMDNodes());
 
   CallInst *CreateMemMove(Value *Dst, MaybeAlign DstAlign, Value *Src,
                           MaybeAlign SrcAlign, uint64_t Size,
-                          bool isVolatile = false, MDNode *TBAATag = nullptr,
-                          MDNode *ScopeTag = nullptr,
-                          MDNode *NoAliasTag = nullptr) {
+                          bool isVolatile = false,
+                          const AAMDNodes &AAInfo = AAMDNodes()) {
     return CreateMemMove(Dst, DstAlign, Src, SrcAlign, getInt64(Size),
-                         isVolatile, TBAATag, ScopeTag, NoAliasTag);
+                         isVolatile, AAInfo);
   }
 
   CallInst *CreateMemMove(Value *Dst, MaybeAlign DstAlign, Value *Src,
                           MaybeAlign SrcAlign, Value *Size,
-                          bool isVolatile = false, MDNode *TBAATag = nullptr,
-                          MDNode *ScopeTag = nullptr,
-                          MDNode *NoAliasTag = nullptr) {
+                          bool isVolatile = false,
+                          const AAMDNodes &AAInfo = AAMDNodes()) {
     return CreateMemTransferInst(Intrinsic::memmove, Dst, DstAlign, Src,
-                                 SrcAlign, Size, isVolatile, TBAATag,
-                                 /*TBAAStructTag=*/nullptr, ScopeTag,
-                                 NoAliasTag);
+                                 SrcAlign, Size, isVolatile, AAInfo);
   }
 
   /// \brief Create and insert an element unordered-atomic memmove between the
@@ -752,14 +726,11 @@ public:
   /// DstAlign/SrcAlign are the alignments of the Dst/Src pointers,
   /// respectively.
   ///
-  /// If the pointers aren't i8*, they will be converted.  If a TBAA tag is
-  /// specified, it will be added to the instruction. Likewise with alias.scope
-  /// and noalias tags.
+  /// If the pointers aren't i8*, they will be converted.  If alias metadata is
+  /// specified, it will be added to the instruction.
   CallInst *CreateElementUnorderedAtomicMemMove(
       Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
-      uint32_t ElementSize, MDNode *TBAATag = nullptr,
-      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
-      MDNode *NoAliasTag = nullptr);
+      uint32_t ElementSize, const AAMDNodes &AAInfo = AAMDNodes());
 
 private:
   CallInst *getReductionIntrinsic(Intrinsic::ID ID, Value *Src);
@@ -1004,24 +975,36 @@ public:
                             ArrayRef<Value *> Args, FMFSource FMFSource = {},
                             const Twine &Name = "");
 
+  /// Create a call to non-overloaded intrinsic \p ID with \p Args. If
+  /// \p FMFSource is provided, copy fast-math-flags from that instruction to
+  /// the intrinsic.
+  CallInst *CreateIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Args,
+                            FMFSource FMFSource = {}, const Twine &Name = "") {
+    return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name);
+  }
+
   /// Create call to the minnum intrinsic.
-  Value *CreateMinNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+  Value *CreateMinNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                      const Twine &Name = "") {
     if (IsFPConstrained) {
       return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_minnum, LHS, RHS, nullptr, Name);
+          Intrinsic::experimental_constrained_minnum, LHS, RHS, FMFSource,
+          Name);
     }
 
-    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, nullptr, Name);
+    return CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the maxnum intrinsic.
-  Value *CreateMaxNum(Value *LHS, Value *RHS, const Twine &Name = "") {
+  Value *CreateMaxNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
+                      const Twine &Name = "") {
     if (IsFPConstrained) {
       return CreateConstrainedFPUnroundedBinOp(
-          Intrinsic::experimental_constrained_maxnum, LHS, RHS, nullptr, Name);
+          Intrinsic::experimental_constrained_maxnum, LHS, RHS, FMFSource,
+          Name);
     }
 
-    return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, nullptr, Name);
+    return CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS, FMFSource, Name);
   }
 
   /// Create call to the minimum intrinsic.
@@ -1061,6 +1044,19 @@ public:
                            {Src, Exp}, FMFSource, Name);
   }
 
+  /// Create call to the fma intrinsic.
+  Value *CreateFMA(Value *Factor1, Value *Factor2, Value *Summand,
+                   FMFSource FMFSource = {}, const Twine &Name = "") {
+    if (IsFPConstrained) {
+      return CreateConstrainedFPIntrinsic(
+          Intrinsic::experimental_constrained_fma, {Factor1->getType()},
+          {Factor1, Factor2, Summand}, FMFSource, Name);
+    }
+
+    return CreateIntrinsic(Intrinsic::fma, {Factor1->getType()},
+                           {Factor1, Factor2, Summand}, FMFSource, Name);
+  }
+
   /// Create a call to the arithmetic_fence intrinsic.
   CallInst *CreateArithmeticFence(Value *Val, Type *DstType,
                                   const Twine &Name = "") {
@@ -1076,12 +1072,24 @@ public:
                            Name);
   }
 
+  /// Create a call to the vector.extract intrinsic.
+  CallInst *CreateExtractVector(Type *DstType, Value *SrcVec, uint64_t Idx,
+                                const Twine &Name = "") {
+    return CreateExtractVector(DstType, SrcVec, getInt64(Idx), Name);
+  }
+
   /// Create a call to the vector.insert intrinsic.
   CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
                                Value *Idx, const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::vector_insert,
                            {DstType, SubVec->getType()}, {SrcVec, SubVec, Idx},
                            nullptr, Name);
+  }
+
+  /// Create a call to the vector.extract intrinsic.
+  CallInst *CreateInsertVector(Type *DstType, Value *SrcVec, Value *SubVec,
+                               uint64_t Idx, const Twine &Name = "") {
+    return CreateInsertVector(DstType, SrcVec, SubVec, getInt64(Idx), Name);
   }
 
   /// Create a call to llvm.stacksave
@@ -1719,6 +1727,17 @@ public:
     return Accum;
   }
 
+  /// This function is like @ref CreateIntrinsic for constrained fp
+  /// intrinsics. It sets the rounding mode and exception behavior of
+  /// the created intrinsic call according to \p Rounding and \p
+  /// Except and it sets \p FPMathTag as the 'fpmath' metadata, using
+  /// defaults if a value equals nullopt/null.
+  CallInst *CreateConstrainedFPIntrinsic(
+      Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
+      FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag = nullptr,
+      std::optional<RoundingMode> Rounding = std::nullopt,
+      std::optional<fp::ExceptionBehavior> Except = std::nullopt);
+
   CallInst *CreateConstrainedFPBinOp(
       Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource = {},
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
@@ -2262,6 +2281,13 @@ public:
   // compile time error, instead of converting the string to bool for the
   // isSigned parameter.
   Value *CreateIntCast(Value *, Type *, const char *) = delete;
+
+  /// Cast between aggregate types that must have identical structure but may
+  /// differ in their leaf types. The leaf values are recursively extracted,
+  /// casted, and then reinserted into a value of type DestTy. The leaf types
+  /// must be castable using a bitcast or ptrcast, because signedness is
+  /// not specified.
+  Value *CreateAggregateCast(Value *V, Type *DestTy);
 
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions

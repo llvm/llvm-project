@@ -90,7 +90,7 @@ program openacc_shutdown_validity
   !ERROR: At most one DEVICE_NUM clause can appear on the SHUTDOWN directive
   !$acc shutdown device_num(1) device_num(i)
 
-  !ERROR: At most one DEVICE_TYPE clause can appear on the SHUTDOWN directive
+  ! OK
   !$acc shutdown device_type(*) device_type(host, default)
 
 end program openacc_shutdown_validity

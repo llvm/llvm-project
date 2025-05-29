@@ -285,22 +285,8 @@ declare void @sink_alt() cold
   EXPECT_TRUE(Ehpad);
 
   BasicBlock *NewBB = SplitEdge(SrcBlock, DestBlock, &DT, &LI, &MSSAU, "");
-
-  MSSA.verifyMemorySSA();
-  EXPECT_TRUE(DT.verify());
-  EXPECT_NE(NewBB, nullptr);
-  EXPECT_EQ(NewBB->getSinglePredecessor(), SrcBlock);
-  EXPECT_EQ(NewBB, SrcBlock->getTerminator()->getSuccessor(SuccNum));
-  EXPECT_EQ(NewBB->getParent(), F);
-
-  bool BBFlag = false;
-  for (BasicBlock &BB : *F) {
-    if (BB.getName() == NewBB->getName()) {
-      BBFlag = true;
-      break;
-    }
-  }
-  EXPECT_TRUE(BBFlag);
+  // SplitEdge cannot split an eh pad edge.
+  EXPECT_EQ(NewBB, nullptr);
 }
 
 TEST(BasicBlockUtils, splitBasicBlockBefore_ex1) {
@@ -436,6 +422,63 @@ bb2:
   EXPECT_EQ(1u, SplitAllCriticalEdges(*F, CESO));
   EXPECT_TRUE(DT.verify());
   EXPECT_TRUE(PDT.verify());
+}
+
+TEST(BasicBlockUtils, SplitLoopCriticalEdge) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+declare i1 @predicate(ptr %p)
+
+define ptr @Parse(ptr %gp) {
+entry:
+  br label %for.inc
+
+for.inc:
+  %phi = phi ptr [ %gp, %entry ], [ %cp, %while.cond ], [ %cp, %while.cond ]
+  %cond = call i1 @predicate(ptr %phi)
+  %inc= getelementptr inbounds i8, ptr %phi, i64 1
+  br i1 %cond, label %while.cond, label %exit
+
+while.cond:
+  %cp = phi ptr [ %inc, %for.inc ], [ %incdec, %while.body ]
+  %val = load i8, ptr %cp, align 1
+  switch i8 %val, label %while.body [
+    i8 10, label %for.inc
+    i8 0, label %for.inc
+  ]
+
+while.body:
+  %incdec = getelementptr inbounds i8, ptr %cp, i64 1
+  br label %while.cond
+
+exit:
+  ret ptr %phi
+}
+)IR");
+  Function *F = M->getFunction("Parse");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  CriticalEdgeSplittingOptions CESO =
+      CriticalEdgeSplittingOptions(nullptr, &LI, nullptr)
+          .setMergeIdenticalEdges()
+          .setPreserveLCSSA();
+  EXPECT_EQ(2u, SplitAllCriticalEdges(*F, CESO));
+
+  BasicBlock *WhileBB = getBasicBlockByName(*F, "while.cond");
+  BasicBlock *SplitBB = WhileBB->getTerminator()->getSuccessor(1);
+  // The only 1 successor of SplitBB is %for.inc
+  EXPECT_EQ(1u, SplitBB->getTerminator()->getNumSuccessors());
+  // MergeIdenticalEdges: SplitBB has two identical predecessors, %while.cond.
+  EXPECT_EQ(WhileBB, SplitBB->getUniquePredecessor());
+  EXPECT_TRUE(SplitBB->hasNPredecessors(2));
+
+  auto *PN = dyn_cast<PHINode>(&SplitBB->front());
+  // PreserveLCSSA: should insert a PHI node in front of SplitBB
+  EXPECT_NE(nullptr, PN);
+  // The PHI node should have 2 identical incoming blocks.
+  EXPECT_EQ(2u, PN->getNumIncomingValues());
+  EXPECT_EQ(PN->getIncomingBlock(0), PN->getIncomingBlock(1));
 }
 
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdgesIgnorePHIs) {

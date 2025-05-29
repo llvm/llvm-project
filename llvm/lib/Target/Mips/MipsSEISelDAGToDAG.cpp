@@ -70,7 +70,7 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
     MIB.addReg(Mips::DSPEFI, Flag);
 }
 
-unsigned MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
+MCRegister MipsSEDAGToDAGISel::getMSACtrlReg(const SDValue RegIdx) const {
   uint64_t RegNum = RegIdx->getAsZExtVal();
   return Mips::MSACtrlRegClass.getRegister(RegNum);
 }
@@ -176,7 +176,8 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
       case Mips::JAL:
       case Mips::JAL_MM:
         if (MI.getOperand(0).isGlobal() &&
-            MI.getOperand(0).getGlobal()->getGlobalIdentifier() == "_mcount")
+            MI.getOperand(0).getGlobal()->hasExternalLinkage() &&
+            MI.getOperand(0).getGlobal()->getName() == "_mcount")
           emitMCountABI(MI, MBB, MF);
         break;
       case Mips::JALRPseudo:

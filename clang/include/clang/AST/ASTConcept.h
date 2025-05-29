@@ -18,6 +18,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
@@ -92,11 +93,11 @@ struct ASTConstraintSatisfaction final :
   bool ContainsErrors : 1;
 
   const UnsatisfiedConstraintRecord *begin() const {
-    return getTrailingObjects<UnsatisfiedConstraintRecord>();
+    return getTrailingObjects();
   }
 
   const UnsatisfiedConstraintRecord *end() const {
-    return getTrailingObjects<UnsatisfiedConstraintRecord>() + NumRecords;
+    return getTrailingObjects() + NumRecords;
   }
 
   ASTConstraintSatisfaction(const ASTContext &C,
@@ -229,12 +230,14 @@ class TypeConstraint {
   /// type-constraint.
   Expr *ImmediatelyDeclaredConstraint = nullptr;
   ConceptReference *ConceptRef;
+  UnsignedOrNone ArgPackSubstIndex;
 
 public:
   TypeConstraint(ConceptReference *ConceptRef,
-                 Expr *ImmediatelyDeclaredConstraint)
+                 Expr *ImmediatelyDeclaredConstraint,
+                 UnsignedOrNone ArgPackSubstIndex)
       : ImmediatelyDeclaredConstraint(ImmediatelyDeclaredConstraint),
-        ConceptRef(ConceptRef) {}
+        ConceptRef(ConceptRef), ArgPackSubstIndex(ArgPackSubstIndex) {}
 
   /// \brief Get the immediately-declared constraint expression introduced by
   /// this type-constraint, that is - the constraint expression that is added to
@@ -244,6 +247,8 @@ public:
   }
 
   ConceptReference *getConceptReference() const { return ConceptRef; }
+
+  UnsignedOrNone getArgPackSubstIndex() const { return ArgPackSubstIndex; }
 
   // FIXME: Instead of using these concept related functions the callers should
   // directly work with the corresponding ConceptReference.

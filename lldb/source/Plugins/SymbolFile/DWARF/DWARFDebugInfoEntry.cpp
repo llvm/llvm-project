@@ -240,7 +240,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
                 data = DataExtractor(data, offset, data.GetByteSize() - offset);
                 if (lo_pc != LLDB_INVALID_ADDRESS) {
                   assert(lo_pc >= cu->GetBaseAddress());
-                  DWARFExpression::ParseDWARFLocationList(cu, data, frame_base);
+                  cu->ParseDWARFLocationList(data, *frame_base);
                   frame_base->SetFuncFileAddress(lo_pc);
                 } else
                   set_frame_base_loclist_addr = true;

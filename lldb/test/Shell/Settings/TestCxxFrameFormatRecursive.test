@@ -1,0 +1,25 @@
+# XFAIL: *
+
+# Test disallowed variables inside the
+# plugin.cplusplus.display.function-name-format setting.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %lldb -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+int main(int argc, char const *argv[]) { return 0; }
+
+#--- commands.input
+settings set plugin.cplusplus.display.function-name-format "${function.name-with-args}"
+settings set -f frame-format "custom-frame '${function.name-with-args}'\n"
+b main
+run
+
+bt
+
+# CHECK: bt
+# CHECK-NOT: custom-frame
+# CHECK: main

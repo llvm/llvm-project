@@ -24,7 +24,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT: .globl obj
 ; CHECK:      obj:
 ; CHECK:      .long 0
-; CHECK:      .long (hidden_func-obj)-4
+; CHECK:      .long hidden_func@PLT-obj-4
 
 declare hidden void @hidden_func()
 

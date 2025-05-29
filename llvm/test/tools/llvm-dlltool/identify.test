@@ -1,0 +1,69 @@
+Test the -I / --identify option.
+
+Test with both GNU style and LLVM style import libraries; using
+sources from yaml to preserve the checking behaviour even if the
+output of llvm-dlltool itself would change.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: split-file %s %t
+
+RUN: yaml2obj %S/Inputs/gnu_foo_lib_h.yaml > %t/gnu_foo_lib_h.o
+RUN: yaml2obj %S/Inputs/gnu_foo_lib_s00000.yaml > %t/gnu_foo_lib_s00000.o
+RUN: yaml2obj %S/Inputs/gnu_foo_lib_t.yaml > %t/gnu_foo_lib_t.o
+RUN: llvm-ar rcs %t/gnu.a %t/gnu_foo_lib_h.o %t/gnu_foo_lib_s00000.o %t/gnu_foo_lib_t.o
+
+RUN: yaml2obj %S/Inputs/llvm_foo_dll_1.yaml > %t/llvm_foo_dll_1.o
+RUN: yaml2obj %S/Inputs/llvm_foo_dll_2.yaml > %t/llvm_foo_dll_2.o
+RUN: yaml2obj %S/Inputs/llvm_foo_dll_3.yaml > %t/llvm_foo_dll_3.o
+RUN: llvm-ar rcs %t/llvm.a %t/llvm_foo_dll_1.o %t/llvm_foo_dll_2.o %t/llvm_foo_dll_3.o
+
+
+Check that we can identify the DLL name from a GNU style import library.
+
+RUN: llvm-dlltool -I %t/gnu.a | FileCheck --check-prefix=FOO %s
+RUN: llvm-dlltool --identify %t/gnu.a | count 1
+
+FOO: foo.dll
+
+
+Check that we successfully can identify run while passing the
+--identify-strict option.
+
+RUN: llvm-dlltool -I %t/gnu.a --identify-strict | FileCheck --check-prefix=FOO %s
+
+
+Check that we can identify the DLL name from an LLVM style import library.
+
+RUN: llvm-dlltool -I %t/llvm.a | FileCheck --check-prefix=FOO %s
+RUN: llvm-dlltool -I %t/llvm.a | count 1
+
+
+Check that we can identify the DLL names from an import library that
+contains imports for multiple DLLs.
+
+RUN: llvm-dlltool -m i386:x86-64 -d %t/lib1.def -l %t/lib1.a
+RUN: llvm-dlltool -m i386:x86-64 -d %t/lib2.def -l %t/lib2.a
+RUN: llvm-ar qcsL %t/merged.a %t/lib1.a %t/lib2.a
+
+RUN: llvm-dlltool -I %t/merged.a | FileCheck --check-prefix=MERGED %s
+
+MERGED-DAG: lib1.dll
+MERGED-DAG: lib2.dll
+
+Check that --identify-strict fails this case, when there are multiple
+outputs.
+
+RUN: not llvm-dlltool -I %t/merged.a --identify-strict 2>&1 | FileCheck --check-prefix=ERROR %s
+
+ERROR: contains imports for two or more DLLs
+
+
+#--- lib1.def
+LIBRARY lib1.dll
+EXPORTS
+    func1
+
+#--- lib2.def
+LIBRARY lib2.dll
+EXPORTS
+    func2

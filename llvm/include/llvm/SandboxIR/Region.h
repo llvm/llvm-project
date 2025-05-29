@@ -114,23 +114,37 @@ class Region {
   /// ID (for later deregistration) of the "erase instruction" callback.
   Context::CallbackID EraseInstCB;
 
-  // TODO: Add cost modeling.
-  // TODO: Add a way to encode/decode region info to/from metadata.
+  /// Adds \p I to the set but also don't track the instruction's score if \p
+  /// IgnoreCost is true. Only to be used when adding an instruction to the
+  /// auxiliary vector.
+  /// NOTE: When an instruction is added to the region we track it cost in the
+  /// scoreboard, which currently resides in the region class. However, when we
+  /// add an instruction to the auxiliary vector it does get tagged as being a
+  /// member of the region (for ownership reasons), but its cost does not get
+  /// counted because the instruction hasn't been added in the "normal" way.
+  void addImpl(Instruction *I, bool IgnoreCost);
+  /// Adds I to the set. This is the main API for adding an instruction to the
+  /// region.
+  void add(Instruction *I) { addImpl(I, /*IgnoreCost=*/false); }
+  /// Removes I from the set.
+  void remove(Instruction *I);
+  friend class Context; // The callbacks need to call add() and remove().
+  friend class RegionInternalsAttorney; // For unit tests.
+  friend class RegionsFromBBs;          // For add().
 
   /// Set \p I as the \p Idx'th element in the auxiliary vector.
   /// NOTE: This is for internal use, it does not set the metadata.
   void setAux(unsigned Idx, Instruction *I);
+  /// Helper for dropping Aux metadata for \p I.
+  void dropAuxMetadata(Instruction *I);
+  /// Remove instruction \p I from Aux and drop metadata.
+  void removeFromAux(Instruction *I);
 
 public:
   Region(Context &Ctx, TargetTransformInfo &TTI);
   ~Region();
 
   Context &getContext() const { return Ctx; }
-
-  /// Adds I to the set.
-  void add(Instruction *I);
-  /// Removes I from the set.
-  void remove(Instruction *I);
   /// Returns true if I is in the Region.
   bool contains(Instruction *I) const { return Insts.contains(I); }
   /// Returns true if the Region has no instructions.
@@ -164,6 +178,13 @@ public:
     return OS;
   }
 #endif
+};
+
+/// A helper client-attorney class for unit tests.
+class RegionInternalsAttorney {
+public:
+  static void add(Region &Rgn, Instruction *I) { Rgn.add(I); }
+  static void remove(Region &Rgn, Instruction *I) { Rgn.remove(I); }
 };
 
 } // namespace llvm::sandboxir

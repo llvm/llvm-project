@@ -99,6 +99,8 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           X0Reg = RISCV::X0_W;
         } else if (RC && RC->contains(RISCV::X0_H)) {
           X0Reg = RISCV::X0_H;
+        } else if (RC && RC->contains(RISCV::X0_Pair)) {
+          X0Reg = RISCV::X0_Pair;
         } else {
           LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
           continue;

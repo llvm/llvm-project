@@ -185,6 +185,7 @@ enum Kind {
   kw_m68k_rtdcc,
   kw_graalcc,
   kw_riscv_vector_cc,
+  kw_riscv_vls_cc,
 
   // Attributes:
   kw_attributes,
@@ -275,6 +276,8 @@ enum Kind {
   kw_umin,
   kw_fmax,
   kw_fmin,
+  kw_fmaximum,
+  kw_fminimum,
   kw_uinc_wrap,
   kw_udec_wrap,
   kw_usub_cond,
@@ -493,6 +496,7 @@ enum Kind {
   DwarfCC,          // DW_CC_foo
   EmissionKind,     // lineTablesOnly
   NameTableKind,    // GNU
+  FixedPointKind,   // Fixed point
   DwarfOp,          // DW_OP_foo
   DIFlag,           // DIFlagFoo
   DISPFlag,         // DISPFlagFoo

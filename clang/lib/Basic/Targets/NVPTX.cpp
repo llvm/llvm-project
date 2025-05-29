@@ -71,10 +71,11 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
 
   if (TargetPointerWidth == 32)
     resetDataLayout(
-        "e-p:32:32-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
+        "e-p:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
   else if (Opts.NVPTXUseShortPointers)
-    resetDataLayout("e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-i64:64-i128:128-v16:"
-                    "16-v32:32-n16:32:64");
+    resetDataLayout(
+        "e-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32-i64:64-i128:128-v16:"
+        "16-v32:32-n16:32:64");
   else
     resetDataLayout("e-p6:32:32-i64:64-i128:128-v16:16-v32:32-n16:32:64");
 
@@ -185,7 +186,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (Opts.CUDAIsDevice || Opts.OpenMPIsTargetDevice || !HostTarget) {
     // Set __CUDA_ARCH__ for the GPU specified.
-    std::string CUDAArchCode = [this] {
+    llvm::StringRef CUDAArchCode = [this] {
       switch (GPU) {
       case OffloadArch::GFX600:
       case OffloadArch::GFX601:
@@ -211,8 +212,6 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX90a:
       case OffloadArch::GFX90c:
       case OffloadArch::GFX9_4_GENERIC:
-      case OffloadArch::GFX940:
-      case OffloadArch::GFX941:
       case OffloadArch::GFX942:
       case OffloadArch::GFX950:
       case OffloadArch::GFX10_1_GENERIC:
@@ -242,6 +241,8 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::GFX1201:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
+      case OffloadArch::GRANITERAPIDS:
+      case OffloadArch::BMG_G21:
       case OffloadArch::LAST:
         break;
       case OffloadArch::UNKNOWN:
@@ -292,14 +293,27 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
       case OffloadArch::SM_100:
       case OffloadArch::SM_100a:
         return "1000";
+      case OffloadArch::SM_101:
+      case OffloadArch::SM_101a:
+         return "1010";
+      case OffloadArch::SM_120:
+      case OffloadArch::SM_120a:
+         return "1200";
       }
       llvm_unreachable("unhandled OffloadArch");
     }();
     Builder.defineMacro("__CUDA_ARCH__", CUDAArchCode);
-    if (GPU == OffloadArch::SM_90a)
-      Builder.defineMacro("__CUDA_ARCH_FEAT_SM90_ALL", "1");
-    if (GPU == OffloadArch::SM_100a)
-      Builder.defineMacro("__CUDA_ARCH_FEAT_SM100_ALL", "1");
+    switch(GPU) {
+      case OffloadArch::SM_90a:
+      case OffloadArch::SM_100a:
+      case OffloadArch::SM_101a:
+      case OffloadArch::SM_120a:
+        Builder.defineMacro("__CUDA_ARCH_FEAT_SM" + CUDAArchCode.drop_back() + "_ALL", "1");
+        break;
+      default:
+        // Do nothing if this is not an enhanced architecture.
+        break;
+    }
   }
 }
 

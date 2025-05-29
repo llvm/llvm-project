@@ -321,23 +321,22 @@ bool ArmUnwindInfo::GetUnwindPlan(Target &target, const Address &addr,
     }
   }
 
-  UnwindPlan::RowSP row = std::make_shared<UnwindPlan::Row>();
-  row->SetOffset(0);
-  row->GetCFAValue().SetIsRegisterPlusOffset(vsp_reg, vsp);
+  UnwindPlan::Row row;
+  row.GetCFAValue().SetIsRegisterPlusOffset(vsp_reg, vsp);
 
   bool have_location_for_pc = false;
   for (const auto &offset : register_offsets) {
     have_location_for_pc |= offset.first == dwarf_pc;
-    row->SetRegisterLocationToAtCFAPlusOffset(offset.first, offset.second - vsp,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(offset.first, offset.second - vsp,
+                                             true);
   }
 
   if (!have_location_for_pc) {
     UnwindPlan::Row::AbstractRegisterLocation lr_location;
-    if (row->GetRegisterInfo(dwarf_lr, lr_location))
-      row->SetRegisterInfo(dwarf_pc, lr_location);
+    if (row.GetRegisterInfo(dwarf_lr, lr_location))
+      row.SetRegisterInfo(dwarf_pc, lr_location);
     else
-      row->SetRegisterLocationToRegister(dwarf_pc, dwarf_lr, false);
+      row.SetRegisterLocationToRegister(dwarf_pc, dwarf_lr, false);
   }
 
   unwind_plan.AppendRow(row);

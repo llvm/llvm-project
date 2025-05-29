@@ -1106,12 +1106,14 @@ void InstrInfoEmitter::emitRecord(
   OS << Inst.ImplicitUses.size() << ",\t" << Inst.ImplicitDefs.size() << ",\t";
   std::vector<const Record *> ImplicitOps = Inst.ImplicitUses;
   llvm::append_range(ImplicitOps, Inst.ImplicitDefs);
-  OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
-     << ",\t";
 
   // Emit the operand info offset.
   OperandInfoTy OperandInfo = GetOperandInfo(Inst);
-  OS << OperandInfoMap.find(OperandInfo)->second << ",\t0";
+  OS << OperandInfoMap.find(OperandInfo)->second << ",\t";
+
+  // Emit implicit operand base.
+  OS << Target.getName() << "ImpOpBase + " << EmittedLists[ImplicitOps]
+     << ",\t0";
 
   // Emit all of the target independent flags...
   if (Inst.isPreISelOpcode)
@@ -1244,7 +1246,7 @@ void InstrInfoEmitter::emitEnums(
   OS << "#undef GET_INSTRINFO_SCHED_ENUM\n";
   OS << "namespace llvm::" << Namespace << "::Sched {\n\n";
   OS << "  enum {\n";
-  auto ExplictClasses = SchedModels.explicit_classes();
+  auto ExplictClasses = SchedModels.explicitSchedClasses();
   for (const auto &[Idx, Class] : enumerate(ExplictClasses))
     OS << "    " << Class.Name << "\t= " << Idx << ",\n";
   OS << "    SCHED_LIST_END = " << ExplictClasses.size() << '\n';

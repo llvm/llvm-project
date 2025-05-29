@@ -26,10 +26,9 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    slli t1, t2, 1
 ; RV32-NEXT:    li t6, 32
 ; RV32-NEXT:    mv t0, t1
-; RV32-NEXT:    bnez zero, .LBB0_4
 ; RV32-NEXT:  # %bb.3: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    li t0, 32
-; RV32-NEXT:  .LBB0_4: # %for.cond1.preheader.us.preheader
+; RV32-NEXT:  # %bb.4: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
@@ -38,6 +37,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    .cfi_offset s1, -8
 ; RV32-NEXT:    .cfi_offset s2, -12
+; RV32-NEXT:    .cfi_remember_state
 ; RV32-NEXT:    add t3, a0, t3
 ; RV32-NEXT:    add t4, a2, t4
 ; RV32-NEXT:    add s0, a4, t5
@@ -48,10 +48,11 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    add t3, t3, a6
 ; RV32-NEXT:    add t5, t4, a6
 ; RV32-NEXT:    add t4, s0, a6
-; RV32-NEXT:    beqz zero, .LBB0_8
+; RV32-NEXT:    j .LBB0_8
 ; RV32-NEXT:  # %bb.7: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    mv t1, t0
 ; RV32-NEXT:  .LBB0_8: # %for.cond1.preheader.us.preheader
+; RV32-NEXT:    .cfi_restore_state
 ; RV32-NEXT:    li t0, 0
 ; RV32-NEXT:    sltu t5, a0, t5
 ; RV32-NEXT:    sltu t6, a2, t3
@@ -301,33 +302,33 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    .cfi_offset s4, -40
 ; RV64X60-NEXT:    li t0, 0
 ; RV64X60-NEXT:    li t1, 0
-; RV64X60-NEXT:    addi t2, a7, -1
-; RV64X60-NEXT:    add t4, a0, a6
-; RV64X60-NEXT:    add t5, a2, a6
-; RV64X60-NEXT:    add t3, a4, a6
-; RV64X60-NEXT:    zext.w s0, t2
-; RV64X60-NEXT:    mul s1, a1, s0
-; RV64X60-NEXT:    add t4, t4, s1
-; RV64X60-NEXT:    mul s1, a3, s0
-; RV64X60-NEXT:    add t5, t5, s1
+; RV64X60-NEXT:    addi s1, a7, -1
+; RV64X60-NEXT:    zext.w s1, s1
+; RV64X60-NEXT:    mul t2, a1, s1
+; RV64X60-NEXT:    mul t3, a3, s1
+; RV64X60-NEXT:    mul t4, a5, s1
+; RV64X60-NEXT:    add s0, a0, a6
+; RV64X60-NEXT:    add s1, a2, a6
+; RV64X60-NEXT:    add t5, a4, a6
+; RV64X60-NEXT:    add s0, s0, t2
 ; RV64X60-NEXT:    csrr t2, vlenb
-; RV64X60-NEXT:    mul s1, a5, s0
 ; RV64X60-NEXT:    add t3, t3, s1
-; RV64X60-NEXT:    sltu s1, a0, t5
-; RV64X60-NEXT:    sltu s0, a2, t4
-; RV64X60-NEXT:    and t6, s1, s0
-; RV64X60-NEXT:    li t5, 32
-; RV64X60-NEXT:    sltu s1, a0, t3
-; RV64X60-NEXT:    sltu s0, a4, t4
-; RV64X60-NEXT:    and t3, s1, s0
-; RV64X60-NEXT:    or s1, a1, a3
-; RV64X60-NEXT:    slti s1, s1, 0
-; RV64X60-NEXT:    or t4, t6, s1
-; RV64X60-NEXT:    or s0, a1, a5
-; RV64X60-NEXT:    slti s0, s0, 0
-; RV64X60-NEXT:    or s0, t3, s0
+; RV64X60-NEXT:    li t6, 32
+; RV64X60-NEXT:    add t4, t4, t5
+; RV64X60-NEXT:    sltu t3, a0, t3
+; RV64X60-NEXT:    sltu s1, a2, s0
+; RV64X60-NEXT:    and t3, t3, s1
+; RV64X60-NEXT:    or t5, a1, a3
+; RV64X60-NEXT:    sltu s1, a0, t4
+; RV64X60-NEXT:    sltu s0, a4, s0
+; RV64X60-NEXT:    slti t4, t5, 0
+; RV64X60-NEXT:    and s0, s0, s1
+; RV64X60-NEXT:    or s1, a1, a5
+; RV64X60-NEXT:    or t4, t3, t4
 ; RV64X60-NEXT:    slli t3, t2, 1
-; RV64X60-NEXT:    maxu s1, t3, t5
+; RV64X60-NEXT:    slti s1, s1, 0
+; RV64X60-NEXT:    or s0, s0, s1
+; RV64X60-NEXT:    maxu s1, t3, t6
 ; RV64X60-NEXT:    or s0, t4, s0
 ; RV64X60-NEXT:    sltu s1, a6, s1
 ; RV64X60-NEXT:    or s0, s0, s1
@@ -338,8 +339,8 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; RV64X60-NEXT:    add t5, t5, a1
 ; RV64X60-NEXT:    add a2, a2, a3
-; RV64X60-NEXT:    add a4, a4, a5
 ; RV64X60-NEXT:    addiw t1, t1, 1
+; RV64X60-NEXT:    add a4, a4, a5
 ; RV64X60-NEXT:    addi t0, t0, 1
 ; RV64X60-NEXT:    beq t1, a7, .LBB0_11
 ; RV64X60-NEXT:  .LBB0_4: # %for.cond1.preheader.us
@@ -366,10 +367,10 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    vl2r.v v8, (s2)
 ; RV64X60-NEXT:    vl2r.v v10, (s3)
 ; RV64X60-NEXT:    sub s1, s1, t3
-; RV64X60-NEXT:    add s3, s3, t3
 ; RV64X60-NEXT:    vaaddu.vv v8, v8, v10
 ; RV64X60-NEXT:    vs2r.v v8, (s4)
 ; RV64X60-NEXT:    add s4, s4, t3
+; RV64X60-NEXT:    add s3, s3, t3
 ; RV64X60-NEXT:    add s2, s2, t3
 ; RV64X60-NEXT:    bnez s1, .LBB0_7
 ; RV64X60-NEXT:  # %bb.8: # %middle.block

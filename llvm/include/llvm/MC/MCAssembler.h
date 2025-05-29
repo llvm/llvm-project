@@ -64,6 +64,7 @@ private:
   std::unique_ptr<MCObjectWriter> Writer;
 
   bool HasLayout = false;
+  bool HasFinalLayout = false;
   bool RelaxAll = false;
 
   SectionListType Sections;
@@ -89,20 +90,17 @@ private:
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
   ///
+  /// \param F The fragment the fixup is inside.
   /// \param Fixup The fixup to evaluate.
-  /// \param DF The fragment the fixup is inside.
   /// \param Target [out] On return, the relocatable expression the fixup
   /// evaluates to.
   /// \param Value [out] On return, the value of the fixup as currently laid
   /// out.
-  /// \param WasForced [out] On return, the value in the fixup is set to the
-  /// correct value if WasForced is true, even if evaluateFixup returns false.
-  /// \return Whether the fixup value was fully resolved. This is true if the
-  /// \p Value result is fixed, otherwise the value may change due to
+  /// \param RecordReloc Record relocation if needed.
   /// relocation.
-  bool evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
-                     MCValue &Target, const MCSubtargetInfo *STI,
-                     uint64_t &Value, bool &WasForced) const;
+  bool evaluateFixup(const MCFragment *F, const MCFixup &Fixup, MCValue &Target,
+                     uint64_t &Value, bool RecordReloc,
+                     MutableArrayRef<char> Contents) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).
@@ -126,9 +124,6 @@ private:
   bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
   bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
-
-  std::tuple<MCValue, uint64_t, bool>
-  handleFixup(MCFragment &F, const MCFixup &Fixup, const MCSubtargetInfo *STI);
 
 public:
   /// Construct a new assembler instance.
@@ -202,6 +197,7 @@ public:
   void layout();
 
   bool hasLayout() const { return HasLayout; }
+  bool hasFinalLayout() const { return HasFinalLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
 
@@ -232,6 +228,8 @@ public:
   /// Expects a fragment \p F containing instructions and its size \p FSize.
   void writeFragmentPadding(raw_ostream &OS, const MCEncodedFragment &F,
                             uint64_t FSize) const;
+
+  void reportError(SMLoc L, const Twine &Msg) const;
 
   void dump() const;
 };

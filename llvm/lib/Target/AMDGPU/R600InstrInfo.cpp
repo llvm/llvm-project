@@ -37,8 +37,8 @@ bool R600InstrInfo::isVector(const MachineInstr &MI) const {
 
 void R600InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
-                                const DebugLoc &DL, MCRegister DestReg,
-                                MCRegister SrcReg, bool KillSrc,
+                                const DebugLoc &DL, Register DestReg,
+                                Register SrcReg, bool KillSrc,
                                 bool RenamableDest, bool RenamableSrc) const {
   unsigned VectorComponents = 0;
   if ((R600::R600_Reg128RegClass.contains(DestReg) ||
@@ -1062,7 +1062,8 @@ void R600InstrInfo::reserveIndirectRegisters(BitVector &Reserved,
 
   for (int Index = getIndirectIndexBegin(MF); Index <= End; ++Index) {
     for (unsigned Chan = 0; Chan < StackWidth; ++Chan) {
-      unsigned Reg = R600::R600_TReg32RegClass.getRegister((4 * Index) + Chan);
+      MCRegister Reg =
+          R600::R600_TReg32RegClass.getRegister((4 * Index) + Chan);
       TRI.reserveRegisterTuples(Reserved, Reg);
     }
   }
@@ -1084,7 +1085,7 @@ MachineInstrBuilder R600InstrInfo::buildIndirectWrite(MachineBasicBlock *MBB,
                                        unsigned ValueReg, unsigned Address,
                                        unsigned OffsetReg,
                                        unsigned AddrChan) const {
-  unsigned AddrReg;
+  MCRegister AddrReg;
   switch (AddrChan) {
     default: llvm_unreachable("Invalid Channel");
     case 0: AddrReg = R600::R600_AddrRegClass.getRegister(Address); break;
@@ -1116,7 +1117,7 @@ MachineInstrBuilder R600InstrInfo::buildIndirectRead(MachineBasicBlock *MBB,
                                        unsigned ValueReg, unsigned Address,
                                        unsigned OffsetReg,
                                        unsigned AddrChan) const {
-  unsigned AddrReg;
+  MCRegister AddrReg;
   switch (AddrChan) {
     default: llvm_unreachable("Invalid Channel");
     case 0: AddrReg = R600::R600_AddrRegClass.getRegister(Address); break;

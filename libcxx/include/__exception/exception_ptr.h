@@ -52,7 +52,7 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception* __cxa_init_primary_exception(
 
 #endif
 
-namespace std { // purposefully not using versioning namespace
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
 #ifndef _LIBCPP_ABI_MICROSOFT
 
@@ -65,8 +65,10 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   friend _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT;
 
 public:
-  // exception_ptr is basically a COW string.
+  // exception_ptr is basically a COW string so it is trivially relocatable.
+  // It is also replaceable because assignment has normal value semantics.
   using __trivially_relocatable _LIBCPP_NODEBUG = exception_ptr;
+  using __replaceable _LIBCPP_NODEBUG           = exception_ptr;
 
   _LIBCPP_HIDE_FROM_ABI exception_ptr() _NOEXCEPT : __ptr_() {}
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}
@@ -171,6 +173,6 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 }
 
 #endif // _LIBCPP_ABI_MICROSOFT
-} // namespace std
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #endif // _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
