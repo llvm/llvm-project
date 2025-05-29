@@ -559,7 +559,7 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
   MDVals.push_back(getIntMD(Binding.RecordID));
   assert(Symbol && "Cannot yet create useful resource metadata without symbol");
   MDVals.push_back(ValueAsMetadata::get(Symbol));
-  MDVals.push_back(MDString::get(Ctx, Symbol->getName()));
+  MDVals.push_back(MDString::get(Ctx, Name));
   MDVals.push_back(getIntMD(Binding.Space));
   MDVals.push_back(getIntMD(Binding.LowerBound));
   MDVals.push_back(getIntMD(Binding.Size));
