@@ -2844,12 +2844,7 @@ static void readSecurityNotes(Ctx &ctx) {
       return f->aarch64PauthAbiCoreInfo.has_value();
     });
     if (it != ctx.objectFiles.end()) {
-      ctx.aarch64PauthAbiCoreInfo.emplace();
-      ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform =
-          (*it)->aarch64PauthAbiCoreInfo->aarch64PauthAbiPlatform;
-      ctx.aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion =
-          (*it)->aarch64PauthAbiCoreInfo->aarch64PauthAbiVersion;
-      referenceFileName = (*it)->getName();
+      ctx.aarch64PauthAbiCoreInfo = (*it)->aarch64PauthAbiCoreInfo;
     }
   }
   bool hasValidPauthAbiCoreInfo =
