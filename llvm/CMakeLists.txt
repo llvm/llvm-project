@@ -289,6 +289,12 @@ if(LLVM_CCACHE_BUILD)
     set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
         CACHE STRING "Parameters to pass through to ccache")
 
+    # Using precompiled headers with ccache builds can result in intermittent CI failures
+    set(LLVM_CCACHE_PCH OFF CACHE BOOL "Use precompiled headers in ccache builds")
+    if (NOT LLVM_CCACHE_PCH)
+      set(CMAKE_DISABLE_PRECOMPILE_HEADERS "ON")
+    endif()
+
     if(NOT CMAKE_HOST_WIN32)
       set(CCACHE_PROGRAM "${LLVM_CCACHE_PARAMS} ${CCACHE_PROGRAM}")
       if (LLVM_CCACHE_MAXSIZE)
