@@ -7539,6 +7539,13 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     auto *VPI = dyn_cast<VPInstruction>(U);
     return VPI && VPI->getOpcode() == VPInstruction::ResumePhi;
   };
+  if (EpiRedResult->getNumUsers() == 1 &&
+      isa<VPInstructionWithType>(*EpiRedResult->user_begin())) {
+    assert((EpiRedResult->getOpcode() == Instruction::SExt ||
+            EpiRedResult->getOpcode() == Instruction::ZExt) &&
+           "can only have SExt/ZExt users");
+    EpiRedResult = cast<VPInstructionWithType>(*EpiRedResult->user_begin());
+  }
   assert(count_if(EpiRedResult->users(), IsResumePhi) == 1 &&
          "ResumePhi must have a single user");
   auto *EpiResumePhiVPI =
@@ -9474,29 +9481,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         PhiR->setOperand(1, NewExitingVPV);
     }
 
-    // If the vector reduction can be performed in a smaller type, we truncate
-    // then extend the loop exit value to enable InstCombine to evaluate the
-    // entire expression in the smaller type.
-    Type *PhiTy = PhiR->getStartValue()->getLiveInIRValue()->getType();
-    if (MinVF.isVector() && PhiTy != RdxDesc.getRecurrenceType() &&
-        !RecurrenceDescriptor::isAnyOfRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
-      assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
-      Type *RdxTy = RdxDesc.getRecurrenceType();
-      auto *Trunc =
-          new VPWidenCastRecipe(Instruction::Trunc, NewExitingVPV, RdxTy);
-      auto *Extnd =
-          RdxDesc.isSigned()
-              ? new VPWidenCastRecipe(Instruction::SExt, Trunc, PhiTy)
-              : new VPWidenCastRecipe(Instruction::ZExt, Trunc, PhiTy);
-
-      Trunc->insertAfter(NewExitingVPV->getDefiningRecipe());
-      Extnd->insertAfter(Trunc);
-      if (PhiR->getOperand(1) == NewExitingVPV)
-        PhiR->setOperand(1, Extnd->getVPSingleValue());
-      NewExitingVPV = Extnd;
-    }
-
     // We want code in the middle block to appear to execute on the location of
     // the scalar loop's latch terminator because: (a) it is all compiler
     // generated, (b) these instructions are always executed after evaluating
@@ -9528,6 +9512,32 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
                                {PhiR, NewExitingVPV}, Flags, ExitDL);
     }
+    // If the vector reduction can be performed in a smaller type, we truncate
+    // then extend the loop exit value to enable InstCombine to evaluate the
+    // entire expression in the smaller type.
+    Type *PhiTy = PhiR->getStartValue()->getLiveInIRValue()->getType();
+    if (MinVF.isVector() && PhiTy != RdxDesc.getRecurrenceType() &&
+        !RecurrenceDescriptor::isAnyOfRecurrenceKind(
+            RdxDesc.getRecurrenceKind())) {
+      assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
+      Type *RdxTy = RdxDesc.getRecurrenceType();
+      auto *Trunc =
+          new VPWidenCastRecipe(Instruction::Trunc, NewExitingVPV, RdxTy);
+      Instruction::CastOps ExtendOpc =
+          RdxDesc.isSigned() ? Instruction::SExt : Instruction::ZExt;
+      auto *Extnd = new VPWidenCastRecipe(ExtendOpc, Trunc, PhiTy);
+      Trunc->insertAfter(NewExitingVPV->getDefiningRecipe());
+      Extnd->insertAfter(Trunc);
+      if (PhiR->getOperand(1) == NewExitingVPV)
+        PhiR->setOperand(1, Extnd->getVPSingleValue());
+
+      // Update ComputeReductionResult with the truncated exiting value and
+      // extend its result.
+      FinalReductionResult->setOperand(1, Trunc);
+      FinalReductionResult =
+          Builder.createScalarCast(ExtendOpc, FinalReductionResult, PhiTy, {});
+    }
+
     // Update all users outside the vector region.
     OrigExitingVPV->replaceUsesWithIf(
         FinalReductionResult, [FinalReductionResult](VPUser &User, unsigned) {
