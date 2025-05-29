@@ -205,31 +205,39 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
     llvm::object::XCOFFSymbolRef xcoff_sym_ref(symbol_ref);
     llvm::Expected<llvm::StringRef> name_or_err = xcoff_sym_ref.getName();
     if (!name_or_err) {
-      consumeError(name_or_err.takeError());
+      LLDB_LOG_ERROR(log, name_or_err.takeError(),
+                     "Unable to extract name from the xcoff symbol ref object");
       continue;
     }
     llvm::StringRef symbolName = name_or_err.get();
-    // Remove the dot prefix for demangle
-    llvm::StringRef symbol_name =
+    // Remove the dot prefix from symbol names.
+    llvm::StringRef name_no_dot =
         symbolName.starts_with(".") ? symbolName.drop_front() : symbolName;
     auto storageClass = xcoff_sym_ref.getStorageClass();
+    // If its the hidden ext TOC symbol, add it directly,
+    // for all other C_HIDEXT symbols, proceed to other checks.
     if (storageClass == XCOFF::C_HIDEXT && symbolName != "TOC") {
+      // We do not need to add entries with 0 or >1 auxiliary data
       if (xcoff_sym_ref.getNumberOfAuxEntries() != 1)
         continue;
       auto aux_csect_or_err = xcoff_sym_ref.getXCOFFCsectAuxRef();
       if (!aux_csect_or_err) {
-        consumeError(aux_csect_or_err.takeError());
+        LLDB_LOG_ERROR(log, aux_csect_or_err.takeError(),
+                       "Unable to access xcoff csect aux ref object");
         continue;
       }
       const llvm::object::XCOFFCsectAuxRef csect_aux = aux_csect_or_err.get();
-      if (csect_aux.getStorageMappingClass() != XCOFF::XMC_PR ||
-          (m_binary->is64Bit() ? (csect_aux.getAuxType64() != XCOFF::AUX_CSECT)
-                               : false))
+      // Only add hidden ext entries which come under Program Code, skip others
+      if (csect_aux.getStorageMappingClass() != XCOFF::XMC_PR)
+        continue;
+      // This does not apply to 32-bit,
+      // Only add csect symbols identified by the aux entry, skip others
+      if (m_binary->is64Bit() ? (csect_aux.getAuxType64() != XCOFF::AUX_CSECT))
         continue;
     }
 
     Symbol symbol;
-    symbol.GetMangled().SetValue(ConstString(symbol_name));
+    symbol.GetMangled().SetValue(ConstString(name_no_dot));
 
     int16_t sectionNumber = xcoff_sym_ref.getSectionNumber();
     size_t sectionIndex = static_cast<size_t>(sectionNumber - 1);
@@ -248,7 +256,8 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
     Expected<llvm::object::SymbolRef::Type> sym_type_or_err =
         symbol_ref.getType();
     if (!sym_type_or_err) {
-      consumeError(sym_type_or_err.takeError());
+      LLDB_LOG_ERROR(log, aux_csect_or_err.takeError(),
+                     "Unable to access xcoff symbol type");
       continue;
     }
     symbol.SetType(MapSymbolType(sym_type_or_err.get()));
