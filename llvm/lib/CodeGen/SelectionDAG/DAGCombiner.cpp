@@ -6812,7 +6812,8 @@ bool DAGCombiner::SearchForAndLoads(SDNode *N,
 
     // Some constants may need fixing up later if they are too large.
     if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
-      if ((N->getOpcode() == ISD::OR || N->getOpcode() == ISD::XOR) &&
+      if ((N->getOpcode() == ISD::OR || N->getOpcode() == ISD::XOR ||
+           N->getOpcode() == ISD::AND) &&
           (Mask->getAPIntValue() & C->getAPIntValue()) != C->getAPIntValue())
         NodesWithConsts.insert(N);
       continue;
@@ -6927,7 +6928,13 @@ bool DAGCombiner::BackwardsPropagateMask(SDNode *N) {
       SDValue Op0 = LogicN->getOperand(0);
       SDValue Op1 = LogicN->getOperand(1);
 
-      if (isa<ConstantSDNode>(Op0))
+      // We only need to fix AND if both inputs are constants. And we only need
+      // to fix one of the constants.
+      if (LogicN->getOpcode() == ISD::AND &&
+          (!isa<ConstantSDNode>(Op0) || !isa<ConstantSDNode>(Op1)))
+        continue;
+
+      if (isa<ConstantSDNode>(Op0) && LogicN->getOpcode() != ISD::AND)
         Op0 =
             DAG.getNode(ISD::AND, SDLoc(Op0), Op0.getValueType(), Op0, MaskOp);
 

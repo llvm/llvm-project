@@ -9,16 +9,15 @@ define i32 @foo(i32 %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, %hi(f)
-; CHECK-NEXT:    lui a2, 16
-; CHECK-NEXT:    lui a3, %hi(d)
+; CHECK-NEXT:    lui a2, %hi(d)
 ; CHECK-NEXT:    lbu a1, %lo(f)(a1)
-; CHECK-NEXT:    lhu a3, %lo(d)(a3)
-; CHECK-NEXT:    addiw a2, a2, -1
-; CHECK-NEXT:    and a4, a0, a2
-; CHECK-NEXT:    xor a0, a1, a2
-; CHECK-NEXT:    or a0, a0, a3
+; CHECK-NEXT:    lhu a2, %lo(d)(a2)
+; CHECK-NEXT:    slli a0, a0, 48
+; CHECK-NEXT:    srli a3, a0, 48
+; CHECK-NEXT:    xori a0, a1, 255
+; CHECK-NEXT:    or a0, a0, a2
 ; CHECK-NEXT:    lui a1, %hi(e)
-; CHECK-NEXT:    sw a4, %lo(e)(a1)
+; CHECK-NEXT:    sw a3, %lo(e)(a1)
 ; CHECK-NEXT:    ret
 entry:
   %1 = load i64, ptr @f, align 8
