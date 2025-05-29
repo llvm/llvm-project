@@ -2089,22 +2089,21 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     // both branches. FIXME: We could probably try harder to preserve some debug
     // instructions (but at least this isn't producing wrong locations).
     MachineInstrBuilder MIRBuilder(*MBB->getParent(), Loc);
-    auto HoistAndKillDbgInstr =
-        [MBB, Loc](MachineBasicBlock::iterator DI) {
-          assert(DI->isDebugInstr() && "Expected a debug instruction");
-          if (DI->isDebugRef()) {
-            const TargetInstrInfo *TII =
-                MBB->getParent()->getSubtarget().getInstrInfo();
-            const MCInstrDesc &DBGV = TII->get(TargetOpcode::DBG_VALUE);
-            DI = BuildMI(*MBB->getParent(), DI->getDebugLoc(), DBGV, false, 0,
-                         DI->getDebugVariable(), DI->getDebugExpression());
-            MBB->insert(Loc, &*DI);
-            return;
-          }
+    auto HoistAndKillDbgInstr = [MBB, Loc](MachineBasicBlock::iterator DI) {
+      assert(DI->isDebugInstr() && "Expected a debug instruction");
+      if (DI->isDebugRef()) {
+        const TargetInstrInfo *TII =
+            MBB->getParent()->getSubtarget().getInstrInfo();
+        const MCInstrDesc &DBGV = TII->get(TargetOpcode::DBG_VALUE);
+        DI = BuildMI(*MBB->getParent(), DI->getDebugLoc(), DBGV, false, 0,
+                     DI->getDebugVariable(), DI->getDebugExpression());
+        MBB->insert(Loc, &*DI);
+        return;
+      }
 
-          DI->setDebugValueUndef();
-          DI->moveBefore(&*Loc);
-        };
+      DI->setDebugValueUndef();
+      DI->moveBefore(&*Loc);
+    };
 
     // TIB and FIB point to the end of the regions to hoist/merge in TBB and
     // FBB.
