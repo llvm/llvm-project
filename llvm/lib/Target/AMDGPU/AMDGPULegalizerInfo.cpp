@@ -1063,9 +1063,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
   if (ST.hasCvtPkF16F32Inst()) {
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}})
-                  .customFor({{V4S16, V4S32}, {V8S16, V8S32}});
-  } else
+        .customFor({{V4S16, V4S32}, {V8S16, V8S32}});
+  } else {
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
+  }
   FPTruncActions.scalarize(0).lower();
 
   getActionDefinitionsBuilder(G_FPEXT)
@@ -2757,12 +2758,13 @@ bool AMDGPULegalizerInfo::legalizeFPTrunc(LegalizerHelper &Helper,
                                           MachineRegisterInfo &MRI) const {
   Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
-  assert (DstTy.isVector() && DstTy.getNumElements() > 2);
+  assert(DstTy.isVector() && DstTy.getNumElements() > 2);
   LLT EltTy = DstTy.getElementType();
-  assert (EltTy == S16 && "Only handle vectors of half");
+  assert(EltTy == S16 && "Only handle vectors of half");
 
   // Split vector to packs.
-  return Helper.fewerElementsVector(MI, 0, LLT::fixed_vector(2, EltTy)) ==
+  LLT PkTy = LLT::fixed_vector(2, EltTy);
+  return Helper.fewerElementsVector(MI, /*TypeIdx=*/0, PkTy) ==
          LegalizerHelper::Legalized;
 }
 

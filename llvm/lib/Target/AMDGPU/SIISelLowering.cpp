@@ -6907,7 +6907,7 @@ SDValue SITargetLowering::SplitFP_ROUNDVectorToPacks(SDValue Op,
   unsigned Opc = Op.getOpcode();
   EVT DstVT = Op.getValueType();
   unsigned NumElts = DstVT.getVectorNumElements();
-  assert (NumElts % 2 == 0 && "Only handle vectors of even number of elements");
+  assert(NumElts % 2 == 0 && "Only handle vectors of even number of elements");
   if (NumElts == 2) // already packed.
     return Op;
 
@@ -6919,7 +6919,7 @@ SDValue SITargetLowering::SplitFP_ROUNDVectorToPacks(SDValue Op,
 
   SDLoc DL(Op);
   SmallVector<SDValue, 16> Packs;
-  for (unsigned Index = 0; Index < NumElts; Index +=2) {
+  for (unsigned Index = 0; Index < NumElts; Index += 2) {
     SDValue PkSrc = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SrcPkVT, Src,
                                 DAG.getConstant(Index, DL, MVT::i32));
     SDValue PkDst = DAG.getNode(Opc, DL, DstPkVT, PkSrc,
