@@ -1211,7 +1211,7 @@ public:
                           ValueToValueMapTy &UnderlyingMap)
       : TypeMap(TypeMap),
         InternalMapper(UnderlyingMap, RF_None, TypeMap, this) {}
-  virtual ~FatPtrConstMaterializer() = default;
+  ~FatPtrConstMaterializer() = default;
 
   Value *materialize(Value *V) override;
 };

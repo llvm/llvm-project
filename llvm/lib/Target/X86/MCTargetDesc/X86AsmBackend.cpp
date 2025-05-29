@@ -878,7 +878,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
   // disabled by default to eliminate the -g vs non -g difference.
   DenseSet<MCFragment *> LabeledFragments;
   for (const MCSymbol &S : Asm.symbols())
-    LabeledFragments.insert(S.getFragment(false));
+    LabeledFragments.insert(S.getFragment());
 
   for (MCSection &Sec : Asm) {
     if (!Sec.isText())
