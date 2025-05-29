@@ -489,7 +489,7 @@ public:
 #  if _LIBCPP_HAS_LOCALIZATION
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static text_encoding environment() {
     return text_encoding(__get_locale_encoding(""));
-  };
+  }
 
   template <id __i>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static bool environment_is() {
