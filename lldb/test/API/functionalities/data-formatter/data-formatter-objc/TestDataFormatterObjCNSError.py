@@ -27,9 +27,16 @@ class ObjCDataFormatterNSError(ObjCDataFormatterTestCase):
             "frame variable nserror", substrs=['domain: @"Foobar" - code: -1234']
         )
 
-        self.expect(
-            "frame variable nserrorptr", substrs=['domain: @"Foobar" - code: -1234']
-        )
+        # The NSError data formatter will not apply to an NSError** after
+        # https://github.com/llvm/llvm-project/pull/138209
+        # "Add --pointer-match-depth option to type summary add command."
+        #
+        # Decide if we'll update the objc formatters to 
+        # dereference an additional depth level to keep this
+        # test working, or if we should drop the behavior.
+        #self.expect(
+        #    "frame variable nserrorptr", substrs=['domain: @"Foobar" - code: -1234']
+        #)
 
         # FIXME: <rdar://problem/25587546> On llvm.org this works without the `-d run`!
         self.expect(
