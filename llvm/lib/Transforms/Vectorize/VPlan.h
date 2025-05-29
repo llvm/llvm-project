@@ -1056,7 +1056,7 @@ class VPInstructionWithType : public VPInstruction {
 public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, const VPIRFlags &Flags, DebugLoc DL,
-                        const Twine &Name = "")
+                        bool SingleScalar = false, const Twine &Name = "")
       : VPInstruction(Opcode, Operands, Flags, DL, Name, true),
         ResultTy(ResultTy) {}
 
@@ -1085,7 +1085,7 @@ public:
     SmallVector<VPValue *, 2> Operands(operands());
     auto *New =
         new VPInstructionWithType(getOpcode(), Operands, getResultType(), *this,
-                                  getDebugLoc(), getName());
+                                  getDebugLoc(), isSingleScalar(), getName());
     New->setUnderlyingValue(getUnderlyingValue());
     return New;
   }
