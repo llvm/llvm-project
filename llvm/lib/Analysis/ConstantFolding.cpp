@@ -3794,11 +3794,6 @@ static Constant *ConstantFoldScalableVectorCall(
       SplatOps.push_back(Op);
       continue;
     }
-    // TODO: Should getSplatValue return a poison scalar for a poison vector?
-    if (isa<PoisonValue>(Op)) {
-      SplatOps.push_back(PoisonValue::get(Op->getType()->getScalarType()));
-      continue;
-    }
     Constant *Splat = Op->getSplatValue();
     if (!Splat)
       return nullptr;
