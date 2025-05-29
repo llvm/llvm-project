@@ -1232,12 +1232,11 @@ static LogicalResult printOperation(CppEmitter &emitter,
   if (emitter.shouldPrintClass()) {
     if (functionOp.isExternal()) {
       // TODO: Determine the best long-term strategy for external functions.
-      // Currently, we're stopping here to prevent downstream errors.
+      // Currently, we're skipping over this functionOp.
       os << "Warning: Cannot process external function '"
          << functionOp.getName() << "'. "
-         << "It lacks a body, and attempting to continue would lead to errors "
-            "due to missing argument details.\n";
-      return failure();
+         << "This functionOp lacks a body so we will skip over it.";
+      return success();
     }
     os << "class " << emitter.getClassName() << " final {\n";
     os << "public: \n";
