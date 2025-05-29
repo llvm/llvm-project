@@ -768,10 +768,22 @@ protected:
     deferImplicitTyping_ = skipImplicitTyping_ = skip;
   }
 
+  void NoteEarlyDeclaredDummyArgument(Symbol &symbol) {
+    earlyDeclaredDummyArguments_.insert(symbol);
+  }
+  bool IsEarlyDeclaredDummyArgument(Symbol &symbol) {
+    return earlyDeclaredDummyArguments_.find(symbol) !=
+        earlyDeclaredDummyArguments_.end();
+  }
+  void ForgetEarlyDeclaredDummyArgument(Symbol &symbol) {
+    earlyDeclaredDummyArguments_.erase(symbol);
+  }
+
 private:
   Scope *currScope_{nullptr};
   FuncResultStack funcResultStack_{*this};
   std::map<Scope *, DeferredDeclarationState> deferred_;
+  UnorderedSymbolSet earlyDeclaredDummyArguments_;
 };
 
 class ModuleVisitor : public virtual ScopeHandler {
@@ -1970,6 +1982,9 @@ private:
   Scope &topScope_;
 
   void PreSpecificationConstruct(const parser::SpecificationConstruct &);
+  void EarlyDummyTypeDeclaration(
+      const parser::Statement<common::Indirection<parser::TypeDeclarationStmt>>
+          &);
   void CreateCommonBlockSymbols(const parser::CommonStmt &);
   void CreateObjectSymbols(const std::list<parser::ObjectDecl> &, Attr);
   void CreateGeneric(const parser::GenericSpec &);
@@ -5605,6 +5620,7 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
   } else {
     Symbol &symbol{DeclareEntity<EntityDetails>(name, attrs)};
     if (auto *type{GetDeclTypeSpec()}) {
+      ForgetEarlyDeclaredDummyArgument(symbol);
       SetType(name, *type);
     }
     charInfo_.length.reset();
@@ -5681,6 +5697,7 @@ Symbol &DeclarationVisitor::DeclareProcEntity(
         symbol.set(Symbol::Flag::Subroutine);
       }
     } else if (auto *type{GetDeclTypeSpec()}) {
+      ForgetEarlyDeclaredDummyArgument(symbol);
       SetType(name, *type);
       symbol.set(Symbol::Flag::Function);
     }
@@ -5695,6 +5712,7 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
   Symbol &symbol{DeclareEntity<ObjectEntityDetails>(name, attrs)};
   if (auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (auto *type{GetDeclTypeSpec()}) {
+      ForgetEarlyDeclaredDummyArgument(symbol);
       SetType(name, *type);
     }
     if (!arraySpec().empty()) {
@@ -5705,9 +5723,11 @@ Symbol &DeclarationVisitor::DeclareObjectEntity(
           context().SetError(symbol);
         }
       } else if (MustBeScalar(symbol)) {
-        context().Warn(common::UsageWarning::PreviousScalarUse, name.source,
-            "'%s' appeared earlier as a scalar actual argument to a specification function"_warn_en_US,
-            name.source);
+        if (!context().HasError(symbol)) {
+          context().Warn(common::UsageWarning::PreviousScalarUse, name.source,
+              "'%s' appeared earlier as a scalar actual argument to a specification function"_warn_en_US,
+              name.source);
+        }
       } else if (details->init() || symbol.test(Symbol::Flag::InDataStmt)) {
         Say(name, "'%s' was initialized earlier as a scalar"_err_en_US);
       } else {
@@ -8461,6 +8481,11 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
       x.u);
 }
 
+static bool TypesMismatchIfNonNull(
+    const DeclTypeSpec *type1, const DeclTypeSpec *type2) {
+  return type1 && type2 && *type1 != *type2;
+}
+
 // If implicit types are allowed, ensure name is in the symbol table.
 // Otherwise, report an error if it hasn't been declared.
 const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
@@ -8482,13 +8507,30 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
     symbol->set(Symbol::Flag::ImplicitOrError, false);
     if (IsUplevelReference(*symbol)) {
       MakeHostAssocSymbol(name, *symbol);
-    } else if (IsDummy(*symbol) ||
-        (!symbol->GetType() && FindCommonBlockContaining(*symbol))) {
+    } else if (IsDummy(*symbol)) {
       CheckEntryDummyUse(name.source, symbol);
+      ConvertToObjectEntity(*symbol);
+      if (IsEarlyDeclaredDummyArgument(*symbol)) {
+        ForgetEarlyDeclaredDummyArgument(*symbol);
+        if (isImplicitNoneType()) {
+          context().Warn(common::LanguageFeature::ForwardRefImplicitNone,
+              name.source,
+              "'%s' was used under IMPLICIT NONE(TYPE) before being explicitly typed"_warn_en_US,
+              name.source);
+        } else if (TypesMismatchIfNonNull(
+                       symbol->GetType(), GetImplicitType(*symbol))) {
+          context().Warn(common::LanguageFeature::ForwardRefExplicitTypeDummy,
+              name.source,
+              "'%s' was used before being explicitly typed (and its implicit type would differ)"_warn_en_US,
+              name.source);
+        }
+      }
+      ApplyImplicitRules(*symbol);
+    } else if (!symbol->GetType() && FindCommonBlockContaining(*symbol)) {
       ConvertToObjectEntity(*symbol);
       ApplyImplicitRules(*symbol);
     } else if (const auto *tpd{symbol->detailsIf<TypeParamDetails>()};
-               tpd && !tpd->attr()) {
+        tpd && !tpd->attr()) {
       Say(name,
           "Type parameter '%s' was referenced before being declared"_err_en_US,
           name.source);
@@ -9031,11 +9073,6 @@ static bool IsLocallyImplicitGlobalSymbol(
   return false;
 }
 
-static bool TypesMismatchIfNonNull(
-    const DeclTypeSpec *type1, const DeclTypeSpec *type2) {
-  return type1 && type2 && *type1 != *type2;
-}
-
 // Check and set the Function or Subroutine flag on symbol; false on error.
 bool ResolveNamesVisitor::SetProcFlag(
     const parser::Name &name, Symbol &symbol, Symbol::Flag flag) {
@@ -9252,6 +9289,10 @@ void ResolveNamesVisitor::PreSpecificationConstruct(
     const parser::SpecificationConstruct &spec) {
   common::visit(
       common::visitors{
+          [&](const parser::Statement<
+              common::Indirection<parser::TypeDeclarationStmt>> &y) {
+            EarlyDummyTypeDeclaration(y);
+          },
           [&](const parser::Statement<Indirection<parser::GenericStmt>> &y) {
             CreateGeneric(std::get<parser::GenericSpec>(y.statement.value().t));
           },
@@ -9278,6 +9319,44 @@ void ResolveNamesVisitor::PreSpecificationConstruct(
           [](const auto &) {},
       },
       spec.u);
+}
+
+void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
+    const parser::Statement<common::Indirection<parser::TypeDeclarationStmt>>
+        &stmt) {
+  context().set_location(stmt.source);
+  const auto &[declTypeSpec, attrs, entities] = stmt.statement.value().t;
+  if (const auto *intrin{
+          std::get_if<parser::IntrinsicTypeSpec>(&declTypeSpec.u)}) {
+    if (const auto *intType{std::get_if<parser::IntegerTypeSpec>(&intrin->u)}) {
+      if (const auto &kind{intType->v}) {
+        if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
+            !parser::Unwrap<parser::IntLiteralConstant>(*kind)) {
+          return;
+        }
+      }
+      const DeclTypeSpec *type{nullptr};
+      for (const auto &ent : entities) {
+        const auto &objName{std::get<parser::ObjectName>(ent.t)};
+        Resolve(objName, FindInScope(currScope(), objName));
+        if (Symbol * symbol{objName.symbol};
+            symbol && IsDummy(*symbol) && NeedsType(*symbol)) {
+          if (!type) {
+            type = ProcessTypeSpec(declTypeSpec);
+            if (!type || !type->IsNumeric(TypeCategory::Integer)) {
+              break;
+            }
+          }
+          symbol->SetType(*type);
+          NoteEarlyDeclaredDummyArgument(*symbol);
+          // Set the Implicit flag to disable bogus errors from
+          // being emitted later when this declaration is processed
+          // again normally.
+          symbol->set(Symbol::Flag::Implicit);
+        }
+      }
+    }
+  }
 }
 
 void ResolveNamesVisitor::CreateCommonBlockSymbols(
