@@ -294,8 +294,6 @@ public:
       DataSize += 2 * sizeof(uint32_t);
       break;
     }
-
-
     if (Header.ParameterOffset + DataSize > EndOfSectionByte)
       return parseFailed("Reading structure out of file bounds");
 

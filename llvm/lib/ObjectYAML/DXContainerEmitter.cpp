@@ -305,7 +305,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         }
         case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
           const DXContainerYAML::DescriptorTableYaml &TableYaml =
-          P.RootSignature->Parameters.getOrInsertTable(L);
+              P.RootSignature->Parameters.getOrInsertTable(L);
           mcdxbc::DescriptorTable Table;
           for (const auto &R : TableYaml.Ranges) {
 

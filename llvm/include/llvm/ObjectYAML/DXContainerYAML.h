@@ -154,8 +154,7 @@ struct RootParameterYamlDesc {
     return getOrInsertImpl(ParamDesc, Descriptors);
   }
 
-  DescriptorTableYaml &
-  getOrInsertTable(RootParameterLocationYaml &ParamDesc) {
+  DescriptorTableYaml &getOrInsertTable(RootParameterLocationYaml &ParamDesc) {
     return getOrInsertImpl(ParamDesc, Tables);
   }
 
