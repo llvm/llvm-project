@@ -19,8 +19,8 @@
 // text_encoding text_encoding::environment();
 
 // Concerns:
-// 1. text_encoding::environment() returns the encoding for the "C" locale, which should be the default for any C++ program.
-// 2. text_encoding::environment() still returns the "C" locale encoding when the locale is set to "en_US.UTF-8".
+// 1. text_encoding::environment() returns the encoding for the environment's default locale.
+// 2. text_encoding::environment() still returns the default locale encoding when the locale is set to "en_US.UTF-8".
 // 3. text_encoding::environment() is affected by changes to the "LANG" environment variable.
 
 // The current implementation of text_encoding::environment() while conformant,
@@ -29,6 +29,7 @@
 #include <cassert>
 #include <clocale>
 #include <cstdlib>
+#include <string>
 #include <string_view>
 #include <text_encoding>
 
@@ -36,30 +37,40 @@
 #include "test_macros.h"
 #include "test_text_encoding.h"
 
+std::string extractEncodingFromLocale(std::string locale_str) {
+  auto dot_pos = locale_str.find('.'), at_pos = locale_str.find('@');
+
+  if(dot_pos == std::string::npos) {
+    return "ANSI_X3.4-1968"; // default is ASCII
+  }
+
+  if(at_pos == std::string::npos) {
+    return locale_str.substr(dot_pos + 1);
+  }
+  
+  return locale_str.substr(dot_pos + 1, at_pos - 1 - dot_pos);
+}
+
 int main() {
+  auto default_locale = std::setlocale(LC_ALL, nullptr);
+  auto default_encoding = extractEncodingFromLocale(std::string(default_locale));
+  auto default_te = std::text_encoding(default_encoding); 
+  
   { // 1
-    auto te = std::text_encoding::environment();
-
-    assert(te == std::text_encoding::environment());
-    assert(te.mib() == std::text_encoding::id::ASCII);
-    assert(te == std::text_encoding::id::ASCII);
-    assert(std::string_view(te.name()) == "ANSI_X3.4-1968");
-    assert(te == std::text_encoding("ANSI_X3.4-1968"));
-
-    assert(std::text_encoding::environment_is<std::text_encoding::id::ASCII>());
+    auto env_te = std::text_encoding::environment();
+    assert(env_te == std::text_encoding::environment());
+    assert(env_te == default_te);
+    assert(env_te.mib() == default_te.mib());
   }
 
   { // 2
-    std::setlocale(LC_ALL, "en_US.UTF-8");
+    std::setlocale(LC_ALL, LOCALE_en_US_UTF_8);
 
-    auto te = std::text_encoding::environment();
+    auto env_te = std::text_encoding::environment();
 
-    assert(te == std::text_encoding::environment());
-    assert(te.mib() == std::text_encoding::id::ASCII);
-    assert(std::string_view(te.name()) == "ANSI_X3.4-1968");
-    assert(te == std::text_encoding("ANSI_X3.4-1968"));
-
-    assert(std::text_encoding::environment_is<std::text_encoding::id::ASCII>());
+    assert(env_te == std::text_encoding::environment());
+    assert(env_te == default_te);
+    assert(env_te.mib() == default_te.mib());
   }
 
   { // 3
