@@ -390,6 +390,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // Zbkb can use rev8+brev8 to implement bitreverse.
     setOperationAction(ISD::BITREVERSE, XLenVT,
                        Subtarget.hasStdExtZbkb() ? Custom : Expand);
+    if (Subtarget.hasStdExtZbkb())
+      setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
   }
 
   if (Subtarget.hasStdExtZbb() ||
@@ -14188,6 +14190,17 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Results.push_back(DAG.getExtractVectorElt(DL, VT, BVec, 0));
       }
     }
+    break;
+  }
+  case ISD::BITREVERSE: {
+    assert(N->getValueType(0) == MVT::i8 && Subtarget.hasStdExtZbkb() &&
+           "Unexpected custom legalisation");
+    MVT XLenVT = Subtarget.getXLenVT();
+    SDValue NewOp = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, N->getOperand(0));
+    SDValue NewRes = DAG.getNode(RISCVISD::BREV8, DL, XLenVT, NewOp);
+    // ReplaceNodeResults requires we maintain the same type for the return
+    // value.
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, NewRes));
     break;
   }
   case RISCVISD::BREV8:
