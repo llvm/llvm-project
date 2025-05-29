@@ -32,20 +32,10 @@ add_llvm_target(LanaiCodeGen
   LanaiTargetObjectFile.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
   LanaiAsmParser
   LanaiDesc
   LanaiInfo
-  MC
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   Lanai

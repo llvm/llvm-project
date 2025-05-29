@@ -48,21 +48,9 @@ add_llvm_target(NVPTXCodeGen
   ${NVPTXCodeGen_sources}
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  IPO
-  MC
   NVPTXDesc
   NVPTXInfo
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
   Vectorize
 
   ADD_TO_COMPONENT
