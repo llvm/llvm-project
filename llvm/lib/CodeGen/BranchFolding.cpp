@@ -2090,8 +2090,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     // instructions (but at least this isn't producing wrong locations).
     MachineInstrBuilder MIRBuilder(*MBB->getParent(), Loc);
     auto HoistAndKillDbgInstr =
-        [MBB](MachineBasicBlock::iterator DI,
-              MachineBasicBlock::iterator InsertBefore) {
+        [MBB, Loc](MachineBasicBlock::iterator DI) {
           assert(DI->isDebugInstr() && "Expected a debug instruction");
           if (DI->isDebugRef()) {
             const TargetInstrInfo *TII =
@@ -2099,12 +2098,12 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
             const MCInstrDesc &DBGV = TII->get(TargetOpcode::DBG_VALUE);
             DI = BuildMI(*MBB->getParent(), DI->getDebugLoc(), DBGV, false, 0,
                          DI->getDebugVariable(), DI->getDebugExpression());
-            MBB->insert(InsertBefore, &*DI);
+            MBB->insert(Loc, &*DI);
             return;
           }
 
           DI->setDebugValueUndef();
-          DI->moveBefore(&*InsertBefore);
+          DI->moveBefore(&*Loc);
         };
 
     // TIB and FIB point to the end of the regions to hoist/merge in TBB and
@@ -2121,7 +2120,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       while (FI->isDebugOrPseudoInstr()) {
         assert(FI != FE && "Unexpected end of FBB range");
         MachineBasicBlock::iterator FINext = std::next(FI);
-        HoistAndKillDbgInstr(FI, Loc);
+        HoistAndKillDbgInstr(FI);
         FI = FINext;
       }
 
@@ -2132,7 +2131,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       }
       // Kill debug instructions before moving.
       if (TI->isDebugInstr()) {
-        HoistAndKillDbgInstr(TI, Loc);
+        HoistAndKillDbgInstr(TI);
         continue;
       }
 
