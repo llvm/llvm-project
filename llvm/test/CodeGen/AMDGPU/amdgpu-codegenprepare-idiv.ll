@@ -10095,11 +10095,11 @@ define i64 @udiv_i64_9divbits(i8 %size) {
   ret i64 %div
 }
 
-define void @srem_zero_zero() {
+define <2 x i64> @srem_zero_zero() {
 ; GCN-LABEL: kernel:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_endpgm
 entry:
-  %B = srem <32 x i64> zeroinitializer, zeroinitializer
-  ret void
+  %B = srem <2 x i64> zeroinitializer, zeroinitializer
+  ret <2 x i64> %B
 }
