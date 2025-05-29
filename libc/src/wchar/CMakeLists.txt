@@ -56,3 +56,15 @@ add_entrypoint_object(
     libc.hdr.wchar_macros
     libc.src.__support.wctype_utils
 )
+
+add_entrypoint_object(
+  wmemcmp
+  SRCS
+    wmemcmp.cpp
+  HDRS
+    wmemcmp.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+    libc.src.__support.wctype_utils
+)
