@@ -15,6 +15,7 @@
 #ifndef LLVM_OBJECTYAML_DXCONTAINERYAML_H
 #define LLVM_OBJECTYAML_DXCONTAINERYAML_H
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/DXContainer.h"
@@ -164,16 +165,18 @@ struct RootParameterYamlDesc {
 };
 
 struct StaticSamplerYamlDesc {
-  uint32_t Filter;
-  uint32_t AddressU;
-  uint32_t AddressV;
-  uint32_t AddressW;
-  float MipLODBias;
-  uint32_t MaxAnisotropy;
-  uint32_t ComparisonFunc;
-  uint32_t BorderColor;
-  float MinLOD;
-  float MaxLOD;
+  uint32_t Filter = llvm::to_underlying(dxbc::StaticSamplerFilter::ANISOTROPIC);
+  uint32_t AddressU = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
+  uint32_t AddressV = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
+  uint32_t AddressW = llvm::to_underlying(dxbc::TextureAddressMode::Wrap);
+  float MipLODBias = 0.f;
+  uint32_t MaxAnisotropy = 16u;
+  uint32_t ComparisonFunc =
+      llvm::to_underlying(dxbc::SamplersComparisonFunction::LessEqual);
+  uint32_t BorderColor =
+      llvm::to_underlying(dxbc::SamplersBorderColor::OpaqueWhite);
+  float MinLOD = 0.f;
+  float MaxLOD = std::numeric_limits<float>::max();
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
   uint32_t ShaderVisibility;

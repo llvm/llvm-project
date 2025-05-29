@@ -445,16 +445,16 @@ void MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml>::mapping(
 void MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc>::mapping(
     IO &IO, llvm::DXContainerYAML::StaticSamplerYamlDesc &S) {
 
-  IO.mapRequired("Filter", S.Filter);
-  IO.mapRequired("AddressU", S.AddressU);
-  IO.mapRequired("AddressV", S.AddressV);
-  IO.mapRequired("AddressW", S.AddressW);
-  IO.mapRequired("MipLODBias", S.MipLODBias);
-  IO.mapRequired("MaxAnisotropy", S.MaxAnisotropy);
-  IO.mapRequired("ComparisonFunc", S.ComparisonFunc);
-  IO.mapRequired("BorderColor", S.BorderColor);
-  IO.mapRequired("MinLOD", S.MinLOD);
-  IO.mapRequired("MaxLOD", S.MaxLOD);
+  IO.mapOptional("Filter", S.Filter);
+  IO.mapOptional("AddressU", S.AddressU);
+  IO.mapOptional("AddressV", S.AddressV);
+  IO.mapOptional("AddressW", S.AddressW);
+  IO.mapOptional("MipLODBias", S.MipLODBias);
+  IO.mapOptional("MaxAnisotropy", S.MaxAnisotropy);
+  IO.mapOptional("ComparisonFunc", S.ComparisonFunc);
+  IO.mapOptional("BorderColor", S.BorderColor);
+  IO.mapOptional("MinLOD", S.MinLOD);
+  IO.mapOptional("MaxLOD", S.MaxLOD);
   IO.mapRequired("ShaderRegister", S.ShaderRegister);
   IO.mapRequired("RegisterSpace", S.RegisterSpace);
   IO.mapRequired("ShaderVisibility", S.ShaderVisibility);

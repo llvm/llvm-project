@@ -209,6 +209,26 @@ inline bool isValidShaderVisibility(uint32_t V) {
   return false;
 }
 
+#define STATIC_SAMPLER_FILTER(Val, Enum) Enum = Val,
+enum class StaticSamplerFilter : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define TEXTURE_ADDRESS_MODE(Val, Enum) Enum = Val,
+enum class TextureAddressMode : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define COMPARISON_FUNCTION(Val, Enum) Enum = Val,
+enum class SamplersComparisonFunction : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
+enum class SamplersBorderColor : uint32_t {
+#include "DXContainerConstants.def"
+};
+
 PartType parsePartType(StringRef S);
 
 struct VertexPSVInfo {
