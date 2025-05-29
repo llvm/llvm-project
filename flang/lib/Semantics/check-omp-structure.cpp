@@ -21,8 +21,6 @@
 
 namespace Fortran::semantics {
 
-static_assert(std::is_same_v<SomeExpr, evaluate::Expr<evaluate::SomeType>>);
-
 template <typename T, typename U>
 static bool operator!=(const evaluate::Expr<T> &e, const evaluate::Expr<U> &f) {
   return !(e == f);
