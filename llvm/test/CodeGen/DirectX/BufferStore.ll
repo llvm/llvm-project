@@ -168,7 +168,7 @@ define void @storef64(<2 x i32> %0) {
   
   %buffer = tail call target("dx.TypedBuffer", double, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
-          i32 0, i32 0, i32 1, i32 0, i1 false)
+          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
 
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.resource.casthandle
@@ -187,7 +187,7 @@ define void @storev2f64(<4 x i32> %0) {
   
   %buffer = tail call target("dx.TypedBuffer", <2 x double>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f64_1_0_0t(
-          i32 0, i32 0, i32 1, i32 0, i1 false)
+          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
 
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.resource.casthandle
