@@ -312,8 +312,7 @@ define <2 x float> @sqrt_poison_fixed_vec() {
 
 define <vscale x 2 x float> @sqrt_poison_scalable_vec() {
 ; CHECK-LABEL: @sqrt_poison_scalable_vec(
-; CHECK-NEXT:    [[SQRT:%.*]] = call <vscale x 2 x float> @llvm.sqrt.nxv2f32(<vscale x 2 x float> poison)
-; CHECK-NEXT:    ret <vscale x 2 x float> [[SQRT]]
+; CHECK-NEXT:    ret <vscale x 2 x float> poison
 ;
   %sqrt = call <vscale x 2 x float> @llvm.sqrt(<vscale x 2 x float> poison)
   ret <vscale x 2 x float> %sqrt
