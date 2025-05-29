@@ -29,9 +29,9 @@ func.func @absi(%arg0: i32) -> i32 {
 
 // -----
 
-// CHECK-LABEL: func @absi_0d_vec(
+// CHECK-LABEL: func @absi_0dvector(
 // CHECK-SAME: i32
-func.func @absi_0d_vec(%arg0 : vector<i32>) {
+func.func @absi_0dvector(%arg0 : vector<i32>) {
   // CHECK: %[[CAST:.+]] = builtin.unrealized_conversion_cast %arg0 : vector<i32> to vector<1xi32>
   // CHECK: "llvm.intr.abs"(%[[CAST]]) <{is_int_min_poison = false}> : (vector<1xi32>) -> vector<1xi32>
   %0 = math.absi %arg0 : vector<i32>
@@ -292,9 +292,9 @@ func.func @ctlz(%arg0 : i32) {
   func.return
 }
 
-// CHECK-LABEL: func @ctlz_0d_vec(
+// CHECK-LABEL: func @ctlz_0dvector(
 // CHECK-SAME: i32
-func.func @ctlz_0d_vec(%arg0 : vector<i32>) {
+func.func @ctlz_0dvector(%arg0 : vector<i32>) {
   // CHECK: %[[CAST:.+]] = builtin.unrealized_conversion_cast %arg0 : vector<i32> to vector<1xi32>
   // CHECK: "llvm.intr.ctlz"(%[[CAST]]) <{is_zero_poison = false}> : (vector<1xi32>) -> vector<1xi32>
   %0 = math.ctlz %arg0 : vector<i32>
@@ -313,9 +313,9 @@ func.func @cttz(%arg0 : i32) {
 
 // -----
 
-// CHECK-LABEL: func @cttz_0d_vec(
+// CHECK-LABEL: func @cttz_0dvector(
 // CHECK-SAME: i32
-func.func @cttz_0d_vec(%arg0 : vector<i32>) {
+func.func @cttz_0dvector(%arg0 : vector<i32>) {
   // CHECK: %[[CAST:.+]] = builtin.unrealized_conversion_cast %arg0 : vector<i32> to vector<1xi32>
   // CHECK: "llvm.intr.cttz"(%[[CAST]]) <{is_zero_poison = false}> : (vector<1xi32>) -> vector<1xi32>
   %0 = math.cttz %arg0 : vector<i32>
