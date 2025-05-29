@@ -188,7 +188,7 @@ _LIBCPP_DIAGNOSTIC_POP
 
 // bullet 5 - Otherwise, there shall be no member `type`.
 template <class...>
-struct _LIBCPP_NO_SPECIALIZATIONS common_reference{};
+struct _LIBCPP_NO_SPECIALIZATIONS common_reference {};
 
 #endif // _LIBCPP_STD_VER >= 20
 
