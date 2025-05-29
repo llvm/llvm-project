@@ -139,21 +139,15 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
           })
           .getResults();
 
-  mlir::OpResult addr = results[0];
+  mlir::OpResult resultBox = results[0];
   mlir::OpResult needsCleanup = results[1];
 
-  builder.setInsertionPoint(copyOut);
-  builder.genIfOp(loc, {}, needsCleanup, /*withElseRegion=*/false).genThen([&] {
-    auto boxAddr = builder.create<fir::BoxAddrOp>(loc, addr);
-    fir::HeapType heapType =
-        fir::HeapType::get(fir::BoxValue(addr).getBaseTy());
-    mlir::Value heapVal =
-        builder.createConvert(loc, heapType, boxAddr.getResult());
-    builder.create<fir::FreeMemOp>(loc, heapVal);
-  });
-  rewriter.eraseOp(copyOut);
+  auto alloca = builder.create<fir::AllocaOp>(loc, resultBox.getType());
+  auto store = builder.create<fir::StoreOp>(loc, resultBox, alloca);
+  copyOut->setOperand(0, store.getMemref());
+  copyOut->setOperand(1, needsCleanup);
 
-  rewriter.replaceOp(copyIn, {addr, builder.genNot(loc, isContiguous)});
+  rewriter.replaceOp(copyIn, {resultBox, builder.genNot(loc, isContiguous)});
   return mlir::success();
 }
 

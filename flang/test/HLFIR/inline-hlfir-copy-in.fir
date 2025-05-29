@@ -73,11 +73,7 @@ func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {
 // CHECK:    %[[VAL_22:.*]] = fir.box_addr %[[VAL_21:.*]]#0 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
 // CHECK:    %[[VAL_23:.*]]:3 = hlfir.associate %[[VAL_5:.*]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 // CHECK:    fir.call @_QFPsb(%[[VAL_22:.*]], %[[VAL_23:.*]]#0) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>, !fir.ref<i32>) -> ()
-// CHECK:    fir.if %[[VAL_21:.*]]#1 {
-// CHECK:      %[[VAL_24:.*]] = fir.box_addr %[[VAL_21:.*]]#0 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
-// CHECK:      %[[VAL_25:.*]] = fir.convert %[[VAL_24:.*]] : (!fir.ref<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
-// CHECK:      fir.freemem %[[VAL_25:.*]] : !fir.heap<!fir.array<?xf64>>
-// CHECK:    }
+// CHECK:    hlfir.copy_out %16, %15#1 : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1) -> ()
 // CHECK:    hlfir.end_associate %[[VAL_23:.*]]#1, %[[VAL_23:.*]]#2 : !fir.ref<i32>, i1
 // CHECK:    return
 // CHECK:  }
