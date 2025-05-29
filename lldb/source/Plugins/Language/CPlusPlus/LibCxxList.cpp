@@ -176,7 +176,7 @@ lldb::ChildCacheState AbstractListFrontEnd::Update() {
 
   if (m_backend.GetTargetSP())
     m_list_capping_size =
-        m_backend.GetTargetSP()->GetMaximumNumberOfChildrenToDisplay();
+        m_backend.GetTargetSP()->GetMaximumNumberOfChildrenToDisplay().first;
   if (m_list_capping_size == 0)
     m_list_capping_size = 255;
 

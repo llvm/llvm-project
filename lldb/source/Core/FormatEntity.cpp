@@ -1027,7 +1027,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     if (index_higher < 0)
       index_higher = valobj->GetNumChildrenIgnoringErrors() - 1;
 
-    uint32_t max_num_children =
+    auto [max_num_children, _] =
         target->GetTargetSP()->GetMaximumNumberOfChildrenToDisplay();
 
     bool success = true;
