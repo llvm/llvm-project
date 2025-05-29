@@ -71,7 +71,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   BOS.reserveExtraSpace(getSize());
 
   const uint32_t NumParameters = ParametersContainer.size();
-  
+
   support::endian::write(BOS, Version, llvm::endianness::little);
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
   support::endian::write(BOS, RootParameterOffset, llvm::endianness::little);
