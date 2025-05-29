@@ -112,7 +112,7 @@ define void @program_1(ptr %dest, ptr %t0, <4 x float> %p0, <4 x float> %p1, <4 
 ; X64-NEXT:  LBB0_3: ## %forbody
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    subq $48, %rsp
-; X64-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    movaps {{.*#+}} xmm1 = [1.28E+2,1.28E+2,1.28E+2,1.28E+2]
 ; X64-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    cvttps2dq %xmm1, %xmm0
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
@@ -172,10 +172,10 @@ define void @program_1(ptr %dest, ptr %t0, <4 x float> %p0, <4 x float> %p1, <4 
 ; X64-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; X64-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
-; X64-NEXT:	   por %xmm1, %xmm0
+; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
-; X64-NEXT:	   xorps %xmm3, %xmm3
-; X64-NEXT:	   xorps %xmm4, %xmm4
+; X64-NEXT:    xorps %xmm3, %xmm3
+; X64-NEXT:    xorps %xmm4, %xmm4
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 ## 16-byte Reload
 ; X64-NEXT:    movaps (%rsp), %xmm2 ## 16-byte Reload

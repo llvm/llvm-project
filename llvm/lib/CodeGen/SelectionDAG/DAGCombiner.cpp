@@ -11638,15 +11638,15 @@ SDValue DAGCombiner::foldBitwiseOpWithNeg(SDNode *N) {
   SDLoc DL(N);
   SDValue X, Y, Z, NotY;
 
-  if (sd_match(
-          N, m_c_BinOp(Opc, m_Value(X), m_Add(m_AllOf(m_Value(NotY), m_Not(m_Value(Y))),
-                                     m_Value(Z)))))
+  if (sd_match(N, m_c_BinOp(Opc, m_Value(X),
+                            m_Add(m_AllOf(m_Value(NotY), m_Not(m_Value(Y))),
+                                  m_Value(Z)))))
     return DAG.getNode(Opc, DL, VT, X,
                        DAG.getNOT(DL, DAG.getNode(ISD::SUB, DL, VT, Y, Z), VT));
 
   if (sd_match(N, m_c_BinOp(Opc, m_Value(X),
-                          m_Sub(m_AllOf(m_Value(NotY), m_Not(m_Value(Y))),
-                                m_Value(Z)))) &&
+                            m_Sub(m_AllOf(m_Value(NotY), m_Not(m_Value(Y))),
+                                  m_Value(Z)))) &&
       NotY->hasOneUse())
     return DAG.getNode(Opc, DL, VT, X,
                        DAG.getNOT(DL, DAG.getNode(ISD::ADD, DL, VT, Y, Z), VT));
