@@ -257,7 +257,6 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Wrap);
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Wrap);
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Wrap);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 16u);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 0.f);
