@@ -2594,7 +2594,7 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
   if (match(V, m_ImmConstant(C)))
     return ConstantExpr::getNot(C);
 
-  if (Depth++ >= getAnalysisRecursionDepthLimit())
+  if (Depth++ >= DepthLimit::getMaxRecursionDepth())
     return nullptr;
 
   // The rest of the cases require that we invert all uses so don't bother
@@ -2689,7 +2689,7 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       Value *NewIncomingVal =
           getFreelyInvertedImpl(U.get(), /*WillInvertAllUses=*/false,
                                 /*Builder=*/nullptr, LocalDoesConsume,
-                                getAnalysisRecursionDepthLimit() - 1);
+                                DepthLimit::getMaxRecursionDepth() - 1);
       if (NewIncomingVal == nullptr)
         return nullptr;
       // Make sure that we can safely erase the original PHI node.

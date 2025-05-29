@@ -631,8 +631,27 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
     ConstantOffset = CI->getValue();
   } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(V)) {
     // Trace into subexpressions for more hoisting opportunities.
-    if (CanTraceInto(SignExtended, ZeroExtended, BO, NonNegative))
-      ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
+    BinaryOperator *TraceInto = BO;
+    if (BO->getOpcode() == Instruction::Xor &&
+        isa<ConstantInt>(BO->getOperand(1))) {
+      KnownBits LHSKnown(BO->getOperand(0)->getType()->getScalarSizeInBits());
+      KnownBits RHSKnown(BO->getOperand(1)->getType()->getScalarSizeInBits());
+      computeKnownBitsExhaustive(BO->getOperand(0), LHSKnown, DL);
+      computeKnownBitsExhaustive(BO->getOperand(1), RHSKnown, DL);
+      if (KnownBits::haveNoCommonBitsSet(LHSKnown, RHSKnown)) {
+        IRBuilder<> Builder(BO);
+        TraceInto = cast<BinaryOperator>(
+            Builder.CreateOr(BO->getOperand(0), BO->getOperand(1)));
+        cast<PossiblyDisjointInst>(TraceInto)->setIsDisjoint(true);
+        BO->replaceAllUsesWith(TraceInto);
+        BO->eraseFromParent();
+      }
+    }
+
+    if (CanTraceInto(SignExtended, ZeroExtended, TraceInto, NonNegative)) {
+      ConstantOffset =
+          findInEitherOperand(TraceInto, SignExtended, ZeroExtended);
+    }
   } else if (isa<TruncInst>(V)) {
     ConstantOffset =
         find(U->getOperand(0), SignExtended, ZeroExtended, NonNegative)

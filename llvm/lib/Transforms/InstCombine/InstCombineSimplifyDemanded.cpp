@@ -117,7 +117,7 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
     return false;
   }
 
-  if (Depth == getAnalysisRecursionDepthLimit())
+  if (Depth == DepthLimit::getMaxRecursionDepth())
     return false;
 
   Value *NewVal;
@@ -167,7 +167,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
                                                  const SimplifyQuery &Q,
                                                  unsigned Depth) {
   assert(I != nullptr && "Null pointer of Value???");
-  assert(Depth <= getAnalysisRecursionDepthLimit() && "Limit Search Depth");
+  assert(Depth <= DepthLimit::getMaxRecursionDepth() && "Limit Search Depth");
   uint32_t BitWidth = DemandedMask.getBitWidth();
   Type *VTy = I->getType();
   assert(
@@ -1452,7 +1452,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
 
   // Limit search depth.
   if (Depth == SimplifyDemandedVectorEltsDepthLimit &&
-      Depth >= getAnalysisRecursionDepthLimit())
+      Depth >= DepthLimit::getMaxRecursionDepth())
     return nullptr;
 
   if (!AllowMultipleUsers) {
@@ -1966,10 +1966,12 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
   }
 }
 
-Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
-    Value *V, const FPClassTest DemandedMask, KnownFPClass &Known,
-    Instruction *CxtI, unsigned Depth) {
-  assert(Depth <= getAnalysisRecursionDepthLimit() && "Limit Search Depth");
+Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Value *V,
+                                                    FPClassTest DemandedMask,
+                                                    KnownFPClass &Known,
+                                                    Instruction *CxtI,
+                                                    unsigned Depth) {
+  assert(Depth <= DepthLimit::getMaxRecursionDepth() && "Limit Search Depth");
   Type *VTy = V->getType();
 
   assert(Known == KnownFPClass() && "expected uninitialized state");
@@ -1977,7 +1979,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
   if (DemandedMask == fcNone)
     return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
 
-  if (Depth == getAnalysisRecursionDepthLimit())
+  if (Depth == DepthLimit::getMaxRecursionDepth())
     return nullptr;
 
   Instruction *I = dyn_cast<Instruction>(V);
