@@ -229,7 +229,7 @@ MDNode *MetadataBuilder::BuildDescriptorTableClause(
 
 std::optional<const RangeInfo *>
 ResourceRange::getOverlapping(const RangeInfo &Info) const {
-  IMap::const_iterator Interval = Intervals.find(Info.LowerBound);
+  MapT::const_iterator Interval = Intervals.find(Info.LowerBound);
   if (!Interval.valid() || Info.UpperBound < Interval.start())
     return std::nullopt;
   return Interval.value();
@@ -244,7 +244,7 @@ std::optional<const RangeInfo *> ResourceRange::insert(const RangeInfo &Info) {
   uint32_t UpperBound = Info.UpperBound;
 
   std::optional<const RangeInfo *> Res = std::nullopt;
-  IMap::iterator Interval = Intervals.begin();
+  MapT::iterator Interval = Intervals.begin();
 
   while (true) {
     if (UpperBound < LowerBound)
