@@ -278,6 +278,9 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Add sanitizer runtime dependencies.
+  // Note: having the static runtime linked into shared libraries can
+  // lead to multiple copies of the runtime with AIX's linkage model,
+  // so disallow that.
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_shared, options::OPT_r)) {
     if (NeedsSanitizerDeps)
