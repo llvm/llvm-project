@@ -25,7 +25,6 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -49,6 +48,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
@@ -2087,15 +2088,18 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
     // Merge the debug locations, and hoist and kill the debug instructions from
     // both branches. FIXME: We could probably try harder to preserve some debug
     // instructions (but at least this isn't producing wrong locations).
-    MachineIRBuilder MIRBuilder(*MBB, Loc);
+    MachineInstrBuilder MIRBuilder(*MBB->getParent(), Loc);
     auto HoistAndKillDbgInstr =
-        [&MIRBuilder](MachineBasicBlock::iterator DI,
-                      MachineBasicBlock::iterator InsertBefore) {
+        [MBB](MachineBasicBlock::iterator DI,
+              MachineBasicBlock::iterator InsertBefore) {
           assert(DI->isDebugInstr() && "Expected a debug instruction");
           if (DI->isDebugRef()) {
-            MIRBuilder.setDebugLoc(DI->getDebugLoc());
-            MIRBuilder.buildDirectDbgValue(0, DI->getDebugVariable(),
-                                           DI->getDebugExpression());
+            const TargetInstrInfo *TII =
+                MBB->getParent()->getSubtarget().getInstrInfo();
+            const MCInstrDesc &DBGV = TII->get(TargetOpcode::DBG_VALUE);
+            DI = BuildMI(*MBB->getParent(), DI->getDebugLoc(), DBGV, false, 0,
+                         DI->getDebugVariable(), DI->getDebugExpression());
+            MBB->insert(InsertBefore, &*DI);
             return;
           }
 
