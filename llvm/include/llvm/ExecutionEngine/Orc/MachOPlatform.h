@@ -194,7 +194,6 @@ private:
 
   // Data needed for bootstrap only.
   struct BootstrapInfo {
-    std::mutex Mutex;
     std::condition_variable CV;
     size_t ActiveGraphs = 0;
     shared::AllocActions DeferredAAs;

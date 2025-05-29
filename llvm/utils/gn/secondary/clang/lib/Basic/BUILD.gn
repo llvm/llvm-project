@@ -54,6 +54,7 @@ static_library("Basic") {
   ]
   deps = [
     ":write_vcsversion",
+    "//clang/include/clang/Basic:AttributeSpellingList",
     "//clang/include/clang/Basic:AttrHasAttributeImpl",
     "//clang/include/clang/Basic:CXX11AttributeInfo",
     "//clang/include/clang/Basic:DiagnosticAllCompatIDs",
@@ -100,6 +101,7 @@ static_library("Basic") {
     "SanitizerSpecialCaseList.cpp",
     "Sanitizers.cpp",
     "Sarif.cpp",
+    "SimpleTypoCorrection.cpp",
     "SourceLocation.cpp",
     "SourceManager.cpp",
     "SourceMgrAdapter.cpp",

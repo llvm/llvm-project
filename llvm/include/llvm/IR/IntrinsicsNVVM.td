@@ -128,6 +128,12 @@
 //   * llvm.nvvm.swap.lo.hi.b64      --> llvm.fshl(x, x, 32)
 //   * llvm.nvvm.atomic.load.inc.32  --> atomicrmw uinc_wrap
 //   * llvm.nvvm.atomic.load.dec.32  --> atomicrmw udec_wrap
+// * llvm.nvvm.barrier0              --> llvm.nvvm.barrier.cta.sync.aligned.all(0)
+// * llvm.nvvm.barrier.n             --> llvm.nvvm.barrier.cta.sync.aligned.all(x)
+// * llvm.nvvm.bar.sync              --> llvm.nvvm.barrier.cta.sync.aligned.all(x)
+// * llvm.nvvm.barrier               --> llvm.nvvm.barrier.cta.sync.aligned(x, y)
+// * llvm.nvvm.barrier.sync          --> llvm.nvvm.barrier.cta.sync.all(x)
+// * llvm.nvvm.barrier.sync.cnt      --> llvm.nvvm.barrier.cta.sync(x, y)
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;         // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;         // (shared)ptr
@@ -1278,18 +1284,6 @@ let TargetPrefix = "nvvm" in {
   defm int_nvvm_atomic_cas_gen_i  : PTXAtomicWithScope3<llvm_anyint_ty>;
 
 // Bar.Sync
-
-  // The builtin for "bar.sync 0" is called __syncthreads.  Unlike most of the
-  // intrinsics in this file, this one is a user-facing API.
-  def int_nvvm_barrier0 : ClangBuiltin<"__syncthreads">,
-      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
-  // Synchronize all threads in the CTA at barrier 'n'.
-  def int_nvvm_barrier_n : ClangBuiltin<"__nvvm_bar_n">,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  // Synchronize 'm', a multiple of warp size, (arg 2) threads in
-  // the CTA at barrier 'n' (arg 1).
-  def int_nvvm_barrier : ClangBuiltin<"__nvvm_bar">,
-      Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_barrier0_popc : ClangBuiltin<"__nvvm_bar0_popc">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_barrier0_and : ClangBuiltin<"__nvvm_bar0_and">,
@@ -1297,16 +1291,21 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_barrier0_or : ClangBuiltin<"__nvvm_bar0_or">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
-  def int_nvvm_bar_sync : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
   def int_nvvm_bar_warp_sync : NVVMBuiltin,
       Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
 
-  // barrier.sync id[, cnt]
-  def int_nvvm_barrier_sync : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
-  def int_nvvm_barrier_sync_cnt : NVVMBuiltin,
-      Intrinsic<[], [llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoCallback]>;
+  // barrier{.cta}.sync{.aligned}      a{, b};
+  // barrier{.cta}.arrive{.aligned}    a, b;
+  let IntrProperties = [IntrConvergent, IntrNoCallback] in {
+    foreach align = ["", "_aligned"] in {
+      def int_nvvm_barrier_cta_sync # align # _all :
+          Intrinsic<[], [llvm_i32_ty]>;
+      def int_nvvm_barrier_cta_sync # align # _count :
+          Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+      def int_nvvm_barrier_cta_arrive # align # _count :
+          Intrinsic<[], [llvm_i32_ty, llvm_i32_ty]>;
+    }
+  }
 
   // barrier.cluster.[wait, arrive, arrive.relaxed]
   def int_nvvm_barrier_cluster_arrive :

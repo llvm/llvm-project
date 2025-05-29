@@ -3658,8 +3658,8 @@ define amdgpu_kernel void @global_zextload_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v17, s9
 ; GCN-HSA-NEXT:    s_add_u32 s10, s2, 64
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v16, s8
-; GCN-HSA-NEXT:    flat_load_dwordx4 v[20:23], v[16:17]
 ; GCN-HSA-NEXT:    s_addc_u32 s11, s3, 0
+; GCN-HSA-NEXT:    flat_load_dwordx4 v[20:23], v[16:17]
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v0, s10
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v1, s11
 ; GCN-HSA-NEXT:    s_add_u32 s10, s2, 0x50

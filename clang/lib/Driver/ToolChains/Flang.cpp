@@ -13,7 +13,6 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"

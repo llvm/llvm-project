@@ -128,13 +128,15 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     RootSignature
 
-    RootFlags DescriptorTable RootConstants
+    RootFlags DescriptorTable RootConstants StaticSampler
 
     num32BitConstants
 
     CBV SRV UAV Sampler
     space visibility flags
     numDescriptors offset
+
+    mipLODBias
 
     unbounded
     DESCRIPTOR_RANGE_OFFSET_APPEND

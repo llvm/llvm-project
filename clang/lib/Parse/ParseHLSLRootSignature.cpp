@@ -10,8 +10,6 @@
 
 #include "clang/Lex/LiteralSupport.h"
 
-#include "llvm/Support/raw_ostream.h"
-
 using namespace llvm::hlsl::rootsig;
 
 namespace clang {
@@ -54,6 +52,13 @@ bool RootSignatureParser::parse() {
       if (!Descriptor.has_value())
         return true;
       Elements.push_back(*Descriptor);
+    }
+
+    if (tryConsumeExpectedToken(TokenKind::kw_StaticSampler)) {
+      auto Sampler = parseStaticSampler();
+      if (!Sampler.has_value())
+        return true;
+      Elements.push_back(*Sampler);
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
@@ -193,6 +198,7 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
     ExpectedReg = TokenKind::uReg;
     break;
   }
+  Descriptor.setDefaultFlags();
 
   auto Params = parseRootDescriptorParams(ExpectedReg);
   if (!Params.has_value())
@@ -213,6 +219,9 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
 
   if (Params->Visibility.has_value())
     Descriptor.Visibility = Params->Visibility.value();
+
+  if (Params->Flags.has_value())
+    Descriptor.Flags = Params->Flags.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -342,6 +351,41 @@ RootSignatureParser::parseDescriptorTableClause() {
     return std::nullopt;
 
   return Clause;
+}
+
+std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
+  assert(CurToken.TokKind == TokenKind::kw_StaticSampler &&
+         "Expects to only be invoked starting at given keyword");
+
+  if (consumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           CurToken.TokKind))
+    return std::nullopt;
+
+  StaticSampler Sampler;
+
+  auto Params = parseStaticSamplerParams();
+  if (!Params.has_value())
+    return std::nullopt;
+
+  // Check mandatory parameters were provided
+  if (!Params->Reg.has_value()) {
+    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+        << TokenKind::sReg;
+    return std::nullopt;
+  }
+
+  Sampler.Reg = Params->Reg.value();
+
+  // Fill in optional values
+  if (Params->MipLODBias.has_value())
+    Sampler.MipLODBias = Params->MipLODBias.value();
+
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/TokenKind::kw_StaticSampler))
+    return std::nullopt;
+
+  return Sampler;
 }
 
 // Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
@@ -475,6 +519,23 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
         return std::nullopt;
       Params.Visibility = Visibility;
     }
+
+    // `flags` `=` ROOT_DESCRIPTOR_FLAGS
+    if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
+      if (Params.Flags.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Flags = parseRootDescriptorFlags();
+      if (!Flags.has_value())
+        return std::nullopt;
+      Params.Flags = Flags;
+    }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   return Params;
@@ -585,6 +646,47 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
   return Params;
 }
 
+std::optional<RootSignatureParser::ParsedStaticSamplerParams>
+RootSignatureParser::parseStaticSamplerParams() {
+  assert(CurToken.TokKind == TokenKind::pu_l_paren &&
+         "Expects to only be invoked starting at given token");
+
+  ParsedStaticSamplerParams Params;
+  do {
+    // `s` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::sReg)) {
+      if (Params.Reg.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+      auto Reg = parseRegister();
+      if (!Reg.has_value())
+        return std::nullopt;
+      Params.Reg = Reg;
+    }
+
+    // `mipLODBias` `=` NUMBER
+    if (tryConsumeExpectedToken(TokenKind::kw_mipLODBias)) {
+      if (Params.MipLODBias.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto MipLODBias = parseFloatParam();
+      if (!MipLODBias.has_value())
+        return std::nullopt;
+      Params.MipLODBias = MipLODBias;
+    }
+  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+  return Params;
+}
+
 std::optional<uint32_t> RootSignatureParser::parseUIntParam() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -628,6 +730,39 @@ std::optional<Register> RootSignatureParser::parseRegister() {
   return Reg;
 }
 
+std::optional<float> RootSignatureParser::parseFloatParam() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+  // Consume sign modifier
+  bool Signed =
+      tryConsumeExpectedToken({TokenKind::pu_plus, TokenKind::pu_minus});
+  bool Negated = Signed && CurToken.TokKind == TokenKind::pu_minus;
+
+  // DXC will treat a postive signed integer as unsigned
+  if (!Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
+    std::optional<uint32_t> UInt = handleUIntLiteral();
+    if (!UInt.has_value())
+      return std::nullopt;
+    return float(UInt.value());
+  }
+
+  if (Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
+    std::optional<int32_t> Int = handleIntLiteral(Negated);
+    if (!Int.has_value())
+      return std::nullopt;
+    return float(Int.value());
+  }
+
+  if (tryConsumeExpectedToken(TokenKind::float_literal)) {
+    std::optional<float> Float = handleFloatLiteral(Negated);
+    if (!Float.has_value())
+      return std::nullopt;
+    return Float.value();
+  }
+
+  return std::nullopt;
+}
+
 std::optional<llvm::hlsl::rootsig::ShaderVisibility>
 RootSignatureParser::parseShaderVisibility() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
@@ -652,6 +787,45 @@ RootSignatureParser::parseShaderVisibility() {
   }
 
   return std::nullopt;
+}
+
+std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
+RootSignatureParser::parseRootDescriptorFlags() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  // Handle the edge-case of '0' to specify no flags set
+  if (tryConsumeExpectedToken(TokenKind::int_literal)) {
+    if (!verifyZeroFlag()) {
+      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
+      return std::nullopt;
+    }
+    return RootDescriptorFlags::None;
+  }
+
+  TokenKind Expected[] = {
+#define ROOT_DESCRIPTOR_FLAG_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  std::optional<RootDescriptorFlags> Flags;
+
+  do {
+    if (tryConsumeExpectedToken(Expected)) {
+      switch (CurToken.TokKind) {
+#define ROOT_DESCRIPTOR_FLAG_ENUM(NAME, LIT)                                   \
+  case TokenKind::en_##NAME:                                                   \
+    Flags =                                                                    \
+        maybeOrFlag<RootDescriptorFlags>(Flags, RootDescriptorFlags::NAME);    \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+      default:
+        llvm_unreachable("Switch for consumed enum token was not provided");
+      }
+    }
+  } while (tryConsumeExpectedToken(TokenKind::pu_or));
+
+  return Flags;
 }
 
 std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
@@ -699,20 +873,119 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
                                       PP.getSourceManager(), PP.getLangOpts(),
                                       PP.getTargetInfo(), PP.getDiagnostics());
   if (Literal.hadError)
-    return true; // Error has already been reported so just return
+    return std::nullopt; // Error has already been reported so just return
 
-  assert(Literal.isIntegerLiteral() && "IsNumberChar will only support digits");
+  assert(Literal.isIntegerLiteral() &&
+         "NumSpelling can only consist of digits");
 
-  llvm::APSInt Val = llvm::APSInt(32, false);
+  llvm::APSInt Val(32, /*IsUnsigned=*/true);
   if (Literal.GetIntegerValue(Val)) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
-        << 0 << CurToken.NumSpelling;
+        << /*integer type*/ 0 << /*is signed*/ 0;
     return std::nullopt;
   }
 
   return Val.getExtValue();
+}
+
+std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
+  // Parse the numeric value and do semantic checks on its specification
+  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
+                                      PP.getSourceManager(), PP.getLangOpts(),
+                                      PP.getTargetInfo(), PP.getDiagnostics());
+  if (Literal.hadError)
+    return std::nullopt; // Error has already been reported so just return
+
+  assert(Literal.isIntegerLiteral() &&
+         "NumSpelling can only consist of digits");
+
+  llvm::APSInt Val(32, /*IsUnsigned=*/true);
+  // GetIntegerValue will overwrite Val from the parsed Literal and return
+  // true if it overflows as a 32-bit unsigned int
+  bool Overflowed = Literal.GetIntegerValue(Val);
+
+  // So we then need to check that it doesn't overflow as a 32-bit signed int:
+  int64_t MaxNegativeMagnitude = -int64_t(std::numeric_limits<int32_t>::min());
+  Overflowed |= (Negated && MaxNegativeMagnitude < Val.getExtValue());
+
+  int64_t MaxPositiveMagnitude = int64_t(std::numeric_limits<int32_t>::max());
+  Overflowed |= (!Negated && MaxPositiveMagnitude < Val.getExtValue());
+
+  if (Overflowed) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*integer type*/ 0 << /*is signed*/ 1;
+    return std::nullopt;
+  }
+
+  if (Negated)
+    Val = -Val;
+
+  return int32_t(Val.getExtValue());
+}
+
+std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
+  // Parse the numeric value and do semantic checks on its specification
+  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
+                                      PP.getSourceManager(), PP.getLangOpts(),
+                                      PP.getTargetInfo(), PP.getDiagnostics());
+  if (Literal.hadError)
+    return std::nullopt; // Error has already been reported so just return
+
+  assert(Literal.isFloatingLiteral() &&
+         "NumSpelling consists only of [0-9.ef+-]. Any malformed NumSpelling "
+         "will be caught and reported by NumericLiteralParser.");
+
+  // DXC used `strtod` to convert the token string to a float which corresponds
+  // to:
+  auto DXCSemantics = llvm::APFloat::Semantics::S_IEEEdouble;
+  auto DXCRoundingMode = llvm::RoundingMode::NearestTiesToEven;
+
+  llvm::APFloat Val(llvm::APFloat::EnumToSemantics(DXCSemantics));
+  llvm::APFloat::opStatus Status(Literal.GetFloatValue(Val, DXCRoundingMode));
+
+  // Note: we do not error when opStatus::opInexact by itself as this just
+  // denotes that rounding occured but not that it is invalid
+  assert(!(Status & llvm::APFloat::opStatus::opInvalidOp) &&
+         "NumSpelling consists only of [0-9.ef+-]. Any malformed NumSpelling "
+         "will be caught and reported by NumericLiteralParser.");
+
+  assert(!(Status & llvm::APFloat::opStatus::opDivByZero) &&
+         "It is not possible for a division to be performed when "
+         "constructing an APFloat from a string");
+
+  if (Status & llvm::APFloat::opStatus::opUnderflow) {
+    // Report that the value has underflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_underflow);
+    return std::nullopt;
+  }
+
+  if (Status & llvm::APFloat::opStatus::opOverflow) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*float type*/ 1;
+    return std::nullopt;
+  }
+
+  if (Negated)
+    Val = -Val;
+
+  double DoubleVal = Val.convertToDouble();
+  double FloatMax = double(std::numeric_limits<float>::max());
+  if (FloatMax < DoubleVal || DoubleVal < -FloatMax) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*float type*/ 1;
+    return std::nullopt;
+  }
+
+  return static_cast<float>(DoubleVal);
 }
 
 bool RootSignatureParser::verifyZeroFlag() {

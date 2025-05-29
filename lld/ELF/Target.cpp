@@ -28,7 +28,6 @@
 #include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
 
