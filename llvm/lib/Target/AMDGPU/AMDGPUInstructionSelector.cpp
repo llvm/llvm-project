@@ -4378,11 +4378,22 @@ static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
 }
 
 static std::optional<std::pair<const MachineOperand *, SrcStatus>>
-retOpStat(const MachineOperand *Op, SrcStatus Stat,
-          std::pair<const MachineOperand *, SrcStatus> &Curr) {
+retOpRegStat(const MachineOperand *Op, SrcStatus Stat,
+             std::pair<const MachineOperand *, SrcStatus> &Curr) {
   if (Stat != SrcStatus::INVALID &&
-      ((Op->isReg() && !(Op->getReg().isPhysical())) || Op->isImm() ||
-       Op->isCImm() || Op->isFPImm())) {
+      ((Op->isReg() && !(Op->getReg().isPhysical())))) {
+    return std::optional<std::pair<const MachineOperand *, SrcStatus>>(
+        {Op, Stat});
+  }
+
+  return std::nullopt;
+}
+
+static std::optional<std::pair<const MachineOperand *, SrcStatus>>
+retOpImmStat(const MachineOperand *Op, SrcStatus Stat,
+             std::pair<const MachineOperand *, SrcStatus> &Curr) {
+  // Only float point inline constant allowed.
+  if (Stat != SrcStatus::INVALID && Op->isFPImm()) {
     return std::optional<std::pair<const MachineOperand *, SrcStatus>>(
         {Op, Stat});
   }
@@ -4572,13 +4583,13 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
   switch (Opc) {
   case AMDGPU::G_CONSTANT:
   case AMDGPU::G_FCONSTANT:
-    return retOpStat(&MI->getOperand(1), Curr.second, Curr);
+    return retOpImmStat(&MI->getOperand(1), Curr.second, Curr);
   case AMDGPU::G_BITCAST:
   case AMDGPU::COPY:
-    return retOpStat(&MI->getOperand(1), Curr.second, Curr);
+    return retOpRegStat(&MI->getOperand(1), Curr.second, Curr);
   case AMDGPU::G_FNEG:
-    return retOpStat(&MI->getOperand(1),
-                     getNegStatus(Curr.first, Curr.second, MRI), Curr);
+    return retOpRegStat(&MI->getOperand(1),
+                        getNegStatus(Curr.first, Curr.second, MRI), Curr);
   default:
     break;
   }
@@ -4587,7 +4598,7 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
   switch (Curr.second) {
   case SrcStatus::IS_SAME:
     if (isTruncHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF, Curr);
+      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF, Curr);
     break;
   case SrcStatus::IS_HI_NEG:
     if (isTruncHalf(MI, MRI)) {
@@ -4597,24 +4608,27 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
       // Src = [SrcHi, SrcLo] = [-CurrHi, CurrLo]
       //     = [-OpLowerHi, OpLowerLo]
       //     = -OpLower
-      return retOpStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF_NEG, Curr);
+      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF_NEG,
+                          Curr);
     }
     break;
   case SrcStatus::IS_UPPER_HALF:
     if (isShlHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF, Curr);
+      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF, Curr);
     break;
   case SrcStatus::IS_LOWER_HALF:
     if (isLshrHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), SrcStatus::IS_UPPER_HALF, Curr);
+      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_UPPER_HALF, Curr);
     break;
   case SrcStatus::IS_UPPER_HALF_NEG:
     if (isShlHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF_NEG, Curr);
+      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_LOWER_HALF_NEG,
+                          Curr);
     break;
   case SrcStatus::IS_LOWER_HALF_NEG:
     if (isLshrHalf(MI, MRI))
-      return retOpStat(&MI->getOperand(1), SrcStatus::IS_UPPER_HALF_NEG, Curr);
+      return retOpRegStat(&MI->getOperand(1), SrcStatus::IS_UPPER_HALF_NEG,
+                          Curr);
     break;
   default:
     break;
@@ -4698,7 +4712,7 @@ getLastSameOrNeg(const MachineOperand *Op, const MachineRegisterInfo &MRI,
 
 static bool isInlinableFPConstant(const MachineOperand &Op,
                                   const SIInstrInfo &TII) {
-  return Op.isFPImm() && TII.isInlineConstant(Op.getFPImm()->getValueAPF());
+  return TII.isInlineConstant(Op.getFPImm()->getValueAPF());
 }
 
 static bool isSameBitWidth(const MachineOperand *Op1, const MachineOperand *Op2,
@@ -4753,12 +4767,11 @@ static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat,
     };
     return isSameBitWidth(NewOp, RootOp, MRI) && IsHalfState(LoStat) &&
            IsHalfState(HiStat);
-  } else
-    return ((HiStat == SrcStatus::IS_SAME || HiStat == SrcStatus::IS_HI_NEG) &&
-            (LoStat == SrcStatus::IS_SAME || LoStat == SrcStatus::IS_HI_NEG) &&
-            isInlinableFPConstant(*NewOp, TII));
-
-  return false;
+  }
+  // Only float point inline constant allowed.
+  return ((HiStat == SrcStatus::IS_SAME || HiStat == SrcStatus::IS_HI_NEG) &&
+          (LoStat == SrcStatus::IS_SAME || LoStat == SrcStatus::IS_HI_NEG) &&
+          TII.isInlineConstant(NewOp->getFPImm()->getValueAPF()));
 }
 
 std::pair<const MachineOperand *, unsigned>
@@ -4800,7 +4813,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
   SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistHi =
       getSrcStats(&MI->getOperand(2), MRI, SearchOptions);
 
-  if (StatlistHi.size() == 0) {
+  if (StatlistHi.empty()) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
   }
@@ -4808,7 +4821,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
   SmallVector<std::pair<const MachineOperand *, SrcStatus>> StatlistLo =
       getSrcStats(&MI->getOperand(1), MRI, SearchOptions);
 
-  if (StatlistLo.size() == 0) {
+  if (StatlistLo.empty()) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
   }
