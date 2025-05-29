@@ -35549,8 +35549,11 @@ bool X86TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
   return !(SrcVT == MVT::i32 && DestVT == MVT::i16);
 }
 
-bool X86TargetLowering::shouldFoldSelectWithIdentityConstant(unsigned Opcode,
-                                                             EVT VT) const {
+bool X86TargetLowering::shouldFoldSelectWithIdentityConstant(
+    unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
+    SDValue Y) const {
+  if (SelectOpcode != ISD::VSELECT)
+    return false;
   // TODO: This is too general. There are cases where pre-AVX512 codegen would
   //       benefit. The transform may also be profitable for scalar code.
   if (!Subtarget.hasAVX512())

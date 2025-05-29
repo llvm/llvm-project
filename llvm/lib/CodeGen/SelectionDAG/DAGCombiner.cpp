@@ -2433,8 +2433,9 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
   if (ShouldCommuteOperands)
     std::swap(N0, N1);
 
-  // TODO: Should this apply to scalar select too?
-  if (N1.getOpcode() != ISD::VSELECT || !N1.hasOneUse())
+  unsigned SelOpcode = N1.getOpcode();
+  if ((SelOpcode != ISD::VSELECT && SelOpcode != ISD::SELECT) ||
+      !N1.hasOneUse())
     return SDValue();
 
   // We can't hoist all instructions because of immediate UB (not speculatable).
@@ -2447,17 +2448,22 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
   SDValue Cond = N1.getOperand(0);
   SDValue TVal = N1.getOperand(1);
   SDValue FVal = N1.getOperand(2);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // This transform increases uses of N0, so freeze it to be safe.
   // binop N0, (vselect Cond, IDC, FVal) --> vselect Cond, N0, (binop N0, FVal)
   unsigned OpNo = ShouldCommuteOperands ? 0 : 1;
-  if (isNeutralConstant(Opcode, N->getFlags(), TVal, OpNo)) {
+  if (isNeutralConstant(Opcode, N->getFlags(), TVal, OpNo) &&
+      TLI.shouldFoldSelectWithIdentityConstant(Opcode, VT, SelOpcode, N0,
+                                               FVal)) {
     SDValue F0 = DAG.getFreeze(N0);
     SDValue NewBO = DAG.getNode(Opcode, SDLoc(N), VT, F0, FVal, N->getFlags());
     return DAG.getSelect(SDLoc(N), VT, Cond, F0, NewBO);
   }
   // binop N0, (vselect Cond, TVal, IDC) --> vselect Cond, (binop N0, TVal), N0
-  if (isNeutralConstant(Opcode, N->getFlags(), FVal, OpNo)) {
+  if (isNeutralConstant(Opcode, N->getFlags(), FVal, OpNo) &&
+      TLI.shouldFoldSelectWithIdentityConstant(Opcode, VT, SelOpcode, N0,
+                                               TVal)) {
     SDValue F0 = DAG.getFreeze(N0);
     SDValue NewBO = DAG.getNode(Opcode, SDLoc(N), VT, F0, TVal, N->getFlags());
     return DAG.getSelect(SDLoc(N), VT, Cond, NewBO, F0);
@@ -2467,26 +2473,23 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
 }
 
 SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   assert(TLI.isBinOp(BO->getOpcode()) && BO->getNumValues() == 1 &&
          "Unexpected binary operator");
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  auto BinOpcode = BO->getOpcode();
-  EVT VT = BO->getValueType(0);
-  if (TLI.shouldFoldSelectWithIdentityConstant(BinOpcode, VT)) {
-    if (SDValue Sel = foldSelectWithIdentityConstant(BO, DAG, false))
-      return Sel;
+  if (SDValue Sel = foldSelectWithIdentityConstant(BO, DAG, false))
+    return Sel;
 
-    if (TLI.isCommutativeBinOp(BO->getOpcode()))
-      if (SDValue Sel = foldSelectWithIdentityConstant(BO, DAG, true))
-        return Sel;
-  }
+  if (TLI.isCommutativeBinOp(BO->getOpcode()))
+    if (SDValue Sel = foldSelectWithIdentityConstant(BO, DAG, true))
+      return Sel;
 
   // Don't do this unless the old select is going away. We want to eliminate the
   // binary operator, not replace a binop with a select.
   // TODO: Handle ISD::SELECT_CC.
   unsigned SelOpNo = 0;
   SDValue Sel = BO->getOperand(0);
+  auto BinOpcode = BO->getOpcode();
   if (Sel.getOpcode() != ISD::SELECT || !Sel.hasOneUse()) {
     SelOpNo = 1;
     Sel = BO->getOperand(1);
@@ -2534,6 +2537,7 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
 
   SDLoc DL(Sel);
   SDValue NewCT, NewCF;
+  EVT VT = BO->getValueType(0);
 
   if (CanFoldNonConst) {
     // If CBO is an opaque constant, we can't rely on getNode to constant fold.
