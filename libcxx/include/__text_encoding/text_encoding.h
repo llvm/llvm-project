@@ -549,7 +549,15 @@ private:
     auto __data_ptr = __text_encoding_data + 2, __data_last = std::end(__text_encoding_data);
     auto __found_data = std::find(__data_ptr, __data_last, __a);
 
-    return __found_data != __data_last ? __found_data : __text_encoding_data; // other
+    if (__found_data == __data_last) {
+      return __text_encoding_data; // other
+    }
+
+    while (__found_data[-1].__mib_rep_ == __found_data->__mib_rep_) {
+      __found_data--;
+    }
+
+    return __found_data;
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr const __encoding_data* __find_encoding_data_by_id(id __i) {
