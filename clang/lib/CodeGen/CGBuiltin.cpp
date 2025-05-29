@@ -2049,7 +2049,7 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
       return EmitAbs(CGF, ArgValue, true);
   }
 
-  SmallVector<SanitizerKind::SanitizerOrdinal, 3> Ordinals;
+  SmallVector<SanitizerKind::SanitizerOrdinal, 1> Ordinals;
   if (SanitizeOverflow)
     Ordinals.push_back(SanitizerKind::SO_SignedIntegerOverflow);
   CodeGenFunction::SanitizerScope SanScope(&CGF, Ordinals);
