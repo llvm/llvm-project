@@ -1456,6 +1456,9 @@ def err_acc_unexpected_directive
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive %select{%1|'%1 %2'}0">;
 def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;
+def warn_acc_unsupported_extension_clause
+    : Warning<"unsupported OpenACC extension clause %0">,
+      InGroup<DiagGroup<"unknown-acc-extension-clause">>;
 def err_acc_missing_directive : Error<"expected OpenACC directive">;
 def err_acc_invalid_open_paren
     : Error<"expected clause-list or newline in OpenACC directive">;

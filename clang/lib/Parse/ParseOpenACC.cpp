@@ -939,6 +939,15 @@ bool Parser::ParseOpenACCGangArgList(
   return false;
 }
 
+namespace {
+bool isUnsupportedExtensionClause(Token Tok) {
+  if (!Tok.is(tok::identifier))
+    return false;
+
+  return Tok.getIdentifierInfo()->getName().starts_with("__");
+}
+} // namespace
+
 Parser::OpenACCClauseParseResult
 Parser::ParseOpenACCClause(ArrayRef<const OpenACCClause *> ExistingClauses,
                            OpenACCDirectiveKind DirKind) {
@@ -949,7 +958,21 @@ Parser::ParseOpenACCClause(ArrayRef<const OpenACCClause *> ExistingClauses,
 
   OpenACCClauseKind Kind = getOpenACCClauseKind(getCurToken());
 
-  if (Kind == OpenACCClauseKind::Invalid) {
+  if (isUnsupportedExtensionClause(getCurToken())) {
+    Diag(getCurToken(), diag::warn_acc_unsupported_extension_clause)
+        << getCurToken().getIdentifierInfo();
+
+    // Extension methods optionally contain balanced token sequences, so we are
+    // going to parse this.
+    ConsumeToken(); // Consume the clause name.
+    BalancedDelimiterTracker Parens(*this, tok::l_paren,
+                                    tok::annot_pragma_openacc_end);
+    // Consume the optional parens and tokens inside of them.
+    if (!Parens.consumeOpen())
+      Parens.skipToEnd();
+
+    return OpenACCCanContinue();
+  } else if (Kind == OpenACCClauseKind::Invalid) {
     Diag(getCurToken(), diag::err_acc_invalid_clause)
         << getCurToken().getIdentifierInfo();
     return OpenACCCannotContinue();
