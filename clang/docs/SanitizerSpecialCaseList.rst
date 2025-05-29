@@ -156,7 +156,6 @@ tool-specific docs.
 
 .. code-block:: bash
 
-    # The line above is explained in the note above
     # Lines starting with # are ignored.
     # Turn off checks for the source file
     # Entries without sections are placed into [*] and apply to all sanitizers
