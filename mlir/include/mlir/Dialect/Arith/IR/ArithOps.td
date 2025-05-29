@@ -1218,25 +1218,26 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFast
 //===----------------------------------------------------------------------===//
 // Scaling ExtFOp
 //===----------------------------------------------------------------------===//
-
+// TODO Remove rouding mode attr for EXtf
 def Arith_ScalingExtFOp :
     Arith_Op<"scaling_extf",
       [Pure, 
        SameInputOutputTensorDims, 
-       DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
        DeclareOpInterfaceMethods<ArithFastMathInterface>, 
        DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins FloatLike:$in,
                    FloatLike:$scale,
-                   OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
                    OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
     Results<(outs FloatLike:$out)> {
   let summary = "cast from floating-point to larger floating-point using provided scales";
   let description = [{
     Implements micro-scaling floating point ExtF op. It expects both scales and input operand to be of same shape. 
-    Scale operand is usually expected to be of type f8E8M0 but that is not strictly necessary. 
-    Scale is usually calculated per block. 
-    It is assumed that Scale operand is broadcasted appropariately to make it of same shape as Input operand so that `arith.scaling_extf` an elementwise op.
+    Scale operand is expected to be of type f8E8M0. But that can be relaxed in future.  
+    Scale is usually calculated per block.  
+    Let's say originally input is shape <dim1 x dim2 x dim3 .. x dimN> then, given blockSize it can be reshaped to <dim1 x dim2 x ... (dimN/blockSize) x blockSize>. 
+    Scales will be calculated on the block axis. Therefore scale will be of shape <dim1 x dim2 x dim3 ... (dimN/blockSize) x 1>. 
+    Before calling into `arith.scaling_extf`, scales must be broadcasted appropariately to make it as same shape as input making `arith.scaling_extf` an elemenwise op.  
+    In above example. scales should be broadcasted to shape of <dim1 x dim2 x dim3 x ... (dimN/blockSize) x blockSize>.
     ```
     resultTy = get_type(result) 
     scaleTy  = get_type(scale)
@@ -1250,7 +1251,7 @@ def Arith_ScalingExtFOp :
     It propagates NaN values. Therefore if either scale or input operand element value is a NaN then output element value will also be a NaN.
   }];
   let hasVerifier = 1;
-  let assemblyFormat = [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:` type($in) `,` type($scale) `to` type($out)}];
+  let assemblyFormat = [{ $in `,` $scale (`fastmath` `` $fastmath^)? attr-dict `:` type($in) `,` type($scale) `to` type($out)}];
 }
 
 //===----------------------------------------------------------------------===//

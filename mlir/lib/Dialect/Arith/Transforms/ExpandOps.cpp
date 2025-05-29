@@ -419,8 +419,13 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     auto inputOperand = op.getIn();
     auto scaleOperand = op.getScale();
+    if (!llvm::isa<Float8E8M0FNUType>(getElementTypeOrSelf(scaleOperand))) {
+      return rewriter.notifyMatchFailure(
+          op, "scaling extf is not using scale operand of type f8E8M0FNU");
+    }
     Type resultTy = op.getType();
-    // extf on scale will essentially create f32 number that is 2^scale
+    // extf on scale will essentially create f32 number that is 2^scale and will
+    // also propagate NaNs
     Value scaleExt = b.create<arith::ExtFOp>(resultTy, scaleOperand);
     Value inputExt = b.create<arith::ExtFOp>(resultTy, inputOperand);
     Value result = b.create<arith::MulFOp>(inputExt, scaleExt);
@@ -437,26 +442,29 @@ struct ScalingTruncFOpConverter
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
     auto inputOperand = op.getIn();
     auto scaleOperand = op.getScale();
-    auto scaleTy = scaleOperand.getType();
     if (!llvm::isa<Float8E8M0FNUType>(getElementTypeOrSelf(scaleOperand))) {
       return rewriter.notifyMatchFailure(
           op, "scaling truncf is not using scale operand of type f8E8M0FNU");
     }
     auto scaleETy = getElementTypeOrSelf(scaleOperand);
+
     Type resultTy = op.getType();
     Type resultETy = getElementTypeOrSelf(op.getOut());
 
     Type inputTy = inputOperand.getType();
     Type inputETy = getElementTypeOrSelf(inputOperand);
-    if (!inputETy.isF32()) {
-      inputOperand = b.create<arith::ExtFOp>(b.getF32Type(), inputOperand);
-      inputETy = getElementTypeOrSelf(inputOperand);
-    }
 
     Type i8Ty = cloneToShapedType(resultTy, b.getI8Type());
     Type i32Ty = cloneToShapedType(resultTy, b.getI32Type());
     Type f32Ty = cloneToShapedType(resultTy, b.getF32Type());
-    Type f8Ty = cloneToShapedType(scaleTy, b.getF8E8M0Type());
+    Type f8Ty = cloneToShapedType(resultTy, b.getF8E8M0Type());
+
+    if (inputETy.getIntOrFloatBitWidth() < 32) {
+      inputOperand = b.create<arith::ExtFOp>(f32Ty, inputOperand);
+    } else if (inputETy.getIntOrFloatBitWidth() > 32) {
+      inputOperand = b.create<arith::TruncFOp>(f32Ty, inputOperand);
+    }
+    inputETy = getElementTypeOrSelf(inputOperand);
 
     // normalize scale by exponent of the max normal value in result type as per
     // the OCP MXFP spec
@@ -475,9 +483,9 @@ struct ScalingTruncFOpConverter
         b.create<arith::SubIOp>(unbiasedScale, cMaxNormalExponent);
     // clamp scale exponent as per spec
     // https://github.com/microsoft/microxcaling/blob/7bc41952de394f5cc5e782baf132e7c7542eb4e4/mx/mx_ops.py#L282
-    // upper limit of 127 will be mapped to biased value of 255 and will be
-    // bitcasted to 0xFF in F8E8M0 which will be converted to f32 NaNs using
-    // extf
+    // upper clamp limit of 127 will be mapped to biased value of 255 and will
+    // be bitcasted to 0xFF in F8E8M0 which will be converted to Float32 NaN
+    // using arith.extf
     Value clampUpperCond = b.create<arith::CmpIOp>(
         arith::CmpIPredicate::sgt, normalizedUnbiasedScale, c127);
     Value clampLowerCond = b.create<arith::CmpIOp>(
