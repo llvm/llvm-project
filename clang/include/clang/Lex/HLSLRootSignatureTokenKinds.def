@@ -102,6 +102,9 @@ KEYWORD(offset)
 
 // StaticSampler Keywords:
 KEYWORD(mipLODBias)
+KEYWORD(maxAnisotropy)
+KEYWORD(minLOD)
+KEYWORD(maxLOD)
 
 // Unbounded Enum:
 UNBOUNDED_ENUM(unbounded, "unbounded")
