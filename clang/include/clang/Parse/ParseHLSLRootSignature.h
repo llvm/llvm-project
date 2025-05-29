@@ -111,11 +111,10 @@ private:
 
   struct ParsedStaticSamplerParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
-    std::optional<llvm::hlsl::rootsig::Filter> Filter;
+    std::optional<float> MipLODBias;
     std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressU;
     std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressV;
     std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressW;
-    std::optional<float> MipLODBias;
     std::optional<uint32_t> MaxAnisotropy;
     std::optional<float> MinLOD;
     std::optional<float> MaxLOD;
@@ -129,7 +128,6 @@ private:
 
   /// Parsing methods of various enums
   std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
-  std::optional<llvm::hlsl::rootsig::Filter> parseFilter();
   std::optional<llvm::hlsl::rootsig::TextureAddressMode>
   parseTextureAddressMode();
   std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
