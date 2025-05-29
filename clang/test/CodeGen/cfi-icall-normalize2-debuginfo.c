@@ -12,53 +12,53 @@
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:      #dbg_value(ptr [[FN]], [[META16:![0-9]+]], !DIExpression(), [[META20:![0-9]+]])
 // CHECK-NEXT:      #dbg_value(i32 [[ARG]], [[META17:![0-9]+]], !DIExpression(), [[META20]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FN]], metadata !"_ZTSFvu3i32E.normalized"), !dbg [[DBG21:![0-9]+]], !nosanitize [[META26:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG21]], !prof [[PROF27:![0-9]+]], !nosanitize [[META26]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FN]], metadata !"_ZTSFvu3i32E.normalized"), !dbg [[DBG21:![0-9]+]], !nosanitize [[META25:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG21]], !prof [[PROF26:![0-9]+]], !nosanitize [[META25]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !dbg [[DBG21]], !nosanitize [[META26]]
-// CHECK-NEXT:    unreachable, !dbg [[DBG21]], !nosanitize [[META26]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !dbg [[DBG21]], !nosanitize [[META25]]
+// CHECK-NEXT:    unreachable, !dbg [[DBG21]], !nosanitize [[META25]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    tail call void [[FN]](i32 noundef [[ARG]]) #[[ATTR4:[0-9]+]], !dbg [[DBG25:![0-9]+]]
-// CHECK-NEXT:    ret void, !dbg [[DBG28:![0-9]+]]
+// CHECK-NEXT:    tail call void [[FN]](i32 noundef [[ARG]]) #[[ATTR4:[0-9]+]], !dbg [[DBG24:![0-9]+]]
+// CHECK-NEXT:    ret void, !dbg [[DBG27:![0-9]+]]
 //
 void foo(void (*fn)(int), int arg) {
     fn(arg);
 }
 
 // CHECK-LABEL: define dso_local void @bar(
-// CHECK-SAME: ptr noundef [[FN:%.*]], i32 noundef [[ARG1:%.*]], i32 noundef [[ARG2:%.*]]) local_unnamed_addr #[[ATTR0]] !dbg [[DBG29:![0-9]+]] !type [[META39:![0-9]+]] !type [[META40:![0-9]+]] {
+// CHECK-SAME: ptr noundef [[FN:%.*]], i32 noundef [[ARG1:%.*]], i32 noundef [[ARG2:%.*]]) local_unnamed_addr #[[ATTR0]] !dbg [[DBG28:![0-9]+]] !type [[META38:![0-9]+]] !type [[META39:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:      #dbg_value(ptr [[FN]], [[META36:![0-9]+]], !DIExpression(), [[META41:![0-9]+]])
-// CHECK-NEXT:      #dbg_value(i32 [[ARG1]], [[META37:![0-9]+]], !DIExpression(), [[META41]])
-// CHECK-NEXT:      #dbg_value(i32 [[ARG2]], [[META38:![0-9]+]], !DIExpression(), [[META41]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FN]], metadata !"_ZTSFvu3i32S_E.normalized"), !dbg [[DBG42:![0-9]+]], !nosanitize [[META26]]
-// CHECK-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG42]], !prof [[PROF27]], !nosanitize [[META26]]
+// CHECK-NEXT:      #dbg_value(ptr [[FN]], [[META35:![0-9]+]], !DIExpression(), [[META40:![0-9]+]])
+// CHECK-NEXT:      #dbg_value(i32 [[ARG1]], [[META36:![0-9]+]], !DIExpression(), [[META40]])
+// CHECK-NEXT:      #dbg_value(i32 [[ARG2]], [[META37:![0-9]+]], !DIExpression(), [[META40]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FN]], metadata !"_ZTSFvu3i32S_E.normalized"), !dbg [[DBG41:![0-9]+]], !nosanitize [[META25]]
+// CHECK-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG41]], !prof [[PROF26]], !nosanitize [[META25]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR3]], !dbg [[DBG42]], !nosanitize [[META26]]
-// CHECK-NEXT:    unreachable, !dbg [[DBG42]], !nosanitize [[META26]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR3]], !dbg [[DBG41]], !nosanitize [[META25]]
+// CHECK-NEXT:    unreachable, !dbg [[DBG41]], !nosanitize [[META25]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    tail call void [[FN]](i32 noundef [[ARG1]], i32 noundef [[ARG2]]) #[[ATTR4]], !dbg [[DBG44:![0-9]+]]
-// CHECK-NEXT:    ret void, !dbg [[DBG45:![0-9]+]]
+// CHECK-NEXT:    tail call void [[FN]](i32 noundef [[ARG1]], i32 noundef [[ARG2]]) #[[ATTR4]], !dbg [[DBG42:![0-9]+]]
+// CHECK-NEXT:    ret void, !dbg [[DBG43:![0-9]+]]
 //
 void bar(void (*fn)(int, int), int arg1, int arg2) {
     fn(arg1, arg2);
 }
 
 // CHECK-LABEL: define dso_local void @baz(
-// CHECK-SAME: ptr noundef [[FN:%.*]], i32 noundef [[ARG1:%.*]], i32 noundef [[ARG2:%.*]], i32 noundef [[ARG3:%.*]]) local_unnamed_addr #[[ATTR0]] !dbg [[DBG46:![0-9]+]] !type [[META57:![0-9]+]] !type [[META58:![0-9]+]] {
+// CHECK-SAME: ptr noundef [[FN:%.*]], i32 noundef [[ARG1:%.*]], i32 noundef [[ARG2:%.*]], i32 noundef [[ARG3:%.*]]) local_unnamed_addr #[[ATTR0]] !dbg [[DBG44:![0-9]+]] !type [[META55:![0-9]+]] !type [[META56:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:      #dbg_value(ptr [[FN]], [[META53:![0-9]+]], !DIExpression(), [[META59:![0-9]+]])
-// CHECK-NEXT:      #dbg_value(i32 [[ARG1]], [[META54:![0-9]+]], !DIExpression(), [[META59]])
-// CHECK-NEXT:      #dbg_value(i32 [[ARG2]], [[META55:![0-9]+]], !DIExpression(), [[META59]])
-// CHECK-NEXT:      #dbg_value(i32 [[ARG3]], [[META56:![0-9]+]], !DIExpression(), [[META59]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FN]], metadata !"_ZTSFvu3i32S_S_E.normalized"), !dbg [[DBG60:![0-9]+]], !nosanitize [[META26]]
-// CHECK-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG60]], !prof [[PROF27]], !nosanitize [[META26]]
+// CHECK-NEXT:      #dbg_value(ptr [[FN]], [[META51:![0-9]+]], !DIExpression(), [[META57:![0-9]+]])
+// CHECK-NEXT:      #dbg_value(i32 [[ARG1]], [[META52:![0-9]+]], !DIExpression(), [[META57]])
+// CHECK-NEXT:      #dbg_value(i32 [[ARG2]], [[META53:![0-9]+]], !DIExpression(), [[META57]])
+// CHECK-NEXT:      #dbg_value(i32 [[ARG3]], [[META54:![0-9]+]], !DIExpression(), [[META57]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[FN]], metadata !"_ZTSFvu3i32S_S_E.normalized"), !dbg [[DBG58:![0-9]+]], !nosanitize [[META25]]
+// CHECK-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG58]], !prof [[PROF26]], !nosanitize [[META25]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR3]], !dbg [[DBG60]], !nosanitize [[META26]]
-// CHECK-NEXT:    unreachable, !dbg [[DBG60]], !nosanitize [[META26]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR3]], !dbg [[DBG58]], !nosanitize [[META25]]
+// CHECK-NEXT:    unreachable, !dbg [[DBG58]], !nosanitize [[META25]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    tail call void [[FN]](i32 noundef [[ARG1]], i32 noundef [[ARG2]], i32 noundef [[ARG3]]) #[[ATTR4]], !dbg [[DBG62:![0-9]+]]
-// CHECK-NEXT:    ret void, !dbg [[DBG63:![0-9]+]]
+// CHECK-NEXT:    tail call void [[FN]](i32 noundef [[ARG1]], i32 noundef [[ARG2]], i32 noundef [[ARG3]]) #[[ATTR4]], !dbg [[DBG59:![0-9]+]]
+// CHECK-NEXT:    ret void, !dbg [[DBG60:![0-9]+]]
 //
 void baz(void (*fn)(int, int, int), int arg1, int arg2, int arg3) {
     fn(arg1, arg2, arg3);
@@ -66,7 +66,7 @@ void baz(void (*fn)(int, int, int), int arg1, int arg2, int arg3) {
 
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECK: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})
 // CHECK: [[DBG7]] = distinct !DISubprogram(name: "foo", scope: [[META8:![0-9]+]], file: [[META8]], line: 24, type: [[META9:![0-9]+]], scopeLine: 24, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META15:![0-9]+]])
 // CHECK: [[META8]] = !DIFile(filename: "{{.*}}cfi-icall-normalize2-debuginfo.c", directory: {{.*}})
 // CHECK: [[META9]] = !DISubroutineType(types: [[META10:![0-9]+]])
@@ -81,47 +81,44 @@ void baz(void (*fn)(int, int, int), int arg1, int arg2, int arg3) {
 // CHECK: [[META18]] = !{i64 0, !"_ZTSFvPFvu3i32ES_E.normalized"}
 // CHECK: [[META19]] = !{i64 0, !"_ZTSFvPvu3i32E.normalized.generalized"}
 // CHECK: [[META20]] = !DILocation(line: 0, scope: [[DBG7]])
-// CHECK: [[DBG21]] = !DILocation(line: 0, scope: [[META22:![0-9]+]], inlinedAt: [[META24:![0-9]+]])
+// CHECK: [[DBG21]] = !DILocation(line: 0, scope: [[META22:![0-9]+]], inlinedAt: [[DBG24]])
 // CHECK: [[META22]] = distinct !DISubprogram(name: "__ubsan_check_singularity", scope: [[META8]], file: [[META8]], type: [[META23:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK: [[META23]] = !DISubroutineType(types: null)
-// CHECK: [[META24]] = !DILocation(line: 0, scope: [[META22]], inlinedAt: [[DBG25]])
-// CHECK: [[DBG25]] = !DILocation(line: 25, column: 5, scope: [[DBG7]])
-// CHECK: [[META26]] = !{}
-// CHECK: [[PROF27]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK: [[DBG28]] = !DILocation(line: 26, column: 1, scope: [[DBG7]])
-// CHECK: [[DBG29]] = distinct !DISubprogram(name: "bar", scope: [[META8]], file: [[META8]], line: 43, type: [[META30:![0-9]+]], scopeLine: 43, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META35:![0-9]+]])
-// CHECK: [[META30]] = !DISubroutineType(types: [[META31:![0-9]+]])
-// CHECK: [[META31]] = !{null, [[META32:![0-9]+]], [[META14]], [[META14]]}
-// CHECK: [[META32]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META33:![0-9]+]], size: 64)
-// CHECK: [[META33]] = !DISubroutineType(types: [[META34:![0-9]+]])
-// CHECK: [[META34]] = !{null, [[META14]], [[META14]]}
-// CHECK: [[META35]] = !{[[META36]], [[META37]], [[META38]]}
-// CHECK: [[META36]] = !DILocalVariable(name: "fn", arg: 1, scope: [[DBG29]], file: [[META8]], line: 43, type: [[META32]])
-// CHECK: [[META37]] = !DILocalVariable(name: "arg1", arg: 2, scope: [[DBG29]], file: [[META8]], line: 43, type: [[META14]])
-// CHECK: [[META38]] = !DILocalVariable(name: "arg2", arg: 3, scope: [[DBG29]], file: [[META8]], line: 43, type: [[META14]])
-// CHECK: [[META39]] = !{i64 0, !"_ZTSFvPFvu3i32S_ES_S_E.normalized"}
-// CHECK: [[META40]] = !{i64 0, !"_ZTSFvPvu3i32S0_E.normalized.generalized"}
-// CHECK: [[META41]] = !DILocation(line: 0, scope: [[DBG29]])
-// CHECK: [[DBG42]] = !DILocation(line: 0, scope: [[META22]], inlinedAt: [[META43:![0-9]+]])
-// CHECK: [[META43]] = !DILocation(line: 0, scope: [[META22]], inlinedAt: [[DBG44]])
-// CHECK: [[DBG44]] = !DILocation(line: 44, column: 5, scope: [[DBG29]])
-// CHECK: [[DBG45]] = !DILocation(line: 45, column: 1, scope: [[DBG29]])
-// CHECK: [[DBG46]] = distinct !DISubprogram(name: "baz", scope: [[META8]], file: [[META8]], line: 63, type: [[META47:![0-9]+]], scopeLine: 63, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META52:![0-9]+]])
-// CHECK: [[META47]] = !DISubroutineType(types: [[META48:![0-9]+]])
-// CHECK: [[META48]] = !{null, [[META49:![0-9]+]], [[META14]], [[META14]], [[META14]]}
-// CHECK: [[META49]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META50:![0-9]+]], size: 64)
-// CHECK: [[META50]] = !DISubroutineType(types: [[META51:![0-9]+]])
-// CHECK: [[META51]] = !{null, [[META14]], [[META14]], [[META14]]}
-// CHECK: [[META52]] = !{[[META53]], [[META54]], [[META55]], [[META56]]}
-// CHECK: [[META53]] = !DILocalVariable(name: "fn", arg: 1, scope: [[DBG46]], file: [[META8]], line: 63, type: [[META49]])
-// CHECK: [[META54]] = !DILocalVariable(name: "arg1", arg: 2, scope: [[DBG46]], file: [[META8]], line: 63, type: [[META14]])
-// CHECK: [[META55]] = !DILocalVariable(name: "arg2", arg: 3, scope: [[DBG46]], file: [[META8]], line: 63, type: [[META14]])
-// CHECK: [[META56]] = !DILocalVariable(name: "arg3", arg: 4, scope: [[DBG46]], file: [[META8]], line: 63, type: [[META14]])
-// CHECK: [[META57]] = !{i64 0, !"_ZTSFvPFvu3i32S_S_ES_S_S_E.normalized"}
-// CHECK: [[META58]] = !{i64 0, !"_ZTSFvPvu3i32S0_S0_E.normalized.generalized"}
-// CHECK: [[META59]] = !DILocation(line: 0, scope: [[DBG46]])
-// CHECK: [[DBG60]] = !DILocation(line: 0, scope: [[META22]], inlinedAt: [[META61:![0-9]+]])
-// CHECK: [[META61]] = !DILocation(line: 0, scope: [[META22]], inlinedAt: [[DBG62]])
-// CHECK: [[DBG62]] = !DILocation(line: 64, column: 5, scope: [[DBG46]])
-// CHECK: [[DBG63]] = !DILocation(line: 65, column: 1, scope: [[DBG46]])
+// CHECK: [[DBG24]] = !DILocation(line: 25, column: 5, scope: [[DBG7]])
+// CHECK: [[META25]] = !{}
+// CHECK: [[PROF26]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[DBG27]] = !DILocation(line: 26, column: 1, scope: [[DBG7]])
+// CHECK: [[DBG28]] = distinct !DISubprogram(name: "bar", scope: [[META8]], file: [[META8]], line: 43, type: [[META29:![0-9]+]], scopeLine: 43, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META34:![0-9]+]])
+// CHECK: [[META29]] = !DISubroutineType(types: [[META30:![0-9]+]])
+// CHECK: [[META30]] = !{null, [[META31:![0-9]+]], [[META14]], [[META14]]}
+// CHECK: [[META31]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META32:![0-9]+]], size: 64)
+// CHECK: [[META32]] = !DISubroutineType(types: [[META33:![0-9]+]])
+// CHECK: [[META33]] = !{null, [[META14]], [[META14]]}
+// CHECK: [[META34]] = !{[[META35]], [[META36]], [[META37]]}
+// CHECK: [[META35]] = !DILocalVariable(name: "fn", arg: 1, scope: [[DBG28]], file: [[META8]], line: 43, type: [[META31]])
+// CHECK: [[META36]] = !DILocalVariable(name: "arg1", arg: 2, scope: [[DBG28]], file: [[META8]], line: 43, type: [[META14]])
+// CHECK: [[META37]] = !DILocalVariable(name: "arg2", arg: 3, scope: [[DBG28]], file: [[META8]], line: 43, type: [[META14]])
+// CHECK: [[META38]] = !{i64 0, !"_ZTSFvPFvu3i32S_ES_S_E.normalized"}
+// CHECK: [[META39]] = !{i64 0, !"_ZTSFvPvu3i32S0_E.normalized.generalized"}
+// CHECK: [[META40]] = !DILocation(line: 0, scope: [[DBG28]])
+// CHECK: [[DBG41]] = !DILocation(line: 0, scope: [[META22]], inlinedAt: [[DBG42]])
+// CHECK: [[DBG42]] = !DILocation(line: 44, column: 5, scope: [[DBG28]])
+// CHECK: [[DBG43]] = !DILocation(line: 45, column: 1, scope: [[DBG28]])
+// CHECK: [[DBG44]] = distinct !DISubprogram(name: "baz", scope: [[META8]], file: [[META8]], line: 63, type: [[META45:![0-9]+]], scopeLine: 63, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META50:![0-9]+]])
+// CHECK: [[META45]] = !DISubroutineType(types: [[META46:![0-9]+]])
+// CHECK: [[META46]] = !{null, [[META47:![0-9]+]], [[META14]], [[META14]], [[META14]]}
+// CHECK: [[META47]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[META48:![0-9]+]], size: 64)
+// CHECK: [[META48]] = !DISubroutineType(types: [[META49:![0-9]+]])
+// CHECK: [[META49]] = !{null, [[META14]], [[META14]], [[META14]]}
+// CHECK: [[META50]] = !{[[META51]], [[META52]], [[META53]], [[META54]]}
+// CHECK: [[META51]] = !DILocalVariable(name: "fn", arg: 1, scope: [[DBG44]], file: [[META8]], line: 63, type: [[META47]])
+// CHECK: [[META52]] = !DILocalVariable(name: "arg1", arg: 2, scope: [[DBG44]], file: [[META8]], line: 63, type: [[META14]])
+// CHECK: [[META53]] = !DILocalVariable(name: "arg2", arg: 3, scope: [[DBG44]], file: [[META8]], line: 63, type: [[META14]])
+// CHECK: [[META54]] = !DILocalVariable(name: "arg3", arg: 4, scope: [[DBG44]], file: [[META8]], line: 63, type: [[META14]])
+// CHECK: [[META55]] = !{i64 0, !"_ZTSFvPFvu3i32S_S_ES_S_S_E.normalized"}
+// CHECK: [[META56]] = !{i64 0, !"_ZTSFvPvu3i32S0_S0_E.normalized.generalized"}
+// CHECK: [[META57]] = !DILocation(line: 0, scope: [[DBG44]])
+// CHECK: [[DBG58]] = !DILocation(line: 0, scope: [[META22]], inlinedAt: [[DBG59]])
+// CHECK: [[DBG59]] = !DILocation(line: 64, column: 5, scope: [[DBG44]])
+// CHECK: [[DBG60]] = !DILocation(line: 65, column: 1, scope: [[DBG44]])
 //.

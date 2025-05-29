@@ -10,21 +10,21 @@
 // CHECK-SAME: ptr noundef [[F:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !dbg [[DBG7:![0-9]+]] !type [[META16:![0-9]+]] !type [[META17:![0-9]+]] !type [[META18:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:      #dbg_value(ptr [[F]], [[META15:![0-9]+]], !DIExpression(), [[META19:![0-9]+]])
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[F]], metadata !"_ZTSFvvE"), !dbg [[DBG20:![0-9]+]], !nosanitize [[META25:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP0]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !dbg [[DBG20]], !prof [[PROF26:![0-9]+]], !nosanitize [[META25]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.type.test(ptr [[F]], metadata !"_ZTSFvvE"), !dbg [[DBG20:![0-9]+]], !nosanitize [[META24:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP0]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !dbg [[DBG20]], !prof [[PROF25:![0-9]+]], !nosanitize [[META24]]
 // CHECK:       [[CFI_SLOWPATH]]:
-// CHECK-NEXT:    tail call void @__cfi_slowpath(i64 9080559750644022485, ptr [[F]]) #[[ATTR6:[0-9]+]], !dbg [[DBG20]], !nosanitize [[META25]]
-// CHECK-NEXT:    br label %[[CFI_CONT]], !dbg [[DBG20]], !nosanitize [[META25]]
+// CHECK-NEXT:    tail call void @__cfi_slowpath(i64 9080559750644022485, ptr [[F]]) #[[ATTR6:[0-9]+]], !dbg [[DBG20]], !nosanitize [[META24]]
+// CHECK-NEXT:    br label %[[CFI_CONT]], !dbg [[DBG20]], !nosanitize [[META24]]
 // CHECK:       [[CFI_CONT]]:
-// CHECK-NEXT:    tail call void [[F]]() #[[ATTR6]], !dbg [[DBG24:![0-9]+]]
-// CHECK-NEXT:    ret void, !dbg [[DBG27:![0-9]+]]
+// CHECK-NEXT:    tail call void [[F]]() #[[ATTR6]], !dbg [[DBG23:![0-9]+]]
+// CHECK-NEXT:    ret void, !dbg [[DBG26:![0-9]+]]
 //
 void caller(void (*f)(void)) {
   f();
 }
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// CHECK: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})
 // CHECK: [[DBG7]] = distinct !DISubprogram(name: "caller", scope: [[META8:![0-9]+]], file: [[META8]], line: 22, type: [[META9:![0-9]+]], scopeLine: 22, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META14:![0-9]+]])
 // CHECK: [[META8]] = !DIFile(filename: "{{.*}}cfi-check-fail-debuginfo.c", directory: {{.*}})
 // CHECK: [[META9]] = !DISubroutineType(types: [[META10:![0-9]+]])
@@ -38,12 +38,11 @@ void caller(void (*f)(void)) {
 // CHECK: [[META17]] = !{i64 0, !"_ZTSFvPvE.generalized"}
 // CHECK: [[META18]] = !{i64 0, i64 2451761621477796417}
 // CHECK: [[META19]] = !DILocation(line: 0, scope: [[DBG7]])
-// CHECK: [[DBG20]] = !DILocation(line: 0, scope: [[META21:![0-9]+]], inlinedAt: [[META23:![0-9]+]])
+// CHECK: [[DBG20]] = !DILocation(line: 0, scope: [[META21:![0-9]+]], inlinedAt: [[DBG23]])
 // CHECK: [[META21]] = distinct !DISubprogram(name: "__ubsan_check_singularity", scope: [[META8]], file: [[META8]], type: [[META22:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK: [[META22]] = !DISubroutineType(types: null)
-// CHECK: [[META23]] = !DILocation(line: 0, scope: [[META21]], inlinedAt: [[DBG24]])
-// CHECK: [[DBG24]] = !DILocation(line: 23, column: 3, scope: [[DBG7]])
-// CHECK: [[META25]] = !{}
-// CHECK: [[PROF26]] = !{!"branch_weights", i32 1048575, i32 1}
-// CHECK: [[DBG27]] = !DILocation(line: 24, column: 1, scope: [[DBG7]])
+// CHECK: [[DBG23]] = !DILocation(line: 23, column: 3, scope: [[DBG7]])
+// CHECK: [[META24]] = !{}
+// CHECK: [[PROF25]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[DBG26]] = !DILocation(line: 24, column: 1, scope: [[DBG7]])
 //.
