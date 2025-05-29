@@ -19,16 +19,6 @@ int aa[10][5];
 
 // OGCG: @aa = global [10 x [5 x i32]] zeroinitializer
 
-extern int b[10];
-// CIR: cir.global external @b = #cir.zero : !cir.array<!s32i x 10>
-
-// LLVM: @b = dso_local global [10 x i32] zeroinitializer
-
-extern int bb[10][5];
-// CIR: cir.global external @bb = #cir.zero : !cir.array<!cir.array<!s32i x 5> x 10>
-
-// LLVM: @bb = dso_local global [10 x [5 x i32]] zeroinitializer
-
 int c[10] = {};
 // CIR: cir.global external @c = #cir.zero : !cir.array<!s32i x 10>
 
@@ -65,6 +55,22 @@ int f[5] = {1, 2};
 // LLVM: @f = dso_local global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
 
 // OGCG: @f = global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
+
+extern int b[10];
+// CIR: cir.global external @b : !cir.array<!s32i x 10>
+// LLVM: @b = external dso_local global [10 x i32]
+// OGCG: @b = external global [10 x i32]
+
+extern int bb[10][5];
+// CIR: cir.global external @bb : !cir.array<!cir.array<!s32i x 5> x 10>
+// LLVM: @bb = external dso_local global [10 x [5 x i32]]
+// OGCG: @bb = external global [10 x [5 x i32]]
+
+// This function is only here to make sure the external globals are emitted.
+void reference_externs() {
+  b;
+  bb;
+}
 
 // OGCG: @[[FUN2_ARR:.*]] = private unnamed_addr constant [2 x i32] [i32 5, i32 0], align 4
 // OGCG: @[[FUN3_ARR:.*]] = private unnamed_addr constant [2 x i32] [i32 5, i32 6], align 4

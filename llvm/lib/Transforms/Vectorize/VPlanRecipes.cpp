@@ -626,7 +626,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     }
 
     return createFindLastIVReduction(Builder, ReducedPartRdx,
-                                     State.get(getOperand(1), true), RdxDesc);
+                                     State.get(getOperand(1), true),
+                                     RdxDesc.getSentinelValue());
   }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
@@ -648,6 +649,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     for (unsigned Part = 0; Part < UF; ++Part)
       RdxParts[Part] = State.get(getOperand(1 + Part), PhiR->isInLoop());
 
+    IRBuilderBase::FastMathFlagGuard FMFG(Builder);
+    if (hasFastMathFlags())
+      Builder.setFastMathFlags(getFastMathFlags());
+
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
     // entire expression in the smaller type.
@@ -663,8 +668,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
       ReducedPartRdx = RdxParts[UF - 1];
     } else {
       // Floating-point operations should have some FMF to enable the reduction.
-      IRBuilderBase::FastMathFlagGuard FMFG(Builder);
-      Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
       for (unsigned Part = 1; Part < UF; ++Part) {
         Value *RdxPart = RdxParts[Part];
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
@@ -684,12 +687,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
       // TODO: Support in-order reductions based on the recurrence descriptor.
       // All ops in the reduction inherit fast-math-flags from the recurrence
       // descriptor.
-      IRBuilderBase::FastMathFlagGuard FMFG(Builder);
-      Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
-
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
         ReducedPartRdx =
-            createAnyOfReduction(Builder, ReducedPartRdx, RdxDesc, OrigPhi);
+            createAnyOfReduction(Builder, ReducedPartRdx,
+                                 RdxDesc.getRecurrenceStartValue(), OrigPhi);
       else
         ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
 
@@ -760,19 +761,24 @@ Value *VPInstruction::generate(VPTransformState &State) {
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
   if (Instruction::isBinaryOp(getOpcode())) {
+    Type *ResTy = Ctx.Types.inferScalarType(this);
+    if (!vputils::onlyFirstLaneUsed(this))
+      ResTy = toVectorTy(ResTy, VF);
+
     if (!getUnderlyingValue()) {
-      // TODO: Compute cost for VPInstructions without underlying values once
-      // the legacy cost model has been retired.
-      return 0;
+      switch (getOpcode()) {
+      case Instruction::FMul:
+        return Ctx.TTI.getArithmeticInstrCost(getOpcode(), ResTy, Ctx.CostKind);
+      default:
+        // TODO: Compute cost for VPInstructions without underlying values once
+        // the legacy cost model has been retired.
+        return 0;
+      }
     }
 
     assert(!doesGeneratePerAllLanes() &&
            "Should only generate a vector value or single scalar, not scalars "
            "for all lanes.");
-    Type *ResTy = Ctx.Types.inferScalarType(this);
-    if (!vputils::onlyFirstLaneUsed(this))
-      ResTy = toVectorTy(ResTy, VF);
-
     return Ctx.TTI.getArithmeticInstrCost(getOpcode(), ResTy, Ctx.CostKind);
   }
 
@@ -965,7 +971,7 @@ void VPInstruction::dump() const {
 
 void VPInstruction::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
+  O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
 
   if (hasResult()) {
     printAsOperand(O, SlotTracker);
@@ -1105,7 +1111,7 @@ void VPPhi::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPhi::print(raw_ostream &O, const Twine &Indent,
                   VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT ";
+  O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
   printAsOperand(O, SlotTracker);
   O << " = phi ";
 
@@ -1599,7 +1605,8 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
            Opcode == Instruction::FSub || Opcode == Instruction::FNeg ||
            Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
            Opcode == Instruction::FCmp || Opcode == Instruction::Select ||
-           Opcode == VPInstruction::WideIVStep;
+           Opcode == VPInstruction::WideIVStep ||
+           Opcode == VPInstruction::ComputeReductionResult;
   case OperationType::NonNegOp:
     return Opcode == Instruction::ZExt;
     break;
@@ -2518,6 +2525,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
   FastMathFlags FMFs = getFastMathFlags();
+  std::optional<FastMathFlags> OptionalFMF =
+      ElementTy->isFloatingPointTy() ? std::make_optional(FMFs) : std::nullopt;
 
   // TODO: Support any-of reductions.
   assert(
@@ -2525,17 +2534,40 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
        ForceTargetInstructionCost.getNumOccurrences() > 0) &&
       "Any-of reduction not implemented in VPlan-based cost model currently.");
 
-  // Cost = Reduction cost + BinOp cost
-  InstructionCost Cost =
-      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, Ctx.CostKind);
+  // Note that TTI should model the cost of moving result to the scalar register
+  // and the BinOp cost in the getMinMaxReductionCost().
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
-    return Cost +
-           Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
+    return Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
   }
 
-  return Cost + Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, FMFs,
-                                                   Ctx.CostKind);
+  // Note that TTI should model the cost of moving result to the scalar register
+  // and the BinOp cost in the getArithmeticReductionCost().
+  return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, OptionalFMF,
+                                            Ctx.CostKind);
+}
+
+InstructionCost
+VPExtendedReductionRecipe::computeCost(ElementCount VF,
+                                       VPCostContext &Ctx) const {
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(getRecurrenceKind());
+  Type *RedTy = Ctx.Types.inferScalarType(this);
+  auto *SrcVecTy =
+      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
+  assert(RedTy->isIntegerTy() &&
+         "ExtendedReduction only support integer type currently.");
+  return Ctx.TTI.getExtendedReductionCost(Opcode, isZExt(), RedTy, SrcVecTy,
+                                          std::nullopt, Ctx.CostKind);
+}
+
+InstructionCost
+VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
+                                            VPCostContext &Ctx) const {
+  Type *RedTy = Ctx.Types.inferScalarType(this);
+  auto *SrcVecTy =
+      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
+  return Ctx.TTI.getMulAccReductionCost(isZExt(), RedTy, SrcVecTy,
+                                        Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

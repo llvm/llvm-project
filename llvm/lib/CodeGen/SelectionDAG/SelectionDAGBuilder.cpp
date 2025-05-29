@@ -4284,8 +4284,8 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
             (int64_t(Offset) >= 0 && NW.hasNoUnsignedSignedWrap()))
           Flags |= SDNodeFlags::NoUnsignedWrap;
 
-        N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N,
-                        DAG.getConstant(Offset, dl, N.getValueType()), Flags);
+        N = DAG.getMemBasePlusOffset(
+            N, DAG.getConstant(Offset, dl, N.getValueType()), dl, Flags);
       }
     } else {
       // IdxSize is the width of the arithmetic according to IR semantics.
@@ -4329,7 +4329,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
 
         OffsVal = DAG.getSExtOrTrunc(OffsVal, dl, N.getValueType());
 
-        N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, OffsVal, Flags);
+        N = DAG.getMemBasePlusOffset(N, OffsVal, dl, Flags);
         continue;
       }
 
@@ -4389,7 +4389,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       SDNodeFlags AddFlags;
       AddFlags.setNoUnsignedWrap(NW.hasNoUnsignedWrap());
 
-      N = DAG.getNode(ISD::ADD, dl, N.getValueType(), N, IdxN, AddFlags);
+      N = DAG.getMemBasePlusOffset(N, IdxN, dl, AddFlags);
     }
   }
 
@@ -9173,8 +9173,7 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   Size = DAG.getSExtOrTrunc(Size, sdl, Dst.getValueType());
 
   // Adjust return pointer to point just past the last dst byte.
-  SDValue DstPlusSize = DAG.getNode(ISD::ADD, sdl, Dst.getValueType(),
-                                    Dst, Size);
+  SDValue DstPlusSize = DAG.getMemBasePlusOffset(Dst, Size, sdl);
   setValue(&I, DstPlusSize);
   return true;
 }
@@ -11265,10 +11264,9 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     MachineFunction &MF = CLI.DAG.getMachineFunction();
     Align HiddenSRetAlign = MF.getFrameInfo().getObjectAlign(DemoteStackIdx);
     for (unsigned i = 0; i < NumValues; ++i) {
-      SDValue Add =
-          CLI.DAG.getNode(ISD::ADD, CLI.DL, PtrVT, DemoteStackSlot,
-                          CLI.DAG.getConstant(Offsets[i], CLI.DL, PtrVT),
-                          SDNodeFlags::NoUnsignedWrap);
+      SDValue Add = CLI.DAG.getMemBasePlusOffset(
+          DemoteStackSlot, CLI.DAG.getConstant(Offsets[i], CLI.DL, PtrVT),
+          CLI.DL, SDNodeFlags::NoUnsignedWrap);
       SDValue L = CLI.DAG.getLoad(
           RetTys[i], CLI.DL, CLI.Chain, Add,
           MachinePointerInfo::getFixedStack(CLI.DAG.getMachineFunction(),
