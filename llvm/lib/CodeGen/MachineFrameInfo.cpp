@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -220,6 +221,12 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
 
     if (SO.StackID != 0)
       OS << "id=" << static_cast<unsigned>(SO.StackID) << ' ';
+
+    if (SO.Alloca)
+      OS << "alloca=" << SO.Alloca->getName() << ' ';
+
+    if (SO.isSpillSlot)
+      OS << "spill ";
 
     if (SO.Size == ~0ULL) {
       OS << "dead\n";
