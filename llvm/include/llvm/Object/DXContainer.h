@@ -20,6 +20,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
@@ -177,6 +178,50 @@ struct RootDescriptorView : RootParameterView {
   }
 };
 
+struct DescriptorTable {
+  uint32_t NumRanges;
+  uint32_t RangesOffset;
+  ViewArray<dxbc::RTS0::v2::DescriptorRange> Ranges;
+
+  typename ViewArray<dxbc::RTS0::v2::DescriptorRange>::iterator begin() const {
+    return Ranges.begin();
+  }
+
+  typename ViewArray<dxbc::RTS0::v2::DescriptorRange>::iterator end() const {
+    return Ranges.end();
+  }
+};
+
+struct DescriptorTableView : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return (V->Header.ParameterType ==
+            llvm::to_underlying(dxbc::RootParameterType::DescriptorTable));
+  }
+
+  // Define a type alias to access the template parameter from inside classof
+  llvm::Expected<DescriptorTable> read(uint32_t Version) {
+    const char *Current = ParamData.begin();
+    DescriptorTable Table;
+
+    Table.NumRanges =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    Table.RangesOffset =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    size_t RangeSize = sizeof(dxbc::RTS0::v1::DescriptorRange);
+    if (Version > 1)
+      RangeSize = sizeof(dxbc::RTS0::v2::DescriptorRange);
+
+    Table.Ranges.Stride = RangeSize;
+    Table.Ranges.Data =
+        ParamData.substr(2 * sizeof(uint32_t), Table.NumRanges * RangeSize);
+    return Table;
+  }
+};
+
 static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
 }
@@ -213,6 +258,9 @@ public:
   llvm::Expected<RootParameterView>
   getParameter(const dxbc::RTS0::v1::RootParameterHeader &Header) const {
     size_t DataSize;
+    size_t EndOfSectionByte = getNumStaticSamplers() == 0
+                                  ? PartData.size()
+                                  : getStaticSamplersOffset();
 
     if (!dxbc::isValidParameterType(Header.ParameterType))
       return parseFailed("invalid parameter type");
@@ -229,11 +277,23 @@ public:
       else
         DataSize = sizeof(dxbc::RTS0::v2::RootDescriptor);
       break;
-    }
-    size_t EndOfSectionByte = getNumStaticSamplers() == 0
-                                  ? PartData.size()
-                                  : getStaticSamplersOffset();
+    case dxbc::RootParameterType::DescriptorTable:
+      if (Header.ParameterOffset + sizeof(uint32_t) > EndOfSectionByte)
+        return parseFailed("Reading structure out of file bounds");
 
+      uint32_t NumRanges =
+          support::endian::read<uint32_t, llvm::endianness::little>(
+              PartData.begin() + Header.ParameterOffset);
+      if (Version == 1)
+        DataSize = sizeof(dxbc::RTS0::v1::DescriptorRange) * NumRanges;
+      else
+        DataSize = sizeof(dxbc::RTS0::v2::DescriptorRange) * NumRanges;
+
+      // 4 bytes for the number of ranges in table and
+      // 4 bytes for the ranges offset
+      DataSize += 2 * sizeof(uint32_t);
+      break;
+    }
     if (Header.ParameterOffset + DataSize > EndOfSectionByte)
       return parseFailed("Reading structure out of file bounds");
 
