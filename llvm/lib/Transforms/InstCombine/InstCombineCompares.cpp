@@ -72,32 +72,6 @@ static bool hasBranchUse(ICmpInst &I) {
   return false;
 }
 
-/// Returns true if the exploded icmp can be expressed as a signed comparison
-/// to zero and updates the predicate accordingly.
-/// The signedness of the comparison is preserved.
-/// TODO: Refactor with decomposeBitTestICmp()?
-static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
-  if (!ICmpInst::isSigned(Pred))
-    return false;
-
-  if (C.isZero())
-    return ICmpInst::isRelational(Pred);
-
-  if (C.isOne()) {
-    if (Pred == ICmpInst::ICMP_SLT) {
-      Pred = ICmpInst::ICMP_SLE;
-      return true;
-    }
-  } else if (C.isAllOnes()) {
-    if (Pred == ICmpInst::ICMP_SGT) {
-      Pred = ICmpInst::ICMP_SGE;
-      return true;
-    }
-  }
-
-  return false;
-}
-
 /// This is called when we see this pattern:
 ///   cmp pred (load (gep GV, ...)), cmpcst
 /// where GV is a global variable with a constant initializer. Try to simplify
@@ -2188,16 +2162,6 @@ Instruction *InstCombinerImpl::foldICmpMulConstant(ICmpInst &Cmp,
   if (!match(Mul->getOperand(1), m_APInt(MulC)))
     return nullptr;
 
-  // If this is a test of the sign bit and the multiply is sign-preserving with
-  // a constant operand, use the multiply LHS operand instead:
-  // (X * +MulC) < 0 --> X < 0
-  // (X * -MulC) < 0 --> X > 0
-  if (isSignTest(Pred, C) && Mul->hasNoSignedWrap()) {
-    if (MulC->isNegative())
-      Pred = ICmpInst::getSwappedPredicate(Pred);
-    return new ICmpInst(Pred, X, ConstantInt::getNullValue(MulTy));
-  }
-
   if (MulC->isZero())
     return nullptr;
 
@@ -3545,12 +3509,73 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
   return nullptr;
 }
 
+std::pair<Value *, bool>
+InstCombinerImpl::stripSignBitPreservingOrFlippingOperations(Value *X,
+                                                             unsigned Depth) {
+  if (!X->hasOneUse() || Depth++ >= MaxAnalysisRecursionDepth)
+    return {X, false};
+
+  auto FlipSign = [](std::pair<Value *, bool> P, bool Flip) {
+    return std::make_pair(P.first, P.second ^ Flip);
+  };
+
+  Value *V;
+  const APInt *C;
+  if (match(X, m_NSWTrunc(m_Value(V))) &&
+      shouldChangeType(X->getType(), V->getType()))
+    return stripSignBitPreservingOrFlippingOperations(V, Depth);
+
+  if (match(X, m_SExt(m_Value(V))) &&
+      shouldChangeType(X->getType(), V->getType()))
+    return stripSignBitPreservingOrFlippingOperations(V, Depth);
+
+  if (match(X, m_Xor(m_Value(V), m_APInt(C))))
+    return FlipSign(stripSignBitPreservingOrFlippingOperations(V, Depth),
+                    C->isNegative());
+
+  if (match(X, m_AShr(m_Value(V), m_Value())))
+    return stripSignBitPreservingOrFlippingOperations(V, Depth);
+
+  if (match(X, m_NSWSub(m_Zero(), m_Value(V))))
+    return FlipSign(stripSignBitPreservingOrFlippingOperations(V, Depth),
+                    /*Flip=*/true);
+
+  if (match(X, m_NSWShl(m_Value(V), m_Value())))
+    return stripSignBitPreservingOrFlippingOperations(V, Depth);
+
+  if (match(X, m_NSWMul(m_Value(V), m_APInt(C))) && !C->isZero())
+    return FlipSign(stripSignBitPreservingOrFlippingOperations(V, Depth),
+                    C->isNegative());
+
+  if (match(X, m_SMax(m_Value(V), m_Negative())))
+    return stripSignBitPreservingOrFlippingOperations(V, Depth);
+
+  if (match(X, m_SMin(m_Value(V), m_StrictlyPositive())))
+    return stripSignBitPreservingOrFlippingOperations(V, Depth);
+
+  return {X, false};
+}
+
 /// Try to fold integer comparisons with a constant operand: icmp Pred X, C
 /// where X is some kind of instruction.
 Instruction *InstCombinerImpl::foldICmpInstWithConstant(ICmpInst &Cmp) {
   const APInt *C;
 
   if (match(Cmp.getOperand(1), m_APInt(C))) {
+    bool TrueIfSigned = false;
+    // Strip off sign bit preserving/flipping operations.
+    if (isSignBitCheck(Cmp.getPredicate(), *C, TrueIfSigned)) {
+      auto [X, FlipSign] = stripSignBitPreservingOrFlippingOperations(
+          Cmp.getOperand(0), /*Depth=*/0);
+      if (X != Cmp.getOperand(0)) {
+        if (TrueIfSigned == FlipSign)
+          return new ICmpInst(ICmpInst::ICMP_SGT, X,
+                              ConstantInt::getAllOnesValue(X->getType()));
+        return new ICmpInst(ICmpInst::ICMP_SLT, X,
+                            ConstantInt::getNullValue(X->getType()));
+      }
+    }
+
     if (auto *BO = dyn_cast<BinaryOperator>(Cmp.getOperand(0)))
       if (Instruction *I = foldICmpBinOpWithConstant(Cmp, BO, *C))
         return I;
