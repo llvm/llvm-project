@@ -3463,10 +3463,10 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
         // iteration.
         // When deinterleaving, the number of values will double until we
         // have "InterleaveFactor".
+        // Deinterleave the elements within the vector
+        SmallVector<Value *> TempDeinterleavedValues(InterleaveFactor);
         for (unsigned NumVectors = 1; NumVectors < InterleaveFactor;
              NumVectors *= 2) {
-          // Deinterleave the elements within the vector
-          SmallVector<Value *> TempDeinterleavedValues(NumVectors);
           for (unsigned I = 0; I < NumVectors; ++I) {
             auto *DiTy = DeinterleavedValues[I]->getType();
             TempDeinterleavedValues[I] = State.Builder.CreateIntrinsic(
