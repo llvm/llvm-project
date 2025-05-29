@@ -1223,7 +1223,7 @@ defm V_CVT_F16_F32           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0
 defm V_CVT_F32_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x00b>;
 
 defm V_TANH_F32              : VOP1_Real_FULL_gfx1250_gfx13<0x01e>;
-defm V_TANH_F16_fake16       : VOP1_Real_FULL_t16_gfx1250_gfx13<0x01f>;
+defm V_TANH_F16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x01f>;
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250_gfx13<0x049>;
 defm V_TANH_BF16_fake16      : VOP1_Real_FULL_t16_gfx1250_gfx13<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL_gfx1250_gfx13<0x04b>;

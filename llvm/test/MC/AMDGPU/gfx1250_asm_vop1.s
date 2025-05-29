@@ -118,6 +118,9 @@ v_tanh_f16 v5, src_scc
 v_tanh_f16 v127, 0x8000
 // GFX1250: v_tanh_f16_e32 v127, 0x8000             ; encoding: [0xff,0x3e,0xfe,0x7e,0x00,0x80,0x00,0x00]
 
+v_tanh_f16 v5.h, v1.h
+// GFX1250: v_tanh_f16_e32 v5.h, v1.h               ; encoding: [0x81,0x3f,0x0a,0x7f]
+
 v_tanh_bf16 v5, v1
 // GFX1250: v_tanh_bf16_e32 v5, v1                  ; encoding: [0x01,0x95,0x0a,0x7e]
 
