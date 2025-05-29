@@ -351,6 +351,7 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                     m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
+         Bound->getType()->isIntegerTy() && 
          SE.isLoopInvariant(SE.getSCEV(Bound), &L) &&
          match(SE.getSCEV(Inc),
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));

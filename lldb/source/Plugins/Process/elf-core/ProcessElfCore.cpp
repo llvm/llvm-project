@@ -176,6 +176,17 @@ Status ProcessElfCore::DoLoadCore() {
     return error;
   }
 
+  // Even if the architecture is set in the target, we need to override it to
+  // match the core file which is always single arch.
+  ArchSpec arch(m_core_module_sp->GetArchitecture());
+
+  ArchSpec target_arch = GetTarget().GetArchitecture();
+  ArchSpec core_arch(m_core_module_sp->GetArchitecture());
+  target_arch.MergeFrom(core_arch);
+  GetTarget().SetArchitecture(target_arch, /*set_platform*/ true);
+
+  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
+
   SetCanJIT(false);
 
   m_thread_data_valid = true;
@@ -215,17 +226,6 @@ Status ProcessElfCore::DoLoadCore() {
     m_core_range_infos.Sort();
     m_core_tag_ranges.Sort();
   }
-
-  // Even if the architecture is set in the target, we need to override it to
-  // match the core file which is always single arch.
-  ArchSpec arch(m_core_module_sp->GetArchitecture());
-
-  ArchSpec target_arch = GetTarget().GetArchitecture();
-  ArchSpec core_arch(m_core_module_sp->GetArchitecture());
-  target_arch.MergeFrom(core_arch);
-  GetTarget().SetArchitecture(target_arch);
-
-  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
 
   // Ensure we found at least one thread that was stopped on a signal.
   bool siginfo_signal_found = false;
@@ -938,10 +938,11 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       break;
     }
     case ELF::NT_SIGINFO: {
-      Status status = ELFLinuxSigInfo::Parse(
-          note.data, arch, GetTarget().GetPlatform(), thread_data);
-      if (status.Fail())
-        return status.ToError();
+      lldb::offset_t size = note.data.GetByteSize();
+      lldb::offset_t offset = 0;
+      const char *bytes =
+          static_cast<const char *>(note.data.GetData(&offset, size));
+      thread_data.siginfo_bytes = llvm::StringRef(bytes, size);
       break;
     }
     case ELF::NT_FILE: {

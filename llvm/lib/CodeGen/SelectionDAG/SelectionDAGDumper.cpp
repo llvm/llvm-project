@@ -270,6 +270,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   // Binary operators
   case ISD::ADD:                        return "add";
+  case ISD::PTRADD:                     return "ptradd";
   case ISD::SUB:                        return "sub";
   case ISD::MUL:                        return "mul";
   case ISD::MULHU:                      return "mulhu";

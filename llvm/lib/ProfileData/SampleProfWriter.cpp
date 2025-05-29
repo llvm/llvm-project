@@ -827,17 +827,8 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   for (const auto &I : S.getBodySamples()) {
     LineLocation Loc = I.first;
     const SampleRecord &Sample = I.second;
-    encodeULEB128(Loc.LineOffset, OS);
-    encodeULEB128(Loc.Discriminator, OS);
-    encodeULEB128(Sample.getSamples(), OS);
-    encodeULEB128(Sample.getCallTargets().size(), OS);
-    for (const auto &J : Sample.getSortedCallTargets()) {
-      FunctionId Callee = J.first;
-      uint64_t CalleeSamples = J.second;
-      if (std::error_code EC = writeNameIdx(Callee))
-        return EC;
-      encodeULEB128(CalleeSamples, OS);
-    }
+    Loc.serialize(OS);
+    Sample.serialize(OS, getNameTable());
   }
 
   // Recursively emit all the callsite samples.
@@ -849,8 +840,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
     for (const auto &FS : J.second) {
       LineLocation Loc = J.first;
       const FunctionSamples &CalleeSamples = FS.second;
-      encodeULEB128(Loc.LineOffset, OS);
-      encodeULEB128(Loc.Discriminator, OS);
+      Loc.serialize(OS);
       if (std::error_code EC = writeBody(CalleeSamples))
         return EC;
     }
