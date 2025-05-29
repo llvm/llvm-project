@@ -759,14 +759,24 @@ SrcSafetyAnalysis::create(BinaryFunction &BF,
 /// either the program should be terminated on authentication failure or
 /// the result of authentication should not be accessible to an attacker.
 ///
-/// For that reason, a restricted set of operations is allowed on any register
-/// containing a value derived from the result of an authentication instruction
-/// until that register is either wiped or checked not to contain a result of a
-/// failed authentication.
+/// Considering the instructions in forward order as they are executed, a
+/// restricted set of operations can be allowed on any register containing a
+/// value derived from the result of an authentication instruction until that
+/// value is checked not to contain the result of a failed authentication.
+/// In DstSafetyAnalysis, these rules are adapted, so that the safety property
+/// for a register is computed by iterating the instructions in backward order.
+/// Then the resulting properties are used at authentication instruction sites
+/// to check output registers and report the particular instruction if it writes
+/// to an unsafe register.
 ///
-/// Specifically, the safety property for a register is computed by iterating
-/// the instructions in backward order: the source register Xn of an instruction
-/// Inst is safe if at least one of the following is true:
+/// Another approach would be to simulate the above rules as-is, iterating over
+/// the instructions in forward direction. To make it possible to report the
+/// particular instructions as oracles, this would probably require tracking
+/// references to these instructions for each register currently containing
+/// sensitive data.
+///
+/// In DstSafetyAnalysis, the source register Xn of an instruction Inst is safe
+/// if at least one of the following is true:
 /// * Inst checks if Xn contains the result of a successful authentication and
 ///   terminates the program on failure. Note that Inst can either naturally
 ///   dereference Xn (load, branch, return, etc. instructions) or be the first
@@ -776,7 +786,7 @@ SrcSafetyAnalysis::create(BinaryFunction &BF,
 ///   execution of Inst (temporaries are not used on AArch64 and thus not
 ///   currently supported/allowed).
 ///   See MCPlusBuilder::analyzeAddressArithmeticsForPtrAuth for the details.
-/// * Inst fully overwrites Xn with an unrelated value.
+/// * Inst fully overwrites Xn with a constant.
 struct DstState {
   /// The set of registers whose values cannot be inspected by an attacker in
   /// a way usable as an authentication oracle. The results of authentication
@@ -913,8 +923,9 @@ protected:
   }
 
   /// Returns the set of registers that can be leaked by this instruction.
-  /// This is computed similar to the set of clobbered registers, but taking
-  /// input operands instead of outputs.
+  /// A register is considered leaked if it has any intersection with any
+  /// register read by Inst. This is similar to how the set of clobbered
+  /// registers is computed, but taking input operands instead of outputs.
   BitVector getLeakedRegs(const MCInst &Inst) const {
     BitVector Leaked(NumRegs);
 
@@ -982,17 +993,18 @@ protected:
         Regs.push_back(SrcReg);
     }
 
-    // ... the register can be overwritten in whole with an unrelated value -
-    // for that reason, ignore the registers that are both read and written:
-    //
-    //     movk x0, #42, lsl #16  // keeps some bits of x0
-    //     mul  x1, x1, #3        // not all information is actually lost
-    //
-    BitVector FullyOverwrittenRegs;
-    BC.MIB->getWrittenRegs(Inst, FullyOverwrittenRegs);
-    FullyOverwrittenRegs.reset(LeakedRegs);
-    for (MCPhysReg Reg : FullyOverwrittenRegs.set_bits())
-      Regs.push_back(Reg);
+    // ... the register can be overwritten in whole with a constant: for that
+    // purpose, look for the instructions with no register inputs (neither
+    // explicit nor implicit ones) and no side effects (to rule out reading
+    // not modelled locations).
+    const MCInstrDesc &Desc = BC.MII->get(Inst.getOpcode());
+    bool HasExplicitSrcRegs = llvm::any_of(BC.MIB->useOperands(Inst),
+                                           [](auto Op) { return Op.isReg(); });
+    if (!Desc.hasUnmodeledSideEffects() && !HasExplicitSrcRegs &&
+        Desc.implicit_uses().empty()) {
+      for (const MCOperand &Def : BC.MIB->defOperands(Inst))
+        Regs.push_back(Def.getReg());
+    }
 
     return Regs;
   }

@@ -223,10 +223,37 @@ bad_unknown_usage_update:
         ret
         .size bad_unknown_usage_update, .-bad_unknown_usage_update
 
+        .globl  good_overwrite_with_constant
+        .type   good_overwrite_with_constant,@function
+good_overwrite_with_constant:
+// CHECK-NOT: good_overwrite_with_constant
+        autia   x0, x1
+        mov     x0, #42
+        ret
+        .size good_overwrite_with_constant, .-good_overwrite_with_constant
+
+// Overwriting sensitive data by instructions with unmodelled side-effects is
+// explicitly rejected, even though this particular MRS is safe.
+        .globl  bad_overwrite_with_side_effects
+        .type   bad_overwrite_with_side_effects,@function
+bad_overwrite_with_side_effects:
+// CHECK-LABEL: GS-PAUTH: authentication oracle found in function bad_overwrite_with_side_effects, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
+// CHECK-NEXT:  The 0 instructions that leak the affected registers are:
+        autia   x0, x1
+        mrs     x0, CTR_EL0
+        ret
+        .size bad_overwrite_with_side_effects, .-bad_overwrite_with_side_effects
+
+// Here the new value written by MUL to x0 is completely unrelated to the result
+// of authentication, so this is a false positive.
+// FIXME: Can/should we generalize overwriting by constant to handle such cases?
         .globl  good_unknown_overwrite
         .type   good_unknown_overwrite,@function
 good_unknown_overwrite:
-// CHECK-NOT: good_unknown_overwrite
+// CHECK-LABEL: GS-PAUTH: authentication oracle found in function good_unknown_overwrite, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
+// CHECK-NEXT:  The 0 instructions that leak the affected registers are:
         autia   x0, x1
         mul     x0, x1, x2
         ret
@@ -235,15 +262,15 @@ good_unknown_overwrite:
 // This is a false positive: when a general-purpose register is written to as
 // a 32-bit register, its top 32 bits are zeroed, but according to LLVM
 // representation, the instruction only overwrites the Wn register.
-        .globl  good_unknown_wreg_overwrite
-        .type   good_unknown_wreg_overwrite,@function
-good_unknown_wreg_overwrite:
-// CHECK-LABEL: GS-PAUTH: authentication oracle found in function good_unknown_wreg_overwrite, basic block {{[^,]+}}, at address
+        .globl  good_wreg_overwrite
+        .type   good_wreg_overwrite,@function
+good_wreg_overwrite:
+// CHECK-LABEL: GS-PAUTH: authentication oracle found in function good_wreg_overwrite, basic block {{[^,]+}}, at address
 // CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
         autia   x0, x1
-        mul     w0, w1, w2
+        mov     w0, #42
         ret
-        .size good_unknown_wreg_overwrite, .-good_unknown_wreg_overwrite
+        .size good_wreg_overwrite, .-good_wreg_overwrite
 
         .globl  good_address_arith
         .type   good_address_arith,@function
@@ -435,16 +462,16 @@ bad_unknown_usage_update_multi_bb:
         ret
         .size bad_unknown_usage_update_multi_bb, .-bad_unknown_usage_update_multi_bb
 
-        .globl  good_unknown_overwrite_multi_bb
-        .type   good_unknown_overwrite_multi_bb,@function
-good_unknown_overwrite_multi_bb:
-// CHECK-NOT: good_unknown_overwrite_multi_bb
+        .globl  good_overwrite_with_constant_multi_bb
+        .type   good_overwrite_with_constant_multi_bb,@function
+good_overwrite_with_constant_multi_bb:
+// CHECK-NOT: good_overwrite_with_constant_multi_bb
         autia   x0, x1
         cbz     x3, 1f
 1:
-        mul     x0, x1, x2
+        mov     x0, #42
         ret
-        .size good_unknown_overwrite_multi_bb, .-good_unknown_overwrite_multi_bb
+        .size good_overwrite_with_constant_multi_bb, .-good_overwrite_with_constant_multi_bb
 
         .globl  good_address_arith_multi_bb
         .type   good_address_arith_multi_bb,@function
@@ -638,20 +665,20 @@ bad_unknown_usage_update_nocfg:
         ret
         .size bad_unknown_usage_update_nocfg, .-bad_unknown_usage_update_nocfg
 
-        .globl  good_unknown_overwrite_nocfg
-        .type   good_unknown_overwrite_nocfg,@function
-good_unknown_overwrite_nocfg:
-// CHECK-NOT: good_unknown_overwrite_nocfg
+        .globl  good_overwrite_with_constant_nocfg
+        .type   good_overwrite_with_constant_nocfg,@function
+good_overwrite_with_constant_nocfg:
+// CHECK-NOT: good_overwrite_with_constant_nocfg
         paciasp
         adr     x2, 1f
         br      x2
 1:
         autia   x0, x1
-        mul     x0, x1, x2
+        mov     x0, #42
 
         autiasp
         ret
-        .size good_unknown_overwrite_nocfg, .-good_unknown_overwrite_nocfg
+        .size good_overwrite_with_constant_nocfg, .-good_overwrite_with_constant_nocfg
 
         .globl  good_address_arith_nocfg
         .type   good_address_arith_nocfg,@function
