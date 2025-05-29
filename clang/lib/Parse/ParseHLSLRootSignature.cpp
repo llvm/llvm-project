@@ -376,6 +376,10 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
 
   Sampler.Reg = Params->Reg.value();
 
+  // Fill in optional values
+  if (Params->MipLODBias.has_value())
+    Sampler.MipLODBias = Params->MipLODBias.value();
+
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
                            /*param of=*/TokenKind::kw_StaticSampler))
@@ -661,6 +665,23 @@ RootSignatureParser::parseStaticSamplerParams() {
         return std::nullopt;
       Params.Reg = Reg;
     }
+
+    // `mipLODBias` `=` NUMBER
+    if (tryConsumeExpectedToken(TokenKind::kw_mipLODBias)) {
+      if (Params.MipLODBias.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto MipLODBias = parseFloatParam();
+      if (!MipLODBias.has_value())
+        return std::nullopt;
+      Params.MipLODBias = MipLODBias;
+    }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   return Params;
@@ -707,6 +728,39 @@ std::optional<Register> RootSignatureParser::parseRegister() {
 
   Reg.Number = *Number;
   return Reg;
+}
+
+std::optional<float> RootSignatureParser::parseFloatParam() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+  // Consume sign modifier
+  bool Signed =
+      tryConsumeExpectedToken({TokenKind::pu_plus, TokenKind::pu_minus});
+  bool Negated = Signed && CurToken.TokKind == TokenKind::pu_minus;
+
+  // DXC will treat a postive signed integer as unsigned
+  if (!Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
+    std::optional<uint32_t> UInt = handleUIntLiteral();
+    if (!UInt.has_value())
+      return std::nullopt;
+    return float(UInt.value());
+  }
+
+  if (Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
+    std::optional<int32_t> Int = handleIntLiteral(Negated);
+    if (!Int.has_value())
+      return std::nullopt;
+    return float(Int.value());
+  }
+
+  if (tryConsumeExpectedToken(TokenKind::float_literal)) {
+    std::optional<float> Float = handleFloatLiteral(Negated);
+    if (!Float.has_value())
+      return std::nullopt;
+    return Float.value();
+  }
+
+  return std::nullopt;
 }
 
 std::optional<llvm::hlsl::rootsig::ShaderVisibility>
@@ -819,20 +873,119 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
                                       PP.getSourceManager(), PP.getLangOpts(),
                                       PP.getTargetInfo(), PP.getDiagnostics());
   if (Literal.hadError)
-    return true; // Error has already been reported so just return
+    return std::nullopt; // Error has already been reported so just return
 
-  assert(Literal.isIntegerLiteral() && "IsNumberChar will only support digits");
+  assert(Literal.isIntegerLiteral() &&
+         "NumSpelling can only consist of digits");
 
-  llvm::APSInt Val = llvm::APSInt(32, false);
+  llvm::APSInt Val(32, /*IsUnsigned=*/true);
   if (Literal.GetIntegerValue(Val)) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
-        << 0 << CurToken.NumSpelling;
+        << /*integer type*/ 0 << /*is signed*/ 0;
     return std::nullopt;
   }
 
   return Val.getExtValue();
+}
+
+std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
+  // Parse the numeric value and do semantic checks on its specification
+  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
+                                      PP.getSourceManager(), PP.getLangOpts(),
+                                      PP.getTargetInfo(), PP.getDiagnostics());
+  if (Literal.hadError)
+    return std::nullopt; // Error has already been reported so just return
+
+  assert(Literal.isIntegerLiteral() &&
+         "NumSpelling can only consist of digits");
+
+  llvm::APSInt Val(32, /*IsUnsigned=*/true);
+  // GetIntegerValue will overwrite Val from the parsed Literal and return
+  // true if it overflows as a 32-bit unsigned int
+  bool Overflowed = Literal.GetIntegerValue(Val);
+
+  // So we then need to check that it doesn't overflow as a 32-bit signed int:
+  int64_t MaxNegativeMagnitude = -int64_t(std::numeric_limits<int32_t>::min());
+  Overflowed |= (Negated && MaxNegativeMagnitude < Val.getExtValue());
+
+  int64_t MaxPositiveMagnitude = int64_t(std::numeric_limits<int32_t>::max());
+  Overflowed |= (!Negated && MaxPositiveMagnitude < Val.getExtValue());
+
+  if (Overflowed) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*integer type*/ 0 << /*is signed*/ 1;
+    return std::nullopt;
+  }
+
+  if (Negated)
+    Val = -Val;
+
+  return int32_t(Val.getExtValue());
+}
+
+std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
+  // Parse the numeric value and do semantic checks on its specification
+  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
+                                      PP.getSourceManager(), PP.getLangOpts(),
+                                      PP.getTargetInfo(), PP.getDiagnostics());
+  if (Literal.hadError)
+    return std::nullopt; // Error has already been reported so just return
+
+  assert(Literal.isFloatingLiteral() &&
+         "NumSpelling consists only of [0-9.ef+-]. Any malformed NumSpelling "
+         "will be caught and reported by NumericLiteralParser.");
+
+  // DXC used `strtod` to convert the token string to a float which corresponds
+  // to:
+  auto DXCSemantics = llvm::APFloat::Semantics::S_IEEEdouble;
+  auto DXCRoundingMode = llvm::RoundingMode::NearestTiesToEven;
+
+  llvm::APFloat Val(llvm::APFloat::EnumToSemantics(DXCSemantics));
+  llvm::APFloat::opStatus Status(Literal.GetFloatValue(Val, DXCRoundingMode));
+
+  // Note: we do not error when opStatus::opInexact by itself as this just
+  // denotes that rounding occured but not that it is invalid
+  assert(!(Status & llvm::APFloat::opStatus::opInvalidOp) &&
+         "NumSpelling consists only of [0-9.ef+-]. Any malformed NumSpelling "
+         "will be caught and reported by NumericLiteralParser.");
+
+  assert(!(Status & llvm::APFloat::opStatus::opDivByZero) &&
+         "It is not possible for a division to be performed when "
+         "constructing an APFloat from a string");
+
+  if (Status & llvm::APFloat::opStatus::opUnderflow) {
+    // Report that the value has underflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_underflow);
+    return std::nullopt;
+  }
+
+  if (Status & llvm::APFloat::opStatus::opOverflow) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*float type*/ 1;
+    return std::nullopt;
+  }
+
+  if (Negated)
+    Val = -Val;
+
+  double DoubleVal = Val.convertToDouble();
+  double FloatMax = double(std::numeric_limits<float>::max());
+  if (FloatMax < DoubleVal || DoubleVal < -FloatMax) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*float type*/ 1;
+    return std::nullopt;
+  }
+
+  return static_cast<float>(DoubleVal);
 }
 
 bool RootSignatureParser::verifyZeroFlag() {

@@ -157,6 +157,7 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
 
 struct StaticSampler {
   Register Reg;
+  float MipLODBias = 0.f;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam
