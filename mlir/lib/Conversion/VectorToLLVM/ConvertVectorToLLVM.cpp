@@ -184,41 +184,6 @@ public:
   }
 };
 
-/// Conversion pattern for a vector.matrix_multiply.
-/// This is lowered directly to the proper llvm.intr.matrix.multiply.
-class VectorMatmulOpConversion
-    : public ConvertOpToLLVMPattern<vector::MatmulOp> {
-public:
-  using ConvertOpToLLVMPattern<vector::MatmulOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::MatmulOp matmulOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::MatrixMultiplyOp>(
-        matmulOp, typeConverter->convertType(matmulOp.getRes().getType()),
-        adaptor.getLhs(), adaptor.getRhs(), matmulOp.getLhsRows(),
-        matmulOp.getLhsColumns(), matmulOp.getRhsColumns());
-    return success();
-  }
-};
-
-/// Conversion pattern for a vector.flat_transpose.
-/// This is lowered directly to the proper llvm.intr.matrix.transpose.
-class VectorFlatTransposeOpConversion
-    : public ConvertOpToLLVMPattern<vector::FlatTransposeOp> {
-public:
-  using ConvertOpToLLVMPattern<vector::FlatTransposeOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::FlatTransposeOp transOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::MatrixTransposeOp>(
-        transOp, typeConverter->convertType(transOp.getRes().getType()),
-        adaptor.getMatrix(), transOp.getRows(), transOp.getColumns());
-    return success();
-  }
-};
-
 /// Overloaded utility that replaces a vector.load, vector.store,
 /// vector.maskedload and vector.maskedstore with their respective LLVM
 /// couterparts.
@@ -2069,12 +2034,6 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
                VectorToElementsLowering, VectorScalableStepOpLowering>(
       converter);
-}
-
-void mlir::populateVectorToLLVMMatrixConversionPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<VectorMatmulOpConversion>(converter);
-  patterns.add<VectorFlatTransposeOpConversion>(converter);
 }
 
 namespace {
