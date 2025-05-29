@@ -259,6 +259,9 @@ v_rcp_bf16 v5, src_scc
 v_rcp_bf16 v127, 0x8000
 // GFX1250: v_rcp_bf16_e32 v127, 0x8000             ; encoding: [0xff,0xf2,0xfe,0x7e,0x00,0x80,0x00,0x00]
 
+v_rcp_bf16 v5.h, v1.h
+// GFX1250: v_rcp_bf16_e32 v5.h, v1.h               ; encoding: [0x81,0xf3,0x0a,0x7f]
+
 v_sqrt_bf16 v5, v1
 // GFX1250: v_sqrt_bf16_e32 v5, v1                  ; encoding: [0x01,0xf5,0x0a,0x7e]
 
