@@ -23,13 +23,13 @@ define void @copysign_f16() {
 ;
 ; GFX8-LABEL: 'copysign_f16'
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.copysign.f16(half undef, half undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.copysign.v2f16(<2 x half> undef, <2 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.copysign.v3f16(<3 x half> undef, <3 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.copysign.v4f16(<4 x half> undef, <4 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.copysign.v5f16(<5 x half> undef, <5 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8f16 = call <8 x half> @llvm.copysign.v8f16(<8 x half> undef, <8 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v9f16 = call <9 x half> @llvm.copysign.v9f16(<9 x half> undef, <9 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.copysign.v16f16(<16 x half> undef, <16 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = call <2 x half> @llvm.copysign.v2f16(<2 x half> undef, <2 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3f16 = call <3 x half> @llvm.copysign.v3f16(<3 x half> undef, <3 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = call <4 x half> @llvm.copysign.v4f16(<4 x half> undef, <4 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = call <5 x half> @llvm.copysign.v5f16(<5 x half> undef, <5 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f16 = call <8 x half> @llvm.copysign.v8f16(<8 x half> undef, <8 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v9f16 = call <9 x half> @llvm.copysign.v9f16(<9 x half> undef, <9 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = call <16 x half> @llvm.copysign.v16f16(<16 x half> undef, <16 x half> undef)
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX9-LABEL: 'copysign_f16'
@@ -67,13 +67,13 @@ define void @copysign_f16() {
 ;
 ; GFX8-SIZE-LABEL: 'copysign_f16'
 ; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.copysign.f16(half undef, half undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.copysign.v2f16(<2 x half> undef, <2 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.copysign.v3f16(<3 x half> undef, <3 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.copysign.v4f16(<4 x half> undef, <4 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.copysign.v5f16(<5 x half> undef, <5 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8f16 = call <8 x half> @llvm.copysign.v8f16(<8 x half> undef, <8 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v9f16 = call <9 x half> @llvm.copysign.v9f16(<9 x half> undef, <9 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.copysign.v16f16(<16 x half> undef, <16 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = call <2 x half> @llvm.copysign.v2f16(<2 x half> undef, <2 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3f16 = call <3 x half> @llvm.copysign.v3f16(<3 x half> undef, <3 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = call <4 x half> @llvm.copysign.v4f16(<4 x half> undef, <4 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = call <5 x half> @llvm.copysign.v5f16(<5 x half> undef, <5 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f16 = call <8 x half> @llvm.copysign.v8f16(<8 x half> undef, <8 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v9f16 = call <9 x half> @llvm.copysign.v9f16(<9 x half> undef, <9 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = call <16 x half> @llvm.copysign.v16f16(<16 x half> undef, <16 x half> undef)
 ; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX9-SIZE-LABEL: 'copysign_f16'
