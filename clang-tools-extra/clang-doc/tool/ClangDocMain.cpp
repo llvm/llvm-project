@@ -388,11 +388,8 @@ Example usage for a project using a compile commands database:
   sortUsrToInfo(USRToInfo);
 
   // Ensure the root output directory exists.
-  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
-      Err != std::error_code()) {
-    ExitOnErr(llvm::createStringError(
-        llvm::inconvertibleErrorCode(), "Failed to create directory '%s': %s",
-        OutDirectory.c_str(), Err.message().c_str()));
+  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory)) {
+  ExitOnErr(llvm::createFileError(OutDirectory, Err));
   }
 
   // Run the generator.
