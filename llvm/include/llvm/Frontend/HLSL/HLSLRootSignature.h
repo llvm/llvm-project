@@ -46,8 +46,6 @@ enum class RootFlags : uint32_t {
   ValidFlags = 0x00000fff
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags);
-
 enum class RootDescriptorFlags : unsigned {
   None = 0,
   DataVolatile = 0x2,
@@ -78,6 +76,14 @@ enum class ShaderVisibility {
   Mesh = 7,
 };
 
+enum class TextureAddressMode {
+  Wrap = 1,
+  Mirror = 2,
+  Clamp = 3,
+  Border = 4,
+  MirrorOnce = 5
+};
+
 // Definitions of the in-memory data layout structures
 
 // Models the different registers: bReg | tReg | uReg | sReg
@@ -94,8 +100,6 @@ struct RootConstants {
   uint32_t Space = 0;
   ShaderVisibility Visibility = ShaderVisibility::All;
 };
-
-raw_ostream &operator<<(raw_ostream &OS, const RootConstants &Constants);
 
 enum class DescriptorType : uint8_t { SRV = 0, UAV, CBuffer };
 // Models RootDescriptor : CBV | SRV | UAV, by collecting like parameters
@@ -161,7 +165,13 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
 
 struct StaticSampler {
   Register Reg;
+  TextureAddressMode AddressU = TextureAddressMode::Wrap;
+  TextureAddressMode AddressV = TextureAddressMode::Wrap;
+  TextureAddressMode AddressW = TextureAddressMode::Wrap;
   float MipLODBias = 0.f;
+  uint32_t MaxAnisotropy = 16;
+  float MinLOD = 0.f;
+  float MaxLOD = std::numeric_limits<float>::max();
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam

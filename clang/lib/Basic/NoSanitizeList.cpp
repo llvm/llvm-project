@@ -29,10 +29,10 @@ NoSanitizeList::~NoSanitizeList() = default;
 
 bool NoSanitizeList::containsPrefix(SanitizerMask Mask, StringRef Prefix,
                                     StringRef Name, StringRef Category) const {
-  auto NoSan = SSCL->inSectionBlame(Mask, Prefix, Name, Category);
+  std::pair<unsigned, unsigned> NoSan = SSCL->inSectionBlame(Mask, Prefix, Name, Category);
   if (NoSan == llvm::SpecialCaseList::NotFound)
     return false;
-  auto San = SSCL->inSectionBlame(Mask, Prefix, Name, "sanitize");
+  std::pair<unsigned, unsigned> San = SSCL->inSectionBlame(Mask, Prefix, Name, "sanitize");
   return San == llvm::SpecialCaseList::NotFound || NoSan > San;
 }
 
