@@ -24,6 +24,4 @@ LLVM_LIBC_FUNCTION(wchar_t *, wcscpy,
   return s1;
 }
 
-
-
 } // namespace LIBC_NAMESPACE_DECL
