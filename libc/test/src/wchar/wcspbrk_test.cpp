@@ -62,7 +62,7 @@ TEST(LlvmLibcWCSPBrkTest, FindsFirstInBreakset) {
 }
 
 #if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
-TEST(LlvmLibcWMemcmpTest, NullptrCrash) {
+TEST(LlvmLibcWCSPBrkTest, NullptrCrash) {
   // Passing in a nullptr should crash the program.
   EXPECT_DEATH([] { LIBC_NAMESPACE::wcspbrk(L"aaaaaaaaaaaaaa", nullptr); },
                WITH_SIGNAL(-1));
