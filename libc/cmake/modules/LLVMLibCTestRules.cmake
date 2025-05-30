@@ -1,5 +1,6 @@
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
+  _get_compile_options_from_config(config_flags)
 
   # Remove -fno-math-errno if it was added.
   if(LIBC_ADD_FNO_MATH_ERRNO)
@@ -9,7 +10,8 @@ function(_get_common_test_compile_options output_var c_test flags)
   set(compile_options
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
       ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
-      ${compile_flags})
+      ${compile_flags}
+      ${config_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -64,6 +66,11 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var)
   _get_common_test_compile_options(compile_options "" "")
+
+  # null check tests are death tests, remove from hermetic tests for now.
+  if(LIBC_ADD_NULL_CHECKS)
+    list(REMOVE_ITEM config_options "-DLIBC_ADD_NULL_CHECKS")
+  endif()
 
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
