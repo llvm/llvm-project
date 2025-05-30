@@ -1,4 +1,4 @@
-// RUN: tco --force-no-capture %s | FileCheck %s
+// RUN: tco %s | FileCheck %s
 
 // Test code gen for unlimited polymorphic type descriptor.
 

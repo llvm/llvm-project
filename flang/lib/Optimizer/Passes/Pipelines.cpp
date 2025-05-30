@@ -15,9 +15,6 @@
 /// Force setting the no-alias attribute on fuction arguments when possible.
 static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
                                         llvm::cl::init(false));
-/// Force setting the no-capture attribute on fuction arguments when possible.
-static llvm::cl::opt<bool> forceNoCapture("force-no-capture", llvm::cl::Hidden,
-                                          llvm::cl::init(false));
 
 namespace fir {
 
@@ -361,7 +358,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   // TODO: re-enable setNoAlias by default (when optimizing for speed) once
   // function specialization is fixed.
   bool setNoAlias = forceNoAlias;
-  bool setNoCapture = forceNoCapture;
+  bool setNoCapture = config.OptLevel.isOptimizingForSpeed();
 
   pm.addPass(fir::createFunctionAttr(
       {framePointerKind, config.InstrumentFunctionEntry,
