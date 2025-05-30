@@ -1458,9 +1458,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FADD, VT, Custom);
 
     if (EnablePartialReduceNodes && Subtarget->hasDotProd()) {
-      setPartialReduceMLAAction(MVT::v4i32, MVT::v16i8, Legal);
-      setPartialReduceMLAAction(MVT::v2i32, MVT::v8i8, Legal);
-      setPartialReduceMLAAction(MVT::v2i64, MVT::v16i8, Custom);
+      static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                        ISD::PARTIAL_REDUCE_UMLA};
+
+      setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Legal);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i32, MVT::v8i8, Legal);
+      setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
     }
 
   } else /* !isNeonAvailable */ {
@@ -1881,16 +1884,18 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   if (EnablePartialReduceNodes && Subtarget->isSVEorStreamingSVEAvailable()) {
     // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
     // Other pairs will default to 'Expand'.
-    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
-    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
+    static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                      ISD::PARTIAL_REDUCE_UMLA};
+    setPartialReduceMLAAction(MLAOps, MVT::nxv2i64, MVT::nxv8i16, Legal);
+    setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv16i8, Legal);
 
-    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv16i8, Custom);
+    setPartialReduceMLAAction(MLAOps, MVT::nxv2i64, MVT::nxv16i8, Custom);
 
     // Wide add types
     if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
-      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv4i32, Legal);
-      setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv8i16, Legal);
-      setPartialReduceMLAAction(MVT::nxv8i16, MVT::nxv16i8, Legal);
+      setPartialReduceMLAAction(MLAOps, MVT::nxv2i64, MVT::nxv4i32, Legal);
+      setPartialReduceMLAAction(MLAOps, MVT::nxv4i32, MVT::nxv8i16, Legal);
+      setPartialReduceMLAAction(MLAOps, MVT::nxv8i16, MVT::nxv16i8, Legal);
     }
   }
 
