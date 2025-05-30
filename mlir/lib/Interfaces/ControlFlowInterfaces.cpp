@@ -81,6 +81,55 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 }
 
 //===----------------------------------------------------------------------===//
+// WeightedBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult detail::verifyBranchWeights(Operation *op) {
+  auto weights = cast<WeightedBranchOpInterface>(op).getBranchWeightsOrNull();
+  if (weights) {
+    if (weights.size() != op->getNumSuccessors())
+      return op->emitError() << "number of weights (" << weights.size()
+                             << ") does not match the number of successors ("
+                             << op->getNumSuccessors() << ")";
+    int32_t total = 0;
+    for (auto weight : llvm::enumerate(weights.asArrayRef())) {
+      if (weight.value() < 0)
+        return op->emitError()
+               << "weight #" << weight.index() << " must be non-negative";
+      total += weight.value();
+    }
+    if (total != 100)
+      return op->emitError() << "total weight " << total << " is not 100";
+  }
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// WeightedRegionBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult detail::verifyRegionBranchWeights(Operation *op) {
+  auto weights =
+      cast<WeightedRegionBranchOpInterface>(op).getRegionWeightsOrNull();
+  if (weights) {
+    if (weights.size() != op->getNumRegions())
+      return op->emitError() << "number of weights (" << weights.size()
+                             << ") does not match the number of regions ("
+                             << op->getNumRegions() << ")";
+    int32_t total = 0;
+    for (auto weight : llvm::enumerate(weights.asArrayRef())) {
+      if (weight.value() < 0)
+        return op->emitError()
+               << "weight #" << weight.index() << " must be non-negative";
+      total += weight.value();
+    }
+    if (total != 100)
+      return op->emitError() << "total weight " << total << " is not 100";
+  }
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
