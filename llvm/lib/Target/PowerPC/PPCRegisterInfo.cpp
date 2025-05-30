@@ -1238,51 +1238,6 @@ static void emitAccSpillRestoreInfo(MachineBasicBlock &MBB, bool IsPrimed,
 #endif
 }
 
-#if 0
-static void spillRegPairs(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator II, DebugLoc DL,
-                          const TargetInstrInfo &TII, Register SrcReg,
-                          unsigned FrameIndex, bool IsLittleEndian) {
-  MachineInstr &MI = *II;
-  bool IsKilled = MI.getOperand(0).isKill();
-  unsigned Offset = IsLittleEndian ? 48 : 0;
-
-  // The register arithmetic in this function does not support virtual
-  // registers.
-  /*
-  assert(!SrcReg.isVirtual() &&
-         "Spilling register pairs does not support virtual registers.");
-  */
-
-  Register RegP0 = TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair0);
-  Register RegP1 = TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair1);
-
-  addFrameReference(
-      BuildMI(MBB, II, DL, TII.get(PPC::STXV))
-          .addReg(TargetRegisterInfo::getSubReg(RegP1, PPC::sub_vsx0),
-                  getKillRegState(IsKilled)),
-      FrameIndex, Offset);
-  Offset += IsLittleEndian ? -16 : 16;
-  addFrameReference(
-      BuildMI(MBB, II, DL, TII.get(PPC::STXV))
-          .addReg(TargetRegisterInfo::getSubReg(RegP1, PPC::sub_vsx1),
-                  getKillRegState(IsKilled)),
-      FrameIndex, Offset);
-  Offset += IsLittleEndian ? -16 : 16;
-  addFrameReference(
-      BuildMI(MBB, II, DL, TII.get(PPC::STXV))
-          .addReg(TargetRegisterInfo::getSubReg(RegP0, PPC::sub_vsx0),
-                  getKillRegState(IsKilled)),
-      FrameIndex, Offset);
-  Offset += IsLittleEndian ? -16 : 16;
-  addFrameReference(
-      BuildMI(MBB, II, DL, TII.get(PPC::STXV))
-          .addReg(TargetRegisterInfo::getSubReg(RegP0, PPC::sub_vsx1),
-                  getKillRegState(IsKilled)),
-      FrameIndex, Offset);
-}
-#endif
-
 /// Remove any STXVP[X] instructions and split them out into a pair of
 /// STXV[X] instructions if --disable-auto-paired-vec-st is specified on
 /// the command line.
@@ -1305,7 +1260,6 @@ void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
           .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_vsx0),
                   getKillRegState(IsKilled)),
       FrameIndex, IsLittleEndian ? 16 : 0);
-
   addFrameReference(
       BuildMI(MBB, II, DL, TII.get(PPC::STXV))
           .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_vsx1),
@@ -1358,33 +1312,22 @@ void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
   if (IsPrimed)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMFACC), SrcReg).addReg(SrcReg);
   if (DisableAutoPairedVecSt) {
-    unsigned Offset = IsLittleEndian ? 48 : 0;
-    Register RegP0 = TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair0);
-    Register RegP1 = TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair1);
-
-    addFrameReference(
-        BuildMI(MBB, II, DL, TII.get(PPC::STXV))
-            .addReg(TargetRegisterInfo::getSubReg(RegP0, PPC::sub_vsx0),
-                    getKillRegState(IsKilled)),
-        FrameIndex, Offset);
-    Offset += IsLittleEndian ? -16 : 16;
-    addFrameReference(
-        BuildMI(MBB, II, DL, TII.get(PPC::STXV))
-            .addReg(TargetRegisterInfo::getSubReg(RegP0, PPC::sub_vsx1),
-                    getKillRegState(IsKilled)),
-        FrameIndex, Offset);
-    Offset += IsLittleEndian ? -16 : 16;
-    addFrameReference(
-        BuildMI(MBB, II, DL, TII.get(PPC::STXV))
-            .addReg(TargetRegisterInfo::getSubReg(RegP1, PPC::sub_vsx0),
-                    getKillRegState(IsKilled)),
-        FrameIndex, Offset);
-    Offset += IsLittleEndian ? -16 : 16;
-    addFrameReference(
-        BuildMI(MBB, II, DL, TII.get(PPC::STXV))
-            .addReg(TargetRegisterInfo::getSubReg(RegP1, PPC::sub_vsx1),
-                    getKillRegState(IsKilled)),
-        FrameIndex, Offset);
+    auto spillPair = [&](Register Reg, int Offset) {
+      addFrameReference(
+          BuildMI(MBB, II, DL, TII.get(PPC::STXV))
+              .addReg(TargetRegisterInfo::getSubReg(Reg, PPC::sub_vsx0),
+                      getKillRegState(IsKilled)),
+          FrameIndex, Offset);
+      addFrameReference(
+          BuildMI(MBB, II, DL, TII.get(PPC::STXV))
+              .addReg(TargetRegisterInfo::getSubReg(Reg, PPC::sub_vsx1),
+                      getKillRegState(IsKilled)),
+          FrameIndex, IsLittleEndian ? Offset - 16 : Offset + 16);
+    };
+    spillPair(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair0),
+              IsLittleEndian ? 48 : 0);
+    spillPair(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair1),
+              IsLittleEndian ? 16 : 32);
   } else {
     addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
                           .addReg(Reg, getKillRegState(IsKilled)),
