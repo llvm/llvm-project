@@ -40,10 +40,13 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
+
+static llvm::cl::opt<bool> DumpAtomicAnalysis("fdebug-dump-atomic-analysis");
 
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
@@ -3790,7 +3793,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 //===----------------------------------------------------------------------===//
 
 [[maybe_unused]] static void
-dumpAnalysis(const parser::OpenMPAtomicConstruct::Analysis &analysis) {
+dumpAtomicAnalysis(const parser::OpenMPAtomicConstruct::Analysis &analysis) {
   auto whatStr = [](int k) {
     std::string txt = "?";
     switch (k & parser::OpenMPAtomicConstruct::Analysis::Action) {
@@ -3869,6 +3872,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   lower::StatementContext stmtCtx;
 
   const parser::OpenMPAtomicConstruct::Analysis &analysis = construct.analysis;
+  if (DumpAtomicAnalysis)
+    dumpAtomicAnalysis(analysis);
+
   const semantics::SomeExpr &atom = *get(analysis.atom);
   mlir::Location loc = converter.genLocation(construct.source);
   mlir::Value atomAddr =
