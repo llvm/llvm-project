@@ -2640,6 +2640,11 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
 
+  if (llvm::Attribute attr = func->getFnAttribute("reciprocal-estimates");
+      attr.isStringAttribute())
+    funcOp.setReciprocalEstimatesAttr(
+        StringAttr::get(context, attr.getValueAsString()));
+
   if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
       attr.isStringAttribute())
     funcOp.setUnsafeFpMath(attr.getValueAsBool());

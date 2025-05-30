@@ -56,6 +56,9 @@ public:
   // The prefered vector width, if requested by -mprefer-vector-width.
   std::string PreferVectorWidth;
 
+  // List of reciprocal estimate sub-options.
+  std::string Reciprocals;
+
   /// List of filenames passed in using the -fembed-offload-object option. These
   /// are offloading binaries containing device images and metadata.
   std::vector<std::string> OffloadObjects;

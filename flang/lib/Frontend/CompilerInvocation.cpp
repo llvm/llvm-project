@@ -1251,6 +1251,164 @@ static bool parseIntegerOverflowArgs(CompilerInvocation &invoc,
   return true;
 }
 
+/// This is a helper function for validating the optional refinement step
+/// parameter in reciprocal argument strings. Return false if there is an error
+/// parsing the refinement step. Otherwise, return true and set the Position
+/// of the refinement step in the input string.
+///
+/// \param [in] in The input string
+/// \param [in] a The compiler invocation arguments to parse
+/// \param [out] position The position of the refinement step in input string
+/// \param [out] diags DiagnosticsEngine to report erros with
+static bool getRefinementStep(llvm::StringRef in, const llvm::opt::Arg &a,
+                              size_t &position,
+                              clang::DiagnosticsEngine &diags) {
+  const char refinementStepToken = ':';
+  position = in.find(refinementStepToken);
+  if (position != llvm::StringRef::npos) {
+    llvm::StringRef option = a.getOption().getName();
+    llvm::StringRef refStep = in.substr(position + 1);
+    // Allow exactly one numeric character for the additional refinement
+    // step parameter. This is reasonable for all currently-supported
+    // operations and architectures because we would expect that a larger value
+    // of refinement steps would cause the estimate "optimization" to
+    // under-perform the native operation. Also, if the estimate does not
+    // converge quickly, it probably will not ever converge, so further
+    // refinement steps will not produce a better answer.
+    if (refStep.size() != 1) {
+      diags.Report(clang::diag::err_drv_invalid_value) << option << refStep;
+      return false;
+    }
+    char refStepChar = refStep[0];
+    if (refStepChar < '0' || refStepChar > '9') {
+      diags.Report(clang::diag::err_drv_invalid_value) << option << refStep;
+      return false;
+    }
+  }
+  return true;
+}
+
+/// Parses all -mrecip=<list> arguments and populates the
+/// CompilerInvocation accordingly. Returns false if new errors are generated.
+///
+/// \param [out] invoc Stores the processed arguments
+/// \param [in] args The compiler invocation arguments to parse
+/// \param [out] diags DiagnosticsEngine to report erros with
+static bool parseMRecip(CompilerInvocation &invoc, llvm::opt::ArgList &args,
+                        clang::DiagnosticsEngine &diags) {
+  llvm::StringRef disabledPrefixIn = "!";
+  llvm::StringRef disabledPrefixOut = "!";
+  llvm::StringRef enabledPrefixOut = "";
+  llvm::StringRef out = "";
+  Fortran::frontend::CodeGenOptions &opts = invoc.getCodeGenOpts();
+
+  const llvm::opt::Arg *a =
+      args.getLastArg(clang::driver::options::OPT_mrecip,
+                      clang::driver::options::OPT_mrecip_EQ);
+  if (!a)
+    return true;
+
+  unsigned numOptions = a->getNumValues();
+  if (numOptions == 0) {
+    // No option is the same as "all".
+    opts.Reciprocals = "all";
+    return true;
+  }
+
+  // Pass through "all", "none", or "default" with an optional refinement step.
+  if (numOptions == 1) {
+    llvm::StringRef val = a->getValue(0);
+    size_t refStepLoc;
+    if (!getRefinementStep(val, *a, refStepLoc, diags))
+      return false;
+    llvm::StringRef valBase = val.slice(0, refStepLoc);
+    if (valBase == "all" || valBase == "none" || valBase == "default") {
+      opts.Reciprocals = args.MakeArgString(val);
+      return true;
+    }
+  }
+
+  // Each reciprocal type may be enabled or disabled individually.
+  // Check each input value for validity, concatenate them all back together,
+  // and pass through.
+
+  llvm::StringMap<bool> optionStrings;
+  optionStrings.insert(std::make_pair("divd", false));
+  optionStrings.insert(std::make_pair("divf", false));
+  optionStrings.insert(std::make_pair("divh", false));
+  optionStrings.insert(std::make_pair("vec-divd", false));
+  optionStrings.insert(std::make_pair("vec-divf", false));
+  optionStrings.insert(std::make_pair("vec-divh", false));
+  optionStrings.insert(std::make_pair("sqrtd", false));
+  optionStrings.insert(std::make_pair("sqrtf", false));
+  optionStrings.insert(std::make_pair("sqrth", false));
+  optionStrings.insert(std::make_pair("vec-sqrtd", false));
+  optionStrings.insert(std::make_pair("vec-sqrtf", false));
+  optionStrings.insert(std::make_pair("vec-sqrth", false));
+
+  for (unsigned i = 0; i != numOptions; ++i) {
+    llvm::StringRef val = a->getValue(i);
+
+    bool isDisabled = val.starts_with(disabledPrefixIn);
+    // Ignore the disablement token for string matching.
+    if (isDisabled)
+      val = val.substr(1);
+
+    size_t refStep;
+    if (!getRefinementStep(val, *a, refStep, diags))
+      return false;
+
+    llvm::StringRef valBase = val.slice(0, refStep);
+    llvm::StringMap<bool>::iterator optionIter = optionStrings.find(valBase);
+    if (optionIter == optionStrings.end()) {
+      // Try again specifying float suffix.
+      optionIter = optionStrings.find(valBase.str() + 'f');
+      if (optionIter == optionStrings.end()) {
+        // The input name did not match any known option string.
+        diags.Report(clang::diag::err_drv_invalid_value)
+            << a->getOption().getName() << val;
+        return false;
+      }
+      // The option was specified without a half or float or double suffix.
+      // Make sure that the double or half entry was not already specified.
+      // The float entry will be checked below.
+      if (optionStrings[valBase.str() + 'd'] ||
+          optionStrings[valBase.str() + 'h']) {
+        diags.Report(clang::diag::err_drv_invalid_value)
+            << a->getOption().getName() << val;
+        return false;
+      }
+    }
+
+    if (optionIter->second == true) {
+      // Duplicate option specified.
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getOption().getName() << val;
+      return false;
+    }
+
+    // Mark the matched option as found. Do not allow duplicate specifiers.
+    optionIter->second = true;
+
+    // If the precision was not specified, also mark the double and half entry
+    // as found.
+    if (valBase.back() != 'f' && valBase.back() != 'd' &&
+        valBase.back() != 'h') {
+      optionStrings[valBase.str() + 'd'] = true;
+      optionStrings[valBase.str() + 'h'] = true;
+    }
+
+    // Build the output string.
+    llvm::StringRef prefix = isDisabled ? disabledPrefixOut : enabledPrefixOut;
+    out = args.MakeArgString(out + prefix + val);
+    if (i != numOptions - 1)
+      out = args.MakeArgString(out + ",");
+  }
+
+  opts.Reciprocals = args.MakeArgString(out); // Handle the rest.
+  return true;
+}
+
 /// Parses all floating point related arguments and populates the
 /// CompilerInvocation accordingly.
 /// Returns false if new errors are generated.
@@ -1398,6 +1556,7 @@ static bool parseLangOptionsArgs(CompilerInvocation &invoc,
 
   success &= parseIntegerOverflowArgs(invoc, args, diags);
   success &= parseFloatingPointArgs(invoc, args, diags);
+  success &= parseMRecip(invoc, args, diags);
   success &= parseVScaleArgs(invoc, args, diags);
 
   return success;
