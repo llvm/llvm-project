@@ -8,17 +8,11 @@
 define void @signed_icmp_mul_common_multiplicand(ptr %loc) vscale_range(1,1073741824) {
 ; CHECK-LABEL: define void @signed_icmp_mul_common_multiplicand(
 ; CHECK-SAME: ptr [[LOC:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[X:%.*]] = mul nsw i32 9, [[Z]]
-; CHECK-NEXT:    [[Y:%.*]] = mul nsw i32 5, [[Z]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IDX_DEC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i32 [[IDX]], ptr [[LOC]], align 4
-; CHECK-NEXT:    [[IDX_DEC]] = add nuw i32 [[IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[X]], [[Y]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
+; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -42,17 +36,11 @@ exit:
 define void @signed_icmp_mul_common_multiplicand_commuted(ptr %loc) vscale_range(1,1073741824) {
 ; CHECK-LABEL: define void @signed_icmp_mul_common_multiplicand_commuted(
 ; CHECK-SAME: ptr [[LOC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[X:%.*]] = mul nsw i32 [[Z]], 9
-; CHECK-NEXT:    [[Y:%.*]] = mul nsw i32 [[Z]], 5
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IDX_DEC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i32 [[IDX]], ptr [[LOC]], align 4
-; CHECK-NEXT:    [[IDX_DEC]] = add nuw i32 [[IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[X]], [[Y]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
+; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -76,18 +64,11 @@ exit:
 define void @signed_icmp_mul_common_multiplicand_mixed_arith(ptr %loc) vscale_range(1,1073741824) {
 ; CHECK-LABEL: define void @signed_icmp_mul_common_multiplicand_mixed_arith(
 ; CHECK-SAME: ptr [[LOC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[VS1:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[VS2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[X:%.*]] = mul nsw i32 9, [[VS1]]
-; CHECK-NEXT:    [[Y:%.*]] = shl nsw i32 [[VS2]], 2
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IDX_DEC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i32 [[IDX]], ptr [[LOC]], align 4
-; CHECK-NEXT:    [[IDX_DEC]] = add nuw i32 [[IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[X]], [[Y]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
+; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -212,17 +193,11 @@ exit:
 define void @unsigned_icmp_mul_common_multiplicand(ptr %loc) {
 ; CHECK-LABEL: define void @unsigned_icmp_mul_common_multiplicand(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[X:%.*]] = mul nuw i32 9, [[Z]]
-; CHECK-NEXT:    [[Y:%.*]] = mul nuw i32 5, [[Z]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IDX_DEC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i32 [[IDX]], ptr [[LOC]], align 4
-; CHECK-NEXT:    [[IDX_DEC]] = add nuw i32 [[IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[X]], [[Y]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
+; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -246,17 +221,11 @@ exit:
 define void @unsigned_icmp_mul_common_multiplicand_commuted(ptr %loc) {
 ; CHECK-LABEL: define void @unsigned_icmp_mul_common_multiplicand_commuted(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[X:%.*]] = mul nuw i32 [[Z]], 9
-; CHECK-NEXT:    [[Y:%.*]] = mul nuw i32 [[Z]], 5
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IDX_DEC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i32 [[IDX]], ptr [[LOC]], align 4
-; CHECK-NEXT:    [[IDX_DEC]] = add nuw i32 [[IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[X]], [[Y]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
+; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -280,18 +249,11 @@ exit:
 define void @unsigned_icmp_mul_common_multiplicand_mixed_arith(ptr %loc) {
 ; CHECK-LABEL: define void @unsigned_icmp_mul_common_multiplicand_mixed_arith(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[VS1:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[VS2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[X:%.*]] = mul nuw i32 9, [[VS1]]
-; CHECK-NEXT:    [[Y:%.*]] = shl nuw i32 [[VS2]], 2
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IDX_DEC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i32 [[IDX]], ptr [[LOC]], align 4
-; CHECK-NEXT:    [[IDX_DEC]] = add nuw i32 [[IDX]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[X]], [[Y]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    store i32 0, ptr [[LOC]], align 4
+; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
