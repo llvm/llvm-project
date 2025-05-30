@@ -136,9 +136,8 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
     space visibility flags
     numDescriptors offset
 
-    addressU addressV addressW
-    mipLODBias maxAnisotropy
-    comparisonFunc borderColor
+    mipLODBias addressU addressV addressW
+    maxAnisotropy comparisonFunc borderColor
     minLOD maxLOD
 
     unbounded
