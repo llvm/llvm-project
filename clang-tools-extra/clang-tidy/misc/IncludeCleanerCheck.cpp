@@ -59,7 +59,9 @@ IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       IgnoreHeaders(
           utils::options::parseStringList(Options.get("IgnoreHeaders", ""))),
-      DeduplicateFindings(Options.get("DeduplicateFindings", true)) {
+      DeduplicateFindings(Options.get("DeduplicateFindings", true)),
+      UnusedIncludes(Options.get("UnusedIncludes", true)),
+      MissingIncludes(Options.get("MissingIncludes", true)) {
   for (const auto &Header : IgnoreHeaders) {
     if (!llvm::Regex{Header}.isValid())
       configurationDiag("Invalid ignore headers regex '%0'") << Header;
@@ -68,12 +70,19 @@ IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
       HeaderSuffix += "$";
     IgnoreHeadersRegex.emplace_back(HeaderSuffix);
   }
+
+  if (UnusedIncludes == false && MissingIncludes == false)
+    this->configurationDiag("The check 'misc-include-cleaner' will not "
+                            "perform any analysis because 'UnusedIncludes' and "
+                            "'MissingIncludes' are both false.");
 }
 
 void IncludeCleanerCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreHeaders",
                 utils::options::serializeStringList(IgnoreHeaders));
   Options.store(Opts, "DeduplicateFindings", DeduplicateFindings);
+  Options.store(Opts, "UnusedIncludes", UnusedIncludes);
+  Options.store(Opts, "MissingIncludes", MissingIncludes);
 }
 
 bool IncludeCleanerCheck::isLanguageVersionSupported(
@@ -200,39 +209,43 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   if (!FileStyle)
     FileStyle = format::getLLVMStyle();
 
-  for (const auto *Inc : Unused) {
-    diag(Inc->HashLocation, "included header %0 is not used directly")
-        << llvm::sys::path::filename(Inc->Spelled,
-                                     llvm::sys::path::Style::posix)
-        << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
-               SM->translateLineCol(SM->getMainFileID(), Inc->Line, 1),
-               SM->translateLineCol(SM->getMainFileID(), Inc->Line + 1, 1)));
+  if (UnusedIncludes) {
+    for (const auto *Inc : Unused) {
+      diag(Inc->HashLocation, "included header %0 is not used directly")
+          << llvm::sys::path::filename(Inc->Spelled,
+                                       llvm::sys::path::Style::posix)
+          << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
+                 SM->translateLineCol(SM->getMainFileID(), Inc->Line, 1),
+                 SM->translateLineCol(SM->getMainFileID(), Inc->Line + 1, 1)));
+    }
   }
 
-  tooling::HeaderIncludes HeaderIncludes(getCurrentMainFile(), Code,
-                                         FileStyle->IncludeStyle);
-  // Deduplicate insertions when running in bulk fix mode.
-  llvm::StringSet<> InsertedHeaders{};
-  for (const auto &Inc : Missing) {
-    std::string Spelling = include_cleaner::spellHeader(
-        {Inc.Missing, PP->getHeaderSearchInfo(), MainFile});
-    bool Angled = llvm::StringRef{Spelling}.starts_with("<");
-    // We might suggest insertion of an existing include in edge cases, e.g.,
-    // include is present in a PP-disabled region, or spelling of the header
-    // turns out to be the same as one of the unresolved includes in the
-    // main file.
-    if (auto Replacement =
-            HeaderIncludes.insert(llvm::StringRef{Spelling}.trim("\"<>"),
-                                  Angled, tooling::IncludeDirective::Include)) {
-      DiagnosticBuilder DB =
-          diag(SM->getSpellingLoc(Inc.SymRef.RefLocation),
-               "no header providing \"%0\" is directly included")
-          << Inc.SymRef.Target.name();
-      if (areDiagsSelfContained() ||
-          InsertedHeaders.insert(Replacement->getReplacementText()).second) {
-        DB << FixItHint::CreateInsertion(
-            SM->getComposedLoc(SM->getMainFileID(), Replacement->getOffset()),
-            Replacement->getReplacementText());
+  if (MissingIncludes) {
+    tooling::HeaderIncludes HeaderIncludes(getCurrentMainFile(), Code,
+                                           FileStyle->IncludeStyle);
+    // Deduplicate insertions when running in bulk fix mode.
+    llvm::StringSet<> InsertedHeaders{};
+    for (const auto &Inc : Missing) {
+      std::string Spelling = include_cleaner::spellHeader(
+          {Inc.Missing, PP->getHeaderSearchInfo(), MainFile});
+      bool Angled = llvm::StringRef{Spelling}.starts_with("<");
+      // We might suggest insertion of an existing include in edge cases, e.g.,
+      // include is present in a PP-disabled region, or spelling of the header
+      // turns out to be the same as one of the unresolved includes in the
+      // main file.
+      if (auto Replacement = HeaderIncludes.insert(
+              llvm::StringRef{Spelling}.trim("\"<>"), Angled,
+              tooling::IncludeDirective::Include)) {
+        DiagnosticBuilder DB =
+            diag(SM->getSpellingLoc(Inc.SymRef.RefLocation),
+                 "no header providing \"%0\" is directly included")
+            << Inc.SymRef.Target.name();
+        if (areDiagsSelfContained() ||
+            InsertedHeaders.insert(Replacement->getReplacementText()).second) {
+          DB << FixItHint::CreateInsertion(
+              SM->getComposedLoc(SM->getMainFileID(), Replacement->getOffset()),
+              Replacement->getReplacementText());
+        }
       }
     }
   }

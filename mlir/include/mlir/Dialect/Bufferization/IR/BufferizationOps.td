@@ -93,7 +93,8 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 
   let extraClassDeclaration = [{
     LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options);
+                            const BufferizationOptions &options,
+                            BufferizationState &state);
 
     bool resultBufferizesToMemoryWrite(OpResult opResult,
                                        const AnalysisState &state);
@@ -282,7 +283,8 @@ def Bufferization_MaterializeInDestinationOp
 
   let extraClassDeclaration = [{
     LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options);
+                            const BufferizationOptions &options,
+                            BufferizationState &state);
 
     bool bufferizesToMemoryRead(OpOperand &opOperand,
                                 const AnalysisState &state);
@@ -375,7 +377,8 @@ def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options);
+                            const BufferizationOptions &options,
+                            BufferizationState &state);
   }];
 }
 
@@ -458,7 +461,8 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     //===------------------------------------------------------------------===//
 
     LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options) const {
+                            const BufferizationOptions &options,
+                            BufferizationState &state) const {
       // to_tensor/to_buffer pairs fold away after bufferization.
       return success();
     }
@@ -550,7 +554,8 @@ def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,
-                            const BufferizationOptions &options);
+                            const BufferizationOptions &options,
+                            BufferizationState &state);
   }];
 
   let assemblyFormat = [{

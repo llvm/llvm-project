@@ -333,11 +333,10 @@ static void addPlaceholderArgs(const LambdaProperties &LP,
 
   ArrayRef<BindArgument> Args = LP.BindArguments;
 
-  const auto *MaxPlaceholderIt =
-      std::max_element(Args.begin(), Args.end(),
-                       [](const BindArgument &B1, const BindArgument &B2) {
-                         return B1.PlaceHolderIndex < B2.PlaceHolderIndex;
-                       });
+  const auto *MaxPlaceholderIt = llvm::max_element(
+      Args, [](const BindArgument &B1, const BindArgument &B2) {
+        return B1.PlaceHolderIndex < B2.PlaceHolderIndex;
+      });
 
   // Placeholders (if present) have index 1 or greater.
   if (!PermissiveParameterList && (MaxPlaceholderIt == Args.end() ||

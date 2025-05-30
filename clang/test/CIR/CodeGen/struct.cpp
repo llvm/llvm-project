@@ -47,9 +47,9 @@ char f2(CompleteS &s) {
 // CIR: cir.func @_Z2f2R9CompleteS(%[[ARG_S:.*]]: !cir.ptr<!rec_CompleteS>{{.*}})
 // CIR:   %[[S_ADDR:.*]] = cir.alloca !cir.ptr<!rec_CompleteS>, !cir.ptr<!cir.ptr<!rec_CompleteS>>, ["s", init, const]
 // CIR:   cir.store %[[ARG_S]], %[[S_ADDR]]
-// CIR:   %[[S_REF:.*]] = cir.load %[[S_ADDR]]
+// CIR:   %[[S_REF:.*]] = cir.load{{.*}} %[[S_ADDR]]
 // CIR:   %[[S_ADDR2:.*]] = cir.get_member %[[S_REF]][1] {name = "b"}
-// CIR:   %[[S_B:.*]] = cir.load %[[S_ADDR2]]
+// CIR:   %[[S_B:.*]] = cir.load{{.*}} %[[S_ADDR2]]
 
 // LLVM: define i8 @_Z2f2R9CompleteS(ptr %[[ARG_S:.*]])
 // LLVM:   %[[S_ADDR:.*]] = alloca ptr

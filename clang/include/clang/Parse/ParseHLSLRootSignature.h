@@ -73,6 +73,7 @@ private:
   /// Root Element parse methods:
   std::optional<llvm::hlsl::rootsig::RootFlags> parseRootFlags();
   std::optional<llvm::hlsl::rootsig::RootConstants> parseRootConstants();
+  std::optional<llvm::hlsl::rootsig::RootDescriptor> parseRootDescriptor();
   std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
   std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
   parseDescriptorTableClause();
@@ -87,6 +88,15 @@ private:
     std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
   };
   std::optional<ParsedConstantParams> parseRootConstantParams();
+
+  struct ParsedRootDescriptorParams {
+    std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::hlsl::rootsig::RootDescriptorFlags> Flags;
+  };
+  std::optional<ParsedRootDescriptorParams>
+  parseRootDescriptorParams(RootSignatureToken::Kind RegType);
 
   struct ParsedClauseParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
@@ -104,6 +114,8 @@ private:
 
   /// Parsing methods of various enums
   std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
+  std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
+  parseRootDescriptorFlags();
   std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
   parseDescriptorRangeFlags();
 

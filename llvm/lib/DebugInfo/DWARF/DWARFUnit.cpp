@@ -656,7 +656,7 @@ bool DWARFUnit::parseDWO(StringRef DWOAlternativeLocation) {
 }
 
 void DWARFUnit::clearDIEs(bool KeepCUDie, bool KeepDWODies) {
-  assert(!Context.doWorkThreadSafely([&] {
+  cantFail(Context.doWorkThreadSafely([&] {
     if (!KeepDWODies && DWO) {
       DWO->clearDIEs(KeepCUDie, KeepDWODies);
     }

@@ -1633,6 +1633,9 @@ LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     return Match_Success;
   }
 
+  if (Kind == MCK_GPRNoR0R1 && (Reg == LoongArch::R0 || Reg == LoongArch::R1))
+    return Match_RequiresOpnd2NotR0R1;
+
   return Match_InvalidOperand;
 }
 

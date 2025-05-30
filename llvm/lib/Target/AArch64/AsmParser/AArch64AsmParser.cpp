@@ -3917,6 +3917,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
   const AsmToken &Tok = getTok();
   StringRef Op = Tok.getString();
   SMLoc S = Tok.getLoc();
+  bool ExpectRegister = true;
 
   if (Mnemonic == "ic") {
     const AArch64IC::IC *IC = AArch64IC::lookupICByName(Op);
@@ -3927,6 +3928,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(IC->getRequiredFeatures(), Str);
       return TokError(Str);
     }
+    ExpectRegister = IC->NeedsReg;
     createSysAlias(IC->Encoding, Operands, S);
   } else if (Mnemonic == "dc") {
     const AArch64DC::DC *DC = AArch64DC::lookupDCByName(Op);
@@ -3957,6 +3959,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
+    ExpectRegister = TLBI->NeedsReg;
     createSysAlias(TLBI->Encoding, Operands, S);
   } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" || Mnemonic == "cosp") {
 
@@ -3987,7 +3990,6 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
 
   Lex(); // Eat operand.
 
-  bool ExpectRegister = !Op.contains_insensitive("all");
   bool HasRegister = false;
 
   // Check for the optional register operand.

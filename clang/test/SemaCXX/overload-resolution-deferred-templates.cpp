@@ -251,3 +251,26 @@ void f() {
   e.g(&N::f);
 }
 }
+
+#if __cplusplus >= 201402
+namespace PointerToMemData {
+struct N {
+  int field;
+};
+template <typename It, typename T>
+struct B {
+  B(It, T);
+  template <typename It2>
+  B(B<It2, T>);
+};
+template <typename T>
+struct C {
+  auto g() { return B<int, T>(0, T{}); }
+};
+void f() {
+  using T = decltype(C<decltype(&N::field)>{}.g());
+}
+
+}
+
+#endif

@@ -537,7 +537,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
 
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               GEP->getSourceElementType(), NewPtr, NewOps);
-          NewGEP->setIsInBounds(GEP->isInBounds());
+          NewGEP->setNoWrapFlags(GEP->getNoWrapFlags());
           return NewGEP;
         }
       }
@@ -1982,7 +1982,7 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
       ArrayRef<Value*> Idx = NewOps.slice(1);
       return Builder.CreateGEP(cast<GEPOperator>(I)->getSourceElementType(),
                                Ptr, Idx, "",
-                               cast<GEPOperator>(I)->isInBounds());
+                               cast<GEPOperator>(I)->getNoWrapFlags());
     }
   }
   llvm_unreachable("failed to rebuild vector instructions");

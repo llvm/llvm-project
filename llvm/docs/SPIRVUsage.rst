@@ -153,6 +153,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds atomic add instruction on floating-point numbers.
    * - ``SPV_EXT_shader_atomic_float_min_max``
      - Adds atomic min and max instruction on floating-point numbers.
+   * - ``SPV_INTEL_2d_block_io``
+     - Adds additional subgroup block prefetch, load, load transposed, load transformed and store instructions to read two-dimensional blocks of data from a two-dimensional region of memory, or to write two-dimensional blocks of data to a two dimensional region of memory.
    * - ``SPV_INTEL_arbitrary_precision_integers``
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
@@ -186,7 +188,7 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
    * - ``SPV_INTEL_variable_length_array``
      - Allows to allocate local arrays whose number of elements is unknown at compile time.
    * - ``SPV_INTEL_joint_matrix``
-     - Adds few matrix capabilities on top of SPV_KHR_cooperative_matrix extension, such as matrix prefetch, get element coordinate and checked load/store/construct instructions, tensor float 32 and bfloat type interpretations for multuply-add instruction.
+     - Adds few matrix capabilities on top of SPV_KHR_cooperative_matrix extension, such as matrix prefetch, get element coordinate and checked load/store/construct instructions, tensor float 32 and bfloat type interpretations for multiply-add instruction.
    * - ``SPV_KHR_bit_instructions``
      - Enables bit instructions to be used by SPIR-V modules without requiring the Shader capability.
    * - ``SPV_KHR_expect_assume``

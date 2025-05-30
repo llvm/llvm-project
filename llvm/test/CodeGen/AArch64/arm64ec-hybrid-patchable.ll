@@ -24,11 +24,15 @@ define void @has_varargs(...) hybrid_patchable nounwind {
 ; CHECK-NEXT:      .p2align 2
 ; CHECK-NEXT:  "#has_varargs$hp_target":               // @"#has_varargs$hp_target"
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:      sub     sp, sp, #32
-; CHECK-NEXT:      stp     x0, x1, [x4, #-32]
-; CHECK-NEXT:      stp     x2, x3, [x4, #-16]
-; CHECK-NEXT:      add     sp, sp, #32
+; CHECK-NEXT:      sub sp, sp, #48
+; CHECK-NEXT:      stp x0, x1, [x4, #-32]!
+; CHECK-NEXT:      stp x2, x3, [x4, #16]
+; CHECK-NEXT:      str x4, [sp, #8]
+; CHECK-NEXT:      add sp, sp, #48
 ; CHECK-NEXT:      ret
+  %valist = alloca ptr
+  call void @llvm.va_start(ptr %valist)
+  call void @llvm.va_end(ptr %valist)
   ret void
 }
 

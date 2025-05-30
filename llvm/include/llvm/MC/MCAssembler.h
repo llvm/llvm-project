@@ -99,7 +99,8 @@ private:
   /// relocation.
   bool evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
                      MCValue &Target, const MCSubtargetInfo *STI,
-                     uint64_t &Value, bool RecordReloc) const;
+                     uint64_t &Value, bool RecordReloc,
+                     MutableArrayRef<char> Contents) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).

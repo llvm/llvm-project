@@ -206,19 +206,6 @@ MCFixupKindInfo ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
               : InfosBE)[Kind - FirstTargetFixupKind];
 }
 
-void ARMAsmBackend::handleAssemblerFlag(MCAssemblerFlag Flag) {
-  switch (Flag) {
-  default:
-    break;
-  case MCAF_Code16:
-    setIsThumb(true);
-    break;
-  case MCAF_Code32:
-    setIsThumb(false);
-    break;
-  }
-}
-
 unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op,
                                          const MCSubtargetInfo &STI) const {
   bool HasThumb2 = STI.hasFeature(ARM::FeatureThumb2);
@@ -405,7 +392,7 @@ bool ARMAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   const uint16_t Thumb2_16bitNopEncoding = 0xbf00; // NOP
   const uint32_t ARMv4_NopEncoding = 0xe1a00000;   // using MOV r0,r0
   const uint32_t ARMv6T2_NopEncoding = 0xe320f000; // NOP
-  if (isThumb()) {
+  if (STI->hasFeature(ARM::ModeThumb)) {
     const uint16_t nopEncoding =
         hasNOP(STI) ? Thumb2_16bitNopEncoding : Thumb1_16bitNopEncoding;
     uint64_t NumNops = Count / 2;
@@ -1407,14 +1394,13 @@ static MCAsmBackend *createARMAsmBackend(const Target &T,
     return new ARMAsmBackendDarwin(T, STI, MRI);
   case Triple::COFF:
     assert(TheTriple.isOSWindows() && "non-Windows ARM COFF is not supported");
-    return new ARMAsmBackendWinCOFF(T, STI.getTargetTriple().isThumb());
+    return new ARMAsmBackendWinCOFF(T);
   case Triple::ELF:
     assert(TheTriple.isOSBinFormatELF() && "using ELF for non-ELF target");
     uint8_t OSABI = Options.FDPIC
                         ? static_cast<uint8_t>(ELF::ELFOSABI_ARM_FDPIC)
                         : MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
-    return new ARMAsmBackendELF(T, STI.getTargetTriple().isThumb(), OSABI,
-                                Endian);
+    return new ARMAsmBackendELF(T, OSABI, Endian);
   }
 }
 

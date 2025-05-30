@@ -56,6 +56,7 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/OffloadBinary.h"
+#include "llvm/Object/OffloadBundle.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -2323,7 +2324,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           // provided
           MCInst Inst;
           ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index);
-          uint64_t ThisAddr = SectionAddr + Index;
+          uint64_t ThisAddr = SectionAddr + Index + VMAAdjustment;
           bool Disassembled = DT->DisAsm->getInstruction(
               Inst, Size, ThisBytes, ThisAddr, CommentStream);
           if (Size == 0)
@@ -3361,7 +3362,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (FaultMapSection)
     printFaultMaps(O);
   if (Offloading)
-    dumpOffloadBinary(*O);
+    dumpOffloadBinary(*O, StringRef(ArchName));
 }
 
 static void dumpObject(const COFFImportFile *I, const Archive *A,

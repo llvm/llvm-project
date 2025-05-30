@@ -15,8 +15,9 @@ namespace std {
   constexpr void construct_at(void *p, Args &&...args) {
     new (p) T((Args&&)args...); // both-note {{in call to}} \
                                 // both-note {{placement new would change type of storage from 'int' to 'float'}} \
-                                // both-note {{construction of subobject of member 'x' of union with active member 'a' is not allowed in a constant expression}}
-
+                                // both-note {{construction of subobject of member 'x' of union with active member 'a' is not allowed in a constant expression}} \
+                                // both-note {{construction of temporary is not allowed}} \
+                                // both-note {{construction of heap allocated object that has been deleted}}
   }
 }
 
@@ -390,4 +391,21 @@ namespace MemMove {
   }
 
   static_assert(foo() == 123);
+}
+
+namespace Temp {
+  constexpr int &&temporary = 0; // both-note {{created here}}
+  static_assert((std::construct_at<int>(&temporary, 1), true)); // both-error{{not an integral constant expression}} \
+                                                                // both-note {{in call}}
+}
+
+namespace PlacementNewAfterDelete {
+  constexpr bool construct_after_lifetime() {
+    int *p = new int;
+    delete p;
+    std::construct_at<int>(p); // both-note {{in call}}
+    return true;
+  }
+  static_assert(construct_after_lifetime()); // both-error {{}} \
+                                             // both-note {{in call}}
 }

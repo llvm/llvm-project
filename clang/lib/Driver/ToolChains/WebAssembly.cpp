@@ -545,8 +545,13 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
 SanitizerMask WebAssembly::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   if (getTriple().isOSEmscripten()) {
-    Res |= SanitizerKind::Vptr | SanitizerKind::Leak | SanitizerKind::Address;
+    Res |= SanitizerKind::Vptr | SanitizerKind::Leak;
   }
+
+  if (getTriple().isOSEmscripten() || getTriple().isOSWASI()) {
+    Res |= SanitizerKind::Address;
+  }
+
   // -fsanitize=function places two words before the function label, which are
   // -unsupported.
   Res &= ~SanitizerKind::Function;

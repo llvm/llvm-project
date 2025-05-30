@@ -171,6 +171,12 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
       /*methodName=*/"getStackAlignmentIdentifier",
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
+    InterfaceMethod<
+      /*description=*/"Returns the function pointer alignment identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getFunctionPointerAlignmentIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
     // Implementations may override this if they have an efficient lookup
     // mechanism.
     InterfaceMethod<
@@ -551,6 +557,18 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::detail::getDefaultStackAlignment(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the function pointer alignment in bits computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"Attribute",
+      /*methodName=*/"getFunctionPointerAlignment",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultFunctionPointerAlignment(entry);
       }]
     >,
     StaticInterfaceMethod<

@@ -7526,11 +7526,10 @@ bool DecomposePrintfHandler::GetSpecifiers(
   if (H.HadError)
     return false;
 
-  std::stable_sort(
-      Args.begin(), Args.end(),
-      [](const EquatableFormatArgument &A, const EquatableFormatArgument &B) {
-        return A.getPosition() < B.getPosition();
-      });
+  llvm::stable_sort(Args, [](const EquatableFormatArgument &A,
+                             const EquatableFormatArgument &B) {
+    return A.getPosition() < B.getPosition();
+  });
   return true;
 }
 
@@ -9156,9 +9155,7 @@ static bool IsStdFunction(const FunctionDecl *FDecl,
 enum class MathCheck { NaN, Inf };
 static bool IsInfOrNanFunction(StringRef calleeName, MathCheck Check) {
   auto MatchesAny = [&](std::initializer_list<llvm::StringRef> names) {
-    return std::any_of(names.begin(), names.end(), [&](llvm::StringRef name) {
-      return calleeName == name;
-    });
+    return llvm::is_contained(names, calleeName);
   };
 
   switch (Check) {
@@ -11748,10 +11745,6 @@ static void CheckImplicitArgumentConversions(Sema &S, CallExpr *TheCall,
 
 static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
                                    SourceLocation CC) {
-  if (S.Diags.isIgnored(diag::warn_impcast_null_pointer_to_integer,
-                        E->getExprLoc()))
-    return;
-
   // Don't warn on functions which have return type nullptr_t.
   if (isa<CallExpr>(E))
     return;
@@ -11766,6 +11759,10 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
   // Return if target type is a safe conversion.
   if (T->isAnyPointerType() || T->isBlockPointerType() ||
       T->isMemberPointerType() || !T->isScalarType() || T->isNullPtrType())
+    return;
+
+  if (S.Diags.isIgnored(diag::warn_impcast_null_pointer_to_integer,
+                        E->getExprLoc()))
     return;
 
   SourceLocation Loc = E->getSourceRange().getBegin();

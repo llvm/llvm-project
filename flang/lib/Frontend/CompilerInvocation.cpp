@@ -201,6 +201,7 @@ static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
           .Case("SLEEF", VectorLibrary::SLEEF)
           .Case("Darwin_libsystem_m", VectorLibrary::Darwin_libsystem_m)
           .Case("ArmPL", VectorLibrary::ArmPL)
+          .Case("AMDLIBM", VectorLibrary::AMDLIBM)
           .Case("NoLibrary", VectorLibrary::NoLibrary)
           .Default(std::nullopt);
   if (!val.has_value()) {
@@ -268,6 +269,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::driver::options::OPT_fstack_arrays,
                    clang::driver::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
+
+  if (args.getLastArg(clang::driver::options::OPT_floop_interchange))
+    opts.InterchangeLoops = 1;
 
   if (args.getLastArg(clang::driver::options::OPT_vectorize_loops))
     opts.VectorizeLoop = 1;

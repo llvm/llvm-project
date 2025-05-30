@@ -54,15 +54,15 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   unsigned Kind = Fixup.getTargetKind();
   auto Spec = RISCVMCExpr::Specifier(Target.getSpecifier());
   switch (Spec) {
-  case RISCVMCExpr::VK_TPREL_HI:
-  case RISCVMCExpr::VK_TLS_GOT_HI:
-  case RISCVMCExpr::VK_TLS_GD_HI:
-  case RISCVMCExpr::VK_TLSDESC_HI:
+  case ELF::R_RISCV_TPREL_HI20:
+  case ELF::R_RISCV_TLS_GOT_HI20:
+  case ELF::R_RISCV_TLS_GD_HI20:
+  case ELF::R_RISCV_TLSDESC_HI20:
     if (auto *SA = Target.getAddSym())
       cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
-  case RISCVMCExpr::VK_PLTPCREL:
-  case RISCVMCExpr::VK_GOTPCREL:
+  case ELF::R_RISCV_PLT32:
+  case ELF::R_RISCV_GOT32_PCREL:
     if (Kind == FK_Data_4)
       break;
     Ctx.reportError(Fixup.getLoc(),
@@ -124,15 +124,12 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_NONE;
   case FK_Data_4:
     if (Expr->getKind() == MCExpr::Target) {
-      switch (cast<RISCVMCExpr>(Expr)->getSpecifier()) {
-      case RISCVMCExpr::VK_32_PCREL:
-        return ELF::R_RISCV_32_PCREL;
-      case RISCVMCExpr::VK_GOTPCREL:
-        return ELF::R_RISCV_GOT32_PCREL;
-      case RISCVMCExpr::VK_PLTPCREL:
-        return ELF::R_RISCV_PLT32;
-      default:
-        break;
+      auto Spec = cast<RISCVMCExpr>(Expr)->getSpecifier();
+      switch (Spec) {
+      case ELF::R_RISCV_32_PCREL:
+      case ELF::R_RISCV_GOT32_PCREL:
+      case ELF::R_RISCV_PLT32:
+        return Spec;
       }
     }
     return ELF::R_RISCV_32;

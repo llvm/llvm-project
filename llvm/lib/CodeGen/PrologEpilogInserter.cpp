@@ -659,8 +659,7 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
   // pipeline is set up without giving the passes a chance to look at the
   // TargetMachine.
   // FIXME: Find a way to express this in getRequiredProperties.
-  assert(MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoVRegs));
+  assert(MF.getProperties().hasNoVRegs());
 
   const Function &F = MF.getFunction();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();

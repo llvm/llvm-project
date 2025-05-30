@@ -36,8 +36,8 @@ static cl::opt<bool> ULEB128Reloc(
 
 RISCVAsmBackend::RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
                                  bool Is64Bit, const MCTargetOptions &Options)
-    : MCAsmBackend(llvm::endianness::little, ELF::R_RISCV_RELAX), STI(STI),
-      OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
+    : MCAsmBackend(llvm::endianness::little, /*LinkerRelaxation=*/true),
+      STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
   RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
 }
 
@@ -71,8 +71,7 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_lo12_i", 20, 12, 0},
       {"fixup_riscv_12_i", 20, 12, 0},
       {"fixup_riscv_lo12_s", 0, 32, 0},
-      {"fixup_riscv_pcrel_hi20", 12, 20,
-       MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget},
+      {"fixup_riscv_pcrel_hi20", 12, 20, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_riscv_pcrel_lo12_i", 20, 12,
        MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget},
       {"fixup_riscv_pcrel_lo12_s", 0, 32,
@@ -580,11 +579,6 @@ bool RISCVAsmBackend::evaluateTargetFixup(
   switch (Fixup.getTargetKind()) {
   default:
     llvm_unreachable("Unexpected fixup kind!");
-  case RISCV::fixup_riscv_pcrel_hi20:
-    AUIPCFixup = &Fixup;
-    AUIPCDF = DF;
-    AUIPCTarget = Target;
-    break;
   case RISCV::fixup_riscv_pcrel_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_s: {
     AUIPCFixup = cast<RISCVMCExpr>(Fixup.getValue())->getPCRelHiFixup(&AUIPCDF);
@@ -622,48 +616,60 @@ bool RISCVAsmBackend::evaluateTargetFixup(
   return AUIPCFixup->getTargetKind() == RISCV::fixup_riscv_pcrel_hi20;
 }
 
-bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
-                                              const MCFragment &F,
-                                              const MCFixup &Fixup,
-                                              const MCValue &Target,
-                                              uint64_t &FixedValue) const {
-  assert(Target.getSpecifier() == 0 &&
-         "relocatable SymA-SymB cannot have relocation specifier");
+bool RISCVAsmBackend::addReloc(MCAssembler &Asm, const MCFragment &F,
+                               const MCFixup &Fixup, const MCValue &Target,
+                               uint64_t &FixedValue, bool IsResolved,
+                               const MCSubtargetInfo *STI) {
   uint64_t FixedValueA, FixedValueB;
-  unsigned TA = 0, TB = 0;
-  switch (Fixup.getKind()) {
-  case llvm::FK_Data_1:
-    TA = ELF::R_RISCV_ADD8;
-    TB = ELF::R_RISCV_SUB8;
-    break;
-  case llvm::FK_Data_2:
-    TA = ELF::R_RISCV_ADD16;
-    TB = ELF::R_RISCV_SUB16;
-    break;
-  case llvm::FK_Data_4:
-    TA = ELF::R_RISCV_ADD32;
-    TB = ELF::R_RISCV_SUB32;
-    break;
-  case llvm::FK_Data_8:
-    TA = ELF::R_RISCV_ADD64;
-    TB = ELF::R_RISCV_SUB64;
-    break;
-  case llvm::FK_Data_leb128:
-    TA = ELF::R_RISCV_SET_ULEB128;
-    TB = ELF::R_RISCV_SUB_ULEB128;
-    break;
-  default:
-    llvm_unreachable("unsupported fixup size");
+  if (Target.getSubSym()) {
+    assert(Target.getSpecifier() == 0 &&
+           "relocatable SymA-SymB cannot have relocation specifier");
+    unsigned TA = 0, TB = 0;
+    switch (Fixup.getKind()) {
+    case llvm::FK_Data_1:
+      TA = ELF::R_RISCV_ADD8;
+      TB = ELF::R_RISCV_SUB8;
+      break;
+    case llvm::FK_Data_2:
+      TA = ELF::R_RISCV_ADD16;
+      TB = ELF::R_RISCV_SUB16;
+      break;
+    case llvm::FK_Data_4:
+      TA = ELF::R_RISCV_ADD32;
+      TB = ELF::R_RISCV_SUB32;
+      break;
+    case llvm::FK_Data_8:
+      TA = ELF::R_RISCV_ADD64;
+      TB = ELF::R_RISCV_SUB64;
+      break;
+    case llvm::FK_Data_leb128:
+      TA = ELF::R_RISCV_SET_ULEB128;
+      TB = ELF::R_RISCV_SUB_ULEB128;
+      break;
+    default:
+      llvm_unreachable("unsupported fixup size");
+    }
+    MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
+    MCValue B = MCValue::get(Target.getSubSym());
+    auto FA = MCFixup::create(Fixup.getOffset(), nullptr, TA);
+    auto FB = MCFixup::create(Fixup.getOffset(), nullptr, TB);
+    Asm.getWriter().recordRelocation(Asm, &F, FA, A, FixedValueA);
+    Asm.getWriter().recordRelocation(Asm, &F, FB, B, FixedValueB);
+    FixedValue = FixedValueA - FixedValueB;
+    return false;
   }
-  MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
-  MCValue B = MCValue::get(Target.getSubSym());
-  auto FA = MCFixup::create(Fixup.getOffset(), nullptr, TA);
-  auto FB = MCFixup::create(Fixup.getOffset(), nullptr, TB);
-  auto &Assembler = const_cast<MCAssembler &>(Asm);
-  Asm.getWriter().recordRelocation(Assembler, &F, FA, A, FixedValueA);
-  Asm.getWriter().recordRelocation(Assembler, &F, FB, B, FixedValueB);
-  FixedValue = FixedValueA - FixedValueB;
-  return true;
+
+  IsResolved = MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue,
+                                      IsResolved, STI);
+  // If linker relaxation is enabled and supported by the current relocation,
+  // append a RELAX relocation.
+  if (Fixup.needsRelax()) {
+    auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
+    Asm.getWriter().recordRelocation(Asm, &F, FA, MCValue::get(nullptr),
+                                     FixedValueA);
+  }
+
+  return false;
 }
 
 void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,

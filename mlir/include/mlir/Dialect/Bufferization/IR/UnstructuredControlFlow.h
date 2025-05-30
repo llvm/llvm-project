@@ -54,8 +54,7 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
       // If the forwarded operand is already on the invocation stack, we ran
       // into a loop and this operand cannot be used to compute the bufferized
       // type.
-      if (llvm::find(invocationStack, opOperand->get()) !=
-          invocationStack.end())
+      if (llvm::is_contained(invocationStack, opOperand->get()))
         continue;
 
       // Compute the bufferized type of the forwarded operand.
