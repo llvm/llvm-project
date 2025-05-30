@@ -377,8 +377,26 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   Sampler.Reg = Params->Reg.value();
 
   // Fill in optional values
+  if (Params->AddressU.has_value())
+    Sampler.AddressU = Params->AddressU.value();
+
+  if (Params->AddressV.has_value())
+    Sampler.AddressV = Params->AddressV.value();
+
+  if (Params->AddressW.has_value())
+    Sampler.AddressW = Params->AddressW.value();
+
   if (Params->MipLODBias.has_value())
     Sampler.MipLODBias = Params->MipLODBias.value();
+
+  if (Params->MaxAnisotropy.has_value())
+    Sampler.MaxAnisotropy = Params->MaxAnisotropy.value();
+
+  if (Params->MinLOD.has_value())
+    Sampler.MinLOD = Params->MinLOD.value();
+
+  if (Params->MaxLOD.has_value())
+    Sampler.MaxLOD = Params->MaxLOD.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -666,6 +684,57 @@ RootSignatureParser::parseStaticSamplerParams() {
       Params.Reg = Reg;
     }
 
+    // `addressU` `=` TEXTURE_ADDRESS
+    if (tryConsumeExpectedToken(TokenKind::kw_addressU)) {
+      if (Params.AddressU.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto AddressU = parseTextureAddressMode();
+      if (!AddressU.has_value())
+        return std::nullopt;
+      Params.AddressU = AddressU;
+    }
+
+    // `addressV` `=` TEXTURE_ADDRESS
+    if (tryConsumeExpectedToken(TokenKind::kw_addressV)) {
+      if (Params.AddressV.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto AddressV = parseTextureAddressMode();
+      if (!AddressV.has_value())
+        return std::nullopt;
+      Params.AddressV = AddressV;
+    }
+
+    // `addressW` `=` TEXTURE_ADDRESS
+    if (tryConsumeExpectedToken(TokenKind::kw_addressW)) {
+      if (Params.AddressW.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto AddressW = parseTextureAddressMode();
+      if (!AddressW.has_value())
+        return std::nullopt;
+      Params.AddressW = AddressW;
+    }
+
     // `mipLODBias` `=` NUMBER
     if (tryConsumeExpectedToken(TokenKind::kw_mipLODBias)) {
       if (Params.MipLODBias.has_value()) {
@@ -681,6 +750,57 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!MipLODBias.has_value())
         return std::nullopt;
       Params.MipLODBias = MipLODBias;
+    }
+
+    // `maxAnisotropy` `=` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::kw_maxAnisotropy)) {
+      if (Params.MaxAnisotropy.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto MaxAnisotropy = parseUIntParam();
+      if (!MaxAnisotropy.has_value())
+        return std::nullopt;
+      Params.MaxAnisotropy = MaxAnisotropy;
+    }
+
+    // `minLOD` `=` NUMBER
+    if (tryConsumeExpectedToken(TokenKind::kw_minLOD)) {
+      if (Params.MinLOD.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto MinLOD = parseFloatParam();
+      if (!MinLOD.has_value())
+        return std::nullopt;
+      Params.MinLOD = MinLOD;
+    }
+
+    // `maxLOD` `=` NUMBER
+    if (tryConsumeExpectedToken(TokenKind::kw_maxLOD)) {
+      if (Params.MaxLOD.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto MaxLOD = parseFloatParam();
+      if (!MaxLOD.has_value())
+        return std::nullopt;
+      Params.MaxLOD = MaxLOD;
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
@@ -780,6 +900,32 @@ RootSignatureParser::parseShaderVisibility() {
 #define SHADER_VISIBILITY_ENUM(NAME, LIT)                                      \
   case TokenKind::en_##NAME:                                                   \
     return ShaderVisibility::NAME;                                             \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  default:
+    llvm_unreachable("Switch for consumed enum token was not provided");
+  }
+
+  return std::nullopt;
+}
+
+std::optional<llvm::hlsl::rootsig::TextureAddressMode>
+RootSignatureParser::parseTextureAddressMode() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind Expected[] = {
+#define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  if (!tryConsumeExpectedToken(Expected))
+    return std::nullopt;
+
+  switch (CurToken.TokKind) {
+#define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT)                                   \
+  case TokenKind::en_##NAME:                                                   \
+    return TextureAddressMode::NAME;                                           \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
