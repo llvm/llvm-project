@@ -51,3 +51,13 @@ func.func @switch_result_number(%arg0: i32) {
   ^bb2:
     return
 }
+
+// CHECK-LABEL: func @cond_weights
+func.func @cond_weights(%cond: i1) {
+// CHECK: cf.cond_br %{{.*}} weights([60, 40]), ^{{.*}}, ^{{.*}}
+  cf.cond_br %cond weights([60, 40]), ^bb1, ^bb2
+  ^bb1:
+    return
+  ^bb2:
+    return
+}
