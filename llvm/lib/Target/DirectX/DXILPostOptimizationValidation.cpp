@@ -53,11 +53,11 @@ static void reportInvalidDirection(Module &M, DXILResourceMap &DRM) {
 
 static void reportOverlappingError(Module &M, ResourceInfo R1,
                                    ResourceInfo R2) {
-  SmallString<64> Message;
+  SmallString<128> Message;
   raw_svector_ostream OS(Message);
   OS << "resource " << R1.getName() << " at register "
      << R1.getBinding().LowerBound << " overlaps with resource " << R2.getName()
-     << " at register " << R2.getBinding().LowerBound << ", space "
+     << " at register " << R2.getBinding().LowerBound << " in space "
      << R2.getBinding().Space;
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
@@ -66,18 +66,20 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
   if (DRM.empty())
     return;
 
-  for (auto ResList :
+  for (const auto &ResList :
        {DRM.srvs(), DRM.uavs(), DRM.cbuffers(), DRM.samplers()}) {
     if (ResList.empty())
       continue;
     const ResourceInfo *PrevRI = &*ResList.begin();
     for (auto *I = ResList.begin() + 1; I != ResList.end(); ++I) {
-      const ResourceInfo *RI = &*I;
-      if (PrevRI->getBinding().overlapsWith(RI->getBinding())) {
+      const ResourceInfo *CurrentRI = &*I;
+      const ResourceInfo *RI = CurrentRI;
+      while (RI != ResList.end() &&
+             PrevRI->getBinding().overlapsWith(RI->getBinding())) {
         reportOverlappingError(M, *PrevRI, *RI);
-        continue;
+        RI++;
       }
-      PrevRI = RI;
+      PrevRI = CurrentRI;
     }
   }
 }
