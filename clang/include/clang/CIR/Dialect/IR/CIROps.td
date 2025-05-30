@@ -1634,7 +1634,8 @@ def GlobalLinkageKind : I32EnumAttr<
 // properties of a global variable will be added over time as more of ClangIR
 // is upstreamed.
 
-def GlobalOp : CIR_Op<"global"> {
+def GlobalOp : CIR_Op<"global",
+                      [DeclareOpInterfaceMethods<CIRGlobalValueInterface>]> {
   let summary = "Declare or define a global variable";
   let description = [{
     The `cir.global` operation declares or defines a named global variable.
@@ -1643,17 +1644,31 @@ def GlobalOp : CIR_Op<"global"> {
     described by the type of the variable.
 
     The `linkage` tracks C/C++ linkage types, currently very similar to LLVM's.
+    Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
+    and verified to be in accordance to `linkage`.
   }];
 
+  // Note that both sym_name and sym_visibility are tied to Symbol trait.
+  // TODO: sym_visibility can possibly be represented by implementing the
+  // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       DefaultValuedAttr<
+                        CIR_VisibilityAttr,
+                        "VisibilityKind::Default"
+                       >:$global_visibility,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        Arg<GlobalLinkageKind, "linkage type">:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
+                       UnitAttr:$comdat,
                        UnitAttr:$dsolocal,
                        OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
+    ($sym_visibility^)?
+    (`` $global_visibility^)?
     $linkage
+    (`comdat` $comdat^)?
     (`dsolocal` $dsolocal^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)

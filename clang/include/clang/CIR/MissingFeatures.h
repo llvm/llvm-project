@@ -31,7 +31,6 @@ struct MissingFeatures {
   static bool cgfSymbolTable() { return false; }
 
   // Unhandled global/linkage information.
-  static bool opGlobalDSOLocal() { return false; }
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
   static bool opGlobalWeakRef() { return false; }
@@ -41,11 +40,11 @@ struct MissingFeatures {
   static bool opGlobalVisibility() { return false; }
   static bool opGlobalDLLImportExport() { return false; }
   static bool opGlobalPartition() { return false; }
-  static bool opGlobalCIRGlobalValueInterface() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
-  static bool supportComdat() { return false; }
+  static bool hiddenVisibility() { return false; }
+  static bool protectedVisibility() { return false; }
 
   // Load/store attributes
   static bool opLoadStoreThreadLocal() { return false; }
@@ -188,7 +187,6 @@ struct MissingFeatures {
   static bool updateCompletedType() { return false; }
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
-  static bool setDSOLocal() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
   static bool cudaSupport() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
