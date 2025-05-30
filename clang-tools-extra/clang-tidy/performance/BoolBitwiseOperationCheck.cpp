@@ -9,53 +9,32 @@
 #include "BoolBitwiseOperationCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include <array>
+#include <utility>
+#include <optional>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 namespace {
-bool isFullyInsideMacro(const BinaryOperator *BO, const SourceManager &SM) {
-  SourceLocation Begin = BO->getBeginLoc();
-  SourceLocation End = BO->getEndLoc();
-  
-  // Если хотя бы одна часть оператора не в макросе — считаем его "не макросным"
-  if (!Begin.isMacroID() || !End.isMacroID()) {
-      return false;
-  }
-  
-  // Проверяем, что начало и конец находятся в одном макросе
-  return SM.getImmediateMacroCallerLoc(Begin) == SM.getImmediateMacroCallerLoc(End);
-}
 
-std::string getSpellingOpcode(const BinaryOperator &Expr, const SourceManager &SM,
-                                                          const clang::LangOptions &LO) {
-  SourceLocation Loc = Expr.getOperatorLoc();
-  if (Loc.isValid()) {
-    // TODO: bear it in mind
-    // SourceLocation expansionLoc = Result.SourceManager->getExpansionLoc(Loc);
-    // if (expansionLoc.isValid()) {
-      Loc = SM.getSpellingLoc(Loc);
-      if (Loc.isValid() && !Loc.isMacroID()) {
-        const CharSourceRange TokenRange = CharSourceRange::getTokenRange(Loc);
-        if (TokenRange.isValid()) {
-          return Lexer::getSourceText(TokenRange, SM, LO).str();
-        }
-      }
-    // }
-  }
-  return "";
-}
+constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
+    OperatorsTransformation{{{"|", "||"},
+                             {"|=", "||"},
+                             {"&", "&&"},
+                             {"&=", "&&"},
+                             {"bitand", "and"},
+                             {"and_eq", "and"},
+                             {"bitor", "or"},
+                             {"or_eq", "or"}}};
 
-std::string changeOpcode(llvm::StringRef Spelling) {
-  if (Spelling == "|" || Spelling == "|=")
-      return "||";
-  else if (Spelling == "&" || Spelling == "&=")
-      return "&&";
-  else if (Spelling == "bitand" || Spelling == "and_eq")
-    return "and";
-  else if (Spelling == "bitor" || Spelling == "or_eq")
-    return "or";
-  return Spelling.str();
+llvm::StringRef translate(llvm::StringRef Value) {
+  for (const auto &[Bitwise, Logical] : OperatorsTransformation) {
+    if (Value == Bitwise)
+      return Logical;
+  }
+
+  return {};
 }
 }
 
@@ -80,61 +59,75 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("op");
-  const SourceManager &SM = *Result.SourceManager;
-  const clang::LangOptions &LO = Result.Context->getLangOpts();
 
   auto Diag = diag(MatchedExpr->getOperatorLoc(), "use logical operator instead of bitwise one for bool");
 
   const auto *VolatileOperand = Result.Nodes.getNodeAs<Expr>("vol");
-  if (VolatileOperand || isFullyInsideMacro(MatchedExpr, SM))
+  if (VolatileOperand)
     return;
 
   SourceLocation Loc = MatchedExpr->getOperatorLoc();
-  if (Loc.isValid()) {
-    // TODO: bear it in mind
-    //SourceLocation expansionLoc = Result.SourceManager->getExpansionLoc(Loc);
-    SourceLocation expansionLoc = Loc;
-    if (expansionLoc.isValid()) {
-      expansionLoc = SM.getFileLoc(expansionLoc);
-      if (expansionLoc.isValid() && !expansionLoc.isMacroID()) {
-        const CharSourceRange TokenRange = CharSourceRange::getTokenRange(expansionLoc);
-        if (TokenRange.isValid()) {
-          const std::string SpellingOpc = getSpellingOpcode(*MatchedExpr, SM, LO);
-          if (SpellingOpc == "&=" || SpellingOpc == "|=" || SpellingOpc == "and_eq" || SpellingOpc == "or_eq") {
-            const auto *DelcRefLHS = Result.Nodes.getNodeAs<DeclRefExpr>("l");
-            if (!DelcRefLHS)
-              return;
-            const clang::SourceLocation EndLoc = // TODO: naming
-                clang::Lexer::getLocForEndOfToken(DelcRefLHS->getEndLoc(), 0,
-                                                  SM, LO);
-            if (EndLoc.isInvalid()) {
-              return;
-            }
-            Diag << FixItHint::CreateInsertion(EndLoc,
-                                               " = " + DelcRefLHS->getDecl()->getNameAsString());
-          }
-          Diag << FixItHint::CreateReplacement(TokenRange, changeOpcode(SpellingOpc));
-          const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p");
-          const auto *RHS = Result.Nodes.getNodeAs<BinaryOperator>("r");
-          const std::string ParentSpellingOpc = Parent ? getSpellingOpcode(*Parent, SM, LO) : "";
-          const std::string RightSpellingOpc = RHS ? getSpellingOpcode(*RHS, SM, LO) : "";
-          if (((SpellingOpc == "|" || SpellingOpc == "bitor") && (ParentSpellingOpc == "&&" || ParentSpellingOpc == "and")) ||
-              ((SpellingOpc == "&" || SpellingOpc == "bitand") && (ParentSpellingOpc == "^" || ParentSpellingOpc == "xor"))) {
-            const clang::SourceLocation StartLoc = MatchedExpr->getBeginLoc();
-            const clang::SourceLocation EndLoc = // TODO: check for valid
-                clang::Lexer::getLocForEndOfToken(MatchedExpr->getEndLoc(), 0, SM, LO);
-            Diag << FixItHint::CreateInsertion(StartLoc, "(")
-                 << FixItHint::CreateInsertion(EndLoc, ")");
-          } else if ((SpellingOpc == "&=" || SpellingOpc == "and_eq") && (RightSpellingOpc == "||" || RightSpellingOpc == "or")) {
-            const clang::SourceLocation StartLoc = RHS->getBeginLoc();
-            const clang::SourceLocation EndLoc = // TODO: check for valid
-                clang::Lexer::getLocForEndOfToken(RHS->getEndLoc(), 0, SM, LO);
-            Diag << FixItHint::CreateInsertion(StartLoc, "(")
-                 << FixItHint::CreateInsertion(EndLoc, ")");
-          }
-        }
-      }
+
+  // TODO: not only operator must be checked for a macro
+  if (Loc.isInvalid() || Loc.isMacroID())
+    return;
+
+  Loc = Result.SourceManager->getSpellingLoc(Loc);
+  if (Loc.isInvalid() || Loc.isMacroID())
+    return;
+
+  const CharSourceRange TokenRange = CharSourceRange::getTokenRange(Loc);
+  if (TokenRange.isInvalid())
+    return;
+
+  StringRef Spelling = Lexer::getSourceText(TokenRange, *Result.SourceManager,
+                                            Result.Context->getLangOpts());
+  StringRef TranslatedSpelling = translate(Spelling);
+
+  if (TranslatedSpelling.empty())
+    return;
+
+  std::string FixSpelling = TranslatedSpelling.str();
+
+  if (MatchedExpr->isCompoundAssignmentOp()) {
+    const auto *DelcRefLHS = Result.Nodes.getNodeAs<DeclRefExpr>("l");
+    if (!DelcRefLHS)
+      return;
+    const clang::SourceLocation InsertLoc =
+        clang::Lexer::getLocForEndOfToken(DelcRefLHS->getEndLoc(), 0, *Result.SourceManager,
+                                          Result.Context->getLangOpts());
+    if (InsertLoc.isInvalid()) {
+      return;
     }
+    Diag << FixItHint::CreateInsertion(InsertLoc,
+                                        " = " + DelcRefLHS->getDecl()->getNameAsString());
+  }
+  Diag << FixItHint::CreateReplacement(TokenRange, FixSpelling);
+
+  std::optional<BinaryOperatorKind> ParentOpcode;
+  if (const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p"); Parent)
+    ParentOpcode = Parent->getOpcode();
+
+  const auto *RHS = Result.Nodes.getNodeAs<BinaryOperator>("r");
+  std::optional<BinaryOperatorKind> RHSOpcode;
+  if (RHS)
+    RHSOpcode = RHS->getOpcode();
+
+  const BinaryOperator* SurroundedExpr = nullptr;
+  if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode.has_value() && *ParentOpcode == BO_LAnd) ||
+      (MatchedExpr->getOpcode() == BO_And && ParentOpcode.has_value() && *ParentOpcode == BO_Xor)) {
+    SurroundedExpr = MatchedExpr;
+  } else if (MatchedExpr->getOpcode() == BO_AndAssign && RHSOpcode.has_value() && *RHSOpcode == BO_LOr) {
+    SurroundedExpr = RHS;
+  }
+
+  if (SurroundedExpr) {
+    const SourceLocation InsertFirstLoc = SurroundedExpr->getBeginLoc(); // TODO: check for correct??
+    const SourceLocation InsertSecondLoc = // TODO: check for valid
+        clang::Lexer::getLocForEndOfToken(SurroundedExpr->getEndLoc(), 0, *Result.SourceManager,
+        Result.Context->getLangOpts());
+    Diag << FixItHint::CreateInsertion(InsertFirstLoc, "(")
+          << FixItHint::CreateInsertion(InsertSecondLoc, ")");
   }
 }
 

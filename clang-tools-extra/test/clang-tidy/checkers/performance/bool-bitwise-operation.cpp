@@ -184,6 +184,7 @@ void bad_no_fixit() {
 #define MY_AND &
 #define MY_OR_ASSIGN |=
 #define MY_AND_ASSIGN &=
+#define MY_LOG_AND &&
 
 #define MY_OR_FUNC(a, b) ((a) | (b))
 #define MY_AND_FUNC(a, b) ((a) & (b))
@@ -192,28 +193,67 @@ void bad_no_fixit() {
 
 #define IDENT(a) (a)
 
-// TODO: check that braces will not be settled inside the macro
-// TODO: check that =a will not be sellted inside the macro(for both cases)
+bool global_flag = false;
+int sink(int);
+#define FUN(ARG) (sink(ARG))
+#define FUN2(ARG) sink((ARG))
+#define FUN3(ARG) sink(ARG)
+#define FUN4(ARG) sink(true | ARG)
+#define FUN5(ARG) sink(false && ARG)
+#define FUN6(ARG) sink(global_flag |= ARG)
 
+#define M1(a,b) (true & a) && (true | b)
+#define M2(a,b) (true a) && (true b)
+
+// FIXME: implement fixit hint for simple macro cases
 void bad_in_macro() {
     bool a = true, b = false;
 
-    // TODO: same for braces as in math check
-
     a MY_OR b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-FIXES: a || b;
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a MY_AND b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-FIXES: a && b;
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a MY_OR_ASSIGN b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-FIXES: a = a || b;
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     a MY_AND_ASSIGN b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-FIXES: a = a && b;
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
-    // TODO: same but for partial(with hints and with no hints)
+    // TODO: bool q = true MY_AND false MY_OR true MY_AND false MY_OR true MY_AND false MY_AND true MY_OR false;
+
+    bool q = (true MY_LOG_AND false MY_OR true) MY_LOG_AND (false MY_OR true MY_LOG_AND (false MY_LOG_AND true MY_OR false));
+    // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:67: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:112: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-4]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    bool r = FUN(true | false && true);
+    // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    bool s = FUN2(true | false && true);
+    // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    bool t = FUN3(true | false && true);
+    // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    bool u = FUN4(true && false);
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    bool v = FUN5(false | true);
+    // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    bool vv = FUN6(true && false);
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
     MY_OR_FUNC(a, b);
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
@@ -229,32 +269,25 @@ void bad_in_macro() {
 
     IDENT(a | b);
     // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-FIXES: IDENT(a || b);
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
     IDENT(a & b);
     // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-FIXES: IDENT(a && b);
-}
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    bool abc = false;
+    IDENT(abc |= b);
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    IDENT(abc &= b);
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 
-// TODO: all the same tests as in math-parentheses check
-void bad_in_macro___() {
-#if 0
-    const std::string Input = R"cc(
-#define M(a,b) (true & a) * (true | b)
-    int f() { return M(false, false); }
-    )cc";
-#endif
-// TODO: implement this(make sure no fix were provided)
-#if 0
-    const std::string Input = R"cc(
-#define M(a,b) (true a) * (true b)
-    int f() { return M(& false, | false); }
-    )cc";
-    const std::string Expected = R"cc(
-#define M(a,b) (true a) * (true b)
-    int f() { return M(&& false, || false); }
-    )cc";
-#endif
-// TODO: implement this
+    M1(false, false);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    M2(& false, | false);
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:17: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-3]]:{{.*}}: note: FIX-IT applied suggested code changes
 }
 
 template<typename T>
