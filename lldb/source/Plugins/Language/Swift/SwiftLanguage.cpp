@@ -1725,17 +1725,10 @@ bool SwiftLanguage::GetFunctionDisplayName(
     return true;
   }
   case Language::FunctionNameRepresentation::eNameWithArgs: {
-    if (!sc->function)
-      return false;
-    if (sc->function->GetLanguage() != eLanguageTypeSwift)
-      return false;
-    std::string display_name = SwiftLanguageRuntime::DemangleSymbolAsString(
-        sc->function->GetMangled().GetMangledName().GetStringRef(),
-        SwiftLanguageRuntime::eSimplified, sc, exe_ctx);
+    std::string display_name = GetFunctionName(sc, exe_ctx);
     if (display_name.empty())
       return false;
-    ExecutionContextScope *exe_scope =
-        exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
+    s << display_name;
     const InlineFunctionInfo *inline_info = NULL;
     VariableListSP variable_list_sp;
     bool get_function_vars = true;
@@ -1755,109 +1748,131 @@ bool SwiftLanguage::GetFunctionDisplayName(
           sc->function->GetBlock(true).GetBlockVariableList(true);
     }
 
-    if (inline_info) {
-      s << display_name;
-      s.PutCString(" [inlined] ");
-      display_name = inline_info->GetName().GetString();
-    }
-
     VariableList args;
     if (variable_list_sp)
       variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
                                                  args);
-    if (args.GetSize() == 0) {
-      s << display_name;
-      return true;
-    }
-    const char *cstr = display_name.data();
-    const char *open_paren = strchr(cstr, '(');
-    const char *close_paren = nullptr;
-    const char *generic = strchr(cstr, '<');
-    // If before the arguments list begins there is a template sign
-    // then scan to the end of the generic args before you try to find
-    // the arguments list.
-    if (generic && open_paren && generic < open_paren) {
-      int generic_depth = 1;
-      ++generic;
-      for (; *generic && generic_depth > 0; generic++) {
-        if (*generic == '<')
-          generic_depth++;
-        if (*generic == '>')
-          generic_depth--;
-      }
-      if (*generic)
-        open_paren = strchr(generic, '(');
-      else
-        open_paren = nullptr;
-    }
-    if (open_paren) {
-      close_paren = strchr(open_paren, ')');
-    }
 
-    if (open_paren)
-      s.Write(cstr, open_paren - cstr + 1);
-    else {
-      s << display_name;
-      s.PutChar('(');
-    }
-    const size_t num_args = args.GetSize();
-    for (size_t arg_idx = 0; arg_idx < num_args; ++arg_idx) {
-      std::string buffer;
-
-      VariableSP var_sp(args.GetVariableAtIndex(arg_idx));
-      ValueObjectSP var_value_sp(
-          ValueObjectVariable::Create(exe_scope, var_sp));
-      if (!var_sp || !var_value_sp || var_sp->IsArtificial())
-        continue;
-      StreamString ss;
-      const char *var_representation = nullptr;
-      const char *var_name = var_value_sp->GetName().GetCString();
-      if (var_value_sp->GetCompilerType().IsValid()) {
-        if (var_value_sp && exe_scope->CalculateTarget())
-          var_value_sp = var_value_sp->GetQualifiedRepresentationIfAvailable(
-              exe_scope->CalculateTarget()
-                  ->TargetProperties::GetPreferDynamicValue(),
-              exe_scope->CalculateTarget()
-                  ->TargetProperties::GetEnableSyntheticValue());
-        if (var_value_sp->GetCompilerType().IsAggregateType() &&
-            DataVisualization::ShouldPrintAsOneLiner(*var_value_sp.get())) {
-          static StringSummaryFormat format(TypeSummaryImpl::Flags()
-                                                .SetHideItemNames(false)
-                                                .SetShowMembersOneLiner(true),
-                                            "");
-          format.FormatObject(var_value_sp.get(), buffer, TypeSummaryOptions());
-          var_representation = buffer.c_str();
-        } else
-          var_value_sp->DumpPrintableRepresentation(
-              ss,
-              ValueObject::ValueObjectRepresentationStyle::
-                  eValueObjectRepresentationStyleSummary,
-              eFormatDefault,
-              ValueObject::PrintableRepresentationSpecialCases::eAllow, false);
-      }
-      if (ss.GetData() && ss.GetSize())
-        var_representation = ss.GetData();
-      if (arg_idx > 0)
-        s.PutCString(", ");
-      if (var_value_sp->GetError().Success()) {
-        if (var_representation)
-          s.Printf("%s=%s", var_name, var_representation);
-        else
-          s.Printf("%s=%s at %s", var_name,
-                   var_value_sp->GetTypeName().GetCString(),
-                   var_value_sp->GetLocationAsCString());
-      } else
-        s.Printf("%s=<unavailable>", var_name);
-    }
-
-    if (close_paren)
-      s.PutCString(close_paren);
-    else
-      s.PutChar(')');
-  }
+    s << GetFunctionDisplayArgs(sc, args, exe_ctx);
     return true;
+    }
+    }
+    return false;
+}
+
+std::string SwiftLanguage::GetFunctionName(const SymbolContext &sc,
+                                           const ExecutionContext *exe_ctx) {
+  if (!sc.function)
+    return {};
+  if (sc.function->GetLanguage() != eLanguageTypeSwift)
+    return {};
+  std::string name = SwiftLanguageRuntime::DemangleSymbolAsString(
+      sc.function->GetMangled().GetMangledName().GetStringRef(),
+      SwiftLanguageRuntime::eSimplified, &sc, exe_ctx);
+  if (name.empty())
+    return {};
+  size_t open_paren = name.find('(');
+  size_t generic = name.find('<');
+  size_t name_end = std::min(open_paren, generic);
+  if (name_end == std::string::npos)
+    return name;
+  return name.substr(0, name_end);
+}
+
+std::string SwiftLanguage::GetFunctionDisplayArgs(
+    const SymbolContext &sc, VariableList &args,
+    const lldb_private::ExecutionContext *exe_ctx) {
+  ExecutionContextScope *exe_scope =
+      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
+  std::string name = SwiftLanguageRuntime::DemangleSymbolAsString(
+      sc.function->GetMangled().GetMangledName().GetStringRef(),
+      SwiftLanguageRuntime::eSimplified, &sc, exe_ctx);
+  lldb_private::StreamString s;
+  const char *cstr = name.data();
+  const char *open_paren = strchr(cstr, '(');
+  const char *close_paren = nullptr;
+  const char *generic = strchr(cstr, '<');
+  // If before the arguments list begins there is a template sign
+  // then scan to the end of the generic args before you try to find
+  // the arguments list.
+  const char *generic_start = generic;
+  if (generic && open_paren && generic < open_paren) {
+    int generic_depth = 1;
+    ++generic;
+    for (; *generic && generic_depth > 0; generic++) {
+      if (*generic == '<')
+        generic_depth++;
+      if (*generic == '>')
+        generic_depth--;
+    }
+    if (*generic)
+      open_paren = strchr(generic, '(');
+    else
+      open_paren = nullptr;
   }
-  return false;
+  if (open_paren) {
+    close_paren = strchr(open_paren, ')');
+  }
+
+  if (generic_start && generic_start < open_paren)
+    s.Write(generic_start, open_paren - generic_start);
+  s.PutChar('(');
+
+  const size_t num_args = args.GetSize();
+  for (size_t arg_idx = 0; arg_idx < num_args; ++arg_idx) {
+    std::string buffer;
+
+    VariableSP var_sp(args.GetVariableAtIndex(arg_idx));
+    ValueObjectSP var_value_sp(ValueObjectVariable::Create(exe_scope, var_sp));
+    if (!var_sp || !var_value_sp || var_sp->IsArtificial())
+      continue;
+    StreamString ss;
+    const char *var_representation = nullptr;
+    const char *var_name = var_value_sp->GetName().GetCString();
+    if (var_value_sp->GetCompilerType().IsValid()) {
+      if (var_value_sp && exe_scope->CalculateTarget())
+        var_value_sp = var_value_sp->GetQualifiedRepresentationIfAvailable(
+            exe_scope->CalculateTarget()
+                ->TargetProperties::GetPreferDynamicValue(),
+            exe_scope->CalculateTarget()
+                ->TargetProperties::GetEnableSyntheticValue());
+      if (var_value_sp->GetCompilerType().IsAggregateType() &&
+          DataVisualization::ShouldPrintAsOneLiner(*var_value_sp.get())) {
+        static StringSummaryFormat format(TypeSummaryImpl::Flags()
+                                              .SetHideItemNames(false)
+                                              .SetShowMembersOneLiner(true),
+                                          "");
+        format.FormatObject(var_value_sp.get(), buffer, TypeSummaryOptions());
+        var_representation = buffer.c_str();
+      } else
+        var_value_sp->DumpPrintableRepresentation(
+            ss,
+            ValueObject::ValueObjectRepresentationStyle::
+                eValueObjectRepresentationStyleSummary,
+            eFormatDefault,
+            ValueObject::PrintableRepresentationSpecialCases::eAllow, false);
+    }
+    if (ss.GetData() && ss.GetSize())
+      var_representation = ss.GetData();
+    if (arg_idx > 0)
+      s.PutCString(", ");
+    if (var_value_sp->GetError().Success()) {
+      if (var_representation)
+        s.Printf("%s=%s", var_name, var_representation);
+      else
+        s.Printf("%s=%s at %s", var_name,
+                 var_value_sp->GetTypeName().GetCString(),
+                 var_value_sp->GetLocationAsCString());
+    } else
+      s.Printf("%s=<unavailable>", var_name);
+  }
+
+  if (close_paren)
+    s.PutCString(close_paren);
+  else
+    s.PutChar(')');
+
+  return s.GetString().str();
 }
 
 void SwiftLanguage::GetExceptionResolverDescription(bool catch_on,
