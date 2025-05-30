@@ -1255,8 +1255,8 @@ void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
   bool IsLittleEndian = Subtarget.isLittleEndian();
   bool IsKilled = MI.getOperand(0).isKill();
 
-  assert(!SrcReg.isVirtual() &&
-          "Spilling register pairs does not support virtual registers.");
+  assert(PPC::VSRpRCRegClass.contains(SrcReg) &&
+          "Expecting STXVP to be utilizing a VSRp register.");
 
   addFrameReference(
       BuildMI(MBB, II, DL, TII.get(PPC::STXV))
