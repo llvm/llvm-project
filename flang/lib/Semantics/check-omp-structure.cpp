@@ -2726,6 +2726,9 @@ static SourcedActionStmt GetActionStmt(const parser::Block &block) {
 // Compute the `evaluate::Assignment` from parser::ActionStmt. The assumption
 // is that the ActionStmt will be either an assignment or a pointer-assignment,
 // otherwise return std::nullopt.
+// Note: This function can return std::nullopt on [Pointer]AssignmentStmt where
+// the "typedAssignment" is unset. This can happen is there are semantic errors
+// in the purported assignment.
 static std::optional<evaluate::Assignment> GetEvaluateAssignment(
     const parser::ActionStmt *x) {
   if (x == nullptr) {
@@ -2750,6 +2753,29 @@ static std::optional<evaluate::Assignment> GetEvaluateAssignment(
         } else {
           return std::nullopt;
         }
+      },
+      x->u);
+}
+
+// Check if the ActionStmt is actually a [Pointer]AssignmentStmt. This is
+// to separate cases where the source has something that looks like an
+// assignment, but is semantically wrong (diagnosed by general semantic
+// checks), and where the source has some other statement (which we want
+// to report as "should be an assignment").
+static bool IsAssignment(const parser::ActionStmt *x) {
+  if (x == nullptr) {
+    return false;
+  }
+
+  using AssignmentStmt = common::Indirection<parser::AssignmentStmt>;
+  using PointerAssignmentStmt =
+      common::Indirection<parser::PointerAssignmentStmt>;
+
+  return common::visit(
+      [](auto &&s) -> bool {
+        using BareS = llvm::remove_cvref_t<decltype(s)>;
+        return std::is_same_v<BareS, AssignmentStmt> ||
+            std::is_same_v<BareS, PointerAssignmentStmt>;
       },
       x->u);
 }
@@ -3588,8 +3614,10 @@ OmpStructureChecker::CheckUpdateCapture(
   auto maybeAssign1{GetEvaluateAssignment(act1.stmt)};
   auto maybeAssign2{GetEvaluateAssignment(act2.stmt)};
   if (!maybeAssign1 || !maybeAssign2) {
-    context_.Say(source,
-        "ATOMIC UPDATE operation with CAPTURE should contain two assignments"_err_en_US);
+    if (!IsAssignment(act1.stmt) || !IsAssignment(act2.stmt)) {
+      context_.Say(source,
+          "ATOMIC UPDATE operation with CAPTURE should contain two assignments"_err_en_US);
+    }
     return std::make_pair(nullptr, nullptr);
   }
 
@@ -3956,7 +3984,7 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateStmt(
   // The if-true statement must be present, and must be an assignment.
   auto maybeAssign{GetEvaluateAssignment(update.ift.stmt)};
   if (!maybeAssign) {
-    if (update.ift.stmt) {
+    if (update.ift.stmt && !IsAssignment(update.ift.stmt)) {
       context_.Say(update.ift.source,
           "In ATOMIC UPDATE COMPARE the update statement should be an assignment"_err_en_US);
     } else {
@@ -3992,7 +4020,7 @@ void OmpStructureChecker::CheckAtomicUpdateOnly(
       x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
           MakeAtomicAnalysisOp(Analysis::Update, maybeUpdate),
           MakeAtomicAnalysisOp(Analysis::None));
-    } else {
+    } else if (!IsAssignment(action.stmt)) {
       context_.Say(
           source, "ATOMIC UPDATE operation should be an assignment"_err_en_US);
     }
@@ -4094,17 +4122,11 @@ void OmpStructureChecker::CheckAtomicUpdateCapture(
   }
   SourcedActionStmt uact{GetActionStmt(uec)};
   SourcedActionStmt cact{GetActionStmt(cec)};
-  auto maybeUpdate{GetEvaluateAssignment(uact.stmt)};
-  auto maybeCapture{GetEvaluateAssignment(cact.stmt)};
+  // The "dereferences" of std::optional are guaranteed to be valid after
+  // CheckUpdateCapture.
+  evaluate::Assignment update{*GetEvaluateAssignment(uact.stmt)};
+  evaluate::Assignment capture{*GetEvaluateAssignment(cact.stmt)};
 
-  if (!maybeUpdate || !maybeCapture) {
-    context_.Say(source,
-        "ATOMIC UPDATE CAPTURE operation both statements should be assignments"_err_en_US);
-    return;
-  }
-
-  const evaluate::Assignment &update{*maybeUpdate};
-  const evaluate::Assignment &capture{*maybeCapture};
   const SomeExpr &atom{update.lhs};
 
   using Analysis = parser::OpenMPAtomicConstruct::Analysis;
@@ -4242,13 +4264,17 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
         return;
       }
     } else {
-      context_.Say(capture.source,
-          "In ATOMIC UPDATE COMPARE CAPTURE the capture statement should be an assignment"_err_en_US);
+      if (!IsAssignment(capture.stmt)) {
+        context_.Say(capture.source,
+            "In ATOMIC UPDATE COMPARE CAPTURE the capture statement should be an assignment"_err_en_US);
+      }
       return;
     }
   } else {
-    context_.Say(update.ift.source,
-        "In ATOMIC UPDATE COMPARE CAPTURE the update statement should be an assignment"_err_en_US);
+    if (!IsAssignment(update.ift.stmt)) {
+      context_.Say(update.ift.source,
+          "In ATOMIC UPDATE COMPARE CAPTURE the update statement should be an assignment"_err_en_US);
+    }
     return;
   }
 
@@ -4316,7 +4342,7 @@ void OmpStructureChecker::CheckAtomicRead(
             MakeAtomicAnalysisOp(Analysis::Read, maybeRead),
             MakeAtomicAnalysisOp(Analysis::None));
       }
-    } else {
+    } else if (!IsAssignment(action.stmt)) {
       context_.Say(
           x.source, "ATOMIC READ operation should be an assignment"_err_en_US);
     }
@@ -4350,7 +4376,7 @@ void OmpStructureChecker::CheckAtomicWrite(
       x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
           MakeAtomicAnalysisOp(Analysis::Write, maybeWrite),
           MakeAtomicAnalysisOp(Analysis::None));
-    } else {
+    } else if (!IsAssignment(action.stmt)) {
       context_.Say(
           x.source, "ATOMIC WRITE operation should be an assignment"_err_en_US);
     }
