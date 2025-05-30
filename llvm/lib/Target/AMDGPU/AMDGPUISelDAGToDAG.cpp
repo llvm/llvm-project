@@ -3048,16 +3048,18 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
   }
 
   SmallVector<SDValue, 5> MCastOps;
+  SDLoc SL(N);
   unsigned AS = cast<MemSDNode>(N)->getAddressSpace();
   unsigned Opcode;
+
+  SDValue V0;
+  SDValue V1;
+  SDValue V2;
+  SDValue V3;
 
   switch (AS) {
   case AMDGPUAS::GLOBAL_ADDRESS: {
     // Choose best addressing mode
-    SDValue V0;
-    SDValue V1;
-    SDValue V2;
-    SDValue V3;
     if (SelectGlobalSAddrCPolM0(N, N->getOperand(3) /*Addr*/, V0 /*SAddr*/,
                                 V1 /*VOffset*/, V2 /*Offset*/, V3 /*CPol*/)) {
       MCastOps.push_back(V0);
@@ -3089,20 +3091,30 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
         llvm_unreachable("Unsupported size for multicast load");
       break;
     }
+    SelectCode(N); // Let this error
+    return;
+  }
+  case AMDGPUAS::LOCAL_ADDRESS: {
+    if (SelectDS1Addr1Offset(N->getOperand(3) /*Addr*/, V0 /*Base*/,
+                             V1 /*Offset*/)) {
+      MCastOps.push_back(V0);
+      MCastOps.push_back(V1);
+      MCastOps.push_back(
+          CurDAG->getTargetConstant(0, SL, MVT::i1)); // isGDS bit
+      if (Size == 32)
+        Opcode = AMDGPU::DS_LOAD_MCAST_B32;
+      else if (Size == 64)
+        Opcode = AMDGPU::DS_LOAD_MCAST_B64;
+      else if (Size == 128)
+        Opcode = AMDGPU::DS_LOAD_MCAST_B128;
+      else
+        llvm_unreachable("Unsupported size for multicast load");
+      break;
+    }
+    SelectCode(N); // Let this error
     return;
   }
   // TODO : Handle other address spaces
-  // case AMDGPUAS::LOCAL_ADDRESS: {
-  //  if (Size == 32)
-  //    Opcode = AMDGPU::DS_LOAD_MCAST_B32;
-  //  else if (Size == 64)
-  //    Opcode = AMDGPU::DS_LOAD_MCAST_B64;
-  //  else if (Size == 128)
-  //    Opcode = AMDGPU::DS_LOAD_MCAST_B128;
-  //  else
-  //    llvm_unreachable("Unsupported size for multicast load");
-  //  break;
-  //}
   // case AMDGPUAS::DDS_ADDRESS: {
   //  if (Size == 32)
   //    Opcode = AMDGPU::DDS_LOAD_MCAST_B32;
@@ -3123,7 +3135,6 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
   // N has new chain and glued m0 now
   MCastOps.push_back(N->getOperand(0));                       // Chain
   MCastOps.push_back(N->getOperand(N->getNumOperands() - 1)); // Glue
-  SDLoc SL(N);
   MachineSDNode *MCast = CurDAG->getMachineNode(
       Opcode, SL, MVT::getIntegerVT(Size), MVT::Other, MCastOps);
   MachineMemOperand *LoadMMO = N->getMemOperand();

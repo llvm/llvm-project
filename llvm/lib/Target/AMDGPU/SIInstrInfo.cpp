@@ -3984,6 +3984,13 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
+  if (isVLdStIdx(MIa.getOpcode()) || isVLdStIdx(MIb.getOpcode())) {
+    if (isVLdStIdx(MIa.getOpcode()) && isVLdStIdx(MIb.getOpcode())) {
+      return checkInstOffsetsDoNotOverlap(MIa, MIb);
+    }
+    return true;
+  }
+
   if (isLDSDMA(MIa) || isLDSDMA(MIb))
     return false;
 
@@ -4029,13 +4036,6 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
     }
 
     return false;
-  }
-
-  if (isVLdStIdx(MIa.getOpcode()) || isVLdStIdx(MIb.getOpcode())) {
-    if (isVLdStIdx(MIa.getOpcode()) && isVLdStIdx(MIb.getOpcode())) {
-      return checkInstOffsetsDoNotOverlap(MIa, MIb);
-    }
-    return true;
   }
 
   return false;
