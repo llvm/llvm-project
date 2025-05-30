@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "JSONUtils.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBStringList.h"
 
 namespace lldb_dap {
