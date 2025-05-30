@@ -15572,7 +15572,7 @@ Sema::BuiltinVectorMath(CallExpr *TheCall,
   if (checkMathBuiltinElementType(*this, LocA, TyA, ArgTyRestr, 1))
     return std::nullopt;
 
-  if (TyA.getCanonicalType() != TyB.getCanonicalType()) {
+  if (!Context.hasSameUnqualifiedType(TyA, TyB)) {
     Diag(LocA, diag::err_typecheck_call_different_arg_types) << TyA << TyB;
     return std::nullopt;
   }
