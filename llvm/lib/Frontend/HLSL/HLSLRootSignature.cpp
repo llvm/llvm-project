@@ -173,13 +173,13 @@ MDNode *MetadataBuilder::BuildRootSignature() {
     MDNode *ElementMD = nullptr;
     if (const auto &Flags = std::get_if<RootFlags>(&Element))
       ElementMD = BuildRootFlags(*Flags);
-    if (const auto &Constants = std::get_if<RootConstants>(&Element))
+    else if (const auto &Constants = std::get_if<RootConstants>(&Element))
       ElementMD = BuildRootConstants(*Constants);
-    if (const auto &Descriptor = std::get_if<RootDescriptor>(&Element))
+    else if (const auto &Descriptor = std::get_if<RootDescriptor>(&Element))
       ElementMD = BuildRootDescriptor(*Descriptor);
-    if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
+    else if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
       ElementMD = BuildDescriptorTableClause(*Clause);
-    if (const auto &Table = std::get_if<DescriptorTable>(&Element))
+    else if (const auto &Table = std::get_if<DescriptorTable>(&Element))
       ElementMD = BuildDescriptorTable(*Table);
 
     // FIXME(#126586): remove once all RootElemnt variants are handled in a
