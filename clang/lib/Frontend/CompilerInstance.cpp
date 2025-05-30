@@ -898,6 +898,10 @@ void CompilerInstance::clearOutputFiles(bool EraseFiles) {
           [&](const llvm::vfs::OutputError &E) {
             getDiagnostics().Report(diag::err_fe_unable_to_open_output)
                 << E.getOutputPath() << E.convertToErrorCode().message();
+          },
+          [&](const llvm::ErrorInfoBase &EIB) { // Handle any remaining error
+            getDiagnostics().Report(diag::err_fe_unable_to_open_output)
+                << O.getPath() << EIB.message();
           });
   }
   OutputFiles.clear();
