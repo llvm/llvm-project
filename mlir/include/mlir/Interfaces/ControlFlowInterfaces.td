@@ -376,6 +376,113 @@ def SelectLikeOpInterface : OpInterface<"SelectLikeOpInterface"> {
 }
 
 //===----------------------------------------------------------------------===//
+// WeightedBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+def WeightedBranchOpInterface : OpInterface<"WeightedBranchOpInterface"> {
+  let description = [{
+    This interface provides weight information for branching terminator
+    operations, i.e. terminator operations with successors.
+
+    This interface provides methods for getting/setting integer non-negative
+    weight of each branch in the range from 0 to 100. The sum of weights
+    must be 100. The number of weights must match the number of successors
+    of the operation.
+
+    The weights specify the probability (in percents) of taking
+    a particular branch.
+
+    The default implementations of the methods expect the operation
+    to have an attribute of type DenseI32ArrayAttr named branch_weights.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [InterfaceMethod<
+                     /*desc=*/"Returns the branch weights attribute or nullptr",
+                     /*returnType=*/"::mlir::DenseI32ArrayAttr",
+                     /*methodName=*/"getBranchWeightsOrNull",
+                     /*args=*/(ins),
+                     /*methodBody=*/[{}],
+                     /*defaultImpl=*/[{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getBranchWeightsAttr();
+      }]>,
+                 InterfaceMethod<
+                     /*desc=*/"Sets the branch weights attribute",
+                     /*returnType=*/"void",
+                     /*methodName=*/"setBranchWeights",
+                     /*args=*/(ins "::mlir::DenseI32ArrayAttr":$attr),
+                     /*methodBody=*/[{}],
+                     /*defaultImpl=*/[{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setBranchWeightsAttr(attr);
+      }]>,
+  ];
+
+  let verify = [{
+    return ::mlir::detail::verifyBranchWeights($_op);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// WeightedRegionBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+// TODO: the probabilities of entering a particular region seem
+// to correlate with the values returned by
+// RegionBranchOpInterface::invocationBounds(), and we should probably
+// verify that the values are consistent. In that case, should
+// WeightedRegionBranchOpInterface extend RegionBranchOpInterface?
+def WeightedRegionBranchOpInterface
+    : OpInterface<"WeightedRegionBranchOpInterface"> {
+  let description = [{
+    This interface provides weight information for region operations
+    that exhibit branching behavior between held regions.
+
+    This interface provides methods for getting/setting integer non-negative
+    weight of each branch in the range from 0 to 100. The sum of weights
+    must be 100. The number of weights must match the number of regions
+    held by the operation (including empty regions).
+
+    The weights specify the probability (in percents) of branching
+    to a particular region when first executing the operation.
+    For example, for loop-like operations with a single region
+    the weight specifies the probability of entering the loop.
+    In this case, the weight must be either 0 or 100.
+
+    The default implementations of the methods expect the operation
+    to have an attribute of type DenseI32ArrayAttr named branch_weights.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [InterfaceMethod<
+                     /*desc=*/"Returns the region weights attribute or nullptr",
+                     /*returnType=*/"::mlir::DenseI32ArrayAttr",
+                     /*methodName=*/"getRegionWeightsOrNull",
+                     /*args=*/(ins),
+                     /*methodBody=*/[{}],
+                     /*defaultImpl=*/[{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getRegionWeightsAttr();
+      }]>,
+                 InterfaceMethod<
+                     /*desc=*/"Sets the region weights attribute",
+                     /*returnType=*/"void",
+                     /*methodName=*/"setRegionWeights",
+                     /*args=*/(ins "::mlir::DenseI32ArrayAttr":$attr),
+                     /*methodBody=*/[{}],
+                     /*defaultImpl=*/[{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setRegionWeightsAttr(attr);
+      }]>,
+  ];
+
+  let verify = [{
+    return ::mlir::detail::verifyRegionBranchWeights($_op);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ControlFlow Traits
 //===----------------------------------------------------------------------===//
 
