@@ -264,12 +264,10 @@ public:
   AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const override;
 
-  Instruction *
-  emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
-                   AtomicOrdering Ord) const override;
-  Instruction *
-  emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
-                    AtomicOrdering Ord) const override;
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                AtomicOrdering Ord) const override;
+  Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                 AtomicOrdering Ord) const override;
 
   unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
                                      EVT ToVT) const override;

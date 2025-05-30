@@ -6292,9 +6292,9 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
     return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
 
   auto *CI = cast<AtomicCmpXchgInst>(Inst);
-  auto CASWidth = cast<IntegerType>(CI->getCompareOperand()->getType())
-                      ->getBitWidth();
-  SyncScope::ID SSID= CI->getSyncScopeID();
+  auto CASWidth =
+      cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth();
+  SyncScope::ID SSID = CI->getSyncScopeID();
   // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
   if (isAcquireOrStronger(Ord) &&
       (Ord != AtomicOrdering::SequentiallyConsistent ||
