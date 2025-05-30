@@ -60,37 +60,38 @@ class RVPUnaryImm8<bits<8> funct8, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVPUnaryImm5<bits<3> f, string opcodestr>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd),
-    (ins GPR:$rs1, uimm5:$uimm5), opcodestr, "$rd, $rs1, $uimm5"> {
-  bits<5> uimm5;
+class RVPUnary<bits<3> f, string opcodestr, dag operands, string argstr>
+    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd), operands, opcodestr, argstr> {
+  bits<5> imm;
+  bits<5> rs1;
+
   let Inst{31}    = 0b1;
   let Inst{30-28} = f;
   let Inst{27}    = 0b0;
+  let Inst{19-15} = rs1;
+}
+
+class RVPUnaryImm5<bits<3> f, string opcodestr>
+    : RVPUnary<f, opcodestr, (ins GPR:$rs1, uimm5:$uimm5), "$rd, $rs1, $uimm5"> {
+  bits<5> uimm5;
+
+  let imm = uimm5;
   let Inst{26-25} = 0b01;
   let Inst{24-20} = uimm5;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnaryImm4<bits<3> f, string opcodestr>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd),
-    (ins GPR:$rs1, uimm4:$uimm4), opcodestr, "$rd, $rs1, $uimm4"> {
+    : RVPUnary<f, opcodestr, (ins GPR:$rs1, uimm4:$uimm4), "$rd, $rs1, $uimm4"> {
   bits<4> uimm4;
-  let Inst{31}    = 0b1;
-  let Inst{30-28} = f;
-  let Inst{27}    = 0b0;
+
   let Inst{26-24} = 0b001;
   let Inst{23-20} = uimm4;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPUnaryImm3<bits<3> f, string opcodestr>
-    : RVInstIBase<0b010, OPC_OP_IMM_32, (outs GPR:$rd),
-    (ins GPR:$rs1, uimm3:$uimm3), opcodestr, "$rd, $rs1, $uimm3"> {
+    : RVPUnary<f, opcodestr, (ins GPR:$rs1, uimm3:$uimm3), "$rd, $rs1, $uimm3"> {
   bits<3> uimm3;
-  let Inst{31}    = 0b1;
-  let Inst{30-28} = f;
-  let Inst{27}    = 0b0;
+
   let Inst{26-23} = 0b0001;
   let Inst{22-20} = uimm3;
 }
@@ -157,3 +158,4 @@ let Predicates = [HasStdExtP] in
 def PLUI_H : RVPUnaryImm10<0b1111000, "plui.h">;
 let Predicates = [HasStdExtP, IsRV64] in
 def PLUI_W : RVPUnaryImm10<0b1111001, "plui.w">;
+
