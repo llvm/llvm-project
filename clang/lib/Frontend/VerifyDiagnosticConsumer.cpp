@@ -812,7 +812,7 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
     C2 += C.substr(last, loc-last);
     last = loc + 1;
 
-    if (C[last] == '\n' || C[last] == '\r') {
+    if (last < C.size() && (C[last] == '\n' || C[last] == '\r')) {
       ++last;
 
       // Escape \r\n  or \n\r, but not \n\n.

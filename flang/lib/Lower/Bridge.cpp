@@ -13,7 +13,6 @@
 #include "flang/Lower/Bridge.h"
 
 #include "OpenMP/DataSharingProcessor.h"
-#include "OpenMP/Utils.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
@@ -63,6 +62,7 @@
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Flags.h"
 #include "flang/Support/Version.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -2029,10 +2029,6 @@ private:
   void handleLocalitySpecs(const IncrementLoopInfo &info) {
     Fortran::semantics::SemanticsContext &semanticsContext =
         bridge.getSemanticsContext();
-    // TODO Extract `DataSharingProcessor` from omp to a more general location.
-    Fortran::lower::omp::DataSharingProcessor dsp(
-        *this, semanticsContext, getEval(),
-        /*useDelayedPrivatization=*/true, localSymbols);
     fir::LocalitySpecifierOperands privateClauseOps;
     auto doConcurrentLoopOp =
         mlir::dyn_cast_if_present<fir::DoConcurrentLoopOp>(info.loopOp);
@@ -2041,10 +2037,17 @@ private:
     // complete.
     bool useDelayedPriv =
         enableDelayedPrivatizationStaging && doConcurrentLoopOp;
+    llvm::SetVector<const Fortran::semantics::Symbol *> allPrivatizedSymbols;
 
     for (const Fortran::semantics::Symbol *sym : info.localSymList) {
       if (useDelayedPriv) {
-        dsp.privatizeSymbol<fir::LocalitySpecifierOp>(sym, &privateClauseOps);
+        Fortran::lower::privatizeSymbol<fir::LocalitySpecifierOp>(
+            *this, this->getFirOpBuilder(), localSymbols,
+            [this](fir::LocalitySpecifierOp result, mlir::Type argType) {
+              TODO(this->toLocation(),
+                   "Localizers that need init regions are not supported yet.");
+            },
+            allPrivatizedSymbols, sym, &privateClauseOps);
         continue;
       }
 
@@ -2053,7 +2056,13 @@ private:
 
     for (const Fortran::semantics::Symbol *sym : info.localInitSymList) {
       if (useDelayedPriv) {
-        dsp.privatizeSymbol<fir::LocalitySpecifierOp>(sym, &privateClauseOps);
+        Fortran::lower::privatizeSymbol<fir::LocalitySpecifierOp>(
+            *this, this->getFirOpBuilder(), localSymbols,
+            [this](fir::LocalitySpecifierOp result, mlir::Type argType) {
+              TODO(this->toLocation(),
+                   "Localizers that need init regions are not supported yet.");
+            },
+            allPrivatizedSymbols, sym, &privateClauseOps);
         continue;
       }
 
@@ -2083,7 +2092,7 @@ private:
           builder->getArrayAttr(privateClauseOps.privateSyms));
 
       for (auto [sym, privateVar] : llvm::zip_equal(
-               dsp.getAllSymbolsToPrivatize(), privateClauseOps.privateVars)) {
+               allPrivatizedSymbols, privateClauseOps.privateVars)) {
         auto arg = doConcurrentLoopOp.getRegion().begin()->addArgument(
             privateVar.getType(), doConcurrentLoopOp.getLoc());
         bindSymbol(*sym, hlfir::translateToExtendedValue(
