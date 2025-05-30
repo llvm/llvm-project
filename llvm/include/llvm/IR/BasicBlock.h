@@ -546,6 +546,10 @@ private:
     return &BasicBlock::InstList;
   }
 
+  static size_t getSublistOffset(Instruction *) {
+    return offsetof(BasicBlock, InstList);
+  }
+
   /// Dedicated function for splicing debug-info: when we have an empty
   /// splice (i.e. zero instructions), the caller may still intend any
   /// debug-info in between the two "positions" to be spliced.
