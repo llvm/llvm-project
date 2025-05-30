@@ -68,7 +68,7 @@ void testshortmul(void) {
 // CHECKS: [[META20]] = !{!"Simple C/C++ TBAA"}
 // CHECKS: [[DBG21]] = !DILocation(line: 47, column: 13, scope: [[DBG13]])
 // CHECKS: [[DBG22]] = !DILocation(line: 0, scope: [[META23:![0-9]+]], inlinedAt: [[META25:![0-9]+]])
-// CHECKS: [[META23]] = distinct !DISubprogram(name: "__ubsan_check_singularity", scope: [[META7]], file: [[META7]], type: [[META24:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META2]])
+// CHECKS: [[META23]] = distinct !DISubprogram(name: "__ubsan_check_debug_info_anchor", scope: [[META7]], file: [[META7]], type: [[META24:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META2]])
 // CHECKS: [[META24]] = !DISubroutineType(types: null)
 // CHECKS: [[META25]] = !DILocation(line: 47, column: 11, scope: [[DBG13]])
 // CHECKS: [[META26]] = !{}
