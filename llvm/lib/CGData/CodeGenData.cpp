@@ -155,7 +155,14 @@ CodeGenData &CodeGenData::getInstance() {
       // Instead, just emit an warning message and fall back as if no CGData
       // were available.
       auto FS = vfs::getRealFileSystem();
-      auto ReaderOrErr = CodeGenDataReader::create(CodeGenDataUsePath, *FS);
+      CodeGenDataReader::Options Opts;
+#ifdef NDEBUG
+      // Do not read the stable function map names for non-assertion builds
+      // to save memory and time for production use.
+      Opts.ReadStableFunctionMapNames = false;
+#endif
+      auto ReaderOrErr =
+          CodeGenDataReader::create(CodeGenDataUsePath, *FS, Opts);
       if (Error E = ReaderOrErr.takeError()) {
         warn(std::move(E), CodeGenDataUsePath);
         return;
@@ -188,7 +195,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Curr) {
     return make_error<CGDataError>(cgdata_error::unsupported_version);
   H.DataKind = endian::readNext<uint32_t, endianness::little, unaligned>(Curr);
 
-  static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version2,
+  static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version3,
                 "Please update the offset computation below if a new field has "
                 "been added to the header.");
   H.OutlinedHashTreeOffset =
