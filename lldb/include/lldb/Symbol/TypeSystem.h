@@ -443,7 +443,8 @@ public:
   /// given stream.
   ///
   /// This should not modify the state of the TypeSystem if possible.
-  virtual void Dump(llvm::raw_ostream &output) = 0;
+  virtual void Dump(llvm::raw_ostream &output,
+                    llvm::StringRef filter_string) = 0;
 
   /// This is used by swift.
   virtual bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) = 0;
