@@ -138,8 +138,9 @@ static std::optional<std::string> findFile(StringRef path1,
 }
 
 // This is for -lfoo. We'll look for libfoo.dll.a or libfoo.a from search paths.
-static std::string
-searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
+static std::string searchLibrary(StringRef name,
+                                 ArrayRef<StringRef> searchPaths, bool bStatic,
+                                 StringRef prefix) {
   if (name.starts_with(":")) {
     for (StringRef dir : searchPaths)
       if (std::optional<std::string> s = findFile(dir, name.substr(1)))
@@ -160,7 +161,7 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
     if (std::optional<std::string> s = findFile(dir, name + ".lib"))
       return *s;
     if (!bStatic) {
-      if (std::optional<std::string> s = findFile(dir, "lib" + name + ".dll"))
+      if (std::optional<std::string> s = findFile(dir, prefix + name + ".dll"))
         return *s;
       if (std::optional<std::string> s = findFile(dir, name + ".dll"))
         return *s;
@@ -553,6 +554,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     searchPaths.push_back(a->getValue());
     add("-libpath:" + StringRef(a->getValue()));
   }
+  StringRef dllPrefix = "lib";
+  for (auto *a : args.filtered(OPT_dll_search_prefix)) {
+    dllPrefix = a->getValue();
+  }
 
   StringRef prefix = "";
   bool isStatic = false;
@@ -565,7 +570,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
         add(prefix + StringRef(a->getValue()));
       break;
     case OPT_l:
-      add(prefix + searchLibrary(a->getValue(), searchPaths, isStatic));
+      add(prefix +
+          searchLibrary(a->getValue(), searchPaths, isStatic, dllPrefix));
       break;
     case OPT_whole_archive:
       prefix = "-wholearchive:";
