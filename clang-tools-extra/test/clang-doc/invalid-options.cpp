@@ -5,7 +5,7 @@
 // CHECK: {{(Not a directory|no such file or directory)}}
 
 /// Invalid format option.
-// RUN: not clang-doc %s -format=badformat 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
+// RUN: not clang-doc %s --output=%t.dir -format=badformat 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
 // BAD-FORMAT: clang-doc: for the --format option: Cannot find option named 'badformat'!
 
 /// Missing HTML asset directory (warning only).
