@@ -2033,7 +2033,11 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::mips64el:
     return MIPS().CheckMipsBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::spirv:
-    return SPIRV().CheckSPIRVBuiltinFunctionCall(BuiltinID, TheCall);
+  case llvm::Triple::spirv32:
+  case llvm::Triple::spirv64:
+    if (TI.getTriple().getOS() != llvm::Triple::OSType::AMDHSA)
+      return SPIRV().CheckSPIRVBuiltinFunctionCall(TI, BuiltinID, TheCall);
+    return false;
   case llvm::Triple::systemz:
     return SystemZ().CheckSystemZBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::x86:
@@ -15568,7 +15572,7 @@ Sema::BuiltinVectorMath(CallExpr *TheCall,
   if (checkMathBuiltinElementType(*this, LocA, TyA, ArgTyRestr, 1))
     return std::nullopt;
 
-  if (TyA.getCanonicalType() != TyB.getCanonicalType()) {
+  if (!Context.hasSameUnqualifiedType(TyA, TyB)) {
     Diag(LocA, diag::err_typecheck_call_different_arg_types) << TyA << TyB;
     return std::nullopt;
   }

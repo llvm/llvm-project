@@ -327,7 +327,7 @@ public:
 
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitBitreverseIntrinsicInst(IntrinsicInst &I);
-  bool visitMinNum(IntrinsicInst &I);
+  bool visitFMinLike(IntrinsicInst &I);
   bool visitSqrt(IntrinsicInst &I);
   bool run();
 };
@@ -1684,7 +1684,10 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
             // return the new value. Just insert a scalar copy and defer
             // expanding it.
             NewElt = Builder.CreateBinOp(Opc, NumEltN, DenEltN);
-            Div64ToExpand.push_back(cast<BinaryOperator>(NewElt));
+            // CreateBinOp does constant folding. If the operands are constant,
+            // it will return a Constant instead of a BinaryOperator.
+            if (auto *NewEltBO = dyn_cast<BinaryOperator>(NewElt))
+              Div64ToExpand.push_back(NewEltBO);
           }
         }
 
@@ -2197,7 +2200,9 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   case Intrinsic::bitreverse:
     return visitBitreverseIntrinsicInst(I);
   case Intrinsic::minnum:
-    return visitMinNum(I);
+  case Intrinsic::minimumnum:
+  case Intrinsic::minimum:
+    return visitFMinLike(I);
   case Intrinsic::sqrt:
     return visitSqrt(I);
   default:
@@ -2216,7 +2221,9 @@ bool AMDGPUCodeGenPrepareImpl::visitBitreverseIntrinsicInst(IntrinsicInst &I) {
 }
 
 /// Match non-nan fract pattern.
-///   minnum(fsub(x, floor(x)), nextafter(1.0, -1.0)
+///   minnum(fsub(x, floor(x)), nextafter(1.0, -1.0))
+///   minimumnum(fsub(x, floor(x)), nextafter(1.0, -1.0))
+///   minimum(fsub(x, floor(x)), nextafter(1.0, -1.0))
 ///
 /// If fract is a useful instruction for the subtarget. Does not account for the
 /// nan handling; the instruction has a nan check on the input value.
@@ -2224,7 +2231,12 @@ Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
   if (ST.hasFractBug())
     return nullptr;
 
-  if (I.getIntrinsicID() != Intrinsic::minnum)
+  Intrinsic::ID IID = I.getIntrinsicID();
+
+  // The value is only used in contexts where we know the input isn't a nan, so
+  // any of the fmin variants are fine.
+  if (IID != Intrinsic::minnum &&
+      IID != Intrinsic::minimumnum & IID != Intrinsic::minimum)
     return nullptr;
 
   Type *Ty = I.getType();
@@ -2270,7 +2282,7 @@ Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
   return insertValues(Builder, FractArg->getType(), ResultVals);
 }
 
-bool AMDGPUCodeGenPrepareImpl::visitMinNum(IntrinsicInst &I) {
+bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
   Value *FractArg = matchFractPat(I);
   if (!FractArg)
     return false;

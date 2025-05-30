@@ -887,11 +887,6 @@ public:
     SLPStore,
     ActiveLaneMask,
     ExplicitVectorLength,
-    /// Creates a scalar phi in a leaf VPBB with a single predecessor in VPlan.
-    /// The first operand is the incoming value from the predecessor in VPlan,
-    /// the second operand is the incoming value for all other predecessors
-    /// (which are currently not modeled in VPlan).
-    ResumePhi,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -1137,9 +1132,13 @@ struct VPPhi : public VPInstruction, public VPPhiAccessors {
   VPPhi(ArrayRef<VPValue *> Operands, DebugLoc DL, const Twine &Name = "")
       : VPInstruction(Instruction::PHI, Operands, DL, Name) {}
 
-  static inline bool classof(const VPRecipeBase *U) {
+  static inline bool classof(const VPUser *U) {
     auto *R = dyn_cast<VPInstruction>(U);
     return R && R->getOpcode() == Instruction::PHI;
+  }
+
+  VPPhi *clone() override {
+    return new VPPhi(operands(), getDebugLoc(), getName());
   }
 
   void execute(VPTransformState &State) override;
@@ -2645,6 +2644,10 @@ public:
                      "VPExtendedRecipe + VPReductionRecipe before execution.");
   };
 
+  /// Return the cost of VPExtendedReductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2743,6 +2746,10 @@ public:
                      "VPWidenCastRecipe + "
                      "VPWidenRecipe + VPReductionRecipe before execution");
   }
+
+  /// Return the cost of VPMulAccumulateReductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -4221,7 +4228,8 @@ public:
   /// that this relies on unneeded branches to the scalar tail loop being
   /// removed.
   bool hasScalarTail() const {
-    return getScalarPreheader()->getNumPredecessors() != 0;
+    return !(getScalarPreheader()->getNumPredecessors() == 0 ||
+             getScalarPreheader()->getSinglePredecessor() == getEntry());
   }
 };
 
