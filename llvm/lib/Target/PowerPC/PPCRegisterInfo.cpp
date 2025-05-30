@@ -1255,6 +1255,9 @@ void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
   bool IsLittleEndian = Subtarget.isLittleEndian();
   bool IsKilled = MI.getOperand(0).isKill();
 
+  assert(!SrcReg.isVirtual() &&
+          "Spilling register pairs does not support virtual registers.");
+
   addFrameReference(
       BuildMI(MBB, II, DL, TII.get(PPC::STXV))
           .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_vsx0),
@@ -1299,8 +1302,6 @@ void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
   bool IsKilled = MI.getOperand(0).isKill();
 
   bool IsPrimed = PPC::ACCRCRegClass.contains(SrcReg);
-  Register Reg =
-      PPC::VSRp0 + (SrcReg - (IsPrimed ? PPC::ACC0 : PPC::UACC0)) * 2;
   bool IsLittleEndian = Subtarget.isLittleEndian();
 
   emitAccSpillRestoreInfo(MBB, IsPrimed, false);
@@ -1329,12 +1330,16 @@ void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
     spillPair(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair1),
               IsLittleEndian ? 16 : 32);
   } else {
-    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                          .addReg(Reg, getKillRegState(IsKilled)),
-                      FrameIndex, IsLittleEndian ? 32 : 0);
-    addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                          .addReg(Reg + 1, getKillRegState(IsKilled)),
-                      FrameIndex, IsLittleEndian ? 0 : 32);
+    addFrameReference(
+        BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+            .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair0),
+                    getKillRegState(IsKilled)),
+        FrameIndex, IsLittleEndian ? 32 : 0);
+    addFrameReference(
+        BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+            .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair1),
+                    getKillRegState(IsKilled)),
+        FrameIndex, IsLittleEndian ? 0 : 32);
   }
   if (IsPrimed && !IsKilled)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMTACC), SrcReg).addReg(SrcReg);
