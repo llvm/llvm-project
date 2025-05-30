@@ -357,7 +357,7 @@ size_t GnuPropertySection::getSize() const {
   if (ctx.arg.andFeatures != 0)
     contentSize += ctx.arg.is64 ? 16 : 12;
   if (ctx.aarch64PauthAbiCoreInfo)
-    contentSize += 4 + 4 + sizeof(uint64_t) * 2;
+    contentSize += 4 + 4 + AArch64PauthAbiCoreInfo::size();
   assert(contentSize != 0);
   return contentSize + 16;
 }
