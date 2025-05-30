@@ -171,6 +171,20 @@ public:
     return emitLoadOfLValue(e);
   }
 
+  mlir::Value VisitShuffleVectorExpr(ShuffleVectorExpr *e) {
+    if (e->getNumSubExprs() == 2) {
+      // The undocumented form of __builtin_shufflevector.
+      mlir::Value inputVec = Visit(e->getExpr(0));
+      mlir::Value indexVec = Visit(e->getExpr(1));
+      return cgf.builder.create<cir::VecShuffleDynamicOp>(
+          cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
+    }
+
+    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
+                                   "ShuffleVectorExpr with indices");
+    return {};
+  }
+
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
   mlir::Value VisitInitListExpr(InitListExpr *e);

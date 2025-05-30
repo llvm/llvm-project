@@ -2141,4 +2141,38 @@ def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// VecShuffleDynamicOp
+//===----------------------------------------------------------------------===//
+
+def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
+                          [Pure, AllTypesMatch<["vec", "result"]>]> {
+  let summary = "Shuffle a vector using indices in another vector";
+  let description = [{
+    The `cir.vec.shuffle.dynamic` operation implements the undocumented form of
+    Clang's __builtin_shufflevector, where the indices of the shuffled result
+    can be runtime values.
+
+    There are two input vectors, which must have the same number of elements.
+    The second input vector must have an integral element type. The elements of
+    the second vector are interpreted as indices into the first vector. The
+    result vector is constructed by taking the elements from the first input
+    vector from the indices indicated by the elements of the second vector.
+
+    ```mlir
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<4 x !s32i>, %indices
+        : !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_VectorType:$vec, IntegerVector:$indices);
+  let results = (outs CIR_VectorType:$result);
+  let assemblyFormat = [{
+    $vec `:` qualified(type($vec)) `,` $indices `:` qualified(type($indices))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
