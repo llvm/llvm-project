@@ -64,3 +64,12 @@ add_flang_library(FortranSemantics
   FrontendOpenACC
   TargetParser
 )
+
+target_precompile_headers(FortranSemantics PRIVATE
+  [["flang/Semantics/semantics.h"]]
+  [["flang/Semantics/type.h"]]
+  [["flang/Semantics/openmp-modifiers.h"]]
+  [["flang/Semantics/expression.h"]]
+  [["flang/Semantics/tools.h"]]
+  [["flang/Semantics/symbol.h"]]
+)

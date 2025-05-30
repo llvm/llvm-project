@@ -139,6 +139,11 @@ bool LoongArchTargetInfo::validateAsmConstraint(
     // A signed 16-bit constant.
     Info.setRequiresImmediate(-32768, 32767);
     return true;
+  case 'q':
+    // A general-purpose register except for $r0 and $r1 (for the csrxchg
+    // instruction)
+    Info.setAllowsRegister();
+    return true;
   case 'I':
     // A signed 12-bit constant (for arithmetic instructions).
     Info.setRequiresImmediate(-2048, 2047);

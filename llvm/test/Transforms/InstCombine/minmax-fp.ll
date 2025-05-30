@@ -331,7 +331,7 @@ define float @maxnum_ogt_fmf_on_select(float %a, float %b) {
 
 define <2 x float> @maxnum_oge_fmf_on_select(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: @maxnum_oge_fmf_on_select(
-; CHECK-NEXT:    [[F:%.*]] = call ninf nsz <2 x float> @llvm.maxnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
+; CHECK-NEXT:    [[F:%.*]] = call nsz <2 x float> @llvm.maxnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[F]]
 ;
   %cond = fcmp oge <2 x float> %a, %b
@@ -383,6 +383,16 @@ define float @maxnum_no_nnan(float %a, float %b) {
   ret float %f
 }
 
+define float @minnum_olt_fmf_on_select_both_ninf(float %a, float %b) {
+; CHECK-LABEL: @minnum_olt_fmf_on_select_both_ninf(
+; CHECK-NEXT:    [[F:%.*]] = call ninf nsz float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float [[F]]
+;
+  %cond = fcmp ninf olt float %a, %b
+  %f = select nnan ninf nsz i1 %cond, float %a, float %b
+  ret float %f
+}
+
 define float @minnum_olt_fmf_on_select(float %a, float %b) {
 ; CHECK-LABEL: @minnum_olt_fmf_on_select(
 ; CHECK-NEXT:    [[F:%.*]] = call nsz float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
@@ -395,7 +405,7 @@ define float @minnum_olt_fmf_on_select(float %a, float %b) {
 
 define <2 x float> @minnum_ole_fmf_on_select(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: @minnum_ole_fmf_on_select(
-; CHECK-NEXT:    [[F:%.*]] = call ninf nsz <2 x float> @llvm.minnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
+; CHECK-NEXT:    [[F:%.*]] = call nsz <2 x float> @llvm.minnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[F]]
 ;
   %cond = fcmp ole <2 x float> %a, %b

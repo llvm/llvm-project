@@ -962,10 +962,8 @@ void RefLeakReport::findBindingToReport(CheckerContext &Ctx,
   // `AllocFirstBinding` to be one of them.  In situations like this,
   // it would still be the easiest case to explain to our users.
   if (!AllVarBindings.empty() &&
-      llvm::count_if(AllVarBindings,
-                     [this](const std::pair<const MemRegion *, SVal> Binding) {
-                       return Binding.first == AllocFirstBinding;
-                     }) == 0) {
+      !llvm::is_contained(llvm::make_first_range(AllVarBindings),
+                          AllocFirstBinding)) {
     // Let's pick one of them at random (if there is something to pick from).
     AllocBindingToReport = AllVarBindings[0].first;
 

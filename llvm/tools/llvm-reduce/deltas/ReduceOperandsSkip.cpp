@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceOperandsSkip.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"

@@ -30,6 +30,7 @@
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/unparse.h"
 #include "flang/Support/Fortran-features.h"
+#include "flang/Support/LangOptions.h"
 #include "flang/Support/default-kinds.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
@@ -83,6 +84,7 @@ struct DriverOptions {
   bool compileOnly{false}; // -c
   std::string outputPath; // -o path
   std::vector<std::string> searchDirectories{"."s}; // -I dir
+  Fortran::common::LangOptions langOpts;
   bool forcedForm{false}; // -Mfixed or -Mfree appeared
   bool warnOnNonstandardUsage{false}; // -Mstandard
   bool warnOnSuspiciousUsage{false}; // -pedantic
@@ -219,7 +221,8 @@ std::string CompileFortran(
     return {};
   }
   if (driver.dumpUnparse) {
-    Unparse(llvm::outs(), parseTree, driver.encoding, true /*capitalize*/,
+    Unparse(llvm::outs(), parseTree, driver.langOpts, driver.encoding,
+        true /*capitalize*/,
         options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes));
     return {};
@@ -240,7 +243,8 @@ std::string CompileFortran(
       std::exit(EXIT_FAILURE);
     }
     llvm::raw_fd_ostream tmpSource(fd, /*shouldClose*/ true);
-    Unparse(tmpSource, parseTree, driver.encoding, true /*capitalize*/,
+    Unparse(tmpSource, parseTree, driver.langOpts, driver.encoding,
+        true /*capitalize*/,
         options.features.IsEnabled(
             Fortran::common::LanguageFeature::BackslashEscapes));
   }

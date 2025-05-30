@@ -247,6 +247,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::DependentBitInt:
     case Type::BTFTagAttributed:
     case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       CanPrefixQualifiers = true;
       break;
 
@@ -2139,6 +2140,53 @@ void TypePrinter::printHLSLAttributedResourceAfter(
   }
 }
 
+void TypePrinter::printHLSLInlineSpirvBefore(const HLSLInlineSpirvType *T,
+                                             raw_ostream &OS) {
+  OS << "__hlsl_spirv_type<" << T->getOpcode();
+
+  OS << ", " << T->getSize();
+  OS << ", " << T->getAlignment();
+
+  for (auto &Operand : T->getOperands()) {
+    using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+    OS << ", ";
+    switch (Operand.getKind()) {
+    case SpirvOperandKind::ConstantId: {
+      QualType ConstantType = Operand.getResultType();
+      OS << "vk::integral_constant<";
+      printBefore(ConstantType, OS);
+      printAfter(ConstantType, OS);
+      OS << ", ";
+      OS << Operand.getValue();
+      OS << ">";
+      break;
+    }
+    case SpirvOperandKind::Literal:
+      OS << "vk::Literal<vk::integral_constant<uint, ";
+      OS << Operand.getValue();
+      OS << ">>";
+      break;
+    case SpirvOperandKind::TypeId: {
+      QualType Type = Operand.getResultType();
+      printBefore(Type, OS);
+      printAfter(Type, OS);
+      break;
+    }
+    default:
+      llvm_unreachable("Invalid SpirvOperand kind!");
+      break;
+    }
+  }
+
+  OS << ">";
+}
+
+void TypePrinter::printHLSLInlineSpirvAfter(const HLSLInlineSpirvType *T,
+                                            raw_ostream &OS) {
+  // nothing to do
+}
+
 void TypePrinter::printObjCInterfaceBefore(const ObjCInterfaceType *T,
                                            raw_ostream &OS) {
   OS << T->getDecl()->getName();
@@ -2617,6 +2665,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_constant";
   case LangAS::hlsl_private:
     return "hlsl_private";
+  case LangAS::hlsl_device:
+    return "hlsl_device";
   case LangAS::wasm_funcref:
     return "__funcref";
   default:

@@ -957,6 +957,94 @@ def LOOPNEZ : RRI8_Inst<0x06, (outs), (ins AR:$s, ltarget:$target),
 def : InstAlias<"_loopnez\t$s, $target", (LOOPNEZ AR:$s, ltarget:$target)>;
 
 //===----------------------------------------------------------------------===//
+// Mul16 Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasMul16] in {
+  def MUL16S : RRR_Inst<0x00, 0x01, 0x0D, (outs AR:$r), (ins AR:$s, AR:$t),
+                       "mul16s\t$r, $s, $t", []>;
+  def MUL16U : RRR_Inst<0x00, 0x01, 0x0C, (outs AR:$r), (ins AR:$s, AR:$t),
+                       "mul16u\t$r, $s, $t", []>;
+}
+
+//===----------------------------------------------------------------------===//
+// Mul32 Instructions
+//===----------------------------------------------------------------------===//
+
+def MULL  : ArithLogic_RRR<0x08, 0x02, "mull", mul, 1>, Requires<[HasMul32]>;
+def MULUH : ArithLogic_RRR<0x0A, 0x02, "muluh", mulhu, 1>, Requires<[HasMul32High]>;
+def MULSH : ArithLogic_RRR<0x0B, 0x02, "mulsh", mulhs, 1>, Requires<[HasMul32High]>;
+
+//===----------------------------------------------------------------------===//
+// Div32 Instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasDiv32] in {
+  def QUOS : ArithLogic_RRR<0x0D, 0x02, "quos", sdiv>;
+  def QUOU : ArithLogic_RRR<0x0C, 0x02, "quou", udiv>;
+  def REMS : ArithLogic_RRR<0x0F, 0x02, "rems", srem>;
+  def REMU : ArithLogic_RRR<0x0E, 0x02, "remu", urem>;
+}
+
+//===----------------------------------------------------------------------===//
+// Region Protection feature instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasRegionProtection] in {
+  def IDTLB : RRR_Inst<0x00, 0x00, 0x05, (outs), (ins AR:$s),
+                     "idtlb\t$s", []> {
+    let r = 0xC;
+	  let t = 0x0;
+  }
+
+  def IITLB : RRR_Inst<0x00, 0x00, 0x05, (outs), (ins AR:$s),
+                     "iitlb\t$s", []> {
+    let r = 0x4;
+	  let t = 0x0;
+  }
+
+  def PDTLB : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "pdtlb\t$t, $s", []> {
+    let r = 0xD;
+  }
+
+  def PITLB : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "pitlb\t$t, $s", []> {
+    let r = 0x5;
+  }
+
+  def RDTLB0 : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "rdtlb0\t$t, $s", []> {
+    let r = 0xB;
+  }
+
+  def RDTLB1 : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "rdtlb1\t$t, $s", []> {
+    let r = 0xF;
+  }
+
+  def RITLB0 : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "ritlb0\t$t, $s", []> {
+    let r = 0x3;
+  }
+
+  def RITLB1 : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "ritlb1\t$t, $s", []> {
+    let r = 0x7;
+  }
+
+  def WDTLB : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "wdtlb\t$t, $s", []> {
+    let r = 0xE;
+  }
+
+  def WITLB : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                      "witlb\t$t, $s", []> {
+    let r = 0x6;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // DSP Instructions
 //===----------------------------------------------------------------------===//
 include "XtensaDSPInstrInfo.td"

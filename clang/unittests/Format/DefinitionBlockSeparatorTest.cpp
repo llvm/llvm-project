@@ -574,6 +574,11 @@ TEST_F(DefinitionBlockSeparatorTest, CSharp) {
                "\r\n"
                "public class FoobarClass {\r\n"
                "  int foobar;\r\n"
+               "}\r\n"
+               "\r\n"
+               "public class LogFactory<TLogger>\r\n"
+               "    where TLogger : class, new() {\r\n"
+               "  int i;\r\n"
                "}",
                Style);
 }

@@ -186,13 +186,12 @@ template <WriteMode write_mode> class FloatWriter {
     if (total_digits_written < digits_before_decimal &&
         total_digits_written + buffered_digits >= digits_before_decimal &&
         has_decimal_point) {
+      // digits_to_write > 0 guaranteed by outer if
       size_t digits_to_write = digits_before_decimal - total_digits_written;
-      if (digits_to_write > 0) {
-        // Write the digits before the decimal point.
-        RET_IF_RESULT_NEGATIVE(writer->write({block_buffer, digits_to_write}));
-      }
+      // Write the digits before the decimal point.
+      RET_IF_RESULT_NEGATIVE(writer->write({block_buffer, digits_to_write}));
       RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT));
-      if (buffered_digits - digits_to_write > 0) {
+      if (buffered_digits > digits_to_write) {
         // Write the digits after the decimal point.
         RET_IF_RESULT_NEGATIVE(
             writer->write({block_buffer + digits_to_write,
@@ -217,12 +216,11 @@ template <WriteMode write_mode> class FloatWriter {
         total_digits_written + BLOCK_SIZE * max_block_count >=
             digits_before_decimal &&
         has_decimal_point) {
+      // digits_to_write > 0 guaranteed by outer if
       size_t digits_to_write = digits_before_decimal - total_digits_written;
-      if (digits_to_write > 0) {
-        RET_IF_RESULT_NEGATIVE(writer->write(MAX_BLOCK_DIGIT, digits_to_write));
-      }
+      RET_IF_RESULT_NEGATIVE(writer->write(MAX_BLOCK_DIGIT, digits_to_write));
       RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT));
-      if ((BLOCK_SIZE * max_block_count) - digits_to_write > 0) {
+      if ((BLOCK_SIZE * max_block_count) > digits_to_write) {
         RET_IF_RESULT_NEGATIVE(writer->write(
             MAX_BLOCK_DIGIT, (BLOCK_SIZE * max_block_count) - digits_to_write));
       }

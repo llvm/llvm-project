@@ -10,12 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 2,
-                             [SDTCisInt<0>, SDTCisInt<0>]>,
+def AArch64_smstart : SDNode<"AArch64ISD::SMSTART", SDTypeProfile<0, 1,
+                             [SDTCisInt<0>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 2,
-                             [SDTCisInt<0>, SDTCisInt<0>]>,
+def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 1,
+                             [SDTCisInt<0>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_cond_smstart : SDNode<"AArch64ISD::COND_SMSTART", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_cond_smstop  : SDNode<"AArch64ISD::COND_SMSTOP", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
 def AArch64_restore_za : SDNode<"AArch64ISD::RESTORE_ZA", SDTypeProfile<0, 3,
@@ -53,6 +61,7 @@ let usesCustomInserter = 1 in {
 }
 
 // Nodes to allocate a save buffer for SME.
+// Needed for __arm_agnostic("sme_za_state").
 def AArch64SMESaveSize : SDNode<"AArch64ISD::GET_SME_SAVE_SIZE", SDTypeProfile<1, 0,
                                [SDTCisInt<0>]>, [SDNPHasChain]>;
 let usesCustomInserter = 1, Defs = [X0] in {
@@ -305,15 +314,15 @@ def MSRpstatePseudo :
   let Defs = [VG];
 }
 
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition)),
-          (MSRpstatePseudo svcr_op:$pstate, 0b1, timm0_31:$condition)>;
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 timm0_31:$condition)),
-          (MSRpstatePseudo svcr_op:$pstate, 0b0, timm0_31:$condition)>;
+def : Pat<(AArch64_cond_smstart (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b1, timm0_31:$condition, GPR64:$pstatesm)>;
+def : Pat<(AArch64_cond_smstop (i32 svcr_op:$pstate), (i64 timm0_31:$condition), (i64 GPR64:$pstatesm)),
+          (MSRpstatePseudo svcr_op:$pstate, 0b0, timm0_31:$condition, GPR64:$pstatesm)>;
 
 // Unconditional start/stop
-def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
+def : Pat<(AArch64_smstart (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
-def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
+def : Pat<(AArch64_smstop (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
 
 
@@ -1091,8 +1100,8 @@ let Predicates = [HasSME2p2] in {
 
 } // [HasSME2p2]
 
-let Predicates = [HasSME_MOP4, HasSMEF8F16], Uses = [FPMR, FPCR] in {
-  defm FMOP4A : sme2_fmop4a_fp8_fp16_2way<"fmop4a">;
+let Predicates = [HasSME_MOP4, HasSMEF8F16] in {
+  defm FMOP4A : sme2_fmop4a_fp8_fp16_2way<"fmop4a", "int_aarch64_sme_fp8_fmop4a_za16">;
 }
 
 let Predicates = [HasSME_MOP4, HasSMEF16F16] in {
@@ -1105,10 +1114,8 @@ let Predicates = [HasSME2, HasSVEBFSCALE] in {
   defm BFMUL : sme2_bfmul_multi<"bfmul">;
 }
 
-let Uses = [FPMR, FPCR] in {
 let Predicates = [HasSME_MOP4, HasSMEF8F32] in {
-  defm FMOP4A : sme2_fmop4a_fp8_fp32_4way<"fmop4a">;
-}
+  defm FMOP4A : sme2_fmop4a_fp8_fp32_4way<"fmop4a", "int_aarch64_sme_fp8_fmop4a_za32">;
 }
 
 let Predicates = [HasSME_MOP4, HasSMEB16B16] in {

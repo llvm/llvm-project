@@ -294,8 +294,8 @@ TEST(ToolInvocation, CustomDiagnosticOptionsOverwriteParsedOnes) {
   Invocation.setDiagnosticConsumer(&Consumer);
 
   // Inject custom `DiagnosticOptions` for command-line parsing.
-  auto DiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
-  Invocation.setDiagnosticOptions(&*DiagOpts);
+  DiagnosticOptions DiagOpts;
+  Invocation.setDiagnosticOptions(&DiagOpts);
 
   EXPECT_TRUE(Invocation.run());
   // Check that the warning was issued during command-line parsing due to the
@@ -392,14 +392,14 @@ overlayRealFS(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
 
 struct CommandLineExtractorTest : public ::testing::Test {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
+  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
   driver::Driver Driver;
 
 public:
   CommandLineExtractorTest()
       : InMemoryFS(new llvm::vfs::InMemoryFileSystem),
-        Diags(CompilerInstance::createDiagnostics(*InMemoryFS,
-                                                  new DiagnosticOptions)),
+        Diags(CompilerInstance::createDiagnostics(*InMemoryFS, DiagOpts)),
         Driver("clang", llvm::sys::getDefaultTargetTriple(), *Diags,
                "clang LLVM compiler", overlayRealFS(InMemoryFS)) {}
 
@@ -793,7 +793,7 @@ TEST(ClangToolTest, StripDependencyFileAdjuster) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("-MD"));
   EXPECT_FALSE(HasFlag("-MMD"));
@@ -825,7 +825,7 @@ TEST(ClangToolTest, StripDependencyFileAdjusterShowIncludes) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("/showIncludes"));
   EXPECT_FALSE(HasFlag("/showIncludes:user"));
@@ -858,7 +858,7 @@ TEST(ClangToolTest, StripDependencyFileAdjusterMsvc) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_TRUE(HasFlag("-MD"));
   EXPECT_TRUE(HasFlag("-MDd"));
@@ -891,7 +891,7 @@ TEST(ClangToolTest, StripPluginsAdjuster) {
   Tool.run(Action.get());
 
   auto HasFlag = [&FinalArgs](const std::string &Flag) {
-    return llvm::find(FinalArgs, Flag) != FinalArgs.end();
+    return llvm::is_contained(FinalArgs, Flag);
   };
   EXPECT_FALSE(HasFlag("-Xclang"));
   EXPECT_FALSE(HasFlag("-add-plugin"));

@@ -9,11 +9,75 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 
+#if defined(__aarch64__) && defined(__linux__)
+#include <linux/prctl.h> // For PR_PAC_* constants
+#include <sys/prctl.h>
+#ifndef PR_PAC_SET_ENABLED_KEYS
+#define PR_PAC_SET_ENABLED_KEYS 60
+#endif
+#ifndef PR_PAC_GET_ENABLED_KEYS
+#define PR_PAC_GET_ENABLED_KEYS 61
+#endif
+#ifndef PR_PAC_APIAKEY
+#define PR_PAC_APIAKEY (1UL << 0)
+#endif
+#ifndef PR_PAC_APIBKEY
+#define PR_PAC_APIBKEY (1UL << 1)
+#endif
+#ifndef PR_PAC_APDAKEY
+#define PR_PAC_APDAKEY (1UL << 2)
+#endif
+#ifndef PR_PAC_APDBKEY
+#define PR_PAC_APDBKEY (1UL << 3)
+#endif
+#endif
+
 #define GET_AVAILABLE_OPCODE_CHECKER
 #include "AArch64GenInstrInfo.inc"
 
 namespace llvm {
 namespace exegesis {
+
+bool isPointerAuth(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+
+  // FIXME: Pointer Authentication instructions.
+  // We would like to measure these instructions, but they can behave
+  // differently on different platforms, and maybe the snippets need to look
+  // different for these instructions,
+  // Platform-specific handling:  On Linux, we disable authentication, may
+  // interfere with measurements. On non-Linux platforms, disable opcodes for
+  // now.
+  case AArch64::AUTDA:
+  case AArch64::AUTDB:
+  case AArch64::AUTDZA:
+  case AArch64::AUTDZB:
+  case AArch64::AUTIA:
+  case AArch64::AUTIA1716:
+  case AArch64::AUTIASP:
+  case AArch64::AUTIAZ:
+  case AArch64::AUTIB:
+  case AArch64::AUTIB1716:
+  case AArch64::AUTIBSP:
+  case AArch64::AUTIBZ:
+  case AArch64::AUTIZA:
+  case AArch64::AUTIZB:
+    return true;
+  }
+}
+
+bool isLoadTagMultiple(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return false;
+
+  // Load tag multiple instruction
+  case AArch64::LDGM:
+    return true;
+  }
+}
 
 static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
@@ -133,6 +197,35 @@ private:
   void addTargetSpecificPasses(PassManagerBase &PM) const override {
     // Function return is a pseudo-instruction that needs to be expanded
     PM.add(createAArch64ExpandPseudoPass());
+  }
+
+  const char *getIgnoredOpcodeReasonOrNull(const LLVMState &State,
+                                           unsigned Opcode) const override {
+    if (const char *Reason =
+            ExegesisTarget::getIgnoredOpcodeReasonOrNull(State, Opcode))
+      return Reason;
+
+    if (isPointerAuth(Opcode)) {
+#if defined(__aarch64__) && defined(__linux__)
+      // Disable all PAC keys. Note that while we expect the measurements to
+      // be the same with PAC keys disabled, they could potentially be lower
+      // since authentication checks are bypassed.
+      if (prctl(PR_PAC_SET_ENABLED_KEYS,
+                PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY |
+                    PR_PAC_APDBKEY, // all keys
+                0,                  // disable all
+                0, 0) < 0) {
+        return "Failed to disable PAC keys";
+      }
+#else
+      return "Unsupported opcode: isPointerAuth";
+#endif
+    }
+
+    if (isLoadTagMultiple(Opcode))
+      return "Unsupported opcode: load tag multiple";
+
+    return nullptr;
   }
 };
 

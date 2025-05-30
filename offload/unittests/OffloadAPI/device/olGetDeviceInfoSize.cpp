@@ -9,50 +9,54 @@
 #include <OffloadAPI.h>
 
 #include "../common/Fixtures.hpp"
-#include "olDeviceInfo.hpp"
 
-struct olGetDeviceInfoSizeTest
-    : offloadDeviceTest,
-      ::testing::WithParamInterface<ol_device_info_t> {
+using olGetDeviceInfoSizeTest = OffloadDeviceTest;
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetDeviceInfoSizeTest);
 
-  void SetUp() override { RETURN_ON_FATAL_FAILURE(offloadDeviceTest::SetUp()); }
-};
-
-// TODO: We could autogenerate the list of enum values
-INSTANTIATE_TEST_SUITE_P(
-    , olGetDeviceInfoSizeTest, ::testing::ValuesIn(DeviceQueries),
-    [](const ::testing::TestParamInfo<ol_device_info_t> &info) {
-      std::stringstream ss;
-      ss << info.param;
-      return ss.str();
-    });
-
-TEST_P(olGetDeviceInfoSizeTest, Success) {
-  ol_device_info_t InfoType = GetParam();
+TEST_P(olGetDeviceInfoSizeTest, SuccessType) {
   size_t Size = 0;
-
-  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, InfoType, &Size));
-  auto ExpectedSize = DeviceInfoSizeMap.find(InfoType);
-  if (ExpectedSize != DeviceInfoSizeMap.end()) {
-    ASSERT_EQ(Size, ExpectedSize->second);
-  } else {
-    ASSERT_NE(Size, 0lu);
-  }
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_TYPE, &Size));
+  ASSERT_EQ(Size, sizeof(ol_device_type_t));
 }
 
-TEST_F(olGetDeviceInfoSizeTest, InvalidNullHandle) {
+TEST_P(olGetDeviceInfoSizeTest, SuccessPlatform) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_PLATFORM, &Size));
+  ASSERT_EQ(Size, sizeof(ol_platform_handle_t));
+}
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessName) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &Size));
+  ASSERT_NE(Size, 0ul);
+}
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessVendor) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_VENDOR, &Size));
+  ASSERT_NE(Size, 0ul);
+}
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessDriverVersion) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(
+      olGetDeviceInfoSize(Device, OL_DEVICE_INFO_DRIVER_VERSION, &Size));
+  ASSERT_NE(Size, 0ul);
+}
+
+TEST_P(olGetDeviceInfoSizeTest, InvalidNullHandle) {
   size_t Size = 0;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
                olGetDeviceInfoSize(nullptr, OL_DEVICE_INFO_TYPE, &Size));
 }
 
-TEST_F(olGetDeviceInfoSizeTest, InvalidDeviceInfoEnumeration) {
+TEST_P(olGetDeviceInfoSizeTest, InvalidDeviceInfoEnumeration) {
   size_t Size = 0;
   ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
                olGetDeviceInfoSize(Device, OL_DEVICE_INFO_FORCE_UINT32, &Size));
 }
 
-TEST_F(olGetDeviceInfoSizeTest, InvalidNullPointer) {
+TEST_P(olGetDeviceInfoSizeTest, InvalidNullPointer) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetDeviceInfoSize(Device, OL_DEVICE_INFO_TYPE, nullptr));
 }

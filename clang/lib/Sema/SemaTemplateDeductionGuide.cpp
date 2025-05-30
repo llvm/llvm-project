@@ -690,6 +690,26 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
   SemaRef.MarkUsedTemplateParameters(
       DeducedArgs, TemplateParamsList->getDepth(), ReferencedTemplateParams);
 
+  auto MarkDefaultArgs = [&](auto *Param) {
+    if (!Param->hasDefaultArgument())
+      return;
+    SemaRef.MarkUsedTemplateParameters(
+        Param->getDefaultArgument().getArgument(),
+        TemplateParamsList->getDepth(), ReferencedTemplateParams);
+  };
+
+  for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
+    if (!ReferencedTemplateParams[Index])
+      continue;
+    auto *Param = TemplateParamsList->getParam(Index);
+    if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(Param))
+      MarkDefaultArgs(TTPD);
+    else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(Param))
+      MarkDefaultArgs(NTTPD);
+    else
+      MarkDefaultArgs(cast<TemplateTemplateParmDecl>(Param));
+  }
+
   SmallVector<unsigned> Results;
   for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
     if (ReferencedTemplateParams[Index])
@@ -1079,6 +1099,10 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // parameters, used for building `TemplateArgsForBuildingFPrime`.
   SmallVector<TemplateArgument, 16> TransformedDeducedAliasArgs(
       AliasTemplate->getTemplateParameters()->size());
+  // We might be already within a pack expansion, but rewriting template
+  // parameters is independent of that. (We may or may not expand new packs
+  // when rewriting. So clear the state)
+  Sema::ArgPackSubstIndexRAII PackSubstReset(SemaRef, std::nullopt);
 
   for (unsigned AliasTemplateParamIdx : DeducedAliasTemplateParams) {
     auto *TP =

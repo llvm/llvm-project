@@ -31,6 +31,8 @@ def defs;
 def pattern;
 def match;
 def apply;
+def combine;
+def empty_action;
 
 def wip_match_opcode;
 
@@ -67,18 +69,17 @@ class GIDefMatchData<string type>  {
   string Type = type;
 }
 
-class GICombineRule<dag defs, dag match, dag apply> : GICombine {
+class GICombineRule<dag defs, dag a0, dag a1 = (empty_action)> : GICombine {
   /// Defines the external interface of the match rule. This includes:
   /// * The names of the root nodes (requires at least one)
   /// See GIDefKind for details.
   dag Defs = defs;
 
-  /// Defines the things which must be true for the pattern to match
-  dag Match = match;
-
-  /// Defines the things which happen after the decision is made to apply a
-  /// combine rule.
-  dag Apply = apply;
+  // The patterns that will be used. Two types of list can exist:
+  //  match (Action0) + apply (Action1).
+  //  combine (Action0) + empty_action (Action1).
+  dag Action0 = a0;
+  dag Action1 = a1;
 
   /// Defines the predicates that are checked before the match function
   /// is called. Targets can use this to, for instance, check Subtarget

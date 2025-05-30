@@ -21,7 +21,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_NORMALIZEMEMREFS
+#define GEN_PASS_DEF_NORMALIZEMEMREFSPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -30,6 +30,7 @@ namespace memref {
 
 using namespace mlir;
 using namespace mlir::affine;
+using namespace mlir::memref;
 
 namespace {
 
@@ -40,7 +41,7 @@ namespace {
 /// to call a non-normalizable function, we treat that function as
 /// non-normalizable as well. We assume external functions to be normalizable.
 struct NormalizeMemRefs
-    : public memref::impl::NormalizeMemRefsBase<NormalizeMemRefs> {
+    : public memref::impl::NormalizeMemRefsPassBase<NormalizeMemRefs> {
   void runOnOperation() override;
   void normalizeFuncOpMemRefs(func::FuncOp funcOp, ModuleOp moduleOp);
   bool areMemRefsNormalizable(func::FuncOp funcOp);
@@ -52,11 +53,6 @@ struct NormalizeMemRefs
 };
 
 } // namespace
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::memref::createNormalizeMemRefsPass() {
-  return std::make_unique<NormalizeMemRefs>();
-}
 
 void NormalizeMemRefs::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "Normalizing Memrefs...\n");
@@ -164,7 +160,7 @@ bool NormalizeMemRefs::areMemRefsNormalizable(func::FuncOp funcOp) {
     return true;
 
   if (funcOp
-          .walk([&](memref::AllocOp allocOp) -> WalkResult {
+          .walk([&](AllocOp allocOp) -> WalkResult {
             Value oldMemRef = allocOp.getResult();
             if (!allocOp.getType().getLayout().isIdentity() &&
                 !isMemRefNormalizable(oldMemRef.getUsers()))
@@ -175,7 +171,7 @@ bool NormalizeMemRefs::areMemRefsNormalizable(func::FuncOp funcOp) {
     return false;
 
   if (funcOp
-          .walk([&](memref::AllocaOp allocaOp) -> WalkResult {
+          .walk([&](AllocaOp allocaOp) -> WalkResult {
             Value oldMemRef = allocaOp.getResult();
             if (!allocaOp.getType().getLayout().isIdentity() &&
                 !isMemRefNormalizable(oldMemRef.getUsers()))
@@ -346,22 +342,31 @@ void NormalizeMemRefs::updateFunctionSignature(func::FuncOp funcOp,
 }
 
 /// Normalizes the memrefs within a function which includes those arising as a
-/// result of AllocOps, AllocaOps, CallOps and function's argument. The ModuleOp
-/// argument is used to help update function's signature after normalization.
+/// result of AllocOps, AllocaOps, CallOps, ReinterpretCastOps and function's
+/// argument. The ModuleOp argument is used to help update function's signature
+/// after normalization.
 void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
                                               ModuleOp moduleOp) {
   // Turn memrefs' non-identity layouts maps into ones with identity. Collect
-  // alloc/alloca ops first and then process since normalizeMemRef
-  // replaces/erases ops during memref rewriting.
-  SmallVector<memref::AllocOp, 4> allocOps;
-  funcOp.walk([&](memref::AllocOp op) { allocOps.push_back(op); });
-  for (memref::AllocOp allocOp : allocOps)
+  // alloc, alloca ops and reinterpret_cast ops first and then process since
+  // normalizeMemRef replaces/erases ops during memref rewriting.
+  SmallVector<AllocOp, 4> allocOps;
+  SmallVector<AllocaOp> allocaOps;
+  SmallVector<ReinterpretCastOp> reinterpretCastOps;
+  funcOp.walk([&](Operation *op) {
+    if (auto allocOp = dyn_cast<AllocOp>(op))
+      allocOps.push_back(allocOp);
+    else if (auto allocaOp = dyn_cast<AllocaOp>(op))
+      allocaOps.push_back(allocaOp);
+    else if (auto reinterpretCastOp = dyn_cast<ReinterpretCastOp>(op))
+      reinterpretCastOps.push_back(reinterpretCastOp);
+  });
+  for (AllocOp allocOp : allocOps)
     (void)normalizeMemRef(allocOp);
-
-  SmallVector<memref::AllocaOp> allocaOps;
-  funcOp.walk([&](memref::AllocaOp op) { allocaOps.push_back(op); });
-  for (memref::AllocaOp allocaOp : allocaOps)
+  for (AllocaOp allocaOp : allocaOps)
     (void)normalizeMemRef(allocaOp);
+  for (ReinterpretCastOp reinterpretCastOp : reinterpretCastOps)
+    (void)normalizeMemRef(reinterpretCastOp);
 
   // We use this OpBuilder to create new memref layout later.
   OpBuilder b(funcOp);

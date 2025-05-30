@@ -134,6 +134,9 @@
 //      HTML-CALC: <div>brief</div>
 //      HTML-CALC: <p> Holds a public value.</p>
 //      HTML-CALC: <div>public int public_val</div>
+//      HTML-CALC: <div>brief</div>
+//      HTML-CALC: <p> A static value.</p>
+//      HTML-CALC: <div>public static const int static_val</div>
 
 //      HTML-CALC: <h2 id="Functions">Functions</h2>
 //      HTML-CALC: <h3 id="{{([0-9A-F]{40})}}">add</h3>
@@ -191,7 +194,7 @@
 //      HTML-CALC: <div>throw</div>
 //      HTML-CALC: <p>if b is zero.</p>
 
-//      HTML-CALC: <p>public int mod(int a, int b)</p>
+//      HTML-CALC: <p>public static int mod(int a, int b)</p>
 //   CALC-NO-REPOSITORY: Defined at line 54 of file .{{.}}include{{.}}Calculator.h
 //      CALC-REPOSITORY: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h#54">54</a>
@@ -326,6 +329,7 @@
 // MD-CALC:  Provides basic arithmetic operations.
 // MD-CALC: ## Members
 // MD-CALC: public int public_val
+// MD-CALC: public static const int static_val
 // MD-CALC: ## Functions
 // MD-CALC: ### add
 // MD-CALC: *public int add(int a, int b)*
@@ -357,7 +361,7 @@
 // MD-CALC: **return** double The result of a / b.
 // MD-CALC: **throw**if b is zero.
 // MD-CALC: ### mod
-// MD-CALC: *public int mod(int a, int b)*
+// MD-CALC: *public static int mod(int a, int b)*
 // MD-CALC: *Defined at ./include{{[\/]}}Calculator.h#54*
 // MD-CALC: **brief** Performs the mod operation on integers.
 // MD-CALC: **a** First integer.

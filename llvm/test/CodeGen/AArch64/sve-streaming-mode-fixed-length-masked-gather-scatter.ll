@@ -20,9 +20,8 @@ define <2 x i64> @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uaddv d0, p0, z0.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    strb w8, [sp, #12]
-; CHECK-NEXT:    and w8, w8, #0xff
+; CHECK-NEXT:    str b0, [sp, #12]
+; CHECK-NEXT:    ldrb w8, [sp, #12]
 ; CHECK-NEXT:    tbz w8, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load
 ; CHECK-NEXT:    fmov x9, d1
@@ -109,11 +108,10 @@ define void @masked_scatter_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    mov z2.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    and z1.d, z2.d, z1.d
-; CHECK-NEXT:    uaddv d1, p0, z1.d
-; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    uaddv d2, p0, z1.d
 ; CHECK-NEXT:    ldr q1, [x1]
-; CHECK-NEXT:    strb w8, [sp, #12]
-; CHECK-NEXT:    and w8, w8, #0xff
+; CHECK-NEXT:    str b2, [sp, #12]
+; CHECK-NEXT:    ldrb w8, [sp, #12]
 ; CHECK-NEXT:    tbnz w8, #0, .LBB1_3
 ; CHECK-NEXT:  // %bb.1: // %else
 ; CHECK-NEXT:    tbnz w8, #1, .LBB1_4

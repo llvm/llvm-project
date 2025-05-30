@@ -32,7 +32,7 @@ using namespace clang;
 static bool MacroBodyEndsInBackslash(StringRef MacroBody) {
   while (!MacroBody.empty() && isWhitespace(MacroBody.back()))
     MacroBody = MacroBody.drop_back();
-  return !MacroBody.empty() && MacroBody.back() == '\\';
+  return MacroBody.ends_with('\\');
 }
 
 // Append a #define line to Buf for Macro.  Macro should be of the form XXX,
@@ -618,8 +618,10 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HIP_MEMORY_SCOPE_SYSTEM", "5");
     if (LangOpts.HIPStdPar) {
       Builder.defineMacro("__HIPSTDPAR__");
-      if (LangOpts.HIPStdParInterposeAlloc)
+      if (LangOpts.HIPStdParInterposeAlloc) {
         Builder.defineMacro("__HIPSTDPAR_INTERPOSE_ALLOC__");
+        Builder.defineMacro("__HIPSTDPAR_INTERPOSE_ALLOC_V1__");
+      }
     }
     if (LangOpts.CUDAIsDevice) {
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");
@@ -772,6 +774,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   Builder.defineMacro("__cpp_pack_indexing", "202311L");
   Builder.defineMacro("__cpp_deleted_function", "202403L");
   Builder.defineMacro("__cpp_variadic_friend", "202403L");
+  // Builder.defineMacro("__cpp_trivial_relocatability", "202502L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
@@ -974,7 +977,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
     if (LangOpts.ObjCRuntime.getKind() == ObjCRuntime::GNUstep) {
       auto version = LangOpts.ObjCRuntime.getVersion();
-      std::string versionString = "1";
       // Don't rely on the tuple argument, because we can be asked to target
       // later ABIs than we actually support, so clamp these values to those
       // currently supported

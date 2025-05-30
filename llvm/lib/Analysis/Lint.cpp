@@ -344,19 +344,13 @@ void Lint::visitCallBase(CallBase &I) {
                            MMI->getSourceAlign(), nullptr, MemRef::Read);
       break;
     }
-    case Intrinsic::memset: {
+    case Intrinsic::memset:
+    case Intrinsic::memset_inline: {
       MemSetInst *MSI = cast<MemSetInst>(&I);
       visitMemoryReference(I, MemoryLocation::getForDest(MSI),
                            MSI->getDestAlign(), nullptr, MemRef::Write);
       break;
     }
-    case Intrinsic::memset_inline: {
-      MemSetInlineInst *MSII = cast<MemSetInlineInst>(&I);
-      visitMemoryReference(I, MemoryLocation::getForDest(MSII),
-                           MSII->getDestAlign(), nullptr, MemRef::Write);
-      break;
-    }
-
     case Intrinsic::vastart:
       // vastart in non-varargs function is rejected by the verifier
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
