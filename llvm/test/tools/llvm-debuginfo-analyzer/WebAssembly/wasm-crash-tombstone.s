@@ -22,10 +22,11 @@
 # Stack dump:
 # 0. Program arguments: llvm-debuginfo-analyzer out/lzma-lzmadec.wasm --print=instructions
 
-# The test-clang-tombstone.s was produced by the following steps:
+# The test case was produced by the following steps:
+#
 # 1) clang --target=wasm32 -S -g Inputs/test-clang.cpp
 #                             -o Inputs/wasm-crash-tombstone.s
-# 2) Manually changing the DW_AT_low_pc for the DW_TAG_subprogram, from
+# 2) Manually changing the DW_AT_low_pc for the DW_TAG_subprogram:
 #    .Lfunc_begin0 to 0xffffffff to mark the function as dead code:
 #
 #	   .int8	2                          # Abbrev [2] 0x26:0x6a DW_TAG_subprogram
