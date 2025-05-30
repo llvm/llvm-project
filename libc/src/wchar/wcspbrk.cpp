@@ -13,13 +13,20 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+bool contains_char(const wchar_t *str, wchar_t target) {
+  for (; *str != 0; str++)
+    if (*str == target)
+      return true;
+
+  return false;
+}
+
 LLVM_LIBC_FUNCTION(const wchar_t *, wcspbrk,
                    (const wchar_t *src, const wchar_t *breakset)) {
   // currently O(n * m), can be further optimized to O(n + m) with a hash set
   for (int src_idx = 0; src[src_idx] != 0; src_idx++)
-    for (int breakset_idx = 0; breakset[breakset_idx] != 0; breakset_idx++)
-      if (src[src_idx] == breakset[breakset_idx])
-        return src + src_idx;
+    if (contains_char(breakset, src[src_idx]))
+      return src + src_idx;
 
   return nullptr;
 }
