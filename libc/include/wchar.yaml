@@ -64,3 +64,11 @@ functions:
       - type: const wchar_t *
       - type: const wchar_t *
       - type: size_t
+  - name: wmemcpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments: 
+      - type: __restricted wchar_t *
+      - type: const __ restricted wchar_t *
+      - type: size_t
