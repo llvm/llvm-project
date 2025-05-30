@@ -1044,7 +1044,7 @@ class DebugCommunication(object):
     def request_dataBreakpointInfo(
         self,
         name: str,
-        variablesReference: Optional[int] | None = None,
+        variablesReference: Optional[int] = None,
         frameIndex: Optional[int] = 0,
         bytes_: Optional[int] = None,
         asAddress: Optional[bool] = None,
