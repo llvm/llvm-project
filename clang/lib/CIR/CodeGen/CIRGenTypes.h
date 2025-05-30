@@ -68,6 +68,8 @@ class CIRGenTypes {
   /// types will be in this set.
   llvm::SmallPtrSet<const clang::Type *, 4> recordsBeingLaidOut;
 
+  llvm::SmallVector<const clang::RecordDecl *, 8> deferredRecords;
+
   /// Heper for convertType.
   mlir::Type convertFunctionTypeInternal(clang::QualType ft);
 

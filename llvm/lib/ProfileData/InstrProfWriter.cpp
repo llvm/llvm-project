@@ -16,6 +16,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
@@ -239,6 +240,7 @@ void InstrProfWriter::addMemProfRecord(
       Alloc.Info.setTotalLifetime(NewTL);
     }
   }
+  MemProfSumBuilder.addRecord(NewRecord);
   auto [Iter, Inserted] = MemProfData.Records.insert({Id, NewRecord});
   // If we inserted a new record then we are done.
   if (Inserted) {
@@ -307,17 +309,27 @@ bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
         return false;
 
   // Add one record at a time if randomization is requested.
-  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness)
+  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness) {
+    // Need to manually add each record to the builder, which is otherwise done
+    // in addMemProfRecord.
+    for (const auto &[GUID, Record] : Incoming.Records)
+      MemProfSumBuilder.addRecord(Record);
     MemProfData.Records = std::move(Incoming.Records);
-  else
+  } else {
     for (const auto &[GUID, Record] : Incoming.Records)
       addMemProfRecord(GUID, Record);
+  }
 
   return true;
 }
 
 void InstrProfWriter::addBinaryIds(ArrayRef<llvm::object::BuildID> BIs) {
   llvm::append_range(BinaryIds, BIs);
+}
+
+void InstrProfWriter::addDataAccessProfData(
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfDataIn) {
+  DataAccessProfileData = std::move(DataAccessProfDataIn);
 }
 
 void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
@@ -605,8 +617,10 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
-    if (auto E = writeMemProf(OS, MemProfData, MemProfVersionRequested,
-                              MemProfFullSchema))
+
+    if (auto E = writeMemProf(
+            OS, MemProfData, MemProfVersionRequested, MemProfFullSchema,
+            std::move(DataAccessProfileData), MemProfSumBuilder.getSummary()))
       return E;
   }
 

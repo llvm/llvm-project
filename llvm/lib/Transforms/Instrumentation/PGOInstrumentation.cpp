@@ -2086,10 +2086,12 @@ static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
 
   unsigned BBNum = 0, BBMisMatchNum = 0, NonZeroBBNum = 0;
   for (auto &BBI : F) {
-    uint64_t CountValue = 0;
-    uint64_t BFICountValue = 0;
+    PGOUseBBInfo *BBInfo = Func.findBBInfo(&BBI);
+    if (!BBInfo)
+      continue;
 
-    CountValue = Func.getBBInfo(&BBI).Count.value_or(CountValue);
+    uint64_t CountValue = BBInfo->Count.value_or(CountValue);
+    uint64_t BFICountValue = 0;
 
     BBNum++;
     if (CountValue)

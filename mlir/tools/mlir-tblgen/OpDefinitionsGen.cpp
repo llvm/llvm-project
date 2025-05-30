@@ -1588,6 +1588,7 @@ void OpEmitter::genPropertiesSupport() {
 
   const char *propHashFmt = R"decl(
   auto hash_{0} = [] (const auto &propStorage) -> llvm::hash_code {
+    using ::llvm::hash_value;
     return {1};
   };
 )decl";
@@ -1605,6 +1606,7 @@ void OpEmitter::genPropertiesSupport() {
       }
     }
   }
+  hashMethod << "  using llvm::hash_value;\n";
   hashMethod << "  return llvm::hash_combine(";
   llvm::interleaveComma(
       attrOrProperties, hashMethod, [&](const ConstArgument &attrOrProp) {
@@ -1614,8 +1616,8 @@ void OpEmitter::genPropertiesSupport() {
             hashMethod << "\n    hash_" << namedProperty->name << "(prop."
                        << namedProperty->name << ")";
           } else {
-            hashMethod << "\n    ::llvm::hash_value(prop."
-                       << namedProperty->name << ")";
+            hashMethod << "\n    hash_value(prop." << namedProperty->name
+                       << ")";
           }
           return;
         }

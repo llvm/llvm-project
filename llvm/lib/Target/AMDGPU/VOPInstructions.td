@@ -526,14 +526,16 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
   bits<9> scale_src0;
   bits<9> scale_src1;
 
-  bits<2> scale_src0_opsel;
-  bits<2> scale_src1_opsel;
+  //MFMALdScaleModifierOp transforms 2 bit opsel input to 4 bit value
+  //where opsel and opselHi are in 3rd and 4th bit. 
+  bits<4> src0_modifiers;
+  bits<4> src1_modifiers;
 
   // Inst{7-0} = unused
   // Inst{10-8} = neg_hi;
   // Inst{13-11} = op_sel
-  let Inst{11} = scale_src0_opsel{0};
-  let Inst{12} = scale_src1_opsel{0};
+  let Inst{11} = src0_modifiers{2}; //opsel[0]
+  let Inst{12} = src1_modifiers{2}; //opsel[1]
   // Inst{13} = unused op_sel
   // Inst{14} = unused op_sel_hi2
 
@@ -542,8 +544,8 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
   let Inst{49-41} = scale_src1;
   // Inst{50-58} = unused
   // Inst{60-59} = op_sel_hi;
-  let Inst{59} = scale_src0_opsel{1};
-  let Inst{60} = scale_src1_opsel{1};
+  let Inst{59} = src0_modifiers{3}; //opsel_hi[0]
+  let Inst{60} = src1_modifiers{3}; //opsel_hi[1]
   // Inst{63-61} = neg;
 
   // The high half of the encoding is the unscaled mfma op.
@@ -1437,17 +1439,17 @@ class getVOP3MAIScaledPat<VOPProfile P, SDPatternOperator node> {
                       // mfma
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
                                             timm:$cbsz, timm:$blgp,
-                                            MFMALdScaleModifierOp:$scale_src0_opsel,
+                                            MFMALdScaleModifierOp:$src0_modifiers,
                                             i32:$scale_src0,
-                                            MFMALdScaleModifierOp:$scale_src1_opsel,
+                                            MFMALdScaleModifierOp:$src1_modifiers,
                                             i32:$scale_src1
                                             ))],
                       // smfmac
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2, i32:$idx,
                                             timm:$cbsz, timm:$abid,
-                                            MFMALdScaleModifierOp:$scale_src0_opsel,
+                                            MFMALdScaleModifierOp:$src0_modifiers,
                                             i32:$scale_src0,
-                                            MFMALdScaleModifierOp:$scale_src1_opsel,
+                                            MFMALdScaleModifierOp:$src1_modifiers,
                                             i32:$scale_src1))]);
 }
 

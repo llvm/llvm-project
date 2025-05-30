@@ -107,6 +107,11 @@ public:
 
 private:
   std::unique_ptr<LangOptions> LangOpts;
+  // FIXME: The documentation on \c LoadFrom* member functions states that the
+  // DiagnosticsEngine (and therefore DiagnosticOptions) must outlive the
+  // returned ASTUnit. This is not the case. Enfore it by storing non-owning
+  // pointers here.
+  std::shared_ptr<DiagnosticOptions> DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
@@ -674,6 +679,7 @@ public:
   /// Create a ASTUnit. Gets ownership of the passed CompilerInvocation.
   static std::unique_ptr<ASTUnit>
   create(std::shared_ptr<CompilerInvocation> CI,
+         std::shared_ptr<DiagnosticOptions> DiagOpts,
          IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
          CaptureDiagsKind CaptureDiagnostics, bool UserFilesAreVolatile);
 
@@ -700,7 +706,8 @@ public:
   /// \returns - The initialized ASTUnit or null if the AST failed to load.
   static std::unique_ptr<ASTUnit> LoadFromASTFile(
       StringRef Filename, const PCHContainerReader &PCHContainerRdr,
-      WhatToLoad ToLoad, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+      WhatToLoad ToLoad, std::shared_ptr<DiagnosticOptions> DiagOpts,
+      IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
       const FileSystemOptions &FileSystemOpts,
       const HeaderSearchOptions &HSOpts, const LangOptions *LangOpts = nullptr,
       bool OnlyLocalDecls = false,
@@ -762,6 +769,7 @@ public:
   static ASTUnit *LoadFromCompilerInvocationAction(
       std::shared_ptr<CompilerInvocation> CI,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+      std::shared_ptr<DiagnosticOptions> DiagOpts,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
       FrontendAction *Action = nullptr, ASTUnit *Unit = nullptr,
       bool Persistent = true, StringRef ResourceFilesPath = StringRef(),
@@ -789,6 +797,7 @@ public:
   static std::unique_ptr<ASTUnit> LoadFromCompilerInvocation(
       std::shared_ptr<CompilerInvocation> CI,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+      std::shared_ptr<DiagnosticOptions> DiagOpts,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FileManager *FileMgr,
       bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
@@ -837,6 +846,7 @@ public:
   static std::unique_ptr<ASTUnit> LoadFromCommandLine(
       const char **ArgBegin, const char **ArgEnd,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+      std::shared_ptr<DiagnosticOptions> DiagOpts,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
       bool StorePreamblesInMemory = false,
       StringRef PreambleStoragePath = StringRef(), bool OnlyLocalDecls = false,

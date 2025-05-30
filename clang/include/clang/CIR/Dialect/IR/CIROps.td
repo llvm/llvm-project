@@ -417,11 +417,15 @@ def LoadOp : CIR_Op<"load", [
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr, UnitAttr:$isDeref);
+                           [MemRead]>:$addr,
+                       UnitAttr:$isDeref,
+                       OptionalAttr<I64Attr>:$alignment
+                       );
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
     (`deref` $isDeref^)?
+    (`align` `(` $alignment^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
@@ -458,9 +462,11 @@ def StoreOp : CIR_Op<"store", [
 
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
-                           [MemWrite]>:$addr);
+                           [MemWrite]>:$addr,
+                           OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
 
@@ -1643,7 +1649,8 @@ def GlobalOp : CIR_Op<"global"> {
                        TypeAttr:$sym_type,
                        Arg<GlobalLinkageKind, "linkage type">:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
-                       UnitAttr:$dsolocal);
+                       UnitAttr:$dsolocal,
+                       OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
     $linkage
@@ -2103,6 +2110,35 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecCmpOp
+//===----------------------------------------------------------------------===//
+
+def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
+
+  let summary = "Compare two vectors";
+  let description = [{
+    The `cir.vec.cmp` operation does an element-wise comparison of two vectors
+    of the same type. The result is a vector of the same size as the operands
+    whose element type is the signed integral type that is the same size as the
+    element type of the operands. The values in the result are 0 or -1.
+
+    ```mlir
+    %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins Arg<CmpOpKind, "cmp kind">:$kind, CIR_VectorType:$lhs,
+                       CIR_VectorType:$rhs);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
+    qualified(type($result)) attr-dict
+  }];
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

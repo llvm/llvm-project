@@ -13,6 +13,7 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBFileSpec.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -160,6 +161,15 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 ///     The environment variables stored in the env key
 lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
+
+/// Gets an SBFileSpec and returns its path as a string.
+///
+/// \param[in] file_spec
+///     The file spec.
+///
+/// \return
+///     The file path as a string.
+std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec);
 
 /// Helper for sending telemetry to lldb server, if client-telemetry is enabled.
 class TelemetryDispatcher {

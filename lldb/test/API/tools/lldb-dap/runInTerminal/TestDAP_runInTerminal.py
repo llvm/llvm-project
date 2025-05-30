@@ -128,8 +128,8 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertFalse(response["success"])
         self.assertIn(
-            "Could not create a target for a program 'INVALIDPROGRAM': 'INVALIDPROGRAM' does not exist",
-            response["message"],
+            "'INVALIDPROGRAM' does not exist",
+            response["body"]["error"]["format"],
         )
 
     @skipIfWindows

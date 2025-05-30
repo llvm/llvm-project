@@ -147,6 +147,7 @@ public:
   Instruction *visitAddrSpaceCast(AddrSpaceCastInst &CI);
   Instruction *foldItoFPtoI(CastInst &FI);
   Instruction *visitSelectInst(SelectInst &SI);
+  Instruction *foldShuffledIntrinsicOperands(IntrinsicInst *II);
   Instruction *visitCallInst(CallInst &CI);
   Instruction *visitInvokeInst(InvokeInst &II);
   Instruction *visitCallBrInst(CallBrInst &CBI);
@@ -604,6 +605,8 @@ public:
   Instruction *foldVectorBinop(BinaryOperator &Inst);
   Instruction *foldVectorSelect(SelectInst &Sel);
   Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf);
+  Constant *unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
+                              VectorType *NewCTy);
 
   /// Given a binary operator, cast instruction, or select which has a PHI node
   /// as operand #0, see if we can fold the instruction into the PHI (which is

@@ -658,7 +658,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
     if (isa<NamedTypeConstraint *>(opArg)) {
       auto operandName =
           formatv("{0}.getODSOperands({1})", castedName, nextOperand);
-      emitOperandMatch(tree, castedName, operandName.str(), opArgIdx,
+      emitOperandMatch(tree, castedName, operandName.str(), nextOperand,
                        /*operandMatcher=*/tree.getArgAsLeaf(i),
                        /*argName=*/tree.getArgName(i), opArgIdx,
                        /*variadicSubIndex=*/std::nullopt);
@@ -680,7 +680,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
                                       int argIndex,
                                       std::optional<int> variadicSubIndex) {
   Operator &op = tree.getDialectOp(opMap);
-  auto *operand = cast<NamedTypeConstraint *>(op.getArg(operandIndex));
+  NamedTypeConstraint operand = op.getOperand(operandIndex);
 
   // If a constraint is specified, we need to generate C++ statements to
   // check the constraint.
@@ -693,8 +693,8 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
     // Only need to verify if the matcher's type is different from the one
     // of op definition.
     Constraint constraint = operandMatcher.getAsConstraint();
-    if (operand->constraint != constraint) {
-      if (operand->isVariableLength()) {
+    if (operand.constraint != constraint) {
+      if (operand.isVariableLength()) {
         auto error = formatv(
             "further constrain op {0}'s variadic operand #{1} unsupported now",
             op.getOperationName(), argIndex);
@@ -706,7 +706,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
           verifier, opName, self.str(),
           formatv(
               "\"operand {0} of op '{1}' failed to satisfy constraint: '{2}'\"",
-              operand - op.operand_begin(), op.getOperationName(),
+              operandIndex, op.getOperationName(),
               escapeString(constraint.getSummary()))
               .str());
     }
@@ -715,7 +715,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
   // Capture the value
   // `$_` is a special symbol to ignore op argument matching.
   if (!argName.empty() && argName != "_") {
-    auto res = symbolInfoMap.findBoundSymbol(argName, tree, op, operandIndex,
+    auto res = symbolInfoMap.findBoundSymbol(argName, tree, op, argIndex,
                                              variadicSubIndex);
     if (res == symbolInfoMap.end())
       PrintFatalError(loc, formatv("symbol not found: {0}", argName));
@@ -821,7 +821,7 @@ void PatternEmitter::emitVariadicOperandMatch(DagNode tree,
   StringRef variadicTreeName = variadicArgTree.getSymbol();
   if (!variadicTreeName.empty()) {
     auto res =
-        symbolInfoMap.findBoundSymbol(variadicTreeName, tree, op, operandIndex,
+        symbolInfoMap.findBoundSymbol(variadicTreeName, tree, op, argIndex,
                                       /*variadicSubIndex=*/std::nullopt);
     if (res == symbolInfoMap.end())
       PrintFatalError(loc, formatv("symbol not found: {0}", variadicTreeName));

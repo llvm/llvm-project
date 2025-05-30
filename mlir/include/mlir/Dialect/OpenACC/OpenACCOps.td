@@ -1327,9 +1327,9 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizations,
+      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
+      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
       UnitAttr:$combined);
@@ -1443,14 +1443,14 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
-            type($firstprivateOperands), $firstprivatizations)
+            type($firstprivateOperands), $firstprivatizationRecipes)
         `)`
       | `num_gangs` `(` custom<NumGangs>($numGangs,
             type($numGangs), $numGangsDeviceType, $numGangsSegments) `)`
       | `num_workers` `(` custom<DeviceTypeOperands>($numWorkers,
             type($numWorkers), $numWorkersDeviceType) `)`
       | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizations)
+            $privateOperands, type($privateOperands), $privatizationRecipes)
         `)`
       | `vector_length` `(` custom<DeviceTypeOperands>($vectorLength,
             type($vectorLength), $vectorLengthDeviceType) `)`
@@ -1512,9 +1512,9 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizations,
+      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$firstprivateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizations,
+      OptionalAttr<SymbolRefArrayAttr>:$firstprivatizationRecipes,
       Variadic<OpenACC_AnyPointerOrMappableType>:$dataClauseOperands,
       OptionalAttr<DefaultValueAttr>:$defaultAttr,
       UnitAttr:$combined);
@@ -1585,10 +1585,10 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
             type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
       | `firstprivate` `(` custom<SymOperandList>($firstprivateOperands,
-            type($firstprivateOperands), $firstprivatizations)
+            type($firstprivateOperands), $firstprivatizationRecipes)
         `)`
       | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizations)
+            $privateOperands, type($privateOperands), $privatizationRecipes)
         `)`
       | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
           $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
@@ -2106,7 +2106,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       OptionalAttr<DeviceTypeArrayAttr>:$tileOperandsDeviceType,
       Variadic<OpenACC_AnyPointerOrMappableType>:$cacheOperands,
       Variadic<OpenACC_AnyPointerOrMappableType>:$privateOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$privatizations,
+      OptionalAttr<SymbolRefArrayAttr>:$privatizationRecipes,
       Variadic<AnyType>:$reductionOperands,
       OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
       OptionalAttr<OpenACC_CombinedConstructsAttr>:$combined
@@ -2261,7 +2261,7 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       | `vector` `` custom<DeviceTypeOperandsWithKeywordOnly>($vectorOperands,
             type($vectorOperands), $vectorOperandsDeviceType, $vector)
       | `private` `(` custom<SymOperandList>(
-            $privateOperands, type($privateOperands), $privatizations) `)`
+            $privateOperands, type($privateOperands), $privatizationRecipes) `)`
       | `tile` `(` custom<DeviceTypeOperandsWithSegment>($tileOperands,
             type($tileOperands), $tileOperandsDeviceType, $tileOperandsSegments)
         `)`

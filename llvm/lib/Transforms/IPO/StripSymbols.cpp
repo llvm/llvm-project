@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/StripSymbols.h"
+
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -33,7 +34,6 @@
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;

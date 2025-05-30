@@ -849,7 +849,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     const Init *SrcInit = Src.getLeafValue();
     if (const IntInit *SrcIntInit = dyn_cast<IntInit>(SrcInit)) {
       OperandMatcher &OM =
-          InsnMatcher.addOperand(OpIdx++, Src.getName(), TempOpIdx);
+          InsnMatcher.addOperand(OpIdx++, Src.getName().str(), TempOpIdx);
       OM.addPredicate<LiteralIntOperandMatcher>(SrcIntInit->getValue());
     } else {
       return failedImport(
@@ -883,8 +883,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
         if (!CCDef || !CCDef->isSubClassOf("CondCode"))
           return failedImport("Unable to handle CondCode");
 
-        OperandMatcher &OM =
-            InsnMatcher.addOperand(OpIdx++, SrcChild.getName(), TempOpIdx);
+        OperandMatcher &OM = InsnMatcher.addOperand(
+            OpIdx++, SrcChild.getName().str(), TempOpIdx);
         StringRef PredType = IsFCmp ? CCDef->getValueAsString("FCmpPredicate")
                                     : CCDef->getValueAsString("ICmpPredicate");
 
@@ -930,8 +930,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
         // For G_INTRINSIC/G_INTRINSIC_W_SIDE_EFFECTS, the operand immediately
         // following the defs is an intrinsic ID.
         if (I == 0) {
-          OperandMatcher &OM =
-              InsnMatcher.addOperand(OpIdx++, SrcChild.getName(), TempOpIdx);
+          OperandMatcher &OM = InsnMatcher.addOperand(
+              OpIdx++, SrcChild.getName().str(), TempOpIdx);
           OM.addPredicate<IntrinsicIDOperandMatcher>(II);
           continue;
         }
