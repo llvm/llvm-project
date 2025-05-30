@@ -5015,7 +5015,7 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
   KnownFPClass KnownFromContext;
 
   if (Q.CC && Q.CC->AffectedValues.contains(V))
-    computeKnownFPClassFromCond(V, Q.CC->Cond, 0, Q.CC->CondIsTrue, Q.CxtI,
+    computeKnownFPClassFromCond(V, Q.CC->Cond, 0, !Q.CC->Invert, Q.CxtI,
                                 KnownFromContext);
 
   if (!Q.CxtI)
