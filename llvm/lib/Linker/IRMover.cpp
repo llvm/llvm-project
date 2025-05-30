@@ -69,18 +69,18 @@ public:
 private:
   Type *remapType(Type *SrcTy) override { return get(SrcTy); }
 
-  bool areTypesIsomorphic(Type *DstTy, Type *SrcTy);
+  bool tryToEstablishTypeIsomorphism(Type *DstTy, Type *SrcTy);
 };
 }
 
 void TypeMapTy::addTypeMapping(Type *DstTy, Type *SrcTy) {
-  // areTypesIsomorphic() will also establish the type mapping as a side effect.
-  areTypesIsomorphic(DstTy, SrcTy);
+  tryToEstablishTypeIsomorphism(DstTy, SrcTy);
 }
 
 /// Recursively walk this pair of types, returning true if they are isomorphic,
-/// false if they are not.
-bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
+/// false if they are not. Types that were determined to be isomorphic are
+/// added to MappedTypes.
+bool TypeMapTy::tryToEstablishTypeIsomorphism(Type *DstTy, Type *SrcTy) {
   // Two types with differing kinds are clearly not isomorphic.
   if (DstTy->getTypeID() != SrcTy->getTypeID())
     return false;
@@ -133,7 +133,7 @@ bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
 
   // Recursively check the subelements.
   for (unsigned I = 0, E = SrcTy->getNumContainedTypes(); I != E; ++I)
-    if (!areTypesIsomorphic(DstTy->getContainedType(I),
+    if (!tryToEstablishTypeIsomorphism(DstTy->getContainedType(I),
                             SrcTy->getContainedType(I)))
       return false;
 
