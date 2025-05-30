@@ -104,7 +104,14 @@ Improvements to clang-tidy
   clauses. Added a ``--match-partial-fixes`` option to keep previous behavior on
   specific tests. This may break tests for users with custom out-of-tree checks
   who use :program:`check_clang_tidy.py` as-is.
-
+- :program:`clang-tidy` no longer processes declarations from system headers
+  by default, greatly improving performance. This behavior is disabled if the
+  `SystemHeaders` option is enabled.
+  Note: this may lead to false negatives; downstream users may need to adjust
+  their checks to preserve existing behavior.
+- :program:`clang-tidy` now supports query based custom checks by `CustomChecks`
+  configuration option.
+  :doc:`Query Based Custom Check Document <clang-tidy/QueryBasedCustomChecks>`
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
 
