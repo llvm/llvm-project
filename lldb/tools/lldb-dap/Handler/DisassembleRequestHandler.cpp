@@ -16,6 +16,7 @@
 #include "RequestHandler.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBInstruction.h"
+#include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringExtras.h"
@@ -141,8 +142,8 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 
   disassembled_inst.instruction = std::move(instruction);
 
-  auto source = CreateSource(addr, target);
-  auto line_entry = GetLineEntryForAddress(target, addr);
+  protocol::Source source = CreateSource(addr, target);
+  lldb::SBLineEntry line_entry = GetLineEntryForAddress(target, addr);
 
   // If the line number is 0 then the entry represents a compiler generated
   // location.

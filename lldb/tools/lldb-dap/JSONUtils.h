@@ -11,12 +11,8 @@
 
 #include "DAPForward.h"
 #include "Protocol/ProtocolTypes.h"
-#include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
-#include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
-#include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-types.h"
@@ -239,29 +235,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 ///     the formal JSON definition outlined by Microsoft.
 protocol::ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
-
-/// Create a "Source" JSON object as described in the debug adapter definition.
-///
-/// \param[in] file
-///     The SBFileSpec to use when populating out the "Source" object
-///
-/// \return
-///     A "Source" JSON object that follows the formal JSON
-///     definition outlined by Microsoft.
-protocol::Source CreateSource(const lldb::SBFileSpec &file);
-
-/// Create a "Source" JSON object as described in the debug adapter definition.
-///
-/// \param[in] address
-///     The address to use when populating out the "Source" object.
-///
-/// \param[in] target
-///     The target that has the address.
-///
-/// \return
-///     A "Source" JSON object that follows the formal JSON
-///     definition outlined by Microsoft.
-protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target);
 
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
