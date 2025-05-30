@@ -1360,12 +1360,14 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
   case Intrinsic::amdgcn_global_tiled_store_half_b64:
   case Intrinsic::amdgcn_global_tiled_store_qtr_b128:
+  case Intrinsic::amdgcn_load_mcast_b32:
     return 32;
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_global_tiled_store_b64:
   case Intrinsic::amdgcn_global_tiled_store_half_b128:
+  case Intrinsic::amdgcn_load_mcast_b64:
     return 64;
   case Intrinsic::amdgcn_global_tiled_store_vst2_b64:
   case Intrinsic::amdgcn_global_tiled_store_half_vst2_b128:
@@ -1379,6 +1381,7 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_struct_buffer_discard_b128:
   case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
   case Intrinsic::amdgcn_global_tiled_store_b128:
+  case Intrinsic::amdgcn_load_mcast_b128:
     return 128;
   case Intrinsic::amdgcn_global_tiled_store_vst2_b128:
     return 224;
@@ -1715,6 +1718,18 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.flags |= MachineMemOperand::MOStore;
     return true;
   }
+  case Intrinsic::amdgcn_load_mcast_b32:
+  case Intrinsic::amdgcn_load_mcast_b64:
+  case Intrinsic::amdgcn_load_mcast_b128: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
+    // We only care about the LoadMMO. The MMO for store to laneshared will be
+    // synthesized
+    Info.ptrVal = CI.getArgOperand(1);
+    Info.flags |= MachineMemOperand::MOLoad;
+    Info.align.reset();
+    return true;
+  }
   case Intrinsic::amdgcn_global_load_async_to_lds_b8:
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
@@ -1953,6 +1968,11 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_tiled_store_qtr_b128:
   case Intrinsic::amdgcn_global_tiled_store_vst2_b128:
   case Intrinsic::amdgcn_global_tiled_store_vst2_b64:
+    Ptr = II->getArgOperand(1);
+    break;
+  case Intrinsic::amdgcn_load_mcast_b32:
+  case Intrinsic::amdgcn_load_mcast_b64:
+  case Intrinsic::amdgcn_load_mcast_b128:
     Ptr = II->getArgOperand(1);
     break;
   default:

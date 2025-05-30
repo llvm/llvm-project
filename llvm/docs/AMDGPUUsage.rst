@@ -1542,6 +1542,15 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Returns a pair for the swapped registers. The first element of the return
                                                    corresponds to the swapped element of the first argument.
 
+  llvm.amdgcn.load.mcast                           Implemented for 32, 64 and 128-bit sizes.
+                                                   Requires wavegroup mode to be enabled.
+                                                   Loads data from a source pointer to global, DS or DDS memory and stores it
+                                                   through a pointer to laneshared memory. The laneshared memory must eventually be mapped to
+                                                   wavegroup shared VGPRs or a compiler error will be thrown. By specifying the SIMD select
+                                                   bits, a single data return is written into vector registers of multiple SIMD units.
+                                                   Opportunistically, loads from different workgroups can also combined when specifying the
+                                                   workgroup select bits.
+
 =======
   llvm.amdgcn.mov.dpp                              The llvm.amdgcn.mov.dpp.`<type>` intrinsic represents the mov.dpp operation in AMDGPU.
                                                    This operation is being deprecated and can be replaced with llvm.amdgcn.update.dpp.

@@ -1,0 +1,31 @@
+# RUN: not --crash llc -march=amdgcn -mcpu=gfx1300 -verify-machineinstrs -run-pass=bundle-indexed-load-store -o /dev/null %s 2>&1 | FileCheck %s
+
+# CHECK: LLVM ERROR: Failed to bundle multicast dest
+---
+name:            same-bb-load-trivial
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+tracksRegLiveness: true
+body:             |
+
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
+    %4:vgpr_32 = COPY $vgpr4
+    %3:vgpr_32 = COPY $vgpr3
+    %2:vgpr_32 = COPY $vgpr2
+    %1:vgpr_32 = COPY $vgpr1
+    %0:vgpr_32 = COPY $vgpr0
+    %20:vreg_64_align2 = REG_SEQUENCE %2:vgpr_32, %subreg.sub0, %3:vgpr_32, %subreg.sub1
+    %19:vreg_64_align2 = REG_SEQUENCE %0:vgpr_32, %subreg.sub0, %1:vgpr_32, %subreg.sub1
+    %18:sgpr_32 = V_READFIRSTLANE_B32 %4:vgpr_32, implicit $exec
+    $m0 = COPY %18:sgpr_32
+    %8:vgpr_32 = CLUSTER_LOAD_B32 %19:vreg_64_align2, 16, 10, implicit $m0, implicit $exec :: (load (s32), addrspace 1)
+    %11:sreg_32_xexec_hi = S_MOV_B32 0
+    ; fake V_STORE_IDX to block bundling STORE_IDX with CLUSTER_LOAD
+    V_STORE_IDX killed %4:vgpr_32, %11:sreg_32_xexec_hi, 0, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX killed %8:vgpr_32, %11:sreg_32_xexec_hi, 0, implicit $exec :: (store (s32), addrspace 10)
+    S_ENDPGM 0
+...
+

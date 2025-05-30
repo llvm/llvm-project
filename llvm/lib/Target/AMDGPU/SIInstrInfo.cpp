@@ -6813,6 +6813,13 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
   SAddr->setReg(ToSGPR);
 }
 
+void SIInstrInfo::legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI,
+                                           MachineInstr &MI) const {
+  MachineOperand &Idx = MI.getOperand(1);
+  if (Idx.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Idx.getReg())))
+    Idx.setReg(readlaneVGPRToSGPR(Idx.getReg(), MI, MRI));
+}
+
 void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
                                          MachineBasicBlock::iterator I,
                                          const TargetRegisterClass *DstRC,
@@ -7180,6 +7187,11 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   // Legalize FLAT
   if (isFLAT(MI)) {
     legalizeOperandsFLAT(MRI, MI);
+    return CreatedBB;
+  }
+
+  if (isVLdStIdx(MI.getOpcode())) {
+    legalizeOperandsVLdStIdx(MRI, MI);
     return CreatedBB;
   }
 

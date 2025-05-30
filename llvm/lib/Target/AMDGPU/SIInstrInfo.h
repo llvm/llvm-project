@@ -899,6 +899,26 @@ public:
     return (isWMMA(MI) || isSWMMAC(MI)) && AMDGPU::getWMMAIsXDL(MI.getOpcode());
   }
 
+  // Instructions for which we care if their destination ends up in a laneshared
+  // VGPR.
+  // Async multicast to LDS instructions have no issue.
+  static bool isMulticastToVGPRs(const MachineInstr &MI) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::CLUSTER_LOAD_B32:
+    case AMDGPU::CLUSTER_LOAD_B64:
+    case AMDGPU::CLUSTER_LOAD_B128:
+      // case AMDGPU::DS_LOAD_MCAST_B32:
+      // case AMDGPU::DS_LOAD_MCAST_B64:
+      // case AMDGPU::DS_LOAD_MCAST_B128:
+      // case AMDGPU::DDS_LOAD_MCAST_B32:
+      // case AMDGPU::DDS_LOAD_MCAST_B64:
+      // case AMDGPU::DDS_LOAD_MCAST_B128:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool isXDL(const MachineInstr &MI) const;
 
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }
@@ -1337,6 +1357,8 @@ public:
 
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsFLAT(MachineRegisterInfo &MRI, MachineInstr &MI) const;
+  void legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI,
+                                MachineInstr &MI) const;
 
   void legalizeGenericOperand(MachineBasicBlock &InsertMBB,
                               MachineBasicBlock::iterator I,

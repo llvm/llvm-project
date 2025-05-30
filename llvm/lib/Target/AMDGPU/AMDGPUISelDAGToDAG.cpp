@@ -3029,6 +3029,131 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
+void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
+                                          unsigned IntrID) {
+
+  unsigned Size = 0;
+  switch (IntrID) {
+  case Intrinsic::amdgcn_load_mcast_b32:
+    Size = 32;
+    break;
+  case Intrinsic::amdgcn_load_mcast_b64:
+    Size = 64;
+    break;
+  case Intrinsic::amdgcn_load_mcast_b128:
+    Size = 128;
+    break;
+  default:
+    llvm_unreachable("multicast selection error");
+  }
+
+  SmallVector<SDValue, 5> MCastOps;
+  unsigned AS = cast<MemSDNode>(N)->getAddressSpace();
+  unsigned Opcode;
+
+  switch (AS) {
+  case AMDGPUAS::GLOBAL_ADDRESS: {
+    // Choose best addressing mode
+    SDValue V0;
+    SDValue V1;
+    SDValue V2;
+    SDValue V3;
+    if (SelectGlobalSAddrCPolM0(N, N->getOperand(3) /*Addr*/, V0 /*SAddr*/,
+                                V1 /*VOffset*/, V2 /*Offset*/, V3 /*CPol*/)) {
+      MCastOps.push_back(V0);
+      MCastOps.push_back(V1);
+      MCastOps.push_back(V2);
+      MCastOps.push_back(V3);
+      if (Size == 32)
+        Opcode = AMDGPU::CLUSTER_LOAD_B32_SADDR;
+      else if (Size == 64)
+        Opcode = AMDGPU::CLUSTER_LOAD_B64_SADDR;
+      else if (Size == 128)
+        Opcode = AMDGPU::CLUSTER_LOAD_B128_SADDR;
+      else
+        llvm_unreachable("Unsupported size for multicast load");
+      break;
+    }
+    if (SelectGlobalOffset(N, N->getOperand(3) /*Addr*/, V0 /*VAddr*/,
+                           V1 /*Offset*/)) {
+      MCastOps.push_back(V0);
+      MCastOps.push_back(V1);
+      MCastOps.push_back(N->getOperand(N->getNumOperands() - 2) /*CPol*/);
+      if (Size == 32)
+        Opcode = AMDGPU::CLUSTER_LOAD_B32;
+      else if (Size == 64)
+        Opcode = AMDGPU::CLUSTER_LOAD_B64;
+      else if (Size == 128)
+        Opcode = AMDGPU::CLUSTER_LOAD_B128;
+      else
+        llvm_unreachable("Unsupported size for multicast load");
+      break;
+    }
+    return;
+  }
+  // TODO : Handle other address spaces
+  // case AMDGPUAS::LOCAL_ADDRESS: {
+  //  if (Size == 32)
+  //    Opcode = AMDGPU::DS_LOAD_MCAST_B32;
+  //  else if (Size == 64)
+  //    Opcode = AMDGPU::DS_LOAD_MCAST_B64;
+  //  else if (Size == 128)
+  //    Opcode = AMDGPU::DS_LOAD_MCAST_B128;
+  //  else
+  //    llvm_unreachable("Unsupported size for multicast load");
+  //  break;
+  //}
+  // case AMDGPUAS::DDS_ADDRESS: {
+  //  if (Size == 32)
+  //    Opcode = AMDGPU::DDS_LOAD_MCAST_B32;
+  //  else if (Size == 64)
+  //    Opcode = AMDGPU::DDS_LOAD_MCAST_B64;
+  //  else if (Size == 128)
+  //    Opcode = AMDGPU::DDS_LOAD_MCAST_B128;
+  //  else
+  //    llvm_unreachable("Unsupported size for multicast load");
+  //}
+  //
+  default:
+    SelectCode(N); // Let this error
+    return;
+  }
+
+  glueCopyToM0(N, N->getOperand(N->getNumOperands() - 1));
+  // N has new chain and glued m0 now
+  MCastOps.push_back(N->getOperand(0));                       // Chain
+  MCastOps.push_back(N->getOperand(N->getNumOperands() - 1)); // Glue
+  SDLoc SL(N);
+  MachineSDNode *MCast = CurDAG->getMachineNode(
+      Opcode, SL, MVT::getIntegerVT(Size), MVT::Other, MCastOps);
+  MachineMemOperand *LoadMMO = N->getMemOperand();
+  CurDAG->setNodeMemRefs(MCast, {LoadMMO});
+
+  // V_STORE_IDX operands are in units of dwords.
+  SDNode *Shift =
+      CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
+                             {N->getOperand(2), // offset
+                              CurDAG->getTargetConstant(2, SL, MVT::i32)});
+  SmallVector<SDValue, 4> StoreOps;
+  StoreOps.push_back(SDValue(MCast, 0));
+  StoreOps.push_back(SDValue(Shift, 0)); // dst
+  StoreOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
+  StoreOps.push_back(SDValue(MCast, 1)); // Chain
+  SDNode *Selected =
+      CurDAG->SelectNodeTo(N, AMDGPU::V_STORE_IDX, MVT::Other, StoreOps);
+
+  // Synthesize MMO for V_STORE_IDX.
+  MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
+  auto F = LoadMMO->getFlags() &
+           ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
+  MachineFunction &MF = CurDAG->getMachineFunction();
+  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+      StorePtrI, F | MachineMemOperand::MOStore, LoadMMO->getSize(),
+      LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
+
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {StoreMMO});
+}
+
 void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
   if (Subtarget->getLDSBankCount() != 16) {
     // This is a single instruction with a pattern.
@@ -3678,6 +3803,12 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
       Ops.push_back(N->getOperand(i));
     Ops.push_back(N->getOperand(0));
     CurDAG->SelectNodeTo(N, Opcode, N->getVTList(),  Ops);
+    return;
+  }
+  case Intrinsic::amdgcn_load_mcast_b32:
+  case Intrinsic::amdgcn_load_mcast_b64:
+  case Intrinsic::amdgcn_load_mcast_b128: {
+    SelectLOAD_MCAST(cast<MemIntrinsicSDNode>(N), IntrID);
     return;
   }
   default:
