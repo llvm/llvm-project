@@ -1144,8 +1144,7 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
     // PLT indirection).
     if (!(isa<cir::FuncOp>(gv) && gv.canBenefitFromLocalAlias()))
       return false;
-    return !(lOpts.SemanticInterposition ||
-             lOpts.HalfNoSemanticInterposition);
+    return !(lOpts.SemanticInterposition || lOpts.HalfNoSemanticInterposition);
   }
 
   // A definition cannot be preempted from an executable.
