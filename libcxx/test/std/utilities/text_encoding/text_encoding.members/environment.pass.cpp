@@ -19,7 +19,7 @@
 // text_encoding text_encoding::environment();
 
 // Concerns:
-// 1. text_encoding::environment() returns the encoding for the environment's default locale.
+// 1. text_encoding::environment() returns the encoding for the environment's default locale, which should be the "C" locale for a C++ program.
 // 2. text_encoding::environment() still returns the default locale encoding when the locale is set to "en_US.UTF-8".
 // 3. text_encoding::environment() is affected by changes to the "LANG" environment variable.
 
@@ -29,7 +29,6 @@
 #include <cassert>
 #include <clocale>
 #include <cstdlib>
-#include <string>
 #include <string_view>
 #include <text_encoding>
 
@@ -37,26 +36,12 @@
 #include "test_macros.h"
 #include "test_text_encoding.h"
 
-std::string extractEncodingFromLocale(std::string locale_str) {
-  auto dot_pos = locale_str.find('.'), at_pos = locale_str.find('@');
-
-  if (dot_pos == std::string::npos) {
-    return "ANSI_X3.4-1968"; // default is ASCII
-  }
-
-  if (at_pos == std::string::npos) {
-    return locale_str.substr(dot_pos + 1);
-  }
-
-  return locale_str.substr(dot_pos + 1, at_pos - 1 - dot_pos);
-}
-
+using id = std::text_encoding::id;
 int main() {
-  auto default_locale   = std::setlocale(LC_ALL, nullptr);
-  auto default_encoding = extractEncodingFromLocale(std::string(default_locale));
-  auto default_te       = std::text_encoding(default_encoding);
+  auto default_te       = std::text_encoding(id::ASCII);
 
   { // 1
+
     auto env_te = std::text_encoding::environment();
     assert(env_te == std::text_encoding::environment());
     assert(checkTextEncoding(env_te, default_te));
