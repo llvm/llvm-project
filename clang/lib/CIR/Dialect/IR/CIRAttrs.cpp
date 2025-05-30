@@ -64,8 +64,7 @@ void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 static ParseResult parseConstPtr(AsmParser &parser, mlir::IntegerAttr &value) {
 
   if (parser.parseOptionalKeyword("null").succeeded()) {
-    value = mlir::IntegerAttr::get(
-        mlir::IntegerType::get(parser.getContext(), 64), 0);
+    value = parser.getBuilder().getI64IntegerAttr(0);
     return success();
   }
 

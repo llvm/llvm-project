@@ -300,7 +300,7 @@ public:
       : ResourceTypeInfo(HandleTy, {}, dxil::ResourceKind::Invalid) {}
 
   TargetExtType *getHandleTy() const { return HandleTy; }
-  LLVM_ABI StructType *createElementStruct();
+  LLVM_ABI StructType *createElementStruct(StringRef CBufferName = "");
 
   // Conditions to check before accessing specific views.
   LLVM_ABI bool isUAV() const;
