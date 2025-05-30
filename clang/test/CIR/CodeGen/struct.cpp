@@ -9,7 +9,7 @@ struct IncompleteS;
 IncompleteS *p;
 
 // CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
-// LLVM: @p = dso_local global ptr null
+// LLVM: @p = global ptr null
 // OGCG: @p = global ptr null, align 8
 
 struct CompleteS {
@@ -20,7 +20,7 @@ struct CompleteS {
 CompleteS cs;
 
 // CIR:       cir.global external @cs = #cir.zero : !rec_CompleteS
-// LLVM-DAG:  @cs = dso_local global %struct.CompleteS zeroinitializer
+// LLVM-DAG:  @cs = global %struct.CompleteS zeroinitializer
 // OGCG-DAG:  @cs = global %struct.CompleteS zeroinitializer, align 4
 
 void f(void) {

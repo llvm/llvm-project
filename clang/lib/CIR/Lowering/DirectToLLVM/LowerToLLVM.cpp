@@ -963,8 +963,7 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   const bool isConst = false;
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
-  assert(!cir::MissingFeatures::opGlobalDSOLocal());
-  const bool isDsoLocal = true;
+  const bool isDsoLocal = op.getDsolocal();
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -1018,8 +1017,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const bool isConst = false;
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
-  assert(!cir::MissingFeatures::opGlobalDSOLocal());
-  const bool isDsoLocal = true;
+  const bool isDsoLocal = op.getDsolocal();
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -1709,7 +1707,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecCreateOpLowering,
                CIRToLLVMVecExtractOpLowering,
                CIRToLLVMVecInsertOpLowering,
-               CIRToLLVMVecCmpOpLowering
+               CIRToLLVMVecCmpOpLowering,
+               CIRToLLVMVecShuffleDynamicOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -1860,6 +1859,60 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
   // must be sign-extended to the correct result type.
   rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(
       op, typeConverter->convertType(op.getType()), bitResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecShuffleDynamicOpLowering::matchAndRewrite(
+    cir::VecShuffleDynamicOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // LLVM IR does not have an operation that corresponds to this form of
+  // the built-in.
+  //     __builtin_shufflevector(V, I)
+  // is implemented as this pseudocode, where the for loop is unrolled
+  // and N is the number of elements:
+  //
+  // result = undef
+  // maskbits = NextPowerOf2(N - 1)
+  // masked = I & maskbits
+  // for (i in 0 <= i < N)
+  //    result[i] = V[masked[i]]
+  mlir::Location loc = op.getLoc();
+  mlir::Value input = adaptor.getVec();
+  mlir::Type llvmIndexVecType =
+      getTypeConverter()->convertType(op.getIndices().getType());
+  mlir::Type llvmIndexType = getTypeConverter()->convertType(
+      elementTypeIfVector(op.getIndices().getType()));
+  uint64_t numElements =
+      mlir::cast<cir::VectorType>(op.getVec().getType()).getSize();
+
+  uint64_t maskBits = llvm::NextPowerOf2(numElements - 1) - 1;
+  mlir::Value maskValue = rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, llvmIndexType, rewriter.getIntegerAttr(llvmIndexType, maskBits));
+  mlir::Value maskVector =
+      rewriter.create<mlir::LLVM::UndefOp>(loc, llvmIndexVecType);
+
+  for (uint64_t i = 0; i < numElements; ++i) {
+    mlir::Value idxValue =
+        rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), i);
+    maskVector = rewriter.create<mlir::LLVM::InsertElementOp>(
+        loc, maskVector, maskValue, idxValue);
+  }
+
+  mlir::Value maskedIndices = rewriter.create<mlir::LLVM::AndOp>(
+      loc, llvmIndexVecType, adaptor.getIndices(), maskVector);
+  mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(
+      loc, getTypeConverter()->convertType(op.getVec().getType()));
+  for (uint64_t i = 0; i < numElements; ++i) {
+    mlir::Value iValue =
+        rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), i);
+    mlir::Value indexValue = rewriter.create<mlir::LLVM::ExtractElementOp>(
+        loc, maskedIndices, iValue);
+    mlir::Value valueAtIndex =
+        rewriter.create<mlir::LLVM::ExtractElementOp>(loc, input, indexValue);
+    result = rewriter.create<mlir::LLVM::InsertElementOp>(loc, result,
+                                                          valueAtIndex, iValue);
+  }
+  rewriter.replaceOp(op, result);
   return mlir::success();
 }
 

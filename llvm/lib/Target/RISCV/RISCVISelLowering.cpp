@@ -8411,14 +8411,20 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
   MVT ArgVT = A.getSimpleValueType();
   assert(ArgVT == B.getSimpleValueType() &&
          ArgVT.getVectorElementType() == MVT::i8);
+  (void)ArgVT;
+
+  // The zvqdotq pseudos are defined with sources and destination both
+  // being i32.  This cast is needed for correctness to avoid incorrect
+  // .vx matching of i8 splats.
+  A = DAG.getBitcast(VT, A);
+  B = DAG.getBitcast(VT, B);
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     ContainerVT = getContainerForFixedLengthVector(VT);
     Accum = convertToScalableVector(ContainerVT, Accum, DAG, Subtarget);
-    MVT ArgContainerVT = getContainerForFixedLengthVector(ArgVT);
-    A = convertToScalableVector(ArgContainerVT, A, DAG, Subtarget);
-    B = convertToScalableVector(ArgContainerVT, B, DAG, Subtarget);
+    A = convertToScalableVector(ContainerVT, A, DAG, Subtarget);
+    B = convertToScalableVector(ContainerVT, B, DAG, Subtarget);
   }
 
   bool IsSigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA;
