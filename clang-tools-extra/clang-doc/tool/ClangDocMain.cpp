@@ -260,6 +260,14 @@ llvm::Error handleMappingPhaseErrors(llvm::Error Err,
   return Err;
 }
 
+llvm::Error ensureOutputDirExists(const std::string &OutDirectory) {
+  // Ensure the root output directory exists.
+  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory)) {
+    return llvm::createFileError(OutDirectory, Err);
+  }
+  return llvm::Error::success();
+}
+
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
@@ -384,9 +392,7 @@ Example usage for a project using a compile commands database:
   sortUsrToInfo(USRToInfo);
 
   // Ensure the root output directory exists.
-  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory)) {
-    ExitOnErr(llvm::createFileError(OutDirectory, Err));
-  }
+  ExitOnErr(ensureOutputDirExists(OutDirectory));
 
   // Run the generator.
   llvm::outs() << "Generating docs...\n";
