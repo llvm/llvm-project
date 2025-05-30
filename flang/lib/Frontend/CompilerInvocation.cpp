@@ -30,6 +30,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -309,6 +310,20 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   for (auto *a : args.filtered(clang::driver::options::OPT_fpass_plugin_EQ))
     opts.LLVMPassPlugins.push_back(a->getValue());
 
+  // -mprefer_vector_width option
+  if (const llvm::opt::Arg *a = args.getLastArg(
+          clang::driver::options::OPT_mprefer_vector_width_EQ)) {
+    llvm::StringRef s = a->getValue();
+    unsigned width;
+    if (s == "none")
+      opts.PreferVectorWidth = "none";
+    else if (s.getAsInteger(10, width))
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+    else
+      opts.PreferVectorWidth = s.str();
+  }
+
   // -fembed-offload-object option
   for (auto *a :
        args.filtered(clang::driver::options::OPT_fembed_offload_object_EQ))
@@ -436,6 +451,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.PICLevel = picLevel;
     if (args.hasArg(clang::driver::options::OPT_pic_is_pie))
       opts.IsPIE = 1;
+  }
+
+  if (args.hasArg(clang::driver::options::OPT_fprofile_generate)) {
+    opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+  }
+
+  if (auto A = args.getLastArg(clang::driver::options::OPT_fprofile_use_EQ)) {
+    opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+    opts.ProfileInstrumentUsePath = A->getValue();
   }
 
   // -mcmodel option.
