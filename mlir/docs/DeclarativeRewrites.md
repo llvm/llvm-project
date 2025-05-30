@@ -421,8 +421,9 @@ must be either passed by reference or pointer to the variable used as argument
 so that the matched value can be returned. In the same example, `$val` will be
 bound to a variable with `Attribute` type (as `I32Attr`) and the type of the
 second argument in `Foo()` could be `Attribute&` or `Attribute*`. Names with
-attribute constraints will be captured as `Attribute`s while everything else
-will be treated as `Value`s.
+attribute constraints will be captured as `Attribute`s, names with
+property constraints (which must have a concrete interface type) will be treated
+as that type, and everything else will be treated as `Value`s.
 
 Positional placeholders will be substituted by the `dag` object parameters at
 the `NativeCodeCall` use site. For example, if we define `SomeCall :

@@ -32,9 +32,9 @@ class Pred;
 // Wrapper class providing helper methods for accesing property constraint
 // values.
 class PropConstraint : public Constraint {
+public:
   using Constraint::Constraint;
 
-public:
   static bool classof(const Constraint *c) { return c->getKind() == CK_Prop; }
 
   StringRef getInterfaceType() const;
@@ -177,7 +177,8 @@ struct NamedProperty {
 // values defined using the `ConstantProp` subclass of `Property`
 // in TableGen.
 class ConstantProp : public Property {
-  explicit ConstantProp(llvm::DefInit *def) : Property(def) {
+public:
+  explicit ConstantProp(const llvm::DefInit *def) : Property(def) {
     assert(isSubClassOf("ConstantProp"));
   }
 

@@ -2825,7 +2825,7 @@ def TestNVVMRequiresSMArchCondOp :
   let assemblyFormat = "attr-dict";
 }
 
-def TestNVVMRequirestSMArchCondMultiOp : 
+def TestNVVMRequirestSMArchCondMultiOp :
     TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
@@ -3466,7 +3466,7 @@ def TestPropPatternOp1 : TEST_Op<"prop_pattern_op_1"> {
 
 def : Pat<
   (TestPropPatternOp1 $tag, NonNegativeI64Prop:$val, ConstantProp<BoolProp, "false">),
-  (TestPropPatternOp1 $tag, (NativeCodeCall<"$0 +1"> $val), ConstantProp<BoolProp, "true">)>;
+  (TestPropPatternOp1 $tag, (NativeCodeCall<"$0 + 1"> $val), ConstantProp<BoolProp, "true">)>;
 
 //===----------------------------------------------------------------------===//
 // Test Dataflow
