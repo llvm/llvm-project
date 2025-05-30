@@ -113,23 +113,25 @@ Error IndexedCodeGenDataReader::read() {
 }
 
 Expected<std::unique_ptr<CodeGenDataReader>>
-CodeGenDataReader::create(const Twine &Path, vfs::FileSystem &FS) {
+CodeGenDataReader::create(const Twine &Path, vfs::FileSystem &FS,
+                          Options Opts) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
-  return CodeGenDataReader::create(std::move(BufferOrError.get()));
+  return CodeGenDataReader::create(std::move(BufferOrError.get()), Opts);
 }
 
 Expected<std::unique_ptr<CodeGenDataReader>>
-CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
+CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer, Options Opts) {
   if (Buffer->getBufferSize() == 0)
     return make_error<CGDataError>(cgdata_error::empty_cgdata);
 
   std::unique_ptr<CodeGenDataReader> Reader;
   // Create the reader.
   if (IndexedCodeGenDataReader::hasFormat(*Buffer))
-    Reader = std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer));
+    Reader =
+        std::make_unique<IndexedCodeGenDataReader>(std::move(Buffer), Opts);
   else if (TextCodeGenDataReader::hasFormat(*Buffer))
     Reader = std::make_unique<TextCodeGenDataReader>(std::move(Buffer));
   else
