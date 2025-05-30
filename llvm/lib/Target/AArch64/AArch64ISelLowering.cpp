@@ -24458,6 +24458,17 @@ static SDValue performBRCONDCombine(SDNode *N,
   if (CC != AArch64CC::EQ && CC != AArch64CC::NE)
     return SDValue();
 
+  // Fold away brcond(NE, subs(csel(1, 0, CC, Cmp), 1)) -> brcond(CC, Cmp)
+  if (CC == AArch64CC::NE && isCMP(Cmp) && isOneConstant(Cmp.getOperand(1)) &&
+      Cmp.getOperand(0).getOpcode() == AArch64ISD::CSEL) {
+    SDValue CSel = Cmp.getOperand(0);
+    if (isOneConstant(CSel.getOperand(0)) &&
+        isNullConstant(CSel.getOperand(1))) {
+      return DAG.getNode(N->getOpcode(), SDLoc(N), N->getVTList(), Chain, Dest,
+                         CSel.getOperand(2), CSel.getOperand(3));
+    }
+  }
+
   unsigned CmpOpc = Cmp.getOpcode();
   if (CmpOpc != AArch64ISD::ADDS && CmpOpc != AArch64ISD::SUBS)
     return SDValue();
