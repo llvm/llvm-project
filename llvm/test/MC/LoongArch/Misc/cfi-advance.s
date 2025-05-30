@@ -17,6 +17,10 @@
 # RELAX:       Relocations [
 # RELAX:         .rela.eh_frame {
 # RELAX-NEXT:       0x1C R_LARCH_32_PCREL .L{{.*}} 0x0
+# RELAX-NEXT:       0x20 R_LARCH_ADD32 .L{{.*}} 0x0
+# RELAX-NEXT:       0x20 R_LARCH_SUB32 .L{{.*}} 0x0
+# RELAX-NEXT:       0x28 R_LARCH_ADD6 .L{{.*}} 0x0
+# RELAX-NEXT:       0x28 R_LARCH_SUB6 .L{{.*}} 0x0
 # RELAX-NEXT:    }
 # RELAX-NEXT:  ]
 
