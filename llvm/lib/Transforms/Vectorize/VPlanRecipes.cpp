@@ -3221,25 +3221,18 @@ static Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor) {
   switch (Factor) {
   case 2:
     return Intrinsic::vector_interleave2;
-    break;
   case 3:
     return Intrinsic::vector_interleave3;
-    break;
   case 4:
     return Intrinsic::vector_interleave4;
-    break;
   case 5:
     return Intrinsic::vector_interleave5;
-    break;
   case 6:
     return Intrinsic::vector_interleave6;
-    break;
   case 7:
     return Intrinsic::vector_interleave7;
-    break;
   case 8:
     return Intrinsic::vector_interleave8;
-    break;
   default:
     llvm_unreachable("Unexpected factor");
   }
@@ -3249,25 +3242,18 @@ static Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor) {
   switch (Factor) {
   case 2:
     return Intrinsic::vector_deinterleave2;
-    break;
   case 3:
     return Intrinsic::vector_deinterleave3;
-    break;
   case 4:
     return Intrinsic::vector_deinterleave4;
-    break;
   case 5:
     return Intrinsic::vector_deinterleave5;
-    break;
   case 6:
     return Intrinsic::vector_deinterleave6;
-    break;
   case 7:
     return Intrinsic::vector_deinterleave7;
-    break;
   case 8:
     return Intrinsic::vector_deinterleave8;
-    break;
   default:
     llvm_unreachable("Unexpected factor");
   }
