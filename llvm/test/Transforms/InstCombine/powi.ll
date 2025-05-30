@@ -582,8 +582,7 @@ define <3 x float> @powi_unary_shuffle_ops_use(<3 x float> %x, i32 %power, ptr %
 ; CHECK-LABEL: @powi_unary_shuffle_ops_use(
 ; CHECK-NEXT:    [[SX:%.*]] = shufflevector <3 x float> [[X:%.*]], <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>
 ; CHECK-NEXT:    store <3 x float> [[SX]], ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x float> @llvm.powi.v3f32.i32(<3 x float> [[X]], i32 [[POWER:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = call <3 x float> @llvm.powi.v3f32.i32(<3 x float> [[SX]], i32 [[POWER:%.*]])
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
   %sx = shufflevector <3 x float> %x, <3 x float> poison, <3 x i32> <i32 1, i32 0, i32 2>

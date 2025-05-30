@@ -1424,8 +1424,11 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
       !match(NonConstArg, m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))
     return nullptr;
 
-  // At least 1 operand must have 1 use because we are creating 2 instructions.
-  if (none_of(II->args(), [](Value *V) { return V->hasOneUse(); }))
+  // At least 1 operand must be a shuffle with 1 use because we are creating 2
+  // instructions.
+  if (none_of(II->args(), [](Value *V) {
+        return isa<ShuffleVectorInst>(V) && V->hasOneUse();
+      }))
     return nullptr;
 
   // See if all arguments are shuffled with the same mask.
