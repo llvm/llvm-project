@@ -505,6 +505,7 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
 // - empty structs
 // - zero-sized arrays
 // - non-variable declarations
+// - SPIR-V specialization constants
 // The layout struct will be added to the HLSLBufferDecl declarations.
 void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   ASTContext &AST = S.getASTContext();
@@ -520,7 +521,8 @@ void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
   for (Decl *D : BufDecl->buffer_decls()) {
     VarDecl *VD = dyn_cast<VarDecl>(D);
     if (!VD || VD->getStorageClass() == SC_Static ||
-        VD->getType().getAddressSpace() == LangAS::hlsl_groupshared)
+        VD->getType().getAddressSpace() == LangAS::hlsl_groupshared ||
+        VD->hasAttr<HLSLVkConstantIdAttr>())
       continue;
     const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
     if (FieldDecl *FD =
@@ -604,6 +606,54 @@ HLSLWaveSizeAttr *SemaHLSL::mergeWaveSizeAttr(Decl *D,
   HLSLWaveSizeAttr *Result = ::new (getASTContext())
       HLSLWaveSizeAttr(getASTContext(), AL, Min, Max, Preferred);
   Result->setSpelledArgsCount(SpelledArgsCount);
+  return Result;
+}
+
+HLSLVkConstantIdAttr *
+SemaHLSL::mergeVkConstantIdAttr(Decl *D, const AttributeCommonInfo &AL,
+                                int Id) {
+
+  auto &TargetInfo = getASTContext().getTargetInfo();
+  if (TargetInfo.getTriple().getArch() != llvm::Triple::spirv) {
+    Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
+    return nullptr;
+  }
+
+  auto *VD = cast<VarDecl>(D);
+
+  if (!VD->getType()->isIntegerType() && !VD->getType()->isFloatingType()) {
+    Diag(VD->getLocation(), diag::err_specialization_const_is_not_int_or_float);
+    return nullptr;
+  }
+
+  if (VD->getStorageClass() != StorageClass::SC_None &&
+      VD->getStorageClass() != StorageClass::SC_Extern) {
+    Diag(VD->getLocation(),
+         diag::err_specialization_const_is_not_externally_visible);
+    return nullptr;
+  }
+
+  if (VD->isLocalVarDecl()) {
+    Diag(VD->getLocation(),
+         diag::err_specialization_const_is_not_externally_visible);
+    return nullptr;
+  }
+
+  if (!VD->getType().isConstQualified()) {
+    Diag(VD->getLocation(), diag::err_specialization_const_missing_const);
+    return nullptr;
+  }
+
+  if (HLSLVkConstantIdAttr *CI = D->getAttr<HLSLVkConstantIdAttr>()) {
+    if (CI->getId() != Id) {
+      Diag(CI->getLocation(), diag::err_hlsl_attribute_param_mismatch) << AL;
+      Diag(AL.getLoc(), diag::note_conflicting_attribute);
+    }
+    return nullptr;
+  }
+
+  HLSLVkConstantIdAttr *Result =
+      ::new (getASTContext()) HLSLVkConstantIdAttr(getASTContext(), AL, Id);
   return Result;
 }
 
@@ -1113,6 +1163,15 @@ void SemaHLSL::handleWaveSizeAttr(Decl *D, const ParsedAttr &AL) {
 
   HLSLWaveSizeAttr *NewAttr =
       mergeWaveSizeAttr(D, AL, Min, Max, Preferred, SpelledArgsCount);
+  if (NewAttr)
+    D->addAttr(NewAttr);
+}
+
+void SemaHLSL::handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL) {
+  uint32_t Id;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Id))
+    return;
+  HLSLVkConstantIdAttr *NewAttr = mergeVkConstantIdAttr(D, AL, Id);
   if (NewAttr)
     D->addAttr(NewAttr);
 }

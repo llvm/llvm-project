@@ -5190,6 +5190,29 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
     if (const auto *CMA = D->getAttr<CodeModelAttr>())
       GV->setCodeModel(CMA->getModel());
 
+    if (const auto *ConstIdAttr = D->getAttr<HLSLVkConstantIdAttr>()) {
+      const Expr *Init = D->getInit();
+      APValue InitValue;
+      bool IsConstExpr = Init->isCXX11ConstantExpr(getContext(), &InitValue);
+      assert(IsConstExpr &&
+             "HLSLVkConstantIdAttr requires a constant initializer");
+      llvm::SmallString<10> InitString;
+      switch (InitValue.getKind()) {
+      case APValue::ValueKind::Int:
+        InitValue.getInt().toString(InitString);
+        break;
+      case APValue::ValueKind::Float:
+        InitValue.getFloat().toString(InitString);
+        break;
+      default:
+        llvm_unreachable(
+            "HLSLVkConstantIdAttr requires an int or float initializer");
+      }
+      std::string ConstIdStr =
+          (llvm::Twine(ConstIdAttr->getId()) + "," + InitString).str();
+      GV->addAttribute("spirv-constant-id", ConstIdStr);
+    }
+
     // Check if we a have a const declaration with an initializer, we may be
     // able to emit it as available_externally to expose it's value to the
     // optimizer.

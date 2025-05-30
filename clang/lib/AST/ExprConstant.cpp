@@ -3570,6 +3570,11 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   if (E->isValueDependent())
     return false;
 
+  // The initializer on a specialization constant is only its default value
+  // when it is not externally initialized. This value cannot be evaluated.
+  if (VD->hasAttr<HLSLVkConstantIdAttr>())
+    return false;
+
   // Dig out the initializer, and use the declaration which it's attached to.
   // FIXME: We should eventually check whether the variable has a reachable
   // initializing declaration.

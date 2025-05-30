@@ -4951,6 +4951,14 @@ def HLSLWaveSize: InheritableAttr {
   let Documentation = [WaveSizeDocs];
 }
 
+def HLSLVkConstantId : InheritableAttr {
+  let Spellings = [CXX11<"vk", "constant_id">];
+  let Args = [IntArgument<"Id">];
+  let Subjects = SubjectList<[Var]>;
+  let LangOpts = [HLSL];
+  let Documentation = [VkConstantIdDocs];
+}
+
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];
   let Subjects = SubjectList<[Record]>;
