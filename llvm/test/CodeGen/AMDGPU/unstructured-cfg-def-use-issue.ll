@@ -522,5 +522,3 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 
 declare hidden float @spam()
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

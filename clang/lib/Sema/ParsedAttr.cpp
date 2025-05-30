@@ -23,14 +23,6 @@
 
 using namespace clang;
 
-IdentifierLoc *IdentifierLoc::create(ASTContext &Ctx, SourceLocation Loc,
-                                     IdentifierInfo *Ident) {
-  IdentifierLoc *Result = new (Ctx) IdentifierLoc;
-  Result->Loc = Loc;
-  Result->Ident = Ident;
-  return Result;
-}
-
 size_t ParsedAttr::allocated_size() const {
   if (IsAvailability) return AttributeFactory::AvailabilityAllocSize;
   else if (IsTypeTagForDatatype)
@@ -62,8 +54,7 @@ void *AttributeFactory::allocate(size_t size) {
   // Check for a previously reclaimed attribute.
   size_t index = getFreeListIndexForSize(size);
   if (index < FreeLists.size() && !FreeLists[index].empty()) {
-    ParsedAttr *attr = FreeLists[index].back();
-    FreeLists[index].pop_back();
+    ParsedAttr *attr = FreeLists[index].pop_back_val();
     return attr;
   }
 
@@ -94,14 +85,14 @@ void AttributeFactory::reclaimPool(AttributePool &cur) {
 }
 
 void AttributePool::takePool(AttributePool &pool) {
-  Attrs.insert(Attrs.end(), pool.Attrs.begin(), pool.Attrs.end());
+  llvm::append_range(Attrs, pool.Attrs);
   pool.Attrs.clear();
 }
 
 void AttributePool::takeFrom(ParsedAttributesView &List, AttributePool &Pool) {
   assert(&Pool != this && "AttributePool can't take attributes from itself");
   llvm::for_each(List.AttrList, [&Pool](ParsedAttr *A) { Pool.remove(A); });
-  Attrs.insert(Attrs.end(), List.AttrList.begin(), List.AttrList.end());
+  llvm::append_range(Attrs, List.AttrList);
 }
 
 namespace {

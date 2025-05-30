@@ -190,6 +190,7 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
     // architecture.  For now GetDisassemblyFlavor is really only valid for x86
     // (and for the llvm assembler plugin, but I'm papering over that since that
     // is the only disassembler plugin we have...
+    // This logic is duplicated in `Handler/DisassembleRequestHandler`.
     if (target->GetArchitecture().GetTriple().getArch() == llvm::Triple::x86 ||
         target->GetArchitecture().GetTriple().getArch() ==
             llvm::Triple::x86_64) {

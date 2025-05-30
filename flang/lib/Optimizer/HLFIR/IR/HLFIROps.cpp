@@ -61,6 +61,7 @@ getIntrinsicEffects(mlir::Operation *self,
   // }
   for (mlir::OpOperand &operand : self->getOpOperands()) {
     mlir::Type opTy = operand.get().getType();
+    fir::addVolatileMemoryEffects({opTy}, effects);
     if (fir::isa_ref_type(opTy) || fir::isa_box_type(opTy))
       effects.emplace_back(mlir::MemoryEffects::Read::get(), &operand,
                            mlir::SideEffects::DefaultResource::get());
@@ -95,7 +96,7 @@ static llvm::LogicalResult areMatchingTypes(Op &op, mlir::Type type1,
 }
 
 //===----------------------------------------------------------------------===//
-// DeclareOp
+// AssignOp
 //===----------------------------------------------------------------------===//
 
 /// Is this a fir.[ref/ptr/heap]<fir.[box/class]<fir.heap<T>>> type?
@@ -164,6 +165,8 @@ void hlfir::AssignOp::getEffects(
     }
   }
 
+  fir::addVolatileMemoryEffects({lhsType, rhsType}, effects);
+
   if (getRealloc()) {
     // Reallocation of the data cannot be precisely described by this API.
     effects.emplace_back(mlir::MemoryEffects::Free::get(),
@@ -204,6 +207,40 @@ static bool hasExplicitLowerBounds(mlir::Value shape) {
          mlir::isa<fir::ShapeShiftType, fir::ShiftType>(shape.getType());
 }
 
+static std::pair<mlir::Type, mlir::Value>
+updateDeclaredInputTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
+                                      mlir::OpBuilder &builder,
+                                      fir::FortranVariableFlagsEnum flags) {
+  if (!bitEnumContainsAny(flags,
+                          fir::FortranVariableFlagsEnum::fortran_volatile)) {
+    return std::make_pair(inputType, memref);
+  }
+
+  // A volatile pointer's pointee is volatile.
+  const bool isPointer =
+      bitEnumContainsAny(flags, fir::FortranVariableFlagsEnum::pointer);
+  // An allocatable's inner type's volatility matches that of the reference.
+  const bool isAllocatable =
+      bitEnumContainsAny(flags, fir::FortranVariableFlagsEnum::allocatable);
+
+  auto updateType = [&](auto t) {
+    using FIRT = decltype(t);
+    auto elementType = t.getEleTy();
+    const bool elementTypeIsBox = mlir::isa<fir::BaseBoxType>(elementType);
+    const bool elementTypeIsVolatile = isPointer || isAllocatable ||
+                                       elementTypeIsBox ||
+                                       fir::isa_volatile_type(elementType);
+    auto newEleTy =
+        fir::updateTypeWithVolatility(elementType, elementTypeIsVolatile);
+    inputType = FIRT::get(newEleTy, true);
+  };
+  llvm::TypeSwitch<mlir::Type>(inputType)
+      .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(updateType);
+  memref =
+      builder.create<fir::VolatileCastOp>(memref.getLoc(), inputType, memref);
+  return std::make_pair(inputType, memref);
+}
+
 void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value memref,
                              llvm::StringRef uniq_name, mlir::Value shape,
@@ -214,6 +251,11 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
+  if (fortran_attrs) {
+    const auto flags = fortran_attrs.getFlags();
+    std::tie(inputType, memref) = updateDeclaredInputTypeWithVolatility(
+        inputType, memref, builder, flags);
+  }
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
@@ -390,6 +432,13 @@ llvm::LogicalResult hlfir::DesignateOp::verify() {
   unsigned outputRank = 0;
   mlir::Type outputElementType;
   bool hasBoxComponent;
+  if (fir::useStrictVolatileVerification() &&
+      fir::isa_volatile_type(memrefType) !=
+          fir::isa_volatile_type(getResult().getType())) {
+    return emitOpError("volatility mismatch between memref and result type")
+           << " memref type: " << memrefType
+           << " result type: " << getResult().getType();
+  }
   if (getComponent()) {
     auto component = getComponent().value();
     auto recType = mlir::dyn_cast<fir::RecordType>(baseElementType);

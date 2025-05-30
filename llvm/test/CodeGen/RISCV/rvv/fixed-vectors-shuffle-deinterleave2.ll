@@ -5,6 +5,9 @@
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+f,+zve32f,+zvfh,+zvl256b \
 ; RUN:   -lower-interleaved-accesses=false -verify-machineinstrs \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,ZVE32F
+; RUN: llc < %s -mtriple=riscv64 -mattr=+v,+zvfh,+zvl256b,+experimental-xrivosvizip \
+; RUN:   -lower-interleaved-accesses=false -verify-machineinstrs \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,ZIP
 
 define void @vnsrl_0_i8(ptr %in, ptr %out) {
 ; CHECK-LABEL: vnsrl_0_i8:
@@ -56,6 +59,15 @@ define void @vnsrl_0_i16(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vnsrl.wi v8, v8, 0
 ; ZVE32F-NEXT:    vse16.v v8, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i16:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
+; ZIP-NEXT:    vle16.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 0
+; ZIP-NEXT:    vse16.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x i16>, ptr %in, align 2
   %shuffle.i5 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -81,6 +93,15 @@ define void @vnsrl_16_i16(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vnsrl.wi v8, v8, 16
 ; ZVE32F-NEXT:    vse16.v v8, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_16_i16:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
+; ZIP-NEXT:    vle16.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 16
+; ZIP-NEXT:    vse16.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x i16>, ptr %in, align 2
   %shuffle.i5 = shufflevector <8 x i16> %0, <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -106,6 +127,15 @@ define void @vnsrl_0_half(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vnsrl.wi v8, v8, 0
 ; ZVE32F-NEXT:    vse16.v v8, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_half:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
+; ZIP-NEXT:    vle16.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 0
+; ZIP-NEXT:    vse16.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x half>, ptr %in, align 2
   %shuffle.i5 = shufflevector <8 x half> %0, <8 x half> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -131,6 +161,15 @@ define void @vnsrl_16_half(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vnsrl.wi v8, v8, 16
 ; ZVE32F-NEXT:    vse16.v v8, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_16_half:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e16, mf2, ta, ma
+; ZIP-NEXT:    vle16.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 16
+; ZIP-NEXT:    vse16.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x half>, ptr %in, align 2
   %shuffle.i5 = shufflevector <8 x half> %0, <8 x half> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -157,6 +196,15 @@ define void @vnsrl_0_i32(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; ZVE32F-NEXT:    vse32.v v8, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i32:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; ZIP-NEXT:    vle32.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 0
+; ZIP-NEXT:    vse32.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x i32>, ptr %in, align 4
   %shuffle.i5 = shufflevector <4 x i32> %0, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
@@ -185,6 +233,16 @@ define void @vnsrl_32_i32(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vslidedown.vi v9, v8, 1, v0.t
 ; ZVE32F-NEXT:    vse32.v v9, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_32_i32:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; ZIP-NEXT:    vle32.v v8, (a0)
+; ZIP-NEXT:    li a0, 32
+; ZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZIP-NEXT:    vnsrl.wx v8, v8, a0
+; ZIP-NEXT:    vse32.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x i32>, ptr %in, align 4
   %shuffle.i5 = shufflevector <4 x i32> %0, <4 x i32> poison, <2 x i32> <i32 1, i32 3>
@@ -211,6 +269,15 @@ define void @vnsrl_0_float(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; ZVE32F-NEXT:    vse32.v v8, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_float:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; ZIP-NEXT:    vle32.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 0
+; ZIP-NEXT:    vse32.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x float>, ptr %in, align 4
   %shuffle.i5 = shufflevector <4 x float> %0, <4 x float> poison, <2 x i32> <i32 0, i32 2>
@@ -239,6 +306,16 @@ define void @vnsrl_32_float(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vslidedown.vi v9, v8, 1, v0.t
 ; ZVE32F-NEXT:    vse32.v v9, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_32_float:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; ZIP-NEXT:    vle32.v v8, (a0)
+; ZIP-NEXT:    li a0, 32
+; ZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZIP-NEXT:    vnsrl.wx v8, v8, a0
+; ZIP-NEXT:    vse32.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x float>, ptr %in, align 4
   %shuffle.i5 = shufflevector <4 x float> %0, <4 x float> poison, <2 x i32> <i32 1, i32 3>
@@ -264,6 +341,16 @@ define void @vnsrl_0_i64(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    sd a0, 8(a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i64:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; ZIP-NEXT:    vle64.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZIP-NEXT:    vslidedown.vi v9, v8, 2
+; ZIP-NEXT:    vslideup.vi v8, v9, 1
+; ZIP-NEXT:    vse64.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x i64>, ptr %in, align 8
   %shuffle.i5 = shufflevector <4 x i64> %0, <4 x i64> poison, <2 x i32> <i32 0, i32 2>
@@ -290,6 +377,16 @@ define void @vnsrl_64_i64(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    sd a0, 8(a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_64_i64:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; ZIP-NEXT:    vle64.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZIP-NEXT:    vslidedown.vi v9, v8, 2
+; ZIP-NEXT:    ri.vzipodd.vv v10, v8, v9
+; ZIP-NEXT:    vse64.v v10, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x i64>, ptr %in, align 8
   %shuffle.i5 = shufflevector <4 x i64> %0, <4 x i64> poison, <2 x i32> <i32 1, i32 3>
@@ -315,6 +412,16 @@ define void @vnsrl_0_double(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    sd a0, 8(a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_double:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; ZIP-NEXT:    vle64.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZIP-NEXT:    vslidedown.vi v9, v8, 2
+; ZIP-NEXT:    vslideup.vi v8, v9, 1
+; ZIP-NEXT:    vse64.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x double>, ptr %in, align 8
   %shuffle.i5 = shufflevector <4 x double> %0, <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -341,6 +448,16 @@ define void @vnsrl_64_double(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    sd a2, 0(a1)
 ; ZVE32F-NEXT:    sd a0, 8(a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_64_double:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; ZIP-NEXT:    vle64.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZIP-NEXT:    vslidedown.vi v9, v8, 2
+; ZIP-NEXT:    ri.vzipodd.vv v10, v8, v9
+; ZIP-NEXT:    vse64.v v10, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x double>, ptr %in, align 8
   %shuffle.i5 = shufflevector <4 x double> %0, <4 x double> poison, <2 x i32> <i32 1, i32 3>
@@ -444,6 +561,15 @@ define void @vnsrl_0_i8_single_src(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vnsrl.wi v8, v8, 0
 ; ZVE32F-NEXT:    vse8.v v8, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i8_single_src:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZIP-NEXT:    vle8.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 0
+; ZIP-NEXT:    vse8.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in, align 1
   %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -469,6 +595,15 @@ define void @vnsrl_8_i8_single_src(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vnsrl.wi v8, v8, 8
 ; ZVE32F-NEXT:    vse8.v v8, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_8_i8_single_src:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZIP-NEXT:    vle8.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 8
+; ZIP-NEXT:    vse8.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in, align 1
   %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -496,6 +631,16 @@ define void @vnsrl_0_i8_single_wideuse(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
 ; ZVE32F-NEXT:    vse8.v v8, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i8_single_wideuse:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZIP-NEXT:    vle8.v v8, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 0
+; ZIP-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZIP-NEXT:    vse8.v v8, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in, align 1
   %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -531,6 +676,18 @@ define void @vnsrl_0_i32_single_src_m8(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; ZVE32F-NEXT:    vse32.v v16, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i32_single_src_m8:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    li a2, 64
+; ZIP-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; ZIP-NEXT:    vle32.v v8, (a0)
+; ZIP-NEXT:    li a0, 32
+; ZIP-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; ZIP-NEXT:    vnsrl.wi v16, v8, 0
+; ZIP-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; ZIP-NEXT:    vse32.v v16, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <64 x i32>, ptr %in, align 4
   %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -564,6 +721,18 @@ define void @vnsrl_0_i32_single_src_m8_2(ptr %in, ptr %out) {
 ; ZVE32F-NEXT:    vcompress.vm v16, v8, v24
 ; ZVE32F-NEXT:    vse32.v v16, (a1)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i32_single_src_m8_2:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    li a2, 64
+; ZIP-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; ZIP-NEXT:    vle32.v v8, (a0)
+; ZIP-NEXT:    li a0, 32
+; ZIP-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; ZIP-NEXT:    vnsrl.wi v16, v8, 0
+; ZIP-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; ZIP-NEXT:    vse32.v v16, (a1)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <64 x i32>, ptr %in, align 4
   %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -597,6 +766,19 @@ define void @vnsrl_0_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v9, v8, 4
 ; ZVE32F-NEXT:    vse8.v v9, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i8_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZIP-NEXT:    vle8.v v8, (a1)
+; ZIP-NEXT:    vle8.v v9, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 0
+; ZIP-NEXT:    vnsrl.wi v9, v9, 0
+; ZIP-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZIP-NEXT:    vslideup.vi v9, v8, 4
+; ZIP-NEXT:    vse8.v v9, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in0, align 1
   %1 = load <8 x i8>, ptr %in1, align 1
@@ -631,6 +813,19 @@ define void @vnsrl_8_8_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v9, v8, 4
 ; ZVE32F-NEXT:    vse8.v v9, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_8_8_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZIP-NEXT:    vle8.v v8, (a1)
+; ZIP-NEXT:    vle8.v v9, (a0)
+; ZIP-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 8
+; ZIP-NEXT:    vnsrl.wi v9, v9, 8
+; ZIP-NEXT:    vsetivli zero, 8, e8, mf4, ta, ma
+; ZIP-NEXT:    vslideup.vi v9, v8, 4
+; ZIP-NEXT:    vse8.v v9, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in0, align 1
   %1 = load <8 x i8>, ptr %in1, align 1
@@ -665,6 +860,19 @@ define void @vnsrl_0_i16_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
 ; ZVE32F-NEXT:    vse16.v v9, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i16_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vle16.v v8, (a1)
+; ZIP-NEXT:    vle16.v v9, (a0)
+; ZIP-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 0
+; ZIP-NEXT:    vnsrl.wi v9, v9, 0
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vslideup.vi v9, v8, 2
+; ZIP-NEXT:    vse16.v v9, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x i16>, ptr %in0, align 2
   %1 = load <4 x i16>, ptr %in1, align 2
@@ -699,6 +907,19 @@ define void @vnsrl_16_i16_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
 ; ZVE32F-NEXT:    vse16.v v9, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_16_i16_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vle16.v v8, (a1)
+; ZIP-NEXT:    vle16.v v9, (a0)
+; ZIP-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 16
+; ZIP-NEXT:    vnsrl.wi v9, v9, 16
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vslideup.vi v9, v8, 2
+; ZIP-NEXT:    vse16.v v9, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x i16>, ptr %in0, align 2
   %1 = load <4 x i16>, ptr %in1, align 2
@@ -733,6 +954,19 @@ define void @vnsrl_0_half_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
 ; ZVE32F-NEXT:    vse16.v v9, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_half_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vle16.v v8, (a1)
+; ZIP-NEXT:    vle16.v v9, (a0)
+; ZIP-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 0
+; ZIP-NEXT:    vnsrl.wi v9, v9, 0
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vslideup.vi v9, v8, 2
+; ZIP-NEXT:    vse16.v v9, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x half>, ptr %in0, align 2
   %1 = load <4 x half>, ptr %in1, align 2
@@ -767,6 +1001,19 @@ define void @vnsrl_16_half_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v9, v8, 2
 ; ZVE32F-NEXT:    vse16.v v9, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_16_half_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vle16.v v8, (a1)
+; ZIP-NEXT:    vle16.v v9, (a0)
+; ZIP-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZIP-NEXT:    vnsrl.wi v8, v8, 16
+; ZIP-NEXT:    vnsrl.wi v9, v9, 16
+; ZIP-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
+; ZIP-NEXT:    vslideup.vi v9, v8, 2
+; ZIP-NEXT:    vse16.v v9, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x half>, ptr %in0, align 2
   %1 = load <4 x half>, ptr %in1, align 2
@@ -793,6 +1040,15 @@ define void @vnsrl_0_i32_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; ZVE32F-NEXT:    vse32.v v8, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i32_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZIP-NEXT:    vle32.v v8, (a0)
+; ZIP-NEXT:    vle32.v v9, (a1)
+; ZIP-NEXT:    vslideup.vi v8, v9, 1
+; ZIP-NEXT:    vse32.v v8, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <2 x i32>, ptr %in0, align 4
   %1 = load <2 x i32>, ptr %in1, align 4
@@ -821,6 +1077,15 @@ define void @vnsrl_32_i32_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslidedown.vi v9, v8, 1, v0.t
 ; ZVE32F-NEXT:    vse32.v v9, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_32_i32_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZIP-NEXT:    vle32.v v8, (a0)
+; ZIP-NEXT:    vle32.v v9, (a1)
+; ZIP-NEXT:    ri.vzipodd.vv v10, v8, v9
+; ZIP-NEXT:    vse32.v v10, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <2 x i32>, ptr %in0, align 4
   %1 = load <2 x i32>, ptr %in1, align 4
@@ -847,6 +1112,15 @@ define void @vnsrl_0_float_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v8, v9, 1
 ; ZVE32F-NEXT:    vse32.v v8, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_float_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZIP-NEXT:    vle32.v v8, (a0)
+; ZIP-NEXT:    vle32.v v9, (a1)
+; ZIP-NEXT:    vslideup.vi v8, v9, 1
+; ZIP-NEXT:    vse32.v v8, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <2 x float>, ptr %in0, align 4
   %1 = load <2 x float>, ptr %in1, align 4
@@ -875,6 +1149,15 @@ define void @vnsrl_32_float_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslidedown.vi v9, v8, 1, v0.t
 ; ZVE32F-NEXT:    vse32.v v9, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_32_float_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; ZIP-NEXT:    vle32.v v8, (a0)
+; ZIP-NEXT:    vle32.v v9, (a1)
+; ZIP-NEXT:    ri.vzipodd.vv v10, v8, v9
+; ZIP-NEXT:    vse32.v v10, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <2 x float>, ptr %in0, align 4
   %1 = load <2 x float>, ptr %in1, align 4
@@ -901,6 +1184,15 @@ define void @vnsrl_0_i64_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslideup.vi v8, v9, 2
 ; ZVE32F-NEXT:    vse32.v v8, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_i64_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZIP-NEXT:    vle64.v v8, (a0)
+; ZIP-NEXT:    vle64.v v9, (a1)
+; ZIP-NEXT:    vslideup.vi v8, v9, 1
+; ZIP-NEXT:    vse64.v v8, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <2 x i64>, ptr %in0, align 8
   %1 = load <2 x i64>, ptr %in1, align 8
@@ -929,6 +1221,15 @@ define void @vnsrl_64_i64_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    vslidedown.vi v9, v8, 2, v0.t
 ; ZVE32F-NEXT:    vse32.v v9, (a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_64_i64_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZIP-NEXT:    vle64.v v8, (a0)
+; ZIP-NEXT:    vle64.v v9, (a1)
+; ZIP-NEXT:    ri.vzipodd.vv v10, v8, v9
+; ZIP-NEXT:    vse64.v v10, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <2 x i64>, ptr %in0, align 8
   %1 = load <2 x i64>, ptr %in1, align 8
@@ -954,6 +1255,15 @@ define void @vnsrl_0_double_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    sd a0, 0(a2)
 ; ZVE32F-NEXT:    sd a1, 8(a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_0_double_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZIP-NEXT:    vle64.v v8, (a0)
+; ZIP-NEXT:    vle64.v v9, (a1)
+; ZIP-NEXT:    vslideup.vi v8, v9, 1
+; ZIP-NEXT:    vse64.v v8, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <2 x double>, ptr %in0, align 8
   %1 = load <2 x double>, ptr %in1, align 8
@@ -980,6 +1290,15 @@ define void @vnsrl_64_double_two_source(ptr %in0, ptr %in1, ptr %out) {
 ; ZVE32F-NEXT:    sd a0, 0(a2)
 ; ZVE32F-NEXT:    sd a1, 8(a2)
 ; ZVE32F-NEXT:    ret
+;
+; ZIP-LABEL: vnsrl_64_double_two_source:
+; ZIP:       # %bb.0: # %entry
+; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZIP-NEXT:    vle64.v v8, (a0)
+; ZIP-NEXT:    vle64.v v9, (a1)
+; ZIP-NEXT:    ri.vzipodd.vv v10, v8, v9
+; ZIP-NEXT:    vse64.v v10, (a2)
+; ZIP-NEXT:    ret
 entry:
   %0 = load <2 x double>, ptr %in0, align 8
   %1 = load <2 x double>, ptr %in1, align 8

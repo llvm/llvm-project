@@ -345,27 +345,25 @@ void llvm::filterDeadComdatFunctions(
 
 std::string llvm::getUniqueModuleId(Module *M) {
   MD5 Md5;
-  bool ExportsSymbols = false;
-  auto AddGlobal = [&](GlobalValue &GV) {
-    if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
-        !GV.hasExternalLinkage() || GV.hasComdat())
-      return;
-    ExportsSymbols = true;
-    Md5.update(GV.getName());
-    Md5.update(ArrayRef<uint8_t>{0});
-  };
 
-  for (auto &F : *M)
-    AddGlobal(F);
-  for (auto &GV : M->globals())
-    AddGlobal(GV);
-  for (auto &GA : M->aliases())
-    AddGlobal(GA);
-  for (auto &IF : M->ifuncs())
-    AddGlobal(IF);
+  auto *UniqueSourceFileNames = mdconst::extract_or_null<ConstantInt>(
+      M->getModuleFlag("Unique Source File Names"));
+  if (UniqueSourceFileNames && UniqueSourceFileNames->getZExtValue()) {
+    Md5.update(M->getSourceFileName());
+  } else {
+    bool ExportsSymbols = false;
+    for (auto &GV : M->global_values()) {
+      if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
+          !GV.hasExternalLinkage() || GV.hasComdat())
+        continue;
+      ExportsSymbols = true;
+      Md5.update(GV.getName());
+      Md5.update(ArrayRef<uint8_t>{0});
+    }
 
-  if (!ExportsSymbols)
-    return "";
+    if (!ExportsSymbols)
+      return "";
+  }
 
   MD5::MD5Result R;
   Md5.final(R);

@@ -1154,6 +1154,14 @@ DEF_TRAVERSE_TYPE(BTFTagAttributedType,
 DEF_TRAVERSE_TYPE(HLSLAttributedResourceType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
+DEF_TRAVERSE_TYPE(HLSLInlineSpirvType, {
+  for (auto &Operand : T->getOperands()) {
+    if (Operand.isConstant() || Operand.isType()) {
+      TRY_TO(TraverseType(Operand.getResultType()));
+    }
+  }
+})
+
 DEF_TRAVERSE_TYPE(ParenType, { TRY_TO(TraverseType(T->getInnerType())); })
 
 DEF_TRAVERSE_TYPE(MacroQualifiedType,
@@ -1457,6 +1465,9 @@ DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
 DEF_TRAVERSE_TYPELOC(HLSLAttributedResourceType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
+DEF_TRAVERSE_TYPELOC(HLSLInlineSpirvType,
+                     { TRY_TO(TraverseType(TL.getType())); })
+
 DEF_TRAVERSE_TYPELOC(ElaboratedType, {
   if (TL.getQualifierLoc()) {
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
@@ -1598,6 +1609,8 @@ DEF_TRAVERSE_DECL(CapturedDecl, {
 DEF_TRAVERSE_DECL(EmptyDecl, {})
 
 DEF_TRAVERSE_DECL(HLSLBufferDecl, {})
+
+DEF_TRAVERSE_DECL(HLSLRootSignatureDecl, {})
 
 DEF_TRAVERSE_DECL(LifetimeExtendedTemporaryDecl, {
   TRY_TO(TraverseStmt(D->getTemporaryExpr()));

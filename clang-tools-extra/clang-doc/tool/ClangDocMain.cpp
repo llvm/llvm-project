@@ -18,20 +18,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitcodeReader.h"
-#include "BitcodeWriter.h"
 #include "ClangDoc.h"
 #include "Generators.h"
 #include "Representation.h"
-#include "clang/AST/AST.h"
-#include "clang/AST/Decl.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "support/Utils.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
-#include "clang/Driver/Options.h"
-#include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/AllTUsExecution.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
-#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -110,24 +104,21 @@ static llvm::cl::opt<std::string> RepositoryCodeLinePrefix(
     llvm::cl::desc("Prefix of line code for repository."),
     llvm::cl::cat(ClangDocCategory));
 
-enum OutputFormatTy {
-  md,
-  yaml,
-  html,
-};
+enum OutputFormatTy { md, yaml, html, mustache };
 
-static llvm::cl::opt<OutputFormatTy>
-    FormatEnum("format", llvm::cl::desc("Format for outputted docs."),
-               llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
-                                           "Documentation in YAML format."),
-                                clEnumValN(OutputFormatTy::md, "md",
-                                           "Documentation in MD format."),
-                                clEnumValN(OutputFormatTy::html, "html",
-                                           "Documentation in HTML format.")),
-               llvm::cl::init(OutputFormatTy::yaml),
-               llvm::cl::cat(ClangDocCategory));
+static llvm::cl::opt<OutputFormatTy> FormatEnum(
+    "format", llvm::cl::desc("Format for outputted docs."),
+    llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
+                                "Documentation in YAML format."),
+                     clEnumValN(OutputFormatTy::md, "md",
+                                "Documentation in MD format."),
+                     clEnumValN(OutputFormatTy::html, "html",
+                                "Documentation in HTML format."),
+                     clEnumValN(OutputFormatTy::mustache, "mustache",
+                                "Documentation in mustache HTML format")),
+    llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
 
-std::string getFormatString() {
+static std::string getFormatString() {
   switch (FormatEnum) {
   case OutputFormatTy::yaml:
     return "yaml";
@@ -135,6 +126,8 @@ std::string getFormatString() {
     return "md";
   case OutputFormatTy::html:
     return "html";
+  case OutputFormatTy::mustache:
+    return "mustache";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -144,11 +137,11 @@ std::string getFormatString() {
 // GetMainExecutable (since some platforms don't support taking the
 // address of main, and some platforms can't implement GetMainExecutable
 // without being given the address of a function in the main executable).
-std::string getExecutablePath(const char *Argv0, void *MainAddr) {
+static std::string getExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
-llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
+static llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   using DirIt = llvm::sys::fs::directory_iterator;
   std::error_code FileErr;
   llvm::SmallString<128> FilePath(UserAssetPath);
@@ -168,8 +161,8 @@ llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   return llvm::Error::success();
 }
 
-llvm::Error getDefaultAssetFiles(const char *Argv0,
-                                 clang::doc::ClangDocContext &CDCtx) {
+static llvm::Error getDefaultAssetFiles(const char *Argv0,
+                                        clang::doc::ClangDocContext &CDCtx) {
   void *MainAddr = (void *)(intptr_t)getExecutablePath;
   std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
   llvm::SmallString<128> NativeClangDocPath;
@@ -178,13 +171,9 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
   llvm::SmallString<128> AssetsPath;
   AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
   llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
-  llvm::SmallString<128> DefaultStylesheet;
-  llvm::sys::path::native(AssetsPath, DefaultStylesheet);
-  llvm::sys::path::append(DefaultStylesheet,
-                          "clang-doc-default-stylesheet.css");
-  llvm::SmallString<128> IndexJS;
-  llvm::sys::path::native(AssetsPath, IndexJS);
-  llvm::sys::path::append(IndexJS, "index.js");
+  llvm::SmallString<128> DefaultStylesheet =
+      appendPathNative(AssetsPath, "clang-doc-default-stylesheet.css");
+  llvm::SmallString<128> IndexJS = appendPathNative(AssetsPath, "index.js");
 
   if (!llvm::sys::fs::is_regular_file(IndexJS))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -204,8 +193,8 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
   return llvm::Error::success();
 }
 
-llvm::Error getHtmlAssetFiles(const char *Argv0,
-                              clang::doc::ClangDocContext &CDCtx) {
+static llvm::Error getHtmlAssetFiles(const char *Argv0,
+                                     clang::doc::ClangDocContext &CDCtx) {
   if (!UserAssetPath.empty() &&
       !llvm::sys::fs::is_directory(std::string(UserAssetPath)))
     llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
@@ -215,9 +204,34 @@ llvm::Error getHtmlAssetFiles(const char *Argv0,
   return getDefaultAssetFiles(Argv0, CDCtx);
 }
 
+static llvm::Error getMustacheHtmlFiles(const char *Argv0,
+                                        clang::doc::ClangDocContext &CDCtx) {
+  bool IsDir = llvm::sys::fs::is_directory(UserAssetPath);
+  if (!UserAssetPath.empty() && !IsDir)
+    llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
+                 << " falling back to default\n";
+  if (IsDir) {
+    getMustacheHtmlFiles(UserAssetPath, CDCtx);
+    return llvm::Error::success();
+  }
+  void *MainAddr = (void *)(intptr_t)getExecutablePath;
+  std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
+  llvm::SmallString<128> NativeClangDocPath;
+  llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
+
+  llvm::SmallString<128> AssetsPath;
+  AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
+  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
+
+  getMustacheHtmlFiles(AssetsPath, CDCtx);
+
+  return llvm::Error::success();
+}
+
 /// Make the output of clang-doc deterministic by sorting the children of
 /// namespaces and records.
-void sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
+static void
+sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
     if (Info->IT == doc::InfoType::IT_namespace) {
@@ -284,6 +298,13 @@ Example usage for a project using a compile commands database:
 
   if (Format == "html") {
     if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
+      llvm::errs() << toString(std::move(Err)) << "\n";
+      return 1;
+    }
+  }
+
+  if (Format == "mustache") {
+    if (auto Err = getMustacheHtmlFiles(argv[0], CDCtx)) {
       llvm::errs() << toString(std::move(Err)) << "\n";
       return 1;
     }

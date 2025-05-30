@@ -1273,7 +1273,7 @@ def Vector_TransferReadOp :
       AttrSizedOperandSegments,
       DestinationStyleOpInterface
     ]>,
-    Arguments<(ins AnyShaped:$source,
+    Arguments<(ins AnyShaped:$base,
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    AnyType:$padding,
@@ -1522,7 +1522,7 @@ def Vector_TransferWriteOp :
       DestinationStyleOpInterface
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$valueToStore,
-                   AnyShaped:$source,
+                   AnyShaped:$base,
                    Variadic<Index>:$indices,
                    AffineMapAttr:$permutation_map,
                    Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
@@ -1663,7 +1663,7 @@ def Vector_TransferWriteOp :
     ///  ops of other dialects.
     Value getValue() { return getVector(); }
 
-    MutableOperandRange getDpsInitsMutable() { return getSourceMutable(); }
+    MutableOperandRange getDpsInitsMutable() { return getBaseMutable(); }
   }];
 
   let hasFolder = 1;
@@ -1972,7 +1972,7 @@ def Vector_GatherOp :
     DeclareOpInterfaceMethods<MaskableOpInterface>,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
   ]>,
-    Arguments<(ins Arg<AnyShaped, "", [MemRead]>:$base,
+    Arguments<(ins Arg<TensorOrMemRef<[AnyType]>, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
                VectorOfNonZeroRankOf<[I1]>:$mask,
@@ -2244,18 +2244,8 @@ def Vector_ShapeCastOp :
     Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "shape_cast casts between vector shapes";
   let description = [{
-    The shape_cast operation casts between an n-D source vector shape and
-    a k-D result vector shape (the element type remains the same).
-
-    If reducing rank (n > k), result dimension sizes must be a product
-    of contiguous source dimension sizes.
-    If expanding rank (n < k), source dimensions must factor into a
-    contiguous sequence of destination dimension sizes.
-    Each source dim is expanded (or contiguous sequence of source dims combined)
-    in source dimension list order (i.e. 0 <= i < n), to produce a contiguous
-    sequence of result dims (or a single result dim), in result dimension list
-    order (i.e. 0 <= j < k). The product of all source dimension sizes and all
-    result dimension sizes must match.
+    Casts to a vector with the same number of elements, element type, and
+    number of scalable dimensions.
 
     It is currently assumed that this operation does not require moving data,
     and that it will be folded away before lowering vector operations.
@@ -2265,15 +2255,13 @@ def Vector_ShapeCastOp :
     2-D MLIR vector to a 1-D flattened LLVM vector.shape_cast lowering to LLVM
     is supported in that particular case, for now.
 
-    Example:
+    Examples:
 
     ```mlir
-    // Example casting to a lower vector rank.
-    %1 = vector.shape_cast %0 : vector<5x1x4x3xf32> to vector<20x3xf32>
+    %1 = vector.shape_cast %0 : vector<4x3xf32> to vector<3x2x2xf32>
 
-    // Example casting to a higher vector rank.
-    %3 = vector.shape_cast %2 : vector<10x12x8xf32> to vector<5x2x3x4x8xf32>
-
+    // with 2 scalable dimensions (number of which must be preserved).
+    %3 = vector.shape_cast %2 : vector<[2]x3x[4]xi8> to vector<3x[1]x[8]xi8>
     ```
   }];
   let extraClassDeclaration = [{
@@ -2494,8 +2482,13 @@ def Vector_MaskOp : Vector_Op<"mask", [
     masked. Values used within the region are captured from above. Only one
     *maskable* operation can be masked with a `vector.mask` operation at a time.
     An operation is *maskable* if it implements the `MaskableOpInterface`. The
-    terminator yields all results of the maskable operation to the result of
-    this operation.
+    terminator yields all results from the maskable operation to the result of
+    this operation. No other values are allowed to be yielded.
+
+    An empty `vector.mask` operation is currently legal to enable optimizations
+    across the `vector.mask` region. However, this might change in the future
+    once vector transformations gain better support for `vector.mask`.
+    TODO: Consider making empty `vector.mask` illegal.
 
     The vector mask argument holds a bit for each vector lane and determines
     which vector lanes should execute the maskable operation and which ones

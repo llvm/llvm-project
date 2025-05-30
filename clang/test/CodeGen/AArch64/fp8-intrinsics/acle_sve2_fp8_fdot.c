@@ -49,8 +49,8 @@ svfloat32_t test_svdot_f32_mf8(svfloat32_t zda, svmfloat8_t zn, svmfloat8_t zm, 
 // CHECK-LABEL: define dso_local <vscale x 4 x float> @test_svdot_n_f32_mf8(
 // CHECK-SAME: <vscale x 4 x float> [[ZDA:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <1 x i8> [[ZM:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[ZM]], i64 0
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPM]])
+// CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[ZM]], i64 0
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP0]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fp8.fdot.nxv4f32(<vscale x 4 x float> [[ZDA]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[DOTSPLAT]])
@@ -59,8 +59,8 @@ svfloat32_t test_svdot_f32_mf8(svfloat32_t zda, svmfloat8_t zn, svmfloat8_t zm, 
 // CHECK-CXX-LABEL: define dso_local <vscale x 4 x float> @_Z20test_svdot_n_f32_mf8u13__SVFloat32_tu13__SVMfloat8_tu6__mfp8m(
 // CHECK-CXX-SAME: <vscale x 4 x float> [[ZDA:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <1 x i8> [[ZM:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[ZM]], i64 0
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPM]])
+// CHECK-CXX-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[ZM]], i64 0
 // CHECK-CXX-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP0]], i64 0
 // CHECK-CXX-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fp8.fdot.nxv4f32(<vscale x 4 x float> [[ZDA]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[DOTSPLAT]])
@@ -91,8 +91,8 @@ svfloat16_t test_svdot_f16_mf8(svfloat16_t zda, svmfloat8_t zn, svmfloat8_t zm, 
 // CHECK-LABEL: define dso_local <vscale x 8 x half> @test_svdot_n_f16_mf8(
 // CHECK-SAME: <vscale x 8 x half> [[ZDA:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <1 x i8> [[ZM:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[ZM]], i64 0
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPM]])
+// CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[ZM]], i64 0
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP0]], i64 0
 // CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fp8.fdot.nxv8f16(<vscale x 8 x half> [[ZDA]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[DOTSPLAT]])
@@ -101,8 +101,8 @@ svfloat16_t test_svdot_f16_mf8(svfloat16_t zda, svmfloat8_t zn, svmfloat8_t zm, 
 // CHECK-CXX-LABEL: define dso_local <vscale x 8 x half> @_Z20test_svdot_n_f16_mf8u13__SVFloat16_tu13__SVMfloat8_tu6__mfp8m(
 // CHECK-CXX-SAME: <vscale x 8 x half> [[ZDA:%.*]], <vscale x 16 x i8> [[ZN:%.*]], <1 x i8> [[ZM:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[ZM]], i64 0
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPM]])
+// CHECK-CXX-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[ZM]], i64 0
 // CHECK-CXX-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP0]], i64 0
 // CHECK-CXX-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 // CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fp8.fdot.nxv8f16(<vscale x 8 x half> [[ZDA]], <vscale x 16 x i8> [[ZN]], <vscale x 16 x i8> [[DOTSPLAT]])

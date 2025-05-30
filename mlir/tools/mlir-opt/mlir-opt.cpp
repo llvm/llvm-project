@@ -128,6 +128,7 @@ void registerTestMatchReductionPass();
 void registerTestMathAlgebraicSimplificationPass();
 void registerTestMathPolynomialApproximationPass();
 void registerTestMathToVCIXPass();
+void registerTestIrdlTestDialectConversionPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestMeshReshardingSpmdizationPass();
@@ -135,7 +136,6 @@ void registerTestMeshSimplificationsPass();
 void registerTestMultiBuffering();
 void registerTestNextAccessPass();
 void registerTestNVGPULowerings();
-void registerTestOneToNTypeConversionPass();
 void registerTestOpaqueLoc();
 void registerTestOpLoweringPasses();
 void registerTestPadFusion();
@@ -150,6 +150,7 @@ void registerTestSPIRVCPURunnerPipeline();
 void registerTestSPIRVFuncSignatureConversion();
 void registerTestSPIRVVectorUnrolling();
 void registerTestTensorCopyInsertionPass();
+void registerTestTensorLikeAndBufferLikePass();
 void registerTestTensorTransforms();
 void registerTestTopologicalSortAnalysisPass();
 void registerTestTransformDialectEraseSchedulePass();
@@ -158,6 +159,7 @@ void registerTestVectorLowerings();
 void registerTestVectorReductionToSPIRVDotProd();
 void registerTestVulkanRunnerPipeline();
 void registerTestWrittenToPass();
+void registerTestXeGPULowerings();
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 void registerTestDialectConversionPasses();
 void registerTestPDLByteCodePass();
@@ -171,6 +173,7 @@ void registerTestDialect(DialectRegistry &);
 void registerTestDynDialect(DialectRegistry &);
 void registerTestTilingInterfaceTransformDialectExtension(DialectRegistry &);
 void registerTestTransformDialectExtension(DialectRegistry &);
+void registerIrdlTestDialect(DialectRegistry &);
 void registerTestTransformsTransformDialectExtension(DialectRegistry &);
 } // namespace test
 
@@ -249,6 +252,7 @@ void registerTestPasses() {
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestGenericIRVisitorsPass();
   mlir::test::registerTestInterfaces();
+  mlir::test::registerTestIrdlTestDialectConversionPass();
   mlir::test::registerTestIRVisitorsPass();
   mlir::test::registerTestLastModifiedPass();
   mlir::test::registerTestLinalgDecomposeOps();
@@ -278,7 +282,6 @@ void registerTestPasses() {
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestNextAccessPass();
   mlir::test::registerTestNVGPULowerings();
-  mlir::test::registerTestOneToNTypeConversionPass();
   mlir::test::registerTestOpaqueLoc();
   mlir::test::registerTestOpLoweringPasses();
   mlir::test::registerTestPadFusion();
@@ -293,6 +296,7 @@ void registerTestPasses() {
   mlir::test::registerTestSPIRVFuncSignatureConversion();
   mlir::test::registerTestSPIRVVectorUnrolling();
   mlir::test::registerTestTensorCopyInsertionPass();
+  mlir::test::registerTestTensorLikeAndBufferLikePass();
   mlir::test::registerTestTensorTransforms();
   mlir::test::registerTestTopologicalSortAnalysisPass();
   mlir::test::registerTestTransformDialectEraseSchedulePass();
@@ -301,6 +305,7 @@ void registerTestPasses() {
   mlir::test::registerTestVectorReductionToSPIRVDotProd();
   mlir::test::registerTestVulkanRunnerPipeline();
   mlir::test::registerTestWrittenToPass();
+  mlir::test::registerTestXeGPULowerings();
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
   mlir::test::registerTestDialectConversionPasses();
   mlir::test::registerTestPDLByteCodePass();
@@ -324,11 +329,12 @@ int main(int argc, char **argv) {
   registerAllGPUToLLVMIRTranslations(registry);
 
 #ifdef MLIR_INCLUDE_TESTS
+  ::test::registerIrdlTestDialect(registry);
   ::test::registerTestDialect(registry);
+  ::test::registerTestDynDialect(registry);
+  ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
   ::test::registerTestTransformDialectExtension(registry);
   ::test::registerTestTransformsTransformDialectExtension(registry);
-  ::test::registerTestTilingInterfaceTransformDialectExtension(registry);
-  ::test::registerTestDynDialect(registry);
 #endif
   return mlir::asMainReturnCode(mlir::MlirOptMain(
       argc, argv, "MLIR modular optimizer driver\n", registry));

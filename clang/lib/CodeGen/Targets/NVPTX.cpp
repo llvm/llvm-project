@@ -77,6 +77,10 @@ public:
     return true;
   }
 
+  unsigned getOpenCLKernelCallingConv() const override {
+    return llvm::CallingConv::PTX_Kernel;
+  }
+
   // Adds a NamedMDNode with GV, Name, and Operand as operands, and adds the
   // resulting MDNode to the nvvm.annotations MDNode.
   static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,

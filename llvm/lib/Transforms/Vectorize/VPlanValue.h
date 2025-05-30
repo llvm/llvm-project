@@ -181,7 +181,7 @@ public:
     return getUnderlyingValue();
   }
 
-  /// Returns true if the VPValue is defined outside any loop region.
+  /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;
 
   // Set \p Val as the underlying Value of this VPValue.
@@ -244,6 +244,12 @@ public:
     Operands[I]->removeUser(*this);
     Operands[I] = New;
     New->addUser(*this);
+  }
+
+  /// Swap operands of the VPUser. It must have exactly 2 operands.
+  void swapOperands() {
+    assert(Operands.size() == 2 && "must have 2 operands to swap");
+    std::swap(Operands[0], Operands[1]);
   }
 
   /// Replaces all uses of \p From in the VPUser with \p To.
@@ -333,6 +339,8 @@ public:
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
+    VPMulAccumulateReductionSC,
+    VPExtendedReductionSC,
     VPPartialReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,
