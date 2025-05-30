@@ -35,6 +35,10 @@ bool NoSanitizeList::containsPrefix(SanitizerMask Mask, StringRef Prefix,
     return false;
   std::pair<unsigned, unsigned> San =
       SSCL->inSectionBlame(Mask, Prefix, Name, "sanitize");
+  // The statement evaluates to true under the following conditions:
+  // 1. The string "prefix:*=sanitize" is absent.
+  // 2. If "prefix:*=sanitize" is present, its (File Index, Line Number) is less
+  // than that of "prefix:*".
   return San == llvm::SpecialCaseList::NotFound || NoSan > San;
 }
 
