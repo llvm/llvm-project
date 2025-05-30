@@ -306,10 +306,10 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
       OpAExtend != OpBExtend || !AccumType->isIntegerTy(32) ||
-      !VF.isKnownMultipleOf(4) || !VF.isScalable())
+      !VF.isKnownMultipleOf(4))
     return InstructionCost::getInvalid();
 
-  Type *Tp = VectorType::get(AccumType, VF);
+  Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
   // Note: Asuming all vqdot* variants are equal cost
   // TODO: Thread CostKind through this API

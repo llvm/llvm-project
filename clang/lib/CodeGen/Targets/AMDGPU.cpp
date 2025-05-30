@@ -8,7 +8,6 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;

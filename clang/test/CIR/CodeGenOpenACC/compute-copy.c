@@ -272,9 +272,9 @@ void acc_compute(int parmVar) {
   // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) to varPtr(%[[LOCALARRAY]] : !cir.ptr<!cir.array<!cir.float x 5>>) {dataClause = #acc<data_clause acc_copy>, name = "localArray"} loc
 #pragma acc serial copy(localArray[localVar1:localVar2])
   ;
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
-  // CHECK-NEXT: %[[LV2:.*]] = cir.load %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
+  // CHECK-NEXT: %[[LV2:.*]] = cir.load{{.*}} %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
   // CHECK-NEXT: %[[LV2_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV2]] : !s16i to si16
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
@@ -288,7 +288,7 @@ void acc_compute(int parmVar) {
 #pragma acc kernels copy(localArray[:localVar2])
   ;
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
-  // CHECK-NEXT: %[[LV2:.*]] = cir.load %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
+  // CHECK-NEXT: %[[LV2:.*]] = cir.load{{.*}} %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
   // CHECK-NEXT: %[[LV2_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV2]] : !s16i to si16
   // CHECK-NEXT: %[[ZERO_CONST2:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
@@ -301,7 +301,7 @@ void acc_compute(int parmVar) {
 
 #pragma acc parallel copy(localArray[localVar1:])
   ;
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
   // CHECK-NEXT: %[[FOUR_CONST:.*]] = arith.constant 4 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
@@ -358,9 +358,9 @@ void acc_compute(int parmVar) {
 
 #pragma acc serial copy(localPointer[localVar1:localVar2])
   ;
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
-  // CHECK-NEXT: %[[LV2:.*]] = cir.load %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
+  // CHECK-NEXT: %[[LV2:.*]] = cir.load{{.*}} %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
   // CHECK-NEXT: %[[LV2_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV2]] : !s16i to si16
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
@@ -374,7 +374,7 @@ void acc_compute(int parmVar) {
 #pragma acc kernels copy(localPointer[:localVar2])
   ;
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
-  // CHECK-NEXT: %[[LV2:.*]] = cir.load %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
+  // CHECK-NEXT: %[[LV2:.*]] = cir.load{{.*}} %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
   // CHECK-NEXT: %[[LV2_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV2]] : !s16i to si16
   // CHECK-NEXT: %[[ZERO_CONST2:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
@@ -421,9 +421,9 @@ void acc_compute(int parmVar) {
 
 #pragma acc kernels copy(localArrayOfPtrs[localVar1:localVar2])
   ;
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
-  // CHECK-NEXT: %[[LV2:.*]] = cir.load %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
+  // CHECK-NEXT: %[[LV2:.*]] = cir.load{{.*}} %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
   // CHECK-NEXT: %[[LV2_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV2]] : !s16i to si16
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
@@ -436,7 +436,7 @@ void acc_compute(int parmVar) {
 
 #pragma acc parallel copy(localArrayOfPtrs[localVar1:])
   ;
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
   // CHECK-NEXT: %[[FOUR_CONST:.*]] = arith.constant 4 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
@@ -451,7 +451,7 @@ void acc_compute(int parmVar) {
 #pragma acc serial copy(localArrayOfPtrs[:localVar2])
   ;
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
-  // CHECK-NEXT: %[[LV2:.*]] = cir.load %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
+  // CHECK-NEXT: %[[LV2:.*]] = cir.load{{.*}} %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
   // CHECK-NEXT: %[[LV2_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV2]] : !s16i to si16
   // CHECK-NEXT: %[[ZERO_CONST2:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
@@ -464,7 +464,7 @@ void acc_compute(int parmVar) {
 
 #pragma acc kernels copy(localArrayOfPtrs[localVar1])
   ;
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
@@ -478,13 +478,13 @@ void acc_compute(int parmVar) {
 
 #pragma acc parallel copy(localArrayOfPtrs[localVar1][localVar2])
   ;
-  // CHECK-NEXT: %[[LV2:.*]] = cir.load %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
+  // CHECK-NEXT: %[[LV2:.*]] = cir.load{{.*}} %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
   // CHECK-NEXT: %[[LV2_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV2]] : !s16i to si16
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[LV2_CAST]] : si16) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64) loc
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
@@ -498,14 +498,14 @@ void acc_compute(int parmVar) {
 
 #pragma acc serial copy(localArrayOfPtrs[localVar1][localVar2:parmVar])
   ;
-  // CHECK-NEXT: %[[LV2:.*]] = cir.load %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
+  // CHECK-NEXT: %[[LV2:.*]] = cir.load{{.*}} %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
   // CHECK-NEXT: %[[LV2_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV2]] : !s16i to si16
-  // CHECK-NEXT: %[[PV:.*]] = cir.load %[[PARM]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[PV:.*]] = cir.load{{.*}} %[[PARM]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[PV_CAST:.*]] = builtin.unrealized_conversion_cast %[[PV]] : !s32i to si32
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[LV2_CAST]] : si16) extent(%[[PV_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST]] : i64) loc
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
@@ -520,12 +520,12 @@ void acc_compute(int parmVar) {
 #pragma acc kernels copy(localArrayOfPtrs[localVar1][:parmVar])
   ;
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
-  // CHECK-NEXT: %[[PV:.*]] = cir.load %[[PARM]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[PV:.*]] = cir.load{{.*}} %[[PARM]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[PV_CAST:.*]] = builtin.unrealized_conversion_cast %[[PV]] : !s32i to si32
   // CHECK-NEXT: %[[ZERO_CONST2:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ZERO_CONST]] : i64) extent(%[[PV_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST2]] : i64) loc
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
@@ -545,9 +545,9 @@ void acc_compute(int parmVar) {
   // CHECK-NEXT: %[[ZERO_CONST2:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ZERO_CONST]] : i64) extent(%[[ONE_CAST]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST2]] : i64) loc
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
-  // CHECK-NEXT: %[[LV2:.*]] = cir.load %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
+  // CHECK-NEXT: %[[LV2:.*]] = cir.load{{.*}} %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
   // CHECK-NEXT: %[[LV2_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV2]] : !s16i to si16
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
@@ -567,9 +567,9 @@ void acc_compute(int parmVar) {
   // CHECK-NEXT: %[[ZERO_CONST2:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST]] : i64) startIdx(%[[ZERO_CONST2]] : i64) loc
-  // CHECK-NEXT: %[[LV1:.*]] = cir.load %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
+  // CHECK-NEXT: %[[LV1:.*]] = cir.load{{.*}} %[[LOCAL1]] : !cir.ptr<!s32i>, !s32i 
   // CHECK-NEXT: %[[LV1_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV1]] : !s32i to si32
-  // CHECK-NEXT: %[[LV2:.*]] = cir.load %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
+  // CHECK-NEXT: %[[LV2:.*]] = cir.load{{.*}} %[[LOCAL2]] : !cir.ptr<!s16i>, !s16i 
   // CHECK-NEXT: %[[LV2_CAST:.*]] = builtin.unrealized_conversion_cast %[[LV2]] : !s16i to si16
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0 : i64
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
