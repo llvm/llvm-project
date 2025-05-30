@@ -35,6 +35,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -693,6 +694,68 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
   return parse_result;
 }
 
+/// If `sc` represents a "closure-like" function according to `lang`, and
+/// `var_name` can be found in a parent context, create a diagnostic
+/// explaining that this variable is available but not captured by the closure.
+static std::string
+CreateVarInParentScopeDiagnostic(StringRef var_name,
+                                 StringRef parent_func_name) {
+  return llvm::formatv("A variable named '{0}' existed in function '{1}', but "
+                       "it was not captured in the closure.\nHint: the "
+                       "variable may be available in a parent frame.",
+                       var_name, parent_func_name);
+}
+
+/// If `diagnostic_manager` contains a "cannot find <var_name> in scope"
+/// diagnostic, attempt to enhance it by showing if `var_name` is used inside a
+/// closure, not captured, but defined in a parent scope.
+static void EnhanceNotInScopeDiagnostics(DiagnosticManager &diagnostic_manager,
+                                         ExecutionContextScope *exe_scope) {
+  if (!exe_scope)
+    return;
+  lldb::StackFrameSP stack_frame = exe_scope->CalculateStackFrame();
+  if (!stack_frame)
+    return;
+  SymbolContext sc =
+      stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
+  Language *swift_lang =
+      Language::FindPlugin(lldb::LanguageType::eLanguageTypeSwift);
+  if (!swift_lang)
+    return;
+
+  static const RegularExpression not_in_scope_regex =
+      RegularExpression("(.*): cannot find '([^']+)' in scope\n(.*)");
+  for (auto &diag : diagnostic_manager.Diagnostics()) {
+    if (!diag)
+      continue;
+
+    llvm::SmallVector<StringRef, 4> match_groups;
+
+    if (StringRef old_rendered_msg = diag->GetDetail().rendered;
+        !not_in_scope_regex.Execute(old_rendered_msg, &match_groups))
+      continue;
+
+    StringRef prefix = match_groups[1];
+    StringRef var_name = match_groups[2];
+    StringRef suffix = match_groups[3];
+
+    Function *parent_func =
+        swift_lang->FindParentOfClosureWithVariable(var_name, sc);
+    if (!parent_func)
+      continue;
+    std::string new_message = CreateVarInParentScopeDiagnostic(
+        var_name, parent_func->GetDisplayName());
+
+    std::string new_rendered =
+        llvm::formatv("{0}: {1}\n{2}", prefix, new_message, suffix);
+    const DiagnosticDetail &old_detail = diag->GetDetail();
+    diag = std::make_unique<Diagnostic>(
+        diag->getKind(), diag->GetCompilerID(),
+        DiagnosticDetail{old_detail.source_location, old_detail.severity,
+                         std::move(new_message), std::move(new_rendered)});
+  }
+}
+
 bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 ExecutionContext &exe_ctx,
                                 lldb_private::ExecutionPolicy execution_policy,
@@ -888,6 +951,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                 fixed_expression.substr(fixed_start, fixed_end - fixed_start);
         }
       }
+      EnhanceNotInScopeDiagnostics(diagnostic_manager, exe_scope);
       return false;
     case ParseResult::success:
       llvm_unreachable("Success case is checked separately before switch!");

@@ -14,6 +14,14 @@ def check_not_captured_error(test, frame, var_name, parent_function):
     expected_error = (
         f"A variable named '{var_name}' existed in function '{parent_function}'"
     )
+    value = frame.EvaluateExpression(var_name)
+    error = value.GetError().GetCString()
+    test.assertIn(expected_error, error)
+
+    value = frame.EvaluateExpression(f"1 + {var_name} + 1")
+    error = value.GetError().GetCString()
+    test.assertIn(expected_error, error)
+
     test.expect(f"frame variable {var_name}", substrs=[expected_error], error=True)
 
 
