@@ -51,6 +51,8 @@ public:
       wasInlined(wasInlined) {
     assert(Pred->getState() &&
            "We should not call the checkers on an empty state.");
+    assert(loc.getTag() && "The ProgramPoint associated with CheckerContext "
+                           "must be tagged with the active checker.");
   }
 
   AnalysisManager &getAnalysisManager() {
