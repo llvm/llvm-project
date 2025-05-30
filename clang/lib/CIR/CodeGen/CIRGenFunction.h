@@ -430,6 +430,8 @@ public:
     // TODO: Add symbol table support
   }
 
+  bool shouldNullCheckClassCastValue(const CastExpr *ce);
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
@@ -444,6 +446,11 @@ public:
       alignment = cgm.getNaturalTypeAlignment(t, baseInfo);
     return Address(ptr, convertTypeForMem(t), alignment);
   }
+
+  Address getAddressOfBaseClass(Address value, const CXXRecordDecl *derived,
+                                CastExpr::path_const_iterator pathBegin,
+                                CastExpr::path_const_iterator pathEnd,
+                                bool nullCheckValue, SourceLocation loc);
 
   LValue makeAddrLValue(Address addr, QualType ty,
                         AlignmentSource source = AlignmentSource::Type) {

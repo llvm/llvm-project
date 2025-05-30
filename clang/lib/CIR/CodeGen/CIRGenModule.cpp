@@ -19,6 +19,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
@@ -1675,6 +1676,34 @@ bool CIRGenModule::verifyModule() const {
   // check the structural properties of the IR and invoke any specific
   // verifiers we have on the CIR operations.
   return mlir::verify(theModule).succeeded();
+}
+
+// TODO(cir): this can be shared with LLVM codegen.
+CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
+    const CXXRecordDecl *derivedClass, CastExpr::path_const_iterator start,
+    CastExpr::path_const_iterator end) {
+  CharUnits offset = CharUnits::Zero();
+
+  const ASTContext &astContext = getASTContext();
+  const CXXRecordDecl *rd = derivedClass;
+
+  for (CastExpr::path_const_iterator i = start; i != end; ++i) {
+    const CXXBaseSpecifier *base = *i;
+    assert(!base->isVirtual() && "Should not see virtual bases here!");
+
+    // Get the layout.
+    const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
+
+    const auto *baseDecl = cast<CXXRecordDecl>(
+        base->getType()->castAs<clang::RecordType>()->getDecl());
+
+    // Add the offset.
+    offset += layout.getBaseClassOffset(baseDecl);
+
+    rd = baseDecl;
+  }
+
+  return offset;
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,

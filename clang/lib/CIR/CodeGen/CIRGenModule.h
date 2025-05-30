@@ -141,6 +141,11 @@ public:
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
 
+  CharUnits
+  computeNonVirtualBaseClassOffset(const CXXRecordDecl *derivedClass,
+                                   CastExpr::path_const_iterator start,
+                                   CastExpr::path_const_iterator end);
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
