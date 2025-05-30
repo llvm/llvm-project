@@ -298,7 +298,9 @@ private:
 };
 
 using InterExplodedGraphMap =
-    llvm::DenseMap<const ExplodedNode *, const ExplodedNode *>;
+    llvm::DenseMap<const ExplodedNode *, ExplodedNode *>;
+
+using TrimGraphWorklist = SmallVector<const ExplodedNode *, 32>;
 
 class ExplodedGraph {
 protected:
@@ -406,22 +408,28 @@ public:
   llvm::BumpPtrAllocator & getAllocator() { return BVC.getAllocator(); }
   BumpVectorContext &getNodeAllocator() { return BVC; }
 
-  using NodeMap = llvm::DenseMap<const ExplodedNode *, ExplodedNode *>;
-
   /// Creates a trimmed version of the graph that only contains paths leading
   /// to the given nodes.
   ///
-  /// \param Nodes The nodes which must appear in the final graph. Presumably
-  ///              these are end-of-path nodes (i.e. they have no successors).
-  /// \param[out] ForwardMap An optional map from nodes in this graph to nodes
-  ///                        in the returned graph.
-  /// \param[out] InverseMap An optional map from nodes in the returned graph to
-  ///                        nodes in this graph.
+  /// \param[in,out] Worklist Vector of nodes which must appear in the final
+  ///                         graph. Presumably these are end-of-path nodes
+  ///                         (i.e. they have no successors). This argument is
+  ///                         consumed and emptied by the trimming algorithm.
+  ///
+  /// \param[out] NodeMap If specified, this will be filled to map nodes from
+  ///                     this map to nodes in the returned graph.
+  ///
   /// \returns The trimmed graph
   std::unique_ptr<ExplodedGraph>
-  trim(ArrayRef<const NodeTy *> Nodes,
-       InterExplodedGraphMap *ForwardMap = nullptr,
-       InterExplodedGraphMap *InverseMap = nullptr) const;
+  trim(TrimGraphWorklist &Worklist,
+       InterExplodedGraphMap *NodeMap = nullptr) const;
+
+  std::unique_ptr<ExplodedGraph>
+  trim(ArrayRef<const ExplodedNode *> Nodes,
+       InterExplodedGraphMap *NodeMap = nullptr) const {
+    TrimGraphWorklist Worklist{Nodes};
+    return trim(Worklist, NodeMap);
+  }
 
   /// Enable tracking of recently allocated nodes for potential reclamation
   /// when calling reclaimRecentlyAllocatedNodes().

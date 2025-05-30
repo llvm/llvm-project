@@ -2164,6 +2164,7 @@ PathSensitiveBugReport::PathSensitiveBugReport(
     : BugReport(Kind::PathSensitive, bt, shortDesc, desc), ErrorNode(errorNode),
       ErrorNodeRange(getStmt() ? getStmt()->getSourceRange() : SourceRange()),
       UniqueingLocation(LocationToUnique), UniqueingDecl(DeclToUnique) {
+  assert(ErrorNode && "The error node must not be null!");
   assert(!isDependency(ErrorNode->getState()
                            ->getAnalysisManager()
                            .getCheckerManager()
@@ -2620,27 +2621,27 @@ public:
 } // namespace
 
 BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
-                             ArrayRef<PathSensitiveBugReport *> &bugReports) {
-  SmallVector<const ExplodedNode *, 32> Nodes;
-  for (const auto I : bugReports) {
-    assert(I->isValid() &&
+                             ArrayRef<PathSensitiveBugReport *> &BugReports) {
+  TrimGraphWorklist Worklist;
+  for (PathSensitiveBugReport *BR : BugReports) {
+    assert(BR->isValid() &&
            "We only allow BugReporterVisitors and BugReporter itself to "
            "invalidate reports!");
-    Nodes.emplace_back(I->getErrorNode());
+    Worklist.emplace_back(BR->getErrorNode());
   }
 
   // The trimmed graph is created in the body of the constructor to ensure
   // that the DenseMaps have been initialized already.
-  InterExplodedGraphMap ForwardMap;
-  TrimmedGraph = OriginalGraph->trim(Nodes, &ForwardMap);
+  InterExplodedGraphMap NodeMap;
+  TrimmedGraph = OriginalGraph->trim(Worklist, &NodeMap);
 
   // Find the (first) error node in the trimmed graph.  We just need to consult
   // the node map which maps from nodes in the original graph to nodes
   // in the new graph.
   llvm::SmallPtrSet<const ExplodedNode *, 32> RemainingNodes;
 
-  for (PathSensitiveBugReport *Report : bugReports) {
-    const ExplodedNode *NewNode = ForwardMap.lookup(Report->getErrorNode());
+  for (PathSensitiveBugReport *Report : BugReports) {
+    const ExplodedNode *NewNode = NodeMap.lookup(Report->getErrorNode());
     assert(NewNode &&
            "Failed to construct a trimmed graph that contains this error "
            "node!");
