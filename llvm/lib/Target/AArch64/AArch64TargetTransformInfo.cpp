@@ -5538,7 +5538,8 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
           NumSources <= 2
               ? getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
-                               NTp, NTp, NMask, CostKind, 0, nullptr, Args, CxtI)
+                               NTp, NTp, NMask, CostKind, 0, nullptr, Args,
+                               CxtI)
               : LTNumElts;
       Result.first->second = NCost;
       Cost += NCost;

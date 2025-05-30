@@ -1383,19 +1383,17 @@ public:
 
   /// \return The cost of a shuffle instruction of kind Kind with inputs of type
   /// SrcTy, producing a vector of type DstTy. The exact mask may be passed as
-  /// Mask, or else the array will be empty. The index and subtype parameters
-  /// are used by the subvector insertion and extraction shuffle kinds to show
-  /// the insert/extract point and the type of the subvector being
-  /// inserted/extracted. The operands of the shuffle can be passed through \p
-  /// Args, which helps improve the cost estimation in some cases, like in
-  /// broadcast loads.
-  LLVM_ABI InstructionCost
-  getShuffleCost(ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask = {},
-                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-                 int Index = 0, VectorType *SubTp = nullptr,
-                 ArrayRef<const Value *> Args = {},
-                 const Instruction *CxtI = nullptr) const;
+  /// Mask, or else the array will be empty. The Index and SubTp parameters
+  /// are used by the subvector insertions shuffle kinds to show the insert
+  /// point and the type of the subvector being inserted. The operands of the
+  /// shuffle can be passed through \p Args, which helps improve the cost
+  /// estimation in some cases, like in broadcast loads.
+  LLVM_ABI InstructionCost getShuffleCost(
+      ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+      ArrayRef<int> Mask = {},
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
+      VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///
