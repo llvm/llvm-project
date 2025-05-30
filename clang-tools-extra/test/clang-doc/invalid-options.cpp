@@ -21,4 +21,9 @@
 // RUN: clang-doc %t/nonexistent.cpp 2>&1 | FileCheck %s --check-prefix=MAP-WARN
 // MAP-WARN: Error mapping decls in files. Clang-doc will ignore these files and continue
 
+///Invalid executor type
+// RUN: not clang-doc --executor=invalid %s 2>&1 | FileCheck %s --check-prefix=EXECUTOR-FAIL
+// EXECUTOR-FAIL: clang-doc error:
+// EXECUTOR-FAIL: Executor "invalid" is not registered
+
 ///TODO: Add tests for failures in generateDocs() and in createResources().

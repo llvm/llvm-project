@@ -247,6 +247,22 @@ sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
   }
 }
 
+llvm::Error runMappingPhase(tooling::ToolExecutor *Executor,
+  clang::doc::ClangDocContext &CDCtx, tooling::ArgumentsAdjuster &ArgAdjuster, bool IgnoreMappingFailures ) {
+  auto Err =
+      Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
+  if (Err) {
+    if (IgnoreMappingFailures) {
+      llvm::errs() << "Error mapping decls in files. Clang-doc will ignore "
+                      "these files and continue:\n"
+                   << toString(std::move(Err)) << "\n";
+      return llvm::Error::success();
+    }
+    return Err;
+  }
+  return llvm::Error::success();
+}
+
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
@@ -265,13 +281,10 @@ Example usage for a project using a compile commands database:
   $ clang-doc --executor=all-TUs compile_commands.json
 )";
 
-  auto Executor = clang::tooling::createExecutorFromCommandLineArgs(
-      argc, argv, ClangDocCategory, Overview);
+  auto Executor = ExitOnErr(clang::tooling::createExecutorFromCommandLineArgs(
+    argc, argv, ClangDocCategory, Overview));
 
-  if (!Executor) {
-    llvm::errs() << toString(Executor.takeError()) << "\n";
-    return 1;
-  }
+
 
   // Fail early if an invalid format was provided.
   std::string Format = getFormatString();
@@ -286,7 +299,7 @@ Example usage for a project using a compile commands database:
         ArgAdjuster);
 
   clang::doc::ClangDocContext CDCtx = {
-      Executor->get()->getExecutionContext(),
+      Executor->getExecutionContext(),
       ProjectName,
       PublicOnly,
       OutDirectory,
@@ -306,24 +319,14 @@ Example usage for a project using a compile commands database:
 
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
-  auto Err =
-      Executor->get()->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
-  if (Err) {
-    if (IgnoreMappingFailures)
-      llvm::errs() << "Error mapping decls in files. Clang-doc will ignore "
-                      "these files and continue:\n"
-                   << toString(std::move(Err)) << "\n";
-    else {
-      ExitOnErr(std::move(Err));
-    }
-  }
+  ExitOnErr(runMappingPhase(Executor.get(), CDCtx, ArgAdjuster, IgnoreMappingFailures));
 
   // Collect values into output by key.
   // In ToolResults, the Key is the hashed USR and the value is the
   // bitcode-encoded representation of the Info object.
   llvm::outs() << "Collecting infos...\n";
   llvm::StringMap<std::vector<StringRef>> USRToBitcode;
-  Executor->get()->getToolResults()->forEachResult(
+  Executor->getToolResults()->forEachResult(
       [&](StringRef Key, StringRef Value) {
         USRToBitcode[Key].emplace_back(Value);
       });
