@@ -163,12 +163,24 @@ enum class RootDescriptorFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
+#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
+enum class DescriptorRangeFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
 enum class RootParameterType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
 ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+
+#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
+enum class DescriptorRangeType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
 
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
@@ -196,6 +208,26 @@ inline bool isValidShaderVisibility(uint32_t V) {
   }
   return false;
 }
+
+#define STATIC_SAMPLER_FILTER(Val, Enum) Enum = Val,
+enum class StaticSamplerFilter : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define TEXTURE_ADDRESS_MODE(Val, Enum) Enum = Val,
+enum class TextureAddressMode : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define COMPARISON_FUNCTION(Val, Enum) Enum = Val,
+enum class SamplersComparisonFunction : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+#define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
+enum class SamplersBorderColor : uint32_t {
+#include "DXContainerConstants.def"
+};
 
 PartType parsePartType(StringRef S);
 
@@ -588,6 +620,52 @@ static_assert(sizeof(ProgramSignatureElement) == 32,
 
 namespace RTS0 {
 namespace v1 {
+struct StaticSampler {
+  uint32_t Filter;
+  uint32_t AddressU;
+  uint32_t AddressV;
+  uint32_t AddressW;
+  float MipLODBias;
+  uint32_t MaxAnisotropy;
+  uint32_t ComparisonFunc;
+  uint32_t BorderColor;
+  float MinLOD;
+  float MaxLOD;
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t ShaderVisibility;
+  void swapBytes() {
+    sys::swapByteOrder(Filter);
+    sys::swapByteOrder(AddressU);
+    sys::swapByteOrder(AddressV);
+    sys::swapByteOrder(AddressW);
+    sys::swapByteOrder(MipLODBias);
+    sys::swapByteOrder(MaxAnisotropy);
+    sys::swapByteOrder(ComparisonFunc);
+    sys::swapByteOrder(BorderColor);
+    sys::swapByteOrder(MinLOD);
+    sys::swapByteOrder(MaxLOD);
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(ShaderVisibility);
+  };
+};
+
+struct DescriptorRange {
+  uint32_t RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t OffsetInDescriptorsFromTableStart;
+  void swapBytes() {
+    sys::swapByteOrder(RangeType);
+    sys::swapByteOrder(NumDescriptors);
+    sys::swapByteOrder(BaseShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
+  }
+};
+
 struct RootDescriptor {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
@@ -652,6 +730,14 @@ struct RootDescriptor : public v1::RootDescriptor {
 
   void swapBytes() {
     v1::RootDescriptor::swapBytes();
+    sys::swapByteOrder(Flags);
+  }
+};
+
+struct DescriptorRange : public v1::DescriptorRange {
+  uint32_t Flags;
+  void swapBytes() {
+    v1::DescriptorRange::swapBytes();
     sys::swapByteOrder(Flags);
   }
 };
