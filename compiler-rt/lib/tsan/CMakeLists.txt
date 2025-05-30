@@ -30,6 +30,8 @@ if(COMPILER_RT_LIBCXX_PATH AND
     add_custom_libcxx(libcxx_tsan_${arch} ${LIBCXX_PREFIX}
       DEPS ${TSAN_RUNTIME_LIBRARIES}
       CFLAGS ${TARGET_CFLAGS} -fsanitize=thread
+      CMAKE_ARGS -DLIBCXX_EXECUTE_ONLY_CODE=${COMPILER_RT_EXECUTE_ONLY_CODE}
+                 -DLIBCXXABI_EXECUTE_ONLY_CODE=${COMPILER_RT_EXECUTE_ONLY_CODE}
       USE_TOOLCHAIN)
     list(APPEND libcxx_tsan_deps libcxx_tsan_${arch}-install-cmake326-workaround)
   endforeach()
