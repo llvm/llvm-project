@@ -247,7 +247,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
    * - ``SPV_ALTERA_arbitrary_precision_fixed_point``
      - Add instructions for fixed point arithmetic. The extension works without SPV_ALTERA_arbitrary_precision_integers, but together they allow greater flexibility in representing arbitrary precision data types.
-
+   * - ``SPV_ALTERA_fpga_buffer_location``
+     - Adds a pointer decoration for FPGA targets, indicating that a global memory pointer accesses only a specific physical memory location.
 
 SPIR-V representation in LLVM IR
 ================================

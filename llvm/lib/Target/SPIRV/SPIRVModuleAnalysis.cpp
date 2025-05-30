@@ -1002,6 +1002,9 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
       Reqs.addRequirements(SPIRV::Capability::FloatControls2);
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
     }
+  } else if (Dec == SPIRV::Decoration::BufferLocationALTERA) {
+    Reqs.addRequirements(SPIRV::Capability::FPGABufferLocationALTERA);
+    Reqs.addExtension(SPIRV::Extension::SPV_ALTERA_fpga_buffer_location);
   }
 }
 

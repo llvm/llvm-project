@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_SPIRV_SPIRVMETADATA_H
 #define LLVM_LIB_TARGET_SPIRV_SPIRVMETADATA_H
 
+#include "llvm/CodeGen/Register.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 
@@ -25,6 +26,8 @@ namespace llvm {
 
 MDString *getOCLKernelArgAccessQual(const Function &F, unsigned ArgIdx);
 MDString *getOCLKernelArgTypeQual(const Function &F, unsigned ArgIdx);
-
+int64_t processKernelArgBufferLocation(
+    const Function &F, MDNode *Node, int i,
+    llvm::ArrayRef<llvm::ArrayRef<llvm::Register>> VRegs, int64_t BufferLoc);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_METADATA_H
