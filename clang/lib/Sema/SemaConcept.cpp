@@ -185,27 +185,20 @@ struct SatisfactionStackRAII {
 };
 } // namespace
 
-static bool
-DiagRecursiveConstraintEval(Sema &S, llvm::FoldingSetNodeID &ID,
-                            const NamedDecl *Templ, const Expr *E,
-                            const MultiLevelTemplateArgumentList &MLTAL) {
+static bool DiagRecursiveConstraintEval(
+    Sema &S, llvm::FoldingSetNodeID &ID, const NamedDecl *Templ, const Expr *E,
+    const MultiLevelTemplateArgumentList *MLTAL = nullptr) {
   E->Profile(ID, S.Context, /*Canonical=*/true);
-  for (const auto &List : MLTAL)
-    for (const auto &TemplateArg : List.Args)
-      TemplateArg.Profile(ID, S.Context);
-
-  // Note that we have to do this with our own collection, because there are
-  // times where a constraint-expression check can cause us to need to evaluate
-  // other constriants that are unrelated, such as when evaluating a recovery
-  // expression, or when trying to determine the constexpr-ness of special
-  // members. Otherwise we could just use the
-  // Sema::InstantiatingTemplate::isAlreadyBeingInstantiated function.
+  if (MLTAL) {
+    for (const auto &List : *MLTAL)
+      for (const auto &TemplateArg : List.Args)
+        TemplateArg.Profile(ID, S.Context);
+  }
   if (S.SatisfactionStackContains(Templ, ID)) {
     S.Diag(E->getExprLoc(), diag::err_constraint_depends_on_self)
         << const_cast<Expr *>(E) << E->getSourceRange();
     return true;
   }
-
   return false;
 }
 
@@ -261,6 +254,15 @@ static ExprResult EvaluateAtomicConstraint(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
       Sema::ReuseLambdaContextDecl);
 
+  llvm::FoldingSetNodeID ID;
+  if (Template &&
+      DiagRecursiveConstraintEval(S, ID, Template, AtomicExpr, &MLTAL)) {
+    Satisfaction.IsSatisfied = false;
+    Satisfaction.ContainsErrors = true;
+    return ExprEmpty();
+  }
+  SatisfactionStackRAII StackRAII(S, Template, ID);
+
   // Atomic constraint - substitute arguments and check satisfaction.
   ExprResult SubstitutedExpression = const_cast<Expr *>(AtomicExpr);
   {
@@ -272,17 +274,6 @@ static ExprResult EvaluateAtomicConstraint(
         const_cast<NamedDecl *>(Template), Info, AtomicExpr->getSourceRange());
     if (Inst.isInvalid())
       return ExprError();
-
-    /*llvm::FoldingSetNodeID ID;
-    if (Template &&
-        DiagRecursiveConstraintEval(S, ID, Template, AtomicExpr, MLTAL)) {
-      Satisfaction.IsSatisfied = false;
-      Satisfaction.ContainsErrors = true;
-      return ExprEmpty();
-    }
-
-    SatisfactionStackRAII StackRAII(S, Template, ID);
-    */
 
     // We do not want error diagnostics escaping here.
     Sema::SFINAETrap Trap(S);
@@ -621,7 +612,9 @@ static bool calculateConstraintSatisfaction(
 
     Satisfaction.Details.insert(
         Satisfaction.Details.begin() + Size,
-        ConstraintSatisfaction::Detail(SubstitutedConceptId.get()));
+        UnsatisfiedConstraintRecord(
+            SubstitutedConceptId.getAs<ConceptSpecializationExpr>()
+                ->getConceptReference()));
 
     Satisfaction.Details.push_back(nullptr);
   }
@@ -1309,55 +1302,54 @@ static void diagnoseUnsatisfiedRequirement(Sema &S,
   }
 }
 
-static void
-diagnoseUnsatisfiedConceptIdExpr(Sema &S, const ConceptSpecializationExpr *CSE,
-                                 SourceLocation Loc, bool First) {
-  if (CSE->getTemplateArgsAsWritten()->NumTemplateArgs == 1) {
+static void diagnoseUnsatisfiedConceptIdExpr(Sema &S,
+                                             const ConceptReference *Concept,
+                                             SourceLocation Loc, bool First) {
+  if (Concept->getTemplateArgsAsWritten()->NumTemplateArgs == 1) {
     S.Diag(
         Loc,
         diag::
             note_single_arg_concept_specialization_constraint_evaluated_to_false)
         << (int)First
-        << CSE->getTemplateArgsAsWritten()->arguments()[0].getArgument()
-        << CSE->getNamedConcept();
+        << Concept->getTemplateArgsAsWritten()->arguments()[0].getArgument()
+        << Concept->getNamedConcept();
   } else {
     S.Diag(Loc, diag::note_concept_specialization_constraint_evaluated_to_false)
-        << (int)First << CSE;
+        << (int)First << Concept;
   }
 }
 
-static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
-                                                        const Expr *SubstExpr,
-                                                        bool First = true);
+static void diagnoseUnsatisfiedConstraintExpr(
+    Sema &S, const UnsatisfiedConstraintRecord &Record, SourceLocation Loc,
+    bool First, concepts::NestedRequirement *Req = nullptr);
+
+static void DiagnoseUnsatisfiedConstraint(
+    Sema &S, ArrayRef<UnsatisfiedConstraintRecord> Records, SourceLocation Loc,
+    bool First = true, concepts::NestedRequirement *Req = nullptr) {
+  std::vector<bool> Prevs;
+  for (auto &Record : Records) {
+    if (Record.isNull()) {
+      First = Prevs.back();
+      Prevs.pop_back();
+      continue;
+    }
+    diagnoseUnsatisfiedConstraintExpr(S, Record, Loc, First, Req);
+    Loc = {};
+    if (isa<const ConceptReference *>(Record)) {
+      Prevs.push_back(First);
+      First = true;
+      continue;
+    }
+    First = false;
+  }
+}
 
 static void diagnoseUnsatisfiedRequirement(Sema &S,
                                            concepts::NestedRequirement *Req,
                                            bool First) {
-  using SubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
-  std::vector<bool> Prevs;
-  for (auto &Record : Req->getConstraintSatisfaction()) {
-    if (auto *SubstDiag = Record.dyn_cast<SubstitutionDiagnostic *>())
-      S.Diag(SubstDiag->first, diag::note_nested_requirement_substitution_error)
-          << (int)First << Req->getInvalidConstraintEntity()
-          << SubstDiag->second;
-    else {
-      if (Record.isNull()) {
-        First = Prevs.back();
-        Prevs.pop_back();
-        continue;
-      }
-      diagnoseWellFormedUnsatisfiedConstraintExpr(
-          S, Record.dyn_cast<const Expr *>(), First);
-      if (isa_and_nonnull<ConceptSpecializationExpr>(
-              Record.dyn_cast<const Expr *>())) {
-        Prevs.push_back(First);
-        First = true;
-        continue;
-      }
-      First = false;
-    }
-    First = false;
-  }
+  DiagnoseUnsatisfiedConstraint(S, Req->getConstraintSatisfaction().records(),
+                                Req->getConstraintExpr()->getExprLoc(), First,
+                                Req);
 }
 
 static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
@@ -1439,6 +1431,10 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
         break;
       }
     return;
+  } else if (auto *CSE = dyn_cast<ConceptSpecializationExpr>(SubstExpr)) {
+    // Drill down concept ids treated as atomic constraints
+    S.DiagnoseUnsatisfiedConstraint(CSE);
+    return;
   } else if (auto *TTE = dyn_cast<TypeTraitExpr>(SubstExpr);
              TTE && TTE->getTrait() == clang::TypeTrait::BTT_IsDeducible) {
     assert(TTE->getNumArgs() == 2);
@@ -1454,74 +1450,49 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
   S.DiagnoseTypeTraitDetails(SubstExpr);
 }
 
-static void
-diagnoseUnsatisfiedConstraintExpr(Sema &S,
-                                  const ConstraintSatisfaction::Detail &Record,
-                                  SourceLocation Loc, bool First = true) {
+static void diagnoseUnsatisfiedConstraintExpr(
+    Sema &S, const UnsatisfiedConstraintRecord &Record, SourceLocation Loc,
+    bool First, concepts::NestedRequirement *Req) {
   if (auto *Diag = Record.template dyn_cast<
                    ConstraintSatisfaction::SubstitutionDiagnostic *>()) {
-    S.Diag(Diag->first, diag::note_substituted_constraint_expr_is_ill_formed)
-        << Diag->second;
+    if (Req)
+      S.Diag(Diag->first, diag::note_nested_requirement_substitution_error)
+          << (int)First << Req->getInvalidConstraintEntity() << Diag->second;
+    else
+      S.Diag(Diag->first, diag::note_substituted_constraint_expr_is_ill_formed)
+          << Diag->second;
     return;
   }
-
-  const auto *Expr = cast<const class Expr *>(Record);
-  if (const auto *CSE = dyn_cast<ConceptSpecializationExpr>(Expr)) {
+  if (const auto *Concept = dyn_cast<const ConceptReference *>(Record)) {
     if (Loc.isInvalid())
-      Loc = CSE->getBeginLoc();
-    diagnoseUnsatisfiedConceptIdExpr(S, CSE, Loc, First);
+      Loc = Concept->getBeginLoc();
+    diagnoseUnsatisfiedConceptIdExpr(S, Concept, Loc, First);
     return;
   }
-  diagnoseWellFormedUnsatisfiedConstraintExpr(S, Expr, First);
+  diagnoseWellFormedUnsatisfiedConstraintExpr(
+      S, cast<const class Expr *>(Record), First);
 }
 
 void Sema::DiagnoseUnsatisfiedConstraint(
     const ConstraintSatisfaction &Satisfaction, SourceLocation Loc,
     bool First) {
+
   assert(!Satisfaction.IsSatisfied &&
          "Attempted to diagnose a satisfied constraint");
-  std::vector<bool> Prevs;
-  for (auto &Record : Satisfaction.Details) {
-    if (Record.isNull()) {
-      First = Prevs.back();
-      Prevs.pop_back();
-      continue;
-    }
-    diagnoseUnsatisfiedConstraintExpr(*this, Record, Loc, First);
-    First = false;
-    Loc = {};
-    if (isa_and_nonnull<ConceptSpecializationExpr>(
-            Record.dyn_cast<const Expr *>())) {
-      Prevs.push_back(First);
-      First = true;
-    }
-  }
+  ::DiagnoseUnsatisfiedConstraint(*this, Satisfaction.Details, Loc, First);
 }
 
 void Sema::DiagnoseUnsatisfiedConstraint(
     const ConceptSpecializationExpr *ConstraintExpr) {
+
   const ASTConstraintSatisfaction &Satisfaction =
       ConstraintExpr->getSatisfaction();
-  bool First = true;
-  SourceLocation Loc = ConstraintExpr->getBeginLoc();
+
   assert(!Satisfaction.IsSatisfied &&
          "Attempted to diagnose a satisfied constraint");
-  std::vector<bool> Prevs;
-  for (auto &Record : Satisfaction) {
-    if (Record.isNull()) {
-      First = Prevs.back();
-      Prevs.pop_back();
-      continue;
-    }
-    diagnoseUnsatisfiedConstraintExpr(*this, Record, Loc, First);
-    Loc = {};
-    if (isa_and_nonnull<ConceptSpecializationExpr>(
-            Record.dyn_cast<const Expr *>())) {
-      Prevs.push_back(First);
-      First = true;
-      continue;
-    }
-  }
+
+  ::DiagnoseUnsatisfiedConstraint(*this, Satisfaction.records(),
+                                  ConstraintExpr->getBeginLoc());
 }
 
 const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
@@ -1716,6 +1687,12 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, const NamedDecl *D,
   // [...]
   E = E->IgnoreParenImpCasts();
 
+  llvm::FoldingSetNodeID ID;
+  if (D && DiagRecursiveConstraintEval(S, ID, D, E)) {
+    return nullptr;
+  }
+  SatisfactionStackRAII StackRAII(S, D, ID);
+
   // C++2a [temp.param]p4:
   //     [...] If T is not a pack, then E is E', otherwise E is (E' && ...).
   // Fold expression is considered atomic constraints per current wording.
@@ -1766,8 +1743,9 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, const NamedDecl *D,
                                        S.ArgPackSubstIndex);
 
   } else if (auto *FE = dyn_cast<const CXXFoldExpr>(E);
-             FE && (FE->getOperator() == BinaryOperatorKind::BO_LAnd ||
-                    FE->getOperator() == BinaryOperatorKind::BO_LOr)) {
+             FE && S.getLangOpts().CPlusPlus26 &&
+             (FE->getOperator() == BinaryOperatorKind::BO_LAnd ||
+              FE->getOperator() == BinaryOperatorKind::BO_LOr)) {
 
     // Normalize fold expressions in C++26.
 

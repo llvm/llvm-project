@@ -27,6 +27,9 @@ CreateUnsatisfiedConstraintRecord(const ASTContext &C,
     new (TrailingObject) UnsatisfiedConstraintRecord(nullptr);
   else if (const auto *E = llvm::dyn_cast<const Expr *>(Detail))
     new (TrailingObject) UnsatisfiedConstraintRecord(E);
+  else if (const auto *Concept =
+               llvm::dyn_cast<const ConceptReference *>(Detail))
+    new (TrailingObject) UnsatisfiedConstraintRecord(Concept);
   else {
     auto &SubstitutionDiagnostic =
         *cast<std::pair<SourceLocation, StringRef> *>(Detail);
@@ -110,6 +113,19 @@ void ConceptReference::print(llvm::raw_ostream &OS,
     }
     OS << ">";
   }
+}
+
+const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
+                                             const ConceptReference *C) {
+  std::string NameStr;
+  llvm::raw_string_ostream OS(NameStr);
+  LangOptions LO;
+  LO.CPlusPlus = true;
+  LO.Bool = true;
+  OS << '\'';
+  C->print(OS, PrintingPolicy(LO));
+  OS << '\'';
+  return DB << NameStr;
 }
 
 concepts::ExprRequirement::ExprRequirement(
