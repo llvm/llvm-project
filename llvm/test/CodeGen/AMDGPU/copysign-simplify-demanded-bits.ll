@@ -36,17 +36,12 @@ define <2 x half> @test_pown_reduced_fast_v2f16_known_odd(<2 x half> %x, <2 x i3
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX9-NEXT:    v_and_b32_e32 v3, 0x7fff7fff, v0
-; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX9-NEXT:    v_pack_b32_f16 v1, v1, v2
 ; GFX9-NEXT:    v_pk_mul_f16 v1, v3, v1
-; GFX9-NEXT:    v_bfi_b32 v2, s4, v1, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v1, v0
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v2, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %y = or <2 x i32> %y.arg, <i32 1, i32 1>
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
