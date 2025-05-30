@@ -947,6 +947,11 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
               converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
           dependVar = entity.getBase();
         }
+      } else if (evaluate::isStructureComponent(*object.ref())) {
+        SomeExpr expr = *object.ref();
+        hlfir::EntityWithAttributes entity = convertExprToHLFIR(
+            converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+        dependVar = entity.getBase();
       } else {
         semantics::Symbol *sym = object.sym();
         dependVar = converter.getSymbolAddress(*sym);
