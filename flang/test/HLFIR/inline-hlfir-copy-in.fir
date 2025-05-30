@@ -34,6 +34,8 @@ func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {
   return
 }
 
+// CHECK: #loop_vectorize = #llvm.loop_vectorize<disable = true>
+// CHECK: #loop_annotation = #llvm.loop_annotation<vectorize = #loop_vectorize>
 // CHECK-LABEL:   func.func private @_test_inline_copy_in(
 // CHECK-SAME:                                          %[[VAL_0:.*]]: !fir.box<!fir.array<?x?x?xf64>> {fir.bindc_name = "x"},
 // CHECK-SAME:                                          %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "i"},
@@ -140,3 +142,65 @@ func.func private @_test_no_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>
 // CHECK:    hlfir.end_associate %[[VAL_22:.*]]#1, %[[VAL_22:.*]]#2 : !fir.ref<i32>, i1
 // CHECK:    return
 // CHECK:  }
+
+// Test not inlining optional dummy arguments (no direct copy-out)
+func.func @_QPoptional_copy_in_out(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
+  %false = arith.constant false
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %1 = fir.dummy_scope : !fir.dscope
+  %2:2 = hlfir.declare %arg0 dummy_scope %1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_copy_in_outEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %3 = fir.is_present %2#0 : (!fir.box<!fir.array<?xf32>>) -> i1
+  %4:2 = fir.if %3 -> (!fir.ref<!fir.array<?xf32>>, i1) {
+    %5:2 = hlfir.copy_in %2#0 to %0 : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.box<!fir.array<?xf32>>, i1)
+    %6 = fir.box_addr %5#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+    fir.result %6, %5#1 : !fir.ref<!fir.array<?xf32>>, i1
+  } else {
+    %5 = fir.absent !fir.ref<!fir.array<?xf32>>
+    fir.result %5, %false : !fir.ref<!fir.array<?xf32>>, i1
+  }
+  fir.call @_QPtakes_optional_explicit(%4#0) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>) -> ()
+  hlfir.copy_out %0, %4#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1) -> ()
+  return
+}
+
+// CHECK-LABEL:  func.func @_QPoptional_copy_in_out(
+// CHECK-SAME: %[[ARG_0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
+// CHECK:    %false = arith.constant false
+// CHECK:    %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
+// CHECK:    %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:    %[[VAL_2:.*]]:2 = hlfir.declare %[[ARG_0:.*]] dummy_scope %[[VAL_1:.*]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFoptional_copy_in_outEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+// CHECK:    %[[VAL_3:.*]] = fir.is_present %[[VAL_2:.*]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
+// CHECK:    %[[VAL_4:.*]]:2 = fir.if %[[VAL_3:.*]] -> (!fir.ref<!fir.array<?xf32>>, i1) {
+// CHECK:      %[[VAL_5:.*]]:2 = hlfir.copy_in %[[VAL_2:.*]]#0 to %[[VAL_0:.*]] : (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.box<!fir.array<?xf32>>, i1)
+// CHECK:      %[[VAL_6:.*]] = fir.box_addr %[[VAL_5:.*]]#0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+// CHECK:      fir.result %[[VAL_6:.*]], %[[VAL_5:.*]]#1 : !fir.ref<!fir.array<?xf32>>, i1
+// CHECK:    } else {
+// CHECK:      %[[VAL_5:.*]] = fir.absent !fir.ref<!fir.array<?xf32>>
+// CHECK:      fir.result %[[VAL_5:.*]], %false : !fir.ref<!fir.array<?xf32>>, i1
+// CHECK:    }
+// CHECK:    fir.call @_QPtakes_optional_explicit(%[[VAL_4:.*]]#0) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>) -> ()
+// CHECK:    hlfir.copy_out %[[VAL_0:.*]], %[[VAL_4:.*]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1) -> ()
+// CHECK:    return
+// CHECK:  }
+
+// Test not inlining of assumed-rank arrays
+func.func @_QPtest_copy_in_out_2(%arg0: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x"}) {
+  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<*:f32>>>
+  %1 = fir.dummy_scope : !fir.dscope
+  %2:2 = hlfir.declare %arg0 dummy_scope %1 {uniq_name = "_QFtest_copy_in_out_2Ex"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+  %3:2 = hlfir.copy_in %2#0 to %0 : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> (!fir.box<!fir.array<*:f32>>, i1)
+  fir.call @_QPtakes_contiguous_intentin(%3#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
+  hlfir.copy_out %0, %3#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, i1) -> ()
+  return
+}
+
+// CHECK-LABEL: func.func @_QPtest_copy_in_out_2(
+// CHECK-SAME: %[[ARG_0]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x"}) {
+// CHECK:   %[[VAL_0]] = fir.alloca !fir.box<!fir.heap<!fir.array<*:f32>>>
+// CHECK:   %[[VAL_1]] = fir.dummy_scope : !fir.dscope
+// CHECK:   %[[VAL_2]]:2 = hlfir.declare %[[ARG_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFtest_copy_in_out_2Ex"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+// CHECK:   %[[VAL_3]]:2 = hlfir.copy_in %[[VAL_2]]#0 to %[[VAL_0]] : (!fir.box<!fir.array<*:f32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>) -> (!fir.box<!fir.array<*:f32>>, i1)
+// CHECK:   fir.call @_QPtakes_contiguous_intentin(%[[VAL_3]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
+// CHECK:   hlfir.copy_out %[[VAL_0]], %[[VAL_3]]#1 : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, i1) -> ()
+// CHECK:   return
+// CHECK: }

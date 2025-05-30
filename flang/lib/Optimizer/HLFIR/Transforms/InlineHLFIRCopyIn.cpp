@@ -48,6 +48,7 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   fir::FirOpBuilder builder(rewriter, copyIn.getOperation());
   mlir::Location loc = copyIn.getLoc();
   hlfir::Entity inputVariable{copyIn.getVar()};
+  mlir::Type resultAddrType = copyIn.getCopiedIn().getType();
   if (!fir::isa_trivial(inputVariable.getFortranElementType()))
     return rewriter.notifyMatchFailure(copyIn,
                                        "CopyInOp's data type is not trivial");
@@ -65,6 +66,10 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   if (!copyOut)
     return rewriter.notifyMatchFailure(copyIn,
                                        "CopyInOp has no direct CopyOut");
+
+  if (mlir::cast<fir::BaseBoxType>(resultAddrType).isAssumedRank())
+    return rewriter.notifyMatchFailure(copyIn,
+                                       "The result array is assumed-rank");
 
   // Only inline the copy_in when copy_out does not need to be done, i.e. in
   // case of intent(in).
@@ -85,12 +90,9 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
           .genThen([&]() {
             mlir::Value result = inputVariable;
             if (fir::isPointerType(inputVariable.getType())) {
-              auto boxAddr = builder.create<fir::BoxAddrOp>(loc, inputVariable);
-              fir::ReferenceType refTy = fir::ReferenceType::get(sequenceType);
-              mlir::Value refVal = builder.createConvert(loc, refTy, boxAddr);
-              mlir::Value shape = hlfir::genShape(loc, builder, inputVariable);
-              result = builder.create<fir::EmboxOp>(loc, resultBoxType, refVal,
-                                                    shape);
+              result = builder.create<fir::ReboxOp>(
+                  loc, resultBoxType, inputVariable, mlir::Value{},
+                  mlir::Value{});
             }
             builder.create<fir::ResultOp>(
                 loc, mlir::ValueRange{result, builder.createBool(loc, false)});
@@ -142,10 +144,13 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   mlir::OpResult resultBox = results[0];
   mlir::OpResult needsCleanup = results[1];
 
+  // Prepare the corresponding copyOut to free the temporary if it is required
   auto alloca = builder.create<fir::AllocaOp>(loc, resultBox.getType());
   auto store = builder.create<fir::StoreOp>(loc, resultBox, alloca);
+  rewriter.startOpModification(copyOut);
   copyOut->setOperand(0, store.getMemref());
   copyOut->setOperand(1, needsCleanup);
+  rewriter.finalizeOpModification(copyOut);
 
   rewriter.replaceOp(copyIn, {resultBox, builder.genNot(loc, isContiguous)});
   return mlir::success();
