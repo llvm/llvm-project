@@ -2379,11 +2379,9 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   PreVectorPH->swapSuccessors();
 
   // We just connected a new block to the scalar preheader. Update all
-  // ResumePhis by adding an incoming value for it, replicating the last value.
-  for (VPRecipeBase &R : *cast<VPBasicBlock>(ScalarPH)) {
-    auto *ResumePhi = dyn_cast<VPInstruction>(&R);
-    if (!ResumePhi || ResumePhi->getOpcode() != VPInstruction::ResumePhi)
-      continue;
+  // VPPhis by adding an incoming value for it, replicating the last value.
+  for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
+    auto *ResumePhi = cast<VPPhi>(&R);
     ResumePhi->addOperand(
         ResumePhi->getOperand(ResumePhi->getNumOperands() - 1));
   }
@@ -2533,7 +2531,8 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
   for (auto &R : make_early_inc_range(*VPBB)) {
-    assert(!R.isPhi() && "Tried to move phi recipe to end of block");
+    assert((IRVPBB->empty() || IRVPBB->back().isPhi() || !R.isPhi()) &&
+           "Tried to move phi recipe after a non-phi recipe");
     R.moveBefore(*IRVPBB, IRVPBB->end());
   }
 
@@ -7535,14 +7534,10 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   // created a bc.merge.rdx Phi after the main vector body. Ensure that we carry
   // over the incoming values correctly.
   using namespace VPlanPatternMatch;
-  auto IsResumePhi = [](VPUser *U) {
-    auto *VPI = dyn_cast<VPInstruction>(U);
-    return VPI && VPI->getOpcode() == VPInstruction::ResumePhi;
-  };
-  assert(count_if(EpiRedResult->users(), IsResumePhi) == 1 &&
+  assert(count_if(EpiRedResult->users(), IsaPred<VPPhi>) == 1 &&
          "ResumePhi must have a single user");
   auto *EpiResumePhiVPI =
-      cast<VPInstruction>(*find_if(EpiRedResult->users(), IsResumePhi));
+      cast<VPInstruction>(*find_if(EpiRedResult->users(), IsaPred<VPPhi>));
   auto *EpiResumePhi = cast<PHINode>(State.get(EpiResumePhiVPI, true));
   EpiResumePhi->setIncomingValueForBlock(
       BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
@@ -8723,9 +8718,8 @@ static VPInstruction *addResumePhiRecipeForInduction(
                                                 WideIV->getDebugLoc());
   }
 
-  auto *ResumePhiRecipe =
-      ScalarPHBuilder.createNaryOp(VPInstruction::ResumePhi, {EndValue, Start},
-                                   WideIV->getDebugLoc(), "bc.resume.val");
+  auto *ResumePhiRecipe = ScalarPHBuilder.createScalarPhi(
+      {EndValue, Start}, WideIV->getDebugLoc(), "bc.resume.val");
   return ResumePhiRecipe;
 }
 
@@ -8754,8 +8748,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
       if (VPInstruction *ResumePhi = addResumePhiRecipeForInduction(
               WideIVR, VectorPHBuilder, ScalarPHBuilder, TypeInfo,
               &Plan.getVectorTripCount())) {
-        assert(ResumePhi->getOpcode() == VPInstruction::ResumePhi &&
-               "Expected a ResumePhi");
+        assert(isa<VPPhi>(ResumePhi) && "Expected a phi");
         IVEndValues[WideIVR] = ResumePhi->getOperand(0);
         ScalarPhiIRI->addOperand(ResumePhi);
         continue;
@@ -8780,8 +8773,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
           VPInstruction::ExtractLastElement, {ResumeFromVectorLoop}, {},
           "vector.recur.extract");
     StringRef Name = IsFOR ? "scalar.recur.init" : "bc.merge.rdx";
-    auto *ResumePhiR = ScalarPHBuilder.createNaryOp(
-        VPInstruction::ResumePhi,
+    auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
         {ResumeFromVectorLoop, VectorPhiR->getStartValue()}, {}, Name);
     ScalarPhiIRI->addOperand(ResumePhiR);
   }
@@ -9445,6 +9437,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+    Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
     // If tail is folded by masking, introduce selects between the phi
     // and the users outside the vector region of each reduction, at the
     // beginning of the dedicated latch block.
@@ -9456,7 +9449,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
-      Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
               ? std::make_optional(RdxDesc.getFastMathFlags())
@@ -9477,7 +9469,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
     // entire expression in the smaller type.
-    Type *PhiTy = PhiR->getStartValue()->getLiveInIRValue()->getType();
     if (MinVF.isVector() && PhiTy != RdxDesc.getRecurrenceType() &&
         !RecurrenceDescriptor::isAnyOfRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
@@ -9962,9 +9953,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       VPI->setOperand(1, Freeze);
       if (UpdateResumePhis)
         OrigStart->replaceUsesWithIf(Freeze, [Freeze](VPUser &U, unsigned) {
-          return Freeze != &U && isa<VPInstruction>(&U) &&
-                 cast<VPInstruction>(&U)->getOpcode() ==
-                     VPInstruction::ResumePhi;
+          return Freeze != &U && isa<VPPhi>(&U);
         });
     }
   };
@@ -9977,13 +9966,12 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   // scalar (which will become vector) epilogue loop we are done. Otherwise
   // create it below.
   if (any_of(*MainScalarPH, [VectorTC](VPRecipeBase &R) {
-        return match(&R, m_VPInstruction<VPInstruction::ResumePhi>(
-                             m_Specific(VectorTC), m_SpecificInt(0)));
+        return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
+                                                           m_SpecificInt(0)));
       }))
     return;
   VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
-  ScalarPHBuilder.createNaryOp(
-      VPInstruction::ResumePhi,
+  ScalarPHBuilder.createScalarPhi(
       {VectorTC, MainPlan.getCanonicalIV()->getStartValue()}, {},
       "vec.epilog.resume.val");
 }

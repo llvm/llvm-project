@@ -12707,34 +12707,26 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   if (LHSExtOpVT != RHSExtOp.getValueType())
     return SDValue();
 
-  unsigned NewOpc = ISD::PARTIAL_REDUCE_SMLA;
+  unsigned NewOpc;
+  if (LHSOpcode == ISD::SIGN_EXTEND && RHSOpcode == ISD::SIGN_EXTEND)
+    NewOpc = ISD::PARTIAL_REDUCE_SMLA;
+  else if (LHSOpcode == ISD::ZERO_EXTEND && RHSOpcode == ISD::ZERO_EXTEND)
+    NewOpc = ISD::PARTIAL_REDUCE_UMLA;
+  else if (LHSOpcode == ISD::SIGN_EXTEND && RHSOpcode == ISD::ZERO_EXTEND)
+    NewOpc = ISD::PARTIAL_REDUCE_SUMLA;
+  else if (LHSOpcode == ISD::ZERO_EXTEND && RHSOpcode == ISD::SIGN_EXTEND) {
+    NewOpc = ISD::PARTIAL_REDUCE_SUMLA;
+    std::swap(LHSExtOp, RHSExtOp);
+  } else
+    return SDValue();
   // For a 2-stage extend the signedness of both of the extends must match
   // If the mul has the same type, there is no outer extend, and thus we
   // can simply use the inner extends to pick the result node.
+  // TODO: extend to handle nonneg zext as sext
   EVT AccElemVT = Acc.getValueType().getVectorElementType();
-  if (Op1.getValueType().getVectorElementType() != AccElemVT) {
-    // TODO: Split this into canonicalization rules
-    if (LHSOpcode == ISD::SIGN_EXTEND && RHSOpcode == ISD::SIGN_EXTEND &&
-        (N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA ||
-         N->getOpcode() == ISD::PARTIAL_REDUCE_SUMLA))
-      NewOpc = ISD::PARTIAL_REDUCE_SMLA;
-    else if (LHSOpcode == ISD::ZERO_EXTEND && RHSOpcode == ISD::ZERO_EXTEND &&
-             N->getOpcode() == ISD::PARTIAL_REDUCE_UMLA)
-      NewOpc = ISD::PARTIAL_REDUCE_UMLA;
-    else
+  if (Op1.getValueType().getVectorElementType() != AccElemVT &&
+      NewOpc != N->getOpcode())
       return SDValue();
-  } else {
-    // TODO: Add canonicalization rule
-    if (LHSOpcode == ISD::SIGN_EXTEND && RHSOpcode == ISD::SIGN_EXTEND)
-      NewOpc = ISD::PARTIAL_REDUCE_SMLA;
-    else if (LHSOpcode == ISD::ZERO_EXTEND && RHSOpcode == ISD::ZERO_EXTEND)
-      NewOpc = ISD::PARTIAL_REDUCE_UMLA;
-    else if (LHSOpcode == ISD::SIGN_EXTEND && RHSOpcode == ISD::ZERO_EXTEND)
-      NewOpc = ISD::PARTIAL_REDUCE_SUMLA;
-    else
-      // TODO: Handle the swapped sumla case here
-      return SDValue();
-  }
 
   // Only perform these combines if the target supports folding
   // the extends into the operation.
