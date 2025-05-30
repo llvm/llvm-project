@@ -23,6 +23,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
@@ -387,9 +388,14 @@ class VPSlotTracker {
   /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
+  /// Lazily created ModuleSlotTracker, used only when unnamed IR instructions
+  /// require slot tracking.
+  std::unique_ptr<ModuleSlotTracker> MST;
+
   void assignName(const VPValue *V);
   void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
+  std::string getName(const VPValue *V);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
