@@ -20,6 +20,17 @@
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
+
+/// Library names to use for `fp128` libcalls.
+enum class F128LibcallFormat {
+  /// C23 `*f128` lowering, e.g. `sinf128`
+  Default = 0,
+  /// `long double` *l` lowering, e.g. `sinl`.
+  LongDouble = 1,
+  // If needed, this could be extended with an option for `q` suffixes from
+  // libquadmath.
+};
+
 namespace RTLIB {
 
 /// RTLIB::Libcall enum - This enum defines all of the runtime library calls
@@ -97,6 +108,13 @@ private:
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
   void initLibcalls(const Triple &TT);
+
+  /// Set a specific lowering convention for `fp128` math libcalls.
+  ///
+  /// By default, `fp128` math functions get lowered to the C23 `sinf128`-
+  /// style symbols. This allows overriding with `sinl`-style symbols on
+  /// platforms where `long double` is known to be identical to _Float128.
+  void setF128LibcallFormat(F128LibcallFormat Format);
 };
 
 } // namespace RTLIB
