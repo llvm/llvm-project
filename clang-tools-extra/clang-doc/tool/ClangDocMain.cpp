@@ -247,8 +247,7 @@ sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
   }
 }
 
-llvm::Error handleMappingPhaseErrors(llvm::Error Err,
-                                     bool IgnoreMappingFailures) {
+static llvm::Error handleMappingFailures(llvm::Error Err) {
   if (!Err)
     return llvm::Error::success();
   if (IgnoreMappingFailures) {
@@ -260,10 +259,9 @@ llvm::Error handleMappingPhaseErrors(llvm::Error Err,
   return Err;
 }
 
-llvm::Error ensureOutputDirExists(const std::string &OutDirectory) {
-  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory)) {
+static llvm::Error createDirectories(llvm::StringRef OutDirectory) {
+  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory))
     return llvm::createFileError(OutDirectory, Err);
-  }
   return llvm::Error::success();
 }
 
@@ -321,9 +319,8 @@ Example usage for a project using a compile commands database:
 
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
-  ExitOnErr(handleMappingPhaseErrors(
-      Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster),
-      IgnoreMappingFailures));
+  ExitOnErr(handleMappingFailures(
+      Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster)));
 
   // Collect values into output by key.
   // In ToolResults, the Key is the hashed USR and the value is the
@@ -391,7 +388,7 @@ Example usage for a project using a compile commands database:
   sortUsrToInfo(USRToInfo);
 
   // Ensure the root output directory exists.
-  ExitOnErr(ensureOutputDirExists(OutDirectory));
+  ExitOnErr(createDirectories(OutDirectory));
 
   // Run the generator.
   llvm::outs() << "Generating docs...\n";
