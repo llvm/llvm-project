@@ -106,17 +106,17 @@ static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
 // Experiment to mark cold functions as optsize/minsize/optnone.
 // TODO: remove once this is exposed as a proper driver flag.
 static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
-  "pgo-cold-func-opt", cl::init(PGOOptions::ColdFuncOpt::Default), cl::Hidden,
-  cl::desc(
-      "Function attribute to apply to cold functions as determined by PGO"),
-  cl::values(clEnumValN(PGOOptions::ColdFuncOpt::Default, "default",
-                        "Default (no attribute)"),
-             clEnumValN(PGOOptions::ColdFuncOpt::OptSize, "optsize",
-                        "Mark cold functions with optsize."),
-             clEnumValN(PGOOptions::ColdFuncOpt::MinSize, "minsize",
-                        "Mark cold functions with minsize."),
-             clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
-                        "Mark cold functions with optnone.")));
+    "pgo-cold-func-opt", cl::init(PGOOptions::ColdFuncOpt::Default), cl::Hidden,
+    cl::desc(
+        "Function attribute to apply to cold functions as determined by PGO"),
+    cl::values(clEnumValN(PGOOptions::ColdFuncOpt::Default, "default",
+                          "Default (no attribute)"),
+               clEnumValN(PGOOptions::ColdFuncOpt::OptSize, "optsize",
+                          "Mark cold functions with optsize."),
+               clEnumValN(PGOOptions::ColdFuncOpt::MinSize, "minsize",
+                          "Mark cold functions with minsize."),
+               clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
+                          "Mark cold functions with optnone.")));
 
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
@@ -853,9 +853,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
         CodeGenOpts.DebugInfoForProfiling, CodeGenOpts.PseudoProbeForProfiling);
   else if (!CodeGenOpts.MemoryProfileUsePath.empty())
     // -fmemory-profile-use (without any of the above options)
-    PGOOpt = PGOOptions("", "", "", CodeGenOpts.MemoryProfileUsePath, VFS,
-                        PGOOptions::NoAction, PGOOptions::NoCSAction,
-                        llvm::ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
+    PGOOpt =
+        PGOOptions("", "", "", CodeGenOpts.MemoryProfileUsePath, VFS,
+                   PGOOptions::NoAction, PGOOptions::NoCSAction,
+                   llvm::ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
   else if (CodeGenOpts.PseudoProbeForProfiling)
     // -fpseudo-probe-for-profiling
     PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
