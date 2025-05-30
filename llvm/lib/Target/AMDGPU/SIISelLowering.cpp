@@ -11737,9 +11737,10 @@ SDValue SITargetLowering::performFCopySignCombine(SDNode *N,
   // lower half with a copy.
   // fcopysign f64:x, _:y -> x.lo32, (fcopysign (f32 x.hi32), _:y)
   EVT MagVT = MagnitudeOp.getValueType();
-  if (MagVT.getScalarType() == MVT::f64) {
-    unsigned NumElts = MagVT.isVector() ? MagVT.getVectorNumElements() : 1;
 
+  unsigned NumElts = MagVT.isVector() ? MagVT.getVectorNumElements() : 1;
+
+  if (MagVT.getScalarType() == MVT::f64) {
     EVT F32VT = MagVT.isVector()
                     ? EVT::getVectorVT(*DAG.getContext(), MVT::f32, 2 * NumElts)
                     : MVT::v2f32;
@@ -11777,7 +11778,7 @@ SDValue SITargetLowering::performFCopySignCombine(SDNode *N,
     return DAG.getNode(ISD::BUILD_VECTOR, DL, MagVT, NewElts);
   }
 
-  if (SignVT != MVT::f64)
+  if (SignVT.getScalarType() != MVT::f64)
     return SDValue();
 
   // Reduce width of sign operand, we only need the highest bit.
@@ -11785,13 +11786,31 @@ SDValue SITargetLowering::performFCopySignCombine(SDNode *N,
   // fcopysign f64:x, f64:y ->
   //   fcopysign f64:x, (extract_vector_elt (bitcast f64:y to v2f32), 1)
   // TODO: In some cases it might make sense to go all the way to f16.
-  SDValue SignAsVector = DAG.getNode(ISD::BITCAST, DL, MVT::v2f32, SignOp);
-  SDValue SignAsF32 =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, SignAsVector,
-                  DAG.getConstant(1, DL, MVT::i32));
+
+  EVT F32VT = MagVT.isVector()
+                  ? EVT::getVectorVT(*DAG.getContext(), MVT::f32, 2 * NumElts)
+                  : MVT::v2f32;
+
+  SDValue SignAsVector = DAG.getNode(ISD::BITCAST, DL, F32VT, SignOp);
+
+  SmallVector<SDValue, 8> F32Signs;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    // Take sign from odd elements of cast vector
+    SDValue SignAsF32 =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, SignAsVector,
+                    DAG.getConstant(2 * I + 1, DL, MVT::i32));
+    F32Signs.push_back(SignAsF32);
+  }
+
+  SDValue NewSign =
+      NumElts == 1
+          ? F32Signs.back()
+          : DAG.getNode(ISD::BUILD_VECTOR, DL,
+                        EVT::getVectorVT(*DAG.getContext(), MVT::f32, NumElts),
+                        F32Signs);
 
   return DAG.getNode(ISD::FCOPYSIGN, DL, N->getValueType(0), N->getOperand(0),
-                     SignAsF32);
+                     NewSign);
 }
 
 // (shl (add x, c1), c2) -> add (shl x, c2), (shl c1, c2)
