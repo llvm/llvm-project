@@ -2765,7 +2765,7 @@ void SelectionDAG::getSignAsIntValue(FloatSignAsInt &State, const SDLoc &DL,
   EVT FloatVT = Value.getValueType();
   unsigned NumBits = FloatVT.getScalarSizeInBits();
   State.FloatVT = FloatVT;
-  EVT IVT = EVT::getIntegerVT(*getContext(), NumBits);
+  EVT IVT = FloatVT.changeTypeToInteger();
   // Convert to an integer of the same size.
   if (TLI->isTypeLegal(IVT)) {
     State.IntValue = getNode(ISD::BITCAST, DL, IVT, Value);

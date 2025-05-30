@@ -8611,9 +8611,10 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
       !DAG.isKnownNeverZeroFloat(RHS) && !DAG.isKnownNeverZeroFloat(LHS)) {
     auto IsSpecificZero = [&](SDValue F) {
-      EVT IntVT = VT.changeTypeToInteger();
-      SDValue Int = DAG.getBitcast(IntVT, F);
-      return DAG.getSetCC(DL, CCVT, Int, DAG.getConstant(0, DL, IntVT),
+      FloatSignAsInt State;
+      DAG.getSignAsIntValue(State, DL, F);
+      return DAG.getSetCC(DL, CCVT, State.IntValue,
+                          DAG.getConstant(0, DL, State.IntValue.getValueType()),
                           IsMax ? ISD::SETEQ : ISD::SETNE);
     };
     SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
