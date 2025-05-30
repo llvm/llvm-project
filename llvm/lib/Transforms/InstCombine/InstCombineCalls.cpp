@@ -1453,8 +1453,12 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
 
   // intrinsic (shuf X, M), (shuf Y, M), ... --> shuf (intrinsic X, Y, ...), M
   Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
+  // Result type might be a different vector width.
+  // TODO: Check that the result type isn't widened?
+  VectorType *ResTy =
+      VectorType::get(II->getType()->getScalarType(), cast<VectorType>(SrcTy));
   Value *NewIntrinsic =
-      Builder.CreateIntrinsic(SrcTy, II->getIntrinsicID(), NewArgs, FPI);
+      Builder.CreateIntrinsic(ResTy, II->getIntrinsicID(), NewArgs, FPI);
   return new ShuffleVectorInst(NewIntrinsic, Mask);
 }
 
