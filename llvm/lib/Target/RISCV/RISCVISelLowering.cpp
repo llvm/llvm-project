@@ -18338,17 +18338,15 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
   if (InVec.getOpcode() == ISD::ZERO_EXTEND ||
       InVec.getOpcode() == ISD::SIGN_EXTEND) {
     SDValue A = InVec.getOperand(0);
-    if (A.getValueType().getVectorElementType() != MVT::i8 ||
-        !TLI.isTypeLegal(A.getValueType()))
+    EVT OpVT = A.getValueType();
+    if (OpVT.getVectorElementType() != MVT::i8 || !TLI.isTypeLegal(OpVT))
       return SDValue();
 
     MVT ResVT = getQDOTXResultType(A.getSimpleValueType());
-    A = DAG.getBitcast(ResVT, A);
-    SDValue B = DAG.getConstant(0x01010101, DL, ResVT);
-
+    SDValue B = DAG.getConstant(0x1, DL, OpVT);
     bool IsSigned = InVec.getOpcode() == ISD::SIGN_EXTEND;
-    unsigned Opc = IsSigned ? RISCVISD::VQDOT_VL : RISCVISD::VQDOTU_VL;
-    return lowerVQDOT(Opc, A, B, DL, DAG, Subtarget);
+    unsigned Opc = IsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+    return DAG.getNode(Opc, DL, ResVT, {DAG.getConstant(0, DL, ResVT), A, B});
   }
 
   // mul (sext, sext) -> vqdot
@@ -18362,32 +18360,38 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
 
   SDValue A = InVec.getOperand(0);
   SDValue B = InVec.getOperand(1);
-  unsigned Opc = 0;
-  if (A.getOpcode() == B.getOpcode()) {
-    if (A.getOpcode() == ISD::SIGN_EXTEND)
-      Opc = RISCVISD::VQDOT_VL;
-    else if (A.getOpcode() == ISD::ZERO_EXTEND)
-      Opc = RISCVISD::VQDOTU_VL;
-    else
-      return SDValue();
-  } else {
-    if (B.getOpcode() != ISD::ZERO_EXTEND)
-      std::swap(A, B);
-    if (A.getOpcode() != ISD::SIGN_EXTEND || B.getOpcode() != ISD::ZERO_EXTEND)
-      return SDValue();
-    Opc = RISCVISD::VQDOTSU_VL;
-  }
-  assert(Opc);
 
-  if (A.getOperand(0).getValueType().getVectorElementType() != MVT::i8 ||
-      A.getOperand(0).getValueType() != B.getOperand(0).getValueType() ||
+  if (!ISD::isExtOpcode(A.getOpcode()))
+    return SDValue();
+
+  EVT OpVT = A.getOperand(0).getValueType();
+  if (OpVT.getVectorElementType() != MVT::i8 ||
+      OpVT != B.getOperand(0).getValueType() ||
       !TLI.isTypeLegal(A.getValueType()))
     return SDValue();
 
-  MVT ResVT = getQDOTXResultType(A.getOperand(0).getSimpleValueType());
+  MVT ResVT = getQDOTXResultType(OpVT.getSimpleVT());
+  // Use the partial_reduce_*mla path if possible
+  if (A.getOpcode() == B.getOpcode()) {
+    // TODO: handle ANY_EXTEND and zext nonneg here
+    if (A.getOpcode() != ISD::SIGN_EXTEND &&
+        A.getOpcode() != ISD::ZERO_EXTEND)
+      return SDValue();
+
+    bool IsSigned = A.getOpcode() == ISD::SIGN_EXTEND;
+    unsigned Opc = IsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+    return DAG.getNode(Opc, DL, ResVT, {DAG.getConstant(0, DL, ResVT), A.getOperand(0), B.getOperand(0)});
+  }
+  // We don't yet have a partial_reduce_sumla node, so directly lower to the
+  // target node instead.
+  if (B.getOpcode() != ISD::ZERO_EXTEND)
+    std::swap(A, B);
+  if (A.getOpcode() != ISD::SIGN_EXTEND || B.getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
   A = DAG.getBitcast(ResVT, A.getOperand(0));
   B = DAG.getBitcast(ResVT, B.getOperand(0));
-  return lowerVQDOT(Opc, A, B, DL, DAG, Subtarget);
+  return lowerVQDOT(RISCVISD::VQDOTSU_VL, A, B, DL, DAG, Subtarget);
 }
 
 static SDValue performVECREDUCECombine(SDNode *N, SelectionDAG &DAG,
