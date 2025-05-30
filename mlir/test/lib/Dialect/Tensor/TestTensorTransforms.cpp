@@ -88,6 +88,12 @@ struct TestTensorTransforms
       *this, "test-tracking-listener",
       llvm::cl::desc("Test tensor TrackingListener for the transform dialect"),
       llvm::cl::init(false)};
+
+  Option<bool> testEliminateWholeSlicingPatterns{
+      *this, "test-eliminate-whole-slicing-patterns",
+      llvm::cl::desc("Test patterns to eliminate whole-slicing extract_slice "
+                     "and insert_slice"),
+      llvm::cl::init(false)};
 };
 } // namespace
 
@@ -130,6 +136,12 @@ applyDropRedundantInsertSliceRankExpansionPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateDropRedundantInsertSliceRankExpansionPatterns(patterns);
   (void)applyPatternsGreedily(rootOp, std::move(patterns));
+}
+
+static void applyEliminateWholeSlicingPatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  tensor::populateEliminateWholeSlicingPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(rootOp, std::move(patterns));
 }
 
 namespace {
@@ -380,6 +392,8 @@ void TestTensorTransforms::runOnOperation() {
             applyRewriteExtractFromCollapseShapePatterns(rootOp, useForeach)))
       return signalPassFailure();
   }
+  if (testEliminateWholeSlicingPatterns)
+    applyEliminateWholeSlicingPatterns(rootOp);
   if (testTrackingListener)
     if (failed(testTrackingListenerReplacements(rootOp)))
       return signalPassFailure();
