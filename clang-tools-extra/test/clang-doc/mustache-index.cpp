@@ -18,9 +18,9 @@ class Foo;
 // CHECK-NEXT:          <a class="sidebar-item" href="#{{[0-9A-F]*}}">enum Color</a>
 // CHECK-NEXT:      </li>
 // CHECK-NEXT:  </ul>
-// CHECK:       <li class="sidebar-section">
-// CHECK-NEXT:      <a class="sidebar-item" href="#Classes">Inner Classes</a>
-// CHECK-NEXT:  </li>
+// CHECK:           <li class="sidebar-section">
+// CHECK-NEXT:          <a class="sidebar-item" href="#Classes">Inner Classes</a>
+// CHECK-NEXT:      </li>
 // CHECK-NEXT:  <ul>
 // CHECK-NEXT:      <li class="sidebar-item-container">
 // CHECK-NEXT:          <a class="sidebar-item" href="#{{[0-9A-F]*}}">Foo</a>
@@ -43,23 +43,23 @@ class Foo;
 // CHECK-NEXT:                  <tr>
 // CHECK-NEXT:                      <th>Name</th>
 // CHECK-NEXT:                      <th>Value</th>
-// CHECK:                  </tr>
+// CHECK:                       </tr>
 // CHECK-NEXT:                      <tr>
 // CHECK-NEXT:                          <td>RED</td>
 // CHECK-NEXT:                          <td>0</td>
-// CHECK:                      </tr>
+// CHECK:                           </tr>
 // CHECK-NEXT:                      <tr>
 // CHECK-NEXT:                          <td>BLUE</td>
 // CHECK-NEXT:                          <td>1</td>
-// CHECK:                      </tr>
+// CHECK:                           </tr>
 // CHECK-NEXT:                      <tr>
 // CHECK-NEXT:                          <td>GREEN</td>
 // CHECK-NEXT:                          <td>2</td>
-// CHECK:                      </tr>
+// CHECK:                           </tr>
 // CHECK-NEXT:                  </tbody>
 // CHECK-NEXT:              </table>
 // CHECK-NEXT:              <div>
-// CHECK-NEXT:                  Defined at line 5 of file {{.*}}/mustache-index.cpp
+// CHECK-NEXT:                  Defined at line 5 of file {{.*}}mustache-index.cpp
 // CHECK-NEXT:              </div>
 // CHECK-NEXT:          </div>
 // CHECK-NEXT:      </div>
