@@ -6576,8 +6576,8 @@ define <8 x float> @mload_constmask_v8f32_zero(ptr %addr, <8 x float> %dst) {
 ;
 ; AVX1OR2-LABEL: mload_constmask_v8f32_zero:
 ; AVX1OR2:       ## %bb.0:
-; AVX1OR2-NEXT:    vmovaps {{.*#+}} ymm0 = [4294967295,4294967295,4294967295,0,0,0,0,0]
-; AVX1OR2-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm0
+; AVX1OR2-NEXT:    vmovaps {{.*#+}} xmm0 = [4294967295,4294967295,4294967295,0]
+; AVX1OR2-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm0
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512F-LABEL: mload_constmask_v8f32_zero:
@@ -6585,21 +6585,21 @@ define <8 x float> @mload_constmask_v8f32_zero(ptr %addr, <8 x float> %dst) {
 ; AVX512F-NEXT:    movw $7, %ax
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z}
-; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512F-NEXT:    vmovaps %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: mload_constmask_v8f32_zero:
 ; AVX512VLDQ:       ## %bb.0:
 ; AVX512VLDQ-NEXT:    movb $7, %al
 ; AVX512VLDQ-NEXT:    kmovw %eax, %k1
-; AVX512VLDQ-NEXT:    vmovups (%rdi), %ymm0 {%k1} {z}
+; AVX512VLDQ-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: mload_constmask_v8f32_zero:
 ; AVX512VLBW:       ## %bb.0:
 ; AVX512VLBW-NEXT:    movb $7, %al
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
-; AVX512VLBW-NEXT:    vmovups (%rdi), %ymm0 {%k1} {z}
+; AVX512VLBW-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
 ; AVX512VLBW-NEXT:    retq
 ;
 ; X86-AVX512-LABEL: mload_constmask_v8f32_zero:
@@ -6607,7 +6607,7 @@ define <8 x float> @mload_constmask_v8f32_zero(ptr %addr, <8 x float> %dst) {
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    movb $7, %cl
 ; X86-AVX512-NEXT:    kmovd %ecx, %k1
-; X86-AVX512-NEXT:    vmovups (%eax), %ymm0 {%k1} {z}
+; X86-AVX512-NEXT:    vmovups (%eax), %xmm0 {%k1} {z}
 ; X86-AVX512-NEXT:    retl
   %res = call <8 x float> @llvm.masked.load.v8f32.p0(ptr %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x float> zeroinitializer)
   ret <8 x float> %res
