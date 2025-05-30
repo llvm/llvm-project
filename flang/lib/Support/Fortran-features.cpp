@@ -11,10 +11,6 @@
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/StringExtras.h"
 
-// Debugging
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
-
 namespace Fortran::common {
 
 LanguageFeatureControl::LanguageFeatureControl() {
