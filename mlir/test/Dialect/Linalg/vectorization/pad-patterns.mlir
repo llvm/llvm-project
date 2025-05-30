@@ -1,6 +1,16 @@
 // RUN: mlir-opt %s -transform-interpreter -split-input-file | FileCheck %s
 
 ///----------------------------------------------------------------------------------------
+/// Tests for vectorization patterns for tensor.pad, i.e.
+///   * transform.apply_patterns.linalg.pad_vectorization
+///
+/// These tests are meant os a lower granule than tests in
+///   * pad-with-patterns.mlir.
+/// The goal is to test specific patterns. To this end, some inputs already
+/// contain Vector ops (on top of `tensor.pad`).
+///----------------------------------------------------------------------------------------
+
+///----------------------------------------------------------------------------------------
 /// [Pattern: PadOpVectorizationWithTransferReadPattern]
 ///----------------------------------------------------------------------------------------
 // CHECK-LABEL: func @pad_and_transfer_read
