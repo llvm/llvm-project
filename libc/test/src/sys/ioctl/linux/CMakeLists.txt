@@ -10,4 +10,7 @@ add_libc_unittest(
     libc.include.sys_ioctl
     libc.src.sys.ioctl.ioctl
     libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.read
 )
