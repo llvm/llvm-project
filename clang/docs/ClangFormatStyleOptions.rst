@@ -2736,6 +2736,42 @@ the configuration (without a prefix: ``Auto``).
      @Mock
      DataLoad loader;
 
+.. _BreakAfterOpenBracketIf:
+
+**BreakAfterOpenBracketIf** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakAfterOpenBracketIf>`
+  Force break after the left parenthesis of an if control statement
+  when the expression exceeds the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    if constexpr (          vs.       if constexpr (a ||
+       a || b)                                      b)
+
+.. _BreakAfterOpenBracketLoop:
+
+**BreakAfterOpenBracketLoop** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakAfterOpenBracketLoop>`
+  Force break after the left parenthesis of a loop control statement
+  when the expression exceeds the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    while (                  vs.      while (a &&
+       a && b) {                             b) {
+
+.. _BreakAfterOpenBracketSwitch:
+
+**BreakAfterOpenBracketSwitch** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakAfterOpenBracketSwitch>`
+  Force break after the left parenthesis of a switch control statement
+  when the expression exceeds the column limit.
+
+  .. code-block:: c++
+
+    true:                             false:
+    switch (                 vs.      switch (a &&
+       a && b) {                              b) {
+
 .. _BreakAfterReturnType:
 
 **BreakAfterReturnType** (``ReturnTypeBreakingStyle``) :versionbadge:`clang-format 19` :ref:`¶ <BreakAfterReturnType>`
@@ -3372,6 +3408,51 @@ the configuration (without a prefix: ``Auto``).
     Configure each individual brace in ``BraceWrapping``.
 
 
+
+.. _BreakBeforeCloseBracketIf:
+
+**BreakBeforeCloseBracketIf** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeCloseBracketIf>`
+  Force break before the right parenthesis of an if control statement
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
+
+  .. code-block:: c++
+
+    true:                             false:
+    if constexpr (          vs.       if constexpr (
+       a || b                            a || b )
+    )
+
+.. _BreakBeforeCloseBracketLoop:
+
+**BreakBeforeCloseBracketLoop** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeCloseBracketLoop>`
+  Force break before the right parenthesis of a loop control statement
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
+
+  .. code-block:: c++
+
+    true:                             false:
+    while (                  vs.      while (
+       a && b                            a && b) {
+    ) {
+
+.. _BreakBeforeCloseBracketSwitch:
+
+**BreakBeforeCloseBracketSwitch** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeCloseBracketSwitch>`
+  Force break before the right parenthesis of a switch control statement
+  when the expression exceeds the column limit. The break before the
+  closing parenthesis is only made if there is a break after the opening
+  parenthesis.
+
+  .. code-block:: c++
+
+    true:                             false:
+    switch (                 vs.      switch (
+       a && b                            a && b) {
+    ) {
 
 .. _BreakBeforeConceptDeclarations:
 
