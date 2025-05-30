@@ -6266,13 +6266,13 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
 
 Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
-                                                   AtomicOrdering Ord,
-                                                   SyncScope::ID SSID) const {
+                                                   AtomicOrdering Ord) const {
   if (!isa<AtomicCmpXchgInst>(Inst))
     return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
 
   // Specialize for cmpxchg
   // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
+  SyncScope::ID SSID = cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID();
   if (isReleaseOrStronger(Ord))
     return Ord == AtomicOrdering::SequentiallyConsistent
                ? Builder.CreateFence(AtomicOrdering::SequentiallyConsistent,
@@ -6284,16 +6284,15 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 
 Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
-                                                    AtomicOrdering Ord,
-                                                    SyncScope::ID SSID) const {
+                                                    AtomicOrdering Ord) const {
   // Specialize for cmpxchg
   if (!isa<AtomicCmpXchgInst>(Inst))
     return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
 
-  auto CASWidth =
-      cast<IntegerType>(
-          dyn_cast<AtomicCmpXchgInst>(Inst)->getCompareOperand()->getType())
-          ->getBitWidth();
+  auto *CI = cast<AtomicCmpXchgInst>(Inst);
+  auto CASWidth = cast<IntegerType>(CI->getCompareOperand()->getType())
+                      ->getBitWidth();
+  SyncScope::ID SSID= CI->getSyncScopeID();
   // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
   if (isAcquireOrStronger(Ord) &&
       (Ord != AtomicOrdering::SequentiallyConsistent ||
