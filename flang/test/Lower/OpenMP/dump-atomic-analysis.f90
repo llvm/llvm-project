@@ -1,4 +1,4 @@
-!RUN: %flang_fc1 -fopenmp -fopenmp-version=60 -emit-hlfir -mmlir -fdebug-dump-atomic-analysis %s -o /dev/null |& FileCheck %s
+!RUN: %flang_fc1 -fopenmp -fopenmp-version=60 -emit-hlfir -mmlir -fdebug-dump-atomic-analysis %s -o /dev/null 2>&1 | FileCheck %s
 
 subroutine f00(x)
   integer :: x, v
