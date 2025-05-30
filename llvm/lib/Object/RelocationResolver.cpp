@@ -888,8 +888,7 @@ uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
         return Elf64BEObj->getRelSection(R.getRawDataRefImpl())->sh_type;
       };
 
-      if (GetRelSectionType() == ELF::SHT_RELA ||
-          GetRelSectionType() == ELF::SHT_CREL) {
+      if (GetRelSectionType() == ELF::SHT_RELA) {
         Addend = getELFAddend(R);
         // LoongArch and RISCV relocations use both LocData and Addend.
         if (Obj->getArch() != Triple::loongarch32 &&
