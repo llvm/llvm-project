@@ -2588,9 +2588,13 @@ GetFrameSetupInfo(UnwindPlan &unwind_plan, RegisterContext &regctx) {
   if (!fp_unwind_regdomain)
     return fp_unwind_regdomain.takeError();
 
-  // Look at the first few (4) rows of the plan and store FP's location.
-  const int upper_bound = std::min(4, unwind_plan.GetRowCount());
-  llvm::SmallVector<AbstractRegisterLocation, 4> fp_locs;
+  // Look at the first few (12) rows of the plan and store FP's location.
+  // This number is based on AAPCS, with 10 callee-saved GPRs and 8 floating
+  // point registers. When STP instructions are used, the plan would have one
+  // initial row, nine rows of saving callee-saved registers, and two standard
+  // prologue rows (fp+lr and sp).
+  const int upper_bound = std::min(12, unwind_plan.GetRowCount());
+  llvm::SmallVector<AbstractRegisterLocation, 12> fp_locs;
   for (int row_idx = 0; row_idx < upper_bound; row_idx++) {
     auto *row = unwind_plan.GetRowAtIndex(row_idx);
     AbstractRegisterLocation regloc;
@@ -2617,7 +2621,7 @@ GetFrameSetupInfo(UnwindPlan &unwind_plan, RegisterContext &regctx) {
   // Use subsequent row, if available.
   // Pointer auth may introduce more instructions, but they don't affect the
   // unwinder rows / store to the stack.
-  int row_idx = fp_locs.end() - it;
+  int row_idx = it - fp_locs.begin();
   int next_row_idx = row_idx + 1;
 
   // If subsequent row is invalid, approximate through current row.

@@ -55,7 +55,7 @@ class TestCase(lldbtest.TestBase):
         fib_bp.SetEnabled(False)
 
         fib_first_line = thread_in_fib.frames[0].GetLineEntry().GetLine()
-        num_lines_fib = 5
+        num_lines_fib = 7
         for line_offset in range(1, num_lines_fib):
             thread_in_fib.StepOver()
             self.assertEqual(process.GetSelectedThread(), thread_in_fib)
