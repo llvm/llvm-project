@@ -598,7 +598,6 @@ entry:
   ret <1 x i32> %res
 }
 
-; FIXME: This case is wrong.  We should be splatting 128 to each i8 lane!
 define <1 x i32> @vqdotu_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
 ; NODOT-LABEL: vqdotu_vx_partial_reduce:
 ; NODOT:       # %bb.0: # %entry
@@ -618,10 +617,13 @@ define <1 x i32> @vqdotu_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; DOT-LABEL: vqdotu_vx_partial_reduce:
 ; DOT:       # %bb.0: # %entry
-; DOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; DOT-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; DOT-NEXT:    vmv.s.x v9, zero
 ; DOT-NEXT:    li a0, 128
-; DOT-NEXT:    vqdotu.vx v9, v8, a0
+; DOT-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; DOT-NEXT:    vmv.v.x v10, a0
+; DOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; DOT-NEXT:    vqdotu.vv v9, v8, v10
 ; DOT-NEXT:    vmv1r.v v8, v9
 ; DOT-NEXT:    ret
 entry:
@@ -631,7 +633,6 @@ entry:
   ret <1 x i32> %res
 }
 
-; FIXME: This case is wrong.  We should be splatting 128 to each i8 lane!
 define <1 x i32> @vqdot_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
 ; NODOT-LABEL: vqdot_vx_partial_reduce:
 ; NODOT:       # %bb.0: # %entry
@@ -652,10 +653,13 @@ define <1 x i32> @vqdot_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; DOT-LABEL: vqdot_vx_partial_reduce:
 ; DOT:       # %bb.0: # %entry
-; DOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; DOT-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; DOT-NEXT:    vmv.s.x v9, zero
 ; DOT-NEXT:    li a0, 128
-; DOT-NEXT:    vqdot.vx v9, v8, a0
+; DOT-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; DOT-NEXT:    vmv.v.x v10, a0
+; DOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; DOT-NEXT:    vqdot.vv v9, v8, v10
 ; DOT-NEXT:    vmv1r.v v8, v9
 ; DOT-NEXT:    ret
 entry:
@@ -1359,13 +1363,13 @@ define <64 x i32> @vqdotsu_vv_partial_v64i32_v256i8(<256 x i8> %a, <256 x i8> %b
 ; DOT-NEXT:    slli a0, a0, 4
 ; DOT-NEXT:    add a0, sp, a0
 ; DOT-NEXT:    addi a0, a0, 16
-; DOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; DOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; DOT-NEXT:    csrr a0, vlenb
 ; DOT-NEXT:    slli a0, a0, 3
 ; DOT-NEXT:    add a0, sp, a0
 ; DOT-NEXT:    addi a0, a0, 16
-; DOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; DOT-NEXT:    vqdotsu.vv v0, v8, v16
+; DOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; DOT-NEXT:    vqdotsu.vv v0, v16, v8
 ; DOT-NEXT:    csrr a0, vlenb
 ; DOT-NEXT:    slli a0, a0, 3
 ; DOT-NEXT:    mv a1, a0
@@ -1373,10 +1377,10 @@ define <64 x i32> @vqdotsu_vv_partial_v64i32_v256i8(<256 x i8> %a, <256 x i8> %b
 ; DOT-NEXT:    add a0, a0, a1
 ; DOT-NEXT:    add a0, sp, a0
 ; DOT-NEXT:    addi a0, a0, 16
-; DOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; DOT-NEXT:    addi a0, sp, 16
 ; DOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; DOT-NEXT:    vqdotsu.vv v24, v8, v16
+; DOT-NEXT:    addi a0, sp, 16
+; DOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; DOT-NEXT:    vqdotsu.vv v24, v16, v8
 ; DOT-NEXT:    vmv.v.v v8, v0
 ; DOT-NEXT:    vmv.v.v v16, v24
 ; DOT-NEXT:    csrr a0, vlenb
@@ -1507,7 +1511,6 @@ entry:
 }
 
 
-; FIXME: This case is wrong.  We should be splatting 128 to each i8 lane!
 define <4 x i32> @partial_of_sext(<16 x i8> %a) {
 ; NODOT-LABEL: partial_of_sext:
 ; NODOT:       # %bb.0: # %entry
@@ -1528,10 +1531,11 @@ define <4 x i32> @partial_of_sext(<16 x i8> %a) {
 ;
 ; DOT-LABEL: partial_of_sext:
 ; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v10, 1
 ; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; DOT-NEXT:    vmv.v.i v9, 0
-; DOT-NEXT:    li a0, 1
-; DOT-NEXT:    vqdot.vx v9, v8, a0
+; DOT-NEXT:    vqdot.vv v9, v8, v10
 ; DOT-NEXT:    vmv.v.v v8, v9
 ; DOT-NEXT:    ret
 entry:
@@ -1540,7 +1544,6 @@ entry:
   ret <4 x i32> %res
 }
 
-; FIXME: This case is wrong.  We should be splatting 128 to each i8 lane!
 define <4 x i32> @partial_of_zext(<16 x i8> %a) {
 ; NODOT-LABEL: partial_of_zext:
 ; NODOT:       # %bb.0: # %entry
@@ -1561,10 +1564,11 @@ define <4 x i32> @partial_of_zext(<16 x i8> %a) {
 ;
 ; DOT-LABEL: partial_of_zext:
 ; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v10, 1
 ; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; DOT-NEXT:    vmv.v.i v9, 0
-; DOT-NEXT:    li a0, 1
-; DOT-NEXT:    vqdotu.vx v9, v8, a0
+; DOT-NEXT:    vqdotu.vv v9, v8, v10
 ; DOT-NEXT:    vmv.v.v v8, v9
 ; DOT-NEXT:    ret
 entry:

@@ -10,6 +10,11 @@
 /// common to flang and the test tools.
 
 #include "flang/Optimizer/Passes/Pipelines.h"
+#include "llvm/Support/CommandLine.h"
+
+/// Force setting the no-alias attribute on fuction arguments when possible.
+static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
+                                        llvm::cl::init(false));
 
 namespace fir {
 
@@ -350,9 +355,10 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   else
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 
-  bool setNoCapture = false, setNoAlias = false;
-  if (config.OptLevel.isOptimizingForSpeed())
-    setNoCapture = setNoAlias = true;
+  // TODO: re-enable setNoAlias by default (when optimizing for speed) once
+  // function specialization is fixed.
+  bool setNoAlias = forceNoAlias;
+  bool setNoCapture = config.OptLevel.isOptimizingForSpeed();
 
   pm.addPass(fir::createFunctionAttr(
       {framePointerKind, config.InstrumentFunctionEntry,
