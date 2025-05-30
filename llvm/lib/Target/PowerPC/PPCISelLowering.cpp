@@ -9671,7 +9671,7 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (SplatBitSize <= 32) {
       SplatBits = APSplatBits.getZExtValue();
       SextVal = SignExtend32(SplatBits, SplatBitSize);
-    } else if (SplatBitSize == 64) {
+    } else if (SplatBitSize == 64 && Subtarget.hasP8Altivec()) {
       int64_t Splat64Val = APSplatBits.getSExtValue();
       SplatBits = (uint64_t)Splat64Val;
       SextVal = (int32_t)SplatBits;
