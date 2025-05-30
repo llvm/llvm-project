@@ -62,8 +62,6 @@ struct InstrInfoQuery {
 struct CondContext {
   Value *Cond;
   bool Invert = false;
-  // Condition is true if CxtI is in the true successor of Cond.
-  bool CondIsTrue = false;
   SmallPtrSet<Value *, 4> AffectedValues;
 
   CondContext(Value *Cond) : Cond(Cond) {}
