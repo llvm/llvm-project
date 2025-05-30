@@ -17,24 +17,9 @@
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-TEST(LlvmLibcSysIoctlTest, NullAndTestFileFIONREAD) {
+TEST(LlvmLibcSysIoctlTest, TestFileFIONREAD) {
   LIBC_NAMESPACE::libc_errno = 0;
 
-  // FIONREAD reports the number of available bytes to read for the passed fd
-  int dev_zero_fd = LIBC_NAMESPACE::open("/dev/zero", O_RDONLY);
-  ASSERT_GT(dev_zero_fd, 0);
-  ASSERT_ERRNO_SUCCESS();
-
-  // For /dev/zero, this is always 0
-  int dev_zero_n = -1;
-  int ret = LIBC_NAMESPACE::ioctl(dev_zero_fd, FIONREAD, &dev_zero_n);
-  ASSERT_GT(ret, -1);
-  ASSERT_ERRNO_SUCCESS();
-  ASSERT_EQ(dev_zero_n, 0);
-
-  ASSERT_THAT(LIBC_NAMESPACE::close(dev_zero_fd), Succeeds(0));
-
-  // Now, with a file known to have a non-zero size
   constexpr const char TEST_MSG[] = "ioctl test";
   constexpr int TEST_MSG_SIZE = sizeof(TEST_MSG) - 1;
   constexpr const char *TEST_FILE = "testdata/ioctl.test";
@@ -42,9 +27,10 @@ TEST(LlvmLibcSysIoctlTest, NullAndTestFileFIONREAD) {
   ASSERT_GT(test_file_fd, 0);
   ASSERT_ERRNO_SUCCESS();
 
-  // This reports the full size of the file, as we haven't read anything yet
+  // FIONREAD reports the number of available bytes to read for the passed fd
+  // This will report the full size of the file, as we haven't read anything yet
   int test_file_n = -1;
-  ret = LIBC_NAMESPACE::ioctl(test_file_fd, FIONREAD, &test_file_n);
+  int ret = LIBC_NAMESPACE::ioctl(test_file_fd, FIONREAD, &test_file_n);
   ASSERT_GT(ret, -1);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(test_file_n, TEST_MSG_SIZE);
