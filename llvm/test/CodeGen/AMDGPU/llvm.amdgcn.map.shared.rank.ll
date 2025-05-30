@@ -142,9 +142,8 @@ define amdgpu_kernel void @map_shared_rank_flat_to_lds_uniform(ptr  %ptr, i32 %r
 ; GFX1300-SDAG-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX1300-SDAG-NEXT:    s_cselect_b32 s0, s2, 0
 ; GFX1300-SDAG-NEXT:    s_cselect_b32 s1, s1, 0
-; GFX1300-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s1
-; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s0
+; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX1300-SDAG-NEXT:    flat_store_b64 v2, v[0:1], s[4:5] scope:SCOPE_SE
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;

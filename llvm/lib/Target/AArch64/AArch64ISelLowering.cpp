@@ -3342,6 +3342,12 @@ static bool isLegalArithImmed(uint64_t C) {
   return IsLegal;
 }
 
+bool isLegalCmpImmed(APInt C) {
+  // Works for negative immediates too, as it can be written as an ADDS
+  // instruction with a negated immediate.
+  return isLegalArithImmed(C.abs().getZExtValue());
+}
+
 static bool cannotBeIntMin(SDValue CheckedVal, SelectionDAG &DAG) {
   KnownBits KnownSrc = DAG.computeKnownBits(CheckedVal);
   return !KnownSrc.getSignedMinValue().isMinSignedValue();
@@ -3767,58 +3773,82 @@ static unsigned getCmpOperandFoldingProfit(SDValue Op) {
   return 0;
 }
 
+// emitComparison() converts comparison with one or negative one to comparison
+// with 0. Note that this only works for signed comparisons because of how ANDS
+// works.
+static bool shouldBeAdjustedToZero(SDValue LHS, APInt C, ISD::CondCode &CC) {
+  // Only works for ANDS and AND.
+  if (LHS.getOpcode() != ISD::AND && LHS.getOpcode() != AArch64ISD::ANDS)
+    return false;
+
+  if (C.isOne() && (CC == ISD::SETLT || CC == ISD::SETGE)) {
+    CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
+    return true;
+  }
+
+  if (C.isAllOnes() && (CC == ISD::SETLE || CC == ISD::SETGT)) {
+    CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
+    return true;
+  }
+
+  return false;
+}
+
 static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                              SDValue &AArch64cc, SelectionDAG &DAG,
                              const SDLoc &dl) {
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
     EVT VT = RHS.getValueType();
-    uint64_t C = RHSC->getZExtValue();
-    if (!isLegalArithImmed(C)) {
+    APInt C = RHSC->getAPIntValue();
+    // shouldBeAdjustedToZero is a special case to better fold with
+    // emitComparison().
+    if (shouldBeAdjustedToZero(LHS, C, CC)) {
+      // Adjust the constant to zero.
+      // CC has already been adjusted.
+      RHS = DAG.getConstant(0, dl, VT);
+    } else if (!isLegalCmpImmed(C)) {
       // Constant does not fit, try adjusting it by one?
       switch (CC) {
       default:
         break;
       case ISD::SETLT:
       case ISD::SETGE:
-        if ((VT == MVT::i32 && C != 0x80000000 &&
-             isLegalArithImmed((uint32_t)(C - 1))) ||
-            (VT == MVT::i64 && C != 0x80000000ULL &&
-             isLegalArithImmed(C - 1ULL))) {
-          CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
-          C = (VT == MVT::i32) ? (uint32_t)(C - 1) : C - 1;
-          RHS = DAG.getConstant(C, dl, VT);
+        if (!C.isMinSignedValue()) {
+          APInt CMinusOne = C - 1;
+          if (isLegalCmpImmed(CMinusOne)) {
+            CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
+            RHS = DAG.getConstant(CMinusOne, dl, VT);
+          }
         }
         break;
       case ISD::SETULT:
       case ISD::SETUGE:
-        if ((VT == MVT::i32 && C != 0 &&
-             isLegalArithImmed((uint32_t)(C - 1))) ||
-            (VT == MVT::i64 && C != 0ULL && isLegalArithImmed(C - 1ULL))) {
-          CC = (CC == ISD::SETULT) ? ISD::SETULE : ISD::SETUGT;
-          C = (VT == MVT::i32) ? (uint32_t)(C - 1) : C - 1;
-          RHS = DAG.getConstant(C, dl, VT);
+        if (!C.isZero()) {
+          APInt CMinusOne = C - 1;
+          if (isLegalCmpImmed(CMinusOne)) {
+            CC = (CC == ISD::SETULT) ? ISD::SETULE : ISD::SETUGT;
+            RHS = DAG.getConstant(CMinusOne, dl, VT);
+          }
         }
         break;
       case ISD::SETLE:
       case ISD::SETGT:
-        if ((VT == MVT::i32 && C != INT32_MAX &&
-             isLegalArithImmed((uint32_t)(C + 1))) ||
-            (VT == MVT::i64 && C != INT64_MAX &&
-             isLegalArithImmed(C + 1ULL))) {
-          CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
-          C = (VT == MVT::i32) ? (uint32_t)(C + 1) : C + 1;
-          RHS = DAG.getConstant(C, dl, VT);
+        if (!C.isMaxSignedValue()) {
+          APInt CPlusOne = C + 1;
+          if (isLegalCmpImmed(CPlusOne)) {
+            CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
+            RHS = DAG.getConstant(CPlusOne, dl, VT);
+          }
         }
         break;
       case ISD::SETULE:
       case ISD::SETUGT:
-        if ((VT == MVT::i32 && C != UINT32_MAX &&
-             isLegalArithImmed((uint32_t)(C + 1))) ||
-            (VT == MVT::i64 && C != UINT64_MAX &&
-             isLegalArithImmed(C + 1ULL))) {
-          CC = (CC == ISD::SETULE) ? ISD::SETULT : ISD::SETUGE;
-          C = (VT == MVT::i32) ? (uint32_t)(C + 1) : C + 1;
-          RHS = DAG.getConstant(C, dl, VT);
+        if (!C.isAllOnes()) {
+          APInt CPlusOne = C + 1;
+          if (isLegalCmpImmed(CPlusOne)) {
+            CC = (CC == ISD::SETULE) ? ISD::SETULT : ISD::SETUGE;
+            RHS = DAG.getConstant(CPlusOne, dl, VT);
+          }
         }
         break;
       }
@@ -3835,8 +3865,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   //    cmp     w13, w12
   // can be turned into:
   //    cmp     w12, w11, lsl #1
-  if (!isa<ConstantSDNode>(RHS) ||
-      !isLegalArithImmed(RHS->getAsAPIntVal().abs().getZExtValue())) {
+  if (!isa<ConstantSDNode>(RHS) || !isLegalCmpImmed(RHS->getAsAPIntVal())) {
     bool LHSIsCMN = isCMN(LHS, CC, DAG);
     bool RHSIsCMN = isCMN(RHS, CC, DAG);
     SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
@@ -17365,17 +17394,10 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
 // 12-bit optionally shifted immediates are legal for adds.
 bool AArch64TargetLowering::isLegalAddImmediate(int64_t Immed) const {
   if (Immed == std::numeric_limits<int64_t>::min()) {
-    LLVM_DEBUG(dbgs() << "Illegal add imm " << Immed
-                      << ": avoid UB for INT64_MIN\n");
     return false;
   }
   // Same encoding for add/sub, just flip the sign.
-  Immed = std::abs(Immed);
-  bool IsLegal = ((Immed >> 12) == 0 ||
-                  ((Immed & 0xfff) == 0 && Immed >> 24 == 0));
-  LLVM_DEBUG(dbgs() << "Is " << Immed
-                    << " legal add imm: " << (IsLegal ? "yes" : "no") << "\n");
-  return IsLegal;
+  return isLegalArithImmed((uint64_t)std::abs(Immed));
 }
 
 bool AArch64TargetLowering::isLegalAddScalableImmediate(int64_t Imm) const {

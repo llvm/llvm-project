@@ -598,6 +598,73 @@ entry:
   ret <1 x i32> %res
 }
 
+; FIXME: This case is wrong.  We should be splatting 128 to each i8 lane!
+define <1 x i32> @vqdotu_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
+; NODOT-LABEL: vqdotu_vx_partial_reduce:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; NODOT-NEXT:    vzext.vf4 v9, v8
+; NODOT-NEXT:    vsll.vi v8, v9, 7
+; NODOT-NEXT:    vslidedown.vi v9, v8, 3
+; NODOT-NEXT:    vslidedown.vi v10, v8, 2
+; NODOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; NODOT-NEXT:    vadd.vv v9, v9, v8
+; NODOT-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; NODOT-NEXT:    vslidedown.vi v8, v8, 1
+; NODOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; NODOT-NEXT:    vadd.vv v8, v8, v10
+; NODOT-NEXT:    vadd.vv v8, v8, v9
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: vqdotu_vx_partial_reduce:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; DOT-NEXT:    vmv.s.x v9, zero
+; DOT-NEXT:    li a0, 128
+; DOT-NEXT:    vqdotu.vx v9, v8, a0
+; DOT-NEXT:    vmv1r.v v8, v9
+; DOT-NEXT:    ret
+entry:
+  %a.ext = zext <4 x i8> %a to <4 x i32>
+  %mul = mul <4 x i32> %a.ext, splat (i32 128)
+  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  ret <1 x i32> %res
+}
+
+; FIXME: This case is wrong.  We should be splatting 128 to each i8 lane!
+define <1 x i32> @vqdot_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
+; NODOT-LABEL: vqdot_vx_partial_reduce:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; NODOT-NEXT:    vsext.vf4 v9, v8
+; NODOT-NEXT:    vsll.vi v8, v9, 7
+; NODOT-NEXT:    vrsub.vi v8, v8, 0
+; NODOT-NEXT:    vslidedown.vi v9, v8, 3
+; NODOT-NEXT:    vslidedown.vi v10, v8, 2
+; NODOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; NODOT-NEXT:    vadd.vv v9, v9, v8
+; NODOT-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; NODOT-NEXT:    vslidedown.vi v8, v8, 1
+; NODOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; NODOT-NEXT:    vadd.vv v8, v8, v10
+; NODOT-NEXT:    vadd.vv v8, v8, v9
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: vqdot_vx_partial_reduce:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; DOT-NEXT:    vmv.s.x v9, zero
+; DOT-NEXT:    li a0, 128
+; DOT-NEXT:    vqdot.vx v9, v8, a0
+; DOT-NEXT:    vmv1r.v v8, v9
+; DOT-NEXT:    ret
+entry:
+  %a.ext = sext <4 x i8> %a to <4 x i32>
+  %mul = mul <4 x i32> %a.ext, splat (i32 -128)
+  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  ret <1 x i32> %res
+}
+
 define <1 x i32> @vqdotsu_vv_partial_reduce_v1i32_v4i8(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: vqdotsu_vv_partial_reduce_v1i32_v4i8:
 ; CHECK:       # %bb.0: # %entry
@@ -623,6 +690,56 @@ entry:
   %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
   ret <1 x i32> %res
 }
+
+define <1 x i32> @vqdotsu_vv_partial_reduce_swapped(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: vqdotsu_vv_partial_reduce_swapped:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vwmulsu.vv v9, v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v9, 3
+; CHECK-NEXT:    vslidedown.vi v10, v9, 2
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v9, v9, 1
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vadd.vv v9, v9, v10
+; CHECK-NEXT:    vadd.vv v8, v9, v8
+; CHECK-NEXT:    ret
+entry:
+  %a.ext = sext <4 x i8> %a to <4 x i32>
+  %b.ext = zext <4 x i8> %b to <4 x i32>
+  %mul = mul <4 x i32> %b.ext, %a.ext
+  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  ret <1 x i32> %res
+}
+
+define <1 x i32> @vqdotsu_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: vqdotsu_vx_partial_reduce:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsext.vf4 v9, v8
+; CHECK-NEXT:    vsll.vi v8, v9, 7
+; CHECK-NEXT:    vslidedown.vi v9, v8, 3
+; CHECK-NEXT:    vslidedown.vi v10, v8, 2
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vadd.vv v9, v9, v8
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+entry:
+  %a.ext = sext <4 x i8> %a to <4 x i32>
+  %mul = mul <4 x i32> %a.ext, splat (i32 128)
+  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  ret <1 x i32> %res
+}
+
 
 define <2 x i32> @vqdot_vv_partial_reduce_v2i32_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; NODOT-LABEL: vqdot_vv_partial_reduce_v2i32_v8i8:
@@ -964,4 +1081,359 @@ entry:
   %mul = mul <16 x i32> %a.sext, %b.sext
   %res = call <16 x i32> @llvm.experimental.vector.partial.reduce.add.nvx8i32.nvx16i32.nvx16i32(<16 x i32> %mul, <16 x i32> zeroinitializer)
   ret <16 x i32> %res
+}
+
+; Test legalization - type split
+define <64 x i32> @vqdotsu_vv_partial_v64i32_v256i8(<256 x i8> %a, <256 x i8> %b) {
+; CHECK-LABEL: vqdotsu_vv_partial_v64i32_v256i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x28, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 40 * vlenb
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 5
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    addi a1, a0, 128
+; CHECK-NEXT:    li a2, 128
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-NEXT:    vle8.v v0, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vs8r.v v0, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    li a0, 32
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v24, v8, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vsext.vf2 v8, v24
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v12, v0, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vzext.vf2 v4, v12
+; CHECK-NEXT:    vwmulsu.vv v24, v8, v4
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 5
+; CHECK-NEXT:    add a3, sp, a3
+; CHECK-NEXT:    addi a3, a3, 16
+; CHECK-NEXT:    vl8r.v v8, (a3) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsext.vf2 v4, v8
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    mv a4, a3
+; CHECK-NEXT:    slli a3, a3, 1
+; CHECK-NEXT:    add a3, a3, a4
+; CHECK-NEXT:    add a3, sp, a3
+; CHECK-NEXT:    addi a3, a3, 16
+; CHECK-NEXT:    vl8r.v v8, (a3) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vzext.vf2 v0, v8
+; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vwmaccsu.vv v24, v4, v0
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v4, v16, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vsext.vf2 v12, v4
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v4, v8, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vzext.vf2 v16, v4
+; CHECK-NEXT:    vwmulsu.vv v0, v12, v16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsext.vf2 v12, v16
+; CHECK-NEXT:    vzext.vf2 v20, v8
+; CHECK-NEXT:    vwmaccsu.vv v0, v12, v20
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 5
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v16, a1
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 5
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    mv a3, a2
+; CHECK-NEXT:    slli a2, a2, 1
+; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vslidedown.vx v8, v16, a1
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 5
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vsext.vf2 v16, v8
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vzext.vf2 v20, v8
+; CHECK-NEXT:    vwmaccsu.vv v24, v16, v20
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vx v16, v16, a1
+; CHECK-NEXT:    addi a2, sp, 16
+; CHECK-NEXT:    vl8r.v v8, (a2) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vslidedown.vx v8, v8, a1
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vsext.vf2 v8, v16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vzext.vf2 v20, v8
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl4r.v v8, (a1) # vscale x 32-byte Folded Reload
+; CHECK-NEXT:    vwmaccsu.vv v0, v8, v20
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 5
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v20, v8, a0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vsext.vf2 v12, v20
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 5
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vs4r.v v12, (a1) # vscale x 32-byte Folded Spill
+; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 5
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl4r.v v8, (a1) # vscale x 32-byte Folded Reload
+; CHECK-NEXT:    vwmaccsu.vv v24, v8, v12
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v12, v16, a0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    slli a1, a1, 1
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vslidedown.vx v8, v16, a0
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vsext.vf2 v16, v12
+; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    vwmaccsu.vv v0, v16, v12
+; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vmv8r.v v16, v0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+entry:
+  %a.ext = sext <256 x i8> %a to <256 x i32>
+  %b.ext = zext <256 x i8> %b to <256 x i32>
+  %mul = mul <256 x i32> %b.ext, %a.ext
+  %res = call <64 x i32> @llvm.experimental.vector.partial.reduce.add(<64 x i32> zeroinitializer, <256 x i32> %mul)
+  ret <64 x i32> %res
+}
+
+; Test legalization - expand
+define <1 x i32> @vqdotsu_vv_partial_v1i32_v2i8(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: vqdotsu_vv_partial_v1i32_v2i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vwmulsu.vv v9, v10, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v9, 1
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+entry:
+  %a.ext = sext <2 x i8> %a to <2 x i32>
+  %b.ext = zext <2 x i8> %b to <2 x i32>
+  %mul = mul <2 x i32> %b.ext, %a.ext
+  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <2 x i32> %mul)
+  ret <1 x i32> %res
+}
+
+; TODO: This isn't legal, but we could split it into two halves, and use
+; a pair of slides + two vqdotsu_vv here.  Or alternatively, the mul
+; sequence + one vredsum, or a vadd reduce tree.
+define <1 x i32> @vqdotsu_vv_partial_v1i32_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-LABEL: vqdotsu_vv_partial_v1i32_v8i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v11, v9
+; CHECK-NEXT:    vwmulsu.vv v8, v10, v11
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 6
+; CHECK-NEXT:    vslidedown.vi v12, v8, 5
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vadd.vv v12, v12, v10
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 7
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v11, v8, 3
+; CHECK-NEXT:    vslidedown.vi v13, v8, 2
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vadd.vv v10, v10, v8
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v14, v8, 1
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v11, v8
+; CHECK-NEXT:    vadd.vv v9, v14, v13
+; CHECK-NEXT:    vadd.vv v10, v12, v10
+; CHECK-NEXT:    vadd.vv v8, v9, v8
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    ret
+entry:
+  %a.ext = sext <8 x i8> %a to <8 x i32>
+  %b.ext = zext <8 x i8> %b to <8 x i32>
+  %mul = mul <8 x i32> %b.ext, %a.ext
+  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <8 x i32> %mul)
+  ret <1 x i32> %res
+}
+
+
+; FIXME: This case is wrong.  We should be splatting 128 to each i8 lane!
+define <4 x i32> @partial_of_sext(<16 x i8> %a) {
+; NODOT-LABEL: partial_of_sext:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; NODOT-NEXT:    vsext.vf4 v12, v8
+; NODOT-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
+; NODOT-NEXT:    vslidedown.vi v8, v12, 12
+; NODOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; NODOT-NEXT:    vadd.vv v16, v8, v12
+; NODOT-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
+; NODOT-NEXT:    vslidedown.vi v8, v12, 8
+; NODOT-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
+; NODOT-NEXT:    vslidedown.vi v10, v12, 4
+; NODOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    vadd.vv v8, v8, v16
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_of_sext:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v9, 0
+; DOT-NEXT:    li a0, 1
+; DOT-NEXT:    vqdot.vx v9, v8, a0
+; DOT-NEXT:    vmv.v.v v8, v9
+; DOT-NEXT:    ret
+entry:
+  %a.ext = sext <16 x i8> %a to <16 x i32>
+  %res = call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> zeroinitializer, <16 x i32> %a.ext)
+  ret <4 x i32> %res
+}
+
+; FIXME: This case is wrong.  We should be splatting 128 to each i8 lane!
+define <4 x i32> @partial_of_zext(<16 x i8> %a) {
+; NODOT-LABEL: partial_of_zext:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; NODOT-NEXT:    vzext.vf4 v12, v8
+; NODOT-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
+; NODOT-NEXT:    vslidedown.vi v8, v12, 12
+; NODOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; NODOT-NEXT:    vadd.vv v16, v8, v12
+; NODOT-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
+; NODOT-NEXT:    vslidedown.vi v8, v12, 8
+; NODOT-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
+; NODOT-NEXT:    vslidedown.vi v10, v12, 4
+; NODOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    vadd.vv v8, v8, v16
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_of_zext:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; DOT-NEXT:    vmv.v.i v9, 0
+; DOT-NEXT:    li a0, 1
+; DOT-NEXT:    vqdotu.vx v9, v8, a0
+; DOT-NEXT:    vmv.v.v v8, v9
+; DOT-NEXT:    ret
+entry:
+  %a.ext = zext <16 x i8> %a to <16 x i32>
+  %res = call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> zeroinitializer, <16 x i32> %a.ext)
+  ret <4 x i32> %res
 }
