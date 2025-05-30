@@ -3767,7 +3767,8 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
 
   llvm::DIFile *DefUnit = getOrCreateFile(ED->getLocation());
   unsigned Line = getLineNumber(ED->getLocation());
-  llvm::DIScope *EnumContext = PickCompositeTypeScope(getDeclContextDescriptor(ED), Identifier);
+  llvm::DIScope *EnumContext =
+      PickCompositeTypeScope(getDeclContextDescriptor(ED), Identifier);
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
   return DBuilder.createEnumerationType(
       EnumContext, ED->getName(), DefUnit, Line, Size, Align, EltArray, ClassTy,
