@@ -106,7 +106,7 @@ bool IsAssemblySource(const protocol::Source &source) {
 }
 
 std::string GetLoadAddressString(const lldb::addr_t addr) {
-  return "0x" + llvm::utohexstr(addr);
+  return "0x" + llvm::utohexstr(addr, false, 15);
 }
 
 } // namespace lldb_dap
