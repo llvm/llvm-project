@@ -718,7 +718,7 @@ public:
   }
 
 private:
-  /// The IR value that the optimization operates on.
+  /// The IR region (currently basic block) that the optimization operates on.
   /// This is currently used to provide run-time hotness information with PGO.
   const BasicBlock *CodeRegion = nullptr;
 };
