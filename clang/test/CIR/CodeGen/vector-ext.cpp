@@ -16,21 +16,21 @@ typedef double vd2 __attribute__((ext_vector_type(2)));
 vi4 vec_a;
 // CIR: cir.global external @[[VEC_A:.*]] = #cir.zero : !cir.vector<4 x !s32i>
 
-// LLVM: @[[VEC_A:.*]] = dso_local global <4 x i32> zeroinitializer
+// LLVM: @[[VEC_A:.*]] = global <4 x i32> zeroinitializer
 
 // OGCG: @[[VEC_A:.*]] = global <4 x i32> zeroinitializer
 
 vi3 vec_b;
 // CIR: cir.global external @[[VEC_B:.*]] = #cir.zero : !cir.vector<3 x !s32i>
 
-// LLVM: @[[VEC_B:.*]] = dso_local global <3 x i32> zeroinitializer
+// LLVM: @[[VEC_B:.*]] = global <3 x i32> zeroinitializer
 
 // OGCG: @[[VEC_B:.*]] = global <3 x i32> zeroinitializer
 
 vi2 vec_c;
 // CIR: cir.global external @[[VEC_C:.*]] = #cir.zero : !cir.vector<2 x !s32i>
 
-// LLVM: @[[VEC_C:.*]] = dso_local global <2 x i32> zeroinitializer
+// LLVM: @[[VEC_C:.*]] = global <2 x i32> zeroinitializer
 
 // OGCG: @[[VEC_C:.*]] = global <2 x i32> zeroinitializer
 
@@ -38,7 +38,7 @@ vd2 vec_d;
 
 // CIR: cir.global external @[[VEC_D:.*]] = #cir.zero : !cir.vector<2 x !cir.double>
 
-// LLVM: @[[VEC_D:.*]] = dso_local global <2 x double> zeroinitialize
+// LLVM: @[[VEC_D:.*]] = global <2 x double> zeroinitialize
 
 // OGCG: @[[VEC_D:.*]] = global <2 x double> zeroinitializer
 
@@ -47,7 +47,7 @@ vi4 vec_e = { 1, 2, 3, 4 };
 // CIR: cir.global external @[[VEC_E:.*]] = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> :
 // CIR-SAME: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 
-// LLVM: @[[VEC_E:.*]] = dso_local global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+// LLVM: @[[VEC_E:.*]] = global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
 
 // OGCG: @[[VEC_E:.*]] = global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
 
