@@ -1061,12 +1061,22 @@ LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
            << operands[2];
   }
 
-  unsigned rows = getConstantInt(operands[3]).getInt();
-  unsigned columns = getConstantInt(operands[4]).getInt();
+  IntegerAttr rowsAttr = getConstantInt(operands[3]);
+  IntegerAttr columnsAttr = getConstantInt(operands[4]);
+  IntegerAttr useAttr = getConstantInt(operands[5]);
+
+  if (!rowsAttr || !columnsAttr || !useAttr)
+    return emitError(
+               unknownLoc,
+               "OpTypeCooperativeMatrixKHR references undefined constant <id> ")
+           << (rowsAttr ? (columnsAttr ? operands[5] : operands[4])
+                        : operands[3]);
+
+  unsigned rows = rowsAttr.getInt();
+  unsigned columns = columnsAttr.getInt();
 
   std::optional<spirv::CooperativeMatrixUseKHR> use =
-      spirv::symbolizeCooperativeMatrixUseKHR(
-          getConstantInt(operands[5]).getInt());
+      spirv::symbolizeCooperativeMatrixUseKHR(useAttr.getInt());
   if (!use) {
     return emitError(
                unknownLoc,
