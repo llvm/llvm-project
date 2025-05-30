@@ -1,4 +1,4 @@
-# A smoke test to check the modules can work basically.
+# A smoke test to check that a simple dependency chain for modules can work.
 #
 # RUN: rm -fr %t
 # RUN: mkdir -p %t
@@ -15,9 +15,13 @@
 # RUN: clangd -experimental-modules-support -lit-test < %t/definition.jsonrpc \
 # RUN:      | FileCheck -strict-whitespace %t/definition.jsonrpc
 
+#--- A-frag.cppm
+export module A:frag;
+export void printA() {}
+
 #--- A.cppm
 export module A;
-export void printA() {}
+export import :frag;
 
 #--- Use.cpp
 import A;
@@ -36,6 +40,11 @@ void foo() {
       "directory": "DIR",
       "command": "CLANG_CC -std=c++20 DIR/A.cppm --precompile -o DIR/A.pcm",
       "file": "DIR/A.cppm"
+    },
+    {
+      "directory": "DIR",
+      "command": "CLANG_CC -std=c++20 DIR/A-frag.cppm --precompile -o DIR/A-frag.pcm",
+      "file": "DIR/A-frag.cppm"
     }
 ]
 
