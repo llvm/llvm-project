@@ -68,7 +68,6 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   SourceLocation Loc = MatchedExpr->getOperatorLoc();
 
-  // TODO: not only operator must be checked for a macro
   if (Loc.isInvalid() || Loc.isMacroID())
     return;
 
@@ -89,20 +88,24 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   std::string FixSpelling = TranslatedSpelling.str();
 
+  FixItHint InsertEqual, ReplaceOperator, InsertBrace1, InsertBrace2;
   if (MatchedExpr->isCompoundAssignmentOp()) {
     const auto *DelcRefLHS = Result.Nodes.getNodeAs<DeclRefExpr>("l");
     if (!DelcRefLHS)
       return;
-    const clang::SourceLocation InsertLoc =
-        clang::Lexer::getLocForEndOfToken(DelcRefLHS->getEndLoc(), 0, *Result.SourceManager,
-                                          Result.Context->getLangOpts());
-    if (InsertLoc.isInvalid()) {
+    const SourceLocation LocLHS = DelcRefLHS->getEndLoc();
+    if (LocLHS.isInvalid() || LocLHS.isMacroID())
+      return;
+    const SourceLocation InsertLoc = clang::Lexer::getLocForEndOfToken(
+        LocLHS, 0, *Result.SourceManager,
+        Result.Context->getLangOpts());
+    if (InsertLoc.isInvalid() || InsertLoc.isMacroID()) {
       return;
     }
-    Diag << FixItHint::CreateInsertion(InsertLoc,
+    InsertEqual = FixItHint::CreateInsertion(InsertLoc,
                                         " = " + DelcRefLHS->getDecl()->getNameAsString());
   }
-  Diag << FixItHint::CreateReplacement(TokenRange, FixSpelling);
+  ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
   std::optional<BinaryOperatorKind> ParentOpcode;
   if (const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p"); Parent)
@@ -122,13 +125,17 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (SurroundedExpr) {
-    const SourceLocation InsertFirstLoc = SurroundedExpr->getBeginLoc(); // TODO: check for correct??
-    const SourceLocation InsertSecondLoc = // TODO: check for valid
+    const SourceLocation InsertFirstLoc = SurroundedExpr->getBeginLoc();
+    const SourceLocation InsertSecondLoc =
         clang::Lexer::getLocForEndOfToken(SurroundedExpr->getEndLoc(), 0, *Result.SourceManager,
         Result.Context->getLangOpts());
-    Diag << FixItHint::CreateInsertion(InsertFirstLoc, "(")
-          << FixItHint::CreateInsertion(InsertSecondLoc, ")");
+    if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() || InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID())
+      return;
+    InsertBrace1 = FixItHint::CreateInsertion(InsertFirstLoc, "(");
+    InsertBrace2 = FixItHint::CreateInsertion(InsertSecondLoc, ")");
   }
+
+  Diag << InsertEqual << ReplaceOperator << InsertBrace1 << InsertBrace2;
 }
 
 } // namespace clang::tidy::performance
