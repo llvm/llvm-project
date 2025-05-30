@@ -11,8 +11,6 @@
 // constexpr range_difference_t<_View> stride() const noexcept;
 
 #include <ranges>
-#include <type_traits>
-#include <utility>
 
 #include "test_iterators.h"
 #include "types.h"
