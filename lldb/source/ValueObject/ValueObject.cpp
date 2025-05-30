@@ -43,7 +43,6 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectCast.h"
 #include "lldb/ValueObject/ValueObjectChild.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
