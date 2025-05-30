@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck -input-file=%t-cir.ll %s
 
 void test() {
   int i = 1;
@@ -42,13 +43,13 @@ void test() {
 // CHECK:    %[[UID_PTR:.*]] = alloca double, i64 1, align 8
 // CHECK:    %[[UIB_PTR:.*]] = alloca i8, i64 1, align 1
 // CHECK:    store i32 1, ptr %[[I_PTR]], align 4
-// CHECK:    store i64 2, ptr %[[L_PTR]], align 4
+// CHECK:    store i64 2, ptr %[[L_PTR]], align 8
 // CHECK:    store float 3.000000e+00, ptr %[[F_PTR]], align 4
 // CHECK:    store double 4.000000e+00, ptr %[[D_PTR]], align 8
 // CHECK:    store i8 1, ptr %[[B1_PTR]], align 1
 // CHECK:    store i8 0, ptr %[[B2_PTR]], align 1
 // CHECK:    store i32 1, ptr %[[CI_PTR]], align 4
-// CHECK:    store i64 2, ptr %[[CL_PTR]], align 4
+// CHECK:    store i64 2, ptr %[[CL_PTR]], align 8
 // CHECK:    store float 3.000000e+00, ptr %[[CF_PTR]], align 4
 // CHECK:    store double 4.000000e+00, ptr %[[CD_PTR]], align 8
 // CHECK:    store i8 1, ptr %[[CB1_PTR]], align 1

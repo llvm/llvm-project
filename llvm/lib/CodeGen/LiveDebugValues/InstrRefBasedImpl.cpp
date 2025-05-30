@@ -1691,8 +1691,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // filled in later.
   for (const DbgOp &Op : DbgOps) {
     if (!Op.IsConst)
-      if (FoundLocs.insert({Op.ID, TransferTracker::LocationAndQuality()})
-              .second)
+      if (FoundLocs.try_emplace(Op.ID).second)
         ValuesToFind.push_back(Op.ID);
   }
 

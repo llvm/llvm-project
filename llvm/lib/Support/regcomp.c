@@ -304,8 +304,9 @@ llvm_regcomp(llvm_regex_t *preg, const char *pattern, int cflags) {
     if (preg->re_endp < pattern)
       return (REG_INVARG);
     len = preg->re_endp - pattern;
-  } else
+  } else {
     len = strlen((const char *)pattern);
+  }
 
   /* do the mallocs early so failure handling is easy */
   g = (struct re_guts *)malloc(sizeof(struct re_guts) +
@@ -715,8 +716,9 @@ p_simp_re(struct parse *p,
       assert(OP(p->strip[p->pend[i]]) == ORPAREN);
       (void)dupl(p, p->pbegin[i] + 1, p->pend[i]);
       EMIT(O_BACK, i);
-    } else
+    } else {
       SETERROR(REG_ESUBREG);
+    }
     p->g->backrefs = 1;
     break;
   case '*':
@@ -851,8 +853,9 @@ static void p_bracket(struct parse *p) {
   if (nch(p, cs) == 1) { /* optimize singleton sets */
     ordinary(p, firstch(p, cs));
     freeset(p, cs);
-  } else
+  } else {
     EMIT(OANYOF, freezeset(p, cs));
+  }
 }
 
 /*
@@ -906,8 +909,9 @@ static void p_b_term(struct parse *p, cset *cs) {
         finish = '-';
       else
         finish = p_b_symbol(p);
-    } else
+    } else {
       finish = start;
+    }
     /* xxx what about signed chars here... */
     REQUIRE(start <= finish, REG_ERANGE);
     for (i = start; i <= finish; i++)

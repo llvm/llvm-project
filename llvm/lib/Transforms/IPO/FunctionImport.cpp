@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AutoUpgrade.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"
@@ -1608,13 +1607,23 @@ Error llvm::EmitImportsFiles(
   if (EC)
     return createFileError("cannot open " + OutputFilename,
                            errorCodeToError(EC));
+  processImportsFiles(ModulePath, ModuleToSummariesForIndex,
+                      [&](StringRef M) { ImportsOS << M << "\n"; });
+  return Error::success();
+}
+
+/// Invoke callback \p F on the file paths from which \p ModulePath
+/// will import.
+void llvm::processImportsFiles(
+    StringRef ModulePath,
+    const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex,
+    function_ref<void(const std::string &)> F) {
   for (const auto &ILI : ModuleToSummariesForIndex)
     // The ModuleToSummariesForIndex map includes an entry for the current
     // Module (needed for writing out the index files). We don't want to
     // include it in the imports file, however, so filter it out.
     if (ILI.first != ModulePath)
-      ImportsOS << ILI.first << "\n";
-  return Error::success();
+      F(ILI.first);
 }
 
 bool llvm::convertToDeclaration(GlobalValue &GV) {

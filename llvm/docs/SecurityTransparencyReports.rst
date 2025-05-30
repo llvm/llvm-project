@@ -218,7 +218,7 @@ Supply chain security related issues and project services-related issues
    Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=71 |br|
    redirect: https://issuetracker.google.com/issues/42410066 |br|
    archive: https://github.com/llvm/llvm-project/issues/132187
-2. “llvmbot account suspended due to supicious login” |br|
+2. “llvmbot account suspended due to suspicious login” |br|
    Details are available at https://bugs.chromium.org/p/llvm/issues/detail?id=72 |br|
    redirect: https://issuetracker.google.com/issues/42410067 |br|
    archive: https://github.com/llvm/llvm-project/issues/132243

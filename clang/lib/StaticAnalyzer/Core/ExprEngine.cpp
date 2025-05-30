@@ -38,7 +38,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -73,7 +72,6 @@
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -2619,6 +2617,19 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   }
 }
 
+void ExprEngine::runCheckersForBlockEntrance(const NodeBuilderContext &BldCtx,
+                                             const BlockEntrance &Entrance,
+                                             ExplodedNode *Pred,
+                                             ExplodedNodeSet &Dst) {
+  llvm::PrettyStackTraceFormat CrashInfo(
+      "Processing block entrance B%d -> B%d",
+      Entrance.getPreviousBlock()->getBlockID(),
+      Entrance.getBlock()->getBlockID());
+  currBldrCtx = &BldCtx;
+  getCheckerManager().runCheckersForBlockEntrance(Dst, Pred, Entrance, *this);
+  currBldrCtx = nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // Branch processing.
 //===----------------------------------------------------------------------===//
@@ -4029,7 +4040,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
           OtherNode->getLocation().printJson(Out, /*NL=*/"\\l");
           Out << ", \"tag\": ";
           if (const ProgramPointTag *Tag = OtherNode->getLocation().getTag())
-            Out << '\"' << Tag->getTagDescription() << '\"';
+            Out << '\"' << Tag->getDebugTag() << '\"';
           else
             Out << "null";
           Out << ", \"node_id\": " << OtherNode->getID() <<

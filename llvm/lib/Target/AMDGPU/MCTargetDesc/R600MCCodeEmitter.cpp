@@ -13,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "llvm/MC/MCCodeEmitter.h"

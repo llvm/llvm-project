@@ -134,3 +134,23 @@ data2:
 	.option norvc
 	.balign 4
 	add	a0, a0, a1
+
+## Branches crossing the linker-relaxable R_RISCV_ALIGN need relocations.
+# RELAX-RELOC:      .rela.text3 {
+# RELAX-RELOC-NEXT:    0x4 R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# RELAX-RELOC-NEXT:    0x8 R_RISCV_ALIGN - 0x4
+# RELAX-RELOC-NEXT:    0xC R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# RELAX-RELOC-NEXT: }
+# C-OR-ZCA-EXT-RELAX-RELOC:      .rela.text3 {
+# C-OR-ZCA-EXT-RELAX-RELOC-NEXT:    0x4 R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# C-OR-ZCA-EXT-RELAX-RELOC-NEXT:    0x8 R_RISCV_ALIGN - 0x4
+# C-OR-ZCA-EXT-RELAX-RELOC-NEXT:    0xC R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# C-OR-ZCA-EXT-RELAX-RELOC-NEXT: }
+	.section .text3, "ax"
+	bnez t1, 1f
+	bnez t2, 2f
+1:
+	.p2align 3
+2:
+	bnez t1, 1b
+	bnez t1, 2b

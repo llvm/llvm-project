@@ -33,7 +33,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <memory>
 #include <optional>
 #include <utility>
 

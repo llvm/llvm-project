@@ -86,7 +86,7 @@ mlir::ParseResult customParseProperties(mlir::OpAsmParser &parser,
 //===----------------------------------------------------------------------===//
 // MyPropStruct
 //===----------------------------------------------------------------------===//
-
+namespace test_properties {
 class MyPropStruct {
 public:
   std::string content;
@@ -101,6 +101,9 @@ public:
     return content == rhs.content;
   }
 };
+inline llvm::hash_code hash_value(const MyPropStruct &S) { return S.hash(); }
+} // namespace test_properties
+using test_properties::MyPropStruct;
 
 llvm::LogicalResult readFromMlirBytecode(mlir::DialectBytecodeReader &reader,
                                          MyPropStruct &prop);

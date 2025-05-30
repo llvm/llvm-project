@@ -42,6 +42,7 @@ using CopySignOpLowering =
     ConvertFMFMathToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
 using CosOpLowering = ConvertFMFMathToLLVMPattern<math::CosOp, LLVM::CosOp>;
 using CoshOpLowering = ConvertFMFMathToLLVMPattern<math::CoshOp, LLVM::CoshOp>;
+using AcosOpLowering = ConvertFMFMathToLLVMPattern<math::AcosOp, LLVM::ACosOp>;
 using CtPopFOpLowering =
     VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp>;
 using Exp2OpLowering = ConvertFMFMathToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
@@ -62,12 +63,15 @@ using RoundOpLowering =
     ConvertFMFMathToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
 using SinOpLowering = ConvertFMFMathToLLVMPattern<math::SinOp, LLVM::SinOp>;
 using SinhOpLowering = ConvertFMFMathToLLVMPattern<math::SinhOp, LLVM::SinhOp>;
+using ASinOpLowering = ConvertFMFMathToLLVMPattern<math::AsinOp, LLVM::ASinOp>;
 using SqrtOpLowering = ConvertFMFMathToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 using FTruncOpLowering =
     ConvertFMFMathToLLVMPattern<math::TruncOp, LLVM::FTruncOp>;
 using TanOpLowering = ConvertFMFMathToLLVMPattern<math::TanOp, LLVM::TanOp>;
 using TanhOpLowering = ConvertFMFMathToLLVMPattern<math::TanhOp, LLVM::TanhOp>;
-
+using ATanOpLowering = ConvertFMFMathToLLVMPattern<math::AtanOp, LLVM::ATanOp>;
+using ATan2OpLowering =
+    ConvertFMFMathToLLVMPattern<math::Atan2Op, LLVM::ATan2Op>;
 // A `CtLz/CtTz/absi(a)` is converted into `CtLz/CtTz/absi(a, false)`.
 template <typename MathOp, typename LLVMOp>
 struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
@@ -353,6 +357,7 @@ void mlir::populateMathToLLVMConversionPatterns(
     CopySignOpLowering,
     CosOpLowering,
     CoshOpLowering,
+    AcosOpLowering,
     CountLeadingZerosOpLowering,
     CountTrailingZerosOpLowering,
     CtPopFOpLowering,
@@ -371,10 +376,13 @@ void mlir::populateMathToLLVMConversionPatterns(
     RsqrtOpLowering,
     SinOpLowering,
     SinhOpLowering,
+    ASinOpLowering,
     SqrtOpLowering,
     FTruncOpLowering,
     TanOpLowering,
-    TanhOpLowering
+    TanhOpLowering,
+    ATanOpLowering,
+    ATan2OpLowering
   >(converter, benefit);
   // clang-format on
 }

@@ -3562,8 +3562,14 @@ bool SparcTargetLowering::isFNegFree(EVT VT) const {
 
 bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
-  return Subtarget->isVIS() && (VT == MVT::f32 || VT == MVT::f64) &&
-         Imm.isZero();
+  if (VT != MVT::f32 && VT != MVT::f64)
+    return false;
+  if (Subtarget->isVIS() && Imm.isZero())
+    return true;
+  if (Subtarget->isVIS3())
+    return Imm.isExactlyValue(+0.5) || Imm.isExactlyValue(-0.5) ||
+           Imm.getExactLog2Abs() == -1;
+  return false;
 }
 
 bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }

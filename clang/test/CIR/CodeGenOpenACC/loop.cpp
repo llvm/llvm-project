@@ -205,7 +205,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
 
 #pragma acc loop worker(N)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
   // CHECK-NEXT: acc.loop worker(%[[N_CONV]] : si32) {
   // CHECK: acc.yield
@@ -219,7 +219,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
 
 #pragma acc loop worker(N) device_type(nvidia, radeon) worker
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
   // CHECK-NEXT: acc.loop worker([#acc.device_type<nvidia>, #acc.device_type<radeon>], %[[N_CONV]] : si32) {
   // CHECK: acc.yield
@@ -227,7 +227,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
 
 #pragma acc loop worker device_type(nvidia, radeon) worker(N)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
   // CHECK-NEXT: acc.loop worker([#acc.device_type<none>], %[[N_CONV]] : si32 [#acc.device_type<nvidia>], %[[N_CONV]] : si32 [#acc.device_type<radeon>]) {
   // CHECK: acc.yield
@@ -235,9 +235,9 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
 
 #pragma acc loop worker(N) device_type(nvidia, radeon) worker(N + 1)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
-  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[N_PLUS_ONE:.*]] = cir.binop(add, %[[N_LOAD2]], %[[ONE_CONST]]) nsw : !s32i
   // CHECK-NEXT: %[[N_PLUS_ONE_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_PLUS_ONE]] : !s32i to si32
@@ -247,7 +247,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
 
 #pragma acc loop device_type(nvidia, radeon) worker(num:N + 1)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[N_PLUS_ONE:.*]] = cir.binop(add, %[[N_LOAD]], %[[ONE_CONST]]) nsw : !s32i
   // CHECK-NEXT: %[[N_PLUS_ONE_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_PLUS_ONE]] : !s32i to si32
@@ -261,7 +261,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
 
 #pragma acc loop vector(N)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
   // CHECK-NEXT: acc.loop vector(%[[N_CONV]] : si32) {
   // CHECK: acc.yield
@@ -275,7 +275,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
 
 #pragma acc loop vector(N) device_type(nvidia, radeon) vector
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
   // CHECK-NEXT: acc.loop vector([#acc.device_type<nvidia>, #acc.device_type<radeon>], %[[N_CONV]] : si32) {
   // CHECK: acc.yield
@@ -283,9 +283,9 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
 
 #pragma acc loop vector(N) device_type(nvidia, radeon) vector(N + 1)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
-  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[N_PLUS_ONE:.*]] = cir.binop(add, %[[N_LOAD2]], %[[ONE_CONST]]) nsw : !s32i
   // CHECK-NEXT: %[[N_PLUS_ONE_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_PLUS_ONE]] : !s32i to si32
@@ -295,7 +295,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
 
 #pragma acc loop device_type(nvidia, radeon) vector(length:N + 1)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[N_PLUS_ONE:.*]] = cir.binop(add, %[[N_LOAD]], %[[ONE_CONST]]) nsw : !s32i
   // CHECK-NEXT: %[[N_PLUS_ONE_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_PLUS_ONE]] : !s32i to si32
@@ -311,13 +311,13 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
 
 #pragma acc loop worker(N) vector(N) device_type(nvidia) worker(N) vector(N)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
-  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV2:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD2]] : !s32i to si32
-  // CHECK-NEXT: %[[N_LOAD3:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD3:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV3:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD3]] : !s32i to si32
-  // CHECK-NEXT: %[[N_LOAD4:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD4:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV4:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD4]] : !s32i to si32
   // CHECK-NEXT: acc.loop worker(%[[N_CONV]] : si32, %[[N_CONV3]] : si32 [#acc.device_type<nvidia>]) vector(%[[N_CONV2]] : si32, %[[N_CONV4]] : si32 [#acc.device_type<nvidia>]) {
   // CHECK: acc.yield
@@ -346,7 +346,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   // CHECK-NEXT: } loc
 #pragma acc loop gang(static:N, dim: 1) device_type(nvidia, radeon) gang(static:*, dim : 2)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1 : i64
   // CHECK-NEXT: %[[STAR_CONST:.*]] = arith.constant -1 : i64
@@ -360,16 +360,16 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   {
 #pragma acc loop gang(num:N) device_type(nvidia, radeon) gang(num:N)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
-  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV2:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD2]] : !s32i to si32
   // CHECK-NEXT: acc.loop gang({num=%[[N_CONV]] : si32}, {num=%[[N_CONV2]] : si32} [#acc.device_type<nvidia>], {num=%[[N_CONV2]] : si32} [#acc.device_type<radeon>]) {
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
 #pragma acc loop gang(static:N) device_type(nvidia) gang(static:*)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
   // CHECK-NEXT: %[[STAR_CONST:.*]] = arith.constant -1 : i64
   // CHECK-NEXT: acc.loop gang({static=%[[N_CONV]] : si32}, {static=%[[STAR_CONST]] : i64} [#acc.device_type<nvidia>]) {
@@ -377,14 +377,14 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   // CHECK-NEXT: } loc
 #pragma acc loop gang(static:N, num: N + 1) device_type(nvidia) gang(static:*, num : N + 2)
   for(unsigned I = 0; I < N; ++I);
-  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[N_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_LOAD]] : !s32i to si32
-  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD2:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[CIR_ONE_CONST:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[N_PLUS_ONE:.*]] = cir.binop(add, %[[N_LOAD2]], %[[CIR_ONE_CONST]]) nsw : !s32i
   // CHECK-NEXT: %[[N_PLUS_ONE_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_PLUS_ONE]] : !s32i to si32
   // CHECK-NEXT: %[[STAR_CONST:.*]] = arith.constant -1 : i64
-  // CHECK-NEXT: %[[N_LOAD3:.*]] = cir.load %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[N_LOAD3:.*]] = cir.load{{.*}} %[[ALLOCA_N]] : !cir.ptr<!s32i>, !s32i
   // CHECK-NEXT: %[[CIR_TWO_CONST:.*]] = cir.const #cir.int<2> : !s32i
   // CHECK-NEXT: %[[N_PLUS_TWO:.*]] = cir.binop(add, %[[N_LOAD3]], %[[CIR_TWO_CONST]]) nsw : !s32i
   // CHECK-NEXT: %[[N_PLUS_TWO_CONV:.*]] = builtin.unrealized_conversion_cast %[[N_PLUS_TWO]] : !s32i to si32

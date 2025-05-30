@@ -783,7 +783,6 @@ public:
     Inst.setOpcode(RISCV::ADD);
     Inst.insert(Inst.begin(), MCOperand::createReg(Reg));
     Inst.insert(Inst.begin() + 1, MCOperand::createReg(RISCV::X0));
-    return;
   }
 
   InstructionListType createLoadImmediate(const MCPhysReg Dest,

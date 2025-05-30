@@ -2556,6 +2556,15 @@ TEST(APIntTest, clearBits) {
   EXPECT_EQ(6u, i256.countl_one());
   EXPECT_EQ(16u, i256.popcount());
 
+  APInt i299 = APInt::getAllOnes(299);
+  i299.clearBits(240, 250);
+  EXPECT_EQ(240u, i299.countr_one());
+  EXPECT_EQ(0u, i299.countr_zero());
+  EXPECT_EQ(299u, i299.getActiveBits());
+  EXPECT_EQ(0u, i299.countl_zero());
+  EXPECT_EQ(49u, i299.countl_one());
+  EXPECT_EQ(289u, i299.popcount());
+
   APInt i311 = APInt::getAllOnes(311);
   i311.clearBits(33, 99);
   EXPECT_EQ(33u, i311.countr_one());

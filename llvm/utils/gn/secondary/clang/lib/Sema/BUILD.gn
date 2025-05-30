@@ -122,6 +122,7 @@ static_library("Sema") {
     "SemaTemplateInstantiateDecl.cpp",
     "SemaTemplateVariadic.cpp",
     "SemaType.cpp",
+    "SemaTypeTraits.cpp",
     "SemaWasm.cpp",
     "SemaX86.cpp",
     "TypeLocBuilder.cpp",

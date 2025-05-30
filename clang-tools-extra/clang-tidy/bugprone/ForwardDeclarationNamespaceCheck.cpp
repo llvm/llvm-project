@@ -11,7 +11,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include <stack>
 #include <string>
 
 using namespace clang::ast_matchers;

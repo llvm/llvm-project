@@ -73,9 +73,7 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
   auto RecipeI = VPBB->begin();
   auto End = VPBB->end();
   unsigned NumActiveLaneMaskPhiRecipes = 0;
-  const VPRegionBlock *ParentR = VPBB->getParent();
-  bool IsHeaderVPBB = ParentR && !ParentR->isReplicator() &&
-                      ParentR->getEntryBasicBlock() == VPBB;
+  bool IsHeaderVPBB = VPBlockUtils::isHeader(VPBB, VPDT);
   while (RecipeI != End && RecipeI->isPhi()) {
     if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
       NumActiveLaneMaskPhiRecipes++;
@@ -245,9 +243,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           continue;
         }
         // TODO: Also verify VPPredInstPHIRecipe.
-        if (isa<VPPredInstPHIRecipe>(UI) ||
-            (isa<VPInstruction>(UI) && (cast<VPInstruction>(UI)->getOpcode() ==
-                                        VPInstruction::ResumePhi)))
+        if (isa<VPPredInstPHIRecipe>(UI))
           continue;
 
         // If the user is in the same block, check it comes after R in the

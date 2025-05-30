@@ -17,7 +17,6 @@
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticParse.h"
-#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
@@ -30,7 +29,6 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
 
@@ -4454,11 +4452,10 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   }
 }
 
-bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
-                                        IdentifierInfo *AttrName,
-                                        SourceLocation AttrNameLoc,
-                                        SourceLocation *EndLoc,
-                                        ParsedAttr::Form Form) {
+bool Parser::ParseCXXAssumeAttributeArg(
+    ParsedAttributes &Attrs, IdentifierInfo *AttrName,
+    SourceLocation AttrNameLoc, IdentifierInfo *ScopeName,
+    SourceLocation ScopeLoc, SourceLocation *EndLoc, ParsedAttr::Form Form) {
   assert(Tok.is(tok::l_paren) && "Not a C++11 attribute argument list");
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
@@ -4500,8 +4497,8 @@ bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
   ArgsUnion Assumption = Res.get();
   auto RParen = Tok.getLocation();
   T.consumeClose();
-  Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), nullptr,
-               SourceLocation(), &Assumption, 1, Form);
+  Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), ScopeName, ScopeLoc,
+               &Assumption, 1, Form);
 
   if (EndLoc)
     *EndLoc = RParen;
@@ -4567,7 +4564,8 @@ bool Parser::ParseCXX11AttributeArgs(
                                       ScopeName, ScopeLoc, Form);
   // So does C++23's assume() attribute.
   else if (!ScopeName && AttrName->isStr("assume")) {
-    if (ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc, Form))
+    if (ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, nullptr,
+                                   SourceLocation{}, EndLoc, Form))
       return true;
     NumArgs = 1;
   } else

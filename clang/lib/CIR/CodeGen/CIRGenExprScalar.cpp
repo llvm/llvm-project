@@ -786,12 +786,12 @@ public:
       }
     };
 
+    cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
     if (lhsTy->getAs<MemberPointerType>()) {
       assert(!cir::MissingFeatures::dataMemberType());
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
       mlir::Value lhs = cgf.emitScalarExpr(e->getLHS());
       mlir::Value rhs = cgf.emitScalarExpr(e->getRHS());
-      cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
       result = builder.createCompare(loc, kind, lhs, rhs);
     } else if (!lhsTy->isAnyComplexType() && !rhsTy->isAnyComplexType()) {
       BinOpInfo boInfo = emitBinOps(e);
@@ -799,9 +799,17 @@ public:
       mlir::Value rhs = boInfo.rhs;
 
       if (lhsTy->isVectorType()) {
-        assert(!cir::MissingFeatures::vectorType());
-        cgf.cgm.errorNYI(loc, "vector comparisons");
-        result = builder.getBool(false, loc);
+        if (!e->getType()->isVectorType()) {
+          // If AltiVec, the comparison results in a numeric type, so we use
+          // intrinsics comparing vectors and giving 0 or 1 as a result
+          cgf.cgm.errorNYI(loc, "AltiVec comparison");
+        } else {
+          // Other kinds of vectors. Element-wise comparison returning
+          // a vector.
+          result = builder.create<cir::VecCmpOp>(
+              cgf.getLoc(boInfo.loc), cgf.convertType(boInfo.fullType), kind,
+              boInfo.lhs, boInfo.rhs);
+        }
       } else if (boInfo.isFixedPointOp()) {
         assert(!cir::MissingFeatures::fixedPointType());
         cgf.cgm.errorNYI(loc, "fixed point comparisons");

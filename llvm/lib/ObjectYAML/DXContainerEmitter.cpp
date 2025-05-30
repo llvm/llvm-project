@@ -273,34 +273,81 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
       RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
-      for (const auto &Param : P.RootSignature->Parameters) {
-        dxbc::RootParameterHeader Header{Param.Type, Param.Visibility,
-                                         Param.Offset};
+      for (DXContainerYAML::RootParameterLocationYaml &L :
+           P.RootSignature->Parameters.Locations) {
+        dxbc::RTS0::v1::RootParameterHeader Header{L.Header.Type, L.Header.Visibility,
+                                         L.Header.Offset};
 
-        switch (Param.Type) {
-        case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-          dxbc::RootConstants Constants;
-          Constants.Num32BitValues = Param.Constants.Num32BitValues;
-          Constants.RegisterSpace = Param.Constants.RegisterSpace;
-          Constants.ShaderRegister = Param.Constants.ShaderRegister;
+        switch (L.Header.Type) {
+        case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+          const DXContainerYAML::RootConstantsYaml &ConstantYaml =
+              P.RootSignature->Parameters.getOrInsertConstants(L);
+          dxbc::RTS0::v1::RootConstants Constants;
+          Constants.Num32BitValues = ConstantYaml.Num32BitValues;
+          Constants.RegisterSpace = ConstantYaml.RegisterSpace;
+          Constants.ShaderRegister = ConstantYaml.ShaderRegister;
           RS.ParametersContainer.addParameter(Header, Constants);
           break;
-        case llvm::to_underlying(dxbc::RootParameterType::SRV):
-        case llvm::to_underlying(dxbc::RootParameterType::UAV):
+        }
         case llvm::to_underlying(dxbc::RootParameterType::CBV):
+        case llvm::to_underlying(dxbc::RootParameterType::SRV):
+        case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+          const DXContainerYAML::RootDescriptorYaml &DescriptorYaml =
+              P.RootSignature->Parameters.getOrInsertDescriptor(L);
+
           dxbc::RTS0::v2::RootDescriptor Descriptor;
-          Descriptor.RegisterSpace = Param.Descriptor.RegisterSpace;
-          Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
+          Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
+          Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
           if (RS.Version > 1)
-            Descriptor.Flags = Param.Descriptor.getEncodedFlags();
+            Descriptor.Flags = DescriptorYaml.getEncodedFlags();
           RS.ParametersContainer.addParameter(Header, Descriptor);
           break;
+        }
+        case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+          const DXContainerYAML::DescriptorTableYaml &TableYaml =
+              P.RootSignature->Parameters.getOrInsertTable(L);
+          mcdxbc::DescriptorTable Table;
+          for (const auto &R : TableYaml.Ranges) {
+
+            dxbc::RTS0::v2::DescriptorRange Range;
+            Range.RangeType = R.RangeType;
+            Range.NumDescriptors = R.NumDescriptors;
+            Range.BaseShaderRegister = R.BaseShaderRegister;
+            Range.RegisterSpace = R.RegisterSpace;
+            Range.OffsetInDescriptorsFromTableStart =
+                R.OffsetInDescriptorsFromTableStart;
+            if (RS.Version > 1)
+              Range.Flags = R.getEncodedFlags();
+            Table.Ranges.push_back(Range);
+          }
+          RS.ParametersContainer.addParameter(Header, Table);
+          break;
+        }
         default:
           // Handling invalid parameter type edge case. We intentionally let
           // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
           // for that to be used as a testing tool more effectively.
           RS.ParametersContainer.addInvalidParameter(Header);
         }
+      }
+
+      for (const auto &Param : P.RootSignature->samplers()) {
+        dxbc::RTS0::v1::StaticSampler NewSampler;
+        NewSampler.Filter = Param.Filter;
+        NewSampler.AddressU = Param.AddressU;
+        NewSampler.AddressV = Param.AddressV;
+        NewSampler.AddressW = Param.AddressW;
+        NewSampler.MipLODBias = Param.MipLODBias;
+        NewSampler.MaxAnisotropy = Param.MaxAnisotropy;
+        NewSampler.ComparisonFunc = Param.ComparisonFunc;
+        NewSampler.BorderColor = Param.BorderColor;
+        NewSampler.MinLOD = Param.MinLOD;
+        NewSampler.MaxLOD = Param.MaxLOD;
+        NewSampler.ShaderRegister = Param.ShaderRegister;
+        NewSampler.RegisterSpace = Param.RegisterSpace;
+        NewSampler.ShaderVisibility = Param.ShaderVisibility;
+
+        RS.StaticSamplers.push_back(NewSampler);
       }
 
       RS.write(OS);

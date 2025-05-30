@@ -1688,7 +1688,7 @@ static const Init *ForeachDagApply(const Init *LHS, const DagInit *MHSd,
   }
 
   if (Change)
-    return DagInit::get(Val, NewArgs);
+    return DagInit::get(Val, MHSd->getName(), NewArgs);
   return MHSd;
 }
 
@@ -2786,7 +2786,7 @@ bool DagInit::isConcrete() const {
 std::string DagInit::getAsString() const {
   std::string Result = "(" + Val->getAsString();
   if (ValName)
-    Result += ":" + ValName->getAsUnquotedString();
+    Result += ":$" + ValName->getAsUnquotedString();
   if (!arg_empty()) {
     Result += " ";
     ListSeparator LS;

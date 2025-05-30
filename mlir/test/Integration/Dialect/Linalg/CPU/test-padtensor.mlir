@@ -7,6 +7,9 @@
 // RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
 // RUN: | FileCheck %s
 
+// TODO: Use TD for vectorization and remove `test-linalg-to-vector-patterns`
+// that's otherwise not required.
+
 
 func.func @main() {
   %const = arith.constant dense<[[[1.0, 2.0, 3.0], [2.0, 3.0, 4.0]]]> : tensor<1x2x3xf32>

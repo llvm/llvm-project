@@ -7078,7 +7078,7 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
         // icmp eq X, (zext (icmp ne X, 0)) --> X == 0 || X == 1
         // icmp ne X, (zext (icmp ne X, 0)) --> X != 0 && X != 1
         // icmp eq X, (sext (icmp ne X, 0)) --> X == 0 || X == -1
-        // icmp ne X, (sext (icmp ne X, 0)) --> X != 0 && X == -1
+        // icmp ne X, (sext (icmp ne X, 0)) --> X != 0 && X != -1
         return CreateRangeCheck();
       }
     } else if (IsSExt ? C->isAllOnes() : C->isOne()) {

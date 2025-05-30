@@ -58,11 +58,8 @@ std::string FormatExtensionFlags(int64_t Flags) {
 
   // The target parser also includes every extension you don't have.
   // E.g. if AEK_CRC is not set then it adds "-crc". Not useful here.
-  Features.erase(std::remove_if(Features.begin(), Features.end(),
-                                [](StringRef extension) {
-                                  return extension.starts_with("-");
-                                }),
-                 Features.end());
+  llvm::erase_if(
+      Features, [](StringRef extension) { return extension.starts_with("-"); });
 
   return llvm::join(Features, ", ");
 }

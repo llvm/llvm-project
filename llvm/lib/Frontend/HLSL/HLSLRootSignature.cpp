@@ -71,11 +71,6 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-void DescriptorTable::dump(raw_ostream &OS) const {
-  OS << "DescriptorTable(numClauses = " << NumClauses
-     << ", visibility = " << Visibility << ")";
-}
-
 static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
   switch (Type) {
   case ClauseType::CBuffer:
@@ -137,14 +132,24 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-void DescriptorTableClause::dump(raw_ostream &OS) const {
-  OS << Type << "(" << Reg << ", numDescriptors = " << NumDescriptors
-     << ", space = " << Space << ", offset = ";
-  if (Offset == DescriptorTableOffsetAppend)
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table) {
+  OS << "DescriptorTable(numClauses = " << Table.NumClauses
+     << ", visibility = " << Table.Visibility << ")";
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause) {
+  OS << Clause.Type << "(" << Clause.Reg
+     << ", numDescriptors = " << Clause.NumDescriptors
+     << ", space = " << Clause.Space << ", offset = ";
+  if (Clause.Offset == DescriptorTableOffsetAppend)
     OS << "DescriptorTableOffsetAppend";
   else
-    OS << Offset;
-  OS << ", flags = " << Flags << ")";
+    OS << Clause.Offset;
+  OS << ", flags = " << Clause.Flags << ")";
+
+  return OS;
 }
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
@@ -154,11 +159,11 @@ void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
     if (!First)
       OS << ",";
     OS << " ";
-    First = false;
     if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
-      Clause->dump(OS);
+      OS << *Clause;
     if (const auto &Table = std::get_if<DescriptorTable>(&Element))
-      Table->dump(OS);
+      OS << *Table;
+    First = false;
   }
   OS << "}";
 }

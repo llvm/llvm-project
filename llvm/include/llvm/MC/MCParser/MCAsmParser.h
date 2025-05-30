@@ -163,8 +163,8 @@ public:
   MCContext &getContext() { return Ctx; }
   MCStreamer &getStreamer() { return Out; }
   SourceMgr &getSourceManager() { return SrcMgr; }
-  MCAsmLexer &getLexer() { return Lexer; }
-  const MCAsmLexer &getLexer() const { return Lexer; }
+  AsmLexer &getLexer() { return Lexer; }
+  const AsmLexer &getLexer() const { return Lexer; }
 
   MCTargetAsmParser &getTargetParser() const { return *TargetParser; }
   void setTargetParser(MCTargetAsmParser &P);

@@ -27,7 +27,7 @@ namespace orc {
 
 enum class LinkableFileKind { Archive, RelocatableObject };
 
-enum LoadArchives {
+enum class LoadArchives {
   Never,   // Linkable file must not be an archive.
   Allowed, // Linkable file is allowed to be an archive.
   Required // Linkable file is required to be an archive.

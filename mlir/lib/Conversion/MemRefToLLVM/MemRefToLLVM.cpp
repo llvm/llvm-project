@@ -1721,10 +1721,6 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
     MemRefDescriptor sourceMemRef(adaptor.getSource());
     auto targetMemRef = MemRefDescriptor::poison(rewriter, loc, targetDescTy);
 
-    // Early exit for 0-D corner case.
-    if (viewMemRefType.getRank() == 0)
-      return rewriter.replaceOp(viewOp, {targetMemRef}), success();
-
     // Field 1: Copy the allocated pointer, used for malloc/free.
     Value allocatedPtr = sourceMemRef.allocatedPtr(rewriter, loc);
     auto srcMemRefType = cast<MemRefType>(viewOp.getSource().getType());
@@ -1746,6 +1742,10 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
     targetMemRef.setOffset(
         rewriter, loc,
         createIndexAttrConstant(rewriter, loc, indexType, offset));
+
+    // Early exit for 0-D corner case.
+    if (viewMemRefType.getRank() == 0)
+      return rewriter.replaceOp(viewOp, {targetMemRef}), success();
 
     // Fields 4 and 5: Update sizes and strides.
     Value stride = nullptr, nextSize = nullptr;
