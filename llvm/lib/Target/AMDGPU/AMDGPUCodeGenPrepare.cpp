@@ -1775,6 +1775,40 @@ bool AMDGPUCodeGenPrepareImpl::visitICmpInst(ICmpInst &I) {
       UA.isUniform(&I))
     Changed |= promoteUniformOpToI32(I);
 
+  // check if select operands should be swapped
+  // so that v_cndmask can be later shrinked into
+  // vop2
+  int ShouldSwap = 0;
+  for (auto Use = I.use_begin(); Use != I.use_end(); Use++) {
+    auto User = Use->getUser();
+
+    if (!isa<SelectInst>(User))
+      return Changed;
+
+    auto SelectI = dyn_cast<SelectInst>(User);
+
+    if (isa<Constant>(SelectI->getOperand(1)) &&
+        !isa<Constant>(SelectI->getOperand(2)))
+      ShouldSwap++;
+    else if (!isa<Constant>(SelectI->getOperand(1)) &&
+             isa<Constant>(SelectI->getOperand(2)))
+      ShouldSwap--;
+  }
+
+  if (ShouldSwap <= 0)
+    return Changed;
+
+  I.setPredicate(I.getInverseCmpPredicate());
+
+  for (auto Use = I.use_begin(); Use != I.use_end(); Use++) {
+    auto SelectI = dyn_cast<Instruction>(Use->getUser());
+
+    auto Op = SelectI->getOperand(1);
+
+    SelectI->setOperand(1, SelectI->getOperand(2));
+    SelectI->setOperand(2, Op);
+  }
+
   return Changed;
 }
 

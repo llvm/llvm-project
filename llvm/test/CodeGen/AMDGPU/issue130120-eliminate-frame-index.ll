@@ -27,27 +27,27 @@ define amdgpu_gfx [13 x i32] @issue130120() {
 ; CHECK-NEXT:    s_mov_b32 s48, 0
 ; CHECK-NEXT:  .LBB0_1: ; %bb3
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_cmp_eq_u32 s46, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s46, 0
 ; CHECK-NEXT:    s_mov_b32 s49, s48
 ; CHECK-NEXT:    s_mov_b32 s50, s48
-; CHECK-NEXT:    s_cselect_b32 s51, 0, s1
-; CHECK-NEXT:    s_cselect_b32 s55, 0, s35
+; CHECK-NEXT:    s_cselect_b32 s51, s1, 0
+; CHECK-NEXT:    s_cselect_b32 s55, s35, 0
 ; CHECK-NEXT:    v_dual_mov_b32 v2, s48 :: v_dual_mov_b32 v3, s49
-; CHECK-NEXT:    s_cselect_b32 s52, 0, s2
-; CHECK-NEXT:    s_cselect_b32 s56, 0, s36
-; CHECK-NEXT:    s_cselect_b32 vcc_lo, 0, s43
+; CHECK-NEXT:    s_cselect_b32 s52, s2, 0
+; CHECK-NEXT:    s_cselect_b32 s56, s36, 0
+; CHECK-NEXT:    s_cselect_b32 vcc_lo, s43, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s50
-; CHECK-NEXT:    s_cselect_b32 s47, s45, 0xf0
-; CHECK-NEXT:    s_cselect_b32 s53, 0, s3
-; CHECK-NEXT:    s_cselect_b32 s54, 0, s34
-; CHECK-NEXT:    s_cselect_b32 s57, 0, s37
-; CHECK-NEXT:    s_cselect_b32 s58, 0, s38
-; CHECK-NEXT:    s_cselect_b32 s59, 0, s0
-; CHECK-NEXT:    s_cselect_b32 s60, 0, s39
-; CHECK-NEXT:    s_cselect_b32 s61, 0, s40
-; CHECK-NEXT:    s_cselect_b32 s62, 0, s41
-; CHECK-NEXT:    s_cselect_b32 s63, 0, s42
-; CHECK-NEXT:    s_cselect_b32 vcc_hi, 0, s44
+; CHECK-NEXT:    s_cselect_b32 s47, 0xf0, s45
+; CHECK-NEXT:    s_cselect_b32 s53, s3, 0
+; CHECK-NEXT:    s_cselect_b32 s54, s34, 0
+; CHECK-NEXT:    s_cselect_b32 s57, s37, 0
+; CHECK-NEXT:    s_cselect_b32 s58, s38, 0
+; CHECK-NEXT:    s_cselect_b32 s59, s0, 0
+; CHECK-NEXT:    s_cselect_b32 s60, s39, 0
+; CHECK-NEXT:    s_cselect_b32 s61, s40, 0
+; CHECK-NEXT:    s_cselect_b32 s62, s41, 0
+; CHECK-NEXT:    s_cselect_b32 s63, s42, 0
+; CHECK-NEXT:    s_cselect_b32 vcc_hi, s44, 0
 ; CHECK-NEXT:    s_mov_b32 s46, s48
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s51
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s52
