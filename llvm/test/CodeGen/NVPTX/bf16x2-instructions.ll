@@ -711,35 +711,35 @@ define <2 x bfloat> @test_round(<2 x bfloat> %a) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<5>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<29>;
+; CHECK-NEXT:    .reg .b32 %r<21>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_round_param_0];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NEXT:    cvt.f32.bf16 %r25, %rs1;
-; CHECK-NEXT:    and.b32 %r4, %r25, -2147483648;
-; CHECK-NEXT:    or.b32 %r26, %r4, 1056964608;
-; CHECK-NEXT:    add.rn.f32 %r7, %r25, %r26;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r8, %r7;
-; CHECK-NEXT:    abs.f32 %r9, %r25;
-; CHECK-NEXT:    setp.gt.f32 %p1, %r9, 0f4B000000;
-; CHECK-NEXT:    selp.f32 %r10, %r25, %r8, %p1;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r11, %r25;
-; CHECK-NEXT:    setp.lt.f32 %p2, %r9, 0f3F000000;
-; CHECK-NEXT:    selp.f32 %r12, %r11, %r10, %p2;
-; CHECK-NEXT:    cvt.f32.bf16 %r27, %rs2;
-; CHECK-NEXT:    and.b32 %r15, %r27, -2147483648;
-; CHECK-NEXT:    or.b32 %r28, %r15, 1056964608;
-; CHECK-NEXT:    add.rn.f32 %r18, %r27, %r28;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r19, %r18;
-; CHECK-NEXT:    abs.f32 %r20, %r27;
-; CHECK-NEXT:    setp.gt.f32 %p3, %r20, 0f4B000000;
-; CHECK-NEXT:    selp.f32 %r21, %r27, %r19, %p3;
-; CHECK-NEXT:    cvt.rzi.f32.f32 %r22, %r27;
-; CHECK-NEXT:    setp.lt.f32 %p4, %r20, 0f3F000000;
-; CHECK-NEXT:    selp.f32 %r23, %r22, %r21, %p4;
-; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r24, %r23, %r12;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r24;
+; CHECK-NEXT:    cvt.f32.bf16 %r2, %rs1;
+; CHECK-NEXT:    and.b32 %r3, %r2, -2147483648;
+; CHECK-NEXT:    or.b32 %r4, %r3, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r5, %r2, %r4;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r6, %r5;
+; CHECK-NEXT:    abs.f32 %r7, %r2;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r7, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r8, %r2, %r6, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r9, %r2;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r7, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r10, %r9, %r8, %p2;
+; CHECK-NEXT:    cvt.f32.bf16 %r11, %rs2;
+; CHECK-NEXT:    and.b32 %r12, %r11, -2147483648;
+; CHECK-NEXT:    or.b32 %r13, %r12, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r14, %r11, %r13;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r15, %r14;
+; CHECK-NEXT:    abs.f32 %r16, %r11;
+; CHECK-NEXT:    setp.gt.f32 %p3, %r16, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r17, %r11, %r15, %p3;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r18, %r11;
+; CHECK-NEXT:    setp.lt.f32 %p4, %r16, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r19, %r18, %r17, %p4;
+; CHECK-NEXT:    cvt.rn.bf16x2.f32 %r20, %r19, %r10;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r20;
 ; CHECK-NEXT:    ret;
   %r = call <2 x bfloat> @llvm.round.f16(<2 x bfloat> %a)
   ret <2 x bfloat> %r

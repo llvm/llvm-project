@@ -471,11 +471,11 @@ define amdgpu_kernel void @v8i32_arg(ptr addrspace(1) nocapture inreg %out, <8 x
 ;
 ; GFX1250-LABEL: v8i32_arg:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v1, s15
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s14 :: v_dual_mov_b32 v3, s17
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s16 :: v_dual_mov_b32 v5, s11
-; GFX1250-NEXT:    v_dual_mov_b32 v4, s10 :: v_dual_mov_b32 v7, s13
-; GFX1250-NEXT:    v_mov_b32_e32 v6, s12
+; GFX1250-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_mov_b32 v0, s14
+; GFX1250-NEXT:    v_dual_mov_b32 v1, s15 :: v_dual_mov_b32 v2, s16
+; GFX1250-NEXT:    v_dual_mov_b32 v3, s17 :: v_dual_mov_b32 v4, s10
+; GFX1250-NEXT:    v_dual_mov_b32 v5, s11 :: v_dual_mov_b32 v6, s12
+; GFX1250-NEXT:    v_mov_b32_e32 v7, s13
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v8, v[0:3], s[2:3] offset:16
 ; GFX1250-NEXT:    global_store_b128 v8, v[4:7], s[2:3]
@@ -739,10 +739,10 @@ define amdgpu_kernel void @v5f64_arg(ptr addrspace(1) nocapture inreg %out, <5 x
 ; GFX1250-NEXT:    v_mov_b32_e32 v10, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b64_e32 v[8:9], s[12:13]
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v3, s11
-; GFX1250-NEXT:    v_dual_mov_b32 v1, s9 :: v_dual_mov_b32 v2, s10
-; GFX1250-NEXT:    v_dual_mov_b32 v5, s5 :: v_dual_mov_b32 v4, s4
-; GFX1250-NEXT:    v_dual_mov_b32 v7, s7 :: v_dual_mov_b32 v6, s6
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v1, s9
+; GFX1250-NEXT:    v_dual_mov_b32 v2, s10 :: v_dual_mov_b32 v3, s11
+; GFX1250-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s5
+; GFX1250-NEXT:    v_dual_mov_b32 v6, s6 :: v_dual_mov_b32 v7, s7
 ; GFX1250-NEXT:    s_clause 0x2
 ; GFX1250-NEXT:    global_store_b64 v10, v[8:9], s[2:3] offset:32
 ; GFX1250-NEXT:    global_store_b128 v10, v[0:3], s[2:3] offset:16
@@ -1240,9 +1240,9 @@ define amdgpu_kernel void @fp128_kernel_preload_arg(ptr addrspace(1) inreg %out,
 ;
 ; GFX1250-LABEL: fp128_kernel_preload_arg:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v1, s7
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v3, s9
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s8
+; GFX1250-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v0, s6
+; GFX1250-NEXT:    v_dual_mov_b32 v1, s7 :: v_dual_mov_b32 v2, s8
+; GFX1250-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX1250-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   store fp128 %in, ptr addrspace(1) %out
@@ -1354,8 +1354,8 @@ define amdgpu_kernel void @v7half_kernel_preload_arg(ptr addrspace(1) inreg %out
 ; GFX1250-LABEL: v7half_kernel_preload_arg:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v4, s9
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s8 :: v_dual_mov_b32 v1, s7
-; GFX1250-NEXT:    v_mov_b32_e32 v0, s6
+; GFX1250-NEXT:    v_dual_mov_b32 v2, s8 :: v_dual_mov_b32 v0, s6
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b16 v3, v4, s[2:3] offset:12
 ; GFX1250-NEXT:    global_store_b96 v3, v[0:2], s[2:3]

@@ -57,9 +57,8 @@ define amdgpu_kernel void @addrspacecast_dds_to_flat_uniform(ptr %inout, ptr add
 ; GFX1300-SDAG-NEXT:    s_mov_b64 s[2:3], src_shared_base
 ; GFX1300-SDAG-NEXT:    s_cselect_b32 s2, s4, 0
 ; GFX1300-SDAG-NEXT:    s_cselect_b32 s3, s3, 0
-; GFX1300-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s3
-; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1300-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
+; GFX1300-SDAG-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1300-SDAG-NEXT:    flat_store_b64 v2, v[0:1], s[0:1] scope:SCOPE_SE
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;

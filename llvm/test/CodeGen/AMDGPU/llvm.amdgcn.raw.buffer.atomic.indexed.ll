@@ -78,8 +78,8 @@ define amdgpu_ps float @test3(i32 inreg %rsrc, i32 %data, i32 %cmp, i32 %vindex,
 ; GFX13-LABEL: test3:
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v3, v0
-; GFX13-NEXT:    v_add_nc_u32_e32 v0, 44, v2
 ; GFX13-NEXT:    s_movk_i32 s1, 0x1ffc
+; GFX13-NEXT:    v_add_nc_u32_e32 v0, 44, v2
 ; GFX13-NEXT:    buffer_atomic_cmpswap_b32 v[3:4], off, s0, null th:TH_ATOMIC_RETURN
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v1

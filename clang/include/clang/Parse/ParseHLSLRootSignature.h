@@ -111,15 +111,25 @@ private:
 
   struct ParsedStaticSamplerParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<float> MipLODBias;
+    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressU;
+    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressV;
+    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressW;
+    std::optional<uint32_t> MaxAnisotropy;
+    std::optional<float> MinLOD;
+    std::optional<float> MaxLOD;
   };
   std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 
   // Common parsing methods
   std::optional<uint32_t> parseUIntParam();
   std::optional<llvm::hlsl::rootsig::Register> parseRegister();
+  std::optional<float> parseFloatParam();
 
   /// Parsing methods of various enums
   std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
+  std::optional<llvm::hlsl::rootsig::TextureAddressMode>
+  parseTextureAddressMode();
   std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
   parseRootDescriptorFlags();
   std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
@@ -128,6 +138,19 @@ private:
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
   std::optional<uint32_t> handleUIntLiteral();
+  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a signed
+  /// 32-bit integer
+  std::optional<int32_t> handleIntLiteral(bool Negated);
+  /// Use NumericLiteralParser to convert CurToken.NumSpelling into a float
+  ///
+  /// This matches the behaviour of DXC, which is as follows:
+  ///  - convert the spelling with `strtod`
+  ///  - check for a float overflow
+  ///  - cast the double to a float
+  /// The behaviour of `strtod` is replicated using:
+  ///  Semantics: llvm::APFloat::Semantics::S_IEEEdouble
+  ///  RoundingMode: llvm::RoundingMode::NearestTiesToEven
+  std::optional<float> handleFloatLiteral(bool Negated);
 
   /// Flags may specify the value of '0' to denote that there should be no
   /// flags set.

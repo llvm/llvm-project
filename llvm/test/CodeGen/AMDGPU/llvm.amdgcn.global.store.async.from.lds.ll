@@ -284,8 +284,8 @@ define amdgpu_ps void @global_store_async_from_lds_b64_saddr_no_scale_offset(ptr
 ;
 ; GFX13-GISEL-LABEL: global_store_async_from_lds_b64_saddr_no_scale_offset:
 ; GFX13-GISEL:       ; %bb.0: ; %entry
-; GFX13-GISEL-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s1 :: v_dual_mov_b32 v3, s0
+; GFX13-GISEL-NEXT:    v_dual_ashrrev_i32 v2, 31, v1 :: v_dual_mov_b32 v4, s1
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v3, s0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_lshlrev_b64_e32 v[1:2], 2, v[1:2]
 ; GFX13-GISEL-NEXT:    v_add_co_u32 v1, vcc_lo, v3, v1
