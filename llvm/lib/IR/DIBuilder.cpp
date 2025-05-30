@@ -943,8 +943,7 @@ DISubprogram *DIBuilder::createFunction(
       SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl, nullptr,
       ThrownTypes, Annotations, TargetFuncName);
 
-  if (IsDefinition)
-    AllSubprograms.push_back(Node);
+  AllSubprograms.push_back(Node);
   trackIfUnresolved(Node);
   return Node;
 }
@@ -981,8 +980,7 @@ DISubprogram *DIBuilder::createMethod(
       Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
       nullptr, ThrownTypes);
 
-  if (IsDefinition)
-    AllSubprograms.push_back(SP);
+  AllSubprograms.push_back(SP);
   trackIfUnresolved(SP);
   return SP;
 }
