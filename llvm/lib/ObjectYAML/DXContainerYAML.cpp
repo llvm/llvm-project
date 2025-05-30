@@ -139,6 +139,26 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       }
     }
   }
+
+  for (const auto &S : Data.samplers()) {
+    StaticSamplerYamlDesc NewS;
+    NewS.Filter = S.Filter;
+    NewS.AddressU = S.AddressU;
+    NewS.AddressV = S.AddressV;
+    NewS.AddressW = S.AddressW;
+    NewS.MipLODBias = S.MipLODBias;
+    NewS.MaxAnisotropy = S.MaxAnisotropy;
+    NewS.ComparisonFunc = S.ComparisonFunc;
+    NewS.BorderColor = S.BorderColor;
+    NewS.MinLOD = S.MinLOD;
+    NewS.MaxLOD = S.MaxLOD;
+    NewS.ShaderRegister = S.ShaderRegister;
+    NewS.RegisterSpace = S.RegisterSpace;
+    NewS.ShaderVisibility = S.ShaderVisibility;
+
+    RootSigDesc.StaticSamplers.push_back(NewS);
+  }
+
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   RootSigDesc.Val =                                                            \
       (Flags & llvm::to_underlying(dxbc::RootElementFlag::Val)) > 0;
@@ -340,6 +360,7 @@ void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
   IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
   IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
   IO.mapRequired("Parameters", S.Parameters.Locations, S);
+  IO.mapOptional("Samplers", S.StaticSamplers);
 #define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
@@ -419,6 +440,24 @@ void MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml>::mapping(
   IO.mapRequired("ShaderRegister", D.ShaderRegister);
 #define ROOT_DESCRIPTOR_FLAG(Num, Val) IO.mapOptional(#Val, D.Val, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
+void MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc>::mapping(
+    IO &IO, llvm::DXContainerYAML::StaticSamplerYamlDesc &S) {
+
+  IO.mapOptional("Filter", S.Filter);
+  IO.mapOptional("AddressU", S.AddressU);
+  IO.mapOptional("AddressV", S.AddressV);
+  IO.mapOptional("AddressW", S.AddressW);
+  IO.mapOptional("MipLODBias", S.MipLODBias);
+  IO.mapOptional("MaxAnisotropy", S.MaxAnisotropy);
+  IO.mapOptional("ComparisonFunc", S.ComparisonFunc);
+  IO.mapOptional("BorderColor", S.BorderColor);
+  IO.mapOptional("MinLOD", S.MinLOD);
+  IO.mapOptional("MaxLOD", S.MaxLOD);
+  IO.mapRequired("ShaderRegister", S.ShaderRegister);
+  IO.mapRequired("RegisterSpace", S.RegisterSpace);
+  IO.mapRequired("ShaderVisibility", S.ShaderVisibility);
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
