@@ -21,7 +21,7 @@ using namespace llvm::logicalview;
 
 #define DEBUG_TYPE "Object"
 
-#ifndef NDEBUG
+#ifdef LLVM_BUILD_DEBUG
 uint64_t LVObject::GID = 0;
 #endif
 
@@ -137,7 +137,7 @@ void LVObject::printAttributes(raw_ostream &OS, bool Full, StringRef Name,
 }
 
 void LVObject::printAttributes(raw_ostream &OS, bool Full) const {
-#ifndef NDEBUG
+#ifdef LLVM_BUILD_DEBUG
   if (options().getInternalID())
     OS << hexSquareString(getID());
 #endif

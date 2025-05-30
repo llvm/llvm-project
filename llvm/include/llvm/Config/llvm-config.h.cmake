@@ -104,6 +104,9 @@
 /* Define to 1 if you have the <sysexits.h> header file. */
 #cmakedefine HAVE_SYSEXITS_H ${HAVE_SYSEXITS_H}
 
+/* Define if this LLVM build is a Debug build */
+#cmakedefine LLVM_BUILD_DEBUG
+
 /* Define if building libLLVM shared library */
 #cmakedefine LLVM_BUILD_LLVM_DYLIB
 
