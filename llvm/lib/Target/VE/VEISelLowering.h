@@ -203,14 +203,10 @@ public:
     // VE uses release consistency, so need fence for each atomics.
     return true;
   }
-  Instruction *
-  emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
-                   AtomicOrdering Ord,
-                   SyncScope::ID SSID = SyncScope::System) const override;
-  Instruction *
-  emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
-                    AtomicOrdering Ord,
-                    SyncScope::ID SSID = SyncScope::System) const override;
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                AtomicOrdering Ord) const override;
+  Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                 AtomicOrdering Ord) const override;
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
   ISD::NodeType getExtendForAtomicOps() const override {
