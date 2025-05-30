@@ -232,16 +232,16 @@ static bool isHeader(StringRef S) {
          all_of(Value, [](char C) { return llvm::isPrint(C) || C == '\t'; });
 }
 
-static SmallVector<std::string, 0> getHeaders() {
+static SmallVector<std::string, 0> getHeaders(StringRef SymbolName) {
+  SmallVector<std::string, 0> Headers;
+  Headers.emplace_back("x-fb-debuginfod-symbolname:" + SymbolName.str());
   const char *Filename = getenv("DEBUGINFOD_HEADERS_FILE");
   if (!Filename)
-    return {};
+    return Headers;
   ErrorOr<std::unique_ptr<MemoryBuffer>> HeadersFile =
       MemoryBuffer::getFile(Filename, /*IsText=*/true);
   if (!HeadersFile)
-    return {};
-
-  SmallVector<std::string, 0> Headers;
+    return Headers;
   uint64_t LineNumber = 0;
   for (StringRef Line : llvm::split((*HeadersFile)->getBuffer(), '\n')) {
     LineNumber++;
@@ -256,6 +256,15 @@ static SmallVector<std::string, 0> getHeaders() {
     Headers.emplace_back(Line);
   }
   return Headers;
+}
+
+static llvm::StringRef getSymbolName(StringRef UniqueKey) {
+  llvm::StringRef SymbolName = UniqueKey;
+  size_t pos = UniqueKey.rfind('-');
+  if (pos != llvm::StringRef::npos) {
+    SymbolName = SymbolName.substr(pos + 1);
+  }
+  return SymbolName;
 }
 
 Expected<std::string> getCachedOrDownloadArtifact(
@@ -304,7 +313,7 @@ Expected<std::string> getCachedOrDownloadArtifact(
       StreamedHTTPResponseHandler Handler(
           [&]() { return CacheAddStream(Task, ""); }, Client);
       HTTPRequest Request(ArtifactUrl);
-      Request.Headers = getHeaders();
+      Request.Headers = getHeaders(getSymbolName(UniqueKey));
       Error Err = Client.perform(Request, Handler);
       if (Err)
         return std::move(Err);
