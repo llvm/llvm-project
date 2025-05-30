@@ -505,6 +505,28 @@ public:
 
   virtual FormatEntity::Entry GetFunctionNameFormat() const { return {}; }
 
+  // BEGIN SWIFT
+  // Implement LanguageCPlusPlus::GetParentNameIfClosure and upstream this.
+  // rdar://152321823
+
+  /// If `mangled_name` refers to a function that is a "closure-like" function,
+  /// returns the name of the parent function where the input closure was
+  /// defined. Returns an empty string if there is no such parent, or if the
+  /// query does not make sense for this language.
+  virtual std::string
+  GetParentNameIfClosure(llvm::StringRef mangled_name) const {
+    return "";
+  }
+
+  /// If `sc` corresponds to a "closure-like" function (as defined in
+  /// `GetParentNameIfClosure`), returns the parent Function*
+  /// where a variable named `variable_name` exists.
+  /// Returns nullptr if `sc` is not a closure, or if the query does
+  /// not make sense for this language.
+  Function *FindParentOfClosureWithVariable(llvm::StringRef variable_name,
+                                            const SymbolContext &sc) const;
+  // END SWIFT
+
 protected:
   // Classes that inherit from Language can see and modify these
 
