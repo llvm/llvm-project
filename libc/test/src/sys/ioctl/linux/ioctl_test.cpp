@@ -23,33 +23,32 @@ TEST(LlvmLibcSysIoctlTest, TestFileFIONREAD) {
   constexpr const char TEST_MSG[] = "ioctl test";
   constexpr int TEST_MSG_SIZE = sizeof(TEST_MSG) - 1;
   constexpr const char *TEST_FILE = "testdata/ioctl.test";
-  int test_file_fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
-  ASSERT_GT(test_file_fd, 0);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
   ASSERT_ERRNO_SUCCESS();
+  ASSERT_GT(fd, 0);
 
   // FIONREAD reports the number of available bytes to read for the passed fd
   // This will report the full size of the file, as we haven't read anything yet
-  int test_file_n = -1;
-  int ret = LIBC_NAMESPACE::ioctl(test_file_fd, FIONREAD, &test_file_n);
-  ASSERT_GT(ret, -1);
+  int n = -1;
+  int ret = LIBC_NAMESPACE::ioctl(fd, FIONREAD, &n);
   ASSERT_ERRNO_SUCCESS();
-  ASSERT_EQ(test_file_n, TEST_MSG_SIZE);
+  ASSERT_GT(ret, -1);
+  ASSERT_EQ(n, TEST_MSG_SIZE);
 
   // But if we read some bytes...
   constexpr int READ_COUNT = 5;
-  char buffer[READ_COUNT];
-  ASSERT_THAT(LIBC_NAMESPACE::read(test_file_fd, buffer, READ_COUNT),
+  char read_buffer[READ_COUNT];
+  ASSERT_THAT((int)LIBC_NAMESPACE::read(fd, read_buffer, READ_COUNT),
               Succeeds(READ_COUNT));
 
   // ... n should have decreased by the number of bytes we've read
-  int test_file_n_after_reading = -1;
-  ret =
-      LIBC_NAMESPACE::ioctl(test_file_fd, FIONREAD, &test_file_n_after_reading);
-  ASSERT_GT(ret, -1);
+  int n_after_reading = -1;
+  ret = LIBC_NAMESPACE::ioctl(fd, FIONREAD, &n_after_reading);
   ASSERT_ERRNO_SUCCESS();
-  ASSERT_EQ(test_file_n - READ_COUNT, test_file_n_after_reading);
+  ASSERT_GT(ret, -1);
+  ASSERT_EQ(n - READ_COUNT, n_after_reading);
 
-  ASSERT_THAT(LIBC_NAMESPACE::close(test_file_fd), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
 TEST(LlvmLibcSysIoctlTest, InvalidIoctlCommand) {
