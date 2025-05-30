@@ -40,6 +40,7 @@
 # CHECK-NEXT:             IsEHPad: No
 # CHECK-NEXT:             CanFallThrough: No
 # CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:             Hash: 0x1
 # CHECK-NEXT:           }
 # CHECK-NEXT:         ]
 # CHECK-NEXT:       }
@@ -55,6 +56,7 @@
 # CHECK-NEXT:             IsEHPad: Yes
 # CHECK-NEXT:             CanFallThrough: No
 # CHECK-NEXT:             HasIndirectBranch: Yes
+# CHECK-NEXT:             Hash: 0x2
 # CHECK-NEXT:           }
 # CHECK-NEXT:         ]
 # CHECK-NEXT:       }
@@ -75,7 +77,8 @@
 # CHECK-NEXT:             HasTailCall: No
 # CHECK-NEXT:             IsEHPad: No
 # CHECK-NEXT:             CanFallThrough: Yes
-# CHECK-NEXT:            HasIndirectBranch: No
+# CHECK-NEXT:             HasIndirectBranch: No
+# CHECK-NEXT:             Hash: 0x3
 # CHECK-NEXT:           }
 # CHECK-NEXT:         ]
 # CHECK-NEXT:       }
@@ -106,6 +109,7 @@
 # TRUNCATED-NEXT:             IsEHPad: No
 # TRUNCATED-NEXT:             CanFallThrough: Yes
 # TRUNCATED-NEXT:             HasIndirectBranch: Yes
+# TRUNCATED-NEXT:             Hash: 0x4
 # TRUNCATED-NEXT:           }
 # TRUNCATED-NEXT:           {
 # TRUNCATED-NEXT:             ID: 7
@@ -116,6 +120,7 @@
 # TRUNCATED-NEXT:             IsEHPad: Yes
 # TRUNCATED-NEXT:             CanFallThrough: Yes
 # TRUNCATED-NEXT:             HasIndirectBranch: No
+# TRUNCATED-NEXT:             Hash: 0x5
 # TRUNCATED-NEXT:           }
 # TRUNCATED-NEXT:         ]
 # TRUNCATED-NEXT:       }
@@ -152,12 +157,14 @@ Sections:
                 AddressOffset: 0x0
                 Size:          0x1
                 Metadata:      [[METADATA=0x2]]
+                Hash:          0x1
           - BaseAddress: 0x44444
             BBEntries:
               - ID:            2
                 AddressOffset: 0x3
                 Size:          0x4
                 Metadata:      0x15
+                Hash:          0x2
       - Version: 2
         BBRanges:
           - BaseAddress: 0x22222
@@ -166,6 +173,7 @@ Sections:
                 AddressOffset: 0x6
                 Size:          0x7
                 Metadata:      0x8
+                Hash:          0x3
   - Name: dummy_section
     Type: SHT_PROGBITS
     Size: 16
@@ -181,10 +189,12 @@ Sections:
                 AddressOffset: 0x9
                 Size:          0xa
                 Metadata:      0x1b
+                Hash:          0x4
               - ID:            7
                 AddressOffset: 0xc
                 Size:          0xd
                 Metadata:      0xe
+                Hash:          0x5
 Symbols:
   - Name:    foo
     Section: .text
