@@ -1306,14 +1306,15 @@ private:
     // Multi-line string itself is a single annotated token.
     if (Tok->is(TT_TableGenMultiLineString))
       return true;
+    auto *Prev = Tok->getPreviousNonComment();
     switch (bool IsIf = false; Tok->Tok.getKind()) {
     case tok::plus:
     case tok::minus:
-      if (!Tok->getPreviousNonComment() && Line.MustBeDeclaration)
+      if (!Prev && Line.MustBeDeclaration)
         Tok->setType(TT_ObjCMethodSpecifier);
       break;
     case tok::colon:
-      if (!Tok->Previous)
+      if (!Prev)
         return false;
       // Goto labels and case labels are already identified in
       // UnwrappedLineParser.
@@ -1346,8 +1347,7 @@ private:
       } else if (Style.isVerilog() && Tok->isNot(TT_BinaryOperator)) {
         // The distribution weight operators are labeled
         // TT_BinaryOperator by the lexer.
-        if (Keywords.isVerilogEnd(*Tok->Previous) ||
-            Keywords.isVerilogBegin(*Tok->Previous)) {
+        if (Keywords.isVerilogEnd(*Prev) || Keywords.isVerilogBegin(*Prev)) {
           Tok->setType(TT_VerilogBlockLabelColon);
         } else if (Contexts.back().ContextKind == tok::l_square) {
           Tok->setType(TT_BitFieldColon);
@@ -1371,50 +1371,43 @@ private:
         Tok->setType(TT_InlineASMColon);
       } else if (Contexts.back().ColonIsDictLiteral || Style.isProto()) {
         Tok->setType(TT_DictLiteral);
-        if (Style.isTextProto()) {
-          if (FormatToken *Previous = Tok->getPreviousNonComment())
-            Previous->setType(TT_SelectorName);
-        }
+        if (Prev && Style.isTextProto())
+          Prev->setType(TT_SelectorName);
       } else if (Contexts.back().ColonIsObjCMethodExpr ||
                  Line.startsWith(TT_ObjCMethodSpecifier)) {
         Tok->setType(TT_ObjCMethodExpr);
-        const FormatToken *BeforePrevious = Tok->Previous->Previous;
+        const auto *PrevPrev = Prev->Previous;
         // Ensure we tag all identifiers in method declarations as
         // TT_SelectorName.
         bool UnknownIdentifierInMethodDeclaration =
             Line.startsWith(TT_ObjCMethodSpecifier) &&
-            Tok->Previous->is(tok::identifier) && Tok->Previous->is(TT_Unknown);
-        if (!BeforePrevious ||
+            Prev->is(tok::identifier) && Prev->is(TT_Unknown);
+        if (!PrevPrev ||
             // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
-            !(BeforePrevious->is(TT_CastRParen) ||
-              (BeforePrevious->is(TT_ObjCMethodExpr) &&
-               BeforePrevious->is(tok::colon))) ||
-            BeforePrevious->is(tok::r_square) ||
+            !(PrevPrev->is(TT_CastRParen) ||
+              (PrevPrev->is(TT_ObjCMethodExpr) && PrevPrev->is(tok::colon))) ||
+            PrevPrev->is(tok::r_square) ||
             Contexts.back().LongestObjCSelectorName == 0 ||
             UnknownIdentifierInMethodDeclaration) {
-          Tok->Previous->setType(TT_SelectorName);
-          if (!Contexts.back().FirstObjCSelectorName) {
-            Contexts.back().FirstObjCSelectorName = Tok->Previous;
-          } else if (Tok->Previous->ColumnWidth >
-                     Contexts.back().LongestObjCSelectorName) {
-            Contexts.back().LongestObjCSelectorName =
-                Tok->Previous->ColumnWidth;
-          }
-          Tok->Previous->ParameterIndex =
+          Prev->setType(TT_SelectorName);
+          if (!Contexts.back().FirstObjCSelectorName)
+            Contexts.back().FirstObjCSelectorName = Prev;
+          else if (Prev->ColumnWidth > Contexts.back().LongestObjCSelectorName)
+            Contexts.back().LongestObjCSelectorName = Prev->ColumnWidth;
+          Prev->ParameterIndex =
               Contexts.back().FirstObjCSelectorName->ObjCSelectorNameParts;
           ++Contexts.back().FirstObjCSelectorName->ObjCSelectorNameParts;
         }
       } else if (Contexts.back().ColonIsForRangeExpr) {
         Tok->setType(TT_RangeBasedForLoopColon);
-        for (auto *Prev = Tok->Previous;
-             Prev && !Prev->isOneOf(tok::semi, tok::l_paren);
-             Prev = Prev->Previous) {
-          if (Prev->isPointerOrReference())
-            Prev->setFinalizedType(TT_PointerOrReference);
+        for (auto *Token = Prev;
+             Token && !Token->isOneOf(tok::semi, tok::l_paren);
+             Token = Token->Previous) {
+          if (Token->isPointerOrReference())
+            Token->setFinalizedType(TT_PointerOrReference);
         }
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
         Tok->setType(TT_GenericSelectionColon);
-        auto *Prev = Tok->getPreviousNonComment();
         assert(Prev);
         if (Prev->isPointerOrReference())
           Prev->setFinalizedType(TT_PointerOrReference);
@@ -1424,7 +1417,6 @@ private:
                  !Line.getFirstNonComment()->isOneOf(tok::kw_enum, tok::kw_case,
                                                      tok::kw_default) &&
                  !Line.startsWith(tok::kw_typedef, tok::kw_enum)) {
-        FormatToken *Prev = Tok->getPreviousNonComment();
         if (!Prev)
           break;
         if (Prev->isOneOf(tok::r_paren, tok::kw_noexcept) ||
@@ -1442,7 +1434,7 @@ private:
           if (Prev->isAccessSpecifierKeyword())
             Line.Type = LT_AccessModifier;
         }
-      } else if (canBeObjCSelectorComponent(*Tok->Previous) && Tok->Next &&
+      } else if (canBeObjCSelectorComponent(*Prev) && Tok->Next &&
                  (Tok->Next->isOneOf(tok::r_paren, tok::comma) ||
                   (canBeObjCSelectorComponent(*Tok->Next) && Tok->Next->Next &&
                    Tok->Next->Next->is(tok::colon)))) {
@@ -1483,7 +1475,7 @@ private:
     case tok::kw_for:
       if (Style.isJavaScript()) {
         // x.for and {for: ...}
-        if ((Tok->Previous && Tok->Previous->is(tok::period)) ||
+        if ((Prev && Prev->is(tok::period)) ||
             (Tok->Next && Tok->Next->is(tok::colon))) {
           break;
         }
@@ -1505,11 +1497,10 @@ private:
       // marks the first l_paren as a OverloadedOperatorLParen. Here, we make
       // the first two parens OverloadedOperators and the second l_paren an
       // OverloadedOperatorLParen.
-      if (Tok->Previous && Tok->Previous->is(tok::r_paren) &&
-          Tok->Previous->MatchingParen &&
-          Tok->Previous->MatchingParen->is(TT_OverloadedOperatorLParen)) {
-        Tok->Previous->setType(TT_OverloadedOperator);
-        Tok->Previous->MatchingParen->setType(TT_OverloadedOperator);
+      if (Prev && Prev->is(tok::r_paren) && Prev->MatchingParen &&
+          Prev->MatchingParen->is(TT_OverloadedOperatorLParen)) {
+        Prev->setType(TT_OverloadedOperator);
+        Prev->MatchingParen->setType(TT_OverloadedOperator);
         Tok->setType(TT_OverloadedOperatorLParen);
       }
 
@@ -1520,7 +1511,6 @@ private:
         // function is only responsible for the definition, not the
         // instantiation.
         auto IsInstancePort = [&]() {
-          const FormatToken *Prev = Tok->getPreviousNonComment();
           const FormatToken *PrevPrev;
           // In the following example all 4 left parentheses will be treated as
           // 'TT_VerilogInstancePortLParen'.
@@ -1566,11 +1556,10 @@ private:
           !Contexts.back().IsExpression && !Line.startsWith(TT_ObjCProperty) &&
           !Line.startsWith(tok::l_paren) &&
           !Tok->isOneOf(TT_TypeDeclarationParen, TT_RequiresExpressionLParen)) {
-        if (const auto *Previous = Tok->Previous;
-            !Previous ||
-            (!Previous->isAttribute() &&
-             !Previous->isOneOf(TT_RequiresClause, TT_LeadingJavaAnnotation,
-                                TT_BinaryOperator))) {
+        if (!Prev ||
+            (!Prev->isAttribute() &&
+             !Prev->isOneOf(TT_RequiresClause, TT_LeadingJavaAnnotation,
+                            TT_BinaryOperator))) {
           Line.MightBeFunctionDecl = true;
           Tok->MightBeFunctionDeclParen = true;
         }
@@ -1587,9 +1576,8 @@ private:
         if (Tok->is(TT_RequiresExpressionLBrace))
           Line.Type = LT_RequiresExpression;
       } else if (Style.isTextProto()) {
-        FormatToken *Previous = Tok->getPreviousNonComment();
-        if (Previous && Previous->isNot(TT_DictLiteral))
-          Previous->setType(TT_SelectorName);
+        if (Prev && Prev->isNot(TT_DictLiteral))
+          Prev->setType(TT_SelectorName);
       }
       Scopes.push_back(getScopeType(*Tok));
       if (!parseBrace())
@@ -1604,12 +1592,11 @@ private:
         //   msg: < item: data >
         // In TT_TextProto, map<key, value> does not occur.
         if (Style.isTextProto() ||
-            (Style.Language == FormatStyle::LK_Proto && Tok->Previous &&
-             Tok->Previous->isOneOf(TT_SelectorName, TT_DictLiteral))) {
+            (Style.Language == FormatStyle::LK_Proto && Prev &&
+             Prev->isOneOf(TT_SelectorName, TT_DictLiteral))) {
           Tok->setType(TT_DictLiteral);
-          FormatToken *Previous = Tok->getPreviousNonComment();
-          if (Previous && Previous->isNot(TT_DictLiteral))
-            Previous->setType(TT_SelectorName);
+          if (Prev && Prev->isNot(TT_DictLiteral))
+            Prev->setType(TT_SelectorName);
         }
         if (Style.isTableGen())
           Tok->setType(TT_TemplateOpener);
@@ -1628,13 +1615,13 @@ private:
       if (!Scopes.empty())
         Scopes.pop_back();
       // Lines can start with '}'.
-      if (Tok->Previous)
+      if (Prev)
         return false;
       break;
     case tok::greater:
       if (!Style.isTextProto() && Tok->is(TT_Unknown))
         Tok->setType(TT_BinaryOperator);
-      if (Tok->Previous && Tok->Previous->is(TT_TemplateCloser))
+      if (Prev && Prev->is(TT_TemplateCloser))
         Tok->SpacesRequiredBefore = 1;
       break;
     case tok::kw_operator:
@@ -1789,7 +1776,7 @@ private:
           Tok->Next->isNot(tok::l_paren)) {
         Tok->setType(TT_CSharpGenericTypeConstraint);
         parseCSharpGenericTypeConstraint();
-        if (!Tok->getPreviousNonComment())
+        if (!Prev)
           Line.IsContinuation = true;
       }
       if (Style.isTableGen()) {
@@ -1806,10 +1793,8 @@ private:
       }
       break;
     case tok::arrow:
-      if (Tok->isNot(TT_LambdaArrow) && Tok->Previous &&
-          Tok->Previous->is(tok::kw_noexcept)) {
+      if (Tok->isNot(TT_LambdaArrow) && Prev && Prev->is(tok::kw_noexcept))
         Tok->setType(TT_TrailingReturnArrow);
-      }
       break;
     case tok::equal:
       // In TableGen, there must be a value after "=";
