@@ -440,8 +440,8 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
               "to f8E8M0FNU");
     }
     Type resultTy = op.getType();
-    // extf on scale will essentially create f32 number that is 2^scale and will
-    // also propagate NaNs
+    // extf on scale will essentially create floating point number
+    // of type resulTy that is 2^scale and will also propagate NaNs
     Value scaleExt = b.create<arith::ExtFOp>(resultTy, scaleOperand);
     Value inputExt = b.create<arith::ExtFOp>(resultTy, inputOperand);
     Value result = b.create<arith::MulFOp>(inputExt, scaleExt);
