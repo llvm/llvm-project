@@ -1,5 +1,11 @@
 // RUN: mlir-opt -split-input-file -transform-interpreter %s | FileCheck %s
 
+///----------------------------------------------------------------------------------------
+/// Tests for vectorizing depthwise convolutions (with patterns) with the
+/// flattening of the channel dim enabled. This approach is beneficial when the
+/// number of channel dimensions is low.
+///----------------------------------------------------------------------------------------
+
 func.func @depthwise_conv1d_nwc_wc_1x8x3xi8_tensor(%input: tensor<1x8x3xi8>,
                                                    %filter: tensor<1x3xi8>,
                                                    %output: tensor<1x8x3xi8>) -> (tensor<1x8x3xi8>) {
