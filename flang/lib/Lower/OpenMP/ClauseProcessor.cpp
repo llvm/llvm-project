@@ -947,6 +947,11 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
               converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
           dependVar = entity.getBase();
         }
+      } else if (evaluate::isStructureComponent(*object.ref())) {
+        SomeExpr expr = *object.ref();
+        hlfir::EntityWithAttributes entity = convertExprToHLFIR(
+            converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+        dependVar = entity.getBase();
       } else {
         semantics::Symbol *sym = object.sym();
         dependVar = converter.getSymbolAddress(*sym);
@@ -1151,7 +1156,8 @@ void ClauseProcessor::processMapObjects(
         typeSpec = &object.sym()->GetType()->derivedTypeSpec();
 
       if (typeSpec) {
-        mapperIdName = typeSpec->name().ToString() + ".omp.default.mapper";
+        mapperIdName =
+            typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
         if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
           mapperIdName = converter.mangleName(mapperIdName, sym->owner());
       }
