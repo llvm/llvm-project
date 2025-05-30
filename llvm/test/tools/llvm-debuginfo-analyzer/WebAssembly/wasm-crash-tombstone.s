@@ -1,3 +1,66 @@
+# REQUIRES: x86-registered-target
+
+# llvm-debuginfo-analyzer crashes on dead code
+# https://github.com/llvm/llvm-project/issues/136772
+
+# For the attached reproducer:
+# llvm-dwarfdump out/lzma-lzmadec.wasm --all
+#
+# shows:
+#
+# 0x000002b3:   DW_TAG_subprogram
+#                 DW_AT_low_pc	(dead code)
+#                 DW_AT_high_pc	(0x00000362)
+#                 DW_AT_frame_base	(DW_OP_WASM_location 0x0 0x6, DW_OP_stack_value)
+
+# llvm-debuginfo-analyzer out/lzma-lzmadec.wasm --print=instructions
+#
+# crashes and shows a stack dump:
+#
+# PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/
+# and include the crash backtrace.
+# Stack dump:
+# 0. Program arguments: llvm-debuginfo-analyzer out/lzma-lzmadec.wasm --print=instructions
+
+# The test-clang-tombstone.s was produced by the following steps:
+# 1) clang --target=wasm32 -S -g Inputs/test-clang.cpp
+#                             -o Inputs/wasm-crash-tombstone.s
+# 2) Manually changing the DW_AT_low_pc for the DW_TAG_subprogram, from
+#    .Lfunc_begin0 to 0xffffffff to mark the function as dead code:
+#
+#	   .int8	2                          # Abbrev [2] 0x26:0x6a DW_TAG_subprogram
+#	   .int32	.Lfunc_begin0              # DW_AT_low_pc  <---------
+#	   .int32	.Lfunc_end0-.Lfunc_begin0  # DW_AT_high_pc
+
+#	   .int8	2                          # Abbrev [2] 0x26:0x6a DW_TAG_subprogram
+#	   .int32	0xffffffff                 # DW_AT_low_pc  <---------
+#	   .int32	.Lfunc_end0-.Lfunc_begin0  # DW_AT_high_pc
+
+# RUN: llvm-mc -arch=wasm32 -filetype=obj       \
+# RUN:         %p/wasm-crash-tombstone.s        \
+# RUN:         -o %t.wasm-crash-tombstone.wasm
+
+# llvm-debuginfo-analyzer --select-elements=Discarde          \
+#                         --print=elements                    \
+#                         %t.wasm-crash-tombstone.wasm 2>&1 | \
+# FileCheck --strict-whitespace -check-prefix=ONE %s
+
+# ONE: Logical View:
+# ONE-NEXT:           {File} '{{.*}}wasm-crash-tombstone.wasm'
+# ONE-EMPTY:
+# ONE-NEXT:           {CompileUnit} 'test.cpp'
+# ONE-NEXT:     2     {Function} extern not_inlined 'foo' -> 'int'
+
+# RUN: llvm-dwarfdump --debug-info %t.wasm-crash-tombstone.wasm | \
+# RUN: FileCheck %s --check-prefix=TWO
+
+# TWO:      DW_TAG_subprogram
+# TWO-NEXT:   DW_AT_low_pc	(dead code)
+# TWO-NEXT:   DW_AT_high_pc
+# TWO-NEXT:   DW_AT_frame_base
+# TWO-NEXT:   DW_AT_linkage_name
+# TWO-NEXT:   DW_AT_name	("foo")
+
 	.text
 	.file	"test.cpp"
 	.globaltype	__stack_pointer, i32

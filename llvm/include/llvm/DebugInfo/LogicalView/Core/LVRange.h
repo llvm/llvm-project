@@ -60,7 +60,7 @@ class LLVM_ABI LVRange final : public LVObject {
   LVAddress Upper = 0;
 
 public:
-  LVRange(LVAddress Address = MaxAddress)
+  LVRange(LVAddress Address = InvalidTombstone)
       : LVObject(), RangesTree(Allocator), TombstoneAddress(Address),
         Lower(Address) {}
   LVRange(const LVRange &) = delete;
