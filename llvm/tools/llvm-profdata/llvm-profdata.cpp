@@ -3248,7 +3248,7 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (std::error_code EC = Reader->read())
     exitWithErrorCode(EC, Filename);
 
-  if (ShowAllFunctions || FuncNameFilter.empty()) {
+  if (ShowAllFunctions) {
     if (SFormat == ShowFormat::Json)
       Reader->dumpJson(OS);
     else

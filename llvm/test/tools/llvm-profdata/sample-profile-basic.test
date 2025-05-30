@@ -1,7 +1,7 @@
 Basic tests for sample profiles.
 
 1- Show all functions
-RUN: llvm-profdata show --sample %p/Inputs/sample-profile.proftext | FileCheck %s --check-prefix=SHOW1
+RUN: llvm-profdata show --sample -all-functions %p/Inputs/sample-profile.proftext | FileCheck %s --check-prefix=SHOW1
 SHOW1-DAG: Function: main: 184019, 0, 7 sampled lines
 SHOW1-DAG: 9: 2064, calls: _Z3bari:1471 _Z3fooi:631
 SHOW1-DAG: Function: _Z3fooi: 7711, 610, 1 sampled lines
@@ -17,8 +17,8 @@ SHOW2-NOT: Function: _Z3fooi: 7711, 610, 1 sampled lines
 
 3- Convert the profile to binary encoding and check that they are both
    identical.
-RUN: llvm-profdata merge --sample %p/Inputs/sample-profile.proftext --binary -o - | llvm-profdata show --sample - -o %t-binary
-RUN: llvm-profdata show --sample %p/Inputs/sample-profile.proftext -o %t-text
+RUN: llvm-profdata merge --sample %p/Inputs/sample-profile.proftext --binary -o - | llvm-profdata show --sample -all-functions - -o %t-binary
+RUN: llvm-profdata show --sample -all-functions %p/Inputs/sample-profile.proftext -o %t-text
 RUN: diff %t-binary %t-text
 
 4- Merge the binary and text encodings of the profile and check that the
@@ -31,5 +31,5 @@ MERGE1: _Z3bari:40602:2874
 MERGE1: _Z3fooi:15422:1220
 
 5- Detect invalid text encoding (e.g. instrumentation profile text format).
-RUN: not llvm-profdata show --sample %p/Inputs/foo3bar3-1.proftext 2>&1 | FileCheck %s --check-prefix=BADTEXT
+RUN: not llvm-profdata show --sample -all-functions %p/Inputs/foo3bar3-1.proftext 2>&1 | FileCheck %s --check-prefix=BADTEXT
 BADTEXT: error: {{.+}}: Unrecognized sample profile encoding format
