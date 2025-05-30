@@ -23,11 +23,12 @@
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// ConstantFolder - Create constants with minimum, target independent, folding.
-class ConstantFolder final : public IRBuilderFolder {
+class LLVM_ABI ConstantFolder final : public IRBuilderFolder {
   LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
