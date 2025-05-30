@@ -5456,12 +5456,15 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
 
   DynamicRelativeRelocationsCount = 0;
 
+  const bool HasIRelativeInPLT =
+      IsJmpRelocation.contains(Relocation::getIRelative());
+
   auto writeRela = [&OS](const Elf_Rela *RelA, uint64_t &Offset) {
     OS.pwrite(reinterpret_cast<const char *>(RelA), sizeof(*RelA), Offset);
     Offset += sizeof(*RelA);
   };
 
-  auto writeRelocations = [&](bool PatchRelative) {
+  auto writeRelocations = [&](bool PatchRelative, bool PatchIRelativeInPLT) {
     for (BinarySection &Section : BC->allocatableSections()) {
       const uint64_t SectionInputAddress = Section.getAddress();
       uint64_t SectionAddress = Section.getOutputAddress();
@@ -5470,7 +5473,12 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
 
       for (const Relocation &Rel : Section.dynamicRelocations()) {
         const bool IsRelative = Rel.isRelative();
+        const bool IsIRelativeInPLT = HasIRelativeInPLT && Rel.isIRelative();
+
         if (PatchRelative != IsRelative)
+          continue;
+
+        if (PatchIRelativeInPLT != IsIRelativeInPLT)
           continue;
 
         if (IsRelative)
@@ -5520,8 +5528,13 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
   // The dynamic linker expects all R_*_RELATIVE relocations in RELA
   // to be emitted first.
   if (!DynamicRelrAddress)
-    writeRelocations(/* PatchRelative */ true);
-  writeRelocations(/* PatchRelative */ false);
+    writeRelocations(/* PatchRelative */ true, /* PatchIRelativeInPLT */ false);
+  writeRelocations(/* PatchRelative */ false, /* PatchIRelativeInPLT */ false);
+
+  // Place R_*_IRELATIVE after all R_*_JUMP_SLOT relocations emitted if
+  // R_*_IRELATIVE is presented at .rela.plt
+  if (HasIRelativeInPLT)
+    writeRelocations(/* PatchRelative */ false, /* PatchIRelativeInPLT */ true);
 
   auto fillNone = [&](uint64_t &Offset, uint64_t EndOffset) {
     if (!Offset)
