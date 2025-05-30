@@ -2891,290 +2891,6 @@ static std::pair<parser::CharBlock, parser::CharBlock> SplitAssignmentSource(
 
 namespace atomic {
 
-template <typename V> static void MoveAppend(V &accum, V &&other) {
-  for (auto &&s : other) {
-    accum.push_back(std::move(s));
-  }
-}
-
-enum class Operator {
-  Unk,
-  // Operators that are officially allowed in the update operation
-  Add,
-  And,
-  Associated,
-  Div,
-  Eq,
-  Eqv,
-  Ge, // extension
-  Gt,
-  Identity, // extension: x = x is allowed (*), but we should never print
-            // "identity" as the name of the operator
-  Le, // extension
-  Lt,
-  Max,
-  Min,
-  Mul,
-  Ne, // extension
-  Neqv,
-  Or,
-  Sub,
-  // Operators that we recognize for technical reasons
-  True,
-  False,
-  Not,
-  Convert,
-  Resize,
-  Intrinsic,
-  Call,
-  Pow,
-
-  // (*): "x = x + 0" is a valid update statement, but it will be folded
-  //      to "x = x" by the time we look at it. Since the source statements
-  //      "x = x" and "x = x + 0" will end up looking the same, accept the
-  //      former as an extension.
-};
-
-std::string ToString(Operator op) {
-  switch (op) {
-  case Operator::Add:
-    return "+";
-  case Operator::And:
-    return "AND";
-  case Operator::Associated:
-    return "ASSOCIATED";
-  case Operator::Div:
-    return "/";
-  case Operator::Eq:
-    return "==";
-  case Operator::Eqv:
-    return "EQV";
-  case Operator::Ge:
-    return ">=";
-  case Operator::Gt:
-    return ">";
-  case Operator::Identity:
-    return "identity";
-  case Operator::Le:
-    return "<=";
-  case Operator::Lt:
-    return "<";
-  case Operator::Max:
-    return "MAX";
-  case Operator::Min:
-    return "MIN";
-  case Operator::Mul:
-    return "*";
-  case Operator::Neqv:
-    return "NEQV/EOR";
-  case Operator::Ne:
-    return "/=";
-  case Operator::Or:
-    return "OR";
-  case Operator::Sub:
-    return "-";
-  case Operator::True:
-    return ".TRUE.";
-  case Operator::False:
-    return ".FALSE.";
-  case Operator::Not:
-    return "NOT";
-  case Operator::Convert:
-    return "type-conversion";
-  case Operator::Resize:
-    return "resize";
-  case Operator::Intrinsic:
-    return "intrinsic";
-  case Operator::Call:
-    return "function-call";
-  case Operator::Pow:
-    return "**";
-  default:
-    return "??";
-  }
-}
-
-template <bool IgnoreResizingConverts> //
-struct ArgumentExtractor
-    : public evaluate::Traverse<ArgumentExtractor<IgnoreResizingConverts>,
-          std::pair<Operator, std::vector<SomeExpr>>, false> {
-  using Arguments = std::vector<SomeExpr>;
-  using Result = std::pair<Operator, Arguments>;
-  using Base = evaluate::Traverse<ArgumentExtractor<IgnoreResizingConverts>,
-      Result, false>;
-  static constexpr auto IgnoreResizes = IgnoreResizingConverts;
-  static constexpr auto Logical = common::TypeCategory::Logical;
-  ArgumentExtractor() : Base(*this) {}
-
-  Result Default() const { return {}; }
-
-  using Base::operator();
-
-  template <int Kind> //
-  Result operator()(
-      const evaluate::Constant<evaluate::Type<Logical, Kind>> &x) const {
-    if (const auto &val{x.GetScalarValue()}) {
-      return val->IsTrue() ? std::make_pair(Operator::True, Arguments{})
-                           : std::make_pair(Operator::False, Arguments{});
-    }
-    return Default();
-  }
-
-  template <typename R> //
-  Result operator()(const evaluate::FunctionRef<R> &x) const {
-    Result result{OperationCode(x.proc()), {}};
-    for (size_t i{0}, e{x.arguments().size()}; i != e; ++i) {
-      if (auto *e{x.UnwrapArgExpr(i)}) {
-        result.second.push_back(*e);
-      }
-    }
-    return result;
-  }
-
-  template <typename D, typename R, typename... Os>
-  Result operator()(const evaluate::Operation<D, R, Os...> &x) const {
-    if constexpr (std::is_same_v<D, evaluate::Parentheses<R>>) {
-      // Ignore top-level parentheses.
-      return (*this)(x.template operand<0>());
-    }
-    if constexpr (IgnoreResizes &&
-        std::is_same_v<D, evaluate::Convert<R, R::category>>) {
-      // Ignore conversions within the same category.
-      // Atomic operations on int(kind=1) may be implicitly widened
-      // to int(kind=4) for example.
-      return (*this)(x.template operand<0>());
-    } else {
-      return std::make_pair(
-          OperationCode(x), OperationArgs(x, std::index_sequence_for<Os...>{}));
-    }
-  }
-
-  template <typename T> //
-  Result operator()(const evaluate::Designator<T> &x) const {
-    evaluate::Designator<T> copy{x};
-    Result result{Operator::Identity, {AsGenericExpr(std::move(copy))}};
-    return result;
-  }
-
-  template <typename... Rs> //
-  Result Combine(Result &&result, Rs &&...results) const {
-    // There shouldn't be any combining needed, since we're stopping the
-    // traversal at the top-level operation, but implement one that picks
-    // the first non-empty result.
-    if constexpr (sizeof...(Rs) == 0) {
-      return std::move(result);
-    } else {
-      if (!result.second.empty()) {
-        return std::move(result);
-      } else {
-        return Combine(std::move(results)...);
-      }
-    }
-  }
-
-private:
-  template <typename... Ts, int Kind>
-  Operator OperationCode(
-      const evaluate::Operation<evaluate::LogicalOperation<Kind>, Ts...> &op)
-      const {
-    switch (op.derived().logicalOperator) {
-    case common::LogicalOperator::And:
-      return Operator::And;
-    case common::LogicalOperator::Or:
-      return Operator::Or;
-    case common::LogicalOperator::Eqv:
-      return Operator::Eqv;
-    case common::LogicalOperator::Neqv:
-      return Operator::Neqv;
-    case common::LogicalOperator::Not:
-      return Operator::Not;
-    }
-    return Operator::Unk;
-  }
-  template <typename T, typename... Ts>
-  Operator OperationCode(
-      const evaluate::Operation<evaluate::Relational<T>, Ts...> &op) const {
-    switch (op.derived().opr) {
-    case common::RelationalOperator::LT:
-      return Operator::Lt;
-    case common::RelationalOperator::LE:
-      return Operator::Le;
-    case common::RelationalOperator::EQ:
-      return Operator::Eq;
-    case common::RelationalOperator::NE:
-      return Operator::Ne;
-    case common::RelationalOperator::GE:
-      return Operator::Ge;
-    case common::RelationalOperator::GT:
-      return Operator::Gt;
-    }
-    return Operator::Unk;
-  }
-  template <typename T, typename... Ts>
-  Operator OperationCode(
-      const evaluate::Operation<evaluate::Add<T>, Ts...> &op) const {
-    return Operator::Add;
-  }
-  template <typename T, typename... Ts>
-  Operator OperationCode(
-      const evaluate::Operation<evaluate::Subtract<T>, Ts...> &op) const {
-    return Operator::Sub;
-  }
-  template <typename T, typename... Ts>
-  Operator OperationCode(
-      const evaluate::Operation<evaluate::Multiply<T>, Ts...> &op) const {
-    return Operator::Mul;
-  }
-  template <typename T, typename... Ts>
-  Operator OperationCode(
-      const evaluate::Operation<evaluate::Divide<T>, Ts...> &op) const {
-    return Operator::Div;
-  }
-  template <typename T, typename... Ts>
-  Operator OperationCode(
-      const evaluate::Operation<evaluate::Power<T>, Ts...> &op) const {
-    return Operator::Pow;
-  }
-  template <typename T, typename... Ts>
-  Operator OperationCode(
-      const evaluate::Operation<evaluate::RealToIntPower<T>, Ts...> &op) const {
-    return Operator::Pow;
-  }
-  template <typename T, common::TypeCategory C, typename... Ts>
-  Operator OperationCode(
-      const evaluate::Operation<evaluate::Convert<T, C>, Ts...> &op) const {
-    if constexpr (C == T::category) {
-      return Operator::Resize;
-    } else {
-      return Operator::Convert;
-    }
-  }
-  Operator OperationCode(const evaluate::ProcedureDesignator &proc) const {
-    Operator code = llvm::StringSwitch<Operator>(proc.GetName())
-                        .Case("associated", Operator::Associated)
-                        .Case("min", Operator::Min)
-                        .Case("max", Operator::Max)
-                        .Case("iand", Operator::And)
-                        .Case("ior", Operator::Or)
-                        .Case("ieor", Operator::Neqv)
-                        .Default(Operator::Call);
-    if (code == Operator::Call && proc.GetSpecificIntrinsic()) {
-      return Operator::Intrinsic;
-    }
-    return code;
-  }
-  template <typename T> //
-  Operator OperationCode(const T &) const {
-    return Operator::Unk;
-  }
-
-  template <typename D, typename R, typename... Os, size_t... Is>
-  Arguments OperationArgs(const evaluate::Operation<D, R, Os...> &x,
-      std::index_sequence<Is...>) const {
-    return Arguments{SomeExpr(x.template operand<Is>())...};
-  }
-};
-
 struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
                                  std::vector<SomeExpr>, false> {
   using Result = std::vector<SomeExpr>;
@@ -3196,125 +2912,14 @@ struct DesignatorCollector : public evaluate::Traverse<DesignatorCollector,
   template <typename... Rs> //
   Result Combine(Result &&result, Rs &&...results) const {
     Result v(std::move(result));
-    (MoveAppend(v, std::move(results)), ...);
-    return v;
-  }
-};
-
-struct ConvertCollector
-    : public evaluate::Traverse<ConvertCollector,
-          std::pair<MaybeExpr, std::vector<evaluate::DynamicType>>, false> {
-  using Result = std::pair<MaybeExpr, std::vector<evaluate::DynamicType>>;
-  using Base = evaluate::Traverse<ConvertCollector, Result, false>;
-  ConvertCollector() : Base(*this) {}
-
-  Result Default() const { return {}; }
-
-  using Base::operator();
-
-  template <typename T> //
-  Result asSomeExpr(const T &x) const {
-    auto copy{x};
-    return {AsGenericExpr(std::move(copy)), {}};
-  }
-
-  template <typename T> //
-  Result operator()(const evaluate::Designator<T> &x) const {
-    return asSomeExpr(x);
-  }
-
-  template <typename T> //
-  Result operator()(const evaluate::FunctionRef<T> &x) const {
-    return asSomeExpr(x);
-  }
-
-  template <typename T> //
-  Result operator()(const evaluate::Constant<T> &x) const {
-    return asSomeExpr(x);
-  }
-
-  template <typename D, typename R, typename... Os>
-  Result operator()(const evaluate::Operation<D, R, Os...> &x) const {
-    if constexpr (std::is_same_v<D, evaluate::Parentheses<R>>) {
-      // Ignore parentheses.
-      return (*this)(x.template operand<0>());
-    } else if constexpr (is_convert_v<D>) {
-      // Convert should always have a typed result, so it should be safe to
-      // dereference x.GetType().
-      return Combine(
-          {std::nullopt, {*x.GetType()}}, (*this)(x.template operand<0>()));
-    } else if constexpr (is_complex_constructor_v<D>) {
-      // This is a conversion iff the imaginary operand is 0.
-      if (IsZero(x.template operand<1>())) {
-        return Combine(
-            {std::nullopt, {*x.GetType()}}, (*this)(x.template operand<0>()));
-      } else {
-        return asSomeExpr(x.derived());
-      }
-    } else {
-      return asSomeExpr(x.derived());
-    }
-  }
-
-  template <typename... Rs> //
-  Result Combine(Result &&result, Rs &&...results) const {
-    Result v(std::move(result));
-    auto setValue{[](MaybeExpr &x, MaybeExpr &&y) {
-      assert((!x.has_value() || !y.has_value()) && "Multiple designators");
-      if (!x.has_value()) {
-        x = std::move(y);
+    auto moveAppend{[](auto &accum, auto &&other) {
+      for (auto &&s : other) {
+        accum.push_back(std::move(s));
       }
     }};
-    (setValue(v.first, std::move(results).first), ...);
-    (MoveAppend(v.second, std::move(results).second), ...);
+    (moveAppend(v, std::move(results)), ...);
     return v;
   }
-
-private:
-  template <typename T> //
-  static bool IsZero(const T &x) {
-    return false;
-  }
-  template <typename T> //
-  static bool IsZero(const evaluate::Expr<T> &x) {
-    return common::visit([](auto &&s) { return IsZero(s); }, x.u);
-  }
-  template <typename T> //
-  static bool IsZero(const evaluate::Constant<T> &x) {
-    if (auto &&maybeScalar{x.GetScalarValue()}) {
-      return maybeScalar->IsZero();
-    } else {
-      return false;
-    }
-  }
-
-  template <typename T> //
-  struct is_convert {
-    static constexpr bool value{false};
-  };
-  template <typename T, common::TypeCategory C> //
-  struct is_convert<evaluate::Convert<T, C>> {
-    static constexpr bool value{true};
-  };
-  template <int K> //
-  struct is_convert<evaluate::ComplexComponent<K>> {
-    // Conversion from complex to real.
-    static constexpr bool value{true};
-  };
-  template <typename T> //
-  static constexpr bool is_convert_v = is_convert<T>::value;
-
-  template <typename T> //
-  struct is_complex_constructor {
-    static constexpr bool value{false};
-  };
-  template <int K> //
-  struct is_complex_constructor<evaluate::ComplexConstructor<K>> {
-    static constexpr bool value{true};
-  };
-  template <typename T> //
-  static constexpr bool is_complex_constructor_v =
-      is_complex_constructor<T>::value;
 };
 
 struct VariableFinder : public evaluate::AnyTraverse<VariableFinder> {
@@ -3347,22 +2952,13 @@ static bool IsAllocatable(const SomeExpr &expr) {
   return !syms.empty() && IsAllocatable(syms.back());
 }
 
-static std::pair<atomic::Operator, std::vector<SomeExpr>> GetTopLevelOperation(
-    const SomeExpr &expr) {
-  return atomic::ArgumentExtractor<true>{}(expr);
-}
-
-std::vector<SomeExpr> GetOpenMPTopLevelArguments(const SomeExpr &expr) {
-  return GetTopLevelOperation(expr).second;
-}
-
 static bool IsPointerAssignment(const evaluate::Assignment &x) {
   return std::holds_alternative<evaluate::Assignment::BoundsSpec>(x.u) ||
       std::holds_alternative<evaluate::Assignment::BoundsRemapping>(x.u);
 }
 
 static bool IsCheckForAssociated(const SomeExpr &cond) {
-  return GetTopLevelOperation(cond).first == atomic::Operator::Associated;
+  return GetTopLevelOperation(cond).first == operation::Operator::Associated;
 }
 
 static bool HasCommonDesignatorSymbols(
@@ -3455,23 +3051,7 @@ static bool IsMaybeAtomicWrite(const evaluate::Assignment &assign) {
   return HasStorageOverlap(assign.lhs, assign.rhs) == nullptr;
 }
 
-MaybeExpr GetConvertInput(const SomeExpr &x) {
-  // This returns SomeExpr(x) when x is a designator/functionref/constant.
-  return atomic::ConvertCollector{}(x).first;
-}
-
-bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x) {
-  // Check if expr is same as x, or a sequence of Convert operations on x.
-  if (expr == x) {
-    return true;
-  } else if (auto maybe{GetConvertInput(expr)}) {
-    return *maybe == x;
-  } else {
-    return false;
-  }
-}
-
-bool IsSubexpressionOf(const SomeExpr &sub, const SomeExpr &super) {
+static bool IsSubexpressionOf(const SomeExpr &sub, const SomeExpr &super) {
   return atomic::VariableFinder{sub}(super);
 }
 
@@ -3839,45 +3419,46 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
 
   CheckAtomicVariable(atom, lsrc);
 
-  std::pair<atomic::Operator, std::vector<SomeExpr>> top{
-      atomic::Operator::Unk, {}};
+  std::pair<operation::Operator, std::vector<SomeExpr>> top{
+      operation::Operator::Unknown, {}};
   if (auto &&maybeInput{GetConvertInput(update.rhs)}) {
     top = GetTopLevelOperation(*maybeInput);
   }
   switch (top.first) {
-  case atomic::Operator::Add:
-  case atomic::Operator::Sub:
-  case atomic::Operator::Mul:
-  case atomic::Operator::Div:
-  case atomic::Operator::And:
-  case atomic::Operator::Or:
-  case atomic::Operator::Eqv:
-  case atomic::Operator::Neqv:
-  case atomic::Operator::Min:
-  case atomic::Operator::Max:
-  case atomic::Operator::Identity:
+  case operation::Operator::Add:
+  case operation::Operator::Sub:
+  case operation::Operator::Mul:
+  case operation::Operator::Div:
+  case operation::Operator::And:
+  case operation::Operator::Or:
+  case operation::Operator::Eqv:
+  case operation::Operator::Neqv:
+  case operation::Operator::Min:
+  case operation::Operator::Max:
+  case operation::Operator::Identity:
     break;
-  case atomic::Operator::Call:
+  case operation::Operator::Call:
     context_.Say(source,
         "A call to this function is not a valid ATOMIC UPDATE operation"_err_en_US);
     return;
-  case atomic::Operator::Convert:
+  case operation::Operator::Convert:
     context_.Say(source,
         "An implicit or explicit type conversion is not a valid ATOMIC UPDATE operation"_err_en_US);
     return;
-  case atomic::Operator::Intrinsic:
+  case operation::Operator::Intrinsic:
     context_.Say(source,
         "This intrinsic function is not a valid ATOMIC UPDATE operation"_err_en_US);
     return;
-  case atomic::Operator::Unk:
+  case operation::Operator::Unknown:
     context_.Say(
         source, "This is not a valid ATOMIC UPDATE operation"_err_en_US);
     return;
   default:
-    assert(top.first != atomic::Operator::Identity && "Handle this separately");
+    assert(
+        top.first != operation::Operator::Identity && "Handle this separately");
     context_.Say(source,
         "The %s operator is not a valid ATOMIC UPDATE operation"_err_en_US,
-        atomic::ToString(top.first));
+        operation::ToString(top.first));
     return;
   }
   // Check if `atom` occurs exactly once in the argument list.
@@ -3898,17 +3479,17 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
   }()};
 
   if (unique == top.second.end()) {
-    if (top.first == atomic::Operator::Identity) {
+    if (top.first == operation::Operator::Identity) {
       // This is "x = y".
       context_.Say(rsrc,
           "The atomic variable %s should appear as an argument in the update operation"_err_en_US,
           atom.AsFortran());
     } else {
-      assert(
-          top.first != atomic::Operator::Identity && "Handle this separately");
+      assert(top.first != operation::Operator::Identity &&
+          "Handle this separately");
       context_.Say(rsrc,
           "The atomic variable %s should occur exactly once among the arguments of the top-level %s operator"_err_en_US,
-          atom.AsFortran(), atomic::ToString(top.first));
+          atom.AsFortran(), operation::ToString(top.first));
     }
   } else {
     CheckStorageOverlap(atom, nonAtom, source);
@@ -3933,18 +3514,18 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
   // Missing arguments to operations would have been diagnosed by now.
 
   switch (top.first) {
-  case atomic::Operator::Associated:
+  case operation::Operator::Associated:
     if (atom != top.second.front()) {
       context_.Say(assignSource,
           "The pointer argument to ASSOCIATED must be same as the target of the assignment"_err_en_US);
     }
     break;
   // x equalop e | e equalop x  (allowing "e equalop x" is an extension)
-  case atomic::Operator::Eq:
-  case atomic::Operator::Eqv:
+  case operation::Operator::Eq:
+  case operation::Operator::Eqv:
   // x ordop expr | expr ordop x
-  case atomic::Operator::Lt:
-  case atomic::Operator::Gt: {
+  case operation::Operator::Lt:
+  case operation::Operator::Gt: {
     const SomeExpr &arg0{top.second[0]};
     const SomeExpr &arg1{top.second[1]};
     if (IsSameOrConvertOf(arg0, atom)) {
@@ -3952,23 +3533,24 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
     } else if (IsSameOrConvertOf(arg1, atom)) {
       CheckStorageOverlap(atom, {arg0}, condSource);
     } else {
-      assert(
-          top.first != atomic::Operator::Identity && "Handle this separately");
+      assert(top.first != operation::Operator::Identity &&
+          "Handle this separately");
       context_.Say(assignSource,
           "An argument of the %s operator should be the target of the assignment"_err_en_US,
-          atomic::ToString(top.first));
+          operation::ToString(top.first));
     }
     break;
   }
-  case atomic::Operator::Identity:
-  case atomic::Operator::True:
-  case atomic::Operator::False:
+  case operation::Operator::Identity:
+  case operation::Operator::True:
+  case operation::Operator::False:
     break;
   default:
-    assert(top.first != atomic::Operator::Identity && "Handle this separately");
+    assert(
+        top.first != operation::Operator::Identity && "Handle this separately");
     context_.Say(condSource,
         "The %s operator is not a valid condition for ATOMIC operation"_err_en_US,
-        atomic::ToString(top.first));
+        operation::ToString(top.first));
     break;
   }
 }

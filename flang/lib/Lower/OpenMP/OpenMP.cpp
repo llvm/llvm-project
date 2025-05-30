@@ -2828,7 +2828,7 @@ genAtomicUpdate(lower::AbstractConverter &converter, mlir::Location loc,
 
   // This must exist by now.
   SomeExpr input = *semantics::GetConvertInput(assign.rhs);
-  std::vector<SomeExpr> args{semantics::GetOpenMPTopLevelArguments(input)};
+  std::vector<SomeExpr> args{semantics::GetTopLevelOperation(input).second};
   assert(!args.empty() && "Update operation without arguments");
   for (auto &arg : args) {
     if (!semantics::IsSameOrConvertOf(arg, atom)) {
