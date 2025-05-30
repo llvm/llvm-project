@@ -30,7 +30,7 @@
 using namespace clang;
 
 DiagnosticRenderer::DiagnosticRenderer(const LangOptions &LangOpts,
-                                       DiagnosticOptions *DiagOpts)
+                                       DiagnosticOptions &DiagOpts)
     : LangOpts(LangOpts), DiagOpts(DiagOpts), LastLevel() {}
 
 DiagnosticRenderer::~DiagnosticRenderer() = default;
@@ -115,7 +115,7 @@ void DiagnosticRenderer::emitDiagnostic(FullSourceLoc Loc,
     // Find the ultimate expansion location for the diagnostic.
     Loc = Loc.getFileLoc();
 
-    PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts->ShowPresumedLoc);
+    PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts.ShowPresumedLoc);
 
     // First, if this diagnostic is not in the main file, print out the
     // "included from" lines.
@@ -172,7 +172,7 @@ void DiagnosticRenderer::emitIncludeStack(FullSourceLoc Loc, PresumedLoc PLoc,
 
   LastIncludeLoc = IncludeLoc;
 
-  if (!DiagOpts->ShowNoteIncludeStack && Level == DiagnosticsEngine::Note)
+  if (!DiagOpts.ShowNoteIncludeStack && Level == DiagnosticsEngine::Note)
     return;
 
   if (IncludeLoc.isValid())
@@ -191,7 +191,7 @@ void DiagnosticRenderer::emitIncludeStackRecursively(FullSourceLoc Loc) {
     return;
   }
 
-  PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts->ShowPresumedLoc);
+  PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts.ShowPresumedLoc);
   if (PLoc.isInvalid())
     return;
 
@@ -232,7 +232,7 @@ void DiagnosticRenderer::emitImportStackRecursively(FullSourceLoc Loc,
     return;
   }
 
-  PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts->ShowPresumedLoc);
+  PresumedLoc PLoc = Loc.getPresumedLoc(DiagOpts.ShowPresumedLoc);
 
   // Emit the other import frames first.
   std::pair<FullSourceLoc, StringRef> NextImportLoc = Loc.getModuleImportLoc();
@@ -247,9 +247,8 @@ void DiagnosticRenderer::emitImportStackRecursively(FullSourceLoc Loc,
 void DiagnosticRenderer::emitModuleBuildStack(const SourceManager &SM) {
   ModuleBuildStack Stack = SM.getModuleBuildStack();
   for (const auto &I : Stack) {
-    emitBuildingModuleLocation(I.second, I.second.getPresumedLoc(
-                                              DiagOpts->ShowPresumedLoc),
-                               I.first);
+    emitBuildingModuleLocation(
+        I.second, I.second.getPresumedLoc(DiagOpts.ShowPresumedLoc), I.first);
   }
 }
 
@@ -539,7 +538,7 @@ void DiagnosticRenderer::emitMacroExpansions(FullSourceLoc Loc,
                       LocationStack.begin() + IgnoredEnd);
 
   unsigned MacroDepth = LocationStack.size();
-  unsigned MacroLimit = DiagOpts->MacroBacktraceLimit;
+  unsigned MacroLimit = DiagOpts.MacroBacktraceLimit;
   if (MacroDepth <= MacroLimit || MacroLimit == 0) {
     for (auto I = LocationStack.rbegin(), E = LocationStack.rend();
          I != E; ++I)

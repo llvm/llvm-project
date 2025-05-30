@@ -2860,9 +2860,8 @@ SDValue SITargetLowering::LowerFormalArguments(
   bool IsError = false;
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isGraphics(CallConv)) {
-    DiagnosticInfoUnsupported NoGraphicsHSA(
-        Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc());
-    DAG.getContext()->diagnose(NoGraphicsHSA);
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        Fn, "unsupported non-compute shaders with HSA", DL.getDebugLoc()));
     IsError = true;
   }
 
@@ -3086,11 +3085,10 @@ SDValue SITargetLowering::LowerFormalArguments(
         if (Arg.isOrigArg()) {
           Argument *OrigArg = Fn.getArg(Arg.getOrigArgIndex());
           if (OrigArg->hasAttribute("amdgpu-hidden-argument")) {
-            DiagnosticInfoUnsupported NonPreloadHiddenArg(
+            DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
                 *OrigArg->getParent(),
                 "hidden argument in kernel signature was not preloaded",
-                DL.getDebugLoc());
-            DAG.getContext()->diagnose(NonPreloadHiddenArg);
+                DL.getDebugLoc()));
           }
         }
 
@@ -7315,11 +7313,10 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
 
   if (!Subtarget->isTrapHandlerEnabled() ||
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
-    DiagnosticInfoUnsupported NoTrap(MF.getFunction(),
-                                     "debugtrap handler not supported",
-                                     Op.getDebugLoc(), DS_Warning);
     LLVMContext &Ctx = MF.getFunction().getContext();
-    Ctx.diagnose(NoTrap);
+    Ctx.diagnose(DiagnosticInfoUnsupported(MF.getFunction(),
+                                           "debugtrap handler not supported",
+                                           Op.getDebugLoc(), DS_Warning));
     return Chain;
   }
 
@@ -8092,19 +8089,17 @@ SDValue SITargetLowering::lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
 
 static SDValue emitNonHSAIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
                                         EVT VT) {
-  DiagnosticInfoUnsupported BadIntrin(DAG.getMachineFunction().getFunction(),
-                                      "non-hsa intrinsic with hsa target",
-                                      DL.getDebugLoc());
-  DAG.getContext()->diagnose(BadIntrin);
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      "non-hsa intrinsic with hsa target", DL.getDebugLoc()));
   return DAG.getPOISON(VT);
 }
 
 static SDValue emitRemovedIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
                                          EVT VT) {
-  DiagnosticInfoUnsupported BadIntrin(DAG.getMachineFunction().getFunction(),
-                                      "intrinsic not supported on subtarget",
-                                      DL.getDebugLoc());
-  DAG.getContext()->diagnose(BadIntrin);
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      "intrinsic not supported on subtarget", DL.getDebugLoc()));
   return DAG.getPOISON(VT);
 }
 
@@ -8813,10 +8808,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_dispatch_ptr:
   case Intrinsic::amdgcn_queue_ptr: {
     if (!Subtarget->isAmdHsaOrMesa(MF.getFunction())) {
-      DiagnosticInfoUnsupported BadIntrin(
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           MF.getFunction(), "unsupported hsa intrinsic without hsa target",
-          DL.getDebugLoc());
-      DAG.getContext()->diagnose(BadIntrin);
+          DL.getDebugLoc()));
       return DAG.getPOISON(VT);
     }
 
@@ -9925,10 +9919,9 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_exp_compr: {
     if (!Subtarget->hasCompressedExport()) {
-      DiagnosticInfoUnsupported BadIntrin(
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
-          "intrinsic not supported on subtarget", DL.getDebugLoc());
-      DAG.getContext()->diagnose(BadIntrin);
+          "intrinsic not supported on subtarget", DL.getDebugLoc()));
     }
     SDValue Src0 = Op.getOperand(4);
     SDValue Src1 = Op.getOperand(5);
@@ -11728,29 +11721,64 @@ SDValue SITargetLowering::performFCopySignCombine(SDNode *N,
                                                   DAGCombinerInfo &DCI) const {
   SDValue MagnitudeOp = N->getOperand(0);
   SDValue SignOp = N->getOperand(1);
+
+  // The generic combine for fcopysign + fp cast is too conservative with
+  // vectors, and also gets confused by the splitting we will perform here, so
+  // peek through FP casts.
+  if (SignOp.getOpcode() == ISD::FP_EXTEND ||
+      SignOp.getOpcode() == ISD::FP_ROUND)
+    SignOp = SignOp.getOperand(0);
+
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
+  EVT SignVT = SignOp.getValueType();
 
   // f64 fcopysign is really an f32 copysign on the high bits, so replace the
   // lower half with a copy.
   // fcopysign f64:x, _:y -> x.lo32, (fcopysign (f32 x.hi32), _:y)
-  if (MagnitudeOp.getValueType() == MVT::f64) {
-    SDValue MagAsVector =
-        DAG.getNode(ISD::BITCAST, DL, MVT::v2f32, MagnitudeOp);
-    SDValue MagLo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32,
-                                MagAsVector, DAG.getConstant(0, DL, MVT::i32));
-    SDValue MagHi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32,
-                                MagAsVector, DAG.getConstant(1, DL, MVT::i32));
+  EVT MagVT = MagnitudeOp.getValueType();
 
-    SDValue HiOp = DAG.getNode(ISD::FCOPYSIGN, DL, MVT::f32, MagHi, SignOp);
+  unsigned NumElts = MagVT.isVector() ? MagVT.getVectorNumElements() : 1;
 
-    SDValue Vector =
-        DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2f32, MagLo, HiOp);
+  if (MagVT.getScalarType() == MVT::f64) {
+    EVT F32VT = MagVT.isVector()
+                    ? EVT::getVectorVT(*DAG.getContext(), MVT::f32, 2 * NumElts)
+                    : MVT::v2f32;
 
-    return DAG.getNode(ISD::BITCAST, DL, MVT::f64, Vector);
+    SDValue MagAsVector = DAG.getNode(ISD::BITCAST, DL, F32VT, MagnitudeOp);
+
+    SmallVector<SDValue, 8> NewElts;
+    for (unsigned I = 0; I != NumElts; ++I) {
+      SDValue MagLo =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, MagAsVector,
+                      DAG.getConstant(2 * I, DL, MVT::i32));
+      SDValue MagHi =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, MagAsVector,
+                      DAG.getConstant(2 * I + 1, DL, MVT::i32));
+
+      SDValue SignOpElt =
+          MagVT.isVector()
+              ? DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SignVT.getScalarType(),
+                            SignOp, DAG.getConstant(I, DL, MVT::i32))
+              : SignOp;
+
+      SDValue HiOp =
+          DAG.getNode(ISD::FCOPYSIGN, DL, MVT::f32, MagHi, SignOpElt);
+
+      SDValue Vector =
+          DAG.getNode(ISD::BUILD_VECTOR, DL, MVT::v2f32, MagLo, HiOp);
+
+      SDValue NewElt = DAG.getNode(ISD::BITCAST, DL, MVT::f64, Vector);
+      NewElts.push_back(NewElt);
+    }
+
+    if (NewElts.size() == 1)
+      return NewElts[0];
+
+    return DAG.getNode(ISD::BUILD_VECTOR, DL, MagVT, NewElts);
   }
 
-  if (SignOp.getValueType() != MVT::f64)
+  if (SignVT.getScalarType() != MVT::f64)
     return SDValue();
 
   // Reduce width of sign operand, we only need the highest bit.
@@ -11758,13 +11786,31 @@ SDValue SITargetLowering::performFCopySignCombine(SDNode *N,
   // fcopysign f64:x, f64:y ->
   //   fcopysign f64:x, (extract_vector_elt (bitcast f64:y to v2f32), 1)
   // TODO: In some cases it might make sense to go all the way to f16.
-  SDValue SignAsVector = DAG.getNode(ISD::BITCAST, DL, MVT::v2f32, SignOp);
-  SDValue SignAsF32 =
-      DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, SignAsVector,
-                  DAG.getConstant(1, DL, MVT::i32));
+
+  EVT F32VT = MagVT.isVector()
+                  ? EVT::getVectorVT(*DAG.getContext(), MVT::f32, 2 * NumElts)
+                  : MVT::v2f32;
+
+  SDValue SignAsVector = DAG.getNode(ISD::BITCAST, DL, F32VT, SignOp);
+
+  SmallVector<SDValue, 8> F32Signs;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    // Take sign from odd elements of cast vector
+    SDValue SignAsF32 =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, SignAsVector,
+                    DAG.getConstant(2 * I + 1, DL, MVT::i32));
+    F32Signs.push_back(SignAsF32);
+  }
+
+  SDValue NewSign =
+      NumElts == 1
+          ? F32Signs.back()
+          : DAG.getNode(ISD::BUILD_VECTOR, DL,
+                        EVT::getVectorVT(*DAG.getContext(), MVT::f32, NumElts),
+                        F32Signs);
 
   return DAG.getNode(ISD::FCOPYSIGN, DL, N->getValueType(0), N->getOperand(0),
-                     SignAsF32);
+                     NewSign);
 }
 
 // (shl (add x, c1), c2) -> add (shl x, c2), (shl c1, c2)
@@ -11908,12 +11954,32 @@ bool llvm::isBoolSGPR(SDValue V) {
   default:
     break;
   case ISD::SETCC:
+  case ISD::IS_FPCLASS:
   case AMDGPUISD::FP_CLASS:
     return true;
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
     return isBoolSGPR(V.getOperand(0)) && isBoolSGPR(V.getOperand(1));
+  case ISD::SADDO:
+  case ISD::UADDO:
+  case ISD::SSUBO:
+  case ISD::USUBO:
+  case ISD::SMULO:
+  case ISD::UMULO:
+    return V.getResNo() == 1;
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntrinsicID = V.getConstantOperandVal(0);
+    switch (IntrinsicID) {
+    case Intrinsic::amdgcn_is_shared:
+    case Intrinsic::amdgcn_is_private:
+      return true;
+    default:
+      return false;
+    }
+
+    return false;
+  }
   }
   return false;
 }
@@ -13593,10 +13659,34 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
   if (K0->getValueAPF() > K1->getValueAPF())
     return SDValue();
 
+  // med3 with a nan input acts like
+  // v_min_f32(v_min_f32(S0.f32, S1.f32), S2.f32)
+  //
+  // So the result depends on whether the IEEE mode bit is enabled or not with a
+  // signaling nan input.
+  // ieee=1
+  // s0 snan: yields s2
+  // s1 snan: yields s2
+  // s2 snan: qnan
+
+  // s0 qnan: min(s1, s2)
+  // s1 qnan: min(s0, s2)
+  // s2 qnan: min(s0, s1)
+
+  // ieee=0
+  // s0 snan: min(s1, s2)
+  // s1 snan: min(s0, s2)
+  // s2 snan: qnan
+
+  // s0 qnan: min(s1, s2)
+  // s1 qnan: min(s0, s2)
+  // s2 qnan: min(s0, s1)
   const MachineFunction &MF = DAG.getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
 
-  // TODO: Check IEEE bit enabled?
+  // TODO: Check IEEE bit enabled. We can form fmed3 with IEEE=0 regardless of
+  // whether the input is a signaling nan if op0 is fmaximum or fmaximumnum. We
+  // can only form if op0 is fmaxnum_ieee if IEEE=1.
   EVT VT = Op0.getValueType();
   if (Info->getMode().DX10Clamp) {
     // If dx10_clamp is enabled, NaNs clamp to 0.0. This is the same as the
@@ -13714,9 +13804,14 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
       return Med3;
   }
 
-  // fminnum(fmaxnum(x, K0), K1), K0 < K1 && !is_snan(x) -> fmed3(x, K0, K1)
+  // if !is_snan(x):
+  //   fminnum(fmaxnum(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fminnum_ieee(fmaxnum_ieee(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fminnumnum(fmaxnumnum(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
+  //   fmin_legacy(fmax_legacy(x, K0), K1), K0 < K1 -> fmed3(x, K0, K1)
   if (((Opc == ISD::FMINNUM && Op0.getOpcode() == ISD::FMAXNUM) ||
        (Opc == ISD::FMINNUM_IEEE && Op0.getOpcode() == ISD::FMAXNUM_IEEE) ||
+       (Opc == ISD::FMINIMUMNUM && Op0.getOpcode() == ISD::FMAXIMUMNUM) ||
        (Opc == AMDGPUISD::FMIN_LEGACY &&
         Op0.getOpcode() == AMDGPUISD::FMAX_LEGACY)) &&
       (VT == MVT::f32 || VT == MVT::f64 ||
@@ -16062,7 +16157,8 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
     case 'v':
       switch (BitWidth) {
       case 16:
-        RC = &AMDGPU::VGPR_32RegClass;
+        RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
+                                             : &AMDGPU::VGPR_32RegClass;
         break;
       default:
         RC = TRI->getVGPRClassForBitWidth(BitWidth);

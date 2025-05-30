@@ -1018,9 +1018,13 @@ void LVScope::printExtra(raw_ostream &OS, bool Full) const {
   // Do not print any type or name for a lexical block.
   if (!getIsBlock()) {
     OS << " " << formattedName(getName());
-    if (!getIsAggregate())
+    if (!getIsAggregate()) {
       OS << " -> " << typeOffsetAsString()
          << formattedNames(getTypeQualifiedName(), typeAsString());
+    }
+    if (options().getAttributeSize())
+      if (uint32_t Size = getStorageSizeInBytes())
+        OS << " [Size = " << Size << "]";
   }
   OS << "\n";
 

@@ -128,13 +128,16 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
 
     RootSignature
 
-    RootFlags DescriptorTable RootConstants
+    RootFlags DescriptorTable RootConstants StaticSampler
 
     num32BitConstants
 
     CBV SRV UAV Sampler
     space visibility flags
     numDescriptors offset
+
+    mipLODBias addressU addressV addressW
+    maxAnisotropy minLOD maxLOD
 
     unbounded
     DESCRIPTOR_RANGE_OFFSET_APPEND
@@ -166,6 +169,12 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
     shader_visibility_pixel
     shader_visibility_amplification
     shader_visibility_mesh
+
+    TEXTURE_ADDRESS_WRAP
+    TEXTURE_ADDRESS_MIRROR
+    TEXTURE_ADDRESS_CLAMP
+    TEXTURE_ADDRESS_BORDER
+    TEXTURE_ADDRESS_MIRRORONCE
   )cc";
   auto TokLoc = SourceLocation();
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);

@@ -166,12 +166,7 @@ bool shouldPrint(const BinaryFunction &Function) {
   }
 
   std::optional<StringRef> Origin = Function.getOriginSectionName();
-  if (Origin && llvm::any_of(opts::PrintOnly, [&](const std::string &Name) {
-        return Name == *Origin;
-      }))
-    return true;
-
-  return false;
+  return Origin && llvm::is_contained(opts::PrintOnly, *Origin);
 }
 
 } // namespace opts
@@ -3584,6 +3579,8 @@ bool BinaryFunction::validateCFG() const {
 }
 
 void BinaryFunction::fixBranches() {
+  assert(isSimple() && "Expected function with valid CFG.");
+
   auto &MIB = BC.MIB;
   MCContext *Ctx = BC.Ctx.get();
 

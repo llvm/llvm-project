@@ -364,6 +364,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.btowc
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
+    libc.src.wchar.wmemset
+    libc.src.wchar.wcschr
+    libc.src.wchar.wcsspn
+    libc.src.wchar.wmemcmp
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev

@@ -27,7 +27,6 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
-#include "llvm/ProfileData/MemProfCommon.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -307,6 +306,14 @@ template <> struct DenseMapInfo<ValueInfo> {
   static unsigned getHashValue(ValueInfo I) { return hash_value(I.getRef()); }
 };
 
+// For optional hinted size reporting, holds a pair of the full stack id
+// (pre-trimming, from the full context in the profile), and the associated
+// total profiled size.
+struct ContextTotalSize {
+  uint64_t FullStackId;
+  uint64_t TotalSize;
+};
+
 /// Summary of memprof callsite metadata.
 struct CallsiteInfo {
   // Actual callee function.
@@ -342,6 +349,19 @@ inline raw_ostream &operator<<(raw_ostream &OS, const CallsiteInfo &SNI) {
   OS << " StackIds: " << llvm::interleaved(SNI.StackIdIndices);
   return OS;
 }
+
+// Allocation type assigned to an allocation reached by a given context.
+// More can be added, now this is cold, notcold and hot.
+// Values should be powers of two so that they can be ORed, in particular to
+// track allocations that have different behavior with different calling
+// contexts.
+enum class AllocationType : uint8_t {
+  None = 0,
+  NotCold = 1,
+  Cold = 2,
+  Hot = 4,
+  All = 7 // This should always be set to the OR of all values.
+};
 
 /// Summary of a single MIB in a memprof metadata on allocations.
 struct MIBInfo {

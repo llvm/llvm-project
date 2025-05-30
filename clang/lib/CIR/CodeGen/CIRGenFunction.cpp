@@ -42,10 +42,6 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
 #include "clang/AST/TypeNodes.inc"
       llvm_unreachable("non-canonical or dependent type in IR-generation");
 
-    case Type::ArrayParameter:
-    case Type::HLSLAttributedResource:
-      llvm_unreachable("NYI");
-
     case Type::Auto:
     case Type::DeducedTemplateSpecialization:
       llvm_unreachable("undeduced type in IR-generation");
@@ -66,6 +62,8 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       return cir::TEK_Scalar;
 
     // Complexes.
@@ -79,6 +77,7 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::Record:
     case Type::ObjCObject:
     case Type::ObjCInterface:
+    case Type::ArrayParameter:
       return cir::TEK_Aggregate;
 
     // We operate on atomic values according to their underlying type.
@@ -531,6 +530,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
+  case Expr::StringLiteralClass:
+    return emitStringLiteralLValue(cast<StringLiteral>(e));
   case Expr::MemberExprClass:
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::BinaryOperatorClass:
@@ -605,7 +606,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // respective address.
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
   const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
-  builder.createStore(loc, zeroValue, destPtr.getPointer());
+  builder.createStore(loc, zeroValue, destPtr);
 }
 
 } // namespace clang::CIRGen
