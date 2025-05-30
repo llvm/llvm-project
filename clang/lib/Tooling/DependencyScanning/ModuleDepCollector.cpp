@@ -701,14 +701,6 @@ void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
   if (Reason != LexedFileChangeReason::EnterFile)
     return;
 
-  // This has to be delayed as the context hash can change at the start of
-  // `CompilerInstance::ExecuteAction`.
-  if (MDC.ContextHash.empty()) {
-    MDC.ContextHash = MDC.ScanInstance.getInvocation().getModuleHash(
-        MDC.ScanInstance.getDiagnostics());
-    MDC.Consumer.handleContextHash(MDC.ContextHash);
-  }
-
   SourceManager &SM = MDC.ScanInstance.getSourceManager();
 
   // Dependency generation really does want to go all the way to the
@@ -789,6 +781,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
 
   for (const Module *M : MDC.DirectModularDeps)
     handleTopLevelModule(M);
+
+  MDC.Consumer.handleContextHash(MDC.ScanInstance.getInvocation().getModuleHash(
+      MDC.ScanInstance.getDiagnostics()));
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
