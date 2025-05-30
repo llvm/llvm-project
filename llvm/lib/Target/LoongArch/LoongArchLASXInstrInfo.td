@@ -1729,6 +1729,10 @@ def : Pat<(loongarch_vshuf4i v8i32:$xj, immZExt8:$ui8),
         (XVSHUF4I_W v8i32:$xj, immZExt8:$ui8)>;
 def : Pat<(loongarch_vshuf4i v8f32:$xj, immZExt8:$ui8),
         (XVSHUF4I_W v8f32:$xj, immZExt8:$ui8)>;
+def : Pat<(loongarch_vshuf4i_d v4i64:$xj, v4i64:$xk, immZExt8:$ui8),
+          (XVSHUF4I_D v4i64:$xj, v4i64:$xk, immZExt8:$ui8)>;
+def : Pat<(loongarch_vshuf4i_d v4f64:$xj, v4f64:$xk, immZExt8:$ui8),
+          (XVSHUF4I_D v4f64:$xj, v4f64:$xk, immZExt8:$ui8)>;
 
 // XVREPL128VEI_{B/H/W/D}
 def : Pat<(loongarch_vreplvei v32i8:$xj, immZExt4:$ui4),
@@ -1755,6 +1759,14 @@ def : Pat<(lasxsplatf32 FPR32:$fj),
           (XVREPLVE0_W (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32))>;
 def : Pat<(lasxsplatf64 FPR64:$fj),
           (XVREPLVE0_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64))>;
+
+// VSTELM
+defm : VstelmPat<truncstorei8, v32i8, XVSTELM_B, simm8, uimm5>;
+defm : VstelmPat<truncstorei16, v16i16, XVSTELM_H, simm8_lsl1, uimm4>;
+defm : VstelmPat<truncstorei32, v8i32, XVSTELM_W, simm8_lsl2, uimm3>;
+defm : VstelmPat<store, v4i64, XVSTELM_D, simm8_lsl3, uimm2>;
+defm : VstelmPat<store, v8f32, XVSTELM_W, simm8_lsl2, uimm3, f32>;
+defm : VstelmPat<store, v4f64, XVSTELM_D, simm8_lsl3, uimm2, f64>;
 
 // Loads/Stores
 foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in {

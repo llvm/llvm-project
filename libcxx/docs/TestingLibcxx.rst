@@ -291,7 +291,7 @@ tests using exceptions. The code to write a test manually would be:
 
 .. code-block:: cpp
 
-  void test_excption([[maybe_unused]] int arg) {
+  void test_exception([[maybe_unused]] int arg) {
   #ifndef TEST_HAS_NO_EXCEPTIONS // do nothing when tests are disabled
     try {
       foo(arg);
@@ -308,7 +308,7 @@ The same test using a macro:
 
 .. code-block:: cpp
 
-  void test_excption([[maybe_unused]] int arg) {
+  void test_exception([[maybe_unused]] int arg) {
     TEST_VALIDATE_EXCEPTION(bar,
                             [](const bar& e) {
                               LIBCPP_ASSERT(e.what() == what);

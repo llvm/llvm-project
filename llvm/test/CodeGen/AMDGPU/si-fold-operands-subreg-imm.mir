@@ -127,3 +127,25 @@ body:             |
 
 ...
 
+---
+name:            issue139908_wrong_splat_constant_handling
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr8_sgpr9
+
+    ; CHECK-LABEL: name: issue139908_wrong_splat_constant_handling
+    ; CHECK: liveins: $sgpr8_sgpr9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
+    ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 42
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1
+    ; CHECK-NEXT: S_CMP_EQ_U64 [[COPY]], [[REG_SEQUENCE]], implicit-def $scc
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_64 = COPY $sgpr8_sgpr9
+    %1:sreg_32 = S_MOV_B32 42
+    %2:sreg_64 = REG_SEQUENCE %1, %subreg.sub0, %1, %subreg.sub1
+    S_CMP_EQ_U64 %0, %2, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...

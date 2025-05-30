@@ -97,7 +97,7 @@ def Test_Integers : Test_Op<"integers"> {
 // Check that IRDL names are properly generated when needed.
 def Test_NamesOp : Test_Op<"names"> {
   let arguments = (ins I32:$a,
-                       I32:$_hello,
+                       I32:$hello,
                        I32:$unnamed0,
                        I32);
   let regions = (region AnyRegion:$unnamed1);
@@ -110,7 +110,7 @@ def Test_NamesOp : Test_Op<"names"> {
 // CHECK-NEXT:    %[[v3:[^ ]*]] = irdl.is i32
 // CHECK-NEXT:    %[[v4:[^ ]*]] = irdl.is i32
 // CHECK-NEXT:    %[[reg:[^ ]*]] = irdl.region
-// CHECK-NEXT:    irdl.operands(a: %[[v0]], _hello: %[[v1]], unnamed0: %[[v2]], unnamed3: %[[v3]])
+// CHECK-NEXT:    irdl.operands(a: %[[v0]], hello: %[[v1]], unnamed0: %[[v2]], unnamed3: %[[v3]])
 // CHECK-NEXT:    irdl.results(unnamed2: %[[v4]])
 // CHECK-NEXT:    irdl.regions(unnamed1: %[[reg]])
 // CHECK-NEXT:  }

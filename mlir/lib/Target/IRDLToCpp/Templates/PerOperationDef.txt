@@ -1,0 +1,28 @@
+R"(
+
+//===----------------------------------------------------------------------===//
+// __NAMESPACE_PATH__::__OP_CPP_NAME__ definitions
+//===----------------------------------------------------------------------===//
+
+__NAMESPACE_OPEN__
+
+__OP_BUILD_DEFS__
+
+void __OP_CPP_NAME__::build(::mlir::OpBuilder &odsBuilder, 
+                            ::mlir::OperationState &odsState, 
+                            ::mlir::TypeRange resultTypes, 
+                            ::mlir::ValueRange operands, 
+                            ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
+{
+  assert(operands.size() == __OP_OPERAND_COUNT__);
+  assert(resultTypes.size() == __OP_RESULT_COUNT__);
+  odsState.addOperands(operands);
+  odsState.addAttributes(attributes);
+  odsState.addTypes(resultTypes);
+}
+
+
+__NAMESPACE_CLOSE__
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__OP_CPP_NAME__)
+)"

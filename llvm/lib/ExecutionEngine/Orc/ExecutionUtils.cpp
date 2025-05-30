@@ -133,10 +133,8 @@ void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
       CtorDtor.Func->setVisibility(GlobalValue::HiddenVisibility);
     }
 
-    if (CtorDtor.Data && cast<GlobalValue>(CtorDtor.Data)->isDeclaration()) {
-      dbgs() << "  Skipping because why now?\n";
+    if (CtorDtor.Data && cast<GlobalValue>(CtorDtor.Data)->isDeclaration())
       continue;
-    }
 
     CtorDtorsByPriority[CtorDtor.Priority].push_back(
         Mangle(CtorDtor.Func->getName()));

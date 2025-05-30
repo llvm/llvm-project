@@ -680,6 +680,9 @@ public:
     /// If the value is true the peeling cost model can decide to peel only
     /// some iterations and in this case it will set this to false.
     bool PeelProfiledIterations;
+
+    /// Peel off the last PeelCount loop iterations.
+    bool PeelLast;
   };
 
   /// Get target-customized preferences for the generic loop peeling
@@ -1797,7 +1800,7 @@ public:
   /// As opposed to the normal scheme of p = phi (0, a) which allows the select
   /// to be pulled out of the loop. If the select(.., add, ..) can be predicated
   /// by the target, this can lead to cleaner code generation.
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const;
+  bool preferPredicatedReductionSelect() const;
 
   /// Return true if the loop vectorizer should consider vectorizing an
   /// otherwise scalar epilogue loop.

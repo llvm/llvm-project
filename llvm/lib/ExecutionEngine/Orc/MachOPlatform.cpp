@@ -487,7 +487,7 @@ MachOPlatform::MachOPlatform(
     if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
                                                    ForceEHFrames)))
       return;
-    this->ForceEHFrames = ForceEHFrames.has_value() ? *ForceEHFrames : false;
+    this->ForceEHFrames = ForceEHFrames.value_or(false);
   }
 
   BootstrapInfo BI;

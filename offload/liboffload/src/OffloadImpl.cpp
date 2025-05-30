@@ -482,7 +482,7 @@ ol_impl_result_t olGetKernel_impl(ol_program_handle_t Program,
   auto &Device = Program->Image->getDevice();
   auto KernelImpl = Device.constructKernel(KernelName);
   if (!KernelImpl)
-    return OL_ERRC_INVALID_KERNEL_NAME;
+    return ol_impl_result_t::fromError(KernelImpl.takeError());
 
   auto Err = KernelImpl->init(Device, *Program->Image);
   if (Err)

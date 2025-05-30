@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Error.h"
@@ -24,6 +25,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <variant>
 
 namespace llvm {
@@ -121,6 +123,7 @@ namespace DirectX {
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
   StringRef ParamData;
+
   RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
       : Header(H), ParamData(P) {}
 
@@ -146,6 +149,31 @@ struct RootConstantView : RootParameterView {
 
   llvm::Expected<dxbc::RootConstants> read() {
     return readParameter<dxbc::RootConstants>();
+  }
+};
+
+struct RootDescriptorView : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return (V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::UAV));
+  }
+
+  llvm::Expected<dxbc::RTS0::v2::RootDescriptor> read(uint32_t Version) {
+    if (Version == 1) {
+      auto Descriptor = readParameter<dxbc::RTS0::v1::RootDescriptor>();
+      if (Error E = Descriptor.takeError())
+        return E;
+      return dxbc::RTS0::v2::RootDescriptor(*Descriptor);
+    }
+    if (Version != 2)
+      return make_error<GenericBinaryError>("Invalid Root Signature version: " +
+                                                Twine(Version),
+                                            object_error::parse_failed);
+    return readParameter<dxbc::RTS0::v2::RootDescriptor>();
   }
 };
 
@@ -191,6 +219,14 @@ public:
     switch (static_cast<dxbc::RootParameterType>(Header.ParameterType)) {
     case dxbc::RootParameterType::Constants32Bit:
       DataSize = sizeof(dxbc::RootConstants);
+      break;
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV:
+      if (Version == 1)
+        DataSize = sizeof(dxbc::RTS0::v1::RootDescriptor);
+      else
+        DataSize = sizeof(dxbc::RTS0::v2::RootDescriptor);
       break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0

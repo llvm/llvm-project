@@ -67,8 +67,7 @@ class ParseHLSLRootSignatureTest : public ::testing::Test {
 protected:
   ParseHLSLRootSignatureTest()
       : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Consumer(new ExpectedDiagConsumer()),
-        Diags(DiagID, new DiagnosticOptions, Consumer),
+        Consumer(new ExpectedDiagConsumer()), Diags(DiagID, DiagOpts, Consumer),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     // This is an arbitrarily chosen target triple to create the target info.
     TargetOpts->Triple = "dxil";
@@ -95,6 +94,7 @@ protected:
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   ExpectedDiagConsumer *Consumer;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
@@ -254,7 +254,10 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   const llvm::StringLiteral Source = R"cc(
-    RootConstants()
+    RootConstants(num32BitConstants = 1, b0),
+    RootConstants(b42, space = 3, num32BitConstants = 4294967295,
+      visibility = SHADER_VISIBILITY_HULL
+    )
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -270,10 +273,142 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
 
   ASSERT_FALSE(Parser.parse());
 
-  ASSERT_EQ(Elements.size(), 1u);
+  ASSERT_EQ(Elements.size(), 2u);
 
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<RootConstants>(Elem));
+  ASSERT_EQ(std::get<RootConstants>(Elem).Num32BitConstants, 1u);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Reg.ViewType, RegisterType::BReg);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility, ShaderVisibility::All);
+
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<RootConstants>(Elem));
+  ASSERT_EQ(std::get<RootConstants>(Elem).Num32BitConstants, 4294967295u);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Reg.ViewType, RegisterType::BReg);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Reg.Number, 42u);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Space, 3u);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility, ShaderVisibility::Hull);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
+  const llvm::StringLiteral Source = R"cc(
+    RootFlags(),
+    RootFlags(0),
+    RootFlags(
+      deny_domain_shader_root_access |
+      deny_pixel_shader_root_access |
+      local_root_signature |
+      cbv_srv_uav_heap_directly_indexed |
+      deny_amplification_shader_root_access |
+      deny_geometry_shader_root_access |
+      deny_hull_shader_root_access |
+      deny_mesh_shader_root_access |
+      allow_stream_output |
+      sampler_heap_directly_indexed |
+      allow_input_assembler_input_layout |
+      deny_vertex_shader_root_access
+    )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  ASSERT_EQ(Elements.size(), 3u);
+
+  RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+
+  Elem = Elements[2];
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::ValidFlags);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
+  const llvm::StringLiteral Source = R"cc(
+    CBV(b0),
+    SRV(space = 4, t42, visibility = SHADER_VISIBILITY_GEOMETRY,
+      flags = DATA_VOLATILE | DATA_STATIC | DATA_STATIC_WHILE_SET_AT_EXECUTE
+    ),
+    UAV(visibility = SHADER_VISIBILITY_HULL, u34893247),
+    CBV(b0, flags = 0),
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  ASSERT_EQ(Elements.size(), 4u);
+
+  RootElement Elem = Elements[0];
+  ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::DataStaticWhileSetAtExecute);
+
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::TReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 42u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
+            ShaderVisibility::Geometry);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::ValidFlags);
+
+  Elem = Elements[2];
+  ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::UReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 34893247u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::Hull);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::DataVolatile);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::DataVolatile);
+
+  Elem = Elements[3];
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, RootDescriptorFlags::None);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -367,7 +502,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
-TEST_F(ParseHLSLRootSignatureTest, InvalidMissingParameterTest) {
+TEST_F(ParseHLSLRootSignatureTest, InvalidMissingDTParameterTest) {
   // This test will check that the parsing fails due a mandatory
   // parameter (register) not being specified
   const llvm::StringLiteral Source = R"cc(
@@ -391,7 +526,51 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingParameterTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
-TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryParameterTest) {
+TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRDParameterTest) {
+  // This test will check that the parsing fails due a mandatory
+  // parameter (register) not being specified
+  const llvm::StringLiteral Source = R"cc(
+    SRV()
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_rootsig_missing_param);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRCParameterTest) {
+  // This test will check that the parsing fails due a mandatory
+  // parameter (num32BitConstants) not being specified
+  const llvm::StringLiteral Source = R"cc(
+    RootConstants(b0)
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_rootsig_missing_param);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryDTParameterTest) {
   // This test will check that the parsing fails due the same mandatory
   // parameter being specified multiple times
   const llvm::StringLiteral Source = R"cc(
@@ -415,12 +594,60 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryParameterTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
-TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalParameterTest) {
+TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryRCParameterTest) {
+  // This test will check that the parsing fails due the same mandatory
+  // parameter being specified multiple times
+  const llvm::StringLiteral Source = R"cc(
+    RootConstants(num32BitConstants = 32, num32BitConstants = 24)
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalDTParameterTest) {
   // This test will check that the parsing fails due the same optional
   // parameter being specified multiple times
   const llvm::StringLiteral Source = R"cc(
     DescriptorTable(
       CBV(space = 2, space = 0)
+    )
+  )cc";
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+  auto TokLoc = SourceLocation();
+
+  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalRCParameterTest) {
+  // This test will check that the parsing fails due the same optional
+  // parameter being specified multiple times
+  const llvm::StringLiteral Source = R"cc(
+    RootConstants(
+      visibility = Shader_Visibility_All,
+      b0, num32BitConstants = 1,
+      visibility = Shader_Visibility_Pixel
     )
   )cc";
 
@@ -480,7 +707,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidNonZeroFlagsTest) {
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
-  Consumer->setExpected(diag::err_expected);
+  Consumer->setExpected(diag::err_hlsl_rootsig_non_zero_flag);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());

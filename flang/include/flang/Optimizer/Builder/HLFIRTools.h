@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include <optional>
 
 namespace fir {
@@ -533,6 +534,12 @@ Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
                     mlir::ArrayRef<mlir::Value> extents,
                     mlir::ValueRange oneBasedIndices,
                     mlir::ArrayRef<mlir::Value> typeParams);
+
+/// Return true iff the given hlfir.designate produces
+/// a contiguous part of the memref object given that it is
+/// contiguous.
+bool designatePreservesContinuity(hlfir::DesignateOp op);
+
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H

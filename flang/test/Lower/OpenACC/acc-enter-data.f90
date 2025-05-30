@@ -53,16 +53,16 @@ subroutine acc_enter_data
 !CHECK: acc.enter_data dataOperands(%[[COPYIN_A]], %[[CREATE_B]], %[[ATTACH_D]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.box<!fir.ptr<f32>>>){{$}}
 
   !$acc enter data create(a) async
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<none>], name = "a", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {async}
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) async -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: acc.enter_data async dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) wait
 !CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {wait}
+!CHECK: acc.enter_data wait dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) async wait
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<none>], name = "a", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {async, wait}
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) async -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: acc.enter_data async wait dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) async(1)
 !CHECK: %[[ASYNC1:.*]] = arith.constant 1 : i32

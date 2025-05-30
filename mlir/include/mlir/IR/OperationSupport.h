@@ -985,9 +985,9 @@ public:
                  BlockRange successors = {},
                  MutableArrayRef<std::unique_ptr<Region>> regions = {});
   OperationState(OperationState &&other) = default;
-  OperationState(const OperationState &other) = default;
   OperationState &operator=(OperationState &&other) = default;
-  OperationState &operator=(const OperationState &other) = default;
+  OperationState(const OperationState &other) = delete;
+  OperationState &operator=(const OperationState &other) = delete;
   ~OperationState();
 
   /// Get (or create) a properties of the provided type to be set on the

@@ -67,6 +67,7 @@ BUILDKITE_WORKFLOW_TO_TRACK = {
 # remain small.
 BUILDKITE_GRAPHQL_BUILDS_PER_PAGE = 50
 
+
 @dataclass
 class JobMetrics:
     job_name: str
@@ -76,6 +77,7 @@ class JobMetrics:
     completed_at_ns: int
     workflow_id: int
     workflow_name: str
+
 
 @dataclass
 class GaugeMetric:
@@ -257,6 +259,7 @@ def buildkite_get_metrics(
             )
 
     return output, incomplete_now
+
 
 def github_get_metrics(
     github_repo: github.Repository, last_workflows_seen_as_completed: set[int]

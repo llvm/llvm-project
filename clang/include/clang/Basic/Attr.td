@@ -1354,6 +1354,17 @@ def Cleanup : InheritableAttr {
   let Args = [DeclArgument<Function, "FunctionDecl">];
   let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [CleanupDocs];
+  // FIXME: DeclArgument should be reworked to also store the
+  // Expr instead of adding attr specific hacks like the following.
+  // See the discussion in https://github.com/llvm/llvm-project/pull/14023.
+  let AdditionalMembers = [{
+private:
+    SourceLocation ArgLoc;
+
+public:
+    void setArgLoc(const SourceLocation &Loc) { ArgLoc = Loc; }
+    auto getArgLoc() const { return ArgLoc; }
+  }];
 }
 
 def CmseNSEntry : InheritableAttr, TargetSpecificAttr<TargetARM> {
@@ -4735,6 +4746,18 @@ def Error : InheritableAttr {
   let Documentation = [ErrorAttrDocs];
 }
 
+/// HLSL Root Signature Attribute
+def RootSignature : Attr {
+  /// [RootSignature(Signature)]
+  let Spellings = [Microsoft<"RootSignature">];
+  let Args = [IdentifierArgument<"SignatureIdent">,
+              DeclArgument<HLSLRootSignature, "SignatureDecl", 0, /*fake=*/1>];
+  let Subjects = SubjectList<[Function],
+                             ErrorDiag, "'function'">;
+  let LangOpts = [HLSL];
+  let Documentation = [RootSignatureDocs];
+}
+
 def HLSLNumThreads: InheritableAttr {
   let Spellings = [Microsoft<"numthreads">];
   let Args = [IntArgument<"X">, IntArgument<"Y">, IntArgument<"Z">];
@@ -4778,6 +4801,7 @@ def HLSLResourceBinding: InheritableAttr {
       RegisterType RegType;
       std::optional<unsigned> SlotNumber;
       unsigned SpaceNumber;
+      std::optional<unsigned> ImplicitBindingOrderID;
 
   public:
       void setBinding(RegisterType RT, std::optional<unsigned> SlotNum, unsigned SpaceNum) {
@@ -4798,6 +4822,16 @@ def HLSLResourceBinding: InheritableAttr {
       }
       unsigned getSpaceNumber() const {
         return SpaceNumber;
+      }
+      void setImplicitBindingOrderID(uint32_t Value) {
+        ImplicitBindingOrderID = Value;
+      }
+      bool hasImplicitBindingOrderID() const {
+        return ImplicitBindingOrderID.has_value();
+      }
+      uint32_t getImplicitBindingOrderID() const {
+        assert(hasImplicitBindingOrderID() && "attribute does not have implicit binding order id");
+        return ImplicitBindingOrderID.value();
       }
   }];
 }

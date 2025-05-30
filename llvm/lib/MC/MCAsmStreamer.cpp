@@ -182,7 +182,7 @@ public:
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
 
-  void emitAssemblerFlag(MCAssemblerFlag Flag) override;
+  void emitSubsectionsViaSymbols() override;
   void emitLinkerOptions(ArrayRef<std::string> Options) override;
   void emitDataRegion(MCDataRegionType Kind) override;
   void emitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
@@ -391,6 +391,8 @@ public:
   void emitWinCFIEndProlog(SMLoc Loc) override;
   void emitWinCFIBeginEpilogue(SMLoc Loc) override;
   void emitWinCFIEndEpilogue(SMLoc Loc) override;
+  void emitWinCFIUnwindV2Start(SMLoc Loc) override;
+  void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) override;
 
   void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                         SMLoc Loc) override;
@@ -595,15 +597,8 @@ void MCAsmStreamer::emitGNUAttribute(unsigned Tag, unsigned Value) {
   OS << "\t.gnu_attribute " << Tag << ", " << Value << "\n";
 }
 
-void MCAsmStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  switch (Flag) {
-  case MCAF_SyntaxUnified:         OS << "\t.syntax unified"; break;
-  case MCAF_SubsectionsViaSymbols: OS << ".subsections_via_symbols"; break;
-  case MCAF_Code16:                OS << '\t'<< MAI->getCode16Directive();break;
-  case MCAF_Code32:                OS << '\t'<< MAI->getCode32Directive();break;
-  case MCAF_Code64:                OS << '\t'<< MAI->getCode64Directive();break;
-  }
-  EmitEOL();
+void MCAsmStreamer::emitSubsectionsViaSymbols() {
+  OS << ".subsections_via_symbols\n";
 }
 
 void MCAsmStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
@@ -2302,6 +2297,20 @@ void MCAsmStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
   MCStreamer::emitWinCFIEndEpilogue(Loc);
 
   OS << "\t.seh_endepilogue";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIUnwindV2Start(SMLoc Loc) {
+  MCStreamer::emitWinCFIUnwindV2Start(Loc);
+
+  OS << "\t.seh_unwindv2start";
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) {
+  MCStreamer::emitWinCFIUnwindVersion(Version, Loc);
+
+  OS << "\t.seh_unwindversion " << (unsigned)Version;
   EmitEOL();
 }
 

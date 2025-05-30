@@ -736,6 +736,9 @@ public:
   Instruction *foldICmpShlConstConst(ICmpInst &I, Value *ShAmt, const APInt &C1,
                                      const APInt &C2);
 
+  Instruction *foldICmpBinOpWithConstantViaTruthTable(ICmpInst &Cmp,
+                                                      BinaryOperator *BO,
+                                                      const APInt &C);
   Instruction *foldICmpBinOpEqualityWithConstant(ICmpInst &Cmp,
                                                  BinaryOperator *BO,
                                                  const APInt &C);

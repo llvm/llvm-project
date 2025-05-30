@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -emit-llvm -triple i686-mingw32 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-w64-mingw32 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple i686-pc-cygwin %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-pc-cygwin %s -o - | FileCheck %s
 
 #define JOIN2(x, y) x##y
 #define JOIN(x, y) JOIN2(x, y)

@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -177,19 +178,15 @@ public:
     return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
   }
 
-  cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
-                         bool isVolatile = false, uint64_t alignment = 0) {
-    mlir::IntegerAttr intAttr;
-    if (alignment)
-      intAttr = mlir::IntegerAttr::get(
-          mlir::IntegerType::get(ptr.getContext(), 64), alignment);
-
-    return create<cir::LoadOp>(loc, ptr);
+  mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
+    assert(!cir::MissingFeatures::addressSpace());
+    return create<cir::GetGlobalOp>(loc, getPointerTo(global.getSymType()),
+                                    global.getSymName());
   }
 
-  cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
-                           mlir::Value dst) {
-    return create<cir::StoreOp>(loc, val, dst);
+  cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
+                           mlir::IntegerAttr align = {}) {
+    return create<cir::StoreOp>(loc, val, dst, align);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
@@ -202,7 +199,12 @@ public:
                                clang::CharUnits alignment) {
     auto addr = createAlloca(loc, getPointerTo(type), type, {},
                              getSizeFromCharUnits(getContext(), alignment));
-    return createLoad(loc, addr);
+    mlir::IntegerAttr alignAttr;
+    uint64_t align = alignment.getQuantity();
+    if (align)
+      alignAttr = getI64IntegerAttr(align);
+
+    return create<cir::LoadOp>(loc, addr, /*isDeref=*/false, alignAttr);
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
@@ -223,6 +225,14 @@ public:
                            mlir::ValueRange operands) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
                         callee.getFunctionType().getReturnType(), operands);
+  }
+
+  cir::CallOp createIndirectCallOp(mlir::Location loc,
+                                   mlir::Value indirectTarget,
+                                   cir::FuncType funcType,
+                                   mlir::ValueRange operands) {
+    return create<cir::CallOp>(loc, indirectTarget, funcType.getReturnType(),
+                               operands);
   }
 
   //===--------------------------------------------------------------------===//

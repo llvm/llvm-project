@@ -1485,7 +1485,7 @@ define amdgpu_kernel void @test_writelane_imm_f64(ptr addrspace(1) %out, double 
   ret void
 }
 
-define amdgpu_kernel void @test_writelane_sreg_oldval_i32(i32 inreg %oldval, ptr addrspace(1) %out, i32 %src0, i32 %src1) #1 {
+define amdgpu_kernel void @test_writelane_sreg_oldval_i32(i32 %oldval, ptr addrspace(1) %out, i32 %src0, i32 %src1) #1 {
 ; GFX802-SDAG-LABEL: test_writelane_sreg_oldval_i32:
 ; GFX802-SDAG:       ; %bb.0:
 ; GFX802-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x0
@@ -1570,7 +1570,7 @@ define amdgpu_kernel void @test_writelane_sreg_oldval_i32(i32 inreg %oldval, ptr
   ret void
 }
 
-define amdgpu_kernel void @test_writelane_sreg_oldval_i64(i64 inreg %oldval, ptr addrspace(1) %out, i64 %src0, i32 %src1) #1 {
+define amdgpu_kernel void @test_writelane_sreg_oldval_i64(i64 %oldval, ptr addrspace(1) %out, i64 %src0, i32 %src1) #1 {
 ; GFX802-SDAG-LABEL: test_writelane_sreg_oldval_i64:
 ; GFX802-SDAG:       ; %bb.0:
 ; GFX802-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
@@ -1673,7 +1673,7 @@ define amdgpu_kernel void @test_writelane_sreg_oldval_i64(i64 inreg %oldval, ptr
   ret void
 }
 
-define amdgpu_kernel void @test_writelane_sreg_oldval_f64(double inreg %oldval, ptr addrspace(1) %out, double %src0, i32 %src1) #1 {
+define amdgpu_kernel void @test_writelane_sreg_oldval_f64(double %oldval, ptr addrspace(1) %out, double %src0, i32 %src1) #1 {
 ; GFX802-SDAG-LABEL: test_writelane_sreg_oldval_f64:
 ; GFX802-SDAG:       ; %bb.0:
 ; GFX802-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0

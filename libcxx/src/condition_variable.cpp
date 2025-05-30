@@ -7,7 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include <condition_variable>
+#include <limits>
+#include <ratio>
 #include <thread>
+#include <__chrono/duration.h>
+#include <__chrono/system_clock.h>
+#include <__chrono/time_point.h>
+#include <__system_error/throw_system_error.h>
 
 #if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
 #  pragma comment(lib, "pthread")
@@ -17,6 +23,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // ~condition_variable is defined elsewhere.
 
@@ -66,6 +73,7 @@ void notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk) 
   __thread_local_data()->notify_all_at_thread_exit(&cond, lk.release());
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

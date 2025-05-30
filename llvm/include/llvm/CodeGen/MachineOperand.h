@@ -279,9 +279,8 @@ public:
   static void printIRSlotNumber(raw_ostream &OS, int Slot);
 
   /// Print the MachineOperand to \p os.
-  /// Providing a valid \p TRI and \p IntrinsicInfo results in a more
-  /// target-specific printing. If \p TRI and \p IntrinsicInfo are null, the
-  /// function will try to pick it up from the parent.
+  /// Providing a valid \p TRI results in a more target-specific printing. If
+  /// \p TRI is null, the function will try to pick it up from the parent.
   void print(raw_ostream &os, const TargetRegisterInfo *TRI = nullptr) const;
 
   /// More complex way of printing a MachineOperand.
@@ -304,14 +303,13 @@ public:
   /// \param TRI - provide more target-specific information to the printer.
   /// Unlike the previous function, this one will not try and get the
   /// information from it's parent.
-  /// \param IntrinsicInfo - same as \p TRI.
   void print(raw_ostream &os, ModuleSlotTracker &MST, LLT TypeToPrint,
              std::optional<unsigned> OpIdx, bool PrintDef, bool IsStandalone,
              bool ShouldPrintRegisterTies, unsigned TiedOperandIdx,
              const TargetRegisterInfo *TRI) const;
 
-  /// Same as print(os, TRI, IntrinsicInfo), but allows to specify the low-level
-  /// type to be printed the same way the full version of print(...) does it.
+  /// Same as print(os, TRI), but allows to specify the low-level type to be
+  /// printed the same way the full version of print(...) does it.
   void print(raw_ostream &os, LLT TypeToPrint,
              const TargetRegisterInfo *TRI = nullptr) const;
 

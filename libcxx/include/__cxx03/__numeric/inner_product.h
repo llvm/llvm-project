@@ -23,7 +23,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator1, class _InputIterator2, class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp
+_LIBCPP_HIDE_FROM_ABI _Tp
 inner_product(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _Tp __init) {
   for (; __first1 != __last1; ++__first1, (void)++__first2)
     __init = __init + *__first1 * *__first2;
@@ -31,7 +31,7 @@ inner_product(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2
 }
 
 template <class _InputIterator1, class _InputIterator2, class _Tp, class _BinaryOperation1, class _BinaryOperation2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp inner_product(
+_LIBCPP_HIDE_FROM_ABI _Tp inner_product(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,

@@ -1249,7 +1249,7 @@ struct ConvertVectorTransferRead final
 
     auto loc = op.getLoc();
     auto containerElemTy =
-        cast<MemRefType>(adaptor.getSource().getType()).getElementType();
+        cast<MemRefType>(adaptor.getBase().getType()).getElementType();
     Type emulatedElemTy = op.getType().getElementType();
     int emulatedBits = emulatedElemTy.getIntOrFloatBitWidth();
     int containerBits = containerElemTy.getIntOrFloatBitWidth();
@@ -1272,7 +1272,7 @@ struct ConvertVectorTransferRead final
                                                       adaptor.getPadding());
 
     auto stridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getSource());
+        rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
 
     OpFoldResult linearizedIndices;
     memref::LinearizedMemRefInfo linearizedInfo;
@@ -1294,7 +1294,7 @@ struct ConvertVectorTransferRead final
                                         emulatedPerContainerElem);
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
-        loc, VectorType::get(numElements, containerElemTy), adaptor.getSource(),
+        loc, VectorType::get(numElements, containerElemTy), adaptor.getBase(),
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices),
         newPadding);
 

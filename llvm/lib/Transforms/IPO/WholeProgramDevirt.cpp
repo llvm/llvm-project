@@ -298,7 +298,9 @@ wholeprogramdevirt::findLowestOffset(ArrayRef<VirtualCallTarget> Targets,
           ++Byte;
         }
       }
-      return (MinByte + I) * 8;
+      // Rounding up ensures the constant is always stored at address we
+      // can directly load from without misalignment.
+      return alignTo((MinByte + I) * 8, Size);
     NextI:;
     }
   }
@@ -1834,8 +1836,18 @@ bool DevirtModule::tryVirtualConstProp(
   if (!RetType)
     return false;
   unsigned BitWidth = RetType->getBitWidth();
+
+  // TODO: Since we can evaluated these constants at compile-time, we can save
+  // some space by calculating the smallest range of values that all these
+  // constants can fit in, then only allocate enough space to fit those values.
+  // At each callsite, we can get the original type by doing a sign/zero
+  // extension. For example, if we would store an i64, but we can see that all
+  // the values fit into an i16, then we can store an i16 before/after the
+  // vtable and at each callsite do a s/zext.
   if (BitWidth > 64)
     return false;
+
+  Align TypeAlignment = M.getDataLayout().getPrefTypeAlign(RetType);
 
   // Make sure that each function is defined, does not access memory, takes at
   // least one argument, does not use its first argument (which we assume is
@@ -1861,6 +1873,18 @@ bool DevirtModule::tryVirtualConstProp(
         Fn->arg_empty() || !Fn->arg_begin()->use_empty() ||
         Fn->getReturnType() != RetType)
       return false;
+
+    // This only works if the integer size is at most the alignment of the
+    // vtable. If the table is underaligned, then we can't guarantee that the
+    // constant will always be aligned to the integer type alignment. For
+    // example, if the table is `align 1`, we can never guarantee that an i32
+    // stored before/after the vtable is 32-bit aligned without changing the
+    // alignment of the new global.
+    GlobalVariable *GV = Target.TM->Bits->GV;
+    Align TableAlignment = M.getDataLayout().getValueOrABITypeAlignment(
+        GV->getAlign(), GV->getValueType());
+    if (TypeAlignment > TableAlignment)
+      return false;
   }
 
   for (auto &&CSByConstantArg : SlotInfo.ConstCSInfo) {
@@ -1880,6 +1904,9 @@ bool DevirtModule::tryVirtualConstProp(
 
     // Find an allocation offset in bits in all vtables associated with the
     // type.
+    // TODO: If there would be "holes" in the vtable that were added by
+    // padding, we could place i1s there to reduce any extra padding that
+    // would be introduced by the i1s.
     uint64_t AllocBefore =
         findLowestOffset(TargetsForSlot, /*IsAfter=*/false, BitWidth);
     uint64_t AllocAfter =
@@ -1910,6 +1937,14 @@ bool DevirtModule::tryVirtualConstProp(
     else
       setAfterReturnValues(TargetsForSlot, AllocAfter, BitWidth, OffsetByte,
                            OffsetBit);
+
+    // In an earlier check we forbade constant propagation from operating on
+    // tables whose alignment is less than the alignment needed for loading
+    // the constant. Thus, the address we take the offset from will always be
+    // aligned to at least this integer alignment. Now, we need to ensure that
+    // the offset is also aligned to this integer alignment to ensure we always
+    // have an aligned load.
+    assert(OffsetByte % TypeAlignment.value() == 0);
 
     if (RemarksEnabled || AreStatisticsEnabled())
       for (auto &&Target : TargetsForSlot)

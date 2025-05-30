@@ -10,7 +10,7 @@ target triple = "nvptx64-unknown-unknown"
 ; CHECK-LABEL: ex_zext
 define ptx_kernel void @ex_zext(ptr noalias readonly %data, ptr %res) {
 entry:
-; CHECK: ld.global.nc.u8
+; CHECK: ld.global.nc.b8
   %val = load i8, ptr %data
 ; CHECK: cvt.u32.u8
   %valext = zext i8 %val to i32
@@ -21,7 +21,7 @@ entry:
 ; CHECK-LABEL: ex_sext
 define ptx_kernel void @ex_sext(ptr noalias readonly %data, ptr %res) {
 entry:
-; CHECK: ld.global.nc.u8
+; CHECK: ld.global.nc.b8
   %val = load i8, ptr %data
 ; CHECK: cvt.s32.s8
   %valext = sext i8 %val to i32
@@ -32,7 +32,7 @@ entry:
 ; CHECK-LABEL: ex_zext_v2
 define ptx_kernel void @ex_zext_v2(ptr noalias readonly %data, ptr %res) {
 entry:
-; CHECK: ld.global.nc.v2.u8
+; CHECK: ld.global.nc.v2.b8
   %val = load <2 x i8>, ptr %data
 ; CHECK: cvt.u32.u16
   %valext = zext <2 x i8> %val to <2 x i32>
@@ -43,7 +43,7 @@ entry:
 ; CHECK-LABEL: ex_sext_v2
 define ptx_kernel void @ex_sext_v2(ptr noalias readonly %data, ptr %res) {
 entry:
-; CHECK: ld.global.nc.v2.u8
+; CHECK: ld.global.nc.v2.b8
   %val = load <2 x i8>, ptr %data
 ; CHECK: cvt.s32.s8
   %valext = sext <2 x i8> %val to <2 x i32>

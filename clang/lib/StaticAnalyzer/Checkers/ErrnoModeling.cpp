@@ -124,7 +124,7 @@ void ErrnoModeling::checkBeginFunction(CheckerContext &C) const {
     // of the data member `ErrnoDecl` of the singleton `ErrnoModeling` checker
     // object.
     const SymbolConjured *Sym = SVB.conjureSymbol(
-        nullptr, C.getLocationContext(),
+        C.getCFGElementRef(), C.getLocationContext(),
         ACtx.getLValueReferenceType(ACtx.IntTy), C.blockCount(), &ErrnoDecl);
 
     // The symbolic region is untyped, create a typed sub-region in it.
@@ -256,11 +256,11 @@ ProgramStateRef setErrnoForStdFailure(ProgramStateRef State, CheckerContext &C,
 
 ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
                                          CheckerContext &C,
-                                         const Expr *InvalE) {
+                                         ConstCFGElementRef Elem) {
   const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return State;
-  State = State->invalidateRegions(ErrnoR, InvalE, C.blockCount(),
+  State = State->invalidateRegions(ErrnoR, Elem, C.blockCount(),
                                    C.getLocationContext(), false);
   if (!State)
     return nullptr;

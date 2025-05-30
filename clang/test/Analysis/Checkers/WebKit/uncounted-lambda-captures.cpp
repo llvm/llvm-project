@@ -9,6 +9,16 @@ T&& move(T& t) {
   return static_cast<T&&>(t);
 }
 
+namespace ranges {
+
+template<typename IteratorType, typename CallbackType>
+void for_each(IteratorType first, IteratorType last, CallbackType callback) {
+  for (auto it = first; !(it == last); ++it)
+    callback(*it);
+}
+
+}
+
 }
 
 namespace WTF {
@@ -414,5 +424,28 @@ void capture_copy_in_lambda(CheckedObj& checked) {
   callFunctionOpaque([ptr]() mutable {
     // expected-warning@-1{{Captured raw-pointer 'ptr' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
     ptr->method();
+  });
+}
+
+class Iterator {
+public:
+  Iterator(void* array, unsigned long sizeOfElement, unsigned int index);
+  Iterator(const Iterator&);
+  Iterator& operator=(const Iterator&);
+  bool operator==(const Iterator&);
+
+  Iterator& operator++();
+  void* operator*();
+
+private:
+  void* current { nullptr };
+  unsigned long sizeOfElement { 0 };
+};
+
+void ranges_for_each(RefCountable* obj) {
+  int array[] = { 1, 2, 3, 4, 5 };
+  std::ranges::for_each(Iterator(array, sizeof(*array), 0), Iterator(array, sizeof(*array), 5), [&](void* item) {
+    obj->method();
+    ++(*static_cast<unsigned*>(item));
   });
 }

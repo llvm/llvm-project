@@ -23,6 +23,7 @@
 ; CHECK:      unsimplified_common_instructions: 5
 ; CHECK:      callee_users: 3
 ; CHECK-DEFAULT: inlining_default: 0
+; CHECK-DEFAULT: inlining_default: 1
 ; CHECK:      observation: 5
 ; CHECK-NOT:  observation: 6
 
