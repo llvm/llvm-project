@@ -12,11 +12,9 @@
 //    requires _Const && convertible_to<ranges::iterator_t<_View>, iterator_t<_Base>> &&
 //                 convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
 
-#include <iterator>
 #include <ranges>
 
 #include "../types.h"
-#include "test_iterators.h"
 #include "test_macros.h"
 
 struct NotSimpleViewIterEnd;

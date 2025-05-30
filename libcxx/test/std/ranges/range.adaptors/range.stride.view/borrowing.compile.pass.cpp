@@ -12,10 +12,8 @@
 // inline constexpr bool enable_borrowed_range<stride_view<V>> = ranges::enable_borrowed_range<V>;
 
 #include <ranges>
-#include <vector>
 
 #include "test_range.h"
-#include "types.h"
 
 static_assert(std::ranges::enable_borrowed_range< std::ranges::stride_view<BorrowedView>>);
 static_assert(!std::ranges::enable_borrowed_range< std::ranges::stride_view<NonBorrowedView>>);

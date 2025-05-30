@@ -14,7 +14,6 @@
 #include <ranges>
 
 #include "../types.h"
-#include "test_iterators.h"
 
 struct NonDefaultConstructibleIterator : InputIter<NonDefaultConstructibleIterator> {
   NonDefaultConstructibleIterator() = delete;
