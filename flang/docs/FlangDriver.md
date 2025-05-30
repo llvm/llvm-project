@@ -618,10 +618,10 @@ nvfortran defines `-fast` as
 
 ## FCC_OVERRIDE_OPTIONS
 
-The environment variable `FCC_OVERRIDE_OPTIONS` can be used to apply a list of
-edits to the input argument lists. The value of this environment variable is
-a space separated list of edits to perform. These edits are applied in order to
-the input argument lists. Edits should be one of the following forms:
+The environment variable `FCC_OVERRIDE_OPTIONS` can be used to edit flang's
+command line arguments. The value of this variable is a space-separated list of
+edits to perform. The edits are applied in the order in which they appear in
+`FCC_OVERRIDE_OPTIONS`. Each edit should be one of the following forms:
 
 - `#`: Silence information about the changes to the command line arguments.
 
