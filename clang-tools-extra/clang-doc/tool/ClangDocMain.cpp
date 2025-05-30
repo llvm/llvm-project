@@ -248,9 +248,10 @@ sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
 }
 
 llvm::Error runMappingPhase(tooling::ToolExecutor *Executor,
-  clang::doc::ClangDocContext &CDCtx, tooling::ArgumentsAdjuster &ArgAdjuster, bool IgnoreMappingFailures ) {
-  auto Err =
-      Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
+                            clang::doc::ClangDocContext &CDCtx,
+                            tooling::ArgumentsAdjuster &ArgAdjuster,
+                            bool IgnoreMappingFailures) {
+  auto Err = Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
   if (Err) {
     if (IgnoreMappingFailures) {
       llvm::errs() << "Error mapping decls in files. Clang-doc will ignore "
@@ -282,9 +283,7 @@ Example usage for a project using a compile commands database:
 )";
 
   auto Executor = ExitOnErr(clang::tooling::createExecutorFromCommandLineArgs(
-    argc, argv, ClangDocCategory, Overview));
-
-
+      argc, argv, ClangDocCategory, Overview));
 
   // Fail early if an invalid format was provided.
   std::string Format = getFormatString();
@@ -319,7 +318,8 @@ Example usage for a project using a compile commands database:
 
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
-  ExitOnErr(runMappingPhase(Executor.get(), CDCtx, ArgAdjuster, IgnoreMappingFailures));
+  ExitOnErr(runMappingPhase(Executor.get(), CDCtx, ArgAdjuster,
+                            IgnoreMappingFailures));
 
   // Collect values into output by key.
   // In ToolResults, the Key is the hashed USR and the value is the
