@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class DeclFromSubmoduleTestCase(TestBase):
+    # Requires DWARF debug info which is not retained when linking with link.exe.
+    @skipIfWindows
     def test_expr(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "return 0", lldb.SBFileSpec("main.cpp"))
