@@ -62,7 +62,6 @@ define i32 @test_call_known_max_range_attr_no_noundef() #0 {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    bl foo
-; CHECK-NEXT:    and w0, w0, #0x3ff
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
