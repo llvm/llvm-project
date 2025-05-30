@@ -59549,6 +59549,7 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   unsigned SizeInBits = VT.getSizeInBits();
   unsigned InSizeInBits = InVecVT.getSizeInBits();
   unsigned NumSubElts = VT.getVectorNumElements();
+  unsigned NumInElts = InVecVT.getVectorNumElements();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(N);
 
@@ -59615,22 +59616,22 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // If we're extracting an upper subvector from a broadcast we should just
-  // extract the lowest subvector instead which should allow
+  // If we're extracting an upper subvector see if we'd get the same elements if
+  // we extracted the lowest subvector instead which should allow
   // SimplifyDemandedVectorElts do more simplifications.
-  if (IdxVal != 0 && (InVec.getOpcode() == X86ISD::VBROADCAST ||
-                      InVec.getOpcode() == X86ISD::VBROADCAST_LOAD ||
-                      DAG.isSplatValue(InVec, /*AllowUndefs*/ false)))
-    return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
+  if (IdxVal != 0) {
+    bool AllEquiv = all_of(seq<unsigned>(NumSubElts), [&](unsigned I) {
+      return IsElementEquivalent(NumInElts, InVec, InVec, I, I + IdxVal);
+    });
+    if (AllEquiv)
+      return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
+  }
 
   // Check if we're extracting a whole broadcasted subvector.
   if (InVec.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) {
     auto *MemIntr = cast<MemIntrinsicSDNode>(InVec);
     EVT MemVT = MemIntr->getMemoryVT();
     if (MemVT == VT) {
-      // Just use the lowest subvector.
-      if (IdxVal != 0)
-        return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
       // If this is the only use, we can replace with a regular load (this may
       // have been missed by SimplifyDemandedVectorElts due to extra uses of the
       // memory chain).
