@@ -166,10 +166,14 @@ struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
                           TypeRange(adaptor.getFalseDestOperands()));
     if (failed(convertedFalseBlock))
       return failure();
-    Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
+    auto newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
         op, adaptor.getCondition(), *convertedTrueBlock,
         adaptor.getTrueDestOperands(), *convertedFalseBlock,
         adaptor.getFalseDestOperands());
+    if (auto weights = op.getBranchWeightsOrNull()) {
+      newOp.setBranchWeights(weights);
+      op.removeBranchWeightsAttr();
+    }
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
     newOp->setAttrs(op->getAttrDictionary());
