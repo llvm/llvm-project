@@ -286,8 +286,16 @@ LogicalResult cir::ContinueOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::CastOp::verify() {
-  const mlir::Type resType = getResult().getType();
-  const mlir::Type srcType = getSrc().getType();
+  mlir::Type resType = getResult().getType();
+  mlir::Type srcType = getSrc().getType();
+
+  if (mlir::isa<cir::VectorType>(srcType) &&
+      mlir::isa<cir::VectorType>(resType)) {
+    // Use the element type of the vector to verify the cast kind. (Except for
+    // bitcast, see below.)
+    srcType = mlir::dyn_cast<cir::VectorType>(srcType).getElementType();
+    resType = mlir::dyn_cast<cir::VectorType>(resType).getElementType();
+  }
 
   switch (getKind()) {
   case cir::CastKind::int_to_bool: {
