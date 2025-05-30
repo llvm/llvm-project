@@ -1406,12 +1406,12 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RV32VB-NEXT:    slli a7, a7, 16
 ; RV32VB-NEXT:    slli t0, t0, 24
 ; RV32VB-NEXT:    slli a5, a5, 8
-; RV32VB-NEXT:    slli a6, a6, 16
-; RV32VB-NEXT:    slli t1, t1, 24
 ; RV32VB-NEXT:    or a7, t0, a7
 ; RV32VB-NEXT:    or a4, a4, a5
 ; RV32VB-NEXT:    lbu a5, 12(a0)
 ; RV32VB-NEXT:    lbu t0, 13(a0)
+; RV32VB-NEXT:    slli a6, a6, 16
+; RV32VB-NEXT:    slli t1, t1, 24
 ; RV32VB-NEXT:    or a6, t1, a6
 ; RV32VB-NEXT:    lbu t1, 14(a0)
 ; RV32VB-NEXT:    lbu a0, 15(a0)
@@ -1767,41 +1767,41 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RV32VB-NEXT:    lbu a7, 55(a0)
 ; RV32VB-NEXT:    lbu t0, 75(a0)
 ; RV32VB-NEXT:    lbu t1, 82(a0)
+; RV32VB-NEXT:    lbu t2, 154(a0)
+; RV32VB-NEXT:    lbu t3, 161(a0)
 ; RV32VB-NEXT:    slli a2, a2, 8
 ; RV32VB-NEXT:    slli a3, a3, 16
 ; RV32VB-NEXT:    slli a4, a4, 24
-; RV32VB-NEXT:    or a1, a1, a2
-; RV32VB-NEXT:    or a3, a4, a3
-; RV32VB-NEXT:    lbu a2, 93(a0)
-; RV32VB-NEXT:    lbu a4, 105(a0)
-; RV32VB-NEXT:    lbu t2, 124(a0)
-; RV32VB-NEXT:    lbu t3, 144(a0)
 ; RV32VB-NEXT:    slli a7, a7, 8
 ; RV32VB-NEXT:    slli a5, a5, 16
 ; RV32VB-NEXT:    slli t0, t0, 24
-; RV32VB-NEXT:    slli a2, a2, 8
-; RV32VB-NEXT:    or a6, a6, a7
-; RV32VB-NEXT:    or a5, t0, a5
-; RV32VB-NEXT:    lbu a7, 154(a0)
-; RV32VB-NEXT:    lbu t0, 161(a0)
-; RV32VB-NEXT:    or a2, t1, a2
+; RV32VB-NEXT:    or a1, a1, a2
+; RV32VB-NEXT:    or a3, a4, a3
+; RV32VB-NEXT:    or a2, a6, a7
+; RV32VB-NEXT:    or a4, t0, a5
+; RV32VB-NEXT:    lbu a5, 93(a0)
+; RV32VB-NEXT:    lbu a6, 105(a0)
+; RV32VB-NEXT:    lbu a7, 124(a0)
+; RV32VB-NEXT:    lbu t0, 144(a0)
+; RV32VB-NEXT:    slli a5, a5, 8
+; RV32VB-NEXT:    or a5, t1, a5
 ; RV32VB-NEXT:    lbu a0, 163(a0)
-; RV32VB-NEXT:    slli a4, a4, 16
-; RV32VB-NEXT:    slli t0, t0, 24
-; RV32VB-NEXT:    or a4, t0, a4
+; RV32VB-NEXT:    slli a6, a6, 16
+; RV32VB-NEXT:    slli t3, t3, 24
+; RV32VB-NEXT:    or a6, t3, a6
 ; RV32VB-NEXT:    slli a0, a0, 8
-; RV32VB-NEXT:    or a0, t2, a0
-; RV32VB-NEXT:    slli t3, t3, 16
-; RV32VB-NEXT:    slli a7, a7, 24
-; RV32VB-NEXT:    or a7, a7, t3
+; RV32VB-NEXT:    or a0, a7, a0
+; RV32VB-NEXT:    slli t0, t0, 16
+; RV32VB-NEXT:    slli t2, t2, 24
+; RV32VB-NEXT:    or a7, t2, t0
 ; RV32VB-NEXT:    or a1, a1, a3
-; RV32VB-NEXT:    or a3, a6, a5
 ; RV32VB-NEXT:    or a2, a2, a4
+; RV32VB-NEXT:    or a3, a5, a6
 ; RV32VB-NEXT:    or a0, a0, a7
 ; RV32VB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32VB-NEXT:    vmv.v.x v8, a1
-; RV32VB-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32VB-NEXT:    vslide1down.vx v8, v8, a2
+; RV32VB-NEXT:    vslide1down.vx v8, v8, a3
 ; RV32VB-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32VB-NEXT:    ret
 ;
@@ -1893,52 +1893,52 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ;
 ; RVA22U64-LABEL: buildvec_v16i8_loads_gather:
 ; RVA22U64:       # %bb.0:
-; RVA22U64-NEXT:    lbu a1, 0(a0)
-; RVA22U64-NEXT:    lbu a2, 1(a0)
-; RVA22U64-NEXT:    lbu a3, 22(a0)
-; RVA22U64-NEXT:    lbu a4, 31(a0)
-; RVA22U64-NEXT:    lbu a6, 623(a0)
-; RVA22U64-NEXT:    lbu t0, 44(a0)
-; RVA22U64-NEXT:    lbu a7, 55(a0)
-; RVA22U64-NEXT:    lbu a5, 75(a0)
-; RVA22U64-NEXT:    lbu t1, 82(a0)
-; RVA22U64-NEXT:    slli a2, a2, 8
-; RVA22U64-NEXT:    slli a3, a3, 16
-; RVA22U64-NEXT:    slli a4, a4, 24
-; RVA22U64-NEXT:    or t2, a1, a2
-; RVA22U64-NEXT:    or t3, a4, a3
-; RVA22U64-NEXT:    lbu a2, 93(a0)
-; RVA22U64-NEXT:    lbu t4, 105(a0)
-; RVA22U64-NEXT:    lbu t6, 124(a0)
-; RVA22U64-NEXT:    lbu t5, 144(a0)
-; RVA22U64-NEXT:    slli t0, t0, 32
-; RVA22U64-NEXT:    slli a7, a7, 40
-; RVA22U64-NEXT:    slli a6, a6, 48
-; RVA22U64-NEXT:    slli a5, a5, 56
-; RVA22U64-NEXT:    slli a2, a2, 8
-; RVA22U64-NEXT:    or a7, a7, t0
-; RVA22U64-NEXT:    or a5, a5, a6
-; RVA22U64-NEXT:    lbu a3, 154(a0)
-; RVA22U64-NEXT:    lbu a1, 161(a0)
-; RVA22U64-NEXT:    or a2, t1, a2
-; RVA22U64-NEXT:    lbu a0, 163(a0)
-; RVA22U64-NEXT:    slli t4, t4, 16
-; RVA22U64-NEXT:    slli a1, a1, 24
-; RVA22U64-NEXT:    or a1, a1, t4
-; RVA22U64-NEXT:    slli t6, t6, 32
-; RVA22U64-NEXT:    slli a0, a0, 40
-; RVA22U64-NEXT:    or a0, a0, t6
-; RVA22U64-NEXT:    slli t5, t5, 48
+; RVA22U64-NEXT:    lbu a6, 0(a0)
+; RVA22U64-NEXT:    lbu a7, 1(a0)
+; RVA22U64-NEXT:    lbu t0, 22(a0)
+; RVA22U64-NEXT:    lbu t1, 31(a0)
+; RVA22U64-NEXT:    lbu t2, 623(a0)
+; RVA22U64-NEXT:    lbu a1, 44(a0)
+; RVA22U64-NEXT:    lbu a2, 55(a0)
+; RVA22U64-NEXT:    lbu a3, 75(a0)
+; RVA22U64-NEXT:    lbu t3, 82(a0)
+; RVA22U64-NEXT:    lbu t4, 154(a0)
+; RVA22U64-NEXT:    lbu t5, 161(a0)
+; RVA22U64-NEXT:    slli a7, a7, 8
+; RVA22U64-NEXT:    slli t0, t0, 16
+; RVA22U64-NEXT:    slli t1, t1, 24
+; RVA22U64-NEXT:    slli a1, a1, 32
+; RVA22U64-NEXT:    slli a2, a2, 40
+; RVA22U64-NEXT:    slli t2, t2, 48
 ; RVA22U64-NEXT:    slli a3, a3, 56
-; RVA22U64-NEXT:    or a3, a3, t5
-; RVA22U64-NEXT:    or a4, t2, t3
-; RVA22U64-NEXT:    or a5, a5, a7
-; RVA22U64-NEXT:    or a1, a1, a2
-; RVA22U64-NEXT:    or a0, a0, a3
-; RVA22U64-NEXT:    or a4, a4, a5
+; RVA22U64-NEXT:    or a6, a6, a7
+; RVA22U64-NEXT:    or t0, t1, t0
+; RVA22U64-NEXT:    or a7, a2, a1
+; RVA22U64-NEXT:    or a2, a3, t2
+; RVA22U64-NEXT:    lbu a3, 93(a0)
+; RVA22U64-NEXT:    lbu a5, 105(a0)
+; RVA22U64-NEXT:    lbu a1, 124(a0)
+; RVA22U64-NEXT:    lbu a4, 144(a0)
+; RVA22U64-NEXT:    slli a3, a3, 8
+; RVA22U64-NEXT:    or a3, t3, a3
+; RVA22U64-NEXT:    lbu a0, 163(a0)
+; RVA22U64-NEXT:    slli a5, a5, 16
+; RVA22U64-NEXT:    slli t5, t5, 24
+; RVA22U64-NEXT:    or a5, t5, a5
+; RVA22U64-NEXT:    slli a1, a1, 32
+; RVA22U64-NEXT:    slli a0, a0, 40
 ; RVA22U64-NEXT:    or a0, a0, a1
+; RVA22U64-NEXT:    slli a4, a4, 48
+; RVA22U64-NEXT:    slli t4, t4, 56
+; RVA22U64-NEXT:    or a1, t4, a4
+; RVA22U64-NEXT:    or a4, a6, t0
+; RVA22U64-NEXT:    or a2, a2, a7
+; RVA22U64-NEXT:    or a3, a3, a5
+; RVA22U64-NEXT:    or a0, a0, a1
+; RVA22U64-NEXT:    or a2, a2, a4
+; RVA22U64-NEXT:    or a0, a0, a3
 ; RVA22U64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RVA22U64-NEXT:    vmv.v.x v8, a4
+; RVA22U64-NEXT:    vmv.v.x v8, a2
 ; RVA22U64-NEXT:    vslide1down.vx v8, v8, a0
 ; RVA22U64-NEXT:    ret
 ;
@@ -2111,24 +2111,24 @@ define <16 x i8> @buildvec_v16i8_undef_low_half(ptr %p) {
 ;
 ; RV32VB-LABEL: buildvec_v16i8_undef_low_half:
 ; RV32VB:       # %bb.0:
-; RV32VB-NEXT:    lbu a1, 93(a0)
-; RV32VB-NEXT:    lbu a2, 82(a0)
-; RV32VB-NEXT:    lbu a3, 105(a0)
-; RV32VB-NEXT:    lbu a4, 124(a0)
-; RV32VB-NEXT:    slli a1, a1, 8
-; RV32VB-NEXT:    lbu a5, 144(a0)
-; RV32VB-NEXT:    lbu a6, 154(a0)
-; RV32VB-NEXT:    lbu a7, 161(a0)
-; RV32VB-NEXT:    or a1, a2, a1
+; RV32VB-NEXT:    lbu a1, 82(a0)
+; RV32VB-NEXT:    lbu a2, 93(a0)
+; RV32VB-NEXT:    lbu a3, 144(a0)
+; RV32VB-NEXT:    lbu a4, 154(a0)
+; RV32VB-NEXT:    lbu a5, 161(a0)
+; RV32VB-NEXT:    lbu a6, 105(a0)
+; RV32VB-NEXT:    lbu a7, 124(a0)
+; RV32VB-NEXT:    slli a2, a2, 8
+; RV32VB-NEXT:    or a1, a1, a2
 ; RV32VB-NEXT:    lbu a0, 163(a0)
-; RV32VB-NEXT:    slli a3, a3, 16
-; RV32VB-NEXT:    slli a7, a7, 24
-; RV32VB-NEXT:    or a2, a7, a3
+; RV32VB-NEXT:    slli a6, a6, 16
+; RV32VB-NEXT:    slli a5, a5, 24
+; RV32VB-NEXT:    or a2, a5, a6
 ; RV32VB-NEXT:    slli a0, a0, 8
-; RV32VB-NEXT:    or a0, a4, a0
-; RV32VB-NEXT:    slli a5, a5, 16
-; RV32VB-NEXT:    slli a6, a6, 24
-; RV32VB-NEXT:    or a3, a6, a5
+; RV32VB-NEXT:    or a0, a7, a0
+; RV32VB-NEXT:    slli a3, a3, 16
+; RV32VB-NEXT:    slli a4, a4, 24
+; RV32VB-NEXT:    or a3, a4, a3
 ; RV32VB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32VB-NEXT:    vmv.v.i v8, 0
 ; RV32VB-NEXT:    or a1, a1, a2
@@ -2186,25 +2186,25 @@ define <16 x i8> @buildvec_v16i8_undef_low_half(ptr %p) {
 ;
 ; RVA22U64-LABEL: buildvec_v16i8_undef_low_half:
 ; RVA22U64:       # %bb.0:
-; RVA22U64-NEXT:    lbu a1, 93(a0)
 ; RVA22U64-NEXT:    lbu a6, 82(a0)
-; RVA22U64-NEXT:    lbu a7, 105(a0)
-; RVA22U64-NEXT:    lbu a4, 124(a0)
-; RVA22U64-NEXT:    slli a1, a1, 8
-; RVA22U64-NEXT:    lbu a5, 144(a0)
-; RVA22U64-NEXT:    lbu a2, 154(a0)
-; RVA22U64-NEXT:    lbu a3, 161(a0)
-; RVA22U64-NEXT:    or a1, a6, a1
+; RVA22U64-NEXT:    lbu a7, 93(a0)
+; RVA22U64-NEXT:    lbu t0, 144(a0)
+; RVA22U64-NEXT:    lbu a4, 154(a0)
+; RVA22U64-NEXT:    lbu a5, 161(a0)
+; RVA22U64-NEXT:    lbu a1, 105(a0)
+; RVA22U64-NEXT:    lbu a2, 124(a0)
+; RVA22U64-NEXT:    slli a7, a7, 8
+; RVA22U64-NEXT:    or a3, a6, a7
 ; RVA22U64-NEXT:    lbu a0, 163(a0)
-; RVA22U64-NEXT:    slli a7, a7, 16
-; RVA22U64-NEXT:    slli a3, a3, 24
-; RVA22U64-NEXT:    or a3, a3, a7
-; RVA22U64-NEXT:    slli a4, a4, 32
+; RVA22U64-NEXT:    slli a1, a1, 16
+; RVA22U64-NEXT:    slli a5, a5, 24
+; RVA22U64-NEXT:    or a1, a1, a5
+; RVA22U64-NEXT:    slli a2, a2, 32
 ; RVA22U64-NEXT:    slli a0, a0, 40
-; RVA22U64-NEXT:    or a0, a0, a4
-; RVA22U64-NEXT:    slli a5, a5, 48
-; RVA22U64-NEXT:    slli a2, a2, 56
-; RVA22U64-NEXT:    or a2, a2, a5
+; RVA22U64-NEXT:    or a0, a0, a2
+; RVA22U64-NEXT:    slli t0, t0, 48
+; RVA22U64-NEXT:    slli a4, a4, 56
+; RVA22U64-NEXT:    or a2, a4, t0
 ; RVA22U64-NEXT:    or a1, a1, a3
 ; RVA22U64-NEXT:    or a0, a0, a2
 ; RVA22U64-NEXT:    or a0, a0, a1
@@ -2313,25 +2313,25 @@ define <16 x i8> @buildvec_v16i8_undef_high_half(ptr %p) {
 ; RV32VB-LABEL: buildvec_v16i8_undef_high_half:
 ; RV32VB:       # %bb.0:
 ; RV32VB-NEXT:    lbu a1, 1(a0)
-; RV32VB-NEXT:    lbu a2, 22(a0)
-; RV32VB-NEXT:    lbu a3, 31(a0)
-; RV32VB-NEXT:    lbu a4, 0(a0)
+; RV32VB-NEXT:    lbu a2, 0(a0)
+; RV32VB-NEXT:    lbu a3, 22(a0)
+; RV32VB-NEXT:    lbu a4, 31(a0)
 ; RV32VB-NEXT:    slli a1, a1, 8
-; RV32VB-NEXT:    slli a2, a2, 16
-; RV32VB-NEXT:    slli a3, a3, 24
-; RV32VB-NEXT:    or a1, a4, a1
-; RV32VB-NEXT:    lbu a4, 44(a0)
+; RV32VB-NEXT:    or a1, a2, a1
+; RV32VB-NEXT:    lbu a2, 44(a0)
 ; RV32VB-NEXT:    lbu a5, 55(a0)
-; RV32VB-NEXT:    or a2, a3, a2
-; RV32VB-NEXT:    lbu a3, 623(a0)
+; RV32VB-NEXT:    slli a3, a3, 16
+; RV32VB-NEXT:    slli a4, a4, 24
+; RV32VB-NEXT:    or a3, a4, a3
+; RV32VB-NEXT:    lbu a4, 623(a0)
 ; RV32VB-NEXT:    lbu a0, 75(a0)
 ; RV32VB-NEXT:    slli a5, a5, 8
-; RV32VB-NEXT:    or a4, a4, a5
-; RV32VB-NEXT:    slli a3, a3, 16
+; RV32VB-NEXT:    or a2, a2, a5
+; RV32VB-NEXT:    slli a4, a4, 16
 ; RV32VB-NEXT:    slli a0, a0, 24
-; RV32VB-NEXT:    or a0, a0, a3
-; RV32VB-NEXT:    or a1, a1, a2
-; RV32VB-NEXT:    or a0, a4, a0
+; RV32VB-NEXT:    or a0, a0, a4
+; RV32VB-NEXT:    or a1, a1, a3
+; RV32VB-NEXT:    or a0, a2, a0
 ; RV32VB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32VB-NEXT:    vmv.v.x v8, a1
 ; RV32VB-NEXT:    vslide1down.vx v8, v8, a0
@@ -2389,26 +2389,26 @@ define <16 x i8> @buildvec_v16i8_undef_high_half(ptr %p) {
 ; RVA22U64-LABEL: buildvec_v16i8_undef_high_half:
 ; RVA22U64:       # %bb.0:
 ; RVA22U64-NEXT:    lbu a1, 1(a0)
-; RVA22U64-NEXT:    lbu a2, 22(a0)
-; RVA22U64-NEXT:    lbu a3, 31(a0)
-; RVA22U64-NEXT:    lbu a4, 0(a0)
+; RVA22U64-NEXT:    lbu a2, 0(a0)
+; RVA22U64-NEXT:    lbu a3, 22(a0)
+; RVA22U64-NEXT:    lbu a4, 31(a0)
 ; RVA22U64-NEXT:    slli a1, a1, 8
-; RVA22U64-NEXT:    slli a2, a2, 16
-; RVA22U64-NEXT:    slli a3, a3, 24
-; RVA22U64-NEXT:    or a1, a1, a4
-; RVA22U64-NEXT:    or a2, a2, a3
-; RVA22U64-NEXT:    lbu a3, 44(a0)
-; RVA22U64-NEXT:    lbu a4, 55(a0)
-; RVA22U64-NEXT:    lbu a5, 623(a0)
-; RVA22U64-NEXT:    lbu a0, 75(a0)
-; RVA22U64-NEXT:    slli a3, a3, 32
-; RVA22U64-NEXT:    slli a4, a4, 40
-; RVA22U64-NEXT:    or a3, a3, a4
-; RVA22U64-NEXT:    slli a5, a5, 48
-; RVA22U64-NEXT:    slli a0, a0, 56
-; RVA22U64-NEXT:    or a0, a0, a5
 ; RVA22U64-NEXT:    or a1, a1, a2
-; RVA22U64-NEXT:    or a0, a0, a3
+; RVA22U64-NEXT:    lbu a2, 44(a0)
+; RVA22U64-NEXT:    lbu a5, 55(a0)
+; RVA22U64-NEXT:    slli a3, a3, 16
+; RVA22U64-NEXT:    slli a4, a4, 24
+; RVA22U64-NEXT:    or a3, a3, a4
+; RVA22U64-NEXT:    lbu a4, 623(a0)
+; RVA22U64-NEXT:    lbu a0, 75(a0)
+; RVA22U64-NEXT:    slli a2, a2, 32
+; RVA22U64-NEXT:    slli a5, a5, 40
+; RVA22U64-NEXT:    or a2, a2, a5
+; RVA22U64-NEXT:    slli a4, a4, 48
+; RVA22U64-NEXT:    slli a0, a0, 56
+; RVA22U64-NEXT:    or a0, a0, a4
+; RVA22U64-NEXT:    or a1, a1, a3
+; RVA22U64-NEXT:    or a0, a0, a2
 ; RVA22U64-NEXT:    or a0, a0, a1
 ; RVA22U64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RVA22U64-NEXT:    vmv.v.x v8, a0
@@ -2520,30 +2520,30 @@ define <16 x i8> @buildvec_v16i8_undef_edges(ptr %p) {
 ;
 ; RV32VB-LABEL: buildvec_v16i8_undef_edges:
 ; RV32VB:       # %bb.0:
-; RV32VB-NEXT:    lbu a1, 623(a0)
-; RV32VB-NEXT:    lbu a2, 55(a0)
-; RV32VB-NEXT:    lbu a3, 75(a0)
-; RV32VB-NEXT:    lbu a4, 31(a0)
-; RV32VB-NEXT:    lbu a5, 44(a0)
-; RV32VB-NEXT:    slli a2, a2, 8
-; RV32VB-NEXT:    slli a1, a1, 16
-; RV32VB-NEXT:    slli a3, a3, 24
-; RV32VB-NEXT:    or a2, a5, a2
-; RV32VB-NEXT:    lbu a5, 82(a0)
-; RV32VB-NEXT:    lbu a6, 93(a0)
+; RV32VB-NEXT:    lbu a1, 55(a0)
+; RV32VB-NEXT:    lbu a2, 31(a0)
+; RV32VB-NEXT:    lbu a3, 44(a0)
+; RV32VB-NEXT:    lbu a4, 623(a0)
+; RV32VB-NEXT:    lbu a5, 75(a0)
+; RV32VB-NEXT:    slli a1, a1, 8
 ; RV32VB-NEXT:    or a1, a3, a1
-; RV32VB-NEXT:    lbu a3, 105(a0)
+; RV32VB-NEXT:    lbu a3, 82(a0)
+; RV32VB-NEXT:    lbu a6, 93(a0)
+; RV32VB-NEXT:    slli a4, a4, 16
+; RV32VB-NEXT:    slli a5, a5, 24
+; RV32VB-NEXT:    or a4, a5, a4
+; RV32VB-NEXT:    lbu a5, 105(a0)
 ; RV32VB-NEXT:    lbu a0, 161(a0)
 ; RV32VB-NEXT:    slli a6, a6, 8
-; RV32VB-NEXT:    or a5, a5, a6
-; RV32VB-NEXT:    slli a3, a3, 16
+; RV32VB-NEXT:    or a3, a3, a6
+; RV32VB-NEXT:    slli a5, a5, 16
 ; RV32VB-NEXT:    slli a0, a0, 24
-; RV32VB-NEXT:    or a0, a0, a3
-; RV32VB-NEXT:    slli a4, a4, 24
-; RV32VB-NEXT:    or a1, a2, a1
-; RV32VB-NEXT:    or a0, a5, a0
+; RV32VB-NEXT:    or a0, a0, a5
+; RV32VB-NEXT:    slli a2, a2, 24
+; RV32VB-NEXT:    or a1, a1, a4
+; RV32VB-NEXT:    or a0, a3, a0
 ; RV32VB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32VB-NEXT:    vmv.v.x v8, a4
+; RV32VB-NEXT:    vmv.v.x v8, a2
 ; RV32VB-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32VB-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32VB-NEXT:    vslide1down.vx v8, v8, zero
@@ -2614,11 +2614,11 @@ define <16 x i8> @buildvec_v16i8_undef_edges(ptr %p) {
 ; RVA22U64-NEXT:    lbu a5, 75(a0)
 ; RVA22U64-NEXT:    slli a2, a2, 32
 ; RVA22U64-NEXT:    slli a3, a3, 40
-; RVA22U64-NEXT:    slli a4, a4, 48
-; RVA22U64-NEXT:    slli a5, a5, 56
 ; RVA22U64-NEXT:    or a2, a2, a3
 ; RVA22U64-NEXT:    lbu a3, 82(a0)
 ; RVA22U64-NEXT:    lbu a1, 93(a0)
+; RVA22U64-NEXT:    slli a4, a4, 48
+; RVA22U64-NEXT:    slli a5, a5, 56
 ; RVA22U64-NEXT:    or a4, a4, a5
 ; RVA22U64-NEXT:    lbu a5, 105(a0)
 ; RVA22U64-NEXT:    lbu a0, 161(a0)

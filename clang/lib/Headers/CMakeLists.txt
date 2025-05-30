@@ -18,6 +18,7 @@ set(core_files
   __stdarg_va_list.h
   stdatomic.h
   stdbool.h
+  stdcountof.h
   stdckdint.h
   stddef.h
   __stddef_header_macro.h
@@ -129,6 +130,10 @@ set(riscv_files
   riscv_ntlh.h
   sifive_vector.h
   andes_vector.h
+  )
+
+set(spirv_files
+  __clang_spirv_builtins.h
   )
 
 set(systemz_files
@@ -318,6 +323,7 @@ set(files
   ${ppc_files}
   ${ppc_htm_files}
   ${riscv_files}
+  ${spirv_files}
   ${systemz_files}
   ${ve_files}
   ${x86_files}
@@ -528,6 +534,7 @@ add_dependencies("clang-resource-headers"
                  "ppc-resource-headers"
                  "ppc-htm-resource-headers"
                  "riscv-resource-headers"
+                 "spirv-resource-headers"
                  "systemz-resource-headers"
                  "ve-resource-headers"
                  "webassembly-resource-headers"
@@ -561,6 +568,7 @@ add_header_target("gpu-resource-headers" "${gpu_files}")
 
 # Other header groupings
 add_header_target("hlsl-resource-headers" ${hlsl_files})
+add_header_target("spirv-resource-headers" ${spirv_files})
 add_header_target("opencl-resource-headers" ${opencl_files})
 add_header_target("llvm-libc-resource-headers" ${llvm_libc_wrapper_files})
 add_header_target("openmp-resource-headers" ${openmp_wrapper_files})
@@ -767,6 +775,12 @@ install(
   COMPONENT hlsl-resource-headers)
 
 install(
+  FILES ${spirv_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT spirv-resource-headers)
+
+install(
   FILES ${opencl_files}
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
@@ -835,6 +849,9 @@ if (NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-riscv-resource-headers
                            DEPENDS riscv-resource-headers
                            COMPONENT riscv-resource-headers)
+  add_llvm_install_targets(install-spirv-resource-headers
+                           DEPENDS spirv-resource-headers
+                           COMPONENT spirv-resource-headers)
   add_llvm_install_targets(install-systemz-resource-headers
                            DEPENDS systemz-resource-headers
                            COMPONENT systemz-resource-headers)

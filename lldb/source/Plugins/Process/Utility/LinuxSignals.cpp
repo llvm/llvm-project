@@ -27,6 +27,30 @@
 #ifndef SEGV_CPERR
 #define SEGV_CPERR 10
 #endif
+#ifndef SI_QUEUE
+#define SI_QUEUE -1
+#endif
+#ifndef SI_TIMER
+#define SI_TIMER -2
+#endif
+#ifndef SI_MESGQ
+#define SI_MESGQ -3
+#endif
+#ifndef SI_ASYNCIO
+#define SI_ASYNCIO -4
+#endif
+#ifndef SI_SIGIO
+#define SI_SIGIO -5
+#endif
+#ifndef SI_TKILL
+#define SI_TKILL -6
+#endif
+#ifndef SI_DETHREAD
+#define SI_DETHREAD -7
+#endif
+#ifndef SI_ASYNCNL
+#define SI_ASYNCNL -60
+#endif
 
 #define ADD_SIGCODE(signal_name, signal_value, code_name, code_value, ...)     \
   static_assert(signal_name == signal_value,                                   \
