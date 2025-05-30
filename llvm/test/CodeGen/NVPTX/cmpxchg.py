@@ -70,7 +70,7 @@ if __name__ == "__main__":
                     file=fp,
                 )
 
-                for  llvm_scope in LLVM_SCOPES:
+                for llvm_scope in LLVM_SCOPES:
                     # cluster ordering is supported from SM90 onwards
                     if sm < 90 and llvm_scope == "cluster":
                         continue
