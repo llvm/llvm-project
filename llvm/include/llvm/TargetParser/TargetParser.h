@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {
 
@@ -189,6 +190,11 @@ insertWaveSizeFeature(StringRef GPU, const Triple &T,
                       StringMap<bool> &Features);
 
 } // namespace AMDGPU
+
+std::optional<llvm::StringMap<bool>>
+getCPUDefaultTargetFeatures(StringRef CPU,
+                            ArrayRef<BasicSubtargetSubTypeKV> ProcDesc,
+                            ArrayRef<BasicSubtargetFeatureKV> ProcFeatures);
 } // namespace llvm
 
 #endif

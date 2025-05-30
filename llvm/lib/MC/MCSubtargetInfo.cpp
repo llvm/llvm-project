@@ -226,30 +226,6 @@ static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
   return Bits;
 }
 
-std::optional<llvm::StringMap<bool>> llvm::getCPUDefaultTargetFeatures(
-    StringRef CPU, ArrayRef<BasicSubtargetSubTypeKV> ProcDesc,
-    ArrayRef<BasicSubtargetFeatureKV> ProcFeatures) {
-  if (CPU.empty())
-    return std::nullopt;
-
-  const BasicSubtargetSubTypeKV *CPUEntry = Find(CPU, ProcDesc);
-  if (!CPUEntry)
-    return std::nullopt;
-
-  // Set the features implied by this CPU feature if there is a match.
-  FeatureBitset Bits;
-  llvm::StringMap<bool> DefaultFeatures;
-  SetImpliedBits(Bits, CPUEntry->Implies.getAsBitset(), ProcFeatures);
-
-  unsigned BitSize = Bits.size();
-  for (const BasicSubtargetFeatureKV &FE : ProcFeatures) {
-    assert(FE.Value < BitSize && "Target Feature is out of range");
-    if (Bits[FE.Value])
-      DefaultFeatures[FE.Key] = true;
-  }
-  return DefaultFeatures;
-}
-
 void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
                                           StringRef FS) {
   FeatureBits =

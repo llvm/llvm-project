@@ -14,9 +14,9 @@
 #ifndef LLVM_TARGETPARSER_PPCTARGETPARSER_H
 #define LLVM_TARGETPARSER_PPCTARGETPARSER_H
 
+#include "TargetParser.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
