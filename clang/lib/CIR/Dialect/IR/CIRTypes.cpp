@@ -553,15 +553,6 @@ LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
-// Floating-point and Float-point Vector type helpers
-//===----------------------------------------------------------------------===//
-
-bool cir::isFPOrFPVectorTy(mlir::Type t) {
-  assert(!cir::MissingFeatures::vectorType());
-  return isAnyFloatingPointType(t);
-}
-
-//===----------------------------------------------------------------------===//
 // FuncType Definitions
 //===----------------------------------------------------------------------===//
 
