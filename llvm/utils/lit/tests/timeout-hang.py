@@ -24,5 +24,9 @@ if testing_time <= grace_time:
     print("Testing finished within the grace period")
     sys.exit(0)
 else:
-    print("Testing took {}s, which is beyond the grace period of {}s".format(testing_time, grace_time))
+    print(
+        "Testing took {}s, which is beyond the grace period of {}s".format(
+            testing_time, grace_time
+        )
+    )
     sys.exit(1)
