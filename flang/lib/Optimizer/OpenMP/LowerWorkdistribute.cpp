@@ -346,6 +346,85 @@ struct TeamsWorkdistributeToSingle : public OpRewritePattern<omp::TeamsOp> {
   }
 };
 
+static std::optional<std::tuple<Operation *, bool, bool>>
+getNestedOpToIsolate(omp::TargetOp targetOp) {
+  auto *targetBlock = &targetOp.getRegion().front();
+  for (auto &op : *targetBlock) {
+    bool first = &op == &*targetBlock->begin();
+    bool last = op.getNextNode() == targetBlock->getTerminator();
+    if (first && last)
+      return std::nullopt;
+
+    if (isa<omp::TeamsOp, omp::ParallelOp>(&op))
+      return {{&op, first, last}};
+  }
+  return std::nullopt;
+}
+
+struct SplitTargetResult {
+  omp::TargetOp targetOp;
+  omp::TargetDataOp dataOp;
+};
+
+/// If multiple coexecutes are nested in a target regions, we will need to split
+/// the target region, but we want to preserve the data semantics of the
+/// original data region and avoid unnecessary data movement at each of the
+/// subkernels - we split the target region into a target_data{target}
+/// nest where only the outer one moves the data
+std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp,
+                                                 RewriterBase &rewriter) {
+
+  auto loc = targetOp->getLoc();
+  if (targetOp.getMapVars().empty()) {
+    LLVM_DEBUG(llvm::dbgs() << DEBUG_TYPE << " target region has no data maps\n");
+    return std::nullopt;
+  }
+
+  // Collect all map_entries with capture(ByRef)
+  SmallVector<mlir::Value> byRefMapInfos;
+  SmallVector<omp::MapInfoOp> MapInfos;
+  for (auto opr : targetOp.getMapVars()) {
+    auto mapInfo = cast<omp::MapInfoOp>(opr.getDefiningOp());
+    MapInfos.push_back(mapInfo);
+    if (mapInfo.getMapCaptureType() == omp::VariableCaptureKind::ByRef)
+      byRefMapInfos.push_back(opr);
+  }
+
+  // Create the new omp.target_data op with these collected map_entries
+  auto targetLoc = targetOp.getLoc();
+  rewriter.setInsertionPoint(targetOp);
+  auto device = targetOp.getDevice();
+  auto ifExpr = targetOp.getIfExpr();
+  auto deviceAddrVars = targetOp.getHasDeviceAddrVars();
+  auto devicePtrVars = targetOp.getIsDevicePtrVars();
+  auto targetDataOp = rewriter.create<omp::TargetDataOp>(loc, device, ifExpr, 
+                                                          mlir::ValueRange{byRefMapInfos},
+                                                          deviceAddrVars,
+                                                          devicePtrVars);
+
+  auto taregtDataBlock = rewriter.createBlock(&targetDataOp.getRegion());
+  rewriter.create<mlir::omp::TerminatorOp>(loc);
+  rewriter.setInsertionPointToStart(taregtDataBlock);
+
+  // Clone mapInfo ops inside omp.target_data region
+  IRMapping mapping;
+  for (auto mapInfo : MapInfos) {
+    rewriter.clone(*mapInfo, mapping);
+  }
+  // Clone omp.target from exisiting targetOp inside target_data region.
+  auto newTargetOp = rewriter.clone(*targetOp, mapping);
+
+  // Erase TargetOp and its MapInfoOps
+  rewriter.eraseOp(targetOp);
+  
+  for (auto mapInfo : MapInfos) {
+    auto mapInfoRes = mapInfo.getResult();
+    if (mapInfoRes.getUsers().empty()) 
+      rewriter.eraseOp(mapInfo);
+  }
+  return SplitTargetResult{targetOp, targetDataOp};
+}                                                  
+
 class LowerWorkdistributePass
     : public flangomp::impl::LowerWorkdistributeBase<LowerWorkdistributePass> {
 public:
@@ -372,6 +451,15 @@ public:
         signalPassFailure();
       }
     }
+    {
+      SmallVector<omp::TargetOp> targetOps;
+      op->walk([&](omp::TargetOp targetOp) { targetOps.push_back(targetOp); });
+      IRRewriter rewriter(&context);
+      for (auto targetOp : targetOps) {
+        auto res = splitTargetData(targetOp, rewriter);
+      }
+    }
+
   }
 };
 } // namespace
