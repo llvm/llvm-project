@@ -2192,7 +2192,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
 class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
                              public VPUnrollPartAccessor<2> {
   /// Descriptor for the reduction.
-  const RecurrenceDescriptor &RdxDesc;
+  const RecurKind Kind;
 
   /// The phi is part of an in-loop reduction.
   bool IsInLoop;
@@ -2211,16 +2211,24 @@ public:
                        VPValue &Start, bool IsInLoop = false,
                        bool IsOrdered = false, unsigned VFScaleFactor = 1)
       : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start),
-        RdxDesc(RdxDesc), IsInLoop(IsInLoop), IsOrdered(IsOrdered),
-        VFScaleFactor(VFScaleFactor) {
+        Kind(RdxDesc.getRecurrenceKind()), IsInLoop(IsInLoop),
+        IsOrdered(IsOrdered), VFScaleFactor(VFScaleFactor) {
+    assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
+  }
+  VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
+                       bool IsInLoop = false, bool IsOrdered = false,
+                       unsigned VFScaleFactor = 1)
+      : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start), Kind(Kind),
+        IsInLoop(IsInLoop), IsOrdered(IsOrdered), VFScaleFactor(VFScaleFactor) {
     assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
   }
 
   ~VPReductionPHIRecipe() override = default;
 
   VPReductionPHIRecipe *clone() override {
+
     auto *R = new VPReductionPHIRecipe(
-        dyn_cast_or_null<PHINode>(getUnderlyingValue()), RdxDesc,
+        dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
         *getOperand(0), IsInLoop, IsOrdered, VFScaleFactor);
     R->addOperand(getBackedgeValue());
     return R;
@@ -2240,9 +2248,7 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
-    return RdxDesc;
-  }
+  RecurKind getRecurrenceKind() const { return Kind; }
 
   /// Returns true, if the phi is part of an ordered reduction.
   bool isOrdered() const { return IsOrdered; }
