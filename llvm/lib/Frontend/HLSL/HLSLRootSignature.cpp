@@ -195,25 +195,24 @@ MDNode *MetadataBuilder::BuildRootSignature() {
 
 MDNode *MetadataBuilder::BuildRootFlags(const RootFlags &Flags) {
   IRBuilder<> Builder(Ctx);
-  return MDNode::get(Ctx, {
-                              MDString::get(Ctx, "RootFlags"),
-                              ConstantAsMetadata::get(
-                                  Builder.getInt32(llvm::to_underlying(Flags))),
-                          });
+  Metadata *Operands[] = {
+      MDString::get(Ctx, "RootFlags"),
+      ConstantAsMetadata::get(Builder.getInt32(llvm::to_underlying(Flags))),
+  };
+  return MDNode::get(Ctx, Operands);
 }
 
 MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
   IRBuilder<> Builder(Ctx);
-  return MDNode::get(
-      Ctx, {
-               MDString::get(Ctx, "RootConstants"),
-               ConstantAsMetadata::get(
-                   Builder.getInt32(llvm::to_underlying(Constants.Visibility))),
-               ConstantAsMetadata::get(Builder.getInt32(Constants.Reg.Number)),
-               ConstantAsMetadata::get(Builder.getInt32(Constants.Space)),
-               ConstantAsMetadata::get(
-                   Builder.getInt32(Constants.Num32BitConstants)),
-           });
+  Metadata *Operands[] = {
+      MDString::get(Ctx, "RootConstants"),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Constants.Visibility))),
+      ConstantAsMetadata::get(Builder.getInt32(Constants.Reg.Number)),
+      ConstantAsMetadata::get(Builder.getInt32(Constants.Space)),
+      ConstantAsMetadata::get(Builder.getInt32(Constants.Num32BitConstants)),
+  };
+  return MDNode::get(Ctx, Operands);
 }
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
@@ -221,16 +220,17 @@ MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   std::string Name;
   llvm::raw_string_ostream OS(Name);
   OS << "Root" << ClauseType(llvm::to_underlying(Descriptor.Type));
-  return MDNode::get(
-      Ctx, {
-               MDString::get(Ctx, OS.str()),
-               ConstantAsMetadata::get(Builder.getInt32(
-                   llvm::to_underlying(Descriptor.Visibility))),
-               ConstantAsMetadata::get(Builder.getInt32(Descriptor.Reg.Number)),
-               ConstantAsMetadata::get(Builder.getInt32(Descriptor.Space)),
-               ConstantAsMetadata::get(
-                   Builder.getInt32(llvm::to_underlying(Descriptor.Flags))),
-           });
+
+  Metadata *Operands[] = {
+      MDString::get(Ctx, OS.str()),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Descriptor.Visibility))),
+      ConstantAsMetadata::get(Builder.getInt32(Descriptor.Reg.Number)),
+      ConstantAsMetadata::get(Builder.getInt32(Descriptor.Space)),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Descriptor.Flags))),
+  };
+  return MDNode::get(Ctx, Operands);
 }
 
 MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
