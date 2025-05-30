@@ -1019,6 +1019,8 @@ std::optional<unsigned> Preprocessor::getStdLibCxxVersion() {
 }
 
 bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(unsigned FixedVersion) {
+  assert(FixedVersion >= 2000'00'00 && FixedVersion <= 2100'00'00 &&
+         "invalid value for __GLIBCXX__");
   std::optional<unsigned> Ver = getStdLibCxxVersion();
   if (!Ver)
     return false;
