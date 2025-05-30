@@ -505,7 +505,7 @@ bool ScalarType::classof(Type type) {
 }
 
 bool ScalarType::isValid(FloatType type) {
-  return llvm::is_contained({16u, 32u, 64u}, type.getWidth()) && !type.isBF16();
+  return llvm::is_contained({16u, 32u, 64u}, type.getWidth());
 }
 
 bool ScalarType::isValid(IntegerType type) {
