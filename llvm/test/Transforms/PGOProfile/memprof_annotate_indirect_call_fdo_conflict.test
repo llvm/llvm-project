@@ -25,18 +25,17 @@ entry:
   %fp = alloca ptr, align 8
   %0 = load ptr, ptr %fp, align 8
   ; This call already has FDO value profile metadata - should NOT be modified
+  ; CHECK: call void %0(), {{.*}} !prof !6
+  ; CHECK-NOT: call void %0(), {{.*}} !prof ![[NEWPROF:[0-9]+]]
   call void %0(), !dbg !5, !prof !6
-; CHECK: call void %0(), {{.*}} !prof !6
-; CHECK-NOT: call void %0(), {{.*}} !prof ![[NEWPROF:[0-9]+]]
 
-  ; This call does NOT have existing metadata - should get MemProf annotation
   %1 = load ptr, ptr %fp, align 8
+  ; This call does NOT have existing metadata - should get MemProf annotation
+  ; CHECK: call void %1(), {{.*}} !prof ![[NEWPROF:[0-9]+]]
   call void %1(), !dbg !7
-; CHECK: call void %1(), {{.*}} !prof ![[NEWPROF:[0-9]+]]
   ret void
 }
 
-; Existing FDO value profile metadata (should be preserved)
 !6 = !{!"VP", i32 0, i64 100, i64 9191153033785521275, i64 80, i64 -1069303473483922844, i64 20}
 
 ; CHECK: !6 = !{!"VP", i32 0, i64 100, i64 9191153033785521275, i64 80, i64 -1069303473483922844, i64 20}

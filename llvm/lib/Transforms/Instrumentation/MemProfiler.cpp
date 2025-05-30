@@ -95,7 +95,7 @@ static cl::opt<bool> ClInsertVersionCheck(
 // This flag may need to be replaced with -f[no-]memprof-reads.
 static cl::opt<bool> ClInstrumentReads("memprof-instrument-reads",
                                        cl::desc("instrument read instructions"),
-                                       cl::Hidden, cl::init(false));
+                                       cl::Hidden, cl::init(true));
 
 static cl::opt<bool>
     ClInstrumentWrites("memprof-instrument-writes",
@@ -177,8 +177,11 @@ static cl::opt<bool>
                         cl::desc("Salvage stale MemProf profile"),
                         cl::init(false), cl::Hidden);
 
-static cl::opt<bool> ClMemProfAttachCalleeGuids("memprof-attach-calleeguids",
-                                                cl::init(false));
+static cl::opt<bool> ClMemProfAttachCalleeGuids(
+    "memprof-attach-calleeguids",
+    cl::desc(
+        "Attach calleeguids as value profile metadata for indirect calls."),
+    cl::init(true), cl::Hidden);
 
 extern cl::opt<bool> MemProfReportHintedSizes;
 extern cl::opt<unsigned> MinClonedColdBytePercent;
@@ -974,8 +977,6 @@ static void addVPMetadata(Module &M, Instruction &I,
     return;
 
   if (I.getMetadata(LLVMContext::MD_prof)) {
-    // Use the existing helper function to check for indirect call
-    // target value profiling metadata
     uint64_t Unused;
     auto ExistingVD =
         getValueProfDataFromInst(I, IPVK_IndirectCallTarget, ~0U, Unused);
@@ -988,20 +989,17 @@ static void addVPMetadata(Module &M, Instruction &I,
   SmallVector<InstrProfValueData, 4> VDs;
   uint64_t TotalCount = 0;
 
-  for (GlobalValue::GUID CalleeGUID : CalleeGuids) {
-    // For MemProf, we don't have actual call counts, so we assign
-    // a weight of 1 to each potential target. This provides the
-    // information needed for indirect call promotion without
-    // specific count data.
+  for (const GlobalValue::GUID CalleeGUID : CalleeGuids) {
     InstrProfValueData VD;
     VD.Value = CalleeGUID;
-    VD.Count = 1; // Weight for ICP decision making
+    // For MemProf, we don't have actual call counts, so we assign
+    // a weight of 1 to each potential target.
+    VD.Count = 1;
     VDs.push_back(VD);
     TotalCount += VD.Count;
   }
 
   if (!VDs.empty()) {
-    // Attach value profile metadata for indirect call targets
     annotateValueSite(M, I, VDs, TotalCount, IPVK_IndirectCallTarget,
                       VDs.size());
   }
@@ -1075,12 +1073,16 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
   // (allocation info and the callsites).
   std::map<uint64_t, std::set<const AllocationInfo *>> LocHashToAllocInfo;
 
+  // Helper struct for maintaining refs to callsite data. As an alternative we
+  // could store a pointer to the CallSiteInfo struct but we also need the frame
+  // index. Using ArrayRefs instead makes it a little easier to read.
   struct CallSiteEntry {
     // Subset of frames for the corresponding CallSiteInfo.
     ArrayRef<Frame> Frames;
     // Potential targets for indirect calls.
     ArrayRef<GlobalValue::GUID> CalleeGuids;
 
+    // Only compare Frame contents.
     bool operator==(const CallSiteEntry &Other) const {
       return Frames.data() == Other.Frames.data() &&
              Frames.size() == Other.Frames.size();
