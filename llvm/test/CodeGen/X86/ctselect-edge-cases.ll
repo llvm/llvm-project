@@ -13,17 +13,11 @@ define i128 @test_ctselect_i128(i1 %cond, i128 %a, i128 %b) {
 ; X64-NEXT:    cmovneq %rsi, %rax
 ; X64-NEXT:    cmovneq %rdx, %r8
 ; X64-NEXT:    movq %r8, %rdx
-; X64-NEXT:    retq
+; X64:    retq
 ;
 ; X32-LABEL: test_ctselect_i128:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushl %edi
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 12
-; X32-NEXT:    .cfi_offset %esi, -12
-; X32-NEXT:    .cfi_offset %edi, -8
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32:         movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -33,15 +27,11 @@ define i128 @test_ctselect_i128(i1 %cond, i128 %a, i128 %b) {
 ; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl %edx, 12(%eax)
-; X32-NEXT:    movl %ecx, 8(%eax)
-; X32-NEXT:    movl %edi, 4(%eax)
+; X32-NEXT:    movl %edx, {{[0-9]+}}(%eax)
+; X32-NEXT:    movl %ecx, {{[0-9]+}}(%eax)
+; X32-NEXT:    movl %edi, {{[0-9]+}}(%eax)
 ; X32-NEXT:    movl %esi, (%eax)
-; X32-NEXT:    popl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    popl %edi
-; X32-NEXT:    .cfi_def_cfa_offset 4
-; X32-NEXT:    retl $4
+; X32:    retl $4
   %result = call i128 @llvm.ct.select.i128(i1 %cond, i128 %a, i128 %b)
   ret i128 %result
 }
@@ -53,16 +43,14 @@ define i1 @test_ctselect_i1(i1 %cond, i1 %a, i1 %b) {
 ; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    cmovnel %esi, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    retq
+; X64:    retq
 ;
 ; X32-LABEL: test_ctselect_i1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    cmovnel {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    # kill: def $al killed $al killed $eax
-; X32-NEXT:    retl
+; X32:    retl
   %result = call i1 @llvm.ct.select.i1(i1 %cond, i1 %a, i1 %b)
   ret i1 %result
 }
@@ -72,16 +60,16 @@ define i32 @test_ctselect_extremal_values(i1 %cond) {
 ; X64-LABEL: test_ctselect_extremal_values:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X64-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X64-NEXT:    movl $2147483647, %ecx
+; X64-NEXT:    movl $-2147483648, %eax
 ; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_ctselect_extremal_values:
 ; X32:       # %bb.0:
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X32-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X32-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X32-NEXT:    movl $2147483647, %ecx
+; X32-NEXT:    movl $-2147483648, %eax
 ; X32-NEXT:    cmovnel %ecx, %eax
 ; X32-NEXT:    retl
   %result = call i32 @llvm.ct.select.i32(i1 %cond, i32 2147483647, i32 -2147483648)
@@ -93,8 +81,8 @@ define float @test_ctselect_f32_special_values(i1 %cond) {
 ; X64-LABEL: test_ctselect_f32_special_values:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    movl $2143289344, %eax # imm = 0x7FC00000
-; X64-NEXT:    movl $2139095040, %ecx # imm = 0x7F800000
+; X64-NEXT:    movl $2143289344, %eax
+; X64-NEXT:    movl $2139095040, %ecx
 ; X64-NEXT:    cmovnel %eax, %ecx
 ; X64-NEXT:    movd %ecx, %xmm0
 ; X64-NEXT:    retq
@@ -102,8 +90,8 @@ define float @test_ctselect_f32_special_values(i1 %cond) {
 ; X32-LABEL: test_ctselect_f32_special_values:
 ; X32:       # %bb.0:
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; X32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X32-NEXT:    flds .LCPI3_0
+; X32-NEXT:    flds .LCPI3_1
 ; X32-NEXT:    jne .LBB3_2
 ; X32-NEXT:  # %bb.1:
 ; X32-NEXT:    fstp %st(1)
@@ -119,8 +107,8 @@ define double @test_ctselect_f64_special_values(i1 %cond) {
 ; X64-LABEL: test_ctselect_f64_special_values:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testb $1, %dil
-; X64-NEXT:    movabsq $9221120237041090560, %rax # imm = 0x7FF8000000000000
-; X64-NEXT:    movabsq $9218868437227405312, %rcx # imm = 0x7FF0000000000000
+; X64-NEXT:    movabsq $9221120237041090560, %rax
+; X64-NEXT:    movabsq $9218868437227405312, %rcx
 ; X64-NEXT:    cmovneq %rax, %rcx
 ; X64-NEXT:    movq %rcx, %xmm0
 ; X64-NEXT:    retq
@@ -128,8 +116,8 @@ define double @test_ctselect_f64_special_values(i1 %cond) {
 ; X32-LABEL: test_ctselect_f64_special_values:
 ; X32:       # %bb.0:
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; X32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X32-NEXT:    flds .LCPI4_0
+; X32-NEXT:    flds .LCPI4_1
 ; X32-NEXT:    jne .LBB4_2
 ; X32-NEXT:  # %bb.1:
 ; X32-NEXT:    fstp %st(1)
@@ -279,9 +267,9 @@ define ptr @test_ctselect_struct_ptr(i1 %cond, ptr %a, ptr %b) {
 define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 ; X64-LABEL: test_ctselect_deeply_nested:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
-; X64-NEXT:    movl {{[0-9]+}}(%rsp), %r11d
+; X64-NEXT:    movl 24(%rsp), %eax
+; X64-NEXT:    movl 16(%rsp), %r10d
+; X64-NEXT:    movl 8(%rsp), %r11d
 ; X64-NEXT:    testb $1, %dil
 ; X64-NEXT:    cmovnel %r8d, %r9d
 ; X64-NEXT:    testb $1, %sil
@@ -295,9 +283,7 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; X32-LABEL: test_ctselect_deeply_nested:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 8
-; X32-NEXT:    .cfi_offset %esi, -8
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32:         movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -310,8 +296,7 @@ define i32 @test_ctselect_deeply_nested(i1 %c1, i1 %c2, i1 %c3, i1 %c4, i32 %a, 
 ; X32-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    cmovnel %ecx, %eax
 ; X32-NEXT:    popl %esi
-; X32-NEXT:    .cfi_def_cfa_offset 4
-; X32-NEXT:    retl
+; X32:    retl
   %sel1 = call i32 @llvm.ct.select.i32(i1 %c1, i32 %a, i32 %b)
   %sel2 = call i32 @llvm.ct.select.i32(i1 %c2, i32 %sel1, i32 %c)
   %sel3 = call i32 @llvm.ct.select.i32(i1 %c3, i32 %sel2, i32 %d)
