@@ -200,7 +200,6 @@ void h(short n) { f(n); }
 // expected-note@-1{{while checking constraint satisfaction for template}}
 // expected-note@#GH62096-note1{{in instantiation}}
 // expected-note@#GH62096-note1{{while substituting template arguments into constraint expression here}}
-// expected-note@#GH62096-note2{{while substituting template arguments into constraint expression here}}
 // expected-note@#GH62096-note2{{while checking the satisfaction of concept}}
 // expected-note@#GH62096-err {{expression evaluates}}
 }
