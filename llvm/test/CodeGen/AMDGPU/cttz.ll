@@ -1455,9 +1455,9 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX10-GISEL-NEXT:    global_load_ushort v1, v0, s[2:3]
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-NEXT:    v_or_b32_e32 v2, 0x10000, v1
-; GFX10-GISEL-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v1
+; GFX10-GISEL-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v1
 ; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v2, v2
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0xffff, v2, vcc_lo
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, 0xffff, vcc_lo
 ; GFX10-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %val = load i16, ptr addrspace(1) %valptr

@@ -1787,11 +1787,12 @@ bool AMDGPUCodeGenPrepareImpl::visitICmpInst(ICmpInst &I) {
 
     auto SelectI = dyn_cast<SelectInst>(User);
 
-    if (isa<Constant>(SelectI->getOperand(1)) &&
-        !isa<Constant>(SelectI->getOperand(2)))
+    auto Op1 = SelectI->getOperand(1);
+    auto Op2 = SelectI->getOperand(2);
+
+    if (!UA.isDivergent(Op1) && UA.isDivergent(Op2))
       ShouldSwap++;
-    else if (!isa<Constant>(SelectI->getOperand(1)) &&
-             isa<Constant>(SelectI->getOperand(2)))
+    else if (UA.isDivergent(Op1) && !UA.isDivergent(Op2))
       ShouldSwap--;
   }
 

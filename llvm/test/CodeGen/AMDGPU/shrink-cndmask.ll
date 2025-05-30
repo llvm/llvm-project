@@ -206,10 +206,10 @@ define amdgpu_cs void @test_mixed(i32 %a, i32 %p, i32 %q, i32 %r, i32 %s, ptr ad
 define amdgpu_cs void @test_sgpr(i32 %a, i32 %p, i32 inreg %q, i32 inreg %r, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_sgpr:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v4, v1, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v5, 0, s0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v6, 0, s1, vcc_lo
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, -1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v5, s0, 0, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v6, s1, 0, vcc_lo
 ; GCN-NEXT:    global_store_b96 v[2:3], v[4:6], off
 ; GCN-NEXT:    s_endpgm
 .entry:
