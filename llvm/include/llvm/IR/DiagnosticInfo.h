@@ -505,6 +505,7 @@ public:
 
     explicit Argument(StringRef Str = "") : Key("String"), Val(Str) {}
     Argument(StringRef Key, const Value *V);
+    Argument(StringRef Key, const Instruction &I);
     Argument(StringRef Key, const Type *T);
     Argument(StringRef Key, StringRef S);
     Argument(StringRef Key, const char *S) : Argument(Key, StringRef(S)) {};
