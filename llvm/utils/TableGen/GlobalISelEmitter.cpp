@@ -321,7 +321,7 @@ public:
   void emitAdditionalImpl(raw_ostream &OS) override;
 
   void emitMIPredicateFns(raw_ostream &OS) override;
-  void emitRegPredicateFns(raw_ostream &OS) override;
+  void emitLeafPredicateFns(raw_ostream &OS) override;
   void emitI64ImmPredicateFns(raw_ostream &OS) override;
   void emitAPFloatImmPredicateFns(raw_ostream &OS) override;
   void emitAPIntImmPredicateFns(raw_ostream &OS) override;
@@ -1115,11 +1115,10 @@ Error GlobalISelEmitter::importChildMatcher(
     for (const TreePredicateCall &Call : SrcChild.getPredicateCalls()) {
       const TreePredicateFn &Predicate = Call.Fn;
 
-      if (!Predicate.hasGISelRegPredicateCode()) {
+      if (!Predicate.hasGISelLeafPredicateCode()) {
         return failedImport("Src pattern child has unsupported predicate");
-      } else {
-        OM.addPredicate<OperandRegPredicateMatcher>(Predicate);
       }
+      OM.addPredicate<OperandLeafPredicateMatcher>(Predicate);
     }
     return Error::success();
   }
@@ -2302,19 +2301,22 @@ void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
       "PatFrag predicates.");
 }
 
-void GlobalISelEmitter::emitRegPredicateFns(raw_ostream &OS) {
+void GlobalISelEmitter::emitLeafPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
   llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
                 [](const Record *R) {
-                  return !R->getValueAsString("GISelRegPredicateCode").empty();
+                  return (!R->getValueAsOptionalString("GISelLeafPredicateCode")
+                               .value_or(std::string())
+                               .empty());
                 });
-  emitRegPredicateFnsImpl<const Record *>(
+  emitLeafPredicateFnsImpl<const Record *>(
       OS,
       "  const auto &Operands = State.RecordedOperands;\n"
+      "  Register Reg = MO.getReg();\n"
       "  (void)Operands;",
       ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
       [](const Record *R) {
-        return R->getValueAsString("GISelRegPredicateCode");
+        return R->getValueAsString("GISelLeafPredicateCode");
       },
       "PatFrag predicates.");
 }

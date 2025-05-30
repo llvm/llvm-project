@@ -1293,19 +1293,21 @@ bool TreePredicateFn::hasGISelPredicateCode() const {
 }
 
 std::string TreePredicateFn::getGISelPredicateCode() const {
-  return std::string(
-      PatFragRec->getRecord()->getValueAsString("GISelPredicateCode"));
+  return PatFragRec->getRecord()->getValueAsString("GISelPredicateCode").str();
 }
 
-bool TreePredicateFn::hasGISelRegPredicateCode() const {
-  return !PatFragRec->getRecord()
-              ->getValueAsString("GISelRegPredicateCode")
-              .empty();
+bool TreePredicateFn::hasGISelLeafPredicateCode() const {
+  return (!PatFragRec->getRecord()
+               ->getValueAsOptionalString("GISelLeafPredicateCode")
+               .value_or(std::string())
+               .empty());
 }
 
-std::string TreePredicateFn::getGISelRegPredicateCode() const {
-  return std::string(
-      PatFragRec->getRecord()->getValueAsString("GISelRegPredicateCode"));
+std::string TreePredicateFn::getGISelLeafPredicateCode() const {
+  return PatFragRec->getRecord()
+      ->getValueAsOptionalString("GISelLeafPredicateCode")
+      .value_or(std::string())
+      .str();
 }
 
 StringRef TreePredicateFn::getImmType() const {

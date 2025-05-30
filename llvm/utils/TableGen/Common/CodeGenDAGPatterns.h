@@ -592,8 +592,8 @@ public:
 
   // If true, indicates that GlobalISel-based C++ code was supplied for checking
   // register operands.
-  bool hasGISelRegPredicateCode() const;
-  std::string getGISelRegPredicateCode() const;
+  bool hasGISelLeafPredicateCode() const;
+  std::string getGISelLeafPredicateCode() const;
 
 private:
   bool hasPredCode() const;
