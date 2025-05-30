@@ -794,6 +794,7 @@ enum class Operator {
   Gt,
   Identity,
   Intrinsic,
+  Le,
   Lt,
   Max,
   Min,
