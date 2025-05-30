@@ -11,8 +11,6 @@
 
 #include "Fortran.h"
 #include "flang/Common/enum-set.h"
-#include "llvm/ADT/StringRef.h"
-#include <optional>
 #include <vector>
 
 namespace Fortran::common {
@@ -115,7 +113,7 @@ public:
     DisableAllNonstandardWarnings();
     DisableAllUsageWarnings();
   }
-  bool applyCLIOption(llvm::StringRef input);
+  bool applyCLIOption(std::string_view input);
   bool AreWarningsDisabled() const { return disableAllWarnings_; }
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
   bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }

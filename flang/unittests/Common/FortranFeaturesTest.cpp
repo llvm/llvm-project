@@ -7,11 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
-#include "flang/Common/enum-class.h"
 #include "flang/Support/Fortran-features.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 namespace Fortran::common::FortranFeaturesHelpers {

@@ -99,11 +99,11 @@ LanguageFeatureControl::LanguageFeatureControl() {
 // used instead of static so that there can be unit tests for these
 // functions.
 namespace FortranFeaturesHelpers {
-// Check if Lower Case Hyphenated words are equal to Camel Case words.
+// Check if lower case hyphenated words are equal to camel case words.
 // Because of out use case we know that 'r' the camel case string is
 // well formed in the sense that it is a sequence [a-zA-Z]+[a-zA-Z0-9]*.
 // This is checked in the enum-class.h file.
-bool LowerHyphEqualCamelCase(llvm::StringRef l, llvm::StringRef r) {
+static bool LowerHyphEqualCamelCase(llvm::StringRef l, llvm::StringRef r) {
   size_t ls{l.size()}, rs{r.size()};
   if (ls < rs) {
     return false;
@@ -161,8 +161,9 @@ optional<std::pair<bool, T>> ParseCLIEnum(
     negated = true;
     input = input.drop_front(3);
   }
-  EnumClass::Predicate predicate{
-      [input](llvm::StringRef r) { return LowerHyphEqualCamelCase(input, r); }};
+  EnumClass::Predicate predicate{[input](std::string_view r) {
+    return LowerHyphEqualCamelCase(input, r);
+  }};
   optional<T> x = EnumClass::Find<T>(predicate, findIndex);
   return MapOption<T, std::pair<bool, T>>(
       x, [negated](T x) { return std::pair{!negated, x}; });
@@ -182,12 +183,13 @@ optional<std::pair<bool, LanguageFeature>> parseCLILanguageFeature(
 
 // Take a string from the CLI and apply it to the LanguageFeatureControl.
 // Return true if the option was applied recognized.
-bool LanguageFeatureControl::applyCLIOption(llvm::StringRef input) {
-  if (auto result = FortranFeaturesHelpers::parseCLILanguageFeature(input)) {
+bool LanguageFeatureControl::applyCLIOption(std::string_view input) {
+  llvm::StringRef inputRef{input};
+  if (auto result = FortranFeaturesHelpers::parseCLILanguageFeature(inputRef)) {
     EnableWarning(result->second, result->first);
     return true;
   } else if (auto result =
-                 FortranFeaturesHelpers::parseCLIUsageWarning(input)) {
+                 FortranFeaturesHelpers::parseCLIUsageWarning(inputRef)) {
     EnableWarning(result->second, result->first);
     return true;
   }
