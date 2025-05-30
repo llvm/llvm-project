@@ -1,0 +1,6 @@
+# XFAIL: system-darwin
+# XFAIL: system-windows
+# RUN: %lldb -b -s %s -c %p/Inputs/x86-64-linux-tkill.test | FileCheck %s
+
+thread list
+# CHECK: * thread #1, name = 'tkill.out', stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
