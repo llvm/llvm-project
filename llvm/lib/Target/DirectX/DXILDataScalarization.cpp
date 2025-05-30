@@ -27,6 +27,20 @@ static const int MaxVecSize = 4;
 
 using namespace llvm;
 
+// Recursively creates an array-like version of a given vector type.
+static Type *equivalentArrayTypeFromVector(Type *T) {
+  if (auto *VecTy = dyn_cast<VectorType>(T))
+    return ArrayType::get(VecTy->getElementType(),
+                          dyn_cast<FixedVectorType>(VecTy)->getNumElements());
+  if (auto *ArrayTy = dyn_cast<ArrayType>(T)) {
+    Type *NewElementType =
+        equivalentArrayTypeFromVector(ArrayTy->getElementType());
+    return ArrayType::get(NewElementType, ArrayTy->getNumElements());
+  }
+  // If it's not a vector or array, return the original type.
+  return T;
+}
+
 class DXILDataScalarizationLegacy : public ModulePass {
 
 public:
@@ -54,8 +68,8 @@ public:
   bool visitGetElementPtrInst(GetElementPtrInst &GEPI);
   bool visitCastInst(CastInst &CI) { return false; }
   bool visitBitCastInst(BitCastInst &BCI) { return false; }
-  bool visitInsertElementInst(InsertElementInst &IEI) { return false; }
-  bool visitExtractElementInst(ExtractElementInst &EEI) { return false; }
+  bool visitInsertElementInst(InsertElementInst &IEI);
+  bool visitExtractElementInst(ExtractElementInst &EEI);
   bool visitShuffleVectorInst(ShuffleVectorInst &SVI) { return false; }
   bool visitPHINode(PHINode &PHI) { return false; }
   bool visitLoadInst(LoadInst &LI);
@@ -90,20 +104,6 @@ DataScalarizerVisitor::lookupReplacementGlobal(Value *CurrOperand) {
   return nullptr; // Not found
 }
 
-// Recursively creates an array version of the given vector type.
-static Type *replaceVectorWithArray(Type *T, LLVMContext &Ctx) {
-  if (auto *VecTy = dyn_cast<VectorType>(T))
-    return ArrayType::get(VecTy->getElementType(),
-                          dyn_cast<FixedVectorType>(VecTy)->getNumElements());
-  if (auto *ArrayTy = dyn_cast<ArrayType>(T)) {
-    Type *NewElementType =
-        replaceVectorWithArray(ArrayTy->getElementType(), Ctx);
-    return ArrayType::get(NewElementType, ArrayTy->getNumElements());
-  }
-  // If it's not a vector or array, return the original type.
-  return T;
-}
-
 static bool isArrayOfVectors(Type *T) {
   if (ArrayType *ArrType = dyn_cast<ArrayType>(T))
     return isa<VectorType>(ArrType->getElementType());
@@ -116,8 +116,7 @@ bool DataScalarizerVisitor::visitAllocaInst(AllocaInst &AI) {
 
   ArrayType *ArrType = cast<ArrayType>(AI.getAllocatedType());
   IRBuilder<> Builder(&AI);
-  LLVMContext &Ctx = AI.getContext();
-  Type *NewType = replaceVectorWithArray(ArrType, Ctx);
+  Type *NewType = equivalentArrayTypeFromVector(ArrType);
   AllocaInst *ArrAlloca =
       Builder.CreateAlloca(NewType, nullptr, AI.getName() + ".scalarize");
   ArrAlloca->setAlignment(AI.getAlign());
@@ -171,6 +170,86 @@ bool DataScalarizerVisitor::visitStoreInst(StoreInst &SI) {
       SI.setOperand(I, NewGlobal);
   }
   return false;
+}
+
+static bool replaceDynamicInsertElementInst(InsertElementInst &IEI) {
+  IRBuilder<> Builder(&IEI);
+
+  Value *Vec = IEI.getOperand(0);
+  Value *Val = IEI.getOperand(1);
+  Value *Index = IEI.getOperand(2);
+  Type *IndexTy = Index->getType();
+
+  Type *ArrTy = equivalentArrayTypeFromVector(Vec->getType());
+  Value *ArrAlloca = Builder.CreateAlloca(ArrTy);
+  const uint64_t ArrNumElems = ArrTy->getArrayNumElements();
+
+  SmallVector<Value *, 4> GEPs(ArrNumElems);
+  for (unsigned I = 0; I < ArrNumElems; ++I) {
+    Value *EE = Builder.CreateExtractElement(Vec, I);
+    Value *GEP = Builder.CreateInBoundsGEP(
+        ArrTy, ArrAlloca,
+        {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, I)});
+    Builder.CreateStore(EE, GEP);
+    GEPs[I] = GEP;
+  }
+
+  Value *GEPForStore = Builder.CreateInBoundsGEP(
+      ArrTy, ArrAlloca, {ConstantInt::get(IndexTy, 0), Index});
+  Builder.CreateStore(Val, GEPForStore);
+
+  Value *NewIEI = PoisonValue::get(Vec->getType());
+  for (unsigned I = 0; I < ArrNumElems; ++I) {
+    Value *GEP = GEPs[I];
+    Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), GEP);
+    NewIEI =
+        Builder.CreateInsertElement(NewIEI, Load, ConstantInt::get(IndexTy, I));
+  }
+
+  IEI.replaceAllUsesWith(NewIEI);
+  IEI.eraseFromParent();
+  return true;
+}
+
+bool DataScalarizerVisitor::visitInsertElementInst(InsertElementInst &IEI) {
+  // If the index is a constant then we don't need to scalarize it
+  Value *Index = IEI.getOperand(2);
+  if (isa<ConstantInt>(Index))
+    return false;
+  return replaceDynamicInsertElementInst(IEI);
+}
+
+static bool replaceDynamicExtractElementInst(ExtractElementInst &EEI) {
+  IRBuilder<> Builder(&EEI);
+
+  Value *Index = EEI.getIndexOperand();
+  Type *IndexTy = Index->getType();
+
+  Type *ArrTy = equivalentArrayTypeFromVector(EEI.getVectorOperandType());
+  Value *ArrAlloca = Builder.CreateAlloca(ArrTy);
+  for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
+    Value *EE = Builder.CreateExtractElement(EEI.getVectorOperand(), I);
+    Value *GEP = Builder.CreateInBoundsGEP(
+        ArrTy, ArrAlloca,
+        {ConstantInt::get(IndexTy, 0), ConstantInt::get(IndexTy, I)});
+    Builder.CreateStore(EE, GEP);
+  }
+
+  Value *GEP = Builder.CreateInBoundsGEP(ArrTy, ArrAlloca,
+                                         {ConstantInt::get(IndexTy, 0), Index});
+  Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), GEP);
+
+  EEI.replaceAllUsesWith(Load);
+  EEI.eraseFromParent();
+  return true;
+}
+
+bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
+  // If the index is a constant then we don't need to scalarize it
+  Value *Index = EEI.getIndexOperand();
+  if (isa<ConstantInt>(Index))
+    return false;
+  return replaceDynamicExtractElementInst(EEI);
 }
 
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
@@ -257,7 +336,7 @@ static bool findAndReplaceVectors(Module &M) {
   for (GlobalVariable &G : M.globals()) {
     Type *OrigType = G.getValueType();
 
-    Type *NewType = replaceVectorWithArray(OrigType, Ctx);
+    Type *NewType = equivalentArrayTypeFromVector(OrigType);
     if (OrigType != NewType) {
       // Create a new global variable with the updated type
       // Note: Initializer is set via transformInitializer
