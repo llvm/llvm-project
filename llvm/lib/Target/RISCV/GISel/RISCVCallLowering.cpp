@@ -588,7 +588,7 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const DataLayout &DL = MF.getDataLayout();
   const Function &F = MF.getFunction();
-  CallingConv::ID CC = F.getCallingConv();
+  CallingConv::ID CC = Info.CallConv;
 
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
