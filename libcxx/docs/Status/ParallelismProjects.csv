@@ -39,5 +39,6 @@ Section,Description,Dependencies,Assignee,Complete
 | `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`simd_mask load constructor <https://github.com/llvm/llvm-project/pull/76610>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`simd_mask subscript operators <https://github.com/llvm/llvm-project/pull/68960>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`simd_mask copy functions <https://github.com/llvm/llvm-project/pull/78935>`_", None, Yin Zhang, |Complete|
+| `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "`simd_mask unary operators <https://github.com/llvm/llvm-project/pull/118468>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "Class template simd_mask implementation", None, Yin Zhang, |In Progress|
 | `[parallel.simd.mask.nonmembers] <https://wg21.link/N4808>`_, "simd_mask non-member operations", None, Yin Zhang, |In Progress|
