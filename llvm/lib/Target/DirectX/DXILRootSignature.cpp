@@ -118,11 +118,13 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
                                  MDNode *RootDescriptorNode) {
 
   if (RootDescriptorNode->getNumOperands() != 5)
-    return reportError(Ctx, "Invalid format for RootConstants Element");
+    return reportError(Ctx, "Invalid format for Root Descriptor Element");
 
   std::optional<StringRef> ElementText =
       extractMdStringValue(RootDescriptorNode, 0);
-  assert(!ElementText->empty());
+
+  if (!ElementText.has_value())
+    return reportError(Ctx, "Root Descriptor, first element is not a string.");
 
   dxbc::RootParameterHeader Header;
   Header.ParameterType =
@@ -273,9 +275,9 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
       if (!verifyRegisterSpace(Descriptor->RegisterSpace))
         return reportValueError(Ctx, "RegisterSpace",
                                 Descriptor->RegisterSpace);
-
-      if (!verifyDescriptorFlag(Descriptor->Flags))
-        return reportValueError(Ctx, "DescriptorFlag", Descriptor->Flags);
+      if (RSD.Version > 1)
+        if (!verifyDescriptorFlag(Descriptor->Flags))
+          return reportValueError(Ctx, "DescriptorFlag", Descriptor->Flags);
     }
   }
 
