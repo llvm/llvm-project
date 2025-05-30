@@ -907,6 +907,10 @@ public:
     BranchOnCount,
     BranchOnCond,
     Broadcast,
+    /// Start vector for reductions with 3 operands: the original start value,
+    /// the identity value for the reduction and an integer indicating the
+    /// scaling factor.
+    ReductionStartVector,
     ComputeAnyOfResult,
     ComputeFindLastIVResult,
     ComputeReductionResult,
@@ -2226,13 +2230,6 @@ public:
 
   /// Returns true, if the phi is part of an in-loop reduction.
   bool isInLoop() const { return IsInLoop; }
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return Op == getStartValue();
-  }
 };
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
