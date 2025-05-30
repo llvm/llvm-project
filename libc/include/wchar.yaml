@@ -42,6 +42,13 @@ functions:
     arguments: 
       - type: const wchar_t *
       - type: wchar_t
+  - name: wcsspn
+    standards:
+      - stdc
+    return_type: size_t
+    arguments: 
+      - type: const wchar_t *
+      - type: const wchar_t *
   - name: wmemcmp
     standards:
       - stdc
