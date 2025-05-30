@@ -12,7 +12,7 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
-#include "Protocol/ProtocolUtils.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBInstruction.h"

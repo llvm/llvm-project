@@ -8,7 +8,7 @@
 
 #include "Breakpoint.h"
 #include "DAP.h"
-#include "Protocol/ProtocolUtils.h"
+#include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBLineEntry.h"
@@ -64,7 +64,7 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
         "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(m_bp.GetTarget()));
     breakpoint.instructionReference = formatted_addr;
 
-    auto source = protocol::CreateSource(bp_addr, m_dap.target);
+    auto source = CreateSource(bp_addr, m_dap.target);
     if (!IsAssemblySource(source)) {
       auto line_entry = bp_addr.GetLineEntry();
       const auto line = line_entry.GetLine();

@@ -21,6 +21,7 @@ add_lldb_library(lldbDAP
   LLDBUtils.cpp
   OutputRedirector.cpp
   ProgressEvent.cpp
+  ProtocolUtils.cpp
   RunInTerminal.cpp
   SourceBreakpoint.cpp
   Transport.cpp
@@ -68,7 +69,6 @@ add_lldb_library(lldbDAP
   Protocol/ProtocolBase.cpp
   Protocol/ProtocolTypes.cpp
   Protocol/ProtocolRequests.cpp
-  Protocol/ProtocolUtils.cpp
 
   LINK_LIBS
     liblldb

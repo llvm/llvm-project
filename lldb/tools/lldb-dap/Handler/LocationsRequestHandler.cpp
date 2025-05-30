@@ -10,7 +10,7 @@
 #include "EventHelper.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
-#include "Protocol/ProtocolUtils.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDeclaration.h"
@@ -137,8 +137,7 @@ void LocationsRequestHandler::operator()(
       return;
     }
 
-    body.try_emplace("source",
-                     protocol::CreateSource(line_entry.GetFileSpec()));
+    body.try_emplace("source", CreateSource(line_entry.GetFileSpec()));
     if (int line = line_entry.GetLine())
       body.try_emplace("line", line);
     if (int column = line_entry.GetColumn())
@@ -153,7 +152,7 @@ void LocationsRequestHandler::operator()(
       return;
     }
 
-    body.try_emplace("source", protocol::CreateSource(decl.GetFileSpec()));
+    body.try_emplace("source", CreateSource(decl.GetFileSpec()));
     if (int line = decl.GetLine())
       body.try_emplace("line", line);
     if (int column = decl.GetColumn())

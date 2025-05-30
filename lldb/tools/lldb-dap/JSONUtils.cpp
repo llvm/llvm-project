@@ -10,7 +10,7 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
-#include "Protocol/ProtocolUtils.h"
+#include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
@@ -572,7 +572,7 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
   if (frame_name.empty()) {
     // If the function name is unavailable, display the pc address as a 16-digit
     // hex string, e.g. "0x0000000000012345"
-    frame_name = protocol::GetLoadAddressString(frame.GetPC());
+    frame_name = GetLoadAddressString(frame.GetPC());
   }
 
   // We only include `[opt]` if a custom frame format is not specified.
@@ -582,7 +582,7 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
   EmplaceSafeString(object, "name", frame_name);
 
   auto target = frame.GetThread().GetProcess().GetTarget();
-  auto source = protocol::CreateSource(frame.GetPCAddress(), target);
+  auto source = CreateSource(frame.GetPCAddress(), target);
   if (!IsAssemblySource(source)) {
     // This is a normal source with a valid line entry.
     auto line_entry = frame.GetLineEntry();

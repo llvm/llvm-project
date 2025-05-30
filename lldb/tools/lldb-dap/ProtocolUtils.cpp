@@ -12,7 +12,7 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBTarget.h"
 
-namespace lldb_dap::protocol {
+namespace lldb_dap {
 
 static bool ShouldDisplayAssemblySource(
     lldb::SBAddress address,
@@ -109,4 +109,4 @@ std::string GetLoadAddressString(const lldb::addr_t addr) {
   return "0x" + llvm::utohexstr(addr);
 }
 
-} // namespace lldb_dap::protocol
+} // namespace lldb_dap

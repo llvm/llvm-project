@@ -17,7 +17,7 @@
 
 #include "lldb/API/SBAddress.h"
 
-namespace lldb_dap::protocol {
+namespace lldb_dap {
 
 /// Create a "Source" JSON object as described in the debug adapter definition.
 ///
@@ -48,6 +48,6 @@ bool IsAssemblySource(const protocol::Source &source);
 /// Get the address as a 16-digit hex string, e.g. "0x0000000000012345"
 std::string GetLoadAddressString(const lldb::addr_t addr);
 
-} // namespace lldb_dap::protocol
+} // namespace lldb_dap
 
 #endif
