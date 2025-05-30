@@ -3001,12 +3001,12 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::BindlessINTEL:
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
-  case SPIRV::ArbitraryPrecisionFixedPoint:
-    return generateAPFixedPointInst(Call.get(), MIRBuilder, GR);
   case SPIRV::TernaryBitwiseINTEL:
     return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Block2DLoadStore:
     return generate2DBlockIOINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::ArbitraryPrecisionFixedPoint:
+    return generateAPFixedPointInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

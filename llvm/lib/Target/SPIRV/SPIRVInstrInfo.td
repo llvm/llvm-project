@@ -954,8 +954,6 @@ def OpSubgroup2DBlockStoreINTEL: Op<6235, (outs), (ins ID:$element_size, ID:$blo
                   ID:$block_count, ID:$src_ptr, ID:$dst_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord),
                   "OpSubgroup2DBlockStoreINTEL $element_size $block_width $block_height $block_count $src_ptr $dst_base_ptr $memory_width $memory_height $memory_pitch $coord">;
 
-
-
 //SPV_INTEL_arbitrary_precision_fixed_point
 def OpFixedSqrtINTEL: Op<5923, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
       "$res = OpFixedSqrtINTEL $result_type $input $sign $l $rl $q $o">;
