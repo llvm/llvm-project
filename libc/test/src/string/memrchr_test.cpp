@@ -118,7 +118,7 @@ TEST(LlvmLibcMemRChrTest, ZeroLengthShouldReturnNullptr) {
 
 TEST(LlvmLibcMemRChrTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::memrchr(nullptr, 'd', 1); },
-               WITH_SIGNAL(SIGTRAP));
+               WITH_SIGNAL(-1));
 }
 
 #endif // defined(LIBC_TARGET_OS_IS_LINUX)

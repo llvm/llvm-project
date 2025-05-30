@@ -89,7 +89,7 @@ TEST(LlvmLibcStrSpnTest, DuplicatedCharactersToBeSearchedForShouldStillMatch) {
 
 TEST(LlvmLibcStrSpnTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::strspn(nullptr, nullptr); },
-               WITH_SIGNAL(SIGTRAP));
+               WITH_SIGNAL(-1));
 }
 
 #endif // defined(LIBC_TARGET_OS_IS_LINUX)

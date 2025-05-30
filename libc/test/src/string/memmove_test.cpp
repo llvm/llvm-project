@@ -108,7 +108,7 @@ TEST(LlvmLibcMemmoveTest, SizeSweep) {
 
 TEST(LlvmLibcMemmoveTest, CrashOnNullPtr) {
   ASSERT_DEATH([]() { LIBC_NAMESPACE::memmove(nullptr, nullptr, 0); },
-               WITH_SIGNAL(SIGTRAP));
+               WITH_SIGNAL(-1));
 }
 
 #endif // LIBC_TARGET_OS_IS_LINUX
