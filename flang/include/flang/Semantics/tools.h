@@ -830,8 +830,8 @@ Operator OperationCode(
 }
 
 template <typename T, typename... Ts>
-Operator
-OperationCode(const evaluate::Operation<evaluate::Relational<T>, Ts...> &op) {
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Relational<T>, Ts...> &op) {
   switch (op.derived().opr) {
   case common::RelationalOperator::LT:
     return Operator::Lt;
@@ -855,26 +855,26 @@ Operator OperationCode(const evaluate::Operation<evaluate::Add<T>, Ts...> &op) {
 }
 
 template <typename T, typename... Ts>
-Operator
-OperationCode(const evaluate::Operation<evaluate::Subtract<T>, Ts...> &op) {
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Subtract<T>, Ts...> &op) {
   return Operator::Sub;
 }
 
 template <typename T, typename... Ts>
-Operator
-OperationCode(const evaluate::Operation<evaluate::Multiply<T>, Ts...> &op) {
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Multiply<T>, Ts...> &op) {
   return Operator::Mul;
 }
 
 template <typename T, typename... Ts>
-Operator
-OperationCode(const evaluate::Operation<evaluate::Divide<T>, Ts...> &op) {
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Divide<T>, Ts...> &op) {
   return Operator::Div;
 }
 
 template <typename T, typename... Ts>
-Operator
-OperationCode(const evaluate::Operation<evaluate::Power<T>, Ts...> &op) {
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Power<T>, Ts...> &op) {
   return Operator::Pow;
 }
 
@@ -885,8 +885,8 @@ Operator OperationCode(
 }
 
 template <typename T, common::TypeCategory C, typename... Ts>
-Operator
-OperationCode(const evaluate::Operation<evaluate::Convert<T, C>, Ts...> &op) {
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Convert<T, C>, Ts...> &op) {
   if constexpr (C == T::category) {
     return Operator::Resize;
   } else {
@@ -905,8 +905,8 @@ Operator OperationCode(const evaluate::ProcedureDesignator &proc);
 
 /// Return information about the top-level operation (ignoring parentheses):
 /// the operation code and the list of arguments.
-std::pair<operation::Operator, std::vector<SomeExpr>>
-GetTopLevelOperation(const SomeExpr &expr);
+std::pair<operation::Operator, std::vector<SomeExpr>> GetTopLevelOperation(
+    const SomeExpr &expr);
 
 /// Check if expr is same as x, or a sequence of Convert operations on x.
 bool IsSameOrConvertOf(const SomeExpr &expr, const SomeExpr &x);
