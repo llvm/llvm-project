@@ -281,6 +281,12 @@ Changes to LLDB
   When using reverse execution, `process continue --forward` returns to the
   forward execution.
 * LLDB now supports RISC-V 32-bit ELF core files.
+* LLDB now supports siginfo descriptions for Linux user-space signals. User space
+  signals will now have descriptions describing the method and sender.
+  ```
+    stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
+  ```
+* ELF Cores can now have their siginfo structures inspected using `thread siginfo`.
 
 ### Changes to lldb-dap
 
