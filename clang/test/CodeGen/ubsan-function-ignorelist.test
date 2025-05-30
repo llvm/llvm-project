@@ -74,7 +74,7 @@ fun:*dd=sanitize
 
 
 //--- test.c
-// CHECK-LABEL: define dso_local void @test
+// CHECK-LABEL: define dso_local void @add
 void add(int A) {
 // IGNORE: %inc = add nsw
 // SANITIZE: @llvm.sadd.with.overflow.i32
