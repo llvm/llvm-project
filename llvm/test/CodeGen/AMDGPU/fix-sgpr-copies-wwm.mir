@@ -9,8 +9,9 @@ body: |
     ; CHECK-LABEL: name: main
     ; CHECK: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[DEF1]], implicit $exec
-    ; CHECK-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed undef [[DEF]], killed undef [[V_READFIRSTLANE_B32_]], implicit-def dead $scc
+    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[DEF1]], implicit $exec
+    ; CHECK-NEXT: early-clobber %2:sreg_32 = STRICT_WWM killed undef [[V_READFIRSTLANE_B32_]], implicit $exec
+    ; CHECK-NEXT: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 killed undef [[DEF]], killed undef %2, implicit-def dead $scc
     ; CHECK-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, killed undef [[S_OR_B32_]], implicit-def dead $scc
     ; CHECK-NEXT: S_CMP_EQ_U32 killed undef [[S_AND_B32_]], 1, implicit-def $scc
     ; CHECK-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_XOR_B32 killed undef [[S_AND_B32_]], killed undef [[S_AND_B32_]], implicit-def dead $scc
