@@ -160,8 +160,7 @@ define i8 @t9(float %a) {
   ; Either operand could be NaN, but fast modifier applied.
 define i8 @t11(float %a, float %b) {
 ; CHECK-LABEL: @t11(
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp fast oge float [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[DOTV:%.*]] = select nnan ninf i1 [[DOTINV]], float [[A]], float [[B]]
+; CHECK-NEXT:    [[DOTV:%.*]] = call nnan ninf float @llvm.minnum.f32(float [[B:%.*]], float [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[DOTV]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
