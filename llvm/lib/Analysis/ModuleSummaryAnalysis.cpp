@@ -64,10 +64,8 @@ using namespace llvm::memprof;
 
 // Option to force edges cold which will block importing when the
 // -import-cold-multiplier is set to 0. Useful for debugging.
-namespace llvm {
-FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold =
+FunctionSummary::ForceSummaryHotnessType llvm::ForceSummaryEdgesCold =
     FunctionSummary::FSHT_None;
-} // namespace llvm
 
 static cl::opt<FunctionSummary::ForceSummaryHotnessType, true> FSEC(
     "force-summary-edges-cold", cl::Hidden, cl::location(ForceSummaryEdgesCold),
