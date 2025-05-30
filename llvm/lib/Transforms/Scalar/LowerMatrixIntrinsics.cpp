@@ -1338,7 +1338,11 @@ public:
     return Builder.CreateAdd(Sum, Mul);
   }
 
-  bool VisitExtractElt(ExtractElementInst *Inst, uint64_t Index) {
+  bool tryLowerExtractElement(ExtractElementInst *Inst) {
+    uint64_t Index;
+    if (!match(Inst->getOperand(1), m_ConstantInt(Index)))
+      return false;
+
     Value *Op0 = Inst->getOperand(0);
     auto *VTy = cast<VectorType>(Op0->getType());
 
@@ -1377,10 +1381,8 @@ public:
       if (ShapeMap.contains(U.getUser()))
         continue;
 
-      Value *Op1;
-      uint64_t Index;
-      if (match(U.getUser(), m_ExtractElt(m_Value(Op1), m_ConstantInt(Index))))
-        if (VisitExtractElt(cast<ExtractElementInst>(U.getUser()), Index))
+      if (auto *Extract = dyn_cast<ExtractElementInst>(U.getUser()))
+        if (tryLowerExtractElement(Extract))
           continue;
 
       if (!Flattened)
