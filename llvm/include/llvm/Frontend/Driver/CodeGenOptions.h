@@ -13,8 +13,6 @@
 #ifndef LLVM_FRONTEND_DRIVER_CODEGENOPTIONS_H
 #define LLVM_FRONTEND_DRIVER_CODEGENOPTIONS_H
 
-#include <string>
-
 namespace llvm {
 class Triple;
 class TargetLibraryInfoImpl;
@@ -48,19 +46,9 @@ enum class VectorLibrary {
   AMDLIBM             // AMD vector math library.
 };
 
-enum ProfileInstrKind {
-  ProfileNone,       // Profile instrumentation is turned off.
-  ProfileClangInstr, // Clang instrumentation to generate execution counts
-                     // to use with PGO.
-  ProfileIRInstr,    // IR level PGO instrumentation in LLVM.
-  ProfileCSIRInstr,  // IR level PGO context sensitive instrumentation in LLVM.
-};
-
 TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
                                   VectorLibrary Veclib);
 
-// Default filename used for profile generation.
-std::string getDefaultProfileGenName();
 } // end namespace llvm::driver
 
 #endif

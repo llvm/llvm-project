@@ -70,24 +70,24 @@ ProfileList::ProfileList(ArrayRef<std::string> Paths, SourceManager &SM)
 
 ProfileList::~ProfileList() = default;
 
-static StringRef getSectionName(llvm::driver::ProfileInstrKind Kind) {
+static StringRef getSectionName(CodeGenOptions::ProfileInstrKind Kind) {
   switch (Kind) {
-  case llvm::driver::ProfileInstrKind::ProfileNone:
+  case CodeGenOptions::ProfileNone:
     return "";
-  case llvm::driver::ProfileInstrKind::ProfileClangInstr:
+  case CodeGenOptions::ProfileClangInstr:
     return "clang";
-  case llvm::driver::ProfileInstrKind::ProfileIRInstr:
+  case CodeGenOptions::ProfileIRInstr:
     return "llvm";
-  case llvm::driver::ProfileInstrKind::ProfileCSIRInstr:
+  case CodeGenOptions::ProfileCSIRInstr:
     return "csllvm";
   case CodeGenOptions::ProfileIRSampleColdCov:
     return "sample-coldcov";
   }
-  llvm_unreachable("Unhandled llvm::driver::ProfileInstrKind enum");
+  llvm_unreachable("Unhandled CodeGenOptions::ProfileInstrKind enum");
 }
 
 ProfileList::ExclusionType
-ProfileList::getDefault(llvm::driver::ProfileInstrKind Kind) const {
+ProfileList::getDefault(CodeGenOptions::ProfileInstrKind Kind) const {
   StringRef Section = getSectionName(Kind);
   // Check for "default:<type>"
   if (SCL->inSection(Section, "default", "allow"))
@@ -118,7 +118,7 @@ ProfileList::inSection(StringRef Section, StringRef Prefix,
 
 std::optional<ProfileList::ExclusionType>
 ProfileList::isFunctionExcluded(StringRef FunctionName,
-                                llvm::driver::ProfileInstrKind Kind) const {
+                                CodeGenOptions::ProfileInstrKind Kind) const {
   StringRef Section = getSectionName(Kind);
   // Check for "function:<regex>=<case>"
   if (auto V = inSection(Section, "function", FunctionName))
@@ -132,13 +132,13 @@ ProfileList::isFunctionExcluded(StringRef FunctionName,
 
 std::optional<ProfileList::ExclusionType>
 ProfileList::isLocationExcluded(SourceLocation Loc,
-                                llvm::driver::ProfileInstrKind Kind) const {
+                                CodeGenOptions::ProfileInstrKind Kind) const {
   return isFileExcluded(SM.getFilename(SM.getFileLoc(Loc)), Kind);
 }
 
 std::optional<ProfileList::ExclusionType>
 ProfileList::isFileExcluded(StringRef FileName,
-                            llvm::driver::ProfileInstrKind Kind) const {
+                            CodeGenOptions::ProfileInstrKind Kind) const {
   StringRef Section = getSectionName(Kind);
   // Check for "source:<regex>=<case>"
   if (auto V = inSection(Section, "source", FileName))
