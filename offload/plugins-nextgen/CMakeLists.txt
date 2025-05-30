@@ -32,6 +32,8 @@ function(add_target_library target_name lib_name)
 
     NO_INSTALL_RPATH
     BUILDTREE_ONLY
+
+    DEPENDS LibomptargetOffloadErrcodes
   )
 
   llvm_update_compile_flags(${target_name})
