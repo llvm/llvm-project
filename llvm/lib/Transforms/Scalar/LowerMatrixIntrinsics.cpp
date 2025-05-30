@@ -1340,12 +1340,7 @@ public:
     return Builder.CreateAdd(Sum, Mul);
   }
 
-  bool VisitReduce(IntrinsicInst *Inst) {
-    FastMathFlags FMF = getFastMathFlags(Inst);
-
-    if (Inst->getType()->isFloatingPointTy() && !FMF.allowReassoc())
-      return false;
-
+  bool tryLowerIntrinsic(IntrinsicInst *Inst) {
     Value *Start = nullptr;
     Value *Op = nullptr;
     switch (Inst->getIntrinsicID()) {
@@ -1366,7 +1361,7 @@ public:
       Op = Inst->getOperand(0);
       break;
     default:
-      llvm_unreachable("unexpected intrinsic");
+      return false;
     }
 
     switch (Inst->getIntrinsicID()) {
@@ -1381,6 +1376,10 @@ public:
     default:
       break;
     }
+
+    FastMathFlags FMF = getFastMathFlags(Inst);
+    if (Inst->getType()->isFloatingPointTy() && !FMF.allowReassoc())
+      return false;
 
     auto *I = Inst2ColumnMatrix.find(Op);
     if (I == Inst2ColumnMatrix.end())
@@ -1485,26 +1484,9 @@ public:
       if (ShapeMap.contains(U.getUser()))
         continue;
 
-      if (auto *Intr = dyn_cast<IntrinsicInst>(U.getUser())) {
-        switch (Intr->getIntrinsicID()) {
-        case Intrinsic::vector_reduce_add:
-        case Intrinsic::vector_reduce_and:
-        case Intrinsic::vector_reduce_fadd:
-        case Intrinsic::vector_reduce_fmax:
-        case Intrinsic::vector_reduce_fmaximum:
-        case Intrinsic::vector_reduce_fmin:
-        case Intrinsic::vector_reduce_fminimum:
-        case Intrinsic::vector_reduce_fmul:
-        case Intrinsic::vector_reduce_mul:
-        case Intrinsic::vector_reduce_or:
-        case Intrinsic::vector_reduce_xor:
-          if (VisitReduce(Intr))
-            continue;
-          break;
-        default:
-          break;
-        }
-      }
+      if (auto *Intr = dyn_cast<IntrinsicInst>(U.getUser()))
+        if (tryLowerIntrinsic(Intr))
+          continue;
 
       if (!Flattened)
         Flattened = Matrix.embedInVector(Builder);
