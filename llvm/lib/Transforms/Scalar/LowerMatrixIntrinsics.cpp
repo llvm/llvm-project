@@ -19,6 +19,7 @@
 
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -32,6 +33,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -1337,6 +1339,57 @@ public:
     return Builder.CreateAdd(Sum, Mul);
   }
 
+  bool tryLowerShuffleVector(ShuffleVectorInst *Inst) {
+    Value *Op0 = Inst->getOperand(0), *Op1 = Inst->getOperand(1);
+    SmallVector<int> Mask;
+    Inst->getShuffleMask(Mask);
+
+    auto *Ty = cast<FixedVectorType>(Op0->getType());
+
+    if (Mask[0] == PoisonMaskElem)
+      return false;
+
+    // Check if the Mask implies a contiguous extraction, i.e. one column of a
+    // column-major matrix (or row of a row-major one).
+    for (int I = 1, E = Mask.size(); I != E; ++I) {
+      if (Mask[I] == PoisonMaskElem)
+        return false;
+      if (Mask[I-1] + 1 != Mask[I])
+        return false;
+    }
+
+    auto VectorForIndex = [&](int Idx) {
+      return Idx < int(Ty->getNumElements()) ? Op0 : Op1;
+    };
+
+    // Check if the Mask extracts from a single source operand.
+    Value *Op = VectorForIndex(Mask.front());
+    if (Op != VectorForIndex(Mask.back()))
+      return false;
+
+    auto *I = Inst2ColumnMatrix.find(Op);
+    if (I == Inst2ColumnMatrix.end())
+      return false;
+
+    const MatrixTy &M = I->second;
+
+    // Check if the Mask extracts one entire vector from the matrix.
+    if (Mask.size() != M.getStride())
+      return false;
+
+    // Check if the result would span two of the vectors in the matrix.
+    // TODO: we could handle this case by creating a new shuffle, if we see that
+    // happening in the wild.
+    if (0 != Mask[0] % M.getStride())
+      return false;
+
+    Value *Result = M.getVector(Mask[0] / M.getStride());
+    Inst->replaceAllUsesWith(Result);
+    Result->takeName(Inst);
+    Inst->eraseFromParent();
+    return true;
+  }
+
   /// Cache \p Matrix as result of \p Inst and update the uses of \p Inst. For
   /// users with shape information, there's nothing to do: they will use the
   /// cached value when they are lowered. For other users, \p Matrix is
@@ -1351,11 +1404,16 @@ public:
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
     for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
-      if (!ShapeMap.contains(U.getUser())) {
-        if (!Flattened)
-          Flattened = Matrix.embedInVector(Builder);
-        U.set(Flattened);
-      }
+      if (ShapeMap.contains(U.getUser()))
+        continue;
+
+      if (auto *Intr = dyn_cast<ShuffleVectorInst>(U.getUser()))
+        if (tryLowerShuffleVector(Intr))
+          continue;
+
+      if (!Flattened)
+        Flattened = Matrix.embedInVector(Builder);
+      U.set(Flattened);
     }
   }
 
