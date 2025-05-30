@@ -3719,7 +3719,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
       User *Shuffle = Use.getUser();
       ArrayRef<int> Mask;
 
-      if (!match(Shuffle, 
+      if (!match(Shuffle,
                  m_Shuffle(m_Specific(OldLoad), m_Undef(), m_Mask(Mask))))
         return std::nullopt;
 
@@ -3756,13 +3756,13 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
       Type *ElemTy = OldLoadTy->getElementType();
       FixedVectorType *NewLoadTy = FixedVectorType::get(ElemTy, NewNumElements);
       Value *PtrOp = OldLoad->getPointerOperand();
-      
+
       InstructionCost OldCost = TTI.getMemoryOpCost(
           Instruction::Load, OldLoad->getType(), OldLoad->getAlign(),
           OldLoad->getPointerAddressSpace(), CostKind);
-      InstructionCost NewCost = TTI.getMemoryOpCost(
-          Instruction::Load, NewLoadTy, OldLoad->getAlign(),
-          OldLoad->getPointerAddressSpace(), CostKind);
+      InstructionCost NewCost =
+          TTI.getMemoryOpCost(Instruction::Load, NewLoadTy, OldLoad->getAlign(),
+                              OldLoad->getPointerAddressSpace(), CostKind);
 
       using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
       auto NewUses = SmallVector<UseEntry, 4u>();
@@ -3776,7 +3776,8 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         NewUses.push_back({Shuffle, {}});
         auto &NewMask = NewUses.back().second;
         for (auto Index : OldMask)
-          NewMask.push_back(Index >= int(NewNumElements) ? Index - SizeDiff : Index);
+          NewMask.push_back(Index >= int(NewNumElements) ? Index - SizeDiff
+                                                         : Index);
 
         // Update costs.
         OldCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, OldLoadTy,
