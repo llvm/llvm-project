@@ -187,6 +187,54 @@ define void @test_write_before_memset_in_both_regions(ptr %result) {
   ret void
 }
 
+define void @test_offset_memset(ptr %result) {
+; CHECK-LABEL: @test_offset_memset(
+; CHECK-NEXT:    [[A1:%.*]] = alloca [4 x i32], align 8
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, ptr [[A1]], i32 1
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[RESULT:%.*]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[TMP1]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [ 4 x i32 ], align 8
+  %b = getelementptr i32, ptr %a, i32 1
+  call void @llvm.memset.p0.i64(ptr align 8 %b, i8 0, i64 12, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %result, ptr align 8 %a, i64 12, i1 false)
+  ret void
+}
+
+define void @test_offset_memsetcpy(ptr %result) {
+; CHECK-LABEL: @test_offset_memsetcpy(
+; CHECK-NEXT:    [[A1:%.*]] = alloca [4 x i32], align 8
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, ptr [[A1]], i32 1
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A1]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[RESULT:%.*]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [ 4 x i32 ], align 8
+  %b = getelementptr i32, ptr %a, i32 1
+  call void @llvm.memset.p0.i64(ptr align 8 %a, i8 0, i64 12, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %result, ptr align 8 %b, i64 12, i1 false)
+  ret void
+}
+
+define void @test_two_memset(ptr %result) {
+; CHECK-LABEL: @test_two_memset(
+; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i32], align 8
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A]], i32 3
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[B]], i8 1, i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %a = alloca [ 4 x i32 ], align 8
+  %b = getelementptr i32, ptr %a, i32 3
+  call void @llvm.memset.p0.i64(ptr align 8 %a, i8 0, i64 12, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 8 %b, i8 1, i64 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %result, ptr align 8 %a, i64 16, i1 false)
+  ret void
+}
+
 declare ptr @malloc(i64)
 declare void @free(ptr)
 
