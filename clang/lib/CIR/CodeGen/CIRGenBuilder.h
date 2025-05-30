@@ -96,6 +96,28 @@ public:
     llvm_unreachable("Unsupported record kind");
   }
 
+  /// Get a CIR named record type.
+  ///
+  /// If a record already exists and is complete, but the client tries to fetch
+  /// it with a different set of attributes, this method will crash.
+  cir::RecordType getCompleteRecordTy(llvm::ArrayRef<mlir::Type> members,
+                                      llvm::StringRef name, bool packed,
+                                      bool padded) {
+    const auto nameAttr = getStringAttr(name);
+    auto kind = cir::RecordType::RecordKind::Struct;
+    assert(!cir::MissingFeatures::astRecordDeclAttr());
+
+    // Create or get the record.
+    auto type =
+        getType<cir::RecordType>(members, nameAttr, packed, padded, kind);
+
+    // Complete an incomplete record or ensure the existing complete record
+    // matches the requested attributes.
+    type.complete(members, packed, padded);
+
+    return type;
+  }
+
   /// Get an incomplete CIR struct type. If we have a complete record
   /// declaration, we may create an incomplete type and then add the
   /// members, so \p rd here may be complete.

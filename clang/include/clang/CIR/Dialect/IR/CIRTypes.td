@@ -474,6 +474,18 @@ def CIR_RecordType : CIR_Type<"Record", "record",
   let genVerifyDecl = 1;
 
   let builders = [
+    // Create an identified and complete record type.
+    TypeBuilder<(ins
+      "llvm::ArrayRef<mlir::Type>":$members,
+      "mlir::StringAttr":$name,
+      "bool":$packed,
+      "bool":$padded,
+      "RecordKind":$kind
+    ), [{
+      return $_get($_ctxt, members, name, /*complete=*/true, packed, padded,
+                   kind);
+    }]>,
+
     // Create an identified and incomplete record type.
     TypeBuilder<(ins
       "mlir::StringAttr":$name,
