@@ -136,7 +136,9 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
     space visibility flags
     numDescriptors offset
 
-    mipLODBias
+    mipLODBias addressU addressV addressW
+    maxAnisotropy comparisonFunc borderColor
+    minLOD maxLOD
 
     unbounded
     DESCRIPTOR_RANGE_OFFSET_APPEND
@@ -168,6 +170,27 @@ TEST_F(LexHLSLRootSignatureTest, ValidLexAllTokensTest) {
     shader_visibility_pixel
     shader_visibility_amplification
     shader_visibility_mesh
+
+    TEXTURE_ADDRESS_WRAP
+    TEXTURE_ADDRESS_MIRROR
+    TEXTURE_ADDRESS_CLAMP
+    TEXTURE_ADDRESS_BORDER
+    TEXTURE_ADDRESS_MIRRORONCE
+
+    comparison_never
+    comparison_less
+    comparison_equal
+    comparison_less_equal
+    comparison_greater
+    comparison_not_equal
+    comparison_greater_equal
+    comparison_always
+
+    STATIC_BORDER_COLOR_TRANSPARENT_BLACK
+    STATIC_BORDER_COLOR_OPAQUE_BLACK
+    STATIC_BORDER_COLOR_OPAQUE_WHITE
+    STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT
+    STATIC_BORDER_COLOR_OPAQUE_WHITE_UINT
   )cc";
   auto TokLoc = SourceLocation();
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);

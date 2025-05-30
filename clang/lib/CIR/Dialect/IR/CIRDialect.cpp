@@ -1132,6 +1132,9 @@ void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
   cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
   odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
+
+  odsState.addAttribute(getGlobalVisibilityAttrName(odsState.name),
+                        cir::VisibilityAttr::get(odsBuilder.getContext()));
 }
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
@@ -1562,6 +1565,20 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
     return {};
 
   return elements[index];
+}
+
+//===----------------------------------------------------------------------===//
+// VecShuffleDynamicOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::VecShuffleDynamicOp::verify() {
+  // The number of elements in the two input vectors must match.
+  if (getVec().getType().getSize() !=
+      mlir::cast<cir::VectorType>(getIndices().getType()).getSize()) {
+    return emitOpError() << ": the number of elements in " << getVec().getType()
+                         << " and " << getIndices().getType() << " don't match";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
