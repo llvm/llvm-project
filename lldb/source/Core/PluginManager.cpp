@@ -1162,6 +1162,36 @@ PluginManager::GetSymbolVendorCreateCallbackAtIndex(uint32_t idx) {
   return GetSymbolVendorInstances().GetCallbackAtIndex(idx);
 }
 
+#pragma mark SourceLocator
+
+struct SourceLocatorInstance
+    : public PluginInstance<SourceLocatorCreateInstance> {
+  SourceLocatorInstance(llvm::StringRef name, llvm::StringRef description,
+                        CallbackType create_callback,
+                        SourceLocatorLocateSourceFile locate_source_file)
+      : PluginInstance(name, description, create_callback),
+        locate_source_file(locate_source_file) {}
+  SourceLocatorLocateSourceFile locate_source_file;
+};
+typedef PluginInstances<SourceLocatorInstance> SourceLocatorInstances;
+
+static SourceLocatorInstances &GetSourceLocatorInstances() {
+  static SourceLocatorInstances g_instances;
+  return g_instances;
+}
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    SourceLocatorCreateInstance create_callback,
+    SourceLocatorLocateSourceFile locate_source_file) {
+  return GetSourceLocatorInstances().RegisterPlugin(
+      name, description, create_callback, locate_source_file);
+}
+
+bool PluginManager::UnregisterPlugin(
+    SourceLocatorCreateInstance create_callback) {
+  return GetSourceLocatorInstances().UnregisterPlugin(create_callback);
+}
+
 #pragma mark SymbolLocator
 
 struct SymbolLocatorInstance
@@ -1237,6 +1267,22 @@ PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec,
   return {};
 }
 
+std::optional<FileSpec>
+PluginManager::LocateSourceFile(const ModuleSpec &module_spec,
+                                const FileSpec &file_spec) {
+  auto instances = GetSourceLocatorInstances().GetSnapshot();
+  for (auto &instance : instances) {
+    if (instance.locate_source_file) {
+      std::optional<FileSpec> result;
+      {
+        result = instance.locate_source_file(module_spec, file_spec);
+      }
+      if (result)
+        return *result;
+    }
+  }
+  return std::nullopt;
+}
 FileSpec PluginManager::LocateExecutableSymbolFile(
     const ModuleSpec &module_spec, const FileSpecList &default_search_paths,
     StatisticsMap &map) {
@@ -1820,6 +1866,7 @@ static constexpr llvm::StringLiteral kPlatformPluginName("platform");
 static constexpr llvm::StringLiteral kProcessPluginName("process");
 static constexpr llvm::StringLiteral kTracePluginName("trace");
 static constexpr llvm::StringLiteral kObjectFilePluginName("object-file");
+static constexpr llvm::StringLiteral kSourceFilePluginName("source-file");
 static constexpr llvm::StringLiteral kSymbolFilePluginName("symbol-file");
 static constexpr llvm::StringLiteral kSymbolLocatorPluginName("symbol-locator");
 static constexpr llvm::StringLiteral kJITLoaderPluginName("jit-loader");
@@ -1882,6 +1929,14 @@ bool PluginManager::CreateSettingForSymbolLocatorPlugin(
     llvm::StringRef description, bool is_global_property) {
   return CreateSettingForPlugin(debugger, kSymbolLocatorPluginName,
                                 "Settings for symbol locator plug-ins",
+                                properties_sp, description, is_global_property);
+}
+
+bool PluginManager::CreateSettingForSourceLocatorPlugin(
+    Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+    llvm::StringRef description, bool is_global_property) {
+  return CreateSettingForPlugin(debugger, kSymbolLocatorPluginName,
+                                "Settings for source locator plugins",
                                 properties_sp, description, is_global_property);
 }
 
