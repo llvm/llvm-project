@@ -3776,8 +3776,9 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         NewUses.push_back({Shuffle, {}});
         auto &NewMask = NewUses.back().second;
         for (auto Index : OldMask)
-          NewMask.push_back(Index >= int(NewNumElements) ? Index - SizeDiff
-                                                         : Index);
+          NewMask.push_back(Index >= static_cast<int>(OldNumElements)
+                                ? Index - SizeDiff
+                                : Index);
 
         // Update costs.
         OldCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, OldLoadTy,
