@@ -439,9 +439,9 @@ define amdgpu_cs void @test_f32_oeq(float %a, float %p, float %q, ptr addrspace(
 define amdgpu_cs void @test_f32_negative_modifiers(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_negative_modifiers:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_neq_f32_e32 vcc_lo, 2.0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -v1, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, -v2, vcc_lo
+; GCN-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 2.0, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v1, 0, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v1, -v2, 0, vcc_lo
 ; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
 ; GCN-NEXT:    s_endpgm
 .entry:

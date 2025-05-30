@@ -314,6 +314,7 @@ public:
   Value *emitSqrtIEEE2ULP(IRBuilder<> &Builder, Value *Src,
                           FastMathFlags FMF) const;
   bool swapSelectOperands(CmpInst &I);
+  bool isFnegOrFabs(Value &V);
 
 public:
   bool visitFDiv(BinaryOperator &I);
@@ -893,6 +894,23 @@ static Value *emitRsqIEEE1ULP(IRBuilder<> &Builder, Value *Src,
   return Builder.CreateFMul(Rsq, OutputScaleFactor);
 }
 
+bool AMDGPUCodeGenPrepareImpl::isFnegOrFabs(Value &V) {
+  Instruction *I = dyn_cast<Instruction>(&V);
+  if (!I)
+    return false;
+
+  if (I->getOpcode() == Instruction::FNeg)
+    return true;
+
+  if (!isa<CallInst>(I))
+    return false;
+
+  auto CallI = dyn_cast<CallInst>(I);
+  auto CallF = CallI->getCalledFunction();
+  return CallF->isIntrinsic() && CallF->getIntrinsicID() == Intrinsic::fabs;
+  return true;
+}
+
 // check if select operands should be swapped
 // so that v_cndmask can be later shrinked into vop2
 bool AMDGPUCodeGenPrepareImpl::swapSelectOperands(CmpInst &I) {
@@ -908,6 +926,11 @@ bool AMDGPUCodeGenPrepareImpl::swapSelectOperands(CmpInst &I) {
     auto Op1 = SelectI->getOperand(1);
     auto Op2 = SelectI->getOperand(2);
 
+    if (isFnegOrFabs(*Op1) || isFnegOrFabs(*Op2))
+      continue;
+
+    // if the operand is defined by fneg or fabs it means the instruction
+    // will have source modifiers and therefore can't be shrinked to vop2
     if (!UA.isDivergent(Op1) && UA.isDivergent(Op2))
       ShouldSwap++;
     else if (UA.isDivergent(Op1) && !UA.isDivergent(Op2))
