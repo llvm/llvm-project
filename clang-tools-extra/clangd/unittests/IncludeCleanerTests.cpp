@@ -282,7 +282,8 @@ $insert_vector[[]]
 
   TU.AdditionalFiles["system/e.h"] = guard("#include <f.h>");
   TU.AdditionalFiles["system/f.h"] = guard("void f();");
-  TU.AdditionalFiles["system/quoted2_wrapper.h"] = guard("#include <system/quoted2.h>");
+  TU.AdditionalFiles["system/quoted2_wrapper.h"] =
+      guard("#include <system/quoted2.h>");
   TU.AdditionalFiles["system/quoted2.h"] = guard("void quoted2();");
   TU.ExtraArgs.push_back("-isystem" + testPath("system"));
 
@@ -340,12 +341,12 @@ $insert_vector[[]]
               withFix({Fix(MainFile.range("insert_quoted"),
                            "#include \"quoted.h\"\n", "#include \"quoted.h\""),
                        FixMessage("add all missing includes")})),
-          AllOf(
-              Diag(MainFile.range("quoted2"),
-                   "No header providing \"quoted2\" is directly included"),
-              withFix({Fix(MainFile.range("insert_quoted2"),
-                           "#include \"quoted2.h\"\n", "#include \"quoted2.h\""),
-                       FixMessage("add all missing includes")})),
+          AllOf(Diag(MainFile.range("quoted2"),
+                     "No header providing \"quoted2\" is directly included"),
+                withFix(
+                    {Fix(MainFile.range("insert_quoted2"),
+                         "#include \"quoted2.h\"\n", "#include \"quoted2.h\""),
+                     FixMessage("add all missing includes")})),
           AllOf(Diag(MainFile.range("bar"),
                      "No header providing \"ns::Bar\" is directly included"),
                 withFix({Fix(MainFile.range("insert_d"),
