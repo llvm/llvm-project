@@ -1449,7 +1449,7 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
   // happen to be processing that implementation, fake up the g++ ?:
   // semantics. See LWG issue 2141 for more information on the bug.  The bugs
   // are fixed in g++ and libstdc++ 4.9.0 (2014-04-22).
-  if (SemaRef.getPreprocessor().NeedsStdLibCxxWorkaroundBefore(20140422)) {
+  if (SemaRef.getPreprocessor().NeedsStdLibCxxWorkaroundBefore(2014'04'22)) {
     const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
     CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
     if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&

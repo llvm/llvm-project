@@ -4453,7 +4453,7 @@ static bool IsLibstdcxxStdFormatKind(Preprocessor &PP, VarDecl *Var) {
   // GCC master branch:
   // https://gcc.gnu.org/g:9361966d80f625c5accc25cbb439f0278dd8b278
   // https://gcc.gnu.org/g:c65725eccbabf3b9b5965f27fff2d3b9f6c75930
-  return PP.NeedsStdLibCxxWorkaroundBefore(20250520);
+  return PP.NeedsStdLibCxxWorkaroundBefore(2025'05'20);
 }
 } // end anonymous namespace
 

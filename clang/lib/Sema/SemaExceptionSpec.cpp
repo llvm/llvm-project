@@ -45,7 +45,7 @@ static const FunctionProtoType *GetUnderlyingFunction(QualType T)
 bool Sema::isLibstdcxxEagerExceptionSpecHack(const Declarator &D) {
   auto *RD = dyn_cast<CXXRecordDecl>(CurContext);
 
-  if (!getPreprocessor().NeedsStdLibCxxWorkaroundBefore(20160427))
+  if (!getPreprocessor().NeedsStdLibCxxWorkaroundBefore(2016'04'27))
     return false;
   // All the problem cases are member functions named "swap" within class
   // templates declared directly within namespace std or std::__debug or

@@ -645,7 +645,7 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
   if (!InitSeq && EmptyInitList &&
       InitSeq.getFailureKind() ==
           InitializationSequence::FK_ExplicitConstructor &&
-      SemaRef.getPreprocessor().NeedsStdLibCxxWorkaroundBefore(20140422)) {
+      SemaRef.getPreprocessor().NeedsStdLibCxxWorkaroundBefore(2014'04'22)) {
     OverloadCandidateSet::iterator Best;
     OverloadingResult O =
         InitSeq.getFailedCandidateSet()
