@@ -64,6 +64,7 @@ class Foo;
 // CHECK-NEXT:          </div>
 // CHECK-NEXT:      </div>
 // CHECK-NEXT:  </section>
+
 // CHECK:       <section id="Classes" class="section-container">
 // CHECK-NEXT:      <h2>Inner Classes</h2>
 // CHECK-NEXT:      <ul class="class-container">
