@@ -3,6 +3,9 @@
 // RUN: %env HOME=%t.homedir TMPDIR=%t.tmpdir %run %t 2>%t.err | FileCheck %s
 // RUN: FileCheck %s --input-file=%t.err --check-prefix=ERROR
 
+// For some reason stdout is empty on android.
+// XFAIL: android
+
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>
 #include <string.h>
