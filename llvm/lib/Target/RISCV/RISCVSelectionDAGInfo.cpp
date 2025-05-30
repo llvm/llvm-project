@@ -37,7 +37,8 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
            N->getOperand(2).getValueType() == VT &&
            "Expected result and first 3 operands to have the same type!");
     EVT MaskVT = N->getOperand(3).getValueType();
-    assert(MaskVT.isScalableVector() && MaskVT.getVectorElementType() == MVT::i1 &&
+    assert(MaskVT.isScalableVector() &&
+           MaskVT.getVectorElementType() == MVT::i1 &&
            MaskVT.getVectorElementCount() == VT.getVectorElementCount() &&
            "Expected mask VT to be an i1 scalable vector with same number of "
            "elements as the result");
