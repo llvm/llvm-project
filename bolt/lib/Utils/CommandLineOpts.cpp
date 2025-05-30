@@ -124,20 +124,25 @@ bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
 
   SmallVector<StringRef> Sizes;
   Arg.split(Sizes, ',');
+  unsigned PreviousSize = 0;
   for (StringRef Size : Sizes) {
+    StringRef OrigSize = Size;
     unsigned &SizeVal = Val.emplace_back(0);
-    if (!Size.consumeInteger(10, SizeVal)) {
-      if (std::optional<unsigned> ShiftAmt = parseSuffix(Size)) {
-        SizeVal <<= *ShiftAmt;
-        continue;
-      }
+    if (Size.consumeInteger(10, SizeVal)) {
+      O.error("'" + OrigSize + "' value can't be parsed as an integer");
+      return true;
     }
-    O.error("'" + Size + "' value invalid for size argument");
-    return true;
-  }
-  if (!llvm::is_sorted(Val)) {
-    O.error("'" + Arg + "' value must be sorted");
-    return true;
+    if (std::optional<unsigned> ShiftAmt = parseSuffix(Size)) {
+      SizeVal <<= *ShiftAmt;
+    } else {
+      O.error("'" + Size + "' value can't be parsed as a suffix");
+      return true;
+    }
+    if (SizeVal <= PreviousSize || (PreviousSize && SizeVal % PreviousSize)) {
+      O.error("'" + OrigSize + "' must be a multiple of previous value");
+      return true;
+    }
+    PreviousSize = SizeVal;
   }
   return false;
 }
