@@ -1935,6 +1935,18 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, MVT::nxv2i64,
                          Custom);
+
+      if (EnablePartialReduceNodes) {
+        static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                          ISD::PARTIAL_REDUCE_UMLA};
+        // Must be lowered to SVE instructions.
+        setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v4i32, Custom);
+        setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v8i16, Custom);
+        setPartialReduceMLAAction(MLAOps, MVT::v2i64, MVT::v16i8, Custom);
+        setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v8i16, Custom);
+        setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+        setPartialReduceMLAAction(MLAOps, MVT::v8i16, MVT::v16i8, Custom);
+      }
     }
   }
 
@@ -2229,6 +2241,28 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
 
   bool PreferNEON = VT.is64BitVector() || VT.is128BitVector();
   bool PreferSVE = !PreferNEON && Subtarget->isSVEAvailable();
+
+  if (EnablePartialReduceNodes) {
+    static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                      ISD::PARTIAL_REDUCE_UMLA};
+    unsigned NumElts = VT.getVectorNumElements();
+    if (VT.getVectorElementType() == MVT::i64) {
+      setPartialReduceMLAAction(MLAOps, VT,
+                                MVT::getVectorVT(MVT::i8, NumElts * 8), Custom);
+      setPartialReduceMLAAction(
+          MLAOps, VT, MVT::getVectorVT(MVT::i16, NumElts * 4), Custom);
+      setPartialReduceMLAAction(
+          MLAOps, VT, MVT::getVectorVT(MVT::i32, NumElts * 2), Custom);
+    } else if (VT.getVectorElementType() == MVT::i32) {
+      setPartialReduceMLAAction(MLAOps, VT,
+                                MVT::getVectorVT(MVT::i8, NumElts * 4), Custom);
+      setPartialReduceMLAAction(
+          MLAOps, VT, MVT::getVectorVT(MVT::i16, NumElts * 2), Custom);
+    } else if (VT.getVectorElementType() == MVT::i16) {
+      setPartialReduceMLAAction(MLAOps, VT,
+                                MVT::getVectorVT(MVT::i8, NumElts * 2), Custom);
+    }
+  }
 
   // Lower fixed length vector operations to scalable equivalents.
   setOperationAction(ISD::ABDS, VT, Default);
@@ -29251,50 +29285,61 @@ SDValue AArch64TargetLowering::LowerVECTOR_HISTOGRAM(SDValue Op,
 SDValue
 AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                SelectionDAG &DAG) const {
-  bool Scalable = Op.getValueType().isScalableVector();
-
-  assert((!Scalable || Subtarget->isSVEorStreamingSVEAvailable()) &&
-         "SVE or StreamingSVE must be available when using scalable vectors.");
-  assert((Scalable || Subtarget->hasDotProd()) &&
-         "Dotprod must be available when targeting NEON dot product "
-         "instructions.");
-
   SDLoc DL(Op);
 
   SDValue Acc = Op.getOperand(0);
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
   EVT ResultVT = Op.getValueType();
+  EVT OrigResultVT = ResultVT;
+  EVT OpVT = LHS.getValueType();
 
-  assert((Scalable && ResultVT == MVT::nxv2i64 &&
-          LHS.getValueType() == MVT::nxv16i8) ||
-         (!Scalable && ResultVT == MVT::v2i64 &&
-          LHS.getValueType() == MVT::v16i8));
+  bool ConvertToScalable =
+      ResultVT.isFixedLengthVector() &&
+      useSVEForFixedLengthVectorVT(ResultVT, /*OverrideNEON=*/true);
 
-  EVT DotVT = Scalable ? MVT::nxv4i32 : MVT::v4i32;
+  if (ConvertToScalable) {
+    ResultVT = getContainerForFixedLengthVector(DAG, ResultVT);
+    OpVT = getContainerForFixedLengthVector(DAG, LHS.getValueType());
+    Acc = convertToScalableVector(DAG, ResultVT, Acc);
+    LHS = convertToScalableVector(DAG, OpVT, LHS);
+    RHS = convertToScalableVector(DAG, OpVT, RHS);
+    Op = DAG.getNode(Op.getOpcode(), DL, ResultVT, {Acc, LHS, RHS});
+  }
+
+  // Two-way and four-way partial reductions are supported by patterns.
+  // We only need to handle the 8-way partial reduction.
+  if (ResultVT.getScalarType() != MVT::i64 || OpVT.getScalarType() != MVT::i8)
+    return ConvertToScalable ? convertFromScalableVector(DAG, OrigResultVT, Op)
+                             : Op;
+
+  EVT DotVT = ResultVT.isScalableVector() ? MVT::nxv4i32 : MVT::v4i32;
   SDValue DotNode = DAG.getNode(Op.getOpcode(), DL, DotVT,
                                 DAG.getConstant(0, DL, DotVT), LHS, RHS);
 
+  SDValue Res;
   bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
-  if (Scalable &&
-      (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
+  if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
     unsigned LoOpcode = IsUnsigned ? AArch64ISD::UADDWB : AArch64ISD::SADDWB;
     unsigned HiOpcode = IsUnsigned ? AArch64ISD::UADDWT : AArch64ISD::SADDWT;
     SDValue Lo = DAG.getNode(LoOpcode, DL, ResultVT, Acc, DotNode);
-    return DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
+    Res = DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
+  } else {
+    // Fold (nx)v4i32 into (nx)v2i64
+    auto [DotNodeLo, DotNodeHi] = DAG.SplitVector(DotNode, DL);
+    if (IsUnsigned) {
+      DotNodeLo = DAG.getZExtOrTrunc(DotNodeLo, DL, ResultVT);
+      DotNodeHi = DAG.getZExtOrTrunc(DotNodeHi, DL, ResultVT);
+    } else {
+      DotNodeLo = DAG.getSExtOrTrunc(DotNodeLo, DL, ResultVT);
+      DotNodeHi = DAG.getSExtOrTrunc(DotNodeHi, DL, ResultVT);
+    }
+    auto Lo = DAG.getNode(ISD::ADD, DL, ResultVT, Acc, DotNodeLo);
+    Res = DAG.getNode(ISD::ADD, DL, ResultVT, Lo, DotNodeHi);
   }
 
-  // Fold (nx)v4i32 into (nx)v2i64
-  auto [DotNodeLo, DotNodeHi] = DAG.SplitVector(DotNode, DL);
-  if (IsUnsigned) {
-    DotNodeLo = DAG.getZExtOrTrunc(DotNodeLo, DL, ResultVT);
-    DotNodeHi = DAG.getZExtOrTrunc(DotNodeHi, DL, ResultVT);
-  } else {
-    DotNodeLo = DAG.getSExtOrTrunc(DotNodeLo, DL, ResultVT);
-    DotNodeHi = DAG.getSExtOrTrunc(DotNodeHi, DL, ResultVT);
-  }
-  auto Lo = DAG.getNode(ISD::ADD, DL, ResultVT, Acc, DotNodeLo);
-  return DAG.getNode(ISD::ADD, DL, ResultVT, Lo, DotNodeHi);
+  return ConvertToScalable ? convertFromScalableVector(DAG, OrigResultVT, Res)
+                           : Res;
 }
 
 SDValue
