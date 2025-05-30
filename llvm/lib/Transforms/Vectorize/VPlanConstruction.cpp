@@ -503,7 +503,7 @@ void VPlanTransforms::prepareForVectorization(
         HandledUncountableEarlyExit = true;
       } else {
         for (VPRecipeBase &R : EB->phis())
-          cast<VPIRPhi>(&R)->removeIncomingValue(Pred);
+          cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
       }
       cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
@@ -528,6 +528,8 @@ void VPlanTransforms::prepareForVectorization(
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
 
+  // The connection order corresponds to the operands of the conditional branch,
+  // with the middle block already connected to the exit block.
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
   // Also connect the entry block to the scalar preheader.
   // TODO: Also introduce a branch recipe together with the minimum trip count
@@ -535,9 +537,9 @@ void VPlanTransforms::prepareForVectorization(
   VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
   Plan.getEntry()->swapSuccessors();
 
-  // If MiddleVPBB has a single successor the original loop exits via the latch
-  // and the single successor must be the scalar preheader. There's no need to
-  // add a runtime check to MiddleVPBB.
+  // If MiddleVPBB has a single successor then the original loop does not exit
+  // via the latch and the single successor must be the scalar preheader.
+  // There's no need to add a runtime check to MiddleVPBB.
   if (MiddleVPBB->getNumSuccessors() == 1) {
     assert(MiddleVPBB->getSingleSuccessor() == ScalarPH &&
            "must have ScalarPH as single successor");
@@ -546,8 +548,9 @@ void VPlanTransforms::prepareForVectorization(
 
   assert(MiddleVPBB->getNumSuccessors() == 2 && "must have 2 successors");
 
-  // If needed, add a check in the middle block to see if we have completed
-  // all of the iterations in the first vector loop.
+  // Add a check in the middle block to see if we have completed$ all of the
+  // iterations in the first vector loop.
+  //
   // Three cases:
   // 1) If we require a scalar epilogue, the scalar ph must execute. Set the
   //    condition to false.

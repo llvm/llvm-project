@@ -1122,9 +1122,9 @@ public:
     return getAsRecipe()->getNumOperands();
   }
 
-  /// Removes the incoming value corresponding to \p IncomingBlock, which must
-  /// be a predecessor.
-  void removeIncomingValue(VPBlockBase *IncomingBlock) const;
+  /// Removes the incoming value for \p IncomingBlock, which must be a
+  /// predecessor.
+  void removeIncomingValueFor(VPBlockBase *IncomingBlock) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3530,22 +3530,22 @@ public:
 
 /// Casting from VPRecipeBase -> VPPhiAccessors is supported for all recipe
 /// types implementing VPPhiAccessors. Used by isa<> & co.
-template <> struct CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
-  static inline bool isPossible(const VPRecipeBase *f) {
+template <typename SrcTy> struct CastIsPossible<VPPhiAccessors, SrcTy> {
+  static inline bool isPossible(SrcTy f) {
     // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
     return isa<VPIRPhi, VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPhi>(f);
   }
 };
 /// Support casting from VPRecipeBase -> VPPhiAccessors, by down-casting to the
 /// recipe types implementing VPPhiAccessors. Used by cast<>, dyn_cast<> & co.
-template <>
-struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
-    : public CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
+template <typename SrcTy>
+struct CastInfo<VPPhiAccessors, SrcTy>
+    : public CastIsPossible<VPPhiAccessors, SrcTy> {
 
-  using Self = CastInfo<VPPhiAccessors, const VPRecipeBase *>;
+  using Self = CastInfo<VPPhiAccessors, SrcTy>;
 
   /// doCast is used by cast<>.
-  static inline VPPhiAccessors *doCast(const VPRecipeBase *R) {
+  static inline VPPhiAccessors *doCast(SrcTy R) {
     return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
       switch (R->getVPDefID()) {
       case VPDef::VPInstructionSC:
@@ -3561,7 +3561,7 @@ struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
   }
 
   /// doCastIfPossible is used by dyn_cast<>.
-  static inline VPPhiAccessors *doCastIfPossible(const VPRecipeBase *f) {
+  static inline VPPhiAccessors *doCastIfPossible(SrcTy f) {
     if (!Self::isPossible(f))
       return nullptr;
     return doCast(f);

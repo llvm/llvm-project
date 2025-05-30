@@ -1185,7 +1185,7 @@ void VPIRPhi::execute(VPTransformState &State) {
   State.Builder.SetInsertPoint(Phi->getParent(), std::next(Phi->getIterator()));
 }
 
-void VPPhiAccessors::removeIncomingValue(VPBlockBase *IncomingBlock) const {
+void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
   VPRecipeBase *R = const_cast<VPRecipeBase *>(getAsRecipe());
   auto &Preds = R->getParent()->getPredecessors();
   assert(R->getNumOperands() == Preds.size() &&

@@ -1865,32 +1865,15 @@ static void removeBranchOnConst(VPlan &Plan) {
     const auto &Preds = RemovedSucc->getPredecessors();
     assert(count(Preds, VPBB) == 1 &&
            "There must be a single edge between VPBB and its successor");
-    unsigned DeadIdx = std::distance(Preds.begin(), find(Preds, VPBB));
-
-    // Values coming from VPBB into ResumePhi recipes of RemoveSucc are removed
-    // from these recipes.
+    // Values coming from VPBB into phi recipes of RemoveSucc are removed from
+    // these recipes.
     for (VPRecipeBase &R : make_early_inc_range(*RemovedSucc)) {
-      if (isa<VPIRPhi>(&R)) {
-        assert(RemovedSucc->getNumPredecessors() == 1 &&
-               "VPIRPhis must have a single predecessor");
-        cast<VPIRPhi>(&R)->removeIncomingValue(VPBB);
-        continue;
-      }
-
-      auto *VPI = dyn_cast<VPPhi>(&R);
-      if (!VPI)
+      auto *Phi = dyn_cast<VPPhiAccessors>(&R);
+      if (!Phi)
         break;
-      VPBuilder B(VPI);
-      SmallVector<VPValue *> NewOperands;
-      // Create new operand list, with the dead incoming value filtered out.
-      for (const auto &[Idx, Op] : enumerate(VPI->operands())) {
-        if (Idx == DeadIdx)
-          continue;
-        NewOperands.push_back(Op);
-      }
-      VPI->replaceAllUsesWith(
-          B.createScalarPhi(NewOperands, VPI->getDebugLoc(), VPI->getName()));
-      VPI->eraseFromParent();
+      assert((!isa<VPIRPhi>(&R) || RemovedSucc->getNumPredecessors() == 1) &&
+             "VPIRPhis must have a single predecessor");
+      Phi->removeIncomingValueFor(VPBB);
     }
     // Disconnect blocks and remove the terminator. RemovedSucc will be deleted
     // automatically on VPlan destruction if it becomes unreachable.

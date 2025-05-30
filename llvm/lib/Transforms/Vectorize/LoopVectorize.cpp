@@ -2383,11 +2383,10 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   unsigned NumPredecessors = ScalarPH->getNumPredecessors();
   (void)NumPredecessors;
   for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
-    auto *ResumePhi = cast<VPPhi>(&R);
-    ResumePhi->addOperand(
-        ResumePhi->getOperand(ResumePhi->getNumOperands() - 1));
-    assert(ResumePhi->getNumIncoming() == NumPredecessors &&
+    assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
+    assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
            "must have incoming values for all operands");
+    R.addOperand(R.getOperand(NumPredecessors - 2));
   }
 }
 
