@@ -25,9 +25,15 @@ TEST(LlvmLibcWMempcpyTest, Simple) {
 
 TEST(LlvmLibcWmempcpyTest, ZeroCount) {
   const wchar_t *src = L"12345";
-  wchar_t dest[10];
+  wchar_t dest[5] = {};
   void *result = LIBC_NAMESPACE::wmempcpy(dest, src, 0);
   ASSERT_EQ(static_cast<wchar_t *>(result), dest);
+
+  ASSERT_TRUE(dest[0] == 0);
+  ASSERT_TRUE(dest[1] == 0);
+  ASSERT_TRUE(dest[2] == 0);
+  ASSERT_TRUE(dest[3] == 0);
+  ASSERT_TRUE(dest[4] == 0);
 }
 
 TEST(LlvmLibcWMempcpyTest, BoundaryCheck) {

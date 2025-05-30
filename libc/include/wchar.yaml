@@ -52,7 +52,7 @@ functions:
       - type: size_t
   - name: wmempcpy
     standards:
-      - stdc
+      - gnu
     return_type: wchar_t * 
     arguments: 
       - type: wchar_t *
