@@ -19,6 +19,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/Operator.h"
@@ -507,6 +508,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::CallInst *inst = builder.CreateCall(
         inlineAsmInst,
         moduleTranslation.lookupValues(inlineAsmOp.getOperands()));
+    inst->setTailCallKind(convertTailCallKindToLLVM(
+        inlineAsmOp.getTailCallKindAttr().getTailCallKind()));
     if (auto maybeOperandAttrs = inlineAsmOp.getOperandAttrs()) {
       llvm::AttributeList attrList;
       for (const auto &it : llvm::enumerate(*maybeOperandAttrs)) {

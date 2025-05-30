@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanUtils.h"
+#include "VPlanCFG.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -125,4 +126,12 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                                           // unless proven otherwise.
         return false;
       });
+}
+
+VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
+  auto DepthFirst = vp_depth_first_shallow(Plan.getEntry());
+  auto I = find_if(DepthFirst, [&VPDT](VPBlockBase *VPB) {
+    return VPBlockUtils::isHeader(VPB, VPDT);
+  });
+  return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
 }

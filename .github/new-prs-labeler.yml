@@ -703,11 +703,18 @@ mlgo:
   - llvm/test/CodeGen/MLRegAlloc/**
   - llvm/utils/mlgo-utils/**
   - llvm/docs/MLGO.rst
+  - llvm/include/llvm/Analysis/IR2Vec.h
+  - llvm/lib/Analysis/IR2Vec.cpp
+  - llvm/lib/Analysis/models/**
+  - llvm/test/Analysis/IR2Vec/**
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
   - llvm/test/tools/llvm-exegesis/**
   - llvm/unittests/tools/llvm-exegesis/**
+
+tools:llvm-reduce:
+  - llvm/tools/llvm-reduce/**
 
 platform:windows:
   - lld/COFF/**

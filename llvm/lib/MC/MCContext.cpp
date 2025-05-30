@@ -309,6 +309,35 @@ MCSymbol *MCContext::createSymbolImpl(const MCSymbolTableEntry *Name,
       MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
 }
 
+MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
+  MCSymbol *NewSym = nullptr;
+  auto Name = Sym.getNameEntryPtr();
+  switch (getObjectFileType()) {
+  case MCContext::IsCOFF:
+    NewSym = new (Name, *this) MCSymbolCOFF(cast<MCSymbolCOFF>(Sym));
+    break;
+  case MCContext::IsELF:
+    NewSym = new (Name, *this) MCSymbolELF(cast<MCSymbolELF>(Sym));
+    break;
+  case MCContext::IsMachO:
+    NewSym = new (Name, *this) MCSymbolMachO(cast<MCSymbolMachO>(Sym));
+    break;
+  default:
+    reportFatalUsageError(".set redefinition is not supported");
+    break;
+  }
+  // Set the name and redirect the `Symbols` entry to `NewSym`.
+  NewSym->getNameEntryPtr() = Name;
+  const_cast<MCSymbolTableEntry *>(Name)->second.Symbol = NewSym;
+  // Ensure the next `registerSymbol` call will add the new symbol to `Symbols`.
+  NewSym->setIsRegistered(false);
+
+  // Ensure the original symbol is not emitted to the symbol table.
+  Sym.IsTemporary = true;
+  Sym.setExternal(false);
+  return NewSym;
+}
+
 MCSymbol *MCContext::createRenamableSymbol(const Twine &Name,
                                            bool AlwaysAddSuffix,
                                            bool IsTemporary) {

@@ -65,8 +65,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -3361,7 +3359,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (FaultMapSection)
     printFaultMaps(O);
   if (Offloading)
-    dumpOffloadBinary(*O);
+    dumpOffloadBinary(*O, StringRef(ArchName));
 }
 
 static void dumpObject(const COFFImportFile *I, const Archive *A,

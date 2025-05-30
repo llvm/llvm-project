@@ -4364,10 +4364,19 @@ bool llvm::inferAttributesFromOthers(Function &F) {
 }
 
 void OverflowTracking::mergeFlags(Instruction &I) {
+#ifndef NDEBUG
+  if (Opcode)
+    assert(Opcode == I.getOpcode() &&
+           "can only use mergeFlags on instructions with matching opcodes");
+  else
+    Opcode = I.getOpcode();
+#endif
   if (isa<OverflowingBinaryOperator>(&I)) {
     HasNUW &= I.hasNoUnsignedWrap();
     HasNSW &= I.hasNoSignedWrap();
   }
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    IsDisjoint &= DisjointOp->isDisjoint();
 }
 
 void OverflowTracking::applyFlags(Instruction &I) {
@@ -4379,4 +4388,6 @@ void OverflowTracking::applyFlags(Instruction &I) {
     if (HasNSW && (AllKnownNonNegative || HasNUW))
       I.setHasNoSignedWrap();
   }
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    DisjointOp->setIsDisjoint(IsDisjoint);
 }

@@ -48,7 +48,7 @@ int f7(int (*ptr)(int, int)) {
 }
 
 // CIR-LABEL: cir.func @_Z2f7PFiiiE
-// CIR:         %[[#ptr:]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>
+// CIR:         %[[#ptr:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>
 // CIR-NEXT:    %[[#a:]] = cir.const #cir.int<1> : !s32i
 // CIR-NEXT:    %[[#b:]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT:    %{{.+}} = cir.call %[[#ptr]](%[[#a]], %[[#b]]) : (!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>, !s32i, !s32i) -> !s32i

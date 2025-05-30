@@ -315,9 +315,9 @@ public:
   }
 
   bool SetInstanceEnabled(llvm::StringRef name, bool enable) {
-    auto it = std::find_if(
-        m_instances.begin(), m_instances.end(),
-        [&](const Instance &instance) { return instance.name == name; });
+    auto it = llvm::find_if(m_instances, [&](const Instance &instance) {
+      return instance.name == name;
+    });
 
     if (it == m_instances.end())
       return false;

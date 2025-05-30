@@ -6064,8 +6064,8 @@ define void @stack_12xv3i32() #0 {
 ; GFX11-NEXT:    s_add_i32 s0, s32, 16
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
 ; GFX11-NEXT:    scratch_store_b32 off, v4, s0
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, 0
-; GFX11-NEXT:    v_dual_mov_b32 v3, 1 :: v_dual_mov_b32 v2, 0
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, 1
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v5, 1 :: v_dual_mov_b32 v4, 1
 ; GFX11-NEXT:    v_dual_mov_b32 v7, 2 :: v_dual_mov_b32 v6, 2
 ; GFX11-NEXT:    v_dual_mov_b32 v9, 3 :: v_dual_mov_b32 v8, 2
@@ -6772,10 +6772,10 @@ define void @stack_8xv5i32() #0 {
 ; GFX11-NEXT:    s_add_i32 s1, s32, 16
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    scratch_store_b32 off, v8, s0
 ; GFX11-NEXT:    scratch_store_b128 off, v[4:7], s1
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v5, 1
 ; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v7, 1
 ; GFX11-NEXT:    v_dual_mov_b32 v6, 1 :: v_dual_mov_b32 v9, 1
@@ -7150,21 +7150,21 @@ define void @stack_8xv5f32() #0 {
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
 ; GFX11-NEXT:    scratch_store_b32 off, v8, s0
 ; GFX11-NEXT:    scratch_store_b128 off, v[4:7], s1
-; GFX11-NEXT:    v_mov_b32_e32 v6, 1.0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v5, 1.0
-; GFX11-NEXT:    v_dual_mov_b32 v7, 1.0 :: v_dual_mov_b32 v8, 1.0
-; GFX11-NEXT:    v_dual_mov_b32 v11, 2.0 :: v_dual_mov_b32 v10, 2.0
-; GFX11-NEXT:    v_dual_mov_b32 v13, 2.0 :: v_dual_mov_b32 v12, 2.0
-; GFX11-NEXT:    v_dual_mov_b32 v15, 0x40400000 :: v_dual_mov_b32 v14, 2.0
-; GFX11-NEXT:    v_dual_mov_b32 v17, 0x40400000 :: v_dual_mov_b32 v16, 0x40400000
-; GFX11-NEXT:    v_dual_mov_b32 v19, 0x40400000 :: v_dual_mov_b32 v18, 0x40400000
-; GFX11-NEXT:    v_dual_mov_b32 v21, 4.0 :: v_dual_mov_b32 v20, 4.0
-; GFX11-NEXT:    v_dual_mov_b32 v23, 4.0 :: v_dual_mov_b32 v22, 4.0
-; GFX11-NEXT:    v_dual_mov_b32 v25, 0x40a00000 :: v_dual_mov_b32 v24, 4.0
-; GFX11-NEXT:    v_dual_mov_b32 v27, 0x40a00000 :: v_dual_mov_b32 v26, 0x40a00000
-; GFX11-NEXT:    v_dual_mov_b32 v29, 0x40a00000 :: v_dual_mov_b32 v28, 0x40a00000
+; GFX11-NEXT:    v_dual_mov_b32 v6, 1.0 :: v_dual_mov_b32 v7, 1.0
+; GFX11-NEXT:    v_dual_mov_b32 v8, 1.0 :: v_dual_mov_b32 v11, 2.0
+; GFX11-NEXT:    v_dual_mov_b32 v10, 2.0 :: v_dual_mov_b32 v13, 2.0
+; GFX11-NEXT:    v_dual_mov_b32 v12, 2.0 :: v_dual_mov_b32 v15, 0x40400000
+; GFX11-NEXT:    v_dual_mov_b32 v14, 2.0 :: v_dual_mov_b32 v17, 0x40400000
+; GFX11-NEXT:    v_dual_mov_b32 v16, 0x40400000 :: v_dual_mov_b32 v19, 0x40400000
+; GFX11-NEXT:    v_dual_mov_b32 v18, 0x40400000 :: v_dual_mov_b32 v21, 4.0
+; GFX11-NEXT:    v_dual_mov_b32 v20, 4.0 :: v_dual_mov_b32 v23, 4.0
+; GFX11-NEXT:    v_dual_mov_b32 v22, 4.0 :: v_dual_mov_b32 v25, 0x40a00000
+; GFX11-NEXT:    v_dual_mov_b32 v24, 4.0 :: v_dual_mov_b32 v27, 0x40a00000
+; GFX11-NEXT:    v_dual_mov_b32 v26, 0x40a00000 :: v_dual_mov_b32 v29, 0x40a00000
+; GFX11-NEXT:    v_mov_b32_e32 v28, 0x40a00000
 ; GFX11-NEXT:    v_mov_b32_e32 v30, 0x40c00000
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
 ; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_8xv5f32@rel32@lo+4
