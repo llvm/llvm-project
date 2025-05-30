@@ -827,50 +827,126 @@ struct FormatStyle {
 
   /// Different styles for merging short functions containing at most one
   /// statement.
-  enum ShortFunctionStyle : int8_t {
-    /// Never merge functions into a single line.
-    SFS_None,
-    /// Only merge functions defined inside a class. Same as ``inline``,
-    /// except it does not implies ``empty``: i.e. top level empty functions
-    /// are not merged either.
-    /// \code
-    ///   class Foo {
-    ///     void f() { foo(); }
-    ///   };
-    ///   void f() {
-    ///     foo();
-    ///   }
-    ///   void f() {
-    ///   }
-    /// \endcode
-    SFS_InlineOnly,
-    /// Only merge empty functions.
+  ///
+  /// They can be read as a whole for compatibility. The choices are:
+  ///
+  /// * ``None``
+  ///   Never merge functions into a single line.
+  ///
+  /// * ``InlineOnly``
+  ///   Only merge functions defined inside a class. Same as ``inline``,
+  ///   except it does not implies ``empty``: i.e. top level empty functions
+  ///   are not merged either. This option is **deprecated** and is retained
+  ///   for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
+  ///   \code
+  ///     class Foo {
+  ///       void f() { foo(); }
+  ///     };
+  ///     void f() {
+  ///       foo();
+  ///     }
+  ///     void f() {
+  ///     }
+  ///   \endcode
+  ///
+  /// * ``Empty``
+  ///   Only merge empty functions. This option is **deprecated** and is
+  ///   retained for backwards compatibility. See ``Empty`` of
+  ///   ``ShortFunctionStyle``.
+  ///   \code
+  ///     void f() {}
+  ///     void f2() {
+  ///       bar2();
+  ///     }
+  ///   \endcode
+  ///
+  /// * ``Inline``
+  ///   Only merge functions defined inside a class. Implies ``empty``. This
+  ///   option is **deprecated** and is retained for backwards compatibility.
+  ///   See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
+  ///   \code
+  ///     class Foo {
+  ///       void f() { foo(); }
+  ///     };
+  ///     void f() {
+  ///       foo();
+  ///     }
+  ///     void f() {}
+  ///   \endcode
+  ///
+  /// * ``All``
+  ///   Merge all functions fitting on a single line.
+  ///   \code
+  ///     class Foo {
+  ///       void f() { foo(); }
+  ///     };
+  ///     void f() { bar(); }
+  ///   \endcode
+  ///
+  /// Also can be specified as a nested configuration flag:
+  /// \code
+  ///   # Example of usage:
+  ///   AllowShortFunctionsOnASingleLine: InlineOnly
+  ///
+  ///   # or more granular control:
+  ///   AllowShortFunctionsOnASingleLine:
+  ///     Empty: false
+  ///     Inline: true
+  ///     Other: false
+  /// \endcode
+  struct ShortFunctionStyle {
+    /// Merge top-level empty functions.
     /// \code
     ///   void f() {}
     ///   void f2() {
     ///     bar2();
     ///   }
+    ///   void f3() { /* comment */ }
     /// \endcode
-    SFS_Empty,
-    /// Only merge functions defined inside a class. Implies ``empty``.
+    bool Empty;
+    /// Merge functions defined inside a class.
     /// \code
     ///   class Foo {
     ///     void f() { foo(); }
+    ///     void g() {}
     ///   };
     ///   void f() {
     ///     foo();
     ///   }
-    ///   void f() {}
+    ///   void f() {
+    ///   }
     /// \endcode
-    SFS_Inline,
-    /// Merge all functions fitting on a single line.
+    bool Inline;
+    /// Merge all functions fitting on a single line. Please note that this
+    /// control does not include Empty
     /// \code
     ///   class Foo {
     ///     void f() { foo(); }
     ///   };
     ///   void f() { bar(); }
     /// \endcode
-    SFS_All,
+    bool Other;
+
+    bool operator==(const ShortFunctionStyle &R) const {
+      return Empty == R.Empty && Inline == R.Inline && Other == R.Other;
+    }
+    bool operator!=(const ShortFunctionStyle &R) const { return !(*this == R); }
+    ShortFunctionStyle() : Empty(false), Inline(false), Other(false) {}
+    ShortFunctionStyle(bool Empty, bool Inline, bool Other)
+        : Empty(Empty), Inline(Inline), Other(Other) {}
+    bool isAll() const { return Empty && Inline && Other; }
+    static ShortFunctionStyle setEmptyOnly() {
+      return ShortFunctionStyle(true, false, false);
+    }
+    static ShortFunctionStyle setEmptyAndInline() {
+      return ShortFunctionStyle(true, true, false);
+    }
+    static ShortFunctionStyle setInlineOnly() {
+      return ShortFunctionStyle(false, true, false);
+    }
+    static ShortFunctionStyle setAll() {
+      return ShortFunctionStyle(true, true, true);
+    }
   };
 
   /// Dependent on the value, ``int f() { return 0; }`` can be put on a
