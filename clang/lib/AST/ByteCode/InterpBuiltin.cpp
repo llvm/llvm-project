@@ -764,7 +764,8 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const CallExpr *Call) {
   assert(Call->getArg(0)->isLValue());
-  PrimType PtrT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
+  [[maybe_unused]] PrimType PtrT =
+      S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
   assert(PtrT == PT_Ptr &&
          "Unsupported pointer type passed to __builtin_addressof()");
   return true;
