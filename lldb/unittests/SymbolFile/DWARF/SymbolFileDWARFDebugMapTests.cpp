@@ -25,14 +25,15 @@ class SymbolFileDWARFDebugMapTests : public testing::Test {
   SubsystemRAII<ObjectFileELF, ObjectFileMachO> subsystems;
 };
 
+#ifdef __APPLE__
 TEST_F(SymbolFileDWARFDebugMapTests, CreateInstanceReturnNonNullForMachOFile) {
-  // Make sure we don't crash parsing a null unit DIE.
+  // The file header represents an arm64 Mach-O file.
   const char *yamldata = R"(
 --- !mach-o
 FileHeader:
   magic:           0xFEEDFACF
-  cputype:         0x01000007
-  cpusubtype:      0x80000003
+  cputype:         0x0100000C
+  cpusubtype:      0x00000000
   filetype:        0x00000001
   ncmds:           1
   sizeofcmds:      152
@@ -69,15 +70,25 @@ LoadCommands:
 
   llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
   EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
-  auto module_sp = std::make_shared<Module>(file->moduleSpec());
+
+  // Set the triple explicitly.
+  ModuleSpec module_spec = file->moduleSpec();
+  module_spec.GetArchitecture().SetTriple("arm64-apple-macosx15.0.0");
+
+  // Create module and get object file.
+  auto module_sp = std::make_shared<Module>(module_spec);
   ASSERT_NE(module_sp, nullptr);
   auto object_file = module_sp->GetObjectFile();
   ASSERT_NE(object_file, nullptr);
+
+  // The debug map should be non-null, because the file is Apple Mach-O.
   auto debug_map =
       SymbolFileDWARFDebugMap::CreateInstance(object_file->shared_from_this());
   ASSERT_NE(debug_map, nullptr);
 }
+#endif
 
+#ifdef __linux__
 TEST_F(SymbolFileDWARFDebugMapTests, CreateInstanceReturnNullForNonMachOFile) {
   // Make sure we don't crash parsing a null unit DIE.
   const char *yamldata = R"(
@@ -140,3 +151,4 @@ DWARF:
       SymbolFileDWARFDebugMap::CreateInstance(object_file->shared_from_this());
   ASSERT_EQ(debug_map, nullptr);
 }
+#endif

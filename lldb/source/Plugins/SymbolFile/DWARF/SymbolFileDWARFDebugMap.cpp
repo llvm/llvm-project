@@ -38,7 +38,6 @@
 #include "lldb/Target/StackFrame.h"
 
 #include "LogChannelDWARF.h"
-#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "SymbolFileDWARF.h"
 #include "lldb/lldb-private-enumerations.h"
 
@@ -247,7 +246,8 @@ llvm::StringRef SymbolFileDWARFDebugMap::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARFDebugMap::CreateInstance(ObjectFileSP objfile_sp) {
-  if (objfile_sp->GetPluginName() != ObjectFileMachO::GetPluginNameStatic())
+  // Don't create a debug map if the object file isn't a Mach-O.
+  if (!objfile_sp->GetArchitecture().GetTriple().isAppleMachO())
     return nullptr;
   return new SymbolFileDWARFDebugMap(std::move(objfile_sp));
 }
