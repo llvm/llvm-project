@@ -619,7 +619,7 @@ struct DemanglingInfoCorrectnessTestCase {
 };
 
 DemanglingInfoCorrectnessTestCase g_demangling_correctness_test_cases[] = {
-#include "DemanglingCorrectness.inc"
+#include "llvm/Testing/Demangle/DemangleTestCases.inc"
 };
 
 struct DemanglingInfoCorrectnessTestFixutre
