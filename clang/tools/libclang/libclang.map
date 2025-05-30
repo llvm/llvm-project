@@ -441,6 +441,8 @@ LLVM_20 {
 LLVM_21 {
   global:
     clang_getFullyQualifiedName;
+    clang_getCStringAndLength;
+    clang_EvalResult_getAsCXString;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol
