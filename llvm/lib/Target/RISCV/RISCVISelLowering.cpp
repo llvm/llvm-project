@@ -18345,7 +18345,8 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
     MVT ResVT = getQDOTXResultType(A.getSimpleValueType());
     SDValue B = DAG.getConstant(0x1, DL, OpVT);
     bool IsSigned = InVec.getOpcode() == ISD::SIGN_EXTEND;
-    unsigned Opc = IsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+    unsigned Opc =
+        IsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
     return DAG.getNode(Opc, DL, ResVT, {DAG.getConstant(0, DL, ResVT), A, B});
   }
 
@@ -18374,13 +18375,15 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
   // Use the partial_reduce_*mla path if possible
   if (A.getOpcode() == B.getOpcode()) {
     // TODO: handle ANY_EXTEND and zext nonneg here
-    if (A.getOpcode() != ISD::SIGN_EXTEND &&
-        A.getOpcode() != ISD::ZERO_EXTEND)
+    if (A.getOpcode() != ISD::SIGN_EXTEND && A.getOpcode() != ISD::ZERO_EXTEND)
       return SDValue();
 
     bool IsSigned = A.getOpcode() == ISD::SIGN_EXTEND;
-    unsigned Opc = IsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
-    return DAG.getNode(Opc, DL, ResVT, {DAG.getConstant(0, DL, ResVT), A.getOperand(0), B.getOperand(0)});
+    unsigned Opc =
+        IsSigned ? ISD::PARTIAL_REDUCE_SMLA : ISD::PARTIAL_REDUCE_UMLA;
+    return DAG.getNode(
+        Opc, DL, ResVT,
+        {DAG.getConstant(0, DL, ResVT), A.getOperand(0), B.getOperand(0)});
   }
   // We don't yet have a partial_reduce_sumla node, so directly lower to the
   // target node instead.
