@@ -396,6 +396,7 @@ class VPSlotTracker {
   void assignName(const VPValue *V);
   void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
+  std::string getName(const VPValue *V);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
