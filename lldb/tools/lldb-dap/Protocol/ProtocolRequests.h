@@ -668,7 +668,7 @@ struct DataBreakpointInfoArguments {
   /// pause on data access anywhere within that range.
   /// Clients may set this property only if the `supportsDataBreakpointBytes`
   /// capability is true.
-  std::optional<int64_t> bytes;
+  std::optional<uint64_t> bytes;
 
   /// If `true`, the `name` is a memory address and the debugger should
   /// interpret it as a decimal value, or hex value if it is prefixed with `0x`.
