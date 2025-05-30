@@ -1261,8 +1261,9 @@ public:
     auto [Curr, InputSignal] = consume(OutputSignal);
 
     // Setup the post action to release the kernel args buffer.
-    if (auto Err = Slots[Curr].schedReleaseBuffer(KernelArgs, MemoryManager))
-      return Err;
+    if (KernelArgs)
+      if (auto Err = Slots[Curr].schedReleaseBuffer(KernelArgs, MemoryManager))
+        return Err;
 
     // If we are running an RPC server we want to wake up the server thread
     // whenever there is a kernel running and let it sleep otherwise.
@@ -3375,8 +3376,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   AMDGPUMemoryManagerTy &ArgsMemoryManager = HostDevice.getArgsMemoryManager();
 
   void *AllArgs = nullptr;
-  if (auto Err = ArgsMemoryManager.allocate(ArgsSize, &AllArgs))
-    return Err;
+  if (ArgsSize)
+    if (auto Err = ArgsMemoryManager.allocate(ArgsSize, &AllArgs))
+      return Err;
 
   // Account for user requested dynamic shared memory.
   uint32_t GroupSize = getGroupSize();
