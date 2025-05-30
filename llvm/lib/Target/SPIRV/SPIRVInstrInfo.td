@@ -1017,4 +1017,3 @@ def OpFixedLogINTEL: Op<5932, (outs ID:$res), (ins TYPE:$result_type, ID:$input,
       "$res = OpFixedLogINTEL $result_type $input $sign $l $rl $q $o">;
 def OpFixedExpINTEL: Op<5933, (outs ID:$res), (ins TYPE:$result_type, ID:$input, i32imm:$sign, i32imm:$l, i32imm:$rl, i32imm:$q, i32imm:$o),
       "$res = OpFixedExpINTEL $result_type $input $sign $l $rl $q $o">;
-      
