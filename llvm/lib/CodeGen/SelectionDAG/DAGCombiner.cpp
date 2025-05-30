@@ -6812,9 +6812,9 @@ bool DAGCombiner::SearchForAndLoads(SDNode *N,
 
     // Some constants may need fixing up later if they are too large.
     if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
-      if ((N->getOpcode() == ISD::OR || N->getOpcode() == ISD::XOR ||
-           N->getOpcode() == ISD::AND) &&
-          (Mask->getAPIntValue() & C->getAPIntValue()) != C->getAPIntValue())
+      assert(ISD::isBitwiseLogicOp(N->getOpcode()) &&
+             "Expected bitwise logic operation");
+      if ((Mask->getAPIntValue() & C->getAPIntValue()) != C->getAPIntValue())
         NodesWithConsts.insert(N);
       continue;
     }
