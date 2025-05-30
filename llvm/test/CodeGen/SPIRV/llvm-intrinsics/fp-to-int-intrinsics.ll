@@ -16,6 +16,7 @@
 ; CHECK: OpDecorate %[[#SAT13:]] SaturatedConversion
 ; CHECK: OpDecorate %[[#SAT14:]] SaturatedConversion
 ; CHECK: OpDecorate %[[#SAT15:]] SaturatedConversion
+; CHECK: OpDecorate %[[#SAT16:]] SaturatedConversion
  
 
 ; CHECK: %[[#SAT1]] = OpConvertFToS %[[#]] %[[#]]
@@ -107,7 +108,7 @@ entry:
 }
 declare i64 @llvm.fptosi.sat.i64.f64(double)
  
-; CHECK: %[[#SAT8]] = OpConvertFToU %[[#]] %[[#]]
+; CHECK: %[[#SAT9]] = OpConvertFToU %[[#]] %[[#]]
 define spir_kernel void @testfunction_float_to_unsigned_i8(float %input) {
 entry:
    %ptr = alloca i8
@@ -118,7 +119,7 @@ entry:
 declare i8 @llvm.fptoui.sat.i8.f32(float)
  
 
-; CHECK: %[[#SAT9]] = OpConvertFToU %[[#]] %[[#]]
+; CHECK: %[[#SAT10]] = OpConvertFToU %[[#]] %[[#]]
 define spir_kernel void @testfunction_float_to_unsigned_i16(float %input) {
 entry:
    %ptr = alloca i16
@@ -129,7 +130,7 @@ entry:
 declare i16 @llvm.fptoui.sat.i16.f32(float)
 
 
-; CHECK: %[[#SAT10]] = OpConvertFToU %[[#]] %[[#]]
+; CHECK: %[[#SAT11]] = OpConvertFToU %[[#]] %[[#]]
 define spir_kernel void @testfunction_float_to_unsigned_i32(float %input) {
 entry:
    %ptr = alloca i32
@@ -140,7 +141,7 @@ entry:
 declare i32 @llvm.fptoui.sat.i32.f32(float)
  
 
-; CHECK: %[[#SAT11]] = OpConvertFToU %[[#]] %[[#]]
+; CHECK: %[[#SAT12]] = OpConvertFToU %[[#]] %[[#]]
 define spir_kernel void @testfunction_float_to_unsigned_i64(float %input) {
 entry:
    %ptr = alloca i64
@@ -151,7 +152,7 @@ entry:
 declare i64 @llvm.fptoui.sat.i64.f32(float)
  
 
-; CHECK: %[[#SAT12]] = OpConvertFToU %[[#]] %[[#]]
+; CHECK: %[[#SAT13]] = OpConvertFToU %[[#]] %[[#]]
 define spir_kernel void @testfunction_double_to_unsigned_i8(double %input) {
 entry:
    %ptr = alloca i8
@@ -162,7 +163,7 @@ entry:
 declare i8 @llvm.fptoui.sat.i8.f64(double)
  
 
-; CHECK: %[[#SAT13]] = OpConvertFToU %[[#]] %[[#]]
+; CHECK: %[[#SAT14]] = OpConvertFToU %[[#]] %[[#]]
 define spir_kernel void @testfunction_double_to_unsigned_i16(double %input) {
 entry:
    %ptr = alloca i16
@@ -173,7 +174,7 @@ entry:
 declare i16 @llvm.fptoui.sat.i16.f64(double)
  
 
-; CHECK: %[[#SAT14]] = OpConvertFToU %[[#]] %[[#]]
+; CHECK: %[[#SAT15]] = OpConvertFToU %[[#]] %[[#]]
 define spir_kernel void @testfunction_double_to_unsigned_i32(double %input) {
 entry:
    %ptr = alloca i32
@@ -184,7 +185,7 @@ entry:
 declare i32 @llvm.fptoui.sat.i32.f64(double)
  
 
-; CHECK: %[[#SAT15]] = OpConvertFToU %[[#]] %[[#]]
+; CHECK: %[[#SAT16]] = OpConvertFToU %[[#]] %[[#]]
 define spir_kernel void @testfunction_double_to_unsigned_i64(double %input) {
 entry:
    %ptr = alloca i64
