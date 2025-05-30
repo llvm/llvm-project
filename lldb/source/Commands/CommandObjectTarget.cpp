@@ -2237,11 +2237,12 @@ public:
             "Dump the clang ast for a given module's symbol file.",
             "target modules dump ast [--filter <name>] [<file1> ...]",
             eCommandRequiresTarget),
-        m_filter(LLDB_OPT_SET_1, false, "filter", 'f', 0, eArgTypeName, "TODO",
+        m_filter(LLDB_OPT_SET_1, false, "filter", 'f', 0, eArgTypeName,
+                 "Dump only the decls whose names contain the specified filter "
+                 "string.",
                  /*default_value=*/"") {
     m_option_group.Append(&m_filter, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
     m_option_group.Finalize();
-    AddSimpleArgumentList(eArgTypeFilename, eArgRepeatStar);
   }
 
   Options *GetOptions() override { return &m_option_group; }

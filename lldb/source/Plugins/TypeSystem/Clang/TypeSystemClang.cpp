@@ -8512,15 +8512,15 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 }
 #endif
 
-void TypeSystemClang::Dump(llvm::raw_ostream &output,
-                           llvm::StringRef filter_string) {
+void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
   auto consumer =
-      clang::CreateASTDumper(output /*Dump to stdout.*/, filter_string,
+      clang::CreateASTDumper(output, filter,
                              /*DumpDecls=*/true,
                              /*Deserialize=*/false,
                              /*DumpLookups=*/false,
                              /*DumpDeclTypes=*/false, clang::ADOF_Default);
   lldbassert(consumer);
+  lldbassert(m_ast_up);
   consumer->HandleTranslationUnit(*m_ast_up);
 }
 
