@@ -388,8 +388,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   // Set DAG combine for 'LSX' feature.
 
-  if (Subtarget.hasExtLSX())
+  if (Subtarget.hasExtLSX()) {
     setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
+    setTargetDAGCombine(ISD::BITCAST);
+  }
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -4286,6 +4288,94 @@ static SDValue performSRLCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const LoongArchSubtarget &Subtarget) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  if (!DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  if (!SrcVT.isSimple() || SrcVT.getScalarType() != MVT::i1)
+    return SDValue();
+
+  if (Src.getOpcode() != ISD::SETCC || !Src.hasOneUse())
+    return SDValue();
+
+  bool UseLASX;
+  EVT CmpVT = Src.getOperand(0).getValueType();
+  EVT EltVT = CmpVT.getVectorElementType();
+  if (Subtarget.hasExtLSX() && CmpVT.getSizeInBits() <= 128)
+    UseLASX = false;
+  else if (Subtarget.has32S() && Subtarget.hasExtLASX() &&
+           CmpVT.getSizeInBits() <= 256)
+    UseLASX = true;
+  else
+    return SDValue();
+
+  unsigned ISD = ISD::DELETED_NODE;
+  SDValue SrcN1 = Src.getOperand(1);
+  switch (cast<CondCodeSDNode>(Src.getOperand(2))->get()) {
+  default:
+    return SDValue();
+  case ISD::SETEQ:
+    if (EltVT == MVT::i8) {
+      // x == 0 => not (vmsknez.b x)
+      if (ISD::isBuildVectorAllZeros(SrcN1.getNode()))
+        ISD = UseLASX ? LoongArchISD::XVMSKEQZ : LoongArchISD::VMSKEQZ;
+      // x == -1 => vmsknez.b x
+      else if (ISD::isBuildVectorAllOnes(SrcN1.getNode()))
+        ISD = UseLASX ? LoongArchISD::XVMSKNEZ : LoongArchISD::VMSKNEZ;
+    }
+    break;
+  case ISD::SETGT:
+    // x > -1 => vmskgez.b x
+    if (ISD::isBuildVectorAllOnes(SrcN1.getNode()) && EltVT == MVT::i8)
+      ISD = UseLASX ? LoongArchISD::XVMSKGEZ : LoongArchISD::VMSKGEZ;
+    break;
+  case ISD::SETGE:
+    // x >= 0 => vmskgez.b x
+    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
+      ISD = UseLASX ? LoongArchISD::XVMSKGEZ : LoongArchISD::VMSKGEZ;
+    break;
+  case ISD::SETLT:
+    // x < 0 => vmskltz.{b,h,w,d} x
+    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) &&
+        (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32 ||
+         EltVT == MVT::i64))
+      ISD = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
+    break;
+  case ISD::SETLE:
+    // x <= -1 => vmskltz.{b,h,w,d} x
+    if (ISD::isBuildVectorAllOnes(SrcN1.getNode()) &&
+        (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32 ||
+         EltVT == MVT::i64))
+      ISD = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
+    break;
+  case ISD::SETNE:
+    if (EltVT == MVT::i8) {
+      // x != 0 => vmsknez.b x
+      if (ISD::isBuildVectorAllZeros(SrcN1.getNode()))
+        ISD = UseLASX ? LoongArchISD::XVMSKNEZ : LoongArchISD::VMSKNEZ;
+      // x != -1 => not (vmsknez.b x)
+      else if (ISD::isBuildVectorAllOnes(SrcN1.getNode()))
+        ISD = UseLASX ? LoongArchISD::XVMSKEQZ : LoongArchISD::VMSKEQZ;
+    }
+    break;
+  }
+
+  if (ISD == ISD::DELETED_NODE)
+    return SDValue();
+
+  SDValue V = DAG.getNode(ISD, DL, MVT::i64, Src.getOperand(0));
+  EVT T = EVT::getIntegerVT(*DAG.getContext(), SrcVT.getVectorNumElements());
+  V = DAG.getZExtOrTrunc(V, DL, T);
+  return DAG.getBitcast(VT, V);
+}
+
 static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const LoongArchSubtarget &Subtarget) {
@@ -5303,6 +5393,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performSETCCCombine(N, DAG, DCI, Subtarget);
   case ISD::SRL:
     return performSRLCombine(N, DAG, DCI, Subtarget);
+  case ISD::BITCAST:
+    return performBITCASTCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   case ISD::INTRINSIC_WO_CHAIN:
@@ -5589,6 +5681,120 @@ static MachineBasicBlock *emitPseudoCTPOP(MachineInstr &MI,
   return BB;
 }
 
+static MachineBasicBlock *
+emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
+                   const LoongArchSubtarget &Subtarget) {
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const TargetRegisterClass *RC = &LoongArch::LSX128RegClass;
+  const LoongArchRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  DebugLoc DL = MI.getDebugLoc();
+  unsigned EleBits = 8;
+  unsigned NotOpc = 0;
+  unsigned MskOpc;
+
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case LoongArch::PseudoVMSKLTZ_B:
+    MskOpc = LoongArch::VMSKLTZ_B;
+    break;
+  case LoongArch::PseudoVMSKLTZ_H:
+    MskOpc = LoongArch::VMSKLTZ_H;
+    EleBits = 16;
+    break;
+  case LoongArch::PseudoVMSKLTZ_W:
+    MskOpc = LoongArch::VMSKLTZ_W;
+    EleBits = 32;
+    break;
+  case LoongArch::PseudoVMSKLTZ_D:
+    MskOpc = LoongArch::VMSKLTZ_D;
+    EleBits = 64;
+    break;
+  case LoongArch::PseudoVMSKGEZ_B:
+    MskOpc = LoongArch::VMSKGEZ_B;
+    break;
+  case LoongArch::PseudoVMSKEQZ_B:
+    MskOpc = LoongArch::VMSKNZ_B;
+    NotOpc = LoongArch::VNOR_V;
+    break;
+  case LoongArch::PseudoVMSKNEZ_B:
+    MskOpc = LoongArch::VMSKNZ_B;
+    break;
+  case LoongArch::PseudoXVMSKLTZ_B:
+    MskOpc = LoongArch::XVMSKLTZ_B;
+    RC = &LoongArch::LASX256RegClass;
+    break;
+  case LoongArch::PseudoXVMSKLTZ_H:
+    MskOpc = LoongArch::XVMSKLTZ_H;
+    RC = &LoongArch::LASX256RegClass;
+    EleBits = 16;
+    break;
+  case LoongArch::PseudoXVMSKLTZ_W:
+    MskOpc = LoongArch::XVMSKLTZ_W;
+    RC = &LoongArch::LASX256RegClass;
+    EleBits = 32;
+    break;
+  case LoongArch::PseudoXVMSKLTZ_D:
+    MskOpc = LoongArch::XVMSKLTZ_D;
+    RC = &LoongArch::LASX256RegClass;
+    EleBits = 64;
+    break;
+  case LoongArch::PseudoXVMSKGEZ_B:
+    MskOpc = LoongArch::XVMSKGEZ_B;
+    RC = &LoongArch::LASX256RegClass;
+    break;
+  case LoongArch::PseudoXVMSKEQZ_B:
+    MskOpc = LoongArch::XVMSKNZ_B;
+    NotOpc = LoongArch::XVNOR_V;
+    RC = &LoongArch::LASX256RegClass;
+    break;
+  case LoongArch::PseudoXVMSKNEZ_B:
+    MskOpc = LoongArch::XVMSKNZ_B;
+    RC = &LoongArch::LASX256RegClass;
+    break;
+  }
+
+  Register Msk = MRI.createVirtualRegister(RC);
+  if (NotOpc) {
+    Register Tmp = MRI.createVirtualRegister(RC);
+    BuildMI(*BB, MI, DL, TII->get(MskOpc), Tmp).addReg(Src);
+    BuildMI(*BB, MI, DL, TII->get(NotOpc), Msk)
+        .addReg(Tmp, RegState::Kill)
+        .addReg(Tmp, RegState::Kill);
+  } else {
+    BuildMI(*BB, MI, DL, TII->get(MskOpc), Msk).addReg(Src);
+  }
+
+  if (TRI->getRegSizeInBits(*RC) > 128) {
+    Register Lo = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+    Register Hi = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPICKVE2GR_WU), Lo)
+        .addReg(Msk, RegState::Kill)
+        .addImm(0);
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPICKVE2GR_WU), Hi)
+        .addReg(Msk, RegState::Kill)
+        .addImm(4);
+    BuildMI(*BB, MI, DL,
+            TII->get(Subtarget.is64Bit() ? LoongArch::BSTRINS_D
+                                         : LoongArch::BSTRINS_W),
+            Dst)
+        .addReg(Lo, RegState::Kill)
+        .addReg(Hi, RegState::Kill)
+        .addImm(256 / EleBits - 1)
+        .addImm(128 / EleBits);
+  } else {
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::VPICKVE2GR_HU), Dst)
+        .addReg(Msk, RegState::Kill)
+        .addImm(0);
+  }
+
+  MI.eraseFromParent();
+  return BB;
+}
+
 static bool isSelectPseudo(MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
@@ -5795,6 +6001,21 @@ MachineBasicBlock *LoongArchTargetLowering::EmitInstrWithCustomInserter(
     return emitPseudoXVINSGR2VR(MI, BB, Subtarget);
   case LoongArch::PseudoCTPOP:
     return emitPseudoCTPOP(MI, BB, Subtarget);
+  case LoongArch::PseudoVMSKLTZ_B:
+  case LoongArch::PseudoVMSKLTZ_H:
+  case LoongArch::PseudoVMSKLTZ_W:
+  case LoongArch::PseudoVMSKLTZ_D:
+  case LoongArch::PseudoVMSKGEZ_B:
+  case LoongArch::PseudoVMSKEQZ_B:
+  case LoongArch::PseudoVMSKNEZ_B:
+  case LoongArch::PseudoXVMSKLTZ_B:
+  case LoongArch::PseudoXVMSKLTZ_H:
+  case LoongArch::PseudoXVMSKLTZ_W:
+  case LoongArch::PseudoXVMSKLTZ_D:
+  case LoongArch::PseudoXVMSKGEZ_B:
+  case LoongArch::PseudoXVMSKEQZ_B:
+  case LoongArch::PseudoXVMSKNEZ_B:
+    return emitPseudoVMSKCOND(MI, BB, Subtarget);
   case TargetOpcode::STATEPOINT:
     // STATEPOINT is a pseudo instruction which has no implicit defs/uses
     // while bl call instruction (where statepoint will be lowered at the
@@ -5916,6 +6137,14 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VBSLL)
     NODE_NAME_CASE(VBSRL)
     NODE_NAME_CASE(VLDREPL)
+    NODE_NAME_CASE(VMSKLTZ)
+    NODE_NAME_CASE(VMSKGEZ)
+    NODE_NAME_CASE(VMSKEQZ)
+    NODE_NAME_CASE(VMSKNEZ)
+    NODE_NAME_CASE(XVMSKLTZ)
+    NODE_NAME_CASE(XVMSKGEZ)
+    NODE_NAME_CASE(XVMSKEQZ)
+    NODE_NAME_CASE(XVMSKNEZ)
   }
 #undef NODE_NAME_CASE
   return nullptr;
