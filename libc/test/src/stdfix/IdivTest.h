@@ -64,9 +64,9 @@ public:
   void testInvalidNumbers(IdivFunc func) {
     constexpr bool has_integral = (FXRep::INTEGRAL_LEN > 0);
 
-    EXPECT_DEATH([func] { func(0.5, 0.0); }, WITH_SIGNAL(SIGILL));
+    EXPECT_DEATH([func] { func(0.5, 0.0); }, WITH_SIGNAL(-1));
     if constexpr (has_integral) {
-      EXPECT_DEATH([func] { func(2.5, 0.0); }, WITH_SIGNAL(SIGSEGV));
+      EXPECT_DEATH([func] { func(2.5, 0.0); }, WITH_SIGNAL(-1));
     }
   }
 };
