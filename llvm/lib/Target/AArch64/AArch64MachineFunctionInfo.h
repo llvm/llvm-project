@@ -245,6 +245,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   int64_t VGIdx = std::numeric_limits<int>::max();
   int64_t StreamingVGIdx = std::numeric_limits<int>::max();
 
+  // The stack slot where ZT0 is stored.
+  int64_t ZT0Idx = std::numeric_limits<int>::max();
+
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
@@ -274,6 +277,9 @@ public:
 
   int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
   void setStreamingVGIdx(unsigned FrameIdx) { StreamingVGIdx = FrameIdx; };
+
+  int64_t getZT0Idx() const { return ZT0Idx; };
+  void setZT0Idx(unsigned FrameIdx) { ZT0Idx = FrameIdx; };
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };

@@ -79,6 +79,10 @@ enum NodeType : unsigned {
   RESTORE_ZT,
   SAVE_ZT,
 
+  SME_CALL_START,
+  SME_CALL_SM_CHANGE,
+  SME_CALL_END,
+
   // A call with the callee in x16, i.e. "blr x16".
   CALL_ARM64EC_TO_X64,
 
@@ -823,6 +827,9 @@ public:
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
 
+  TargetLoweringBase::LegalizeAction
+  getCustomOperationAction(SDNode &) const override;
+
   /// If the target has a standard location for the stack protector cookie,
   /// returns the address of that location. Otherwise, returns nullptr.
   Value *getIRStackGuard(IRBuilderBase &IRB) const override;
@@ -1028,6 +1035,11 @@ public:
   /// True if stack clash protection is enabled for this functions.
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
 
+  // Returns the runtime value for PSTATE.SM by generating a call to
+  // __arm_sme_state.
+  SDValue getRuntimePStateSM(SelectionDAG &DAG, SDValue Chain, SDLoc DL,
+                             EVT VT) const;
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
@@ -1211,6 +1223,9 @@ private:
   SDValue LowerWindowsDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerInlineDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSME_CALL_START(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSME_CALL_SM_CHANGE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSME_CALL_END(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerAVG(SDValue Op, SelectionDAG &DAG, unsigned NewOp) const;
 
@@ -1346,11 +1361,6 @@ private:
   // with BITCAST used otherwise.
   // This function does not handle predicate bitcasts.
   SDValue getSVESafeBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) const;
-
-  // Returns the runtime value for PSTATE.SM by generating a call to
-  // __arm_sme_state.
-  SDValue getRuntimePStateSM(SelectionDAG &DAG, SDValue Chain, SDLoc DL,
-                             EVT VT) const;
 
   bool preferScalarizeSplat(SDNode *N) const override;
 
