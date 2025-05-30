@@ -3847,7 +3847,6 @@ TEST(Hover, ParseDocumentation) {
                    "`not parsed`",
                }};
 
-  //Case C = Cases[2];
   for (const auto &C : Cases) {
     markup::Document Output;
     parseDocumentation(C.Documentation, Output);

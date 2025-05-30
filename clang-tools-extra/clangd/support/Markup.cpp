@@ -66,12 +66,13 @@ bool looksLikeTag(llvm::StringRef Contents) {
 ///
 /// **FIXME:** handle the case when the client does support HTML rendering in
 /// markdown. For this, the LSP server needs to check the
-/// [supportsHtml capability](https://github.com/microsoft/language-server-protocol/issues/1344)
+/// [supportsHtml
+/// capability](https://github.com/microsoft/language-server-protocol/issues/1344)
 /// of the client.
 ///
 /// \param C The character to check.
-/// \param After The string that follows \p C . This is used to determine if \p C is
-///             part of a tag or an entity reference.
+/// \param After The string that follows \p C .
+//  This is used to determine if \p C is part of a tag or an entity reference.
 /// \returns true if \p C should be escaped, false otherwise.
 bool needsLeadingEscape(char C, llvm::StringRef After) {
   switch (C) {
@@ -245,7 +246,8 @@ private:
 std::string indentLines(llvm::StringRef Input) {
   assert(!Input.ends_with("\n") && "Input should've been trimmed.");
   std::string IndentedR;
-  // We'll add 2 spaces after each new line which is not followed by another new line.
+  // We'll add 2 spaces after each new line which is not followed by another new
+  // line.
   IndentedR.reserve(Input.size() + Input.count('\n') * 2);
   for (size_t I = 0; I < Input.size(); ++I) {
     char C = Input[I];
@@ -326,7 +328,7 @@ llvm::StringRef Paragraph::chooseMarker(llvm::ArrayRef<llvm::StringRef> Options,
   return Options.front();
 }
 
-bool Paragraph::punctuationIndicatesLineBreak(llvm::StringRef Line) const{
+bool Paragraph::punctuationIndicatesLineBreak(llvm::StringRef Line) const {
   constexpr llvm::StringLiteral Punctuation = R"txt(.:,;!?)txt";
 
   Line = Line.rtrim();
@@ -515,9 +517,7 @@ Paragraph &Document::addParagraph() {
   return *static_cast<Paragraph *>(Children.back().get());
 }
 
-void Document::addRuler() {
-  Children.push_back(std::make_unique<Ruler>());
-}
+void Document::addRuler() { Children.push_back(std::make_unique<Ruler>()); }
 
 void Document::addCodeBlock(std::string Code, std::string Language) {
   Children.emplace_back(

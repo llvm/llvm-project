@@ -1095,10 +1095,11 @@ TEST(CompletionTest, Documentation) {
 
       int x = ^
      )cpp");
-  EXPECT_THAT(Results.Completions,
-              Contains(AllOf(
-                  named("foo"),
-                  doc("Annotation: custom_annotation\n\nNon-doxygen comment."))));
+  EXPECT_THAT(
+      Results.Completions,
+      Contains(
+          AllOf(named("foo"),
+                doc("Annotation: custom_annotation\n\nNon-doxygen comment."))));
   EXPECT_THAT(
       Results.Completions,
       Contains(AllOf(named("bar"), doc("Doxygen comment.\n\\param int a"))));

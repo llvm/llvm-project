@@ -187,7 +187,8 @@ TEST(Paragraph, SeparationOfChunks) {
   EXPECT_EQ(P.asPlainText(), "after foobar batno space text");
 
   P.appendSpace().appendCode("code").appendText(".\n  newline");
-  EXPECT_EQ(P.asMarkdown(), "after `foobar` bat`no` `space` text `code`.\n  newline");
+  EXPECT_EQ(P.asMarkdown(),
+            "after `foobar` bat`no` `space` text `code`.\n  newline");
   EXPECT_EQ(P.asPlainText(), "after foobar batno space text code.\nnewline");
 }
 
