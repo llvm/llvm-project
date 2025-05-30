@@ -1581,6 +1581,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   llvm.amdgcn.query.shared.rank                    Get workgroup ID within a cluster for a pointer in Distributed address space.
 
+  llvm.amdgcn.map.shared.rank                      Construct a pointer in Distributed address space from a pointer in
+                                                   Local address space and a workgroup ID within a cluster.
+
   ==============================================   ==========================================================
 
 .. TODO::

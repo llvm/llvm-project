@@ -292,6 +292,8 @@ private:
   // represents ptr addrspace(8)) using the flags specified in the intrinsic.
   SDValue lowerPointerAsRsrcIntrin(SDNode *Op, SelectionDAG &DAG) const;
 
+  SDValue lowerMapSharedRank(SDNode *Op, SelectionDAG &DAG) const;
+
   // Handle 8 bit and 16 bit buffer loads
   SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,
                                      ArrayRef<SDValue> Ops,

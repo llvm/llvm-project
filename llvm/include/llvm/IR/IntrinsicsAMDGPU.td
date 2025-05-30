@@ -4130,6 +4130,11 @@ def int_amdgcn_query_shared_rank : DefaultAttrsIntrinsic<
   [dds_ptr_ty],
   [IntrNoMem, ReadNone<ArgIndex<0>>, IntrSpeculatable]>;
 
+def int_amdgcn_map_shared_rank : DefaultAttrsIntrinsic<
+  [dds_ptr_ty],
+  [local_ptr_ty, llvm_i32_ty],
+  [IntrNoMem, ReadNone<ArgIndex<0>>, IntrSpeculatable]>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//

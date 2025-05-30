@@ -10512,6 +10512,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_mov_dpp8:
   case Intrinsic::amdgcn_update_dpp:
     return lowerLaneOp(*this, Op.getNode(), DAG);
+  case Intrinsic::amdgcn_map_shared_rank:
+    return lowerMapSharedRank(Op.getNode(), DAG);
   case Intrinsic::amdgcn_dead: {
     SmallVector<SDValue, 8> Poisons;
     for (const EVT ValTy : Op.getNode()->values())
@@ -12102,6 +12104,17 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
                              NewHighHalf, NumRecords, Flags);
   SDValue RsrcPtr = DAG.getNode(ISD::BITCAST, Loc, MVT::i128, Rsrc);
   return RsrcPtr;
+}
+
+SDValue SITargetLowering::lowerMapSharedRank(SDNode *Op,
+                                             SelectionDAG &DAG) const {
+  SDValue Pointer = Op->getOperand(1);
+  SDValue Rank = Op->getOperand(2);
+  SDLoc SL(Op);
+
+  return DAG.getNode(ISD::OR, SL, MVT::i32, Pointer,
+                     DAG.getNode(ISD::SHL, SL, MVT::i32, Rank,
+                                 DAG.getShiftAmountConstant(24, MVT::i32, SL)));
 }
 
 // Handle 8 bit and 16 bit buffer loads

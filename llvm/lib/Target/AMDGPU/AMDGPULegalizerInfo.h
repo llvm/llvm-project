@@ -125,6 +125,9 @@ public:
   bool legalizePointerAsRsrcIntrin(MachineInstr &MI, MachineRegisterInfo &MRI,
                                    MachineIRBuilder &B) const;
 
+  bool legalizeMapSharedRank(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B) const;
+
   bool legalizePreloadedArgIntrin(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
