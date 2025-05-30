@@ -1103,7 +1103,7 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
   assert(!cir::MissingFeatures::opGlobalDLLImportExport());
 
   const llvm::Triple &tt = cgm.getTriple();
-  const auto &cgOpts = cgm.getCodeGenOpts();
+  const CodeGenOptions &cgOpts = cgm.getCodeGenOpts();
   if (tt.isWindowsGNUEnvironment()) {
     // In MinGW, variables without DLLImport can still be automatically
     // imported from a DLL by the linker; don't mark variables that
@@ -1135,7 +1135,7 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
     return false;
 
   llvm::Reloc::Model rm = cgOpts.RelocationModel;
-  const auto &lOpts = cgm.getLangOpts();
+  const LangOptions &lOpts = cgm.getLangOpts();
   if (rm != llvm::Reloc::Static && !lOpts.PIE) {
     // On ELF, if -fno-semantic-interposition is specified and the target
     // supports local aliases, there will be neither CC1
@@ -1144,8 +1144,8 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
     // PLT indirection).
     if (!(isa<cir::FuncOp>(gv) && gv.canBenefitFromLocalAlias()))
       return false;
-    return !(cgm.getLangOpts().SemanticInterposition ||
-             cgm.getLangOpts().HalfNoSemanticInterposition);
+    return !(lOpts.SemanticInterposition ||
+             lOpts.HalfNoSemanticInterposition);
   }
 
   // A definition cannot be preempted from an executable.

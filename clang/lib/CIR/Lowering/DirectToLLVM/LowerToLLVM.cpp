@@ -966,7 +966,7 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   const bool isConst = false;
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
-  const auto isDsoLocal = op.getDsolocal();
+  const bool isDsoLocal = op.getDsolocal();
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -1020,7 +1020,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const bool isConst = false;
   assert(!cir::MissingFeatures::addressSpace());
   const unsigned addrSpace = 0;
-  const auto isDsoLocal = op.getDsolocal();
+  const bool isDsoLocal = op.getDsolocal();
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   const bool isThreadLocal = false;
   const uint64_t alignment = op.getAlignment().value_or(0);

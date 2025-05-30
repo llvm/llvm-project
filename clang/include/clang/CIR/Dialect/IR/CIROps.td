@@ -1653,7 +1653,7 @@ def GlobalOp : CIR_Op<"global",
   // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
                        DefaultValuedAttr<
-                        VisibilityAttr,
+                        CIR_VisibilityAttr,
                         "VisibilityKind::Default"
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,

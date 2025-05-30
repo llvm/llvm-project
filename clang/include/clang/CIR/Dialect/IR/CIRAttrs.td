@@ -280,17 +280,16 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 // VisibilityAttr
 //===----------------------------------------------------------------------===//
 
-def VK_Default : I32EnumAttrCase<"Default", 1, "default">;
-def VK_Hidden : I32EnumAttrCase<"Hidden", 2, "hidden">;
-def VK_Protected : I32EnumAttrCase<"Protected", 3, "protected">;
-
-def VisibilityKind : I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
-  VK_Default, VK_Hidden, VK_Protected
+def CIR_VisibilityKind : I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
+  I32EnumAttrCase<"Default", 1, "default">,
+  I32EnumAttrCase<"Hidden", 2, "hidden">,
+  I32EnumAttrCase<"Protected", 3, "protected">
 ]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::cir";
 }
 
-def VisibilityAttr : CIR_Attr<"Visibility", "visibility"> {
+def CIR_VisibilityAttr : CIR_Attr<"Visibility", "visibility"> {
   let summary = "Visibility attribute";
   let description = [{
     Visibility attributes.
