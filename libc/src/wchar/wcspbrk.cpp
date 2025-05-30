@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 bool contains_char(const wchar_t *str, wchar_t target) {
-  for (; *str != 0; str++)
+  for (; *str != L'\0'; str++)
     if (*str == target)
       return true;
 
