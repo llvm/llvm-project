@@ -3273,6 +3273,32 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
                                      -MI->getOperand(2).getImm());
     return;
 
+  case AArch64::SEH_AllocZ:
+    assert(MI->getOperand(0).getImm() >= 0 &&
+           "AllocZ SEH opcode offset must be non-negative");
+    assert(MI->getOperand(0).getImm() <= 255 &&
+           "AllocZ SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFIAllocZ(MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_SaveZReg:
+    assert(MI->getOperand(1).getImm() >= 0 &&
+           "SaveZReg SEH opcode offset must be non-negative");
+    assert(MI->getOperand(1).getImm() <= 255 &&
+           "SaveZReg SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFISaveZReg(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SavePReg:
+    assert(MI->getOperand(1).getImm() >= 0 &&
+           "SavePReg SEH opcode offset must be non-negative");
+    assert(MI->getOperand(1).getImm() <= 255 &&
+           "SavePReg SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFISavePReg(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
   case AArch64::BLR:
   case AArch64::BR: {
     recordIfImportCall(MI);
