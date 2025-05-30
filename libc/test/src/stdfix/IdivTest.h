@@ -72,7 +72,7 @@ public:
 };
 
 #if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
-#define LIST_IDIV_TESTS(Name, T, XTYpe, func)                                  \
+#define LIST_IDIV_TESTS(Name, T, XType, func)                                  \
   using LlvmLibcIdiv##Name##Test = IdivTest<T, XType>;                         \
   TEST_F(LlvmLibcIdiv##Name##Test, InvalidNumbers) {                           \
     testInvalidNumbers(&func);                                                 \
