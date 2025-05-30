@@ -15,21 +15,21 @@ typedef long long vll2 __attribute__((vector_size(16)));
 vi4 vec_a;
 // CIR: cir.global external @[[VEC_A:.*]] = #cir.zero : !cir.vector<4 x !s32i>
 
-// LLVM: @[[VEC_A:.*]] = dso_local global <4 x i32> zeroinitializer
+// LLVM: @[[VEC_A:.*]] = global <4 x i32> zeroinitializer
 
 // OGCG: @[[VEC_A:.*]] = global <4 x i32> zeroinitializer
 
 vd2 b;
 // CIR: cir.global external @[[VEC_B:.*]] = #cir.zero : !cir.vector<2 x !cir.double>
 
-// LLVM: @[[VEC_B:.*]] = dso_local global <2 x double> zeroinitialize
+// LLVM: @[[VEC_B:.*]] = global <2 x double> zeroinitialize
 
 // OGCG: @[[VEC_B:.*]] = global <2 x double> zeroinitializer
 
 vll2 c;
 // CIR: cir.global external @[[VEC_C:.*]] = #cir.zero : !cir.vector<2 x !s64i>
 
-// LLVM: @[[VEC_C:.*]] = dso_local global <2 x i64> zeroinitialize
+// LLVM: @[[VEC_C:.*]] = global <2 x i64> zeroinitialize
 
 // OGCG: @[[VEC_C:.*]] = global <2 x i64> zeroinitializer
 
@@ -38,7 +38,7 @@ vi4 d = { 1, 2, 3, 4 };
 // CIR: cir.global external @[[VEC_D:.*]] = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> :
 // CIR-SAME: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 
-// LLVM: @[[VEC_D:.*]] = dso_local global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+// LLVM: @[[VEC_D:.*]] = global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
 
 // OGCG: @[[VEC_D:.*]] = global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
 
