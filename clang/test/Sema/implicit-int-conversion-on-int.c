@@ -44,3 +44,7 @@ long long test_ll(long long x) {
 unsigned long long test_ull(unsigned long long x) {
   return -x;
 }
+
+unsigned _BitInt(16) test_unsigned_bit_int(unsigned _BitInt(16) x) {
+  return -x;
+}
