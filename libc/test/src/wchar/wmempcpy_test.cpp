@@ -15,12 +15,12 @@ TEST(LlvmLibcWMempcpyTest, Simple) {
   void *result = LIBC_NAMESPACE::wmempcpy(dest, src, 6);
   ASSERT_EQ(static_cast<wchar_t *>(result), dest + 6);
 
-  ASSERT_TRUE(src[0] == dest[0]);
-  ASSERT_TRUE(src[1] == dest[1]);
-  ASSERT_TRUE(src[2] == dest[2]);
-  ASSERT_TRUE(src[3] == dest[3]);
-  ASSERT_TRUE(src[4] == dest[4]);
-  ASSERT_TRUE(src[5] == dest[5]);
+  ASSERT_TRUE(dest[0] == src[0]);
+  ASSERT_TRUE(dest[1] == src[1]);
+  ASSERT_TRUE(dest[2] == src[2]);
+  ASSERT_TRUE(dest[3] == src[3]);
+  ASSERT_TRUE(dest[4] == src[4]);
+  ASSERT_TRUE(dest[5] == src[5]);
 }
 
 TEST(LlvmLibcWmempcpyTest, ZeroCount) {
