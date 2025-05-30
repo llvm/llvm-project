@@ -148,6 +148,12 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`readability-use-span-first-last
+  <clang-tidy/checks/readability/use-span-first-last>` check.
+
+  Suggests using ``std::span::first()`` and ``std::span::last()`` member functions instead of
+  equivalent ``subspan()``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
