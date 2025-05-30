@@ -177,7 +177,7 @@ public:
     }
 
     std::vector<VariantMatcher> innerArgs;
-    for (size_t i = 0, e = args.size(); i != e; ++i) {
+    for (int64_t i = 0, e = args.size(); i != e; ++i) {
       const ParserValue &arg = args[i];
       const VariantValue &value = arg.value;
       if (!value.isMatcher()) {

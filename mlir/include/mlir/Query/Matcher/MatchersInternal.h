@@ -102,7 +102,8 @@ using VariadicOperatorFunction = bool (*)(Operation *op,
 template <VariadicOperatorFunction Func>
 class VariadicMatcher : public MatcherInterface {
 public:
-  VariadicMatcher(std::vector<DynMatcher> matchers) : matchers(matchers) {}
+  VariadicMatcher(std::vector<DynMatcher> matchers)
+      : matchers(std::move(matchers)) {}
 
   bool match(Operation *op) override { return Func(op, nullptr, matchers); }
   bool match(Operation *op, SetVector<Operation *> &matchedOps) override {
