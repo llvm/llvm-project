@@ -7534,11 +7534,10 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   // created a bc.merge.rdx Phi after the main vector body. Ensure that we carry
   // over the incoming values correctly.
   using namespace VPlanPatternMatch;
-  auto IsResumePhi = [](VPUser *U) { return isa<VPPhi>(U); };
-  assert(count_if(EpiRedResult->users(), IsResumePhi) == 1 &&
+  assert(count_if(EpiRedResult->users(), IsaPred<VPPhi>) == 1 &&
          "ResumePhi must have a single user");
   auto *EpiResumePhiVPI =
-      cast<VPInstruction>(*find_if(EpiRedResult->users(), IsResumePhi));
+      cast<VPInstruction>(*find_if(EpiRedResult->users(), IsaPred<VPPhi>));
   auto *EpiResumePhi = cast<PHINode>(State.get(EpiResumePhiVPI, true));
   EpiResumePhi->setIncomingValueForBlock(
       BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
