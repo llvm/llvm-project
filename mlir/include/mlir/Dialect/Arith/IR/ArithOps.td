@@ -1232,7 +1232,7 @@ def Arith_ScalingExtFOp
     This operations upcasts quantized floating point value using provided scales values. 
     It expects both scales and input operand to be of same shape and therefore operation is an elementwise operation. 
     Scales are usually calculated per block following OCP MXFP spec as described in  https://arxiv.org/abs/2310.10537.
-    If Scales are calculated per block where blockSize != 1 then, Scales may require broadcasting to make this operation elementwise. 
+    If scales are calculated per block where blockSize != 1 then, scales may require broadcasting to make this operation elementwise. 
     For example, let's say input is of shape <dim1 x dim2 x ... dimN> then given blockSize != 1 and assuming quantization happens on last axis, 
     then input can be reshaped to `<dim1 x dim2 x ... (dimN/blockSize) x blockSize>`. Scales will be calculated per block on last axis. Therefore 
     scales will be of shape `<dim1 x dim2 x .. (dimN/blockSize) x 1>`.
@@ -1342,7 +1342,7 @@ def Arith_ScalingTruncFOp
     This operation quantizes input using provided scales value. 
     It expects both scales and input operand to be of same shape and therefore operation is an elementwise operation. 
     Scales are usually calculated per block following OCP MXFP spec as described in  https://arxiv.org/abs/2310.10537.
-    If Scales are calculated per block where blockSize != 1 then, Scales may require broadcasting to make this operation elementwise. 
+    If scales are calculated per block where blockSize != 1 then, scales may require broadcasting to make this operation elementwise. 
     For example, let's say input is of shape <dim1 x dim2 x ... dimN> then given blockSize != 1 and assuming quantization happens on last axis, 
     then input can be reshaped to `<dim1 x dim2 x ... (dimN/blockSize) x blockSize>`. Scales will be calculated per block on last axis. Therefore 
     scales will be of shape `<dim1 x dim2 x .. (dimN/blockSize) x 1>`.
