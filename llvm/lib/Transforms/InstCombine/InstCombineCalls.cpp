@@ -1453,7 +1453,7 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
   // intrinsic (shuf X, M), (shuf Y, M), ... --> shuf (intrinsic X, Y, ...), M
   Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
   Value *NewIntrinsic =
-      Builder.CreateIntrinsic(II->getIntrinsicID(), SrcTy, NewArgs, FPI);
+      Builder.CreateIntrinsic(SrcTy, II->getIntrinsicID(), NewArgs, FPI);
   return new ShuffleVectorInst(NewIntrinsic, Mask);
 }
 
