@@ -71,15 +71,15 @@
 
 // Macros that define commands
 
-#define TIOCPKT_DATA 0
-#define TIOCSER_TEMT 1
+#define TIOCPKT_DATA _IO('\0', 0)
+#define TIOCSER_TEMT _IO('\0', 1)
 #define TIOCPKT_FLUSHREAD TIOCSER_TEMT
-#define TIOCPKT_FLUSHWRITE 2
-#define TIOCPKT_STOP 4
-#define TIOCPKT_START 8
-#define TIOCPKT_NOSTOP 16
-#define TIOCPKT_DOSTOP 32
-#define TIOCPKT_IOCTL 64
+#define TIOCPKT_FLUSHWRITE _IO('\0', 2)
+#define TIOCPKT_STOP _IO('\0', 4)
+#define TIOCPKT_START _IO('\0', 8)
+#define TIOCPKT_NOSTOP _IO('\0', 16)
+#define TIOCPKT_DOSTOP _IO('\0', 32)
+#define TIOCPKT_IOCTL _IO('\0', 64)
 
 #define TCGETS _IO('T', 1)
 #define TCSETS _IO('T', 2)
