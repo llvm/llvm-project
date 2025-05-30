@@ -13,8 +13,10 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GCN-LABEL: {{^}}test_mfma_f32_32x32x4bf16_1k:
 ; GCN-DAG:     s_load_dwordx16
 ; GCN-DAG:     s_load_dwordx16
-; GCN-DAG:     v_mov_b32_e32 v[[TWO:[0-9]+]], 2
-; GCN-DAG:     v_mov_b32_e32 v[[ONE:[0-9]+]], 1
+; GFX90A-DAG:  v_mov_b32_e32 v[[TWO:[0-9]+]], 2
+; GFX90A-DAG:  v_mov_b32_e32 v[[ONE:[0-9]+]], 1
+; GFX942-DAG:  v_mov_b64_e32 v[[[ONE:[0-9]+]]:{{[0-9]+}}], 1
+; GFX942-DAG:  v_mov_b64_e32 v[[[TWO:[0-9]+]]:{{[0-9]+}}], 2
 ; GCN-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GFX90A:      v_mfma_f32_32x32x4bf16_1k a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX942:      v_mfma_f32_32x32x4_2b_bf16 a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9+]}}], v[[[TWO]]:{{[0-9+]}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
@@ -32,8 +34,10 @@ bb:
 
 ; GCN-LABEL: {{^}}test_mfma_f32_16x16x4bf16_1k:
 ; GCN-DAG:      s_load_dwordx16
-; GCN-DAG:      v_mov_b32_e32 v[[TWO:[0-9]+]], 2
-; GCN-DAG:      v_mov_b32_e32 v[[ONE:[0-9]+]], 1
+; GFX90A-DAG:   v_mov_b32_e32 v[[TWO:[0-9]+]], 2
+; GFX90A-DAG:   v_mov_b32_e32 v[[ONE:[0-9]+]], 1
+; GFX942-DAG:   v_mov_b64_e32 v[[[ONE:[0-9]+]]:{{[0-9]+}}], 1
+; GFX942-DAG:   v_mov_b64_e32 v[[[TWO:[0-9]+]]:{{[0-9]+}}], 2
 ; GCN-COUNT-16: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GFX90A:       v_mfma_f32_16x16x4bf16_1k a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX942:       v_mfma_f32_16x16x4_4b_bf16 a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9+]}}], v[[[TWO]]:{{[0-9+]}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
@@ -51,8 +55,10 @@ bb:
 
 ; GCN-LABEL: {{^}}test_mfma_f32_4x4x4bf16_1k:
 ; GCN-DAG:     s_load_dwordx4
-; GCN-DAG:     v_mov_b32_e32 v[[TWO:[0-9]+]], 2
-; GCN-DAG:     v_mov_b32_e32 v[[ONE:[0-9]+]], 1
+; GFX90A-DAG:  v_mov_b32_e32 v[[TWO:[0-9]+]], 2
+; GFX90A-DAG:  v_mov_b32_e32 v[[ONE:[0-9]+]], 1
+; GFX942-DAG:  v_mov_b64_e32 v[[[ONE:[0-9]+]]:{{[0-9]+}}], 1
+; GFX942-DAG:  v_mov_b64_e32 v[[[TWO:[0-9]+]]:{{[0-9]+}}], 2
 ; GCN-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GFX90A:      v_mfma_f32_4x4x4bf16_1k [[RES:a\[[0-9]+:[0-9]+\]]], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX942:      v_mfma_f32_4x4x4_16b_bf16 [[RES:a\[[0-9]+:[0-9]+\]]], v[[[ONE]]:{{[0-9+]}}], v[[[TWO]]:{{[0-9+]}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
@@ -70,8 +76,10 @@ bb:
 
 ; GCN-LABEL: {{^}}test_mfma_f32_32x32x8bf16_1k:
 ; GCN-DAG:      s_load_dwordx16
-; GCN-DAG:      v_mov_b32_e32 v[[TWO:[0-9]+]], 2
-; GCN-DAG:      v_mov_b32_e32 v[[ONE:[0-9]+]], 1
+; GFX90A-DAG:   v_mov_b32_e32 v[[TWO:[0-9]+]], 2
+; GFX90A-DAG:   v_mov_b32_e32 v[[ONE:[0-9]+]], 1
+; GFX942-DAG:   v_mov_b64_e32 v[[[ONE:[0-9]+]]:{{[0-9]+}}], 1
+; GFX942-DAG:   v_mov_b64_e32 v[[[TWO:[0-9]+]]:{{[0-9]+}}], 2
 ; GCN-COUNT-16: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GFX90A:       v_mfma_f32_32x32x8bf16_1k a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX942:       v_mfma_f32_32x32x8_bf16 a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9+]}}], v[[[TWO]]:{{[0-9+]}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
@@ -89,8 +97,10 @@ bb:
 
 ; GCN-LABEL: {{^}}test_mfma_f32_16x16x16bf16_1k:
 ; GCN-DAG:     s_load_dwordx4
-; GCN-DAG:     v_mov_b32_e32 v[[TWO:[0-9]+]], 2
-; GCN-DAG:     v_mov_b32_e32 v[[ONE:[0-9]+]], 1
+; GFX90A-DAG:     v_mov_b32_e32 v[[TWO:[0-9]+]], 2
+; GFX90A-DAG:     v_mov_b32_e32 v[[ONE:[0-9]+]], 1
+; GFX942-DAG:   v_mov_b64_e32 v[[[ONE:[0-9]+]]:{{[0-9]+}}], 1
+; GFX942-DAG:   v_mov_b64_e32 v[[[TWO:[0-9]+]]:{{[0-9]+}}], 2
 ; GCN-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GFX90A:      v_mfma_f32_16x16x16bf16_1k [[RES:a\[[0-9]+:[0-9]+\]]], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX942:      v_mfma_f32_16x16x16_bf16 [[RES:a\[[0-9]+:[0-9]+\]]], v[[[ONE]]:{{[0-9+]}}], v[[[TWO]]:{{[0-9+]}}], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
