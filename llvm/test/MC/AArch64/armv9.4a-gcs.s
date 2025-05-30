@@ -113,3 +113,15 @@ gcspopcx
 gcspopx
 // CHECK: gcspopx                           // encoding: [0xdf,0x77,0x08,0xd5]
 // ERROR-NO-GCS: [[@LINE-2]]:1: error: instruction requires: gcs
+
+gcspushx x3
+// CHECK: gcspushx x3                       // encoding: [0x83,0x77,0x08,0xd5]
+// ERROR-NO-GCS: [[@LINE-2]]:1: error: instruction requires: gcs
+
+gcspopcx x3
+// CHECK: gcspopcx x3                       // encoding: [0xa3,0x77,0x08,0xd5]
+// ERROR-NO-GCS: [[@LINE-2]]:1: error: instruction requires: gcs
+
+gcspopx x3
+// CHECK: gcspopx x3                        // encoding: [0xc3,0x77,0x08,0xd5]
+// ERROR-NO-GCS: [[@LINE-2]]:1: error: instruction requires: gcs

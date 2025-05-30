@@ -1537,16 +1537,6 @@ def : TokenAlias<"IALL", "iall">;
 
 
 // ARMv9.4-A Guarded Control Stack
-class GCSNoOp<bits<3> op2, string mnemonic>
-    : SimpleSystemI<0, (ins), mnemonic, "">, Sched<[]> {
-  let Inst{20-8} = 0b0100001110111;
-  let Inst{7-5} = op2;
-  let Predicates = [HasGCS];
-}
-def GCSPUSHX : GCSNoOp<0b100, "gcspushx">;
-def GCSPOPCX : GCSNoOp<0b101, "gcspopcx">;
-def GCSPOPX  : GCSNoOp<0b110, "gcspopx">;
-
 class GCSRtIn<bits<3> op1, bits<3> op2, string mnemonic,
             list<dag> pattern = []>
     : RtSystemI<0, (outs), (ins GPR64:$Rt), mnemonic, "\t$Rt", pattern> {
@@ -1560,8 +1550,17 @@ class GCSRtIn<bits<3> op1, bits<3> op2, string mnemonic,
 
 let mayStore = 1, mayLoad = 1 in
 def GCSSS1   : GCSRtIn<0b011, 0b010, "gcsss1">;
-let mayStore = 1 in
+
+let mayStore = 1 in {
 def GCSPUSHM : GCSRtIn<0b011, 0b000, "gcspushm">;
+def GCSPUSHX : GCSRtIn<0b000, 0b100, "gcspushx">;
+def GCSPOPCX : GCSRtIn<0b000, 0b101, "gcspopcx">;
+def GCSPOPX  : GCSRtIn<0b000, 0b110, "gcspopx">;
+}
+
+def GCSPUSHX_NoOp : InstAlias<"gcspushx", (GCSPUSHX XZR)>, Requires<[HasGCS]>; // Rt defaults to XZR if absent
+def GCSPOPCX_NoOp : InstAlias<"gcspopcx", (GCSPOPCX XZR)>, Requires<[HasGCS]>; // Rt defaults to XZR if absent
+def GCSPOPX_NoOp  : InstAlias<"gcspopx",  (GCSPOPX  XZR)>, Requires<[HasGCS]>; // Rt defaults to XZR if absent
 
 class GCSRtOut<bits<3> op1, bits<3> op2, string mnemonic,
             list<dag> pattern = []>
