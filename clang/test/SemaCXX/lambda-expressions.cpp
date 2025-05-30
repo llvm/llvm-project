@@ -591,7 +591,7 @@ int func() {
 }
 
 namespace PR30566 {
-int name1; // expected-note {{'name1' declared here}}
+int name1;
 
 struct S1 {
   template<class T>
@@ -601,8 +601,7 @@ struct S1 {
 
 void foo1() {
   auto s0 = S1([name=]() {}); // expected-error {{expected expression}}
-  auto s1 = S1([name=name]() {}); // expected-error {{use of undeclared identifier 'name'; did you mean 'name1'?}}
-                                  // cxx03-cxx11-warning@-1 {{initialized lambda captures are a C++14 extension}}
+  auto s1 = S1([name=name]() {}); // expected-error {{use of undeclared identifier 'name'}}
 }
 }
 

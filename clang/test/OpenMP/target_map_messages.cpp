@@ -136,7 +136,7 @@ struct SA {
     {}
     #pragma omp target map(self, tofrom: c[:],f)   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
-    #pragma omp target map(self, tofrom: c,f[:])   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}} 
+    #pragma omp target map(self, tofrom: c,f[:])   // lt60-error {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper'}} // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
     {}
     #pragma omp target map(close, tofrom: c,f)
     {}
@@ -997,10 +997,8 @@ int main(int argc, char **argv) {
   #pragma omp target map(iterator(it=0:10), tofrom:a[it])
   {}
 
-  // ompx-error@+8 {{use of undeclared identifier 'itt'; did you mean 'it'?}}
-  // ompx-note@+7 {{'it' declared here}}
-  // omp-error@+6 {{use of undeclared identifier 'itt'; did you mean 'it'?}}
-  // omp-note@+5 {{'it' declared here}}
+  // ompx-error@+6 {{use of undeclared identifier 'itt'}}
+  // omp-error@+5 {{use of undeclared identifier 'itt'}}
   // ge51-ompx-error@+4 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present', 'ompx_hold'}}
   // lt51-ompx-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'ompx_hold'}}
   // ge51-omp-error@+2 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}

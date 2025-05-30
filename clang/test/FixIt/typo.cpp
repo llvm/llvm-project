@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify %s
 // RUN: cp %s %t
-// RUN: not %clang_cc1 -fixit -x c++ %t
+// RUN: not %clang_cc1 -fixit -fdelayed-typo-correction -x c++ %t
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Werror -x c++ %t
 // RUN: grep test_string %t
 

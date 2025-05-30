@@ -11,7 +11,7 @@
 //   friends members of the befriending class.
 
 struct S { static void f(); }; // expected-note 2 {{'S' declared here}}
-S* g() { return 0; } // expected-note 2 {{'g' declared here}}
+S* g() { return 0; }
 
 struct X {
   friend struct S;
@@ -22,7 +22,7 @@ void test1() {
   S s;
   g()->f();
   S::f();
-  X::g(); // expected-error{{no member named 'g' in 'X'; did you mean simply 'g'?}}
+  X::g(); // expected-error{{no member named 'g' in 'X'}}
   X::S x_s; // expected-error{{no type named 'S' in 'X'; did you mean simply 'S'?}}
   X x;
   x.g(); // expected-error{{no member named 'g' in 'X'}}
@@ -40,22 +40,22 @@ namespace N {
   };
 
   struct S2 { static void f2(); }; // expected-note 2 {{'S2' declared here}}
-  S2* g2() { return 0; } // expected-note 2 {{'g2' declared here}}
+  S2* g2() { return 0; }
 
   void test() {
     g()->f();
     S s;
     S::f();
-    X::g(); // expected-error{{no member named 'g' in 'N::X'; did you mean simply 'g'?}}
+    X::g(); // expected-error{{no member named 'g' in 'N::X'}}
     X::S x_s; // expected-error{{no type named 'S' in 'N::X'; did you mean simply 'S'?}}
     X x;
     x.g(); // expected-error{{no member named 'g' in 'N::X'}}
 
     g2();
     S2 s2;
-    ::g2(); // expected-error{{no member named 'g2' in the global namespace; did you mean simply 'g2'?}}
+    ::g2(); // expected-error{{no member named 'g2' in the global namespace}}
     ::S2 g_s2; // expected-error{{no type named 'S2' in the global namespace; did you mean simply 'S2'?}}
-    X::g2(); // expected-error{{no member named 'g2' in 'N::X'; did you mean simply 'g2'?}}
+    X::g2(); // expected-error{{no member named 'g2' in 'N::X'}}
     X::S2 x_s2; // expected-error{{no type named 'S2' in 'N::X'; did you mean simply 'S2'?}}
     x.g2(); // expected-error{{no member named 'g2' in 'N::X'}}
   }
@@ -139,7 +139,7 @@ namespace test2 {
   struct ilist_walker {
     static X *getPrev(X *N) { return N->getPrev(); }
     static X *getNext(X *N) { return N->getNext(); }
-  };  
+  };
 
   struct ilist_walker_bad {
     static X *getPrev(X *N) { return N->getPrev(); } // \
@@ -147,7 +147,7 @@ namespace test2 {
 
     static X *getNext(X *N) { return N->getNext(); } // \
     // expected-error {{'getNext' is a private member of 'test2::ilist_node'}}
-  };  
+  };
 }
 
 namespace test3 {

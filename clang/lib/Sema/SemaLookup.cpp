@@ -5437,6 +5437,9 @@ TypoExpr *Sema::CorrectTypoDelayed(
     TypoDiagnosticGenerator TDG, TypoRecoveryCallback TRC, CorrectTypoKind Mode,
     DeclContext *MemberContext, bool EnteringContext,
     const ObjCObjectPointerType *OPT) {
+  if (!LangOpts.DelayedTypoCorrection)
+    return nullptr;
+
   auto Consumer = makeTypoCorrectionConsumer(
       TypoName, LookupKind, S, SS, CCC, MemberContext, EnteringContext, OPT,
       Mode == CorrectTypoKind::ErrorRecovery);

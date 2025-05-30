@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 %s -verify -fopenacc
 
 namespace NS {
-  void foo(); // expected-note{{declared here}}
+  void foo();
 
   template<typename T>
-  void templ(); // expected-note 2{{declared here}}
+  void templ();
 
   class C { // #CDef
     void private_mem_func(); // #PrivateMemFunc
@@ -13,18 +13,16 @@ namespace NS {
   };
 }
 
-// expected-error@+1{{use of undeclared identifier 'foo'; did you mean 'NS::foo'?}}
+// expected-error@+1{{use of undeclared identifier 'foo'}}
 #pragma acc routine(foo) seq
 #pragma acc routine(NS::foo) seq
 
-// expected-error@+2{{use of undeclared identifier 'templ'; did you mean 'NS::templ'?}}
-// expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
+// expected-error@+1{{use of undeclared identifier 'templ'}}
 #pragma acc routine(templ) seq
 // expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
 #pragma acc routine(NS::templ) seq
 
-// expected-error@+2{{use of undeclared identifier 'templ'; did you mean 'NS::templ'?}}
-// expected-error@+1{{OpenACC routine name 'NS::templ' names a set of overloads}}
+// expected-error@+1{{use of undeclared identifier 'templ'}}
 #pragma acc routine(templ<int>) seq
 // expected-error@+1{{OpenACC routine name 'NS::templ<int>' names a set of overloads}}
 #pragma acc routine(NS::templ<int>) seq

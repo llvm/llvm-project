@@ -52,7 +52,7 @@ void f(id super) {
 void f0(int super) {
   [super m]; // expected-warning{{receiver type 'int' is not 'id'}}
 }
-void f1(id puper) {  // expected-note {{'puper' declared here}}
+void f1(id puper) {
   [super m]; // expected-error{{use of undeclared identifier 'super'}}
 }
 

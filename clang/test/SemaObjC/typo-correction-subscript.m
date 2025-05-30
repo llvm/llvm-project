@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-macosx10.10 -fobjc-arc -fsyntax-only -Wno-objc-root-class %s -verify
+// RUN: %clang_cc1 -triple i386-apple-macosx10.10 -fobjc-arc -fsyntax-only -fdelayed-typo-correction -Wno-objc-root-class %s -verify
 
 @class Dictionary;
 

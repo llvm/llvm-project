@@ -65,10 +65,10 @@ id radar15147688(void) {
   return x;
 }
 
-enum XXXYYYZZZType { XXXYYYZZZTypeAny }; // expected-note {{'XXXYYYZZZTypeAny' declared here}}
+enum XXXYYYZZZType { XXXYYYZZZTypeAny };
 void foo(void) {
   NSArray *array = @[
-    @(XXXYYYZZZTypeA),                 // expected-error {{use of undeclared identifier 'XXXYYYZZZTypeA'; did you mean 'XXXYYYZZZTypeAny'}}
-    @(XXXYYYZZZTypeSomethingSomething) // expected-error {{use of undeclared identifier 'XXXYYYZZZTypeSomethingSomething'}}
+    @(XXXYYYZZZTypeA),                 // expected-error {{use of undeclared identifier 'XXXYYYZZZTypeA'}}
+    @(XXXYYYZZZTypeSomethingSomething) // FIXME-expected-error {{use of undeclared identifier 'XXXYYYZZZTypeSomethingSomething'}}
   ];
 }

@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -frecovery-ast -frecovery-ast-type -fblocks -ast-dump %s | FileCheck -strict-whitespace %s
+// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -frecovery-ast -frecovery-ast-type -fdelayed-typo-correction -fblocks -ast-dump %s | FileCheck -strict-whitespace %s
 
 @interface Foo
 - (void)method:(int)n;

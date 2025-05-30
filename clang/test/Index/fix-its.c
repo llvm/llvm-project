@@ -1,4 +1,4 @@
-// RUN: c-index-test -test-load-source all -fspell-checking %s 2> %t  
+// RUN: c-index-test -test-load-source all -fspell-checking -Xclang -fdelayed-typo-correction %s 2> %t
 // RUN: FileCheck %s < %t
 struct X {
   int wibble;

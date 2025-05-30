@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify %s
 
 // From `test/Sema/typo-correction.c` but for C++ since the behavior varies
 // between the two languages.

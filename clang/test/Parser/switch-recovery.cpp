@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify %s
 
 struct A {};
 struct B {
@@ -7,7 +7,7 @@ struct B {
     default:
       return;
     }
-    
+
     switch (b) {
     case 17 // expected-error{{expected ':' after 'case'}}
       break;

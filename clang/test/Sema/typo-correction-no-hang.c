@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify %s
 
 // PR50797
 struct a {

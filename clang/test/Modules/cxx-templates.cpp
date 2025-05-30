@@ -200,7 +200,7 @@ namespace hidden_specializations {
     // For enums, uses that would trigger instantiations of definitions are not
     // allowed.
     cls<void>::nested_enum e; // ok
-    (void)cls<void>::nested_enum::e; // expected-error 1+{{definition of 'nested_enum' must be imported}} expected-error 1+{{declaration of 'e'}}
+    (void)cls<void>::nested_enum::e; // expected-error 1+{{definition of 'nested_enum' must be imported}} expected-error 1+{{no member named 'e' in 'hidden_specializations::cls<void>::nested_enum'}}
 
     // For variable template specializations, no uses are allowed because
     // specializations can change the type.

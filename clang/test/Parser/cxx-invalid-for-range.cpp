@@ -3,12 +3,12 @@
 // From PR23057 comment #18 (https://llvm.org/bugs/show_bug.cgi?id=23057#c18).
 
 namespace N {
-  int X[10]; // expected-note{{declared here}}}}
+  int X[10];
 }
 
 void f1() {
   for (auto operator new : X); // expected-error{{'operator new' cannot be the name of a variable or data member}}
-                               // expected-error@-1{{use of undeclared identifier 'X'; did you mean 'N::X'?}}
+                               // expected-error@-1{{use of undeclared identifier 'X'}}
 }
 
 void f2() {

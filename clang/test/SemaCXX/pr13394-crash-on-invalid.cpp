@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
-// Don't crash (PR13394).
+// RUN: %clang_cc1 -fsyntax-only -verify -fdelayed-typo-correction -std=c++11 %s
+// Don't crash (PR13394). The crash was from delayed typo correction, which is
+// why we're enabling that flag for the test.
 
 namespace stretch_v1 {
   struct closure_t {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only -fobjc-runtime=ios
+// RUN: %clang_cc1 %s -verify -fsyntax-only -fobjc-runtime=ios -fdelayed-typo-correction
 
 @protocol P
 -(id)description;

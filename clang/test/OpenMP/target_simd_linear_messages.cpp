@@ -28,7 +28,7 @@ int x;
 };
 
 struct B {
-  static int ib; // expected-note {{'B::ib' declared here}}
+  static int ib;
   static int bfoo() { return 8; }
 };
 
@@ -46,7 +46,7 @@ void test_linear_colons() {
 #pragma omp target simd linear(B::ib : B : bfoo())
   for (int i = 0; i < 10; ++i)
     ;
-// expected-error@+1 {{use of undeclared identifier 'ib'; did you mean 'B::ib'}}
+// expected-error@+1 {{use of undeclared identifier 'ib'}}
 #pragma omp target simd linear(B : ib)
   for (int i = 0; i < 10; ++i)
     ;

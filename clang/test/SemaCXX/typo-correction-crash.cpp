@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -fdelayed-typo-correction -verify %s
 auto check1() {
   return 1;
   return s; // expected-error {{use of undeclared identifier 's'}}

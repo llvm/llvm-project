@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify %s
 
 namespace c { double xxx; } // expected-note{{'c::xxx' declared here}}
 namespace d { float xxx; }

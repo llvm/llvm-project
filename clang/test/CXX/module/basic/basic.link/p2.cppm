@@ -51,7 +51,7 @@ void use_from_module_impl() {
   (void)external_linkage_var;
   (void)module_linkage_var;
 
-  (void)internal_linkage_class{}; // expected-error {{use of undeclared identifier 'internal_linkage_class'}} //expected-error{{}}
+  (void)internal_linkage_class{}; // expected-error {{use of undeclared identifier 'internal_linkage_class'}}
   (void)internal_linkage_var; // expected-error {{use of undeclared identifier 'internal_linkage_var'}}
 }
 

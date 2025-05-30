@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++11 -fdelayed-typo-correction -fsyntax-only -verify %s
 
 namespace PR23186 {
 decltype(ned);  // expected-error-re {{use of undeclared identifier 'ned'{{$}}}}

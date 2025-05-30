@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify %s
 //
 // This file contains typo correction tests which hit different code paths in C
 // than in C++ and may exhibit different behavior as a result.

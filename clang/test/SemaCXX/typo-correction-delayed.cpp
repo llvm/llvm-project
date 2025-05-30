@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wno-c++11-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 -Wno-c++11-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify -Wno-c++11-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify -std=c++98 -Wno-c++11-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify -std=c++11 %s
 
 struct A {};
 struct B {};

@@ -588,8 +588,7 @@ namespace cwg231 { // cwg231: 2.7
     }
     void f() { using namespace inner; }
     int j = i;
-    // expected-error@-1 {{use of undeclared identifier 'i'; did you mean 'inner::i'?}}
-    //   expected-note@#cwg231-i {{'inner::i' declared here}}
+    // expected-error@-1 {{use of undeclared identifier 'i'}}
   }
 } // namespace cwg231
 

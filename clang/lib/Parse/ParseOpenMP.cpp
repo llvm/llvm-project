@@ -4884,6 +4884,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     SourceLocation ELoc = ConsumeToken();
 
     if (getLangOpts().OpenMP >= 52 && Kind == OMPC_linear) {
+      bool Malformed = false;
       while (Tok.isNot(tok::r_paren)) {
         if (Tok.is(tok::identifier)) {
           // identifier could be a linear kind (val, uval, ref) or step
@@ -4920,6 +4921,11 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
             ModifierFound = true;
           } else {
             StepFound = parseStepSize(*this, Data, Kind, Tok.getLocation());
+            if (!StepFound) {
+              Malformed = true;
+              SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                        StopBeforeMatch);
+            }
           }
         } else {
           // parse an integer expression as step size
@@ -4931,7 +4937,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         if (Tok.is(tok::r_paren) || Tok.is(tok::annot_pragma_openmp_end))
           break;
       }
-      if (!StepFound && !ModifierFound)
+      if (!Malformed && !StepFound && !ModifierFound)
         Diag(ELoc, diag::err_expected_expression);
     } else {
       // for OMPC_aligned and OMPC_linear (with OpenMP <= 5.1)

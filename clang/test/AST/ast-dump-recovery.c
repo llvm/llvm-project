@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -frecovery-ast -fno-recovery-ast-type -ast-dump %s | FileCheck -strict-whitespace %s
+// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -frecovery-ast -fno-recovery-ast-type -fdelayed-typo-correction -ast-dump %s | FileCheck -strict-whitespace %s
 
 int some_func(int);
 
