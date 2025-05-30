@@ -22,6 +22,32 @@
 namespace lldb_private {
 namespace swift_demangle {
 
+using NodePointer = swift::Demangle::NodePointer;
+using Node = swift::Demangle::Node;
+
+/// Returns the first child of `node` whose kind is in `kinds`.
+inline NodePointer GetFirstChildOfKind(NodePointer node,
+                                       llvm::ArrayRef<Node::Kind> kinds) {
+  if (!node)
+    return nullptr;
+  for (auto *child : *node)
+    if (llvm::is_contained(kinds, child->getKind()))
+      return child;
+  return nullptr;
+}
+
+/// Assumes that `to_replace` is a child of `parent`, and replaces it with
+/// `new_child`. The Nodes must all be owned by the same context.
+inline void ReplaceChildWith(Node &parent, Node &to_replace, Node &new_child) {
+  for (unsigned idx = 0; idx < parent.getNumChildren(); idx++) {
+    auto *child = parent.getChild(idx);
+    if (child == &to_replace)
+      parent.replaceChild(idx, &new_child);
+    return;
+  }
+  llvm_unreachable("invalid child passed to replaceChildWith");
+}
+
 /// Access an inner node by following the given Node::Kind path.
 ///
 /// Note: The Node::Kind path is relative to the given root node. The root
