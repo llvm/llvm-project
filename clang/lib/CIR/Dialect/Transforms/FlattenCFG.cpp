@@ -493,7 +493,7 @@ public:
     Location loc = op->getLoc();
     Block *condBlock = rewriter.getInsertionBlock();
     Block::iterator opPosition = rewriter.getInsertionPoint();
-    auto *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
+    Block *remainingOpsBlock = rewriter.splitBlock(condBlock, opPosition);
 
     Region &trueRegion = op.getTrueRegion();
     Block *trueBlock = &trueRegion.front();
@@ -518,7 +518,7 @@ public:
     rewriter.setInsertionPointToEnd(condBlock);
     rewriter.create<cir::BrCondOp>(loc, op.getCond(), trueBlock, falseBlock);
 
-    if (auto rt = op.getResultTypes(); rt.size()) {
+    if (ValueTypeRange<ResultRange> rt = op.getResultTypes(); rt.size()) {
       iterator_range args = remainingOpsBlock->addArguments(rt, op.getLoc());
       SmallVector<mlir::Value, 2> values;
       llvm::copy(args, std::back_inserter(values));
