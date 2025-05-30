@@ -52,6 +52,8 @@ program omp_copyprivate
       !$omp single
         c = 22
         d = 33
+      !Check that 'c' and 'd' inherit PRIVATE DSA from the enclosing PARALLEL
+      !and no error occurs.
       !$omp end single copyprivate(c, d)
     !$omp end parallel
   !$omp end task
