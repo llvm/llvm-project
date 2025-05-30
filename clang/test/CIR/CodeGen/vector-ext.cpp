@@ -6,6 +6,7 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
 typedef int vi4 __attribute__((ext_vector_type(4)));
+typedef int vi6 __attribute__((ext_vector_type(6)));
 typedef unsigned int uvi4 __attribute__((ext_vector_type(4)));
 typedef int vi3 __attribute__((ext_vector_type(3)));
 typedef int vi2 __attribute__((ext_vector_type(2)));
@@ -988,3 +989,87 @@ void foo14() {
 // OGCG: %[[TMP_B:.*]] = load <4 x float>, ptr %[[VEC_B]], align 16
 // OGCG: %[[GE:.*]] = fcmp oge <4 x float> %[[TMP_A]], %[[TMP_B]]
 // OGCG: %[[RES:.*]] = sext <4 x i1> %[[GE]] to <4 x i32>
+
+void foo15() {
+  vi4 a;
+  vi4 b;
+  vi4 r = __builtin_shufflevector(a, b);
+}
+
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load{{>*}} {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[NEW_VEC:.*]] = cir.vec.shuffle.dynamic %[[TMP_A]] : !cir.vector<4 x !s32i>, %[[TMP_B]] : !cir.vector<4 x !s32i>
+
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr {{.*}}, align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr {{.*}}, align 16
+// LLVM: %[[MASK:.*]] = and <4 x i32> %[[TMP_B]], splat (i32 3)
+// LLVM: %[[SHUF_IDX_0:.*]] = extractelement <4 x i32> %[[MASK]], i64 0
+// LLVM: %[[SHUF_ELE_0:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_0]]
+// LLVM: %[[SHUF_INS_0:.*]] = insertelement <4 x i32> undef, i32 %[[SHUF_ELE_0]], i64 0
+// LLVM: %[[SHUF_IDX_1:.*]] = extractelement <4 x i32> %[[MASK]], i64 1
+// LLVM: %[[SHUF_ELE_1:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_1]]
+// LLVM: %[[SHUF_INS_1:.*]] = insertelement <4 x i32> %[[SHUF_INS_0]], i32 %[[SHUF_ELE_1]], i64 1
+// LLVM: %[[SHUF_IDX_2:.*]] = extractelement <4 x i32> %[[MASK]], i64 2
+// LLVM: %[[SHUF_ELE_2:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_2]]
+// LLVM: %[[SHUF_INS_2:.*]] = insertelement <4 x i32> %[[SHUF_INS_1]], i32 %[[SHUF_ELE_2]], i64 2
+// LLVM: %[[SHUF_IDX_3:.*]] = extractelement <4 x i32> %[[MASK]], i64 3
+// LLVM: %[[SHUF_ELE_3:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_3]]
+// LLVM: %[[SHUF_INS_3:.*]] = insertelement <4 x i32> %[[SHUF_INS_2]], i32 %[[SHUF_ELE_3]], i64 3
+
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr {{.*}}, align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr {{.*}}, align 16
+// OGCG: %[[MASK:.*]] = and <4 x i32> %[[TMP_B]], splat (i32 3)
+// OGCG: %[[SHUF_IDX_0:.*]] = extractelement <4 x i32> %[[MASK]], i64 0
+// OGCG: %[[SHUF_ELE_0:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_0]]
+// OGCG: %[[SHUF_INS_0:.*]] = insertelement <4 x i32> poison, i32 %[[SHUF_ELE_0]], i64 0
+// OGCG: %[[SHUF_IDX_1:.*]] = extractelement <4 x i32> %[[MASK]], i64 1
+// OGCG: %[[SHUF_ELE_1:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_1]]
+// OGCG: %[[SHUF_INS_1:.*]] = insertelement <4 x i32> %[[SHUF_INS_0]], i32 %[[SHUF_ELE_1]], i64 1
+// OGCG: %[[SHUF_IDX_2:.*]] = extractelement <4 x i32> %[[MASK]], i64 2
+// OGCG: %[[SHUF_ELE_2:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_2]]
+// OGCG: %[[SHUF_INS_2:.*]] = insertelement <4 x i32> %[[SHUF_INS_1]], i32 %[[SHUF_ELE_2]], i64 2
+// OGCG: %[[SHUF_IDX_3:.*]] = extractelement <4 x i32> %[[MASK]], i64 3
+// OGCG: %[[SHUF_ELE_3:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_3]]
+// OGCG: %[[SHUF_INS_3:.*]] = insertelement <4 x i32> %[[SHUF_INS_2]], i32 %[[SHUF_ELE_3]], i64 3
+
+void foo16() {
+  vi6 a;
+  vi6 b;
+  vi6 r = __builtin_shufflevector(a, b);
+}
+
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.vector<6 x !s32i>>, !cir.vector<6 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load{{>*}} {{.*}} : !cir.ptr<!cir.vector<6 x !s32i>>, !cir.vector<6 x !s32i>
+// CIR: %[[NEW_VEC:.*]] = cir.vec.shuffle.dynamic %[[TMP_A]] : !cir.vector<6 x !s32i>, %[[TMP_B]] : !cir.vector<6 x !s32i>
+
+// LLVM: %[[TMP_A:.*]] = load <6 x i32>, ptr {{.*}}, align 32
+// LLVM: %[[TMP_B:.*]] = load <6 x i32>, ptr {{.*}}, align 32
+// LLVM: %[[MASK:.*]] = and <6 x i32> %[[TMP_B]], splat (i32 7)
+// LLVM: %[[SHUF_IDX_0:.*]] = extractelement <6 x i32> %[[MASK]], i64 0
+// LLVM: %[[SHUF_ELE_0:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_0]]
+// LLVM: %[[SHUF_INS_0:.*]] = insertelement <6 x i32> undef, i32 %[[SHUF_ELE_0]], i64 0
+// LLVM: %[[SHUF_IDX_1:.*]] = extractelement <6 x i32> %[[MASK]], i64 1
+// LLVM: %[[SHUF_ELE_1:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_1]]
+// LLVM: %[[SHUF_INS_1:.*]] = insertelement <6 x i32> %[[SHUF_INS_0]], i32 %[[SHUF_ELE_1]], i64 1
+// LLVM: %[[SHUF_IDX_2:.*]] = extractelement <6 x i32> %[[MASK]], i64 2
+// LLVM: %[[SHUF_ELE_2:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_2]]
+// LLVM: %[[SHUF_INS_2:.*]] = insertelement <6 x i32> %[[SHUF_INS_1]], i32 %[[SHUF_ELE_2]], i64 2
+// LLVM: %[[SHUF_IDX_3:.*]] = extractelement <6 x i32> %[[MASK]], i64 3
+// LLVM: %[[SHUF_ELE_3:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_3]]
+// LLVM: %[[SHUF_INS_3:.*]] = insertelement <6 x i32> %[[SHUF_INS_2]], i32 %[[SHUF_ELE_3]], i64 3
+
+// OGCG: %[[TMP_A:.*]] = load <6 x i32>, ptr {{.*}}, align 32
+// OGCG: %[[TMP_B:.*]] = load <6 x i32>, ptr {{.*}}, align 32
+// OGCG: %[[MASK:.*]] = and <6 x i32> %[[TMP_B]], splat (i32 7)
+// OGCG: %[[SHUF_IDX_0:.*]] = extractelement <6 x i32> %[[MASK]], i64 0
+// OGCG: %[[SHUF_ELE_0:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_0]]
+// OGCG: %[[SHUF_INS_0:.*]] = insertelement <6 x i32> poison, i32 %[[SHUF_ELE_0]], i64 0
+// OGCG: %[[SHUF_IDX_1:.*]] = extractelement <6 x i32> %[[MASK]], i64 1
+// OGCG: %[[SHUF_ELE_1:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_1]]
+// OGCG: %[[SHUF_INS_1:.*]] = insertelement <6 x i32> %[[SHUF_INS_0]], i32 %[[SHUF_ELE_1]], i64 1
+// OGCG: %[[SHUF_IDX_2:.*]] = extractelement <6 x i32> %[[MASK]], i64 2
+// OGCG: %[[SHUF_ELE_2:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_2]]
+// OGCG: %[[SHUF_INS_2:.*]] = insertelement <6 x i32> %[[SHUF_INS_1]], i32 %[[SHUF_ELE_2]], i64 2
+// OGCG: %[[SHUF_IDX_3:.*]] = extractelement <6 x i32> %[[MASK]], i64 3
+// OGCG: %[[SHUF_ELE_3:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_3]]
+// OGCG: %[[SHUF_INS_3:.*]] = insertelement <6 x i32> %[[SHUF_INS_2]], i32 %[[SHUF_ELE_3]], i64 3

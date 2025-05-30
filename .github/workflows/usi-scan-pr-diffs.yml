@@ -1,11 +1,11 @@
 name: USI CLI Scanner - Search on PR
 
 on:
-  pull_request: 
+  pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  printJob:    
+  printJob:
     name: Print event
     runs-on:
       group: sit-usi
