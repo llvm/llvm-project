@@ -58,6 +58,9 @@ func.func @empty_with_encoding(%sz: index) -> tensor<5x?x6xf32, "foo"> {
 func.func @extract(%arg0: tensor<?x?x?xf32>, %arg1: index) {
   // CHECK: tensor.extract %[[TENSOR]][%[[INDEX]], %[[INDEX]], %[[INDEX]]] : tensor<?x?x?xf32>
   %0 = tensor.extract %arg0[%arg1, %arg1, %arg1] : tensor<?x?x?xf32>
+
+  // CHECK: tensor.extract %[[TENSOR]][%[[INDEX]], 2, 3] : tensor<?x?x?xf32>
+  %1 = tensor.extract %arg0[%arg1, 2, 3] : tensor<?x?x?xf32>
   return
 }
 
@@ -70,6 +73,9 @@ func.func @extract(%arg0: tensor<?x?x?xf32>, %arg1: index) {
 func.func @insert(%arg0: f32, %arg1: index, %arg2: tensor<?x?x?xf32>) {
   // CHECK: tensor.insert %[[SCALAR]] into %[[DEST1]][%[[INDEX]], %[[INDEX]], %[[INDEX]]] : tensor<?x?x?xf32>
   %0 = tensor.insert %arg0 into %arg2[%arg1, %arg1, %arg1] : tensor<?x?x?xf32>
+
+  // CHECK: tensor.insert %[[SCALAR]] into %[[DEST1]][%[[INDEX]], 2, 3] : tensor<?x?x?xf32>
+  %1 = tensor.insert %arg0 into %arg2[%arg1, 2, 3] : tensor<?x?x?xf32>
   return
 }
 
