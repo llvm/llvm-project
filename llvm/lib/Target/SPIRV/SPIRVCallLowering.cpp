@@ -267,10 +267,10 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
 
 static SPIRV::ExecutionModel::ExecutionModel
 getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
-  if (STI.isKernelEnv())
+  if (STI.isKernel())
     return SPIRV::ExecutionModel::Kernel;
 
-  if (STI.isShaderEnv()) {
+  if (STI.isShader()) {
     auto attribute = F.getFnAttribute("hlsl.shader");
     if (!attribute.isValid()) {
       report_fatal_error(
@@ -342,7 +342,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::MaxByteOffset, {DerefBytes});
       }
-      if (Arg.hasAttribute(Attribute::Alignment) && !ST->isShaderEnv()) {
+      if (Arg.hasAttribute(Attribute::Alignment) && !ST->isShader()) {
         auto Alignment = static_cast<unsigned>(
             Arg.getAttribute(Attribute::Alignment).getValueAsInt());
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,

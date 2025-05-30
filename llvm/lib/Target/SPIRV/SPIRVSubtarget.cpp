@@ -119,7 +119,7 @@ bool SPIRVSubtarget::canUseExtInstSet(
 
 SPIRV::InstructionSet::InstructionSet
 SPIRVSubtarget::getPreferredInstructionSet() const {
-  if (isShaderEnv())
+  if (isShader())
     return SPIRV::InstructionSet::GLSL_std_450;
   else
     return SPIRV::InstructionSet::OpenCL_std;
@@ -130,7 +130,7 @@ bool SPIRVSubtarget::isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const {
 }
 
 bool SPIRVSubtarget::isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const {
-  if (isShaderEnv())
+  if (isShader())
     return false;
   return isAtLeastVer(OpenCLVersion, VerToCompareTo);
 }
@@ -153,7 +153,7 @@ void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
 // Must have called initAvailableExtensions first.
 void SPIRVSubtarget::initAvailableExtInstSets() {
   AvailableExtInstSets.clear();
-  if (isShaderEnv())
+  if (isShader())
     AvailableExtInstSets.insert(SPIRV::InstructionSet::GLSL_std_450);
   else
     AvailableExtInstSets.insert(SPIRV::InstructionSet::OpenCL_std);
