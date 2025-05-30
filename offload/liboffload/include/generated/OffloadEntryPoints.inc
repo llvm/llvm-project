@@ -901,3 +901,82 @@ ol_result_t olLaunchKernelWithCodeLoc(
   currentCodeLocation() = nullptr;
   return Result;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+llvm::Error olLaunchKernelSuggestedGroupSize_val(
+    ol_queue_handle_t Queue, ol_device_handle_t Device,
+    ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
+    const ol_kernel_launch_size_suggested_args_t *LaunchSizeArgs,
+    ol_event_handle_t *EventOut) {
+  if (offloadConfig().ValidationEnabled) {
+    if (Queue == NULL && EventOut != NULL) {
+      return createOffloadError(
+          error::ErrorCode::INVALID_ARGUMENT,
+          "validation failure: Queue == NULL && EventOut != NULL");
+    }
+
+    if (ArgumentsSize > 0 && ArgumentsData == NULL) {
+      return createOffloadError(
+          error::ErrorCode::INVALID_ARGUMENT,
+          "validation failure: ArgumentsSize > 0 && ArgumentsData == NULL");
+    }
+
+    if (NULL == Device) {
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Device");
+    }
+
+    if (NULL == Kernel) {
+      return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
+                                "validation failure: NULL == Kernel");
+    }
+
+    if (NULL == LaunchSizeArgs) {
+      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
+                                "validation failure: NULL == LaunchSizeArgs");
+    }
+  }
+
+  return llvm::offload::olLaunchKernelSuggestedGroupSize_impl(
+      Queue, Device, Kernel, ArgumentsData, ArgumentsSize, LaunchSizeArgs,
+      EventOut);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernelSuggestedGroupSize(
+    ol_queue_handle_t Queue, ol_device_handle_t Device,
+    ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
+    const ol_kernel_launch_size_suggested_args_t *LaunchSizeArgs,
+    ol_event_handle_t *EventOut) {
+  if (offloadConfig().TracingEnabled) {
+    llvm::errs() << "---> olLaunchKernelSuggestedGroupSize";
+  }
+
+  ol_result_t Result =
+      llvmErrorToOffloadError(olLaunchKernelSuggestedGroupSize_val(
+          Queue, Device, Kernel, ArgumentsData, ArgumentsSize, LaunchSizeArgs,
+          EventOut));
+
+  if (offloadConfig().TracingEnabled) {
+    ol_launch_kernel_suggested_group_size_params_t Params = {
+        &Queue,         &Device,         &Kernel,  &ArgumentsData,
+        &ArgumentsSize, &LaunchSizeArgs, &EventOut};
+    llvm::errs() << "(" << &Params << ")";
+    llvm::errs() << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olLaunchKernelSuggestedGroupSizeWithCodeLoc(
+    ol_queue_handle_t Queue, ol_device_handle_t Device,
+    ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
+    const ol_kernel_launch_size_suggested_args_t *LaunchSizeArgs,
+    ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = ::olLaunchKernelSuggestedGroupSize(
+      Queue, Device, Kernel, ArgumentsData, ArgumentsSize, LaunchSizeArgs,
+      EventOut);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}

@@ -392,6 +392,31 @@ operator<<(llvm::raw_ostream &os,
   os << "}";
   return os;
 }
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Print operator for the ol_kernel_launch_size_suggested_args_t type
+/// @returns llvm::raw_ostream &
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_kernel_launch_size_suggested_args_t params) {
+  os << "(struct ol_kernel_launch_size_suggested_args_t){";
+  os << ".Dimensions = ";
+  os << params.Dimensions;
+  os << ", ";
+  os << ".NumItemsX = ";
+  os << params.NumItemsX;
+  os << ", ";
+  os << ".NumItemsY = ";
+  os << params.NumItemsY;
+  os << ", ";
+  os << ".NumItemsZ = ";
+  os << params.NumItemsZ;
+  os << ", ";
+  os << ".DynSharedMemory = ";
+  os << params.DynSharedMemory;
+  os << "}";
+  return os;
+}
 
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
@@ -596,6 +621,32 @@ operator<<(llvm::raw_ostream &os, const struct ol_get_kernel_params_t *params) {
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
            const struct ol_launch_kernel_params_t *params) {
+  os << ".Queue = ";
+  printPtr(os, *params->pQueue);
+  os << ", ";
+  os << ".Device = ";
+  printPtr(os, *params->pDevice);
+  os << ", ";
+  os << ".Kernel = ";
+  printPtr(os, *params->pKernel);
+  os << ", ";
+  os << ".ArgumentsData = ";
+  printPtr(os, *params->pArgumentsData);
+  os << ", ";
+  os << ".ArgumentsSize = ";
+  os << *params->pArgumentsSize;
+  os << ", ";
+  os << ".LaunchSizeArgs = ";
+  printPtr(os, *params->pLaunchSizeArgs);
+  os << ", ";
+  os << ".EventOut = ";
+  printPtr(os, *params->pEventOut);
+  return os;
+}
+
+inline llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os,
+    const struct ol_launch_kernel_suggested_group_size_params_t *params) {
   os << ".Queue = ";
   printPtr(os, *params->pQueue);
   os << ", ";
