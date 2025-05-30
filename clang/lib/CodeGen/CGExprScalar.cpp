@@ -4762,9 +4762,8 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
       Kinds.push_back(SanitizerKind::SO_ShiftBase);
     if (SanitizeUnsignedBase)
       Kinds.push_back(SanitizerKind::SO_UnsignedShiftBase);
-    if (SanitizeExponent) {
+    if (SanitizeExponent)
       Kinds.push_back(SanitizerKind::SO_ShiftExponent);
-    }
 
     CodeGenFunction::SanitizerScope SanScope(&CGF, Kinds);
     SmallVector<std::pair<Value *, SanitizerKind::SanitizerOrdinal>, 2> Checks;
