@@ -649,7 +649,8 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
     // or an emergency spill slot we need to enable the basepointer
     // conservatively.
     if (AFI->hasStackHazardSlotIndex() ||
-        !SMEAttrs(MF.getFunction()).hasNonStreamingInterfaceAndBody()) {
+        (ST.getStreamingHazardSize() &&
+         !SMEAttrs(MF.getFunction()).hasNonStreamingInterfaceAndBody())) {
       return true;
     }
 
