@@ -36,19 +36,26 @@ class FeaturePTX<int version>:
 
 foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
               60, 61, 62, 70, 72, 75, 80, 86, 87,
-              89, 90] in
-  def SM#sm: FeatureSM<""#sm, !mul(sm, 10)>;
+              89, 90, 100, 101, 103, 120, 121] in {
+  // Base SM version (e.g. FullSMVersion for sm_100 is 10000)
+  def SM#sm : FeatureSM<""#sm, !mul(sm, 100)>;
 
-// Full SM version for sm_90a is 901
-def SM90a: FeatureSM<"90a", 901>;
+  // Note: Subset of the architecture-specific features, normally
+  // available in "a" variants that will be compatible with subsequent targets
+  // in the same family. I.e they are only ordered within the major architecture,
+  // but are not comparable with other major architectures
 
-foreach sm = [100, 101, 103, 120, 121] in {
-  def SM#sm: FeatureSM<""#sm, !mul(sm, 10)>;
-  // Arch-specific targets. PTX for these is not compatible with any other
-  // architectures.
-  def SM#sm#a: FeatureSM<""#sm#"a", !add(!mul(sm, 10), 1)>;
-  // Family-specific targets. PTX for these is compatible within the same family.
-  def SM#sm#f: FeatureSM<""#sm#"f", !add(!mul(sm, 10), 2)>;
+  // Family-specific targets which are compatible within same family
+  // (e.g. FullSMVersion for sm_100f is 10010)
+  if !ge(sm, 100) then {
+    def SM#sm#f : FeatureSM<""#sm#"f", !add(!mul(sm, 100), 10)>;
+  }
+
+  // Architecture-specific targets which are incompatible across architectures
+  // (e.g. FullSMVersion for sm_100a is 10011)
+  if !ge(sm, 90) then {
+    def SM#sm#a : FeatureSM<""#sm#"a", !add(!mul(sm, 100), 11)>;
+  }
 }
 
 foreach version = [32, 40, 41, 42, 43, 50, 60, 61, 62, 63, 64, 65,
