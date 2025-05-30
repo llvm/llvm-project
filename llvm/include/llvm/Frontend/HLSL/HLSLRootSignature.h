@@ -76,6 +76,14 @@ enum class ShaderVisibility {
   Mesh = 7,
 };
 
+enum class TextureAddressMode {
+  Wrap = 1,
+  Mirror = 2,
+  Clamp = 3,
+  Border = 4,
+  MirrorOnce = 5
+};
+
 // Definitions of the in-memory data layout structures
 
 // Models the different registers: bReg | tReg | uReg | sReg
@@ -157,6 +165,13 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
 
 struct StaticSampler {
   Register Reg;
+  TextureAddressMode AddressU = TextureAddressMode::Wrap;
+  TextureAddressMode AddressV = TextureAddressMode::Wrap;
+  TextureAddressMode AddressW = TextureAddressMode::Wrap;
+  float MipLODBias = 0.f;
+  uint32_t MaxAnisotropy = 16;
+  float MinLOD = 0.f;
+  float MaxLOD = std::numeric_limits<float>::max();
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam
