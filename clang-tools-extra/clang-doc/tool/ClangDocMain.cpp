@@ -261,7 +261,6 @@ llvm::Error handleMappingPhaseErrors(llvm::Error Err,
 }
 
 llvm::Error ensureOutputDirExists(const std::string &OutDirectory) {
-  // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory)) {
     return llvm::createFileError(OutDirectory, Err);
   }
