@@ -2006,6 +2006,15 @@ static const APFloat FTZPreserveSign(const APFloat &V) {
   return V;
 }
 
+// Get only the upper word of the input double in 1.11.20 format
+// by making the lower 32-bits of the mantissa all 0.
+static const APFloat ZeroLower32Bits(const APFloat &V) {
+  assert(V.getSizeInBits(V.getSemantics()) == 64);
+  uint64_t DoubleBits = V.bitcastToAPInt().getZExtValue();
+  DoubleBits &= 0xffffffff00000000;
+  return APFloat(V.getSemantics(), APInt(64, DoubleBits, false, false));
+}
+
 Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V, Type *Ty,
                          bool ShouldFTZPreservingSign = false) {
   llvm_fenv_clearexcept();
@@ -2651,6 +2660,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         bool IsFTZ = nvvm::RCPShouldFTZ(IntrinsicID);
 
         auto Denominator = IsFTZ ? FTZPreserveSign(APF) : APF;
+        if (IntrinsicID == Intrinsic::nvvm_rcp_approx_ftz_d)
+          Denominator = ZeroLower32Bits(Denominator);
         if (IsApprox && Denominator.isZero()) {
           // According to the PTX spec, approximate rcp should return infinity
           // with the same sign as the denominator when dividing by 0.
@@ -2663,6 +2674,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         if (Status == APFloat::opOK || Status == APFloat::opInexact) {
           if (IsFTZ)
             Res = FTZPreserveSign(Res);
+          if (IntrinsicID == Intrinsic::nvvm_rcp_approx_ftz_d)
+            Res = ZeroLower32Bits(Res);
           return ConstantFP::get(Ty->getContext(), Res);
         }
         return nullptr;
@@ -2680,13 +2693,23 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_rsqrt_approx_f: {
         bool IsFTZ = nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID);
         auto V = IsFTZ ? FTZPreserveSign(APF) : APF;
+
+        if (IntrinsicID == Intrinsic::nvvm_rsqrt_approx_ftz_d)
+          V = ZeroLower32Bits(V);
+
         APFloat SqrtV(sqrt(V.convertToDouble()));
 
-        bool lost;
-        SqrtV.convert(APF.getSemantics(), APFloat::rmNearestTiesToEven, &lost);
+        if (Ty->isFloatTy()) {
+          bool lost;
+          SqrtV.convert(APF.getSemantics(), APFloat::rmNearestTiesToEven,
+                        &lost);
+        }
 
         APFloat Res = APFloat::getOne(APF.getSemantics());
         Res.divide(SqrtV, APFloat::rmNearestTiesToEven);
+
+        if (IntrinsicID == Intrinsic::nvvm_rsqrt_approx_ftz_d)
+          Res = ZeroLower32Bits(Res);
 
         // We do not need to flush the output for ftz because it is impossible
         // for 1/sqrt(x) to be a denormal value. If x is the largest fp value,

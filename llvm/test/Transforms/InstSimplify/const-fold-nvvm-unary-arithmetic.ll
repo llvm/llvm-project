@@ -551,7 +551,7 @@ define float @test_rcp_approx_ftz_f_0_5() {
 
 define double @test_rcp_approx_ftz_d_neg_subnorm() {
 ; CHECK-LABEL: define double @test_rcp_approx_ftz_d_neg_subnorm() {
-; CHECK-NEXT:    ret double 0xC7D0000020000040
+; CHECK-NEXT:    ret double 0xC7D0000000000000
 ;
   %res = call double @llvm.nvvm.rcp.approx.ftz.d(double 0xB80FFFFFC0000000)
   ret double %res
@@ -568,7 +568,7 @@ define float @test_rcp_approx_ftz_f_neg_subnorm() {
 
 define double @test_rcp_approx_ftz_d_pos_subnorm() {
 ; CHECK-LABEL: define double @test_rcp_approx_ftz_d_pos_subnorm() {
-; CHECK-NEXT:    ret double 0x47D0000020000040
+; CHECK-NEXT:    ret double 0x47D0000000000000
 ;
   %res = call double @llvm.nvvm.rcp.approx.ftz.d(double 0x380FFFFFC0000000)
   ret double %res
@@ -658,7 +658,7 @@ define float @test_rsqrt_approx_f_1_25() {
 
 define double @test_rsqrt_approx_ftz_d_1_25() {
 ; CHECK-LABEL: define double @test_rsqrt_approx_ftz_d_1_25() {
-; CHECK-NEXT:    ret double 0x3FEC9F25C5BFEDD9
+; CHECK-NEXT:    ret double 0x3FEC9F2500000000
 ;
   %res = call double @llvm.nvvm.rsqrt.approx.ftz.d(double 1.25)
   ret double %res
@@ -690,7 +690,7 @@ define float @test_rsqrt_approx_f_pos_subnorm() {
 
 define double @test_rsqrt_approx_ftz_d_pos_subnorm() {
 ; CHECK-LABEL: define double @test_rsqrt_approx_ftz_d_pos_subnorm() {
-; CHECK-NEXT:    ret double 0x43E0000010000018
+; CHECK-NEXT:    ret double 0x43E0000000000000
 ;
   %res = call double @llvm.nvvm.rsqrt.approx.ftz.d(double 0x380FFFFFC0000000)
   ret double %res
