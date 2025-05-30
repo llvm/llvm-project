@@ -247,21 +247,17 @@ sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
   }
 }
 
-llvm::Error runMappingPhase(tooling::ToolExecutor *Executor,
-                            clang::doc::ClangDocContext &CDCtx,
-                            tooling::ArgumentsAdjuster &ArgAdjuster,
-                            bool IgnoreMappingFailures) {
-  auto Err = Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
-  if (Err) {
-    if (IgnoreMappingFailures) {
-      llvm::errs() << "Error mapping decls in files. Clang-doc will ignore "
-                      "these files and continue:\n"
-                   << toString(std::move(Err)) << "\n";
-      return llvm::Error::success();
-    }
-    return Err;
+llvm::Error handleMappingPhaseErrors(llvm::Error Err,
+                                     bool IgnoreMappingFailures) {
+  if (!Err)
+    return llvm::Error::success();
+  if (IgnoreMappingFailures) {
+    llvm::errs() << "Error mapping decls in files. Clang-doc will ignore these "
+                    "files and continue:\n"
+                 << toString(std::move(Err)) << "\n";
+    return llvm::Error::success();
   }
-  return llvm::Error::success();
+  return Err;
 }
 
 int main(int argc, const char **argv) {
@@ -318,8 +314,9 @@ Example usage for a project using a compile commands database:
 
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
-  ExitOnErr(runMappingPhase(Executor.get(), CDCtx, ArgAdjuster,
-                            IgnoreMappingFailures));
+  ExitOnErr(handleMappingPhaseErrors(
+      Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster),
+      IgnoreMappingFailures));
 
   // Collect values into output by key.
   // In ToolResults, the Key is the hashed USR and the value is the
