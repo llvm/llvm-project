@@ -3372,6 +3372,13 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 4); // M0
       return;
     }
+    case Intrinsic::amdgcn_load_mcast_b32:
+    case Intrinsic::amdgcn_load_mcast_b64:
+    case Intrinsic::amdgcn_load_mcast_b128: {
+      applyDefaultMapping(OpdMapper);
+      constrainOpWithReadfirstlane(B, MI, 4); // M0
+      return;
+    }
     case Intrinsic::amdgcn_s_mov_from_global:
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 3); // M0
@@ -5714,6 +5721,16 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       unsigned M0Bank = getRegBankID(MI.getOperand(4).getReg(), MRI,
                                  AMDGPU::SGPRRegBankID);
+      OpdsMapping[4] = AMDGPU::getValueMapping(M0Bank, 32);
+      break;
+    }
+    case Intrinsic::amdgcn_load_mcast_b32:
+    case Intrinsic::amdgcn_load_mcast_b64:
+    case Intrinsic::amdgcn_load_mcast_b128: {
+      OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      unsigned M0Bank =
+          getRegBankID(MI.getOperand(4).getReg(), MRI, AMDGPU::SGPRRegBankID);
       OpdsMapping[4] = AMDGPU::getValueMapping(M0Bank, 32);
       break;
     }

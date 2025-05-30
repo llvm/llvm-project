@@ -838,6 +838,12 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore 
   defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", VReg_96>;
 }
 
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
+  def DS_LOAD_MCAST_B32  : DS_1A_RET<"ds_load_mcast_b32">;
+  def DS_LOAD_MCAST_B64  : DS_1A_RET<"ds_load_mcast_b64", VReg_64>;
+  def DS_LOAD_MCAST_B128 : DS_1A_RET<"ds_load_mcast_b128", VReg_128>;
+}
+
 //===----------------------------------------------------------------------===//
 // DS Patterns
 //===----------------------------------------------------------------------===//
@@ -1443,6 +1449,10 @@ let AssemblerPredicate = HasSGPRVMEM in {
   defm DS_LOAD_SGPR_B32    : DS_Real_gfx13<0x0ad>;
   defm DS_ADD_SGPR_RTN_U32 : DS_Real_gfx13<0x0ae>;
 }
+
+defm DS_LOAD_MCAST_B32  : DS_Real_gfx13<0x069>;
+defm DS_LOAD_MCAST_B64  : DS_Real_gfx13<0x06a>;
+defm DS_LOAD_MCAST_B128 : DS_Real_gfx13<0x06b>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.

@@ -865,6 +865,168 @@ define i32 @test_call_defined_many_args(i32 %a) nounwind {
                                    i32 %a, i32 %a, i32 %a, i32 %a, i32 %a)
   ret i32 %1
 }
+
+define fastcc void @fastcc_call_nonfastcc(){
+; CHECK-LABEL: fastcc_call_nonfastcc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -4
+; CHECK-NEXT:    li t0, 10
+; CHECK-NEXT:    li t1, 9
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    li a1, 2
+; CHECK-NEXT:    li a2, 3
+; CHECK-NEXT:    li a3, 4
+; CHECK-NEXT:    li a4, 5
+; CHECK-NEXT:    li a5, 6
+; CHECK-NEXT:    li a6, 7
+; CHECK-NEXT:    li a7, 8
+; CHECK-NEXT:    sw t1, 0(sp)
+; CHECK-NEXT:    sw t0, 4(sp)
+; CHECK-NEXT:    call external_many_args
+; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+;
+; RV64I-LABEL: fastcc_call_nonfastcc:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    .cfi_def_cfa_offset 32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    .cfi_offset ra, -8
+; RV64I-NEXT:    li t0, 10
+; RV64I-NEXT:    li t1, 9
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    li a1, 2
+; RV64I-NEXT:    li a2, 3
+; RV64I-NEXT:    li a3, 4
+; RV64I-NEXT:    li a4, 5
+; RV64I-NEXT:    li a5, 6
+; RV64I-NEXT:    li a6, 7
+; RV64I-NEXT:    li a7, 8
+; RV64I-NEXT:    sd t1, 0(sp)
+; RV64I-NEXT:    sd t0, 8(sp)
+; RV64I-NEXT:    call external_many_args
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    .cfi_restore ra
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-NEXT:    ret
+;
+; RV64I-SMALL-LABEL: fastcc_call_nonfastcc:
+; RV64I-SMALL:       # %bb.0:
+; RV64I-SMALL-NEXT:    addi sp, sp, -32
+; RV64I-SMALL-NEXT:    .cfi_def_cfa_offset 32
+; RV64I-SMALL-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-SMALL-NEXT:    .cfi_offset ra, -8
+; RV64I-SMALL-NEXT:    li t0, 10
+; RV64I-SMALL-NEXT:    li t1, 9
+; RV64I-SMALL-NEXT:    li a0, 1
+; RV64I-SMALL-NEXT:    li a1, 2
+; RV64I-SMALL-NEXT:    li a2, 3
+; RV64I-SMALL-NEXT:    li a3, 4
+; RV64I-SMALL-NEXT:    li a4, 5
+; RV64I-SMALL-NEXT:    li a5, 6
+; RV64I-SMALL-NEXT:    li a6, 7
+; RV64I-SMALL-NEXT:    li a7, 8
+; RV64I-SMALL-NEXT:    sd t1, 0(sp)
+; RV64I-SMALL-NEXT:    sd t0, 8(sp)
+; RV64I-SMALL-NEXT:    call external_many_args
+; RV64I-SMALL-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-SMALL-NEXT:    .cfi_restore ra
+; RV64I-SMALL-NEXT:    addi sp, sp, 32
+; RV64I-SMALL-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-SMALL-NEXT:    ret
+;
+; RV64I-MEDIUM-LABEL: fastcc_call_nonfastcc:
+; RV64I-MEDIUM:       # %bb.0:
+; RV64I-MEDIUM-NEXT:    addi sp, sp, -32
+; RV64I-MEDIUM-NEXT:    .cfi_def_cfa_offset 32
+; RV64I-MEDIUM-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-MEDIUM-NEXT:    .cfi_offset ra, -8
+; RV64I-MEDIUM-NEXT:    li t0, 10
+; RV64I-MEDIUM-NEXT:    li t1, 9
+; RV64I-MEDIUM-NEXT:    li a0, 1
+; RV64I-MEDIUM-NEXT:    li a1, 2
+; RV64I-MEDIUM-NEXT:    li a2, 3
+; RV64I-MEDIUM-NEXT:    li a3, 4
+; RV64I-MEDIUM-NEXT:    li a4, 5
+; RV64I-MEDIUM-NEXT:    li a5, 6
+; RV64I-MEDIUM-NEXT:    li a6, 7
+; RV64I-MEDIUM-NEXT:    li a7, 8
+; RV64I-MEDIUM-NEXT:    sd t1, 0(sp)
+; RV64I-MEDIUM-NEXT:    sd t0, 8(sp)
+; RV64I-MEDIUM-NEXT:    call external_many_args
+; RV64I-MEDIUM-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-MEDIUM-NEXT:    .cfi_restore ra
+; RV64I-MEDIUM-NEXT:    addi sp, sp, 32
+; RV64I-MEDIUM-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: fastcc_call_nonfastcc:
+; RV64I-LARGE:       # %bb.0:
+; RV64I-LARGE-NEXT:    addi sp, sp, -32
+; RV64I-LARGE-NEXT:    .cfi_def_cfa_offset 32
+; RV64I-LARGE-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-LARGE-NEXT:    .cfi_offset ra, -8
+; RV64I-LARGE-NEXT:    li t0, 10
+; RV64I-LARGE-NEXT:    li t1, 9
+; RV64I-LARGE-NEXT:  .Lpcrel_hi6:
+; RV64I-LARGE-NEXT:    auipc a5, %pcrel_hi(.LCPI11_0)
+; RV64I-LARGE-NEXT:    li a0, 1
+; RV64I-LARGE-NEXT:    li a1, 2
+; RV64I-LARGE-NEXT:    li a2, 3
+; RV64I-LARGE-NEXT:    li a3, 4
+; RV64I-LARGE-NEXT:    li a4, 5
+; RV64I-LARGE-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi6)(a5)
+; RV64I-LARGE-NEXT:    li a5, 6
+; RV64I-LARGE-NEXT:    li a6, 7
+; RV64I-LARGE-NEXT:    li a7, 8
+; RV64I-LARGE-NEXT:    sd t1, 0(sp)
+; RV64I-LARGE-NEXT:    sd t0, 8(sp)
+; RV64I-LARGE-NEXT:    jalr t2
+; RV64I-LARGE-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-LARGE-NEXT:    .cfi_restore ra
+; RV64I-LARGE-NEXT:    addi sp, sp, 32
+; RV64I-LARGE-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-LARGE-NEXT:    ret
+;
+; RV64I-LARGE-ZICFILP-LABEL: fastcc_call_nonfastcc:
+; RV64I-LARGE-ZICFILP:       # %bb.0:
+; RV64I-LARGE-ZICFILP-NEXT:    lpad 0
+; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, -32
+; RV64I-LARGE-ZICFILP-NEXT:    .cfi_def_cfa_offset 32
+; RV64I-LARGE-ZICFILP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-LARGE-ZICFILP-NEXT:    .cfi_offset ra, -8
+; RV64I-LARGE-ZICFILP-NEXT:    li t0, 10
+; RV64I-LARGE-ZICFILP-NEXT:    li t1, 9
+; RV64I-LARGE-ZICFILP-NEXT:  .Lpcrel_hi6:
+; RV64I-LARGE-ZICFILP-NEXT:    auipc a5, %pcrel_hi(.LCPI11_0)
+; RV64I-LARGE-ZICFILP-NEXT:    li a0, 1
+; RV64I-LARGE-ZICFILP-NEXT:    li a1, 2
+; RV64I-LARGE-ZICFILP-NEXT:    li a2, 3
+; RV64I-LARGE-ZICFILP-NEXT:    li a3, 4
+; RV64I-LARGE-ZICFILP-NEXT:    li a4, 5
+; RV64I-LARGE-ZICFILP-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi6)(a5)
+; RV64I-LARGE-ZICFILP-NEXT:    li a5, 6
+; RV64I-LARGE-ZICFILP-NEXT:    li a6, 7
+; RV64I-LARGE-ZICFILP-NEXT:    li a7, 8
+; RV64I-LARGE-ZICFILP-NEXT:    sd t1, 0(sp)
+; RV64I-LARGE-ZICFILP-NEXT:    sd t0, 8(sp)
+; RV64I-LARGE-ZICFILP-NEXT:    jalr t2
+; RV64I-LARGE-ZICFILP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-LARGE-ZICFILP-NEXT:    .cfi_restore ra
+; RV64I-LARGE-ZICFILP-NEXT:    addi sp, sp, 32
+; RV64I-LARGE-ZICFILP-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-LARGE-ZICFILP-NEXT:    ret
+  call void @external_many_args(i32 1, i32 2,i32 3,i32 4,i32 5,i32 6,i32 7,i32 8,i32 9,i32 10)
+  ret void
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; RV32I: {{.*}}
 ; RV32I-PIC: {{.*}}

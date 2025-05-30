@@ -3994,6 +3994,13 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
+  if (isVLdStIdx(MIa.getOpcode()) || isVLdStIdx(MIb.getOpcode())) {
+    if (isVLdStIdx(MIa.getOpcode()) && isVLdStIdx(MIb.getOpcode())) {
+      return checkInstOffsetsDoNotOverlap(MIa, MIb);
+    }
+    return true;
+  }
+
   if (isLDSDMA(MIa) || isLDSDMA(MIb))
     return false;
 
@@ -4039,13 +4046,6 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
     }
 
     return false;
-  }
-
-  if (isVLdStIdx(MIa.getOpcode()) || isVLdStIdx(MIb.getOpcode())) {
-    if (isVLdStIdx(MIa.getOpcode()) && isVLdStIdx(MIb.getOpcode())) {
-      return checkInstOffsetsDoNotOverlap(MIa, MIb);
-    }
-    return true;
   }
 
   return false;
@@ -6823,6 +6823,13 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
   SAddr->setReg(ToSGPR);
 }
 
+void SIInstrInfo::legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI,
+                                           MachineInstr &MI) const {
+  MachineOperand &Idx = MI.getOperand(1);
+  if (Idx.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Idx.getReg())))
+    Idx.setReg(readlaneVGPRToSGPR(Idx.getReg(), MI, MRI));
+}
+
 void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
                                          MachineBasicBlock::iterator I,
                                          const TargetRegisterClass *DstRC,
@@ -7190,6 +7197,11 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   // Legalize FLAT
   if (isFLAT(MI)) {
     legalizeOperandsFLAT(MRI, MI);
+    return CreatedBB;
+  }
+
+  if (isVLdStIdx(MI.getOpcode())) {
+    legalizeOperandsVLdStIdx(MRI, MI);
     return CreatedBB;
   }
 

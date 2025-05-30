@@ -301,6 +301,7 @@ private:
   void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
   void SelectPOPSExitingWaveID(SDNode *N);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
+  void SelectLOAD_MCAST(MemIntrinsicSDNode *N, unsigned IntrID);
   void SelectInterpP1F16(SDNode *N);
   void SelectCvtTensor(SDNode *N, unsigned IntrID);
   void SelectINTRINSIC_W_CHAIN(SDNode *N);
