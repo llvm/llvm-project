@@ -3457,12 +3457,10 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
         assert(isPowerOf2_32(InterleaveFactor) &&
                "Unsupported deinterleave factor for scalable vectors");
         DeinterleavedValues[0] = NewLoad;
-        // For the case of InterleaveFactor > 2, we will have to do recursive
-        // deinterleaving, because the current available deinterleave intrinsic
-        // supports only Factor of 2, otherwise it will bailout after first
-        // iteration.
-        // When deinterleaving, the number of values will double until we
-        // have "InterleaveFactor".
+        // For InterleaveFactor > 8 we have to do recursive deinterleaving via
+        // deinterleave2, because the intrinsics only go up to Factor 8. We
+        // currently only support power-of-2 factors. When deinterleaving, the
+        // number of values will double until we have "InterleaveFactor".
         // Deinterleave the elements within the vector
         SmallVector<Value *> TempDeinterleavedValues(InterleaveFactor);
         for (unsigned NumVectors = 1; NumVectors < InterleaveFactor;
