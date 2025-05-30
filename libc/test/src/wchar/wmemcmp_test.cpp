@@ -66,3 +66,11 @@ TEST(LlvmLibcWMemcmpTest, LhsRhsAreTheSameLong) {
   const wchar_t *rhs = L"aaaaaaaaaaaaaa";
   EXPECT_EQ(LIBC_NAMESPACE::wmemcmp(lhs, rhs, 15), 0);
 }
+
+TEST(LlvmLibcWMemcmpTest, NullptrCrash) {
+  // Passing in a nullptr should crash the program.
+  EXPECT_DEATH([] { LIBC_NAMESPACE::wmemcmp(L"aaaaaaaaaaaaaa", nullptr, 15); },
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([] { LIBC_NAMESPACE::wmemcmp(nullptr, L"aaaaaaaaaaaaaa", 15); },
+               WITH_SIGNAL(-1));
+}
