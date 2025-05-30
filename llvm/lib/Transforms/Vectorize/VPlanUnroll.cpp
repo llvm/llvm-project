@@ -223,6 +223,23 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
       Copy->addOperand(R);
       Copy->addOperand(getConstantVPV(Part));
     } else if (RdxPhi) {
+      // If the start value is a ReductionStartVector, use the identity value
+      // (second operand) for unrolled parts. If the scaling factor is > 1,
+      // create a new ReductionStartVector with the scale factor and both
+      // operands set to the identity value.
+      if (auto *VPI = dyn_cast<VPInstruction>(RdxPhi->getStartValue())) {
+        if (cast<ConstantInt>(VPI->getOperand(2)->getLiveInIRValue())
+                ->getZExtValue() == 1)
+          Copy->setOperand(0, VPI->getOperand(1));
+        else {
+          if (Part == 1) {
+            auto *C = VPI->clone();
+            C->setOperand(0, C->getOperand(1));
+            C->insertAfter(VPI);
+            addUniformForAllParts(C);
+          }
+        }
+      }
       Copy->addOperand(getConstantVPV(Part));
     } else {
       assert(isa<VPActiveLaneMaskPHIRecipe>(R) &&

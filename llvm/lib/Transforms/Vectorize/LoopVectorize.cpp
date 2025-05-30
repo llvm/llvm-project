@@ -7235,8 +7235,11 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
       cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
   const RecurrenceDescriptor &RdxDesc =
       EpiRedHeaderPhi->getRecurrenceDescriptor();
-  Value *MainResumeValue =
-      EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
+  Value *MainResumeValue;
+  if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue()))
+    MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
+  else
+    MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
           RdxDesc.getRecurrenceKind())) {
     Value *StartV = EpiRedResult->getOperand(1)->getLiveInIRValue();
@@ -8286,6 +8289,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       // If the PHI is used by a partial reduction, set the scale factor.
       unsigned ScaleFactor =
           getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
+
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc, *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor);
@@ -9173,7 +9177,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
+    Type *PhiTy = PhiR->getUnderlyingValue()->getType();
     // If tail is folded by masking, introduce selects between the phi
     // and the users outside the vector region of each reduction, at the
     // beginning of the dedicated latch block.
@@ -9310,6 +9314,28 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // value after generating the ResumePhi recipe, which uses the original
       // start value.
       PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
+    }
+    RecurKind RK = RdxDesc.getRecurrenceKind();
+    if (PhiR->isOrdered() || PhiR->isInLoop() ||
+        (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
+         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
+         !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))) {
+      VPBuilder PHBuilder(Plan->getVectorPreheader());
+      VPValue *Iden = Plan->getOrAddLiveIn(
+          getRecurrenceIdentity(RK, PhiTy, RdxDesc.getFastMathFlags()));
+      // If the PHI is used by a partial reduction, set the scale factor.
+      unsigned ScaleFactor =
+          RecipeBuilder.getScalingForReduction(RdxDesc.getLoopExitInstr())
+              .value_or(1);
+      Type *I32Ty = IntegerType::getInt32Ty(PhiTy->getContext());
+      auto *ScalarFactorVPV =
+          Plan->getOrAddLiveIn(ConstantInt::get(I32Ty, ScaleFactor));
+      VPValue *StartV = PHBuilder.createNaryOp(
+          VPInstruction::ReductionStartVector,
+          {PhiR->getStartValue(), Iden, ScalarFactorVPV},
+          PhiTy->isFloatingPointTy() ? RdxDesc.getFastMathFlags()
+                                     : FastMathFlags());
+      PhiR->setOperand(0, StartV);
     }
   }
   for (VPRecipeBase *R : ToDelete)
@@ -9836,6 +9862,12 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
     }
     assert(ResumeV && "Must have a resume value");
     VPValue *StartVal = Plan.getOrAddLiveIn(ResumeV);
+    if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R)) {
+      if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
+        VPI->setOperand(0, StartVal);
+        continue;
+      }
+    }
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(StartVal);
   }
 
