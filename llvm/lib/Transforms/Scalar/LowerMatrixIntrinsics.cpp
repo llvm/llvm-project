@@ -229,14 +229,11 @@ static bool isUniformShape(Value *V) {
   if (!I)
     return true;
 
+  if (I->isBinaryOp())
+    return true;
+
   switch (I->getOpcode()) {
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul: // Scalar multiply.
   case Instruction::FNeg:
-  case Instruction::Add:
-  case Instruction::Mul:
-  case Instruction::Sub:
     return true;
   default:
     return false;
@@ -2154,28 +2151,9 @@ public:
 
     Builder.setFastMathFlags(getFastMathFlags(Inst));
 
-    // Helper to perform binary op on vectors.
-    auto BuildVectorOp = [&Builder, Inst](Value *LHS, Value *RHS) {
-      switch (Inst->getOpcode()) {
-      case Instruction::Add:
-        return Builder.CreateAdd(LHS, RHS);
-      case Instruction::Mul:
-        return Builder.CreateMul(LHS, RHS);
-      case Instruction::Sub:
-        return Builder.CreateSub(LHS, RHS);
-      case Instruction::FAdd:
-        return Builder.CreateFAdd(LHS, RHS);
-      case Instruction::FMul:
-        return Builder.CreateFMul(LHS, RHS);
-      case Instruction::FSub:
-        return Builder.CreateFSub(LHS, RHS);
-      default:
-        llvm_unreachable("Unsupported binary operator for matrix");
-      }
-    };
-
     for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
-      Result.addVector(BuildVectorOp(A.getVector(I), B.getVector(I)));
+      Result.addVector(Builder.CreateBinOp(Inst->getOpcode(), A.getVector(I),
+                                           B.getVector(I)));
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *

@@ -520,7 +520,7 @@ void Sema::Initialize() {
        Context.getAuxTargetInfo()->hasAArch64SVETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId)                                        \
   addImplicitTypedef(#Name, Context.SingletonId);
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
   }
 
   if (Context.getTargetInfo().getTriple().isPPC64()) {

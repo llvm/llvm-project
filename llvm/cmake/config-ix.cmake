@@ -195,8 +195,19 @@ if(LLVM_ENABLE_ZSTD)
   elseif(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
     find_package(zstd QUIET)
   endif()
+
+  # If LLVM_USE_STATIC_ZSTD is specified, make sure we enable zstd only if static
+  # libraries are found.
+  if(LLVM_USE_STATIC_ZSTD AND NOT TARGET zstd::libzstd_static)
+    # Fail if LLVM_ENABLE_ZSTD is FORCE_ON.
+    if(LLVM_ENABLE_ZSTD STREQUAL FORCE_ON)
+        message(FATAL_ERROR "Failed to find static zstd libraries, but LLVM_USE_STATIC_ZSTD=ON and LLVM_ENABLE_ZSTD=FORCE_ON.")
+    endif()
+    set(LLVM_ENABLE_ZSTD OFF)
+  else()
+    set(LLVM_ENABLE_ZSTD ${zstd_FOUND})
+  endif()
 endif()
-set(LLVM_ENABLE_ZSTD ${zstd_FOUND})
 
 if(LLVM_ENABLE_LIBXML2)
   if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON)
@@ -292,6 +303,41 @@ if(LLVM_HAS_LOGF128)
   endif()
 
   set(LLVM_HAS_LOGF128 "${HAS_LOGF128}")
+endif()
+
+if (LLVM_ENABLE_ICU STREQUAL FORCE_ON AND LLVM_ENABLE_ICONV STREQUAL FORCE_ON)
+  message(FATAL_ERROR "LLVM_ENABLE_ICU and LLVM_ENABLE_ICONV should not both be FORCE_ON")
+endif()
+
+# Check for ICU. Only allow an optional, dynamic link for ICU so we don't impact LLVM's licensing.
+if(LLVM_ENABLE_ICU AND NOT(LLVM_ENABLE_ICONV STREQUAL FORCE_ON))
+  set(LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  if (LLVM_ENABLE_ICU STREQUAL FORCE_ON)
+    find_package(ICU REQUIRED COMPONENTS uc i18n)
+    if (NOT ICU_FOUND)
+      message(FATAL_ERROR "Failed to configure ICU, but LLVM_ENABLE_ICU is FORCE_ON")
+    endif()
+  else()
+    find_package(ICU COMPONENTS uc i18n)
+  endif()
+  set(HAVE_ICU ${ICU_FOUND})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${LIBRARY_SUFFIXES})
+endif()
+
+# Check only for builtin iconv to avoid licensing issues.
+if(LLVM_ENABLE_ICONV AND NOT HAVE_ICU)
+  if (LLVM_ENABLE_ICONV STREQUAL FORCE_ON)
+    find_package(Iconv REQUIRED)
+    if (NOT Iconv_FOUND OR NOT Iconv_IS_BUILT_IN)
+      message(FATAL_ERROR "Failed to configure iconv, but LLVM_ENABLE_ICONV is FORCE_ON")
+    endif()
+  else()
+    find_package(Iconv)
+  endif()
+  if(Iconv_FOUND AND Iconv_IS_BUILT_IN)
+    set(HAVE_ICONV 1)
+  endif()
 endif()
 
 # function checks

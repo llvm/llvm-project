@@ -121,6 +121,11 @@ class OpenACCClauseCIREmitter final
     return constOp.getResult();
   }
 
+  mlir::Value createConstantInt(SourceLocation loc, unsigned width,
+                                int64_t value) {
+    return createConstantInt(cgf.cgm.getLoc(loc), width, value);
+  }
+
   mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
     // '*' case leaves no identifier-info, just a nullptr.
     if (!ii)
@@ -164,45 +169,109 @@ class OpenACCClauseCIREmitter final
     builder.setInsertionPoint(operation.computeOp);
     OpenACCClauseCIREmitter<typename OpTy::ComputeOpTy> computeEmitter{
         operation.computeOp, cgf, builder, dirKind, dirLoc};
+
     computeEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
+
+    // Async handler uses the first data operand to figure out where to insert
+    // its information if it is present.  This ensures that the new handler will
+    // correctly set the insertion point for async.
+    if (!dataOperands.empty())
+      computeEmitter.dataOperands.push_back(dataOperands.front());
     computeEmitter.Visit(&c);
+
+    // Make sure all of the new data operands are kept track of here. The
+    // combined constructs always apply 'async' to only the compute component,
+    // so we need to collect these.
+    dataOperands.append(computeEmitter.dataOperands);
   }
 
   struct DataOperandInfo {
     mlir::Location beginLoc;
     mlir::Value varValue;
     llvm::StringRef name;
+    llvm::SmallVector<mlir::Value> bounds;
   };
+
+  mlir::Value createBound(mlir::Location boundLoc, mlir::Value lowerBound,
+                          mlir::Value upperBound, mlir::Value extent) {
+    // Arrays always have a start-idx of 0.
+    mlir::Value startIdx = createConstantInt(boundLoc, 64, 0);
+    // Stride is always 1 in C/C++.
+    mlir::Value stride = createConstantInt(boundLoc, 64, 1);
+
+    auto bound = builder.create<mlir::acc::DataBoundsOp>(boundLoc, lowerBound,
+                                                         upperBound);
+    bound.getStartIdxMutable().assign(startIdx);
+    if (extent)
+      bound.getExtentMutable().assign(extent);
+    bound.getStrideMutable().assign(stride);
+
+    return bound;
+  }
 
   // A helper function that gets the information from an operand to a data
   // clause, so that it can be used to emit the data operations.
-  inline DataOperandInfo getDataOperandInfo(OpenACCDirectiveKind dk,
-                                            const Expr *e) {
+  DataOperandInfo getDataOperandInfo(OpenACCDirectiveKind dk, const Expr *e) {
     // TODO: OpenACC: Cache was different enough as to need a separate
     // `ActOnCacheVar`, so we are going to need to do some investigations here
     // when it comes to implement this for cache.
     if (dk == OpenACCDirectiveKind::Cache) {
       cgf.cgm.errorNYI(e->getSourceRange(),
                        "OpenACC data operand for 'cache' directive");
-      return {cgf.cgm.getLoc(e->getBeginLoc()), {}, {}};
+      return {cgf.cgm.getLoc(e->getBeginLoc()), {}, {}, {}};
     }
 
     const Expr *curVarExpr = e->IgnoreParenImpCasts();
 
     mlir::Location exprLoc = cgf.cgm.getLoc(curVarExpr->getBeginLoc());
+    llvm::SmallVector<mlir::Value> bounds;
 
-    // TODO: OpenACC: Assemble the list of bounds.
-    if (isa<ArraySectionExpr, ArraySubscriptExpr>(curVarExpr)) {
-      cgf.cgm.errorNYI(curVarExpr->getSourceRange(),
-                       "OpenACC data clause array subscript/section");
-      return {exprLoc, {}, {}};
+    // Assemble the list of bounds.
+    while (isa<ArraySectionExpr, ArraySubscriptExpr>(curVarExpr)) {
+      mlir::Location boundLoc = cgf.cgm.getLoc(curVarExpr->getBeginLoc());
+      mlir::Value lowerBound;
+      mlir::Value upperBound;
+      mlir::Value extent;
+
+      if (const auto *section = dyn_cast<ArraySectionExpr>(curVarExpr)) {
+        if (const Expr *lb = section->getLowerBound())
+          lowerBound = emitIntExpr(lb);
+        else
+          lowerBound = createConstantInt(boundLoc, 64, 0);
+
+        if (const Expr *len = section->getLength()) {
+          extent = emitIntExpr(len);
+        } else {
+          QualType baseTy = ArraySectionExpr::getBaseOriginalType(
+              section->getBase()->IgnoreParenImpCasts());
+          // We know this is the case as implicit lengths are only allowed for
+          // array types with a constant size, or a dependent size.  AND since
+          // we are codegen we know we're not dependent.
+          auto *arrayTy = cgf.getContext().getAsConstantArrayType(baseTy);
+          // Rather than trying to calculate the extent based on the
+          // lower-bound, we can just emit this as an upper bound.
+          upperBound =
+              createConstantInt(boundLoc, 64, arrayTy->getLimitedSize() - 1);
+        }
+
+        curVarExpr = section->getBase()->IgnoreParenImpCasts();
+      } else {
+        const auto *subscript = cast<ArraySubscriptExpr>(curVarExpr);
+
+        lowerBound = emitIntExpr(subscript->getIdx());
+        // Length of an array index is always 1.
+        extent = createConstantInt(boundLoc, 64, 1);
+        curVarExpr = subscript->getBase()->IgnoreParenImpCasts();
+      }
+
+      bounds.push_back(createBound(boundLoc, lowerBound, upperBound, extent));
     }
 
     // TODO: OpenACC: if this is a member expr, emit the VarPtrPtr correctly.
     if (isa<MemberExpr>(curVarExpr)) {
       cgf.cgm.errorNYI(curVarExpr->getSourceRange(),
                        "OpenACC Data clause member expr");
-      return {exprLoc, {}, {}};
+      return {exprLoc, {}, {}, std::move(bounds)};
     }
 
     // Sema has made sure that only 4 types of things can get here, array
@@ -211,14 +280,14 @@ class OpenACCClauseCIREmitter final
     // right.
     const auto *dre = cast<DeclRefExpr>(curVarExpr);
     const auto *vd = cast<VarDecl>(dre->getFoundDecl()->getCanonicalDecl());
-    return {exprLoc, cgf.emitDeclRefLValue(dre).getPointer(), vd->getName()};
+    return {exprLoc, cgf.emitDeclRefLValue(dre).getPointer(), vd->getName(),
+            std::move(bounds)};
   }
 
   template <typename BeforeOpTy, typename AfterOpTy>
   void addDataOperand(const Expr *varOperand, mlir::acc::DataClause dataClause,
                       bool structured, bool implicit) {
     DataOperandInfo opInfo = getDataOperandInfo(dirKind, varOperand);
-    mlir::ValueRange bounds;
 
     // TODO: OpenACC: we should comprehend the 'modifier-list' here for the data
     // operand. At the moment, we don't have a uniform way to assign these
@@ -227,7 +296,7 @@ class OpenACCClauseCIREmitter final
 
     auto beforeOp =
         builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
-                                   implicit, opInfo.name, bounds);
+                                   implicit, opInfo.name, opInfo.bounds);
     operation.getDataClauseOperandsMutable().append(beforeOp.getResult());
 
     AfterOpTy afterOp;
@@ -236,7 +305,7 @@ class OpenACCClauseCIREmitter final
       builder.setInsertionPointAfter(operation);
       afterOp = builder.create<AfterOpTy>(opInfo.beginLoc, beforeOp.getResult(),
                                           opInfo.varValue, structured, implicit,
-                                          opInfo.name, bounds);
+                                          opInfo.name, opInfo.bounds);
     }
 
     // Set the 'rest' of the info for both operations.
@@ -254,6 +323,8 @@ class OpenACCClauseCIREmitter final
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp, mlir::acc::DataOp>)
       return operation.getAsyncOnlyAttr();
+    else if constexpr (isCombinedType<OpTy>)
+      return operation.computeOp.getAsyncOnlyAttr();
 
     // Note: 'wait' has async as well, but it cannot have data clauses, so we
     // don't have to handle them here.
@@ -267,6 +338,8 @@ class OpenACCClauseCIREmitter final
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp, mlir::acc::DataOp>)
       return operation.getAsyncOperandsDeviceTypeAttr();
+    else if constexpr (isCombinedType<OpTy>)
+      return operation.computeOp.getAsyncOperandsDeviceTypeAttr();
 
     // Note: 'wait' has async as well, but it cannot have data clauses, so we
     // don't have to handle them here.
@@ -281,6 +354,8 @@ class OpenACCClauseCIREmitter final
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp, mlir::acc::DataOp>)
       return operation.getAsyncOperands();
+    else if constexpr (isCombinedType<OpTy>)
+      return operation.computeOp.getAsyncOperands();
 
     // Note: 'wait' has async as well, but it cannot have data clauses, so we
     // don't have to handle them here.
@@ -295,8 +370,6 @@ class OpenACCClauseCIREmitter final
   void updateDataOperandAsyncValues() {
     if (!hasAsyncClause || dataOperands.empty())
       return;
-
-    // TODO: OpenACC: Handle this correctly for combined constructs.
 
     for (mlir::Operation *dataOp : dataOperands) {
       llvm::TypeSwitch<mlir::Operation *, void>(dataOp)
@@ -708,6 +781,8 @@ public:
         addDataOperand<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
             var, mlir::acc::DataClause::acc_copy, /*structured=*/true,
             /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. data, declare, combined constructs remain.

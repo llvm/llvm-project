@@ -85,7 +85,7 @@ void genOpenACCRoutineConstruct(
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
 /// exist yet.
-mlir::acc::PrivateRecipeOp createOrGetPrivateRecipe(mlir::OpBuilder &,
+mlir::acc::PrivateRecipeOp createOrGetPrivateRecipe(fir::FirOpBuilder &,
                                                     llvm::StringRef,
                                                     mlir::Location, mlir::Type);
 
@@ -99,7 +99,7 @@ createOrGetReductionRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
 /// Get a acc.firstprivate.recipe op for the given type or create it if it does
 /// not exist yet.
 mlir::acc::FirstprivateRecipeOp
-createOrGetFirstprivateRecipe(mlir::OpBuilder &, llvm::StringRef,
+createOrGetFirstprivateRecipe(fir::FirOpBuilder &, llvm::StringRef,
                               mlir::Location, mlir::Type,
                               llvm::SmallVector<mlir::Value> &);
 

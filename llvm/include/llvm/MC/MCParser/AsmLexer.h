@@ -213,8 +213,6 @@ private:
   StringRef LexUntilEndOfLine();
 };
 
-using MCAsmLexer = AsmLexer;
-
 } // end namespace llvm
 
 #endif // LLVM_MC_MCPARSER_ASMLEXER_H

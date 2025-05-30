@@ -99,13 +99,13 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 4;
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
-// CHECK-NEXT:  LLVM_ABI Directive getTdlDirectiveKind(llvm::StringRef Str);
+// CHECK-NEXT:  LLVM_ABI Directive getTdlDirectiveKind(StringRef Str);
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_ABI llvm::StringRef getTdlDirectiveName(Directive D);
+// CHECK-NEXT:  LLVM_ABI StringRef getTdlDirectiveName(Directive D);
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_ABI Clause getTdlClauseKind(llvm::StringRef Str);
+// CHECK-NEXT:  LLVM_ABI Clause getTdlClauseKind(StringRef Str);
 // CHECK-EMPTY:
-// CHECK-NEXT:  LLVM_ABI llvm::StringRef getTdlClauseName(Clause C);
+// CHECK-NEXT:  LLVM_ABI StringRef getTdlClauseName(Clause C);
 // CHECK-EMPTY:
 // CHECK-NEXT:  /// Return true if \p C is a valid clause for \p D in version \p Version.
 // CHECK-NEXT:  LLVM_ABI bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
@@ -127,8 +127,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:   // Sets for dira
 // IMPL-EMPTY:
 // IMPL-NEXT:   static  allowedClauses_TDLD_dira {
-// IMPL-NEXT:     llvm::tdl::Clause::TDLC_clausea,
-// IMPL-NEXT:     llvm::tdl::Clause::TDLC_clauseb,
+// IMPL-NEXT:     Clause::TDLC_clausea,
+// IMPL-NEXT:     Clause::TDLC_clauseb,
 // IMPL-NEXT:   };
 // IMPL-EMPTY:
 // IMPL-NEXT:   static  allowedOnceClauses_TDLD_dira {
@@ -259,13 +259,13 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-EMPTY:
 // IMPL-NEXT:  #include "llvm/Support/ErrorHandling.h"
 // IMPL-EMPTY:
-// IMPL-NEXT:  Directive llvm::tdl::getTdlDirectiveKind(llvm::StringRef Str) {
-// IMPL-NEXT:    return llvm::StringSwitch<Directive>(Str)
+// IMPL-NEXT:  llvm::tdl::Directive llvm::tdl::getTdlDirectiveKind(llvm::StringRef Str) {
+// IMPL-NEXT:    return StringSwitch<Directive>(Str)
 // IMPL-NEXT:      .Case("dira",TDLD_dira)
 // IMPL-NEXT:      .Default(TDLD_dira);
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlDirectiveName(Directive Kind) {
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlDirectiveName(llvm::tdl::Directive Kind) {
 // IMPL-NEXT:    switch (Kind) {
 // IMPL-NEXT:      case TDLD_dira:
 // IMPL-NEXT:        return "dira";
@@ -273,8 +273,8 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  Clause llvm::tdl::getTdlClauseKind(llvm::StringRef Str) {
-// IMPL-NEXT:    return llvm::StringSwitch<Clause>(Str)
+// IMPL-NEXT:  llvm::tdl::Clause llvm::tdl::getTdlClauseKind(llvm::StringRef Str) {
+// IMPL-NEXT:    return StringSwitch<Clause>(Str)
 // IMPL-NEXT:      .Case("clausea",TDLC_clauseb)
 // IMPL-NEXT:      .Case("clauseb",TDLC_clauseb)
 // IMPL-NEXT:      .Case("clausec",TDLC_clausec)
@@ -282,7 +282,7 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:      .Default(TDLC_clauseb);
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlClauseName(Clause Kind) {
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getTdlClauseName(llvm::tdl::Clause Kind) {
 // IMPL-NEXT:    switch (Kind) {
 // IMPL-NEXT:      case TDLC_clausea:
 // IMPL-NEXT:        return "clausea";
@@ -296,9 +296,9 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Clause kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-// IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(Directive D, Clause C, unsigned Version) {
-// IMPL-NEXT:    assert(unsigned(D) <= llvm::tdl::Directive_enumSize);
-// IMPL-NEXT:    assert(unsigned(C) <= llvm::tdl::Clause_enumSize);
+// IMPL-NEXT:  bool llvm::tdl::isAllowedClauseForDirective(llvm::tdl::Directive D, llvm::tdl::Clause C, unsigned Version) {
+// IMPL-NEXT:    assert(unsigned(D) <= Directive_enumSize);
+// IMPL-NEXT:    assert(unsigned(C) <= Clause_enumSize);
 // IMPL-NEXT:    switch (D) {
 // IMPL-NEXT:      case TDLD_dira:
 // IMPL-NEXT:        switch (C) {
@@ -316,24 +316,24 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-EMPTY:
 // IMPL-NEXT:  llvm::tdl::Association llvm::tdl::getDirectiveAssociation(llvm::tdl::Directive Dir) {
 // IMPL-NEXT:    switch (Dir) {
-// IMPL-NEXT:    case llvm::tdl::Directive::TDLD_dira:
-// IMPL-NEXT:      return llvm::tdl::Association::Block;
+// IMPL-NEXT:    case TDLD_dira:
+// IMPL-NEXT:      return Association::Block;
 // IMPL-NEXT:    } // switch (Dir)
 // IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  llvm::tdl::Category llvm::tdl::getDirectiveCategory(llvm::tdl::Directive Dir) {
 // IMPL-NEXT:    switch (Dir) {
-// IMPL-NEXT:    case llvm::tdl::TDLD_dira:
-// IMPL-NEXT:      return llvm::tdl::Category::Declarative;
+// IMPL-NEXT:    case TDLD_dira:
+// IMPL-NEXT:      return Category::Declarative;
 // IMPL-NEXT:    } // switch (Dir)
 // IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  llvm::tdl::SourceLanguage llvm::tdl::getDirectiveLanguages(llvm::tdl::Directive D) {
 // IMPL-NEXT:    switch (D) {
-// IMPL-NEXT:    case llvm::tdl::TDLD_dira:
-// IMPL-NEXT:      return llvm::tdl::SourceLanguage::C | llvm::tdl::SourceLanguage::Fortran;
+// IMPL-NEXT:    case TDLD_dira:
+// IMPL-NEXT:      return SourceLanguage::C | SourceLanguage::Fortran;
 // IMPL-NEXT:    } // switch(D)
 // IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }

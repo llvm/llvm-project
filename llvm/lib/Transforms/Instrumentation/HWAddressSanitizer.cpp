@@ -692,7 +692,7 @@ void HWAddressSanitizer::initializeModule() {
   }
 
   if (!TargetTriple.isAndroid()) {
-    Constant *C = M.getOrInsertGlobal("__hwasan_tls", IntptrTy, [&] {
+    ThreadPtrGlobal = M.getOrInsertGlobal("__hwasan_tls", IntptrTy, [&] {
       auto *GV = new GlobalVariable(M, IntptrTy, /*isConstant=*/false,
                                     GlobalValue::ExternalLinkage, nullptr,
                                     "__hwasan_tls", nullptr,
@@ -700,7 +700,6 @@ void HWAddressSanitizer::initializeModule() {
       appendToCompilerUsed(M, GV);
       return GV;
     });
-    ThreadPtrGlobal = cast<GlobalVariable>(C);
   }
 }
 

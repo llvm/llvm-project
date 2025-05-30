@@ -55,7 +55,7 @@
 
 namespace lldb_dap {
 
-typedef llvm::DenseMap<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
+typedef std::map<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
     SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
@@ -97,7 +97,6 @@ struct DAP {
 
   Variables variables;
   lldb::SBBroadcaster broadcaster;
-  llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
   std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
@@ -161,6 +160,9 @@ struct DAP {
   std::mutex modules_mutex;
   llvm::StringSet<> modules;
   /// @}
+
+  /// Number of lines of assembly code to show when no debug info is available.
+  static constexpr uint32_t k_number_of_assembly_lines_for_nodebug = 32;
 
   /// Creates a new DAP sessions.
   ///
@@ -364,7 +366,28 @@ struct DAP {
   void StartEventThread();
   void StartProgressEventThread();
 
+  /// Sets the given protocol `breakpoints` in the given `source`, while
+  /// removing any existing breakpoints in the given source if they are not in
+  /// `breakpoint`.
+  ///
+  /// \param[in] source
+  ///   The relevant source of the breakpoints.
+  ///
+  /// \param[in] breakpoints
+  ///   The breakpoints to set.
+  ///
+  /// \return a vector of the breakpoints that were set.
+  std::vector<protocol::Breakpoint> SetSourceBreakpoints(
+      const protocol::Source &source,
+      const std::optional<std::vector<protocol::SourceBreakpoint>>
+          &breakpoints);
+
 private:
+  std::vector<protocol::Breakpoint> SetSourceBreakpoints(
+      const protocol::Source &source,
+      const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
+      SourceBreakpointMap &existing_breakpoints);
+
   /// Registration of request handler.
   /// @{
   void RegisterRequests();
@@ -393,6 +416,9 @@ private:
 
   std::mutex m_active_request_mutex;
   const protocol::Request *m_active_request;
+
+  llvm::StringMap<SourceBreakpointMap> m_source_breakpoints;
+  llvm::DenseMap<int64_t, SourceBreakpointMap> m_source_assembly_breakpoints;
 };
 
 } // namespace lldb_dap

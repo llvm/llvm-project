@@ -192,7 +192,8 @@ static Expected<MachOObjectFile::LoadCommandInfo>
 getLoadCommandInfo(const MachOObjectFile &Obj, const char *Ptr,
                    uint32_t LoadCommandIndex) {
   if (auto CmdOrErr = getStructOrErr<MachO::load_command>(Obj, Ptr)) {
-    if (CmdOrErr->cmdsize + Ptr > Obj.getData().end())
+    assert(Ptr <= Obj.getData().end() && "Start must be before end");
+    if (CmdOrErr->cmdsize > (uintptr_t)(Obj.getData().end() - Ptr))
       return malformedError("load command " + Twine(LoadCommandIndex) +
                             " extends past end of file");
     if (CmdOrErr->cmdsize < 8)

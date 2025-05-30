@@ -8,17 +8,15 @@
 
 #include "ModelInjector.h"
 #include "clang/AST/Decl.h"
-#include "clang/Basic/IdentifierTable.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Stack.h"
-#include "clang/AST/DeclObjC.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
 #include <utility>

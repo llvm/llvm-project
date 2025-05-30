@@ -14,6 +14,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBError.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -25,7 +26,7 @@ public:
   SourceBreakpoint(DAP &d, const protocol::SourceBreakpoint &breakpoint);
 
   // Set this breakpoint in LLDB as a new breakpoint
-  void SetBreakpoint(const llvm::StringRef source_path);
+  llvm::Error SetBreakpoint(const protocol::Source &source);
   void UpdateBreakpoint(const SourceBreakpoint &request_bp);
 
   void SetLogMessage();

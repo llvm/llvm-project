@@ -324,8 +324,8 @@ namespace {
 
       // FIXME: This is quadratic if we have lots of reuses of the same
       // attributed type.
-      for (auto It = std::partition_point(
-               AttrsForTypes.begin(), AttrsForTypes.end(),
+      for (auto It = llvm::partition_point(
+               AttrsForTypes,
                [=](const TypeAttrPair &A) { return A.first < AT; });
            It != AttrsForTypes.end() && It->first == AT; ++It) {
         if (It->second) {
@@ -2321,9 +2321,9 @@ static bool CheckBitIntElementType(Sema &S, SourceLocation AttrLoc,
                                    bool ForMatrixType = false) {
   // Only support _BitInt elements with byte-sized power of 2 NumBits.
   unsigned NumBits = BIT->getNumBits();
-  if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8)
+  if (!llvm::isPowerOf2_32(NumBits))
     return S.Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
-           << ForMatrixType << (NumBits < 8);
+           << ForMatrixType;
   return false;
 }
 
@@ -5888,6 +5888,7 @@ namespace {
       Visit(TL.getWrappedLoc());
       fillHLSLAttributedResourceTypeLoc(TL, State);
     }
+    void VisitHLSLInlineSpirvTypeLoc(HLSLInlineSpirvTypeLoc TL) {}
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       Visit(TL.getInnerLoc());
       TL.setExpansionLoc(
@@ -7689,8 +7690,8 @@ static bool checkMutualExclusion(TypeProcessingState &state,
                                  const FunctionProtoType::ExtProtoInfo &EPI,
                                  ParsedAttr &Attr,
                                  AttributeCommonInfo::Kind OtherKind) {
-  auto OtherAttr = std::find_if(
-      state.getCurrentAttributes().begin(), state.getCurrentAttributes().end(),
+  auto OtherAttr = llvm::find_if(
+      state.getCurrentAttributes(),
       [OtherKind](const ParsedAttr &A) { return A.getKind() == OtherKind; });
   if (OtherAttr == state.getCurrentAttributes().end() || OtherAttr->isInvalid())
     return false;
@@ -8788,9 +8789,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::UnknownAttribute:
       if (attr.isStandardAttributeSyntax()) {
-        state.getSema().Diag(attr.getLoc(),
-                             diag::warn_unknown_attribute_ignored)
-            << attr << attr.getRange();
+        state.getSema().DiagnoseUnknownAttribute(attr);
         // Mark the attribute as invalid so we don't emit the same diagnostic
         // multiple times.
         attr.setInvalid();

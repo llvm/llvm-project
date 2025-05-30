@@ -14832,6 +14832,7 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
     CE = CallExpr::Create(Context, FnExpr.get(), MultiExprArg(&ObjectParam, 1),
                           ResultType, VK, Exp.get()->getEndLoc(),
                           CurFPFeatureOverrides());
+    CE->setUsesMemberSyntax(true);
   } else {
     MemberExpr *ME =
         BuildMemberExpr(Exp.get(), /*IsArrow=*/false, SourceLocation(),
@@ -16159,6 +16160,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     TheCall =
         CallExpr::Create(Context, FnExpr.get(), Args, ResultType, VK, RParenLoc,
                          CurFPFeatureOverrides(), Proto->getNumParams());
+    TheCall->setUsesMemberSyntax(true);
   } else {
     // Convert the object argument (for a non-static member function call).
     ExprResult ObjectArg = PerformImplicitObjectArgumentInitialization(

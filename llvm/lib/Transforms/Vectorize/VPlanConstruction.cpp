@@ -65,9 +65,8 @@ public:
   PlainCFGBuilder(Loop *Lp, LoopInfo *LI)
       : TheLoop(Lp), LI(LI), Plan(std::make_unique<VPlan>(Lp)) {}
 
-  /// Build plain CFG for TheLoop  and connects it to Plan's entry.
-  std::unique_ptr<VPlan>
-  buildPlainCFG(DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB);
+  /// Build plain CFG for TheLoop and connect it to Plan's entry.
+  std::unique_ptr<VPlan> buildPlainCFG();
 };
 } // anonymous namespace
 
@@ -242,8 +241,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 }
 
 // Main interface to build the plain CFG.
-std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
-    DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG() {
   VPIRBasicBlock *Entry = cast<VPIRBasicBlock>(Plan->getEntry());
   BB2VPBB[Entry->getIRBasicBlock()] = Entry;
   for (VPIRBasicBlock *ExitVPBB : Plan->getExitBlocks())
@@ -334,18 +332,14 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
     }
   }
 
-  for (const auto &[IRBB, VPB] : BB2VPBB)
-    VPB2IRBB[VPB] = IRBB;
-
   LLVM_DEBUG(Plan->setName("Plain CFG\n"); dbgs() << *Plan);
   return std::move(Plan);
 }
 
-std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(
-    Loop *TheLoop, LoopInfo &LI,
-    DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(Loop *TheLoop,
+                                                      LoopInfo &LI) {
   PlainCFGBuilder Builder(TheLoop, &LI);
-  return Builder.buildPlainCFG(VPB2IRBB);
+  return Builder.buildPlainCFG();
 }
 
 /// Checks if \p HeaderVPB is a loop header block in the plain CFG; that is, it
@@ -546,6 +540,9 @@ void VPlanTransforms::prepareForVectorization(
     if (auto *LatchExitVPB = MiddleVPBB->getSingleSuccessor())
       VPBlockUtils::disconnectBlocks(MiddleVPBB, LatchExitVPB);
     VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+    VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
+    Plan.getEntry()->swapSuccessors();
+
     // The exit blocks are unreachable, remove their recipes to make sure no
     // users remain that may pessimize transforms.
     for (auto *EB : Plan.getExitBlocks()) {
@@ -558,6 +555,11 @@ void VPlanTransforms::prepareForVectorization(
   // The connection order corresponds to the operands of the conditional branch,
   // with the middle block already connected to the exit block.
   VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+  // Also connect the entry block to the scalar preheader.
+  // TODO: Also introduce a branch recipe together with the minimum trip count
+  // check.
+  VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
+  Plan.getEntry()->swapSuccessors();
 
   auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
   // Here we use the same DebugLoc as the scalar loop latch terminator instead

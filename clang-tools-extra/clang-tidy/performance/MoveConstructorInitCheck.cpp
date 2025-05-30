@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MoveConstructorInitCheck.h"
-#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 

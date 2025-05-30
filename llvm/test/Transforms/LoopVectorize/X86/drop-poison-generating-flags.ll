@@ -673,30 +673,24 @@ define void @pr70590_recipe_without_underlying_instr(i64 %n, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SREM_IF:.*]], label %[[PRED_SREM_CONTINUE:.*]]
 ; CHECK:       [[PRED_SREM_IF]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = srem i64 3, 0
 ; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE]]
 ; CHECK:       [[PRED_SREM_CONTINUE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[TMP3]], %[[PRED_SREM_IF]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_SREM_IF1:.*]], label %[[PRED_SREM_CONTINUE2:.*]]
 ; CHECK:       [[PRED_SREM_IF1]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = srem i64 3, 0
 ; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE2]]
 ; CHECK:       [[PRED_SREM_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_SREM_IF3:.*]], label %[[PRED_SREM_CONTINUE4:.*]]
 ; CHECK:       [[PRED_SREM_IF3]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = srem i64 3, 0
 ; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE4]]
 ; CHECK:       [[PRED_SREM_CONTINUE4]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_SREM_IF5:.*]], label %[[PRED_SREM_CONTINUE6]]
 ; CHECK:       [[PRED_SREM_IF5]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = srem i64 3, 0
 ; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE6]]
 ; CHECK:       [[PRED_SREM_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP4]], -3
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], poison
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [5 x i8], ptr @c, i64 0, i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP14]], align 1
@@ -738,6 +732,88 @@ exit:
   ret void
 }
 
+; Variation of the above test with the poison value being used in all lanes.
+define void @recipe_without_underlying_instr_lanes_used(i64 %n, ptr noalias %dst, ptr noalias %aux) {
+; CHECK-LABEL: define void @recipe_without_underlying_instr_lanes_used(
+; CHECK-SAME: i64 [[N:%.*]], ptr noalias [[DST:%.*]], ptr noalias [[AUX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 false, [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SREM_CONTINUE6:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_SREM_CONTINUE6]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[TMP0]], splat (i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_SREM_IF:.*]], label %[[PRED_SREM_CONTINUE:.*]]
+; CHECK:       [[PRED_SREM_IF]]:
+; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE]]
+; CHECK:       [[PRED_SREM_CONTINUE]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_SREM_IF1:.*]], label %[[PRED_SREM_CONTINUE2:.*]]
+; CHECK:       [[PRED_SREM_IF1]]:
+; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE2]]
+; CHECK:       [[PRED_SREM_CONTINUE2]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_SREM_IF3:.*]], label %[[PRED_SREM_CONTINUE4:.*]]
+; CHECK:       [[PRED_SREM_IF3]]:
+; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE4]]
+; CHECK:       [[PRED_SREM_CONTINUE4]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_SREM_IF5:.*]], label %[[PRED_SREM_CONTINUE6]]
+; CHECK:       [[PRED_SREM_IF5]]:
+; CHECK-NEXT:    br label %[[PRED_SREM_CONTINUE6]]
+; CHECK:       [[PRED_SREM_CONTINUE6]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], poison
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr [5 x i8], ptr @c, i64 0, i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP9]], align 1
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i8> zeroinitializer, <4 x i8> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> zeroinitializer, <4 x i64> poison
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[PREDPHI7]], i32 3
+; CHECK-NEXT:    store i64 [[TMP12]], ptr [[AUX]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i32 0
+; CHECK-NEXT:    store <4 x i8> [[PREDPHI]], ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+;
+
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %inc, %loop.latch ]
+  %cmp = icmp eq i64 %iv, %n
+  br i1 %cmp, label %loop.latch, label %then
+
+then:
+  %rem = srem i64 3, 0
+  %add3 = add i64 %rem, -3
+  %add5 = add i64 %iv, %add3
+  %gep = getelementptr [5 x i8], ptr @c, i64 0, i64 %add5
+  %l = load i8, ptr %gep, align 1
+  br label %loop.latch
+
+loop.latch:
+  %sr = phi i8 [ 0, %loop.header ], [ %l , %then ]
+  %p = phi i64 [ 0, %loop.header ], [ %rem, %then ]
+  store i64 %p, ptr %aux
+  %gep.dst = getelementptr i8, ptr %dst, i64 %iv
+  store i8 %sr, ptr %gep.dst, align 4
+  %inc = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %inc, 4
+  br i1 %exitcond.not, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
 ; %B.gep.0 and pointers based on it can preserve inbounds, as the inbounds
 ; versionused unconditionally in the store in the latch.
 ; FIXME: at the moment, inbounds is dropped from both the GEP feeding the vector load ans tore
@@ -763,7 +839,7 @@ define void @Bgep_inbounds_unconditionally_due_to_store(ptr noalias %B, ptr read
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ;
 

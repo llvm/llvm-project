@@ -979,7 +979,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
     // Stable sort all of the diagnostics that were emitted. This creates a
     // deterministic ordering for the diagnostics based upon which order id they
     // were emitted for.
-    std::stable_sort(diagnostics.begin(), diagnostics.end());
+    llvm::stable_sort(diagnostics);
 
     // Emit each diagnostic to the context again.
     for (ThreadDiagnostic &diag : diagnostics)

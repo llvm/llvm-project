@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 
+#include "Address.h"
 #include "CIRGenTypeCache.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -25,6 +26,34 @@ class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
 public:
   CIRGenBuilderTy(mlir::MLIRContext &mlirContext, const CIRGenTypeCache &tc)
       : CIRBaseBuilderTy(mlirContext), typeCache(tc) {}
+
+  /// Get a cir::ConstArrayAttr for a string literal.
+  /// Note: This is different from what is returned by
+  /// mlir::Builder::getStringAttr() which is an mlir::StringAttr.
+  mlir::Attribute getString(llvm::StringRef str, mlir::Type eltTy,
+                            std::optional<size_t> size) {
+    size_t finalSize = size.value_or(str.size());
+
+    size_t lastNonZeroPos = str.find_last_not_of('\0');
+    // If the string is full of null bytes, emit a #cir.zero rather than
+    // a #cir.const_array.
+    if (lastNonZeroPos == llvm::StringRef::npos) {
+      auto arrayTy = cir::ArrayType::get(eltTy, finalSize);
+      return cir::ZeroAttr::get(arrayTy);
+    }
+    // We emit trailing zeros only if there are multiple trailing zeros.
+    size_t trailingZerosNum = 0;
+    if (finalSize > lastNonZeroPos + 2)
+      trailingZerosNum = finalSize - lastNonZeroPos - 1;
+    auto truncatedArrayTy =
+        cir::ArrayType::get(eltTy, finalSize - trailingZerosNum);
+    auto fullArrayTy = cir::ArrayType::get(eltTy, finalSize);
+    return cir::ConstArrayAttr::get(
+        fullArrayTy,
+        mlir::StringAttr::get(str.drop_back(trailingZerosNum),
+                              truncatedArrayTy),
+        trailingZerosNum);
+  }
 
   std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
 
@@ -249,6 +278,20 @@ public:
     assert(!cir::MissingFeatures::fastMathFlags());
 
     return create<cir::BinOp>(loc, cir::BinOpKind::Div, lhs, rhs);
+  }
+
+  cir::LoadOp createLoad(mlir::Location loc, Address addr,
+                         bool isVolatile = false) {
+    mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
+    return create<cir::LoadOp>(loc, addr.getPointer(), /*isDeref=*/false,
+                               align);
+  }
+
+  cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
+                           mlir::IntegerAttr align = {}) {
+    if (!align)
+      align = getAlignmentAttr(dst.getAlignment());
+    return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), align);
   }
 
   /// Create a cir.ptr_stride operation to get access to an array element.

@@ -125,21 +125,14 @@ static Expected<std::optional<uint32_t>> parseToleranceOption(StringRef Arg) {
 // Initialization.
 //===----------------------------------------------------------------------===//
 
-namespace {
 template <class T> std::shared_ptr<T> make_shared_copy(const T &X) {
   return std::make_shared<T>(X);
 }
 
-template <class T>
-llvm::IntrusiveRefCntPtr<T> makeIntrusiveRefCntCopy(const T &X) {
-  return llvm::makeIntrusiveRefCnt<T>(X);
-}
-} // namespace
-
 CompilerInvocationBase::CompilerInvocationBase()
     : LangOpts(std::make_shared<LangOptions>()),
       TargetOpts(std::make_shared<TargetOptions>()),
-      DiagnosticOpts(llvm::makeIntrusiveRefCnt<DiagnosticOptions>()),
+      DiagnosticOpts(std::make_shared<DiagnosticOptions>()),
       HSOpts(std::make_shared<HeaderSearchOptions>()),
       PPOpts(std::make_shared<PreprocessorOptions>()),
       AnalyzerOpts(std::make_shared<AnalyzerOptions>()),
@@ -156,7 +149,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
   if (this != &X) {
     LangOpts = make_shared_copy(X.getLangOpts());
     TargetOpts = make_shared_copy(X.getTargetOpts());
-    DiagnosticOpts = makeIntrusiveRefCntCopy(X.getDiagnosticOpts());
+    DiagnosticOpts = make_shared_copy(X.getDiagnosticOpts());
     HSOpts = make_shared_copy(X.getHeaderSearchOpts());
     PPOpts = make_shared_copy(X.getPreprocessorOpts());
     AnalyzerOpts = make_shared_copy(X.getAnalyzerOpts());
@@ -202,21 +195,12 @@ CompilerInvocation::operator=(const CowCompilerInvocation &X) {
   return *this;
 }
 
-namespace {
 template <typename T>
 T &ensureOwned(std::shared_ptr<T> &Storage) {
   if (Storage.use_count() > 1)
     Storage = std::make_shared<T>(*Storage);
   return *Storage;
 }
-
-template <typename T>
-T &ensureOwned(llvm::IntrusiveRefCntPtr<T> &Storage) {
-  if (Storage.useCount() > 1)
-    Storage = llvm::makeIntrusiveRefCnt<T>(*Storage);
-  return *Storage;
-}
-} // namespace
 
 LangOptions &CowCompilerInvocation::getMutLangOpts() {
   return ensureOwned(LangOpts);
@@ -844,7 +828,8 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   };
 
   // Setup a dummy DiagnosticsEngine.
-  DiagnosticsEngine DummyDiags(new DiagnosticIDs(), new DiagnosticOptions());
+  DiagnosticOptions DummyDiagOpts;
+  DiagnosticsEngine DummyDiags(new DiagnosticIDs(), DummyDiagOpts);
   DummyDiags.setClient(new TextDiagnosticBuffer());
 
   // Run the first parse on the original arguments with the dummy invocation and
@@ -2663,9 +2648,11 @@ clang::CreateAndPopulateDiagOpts(ArrayRef<const char *> Argv) {
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                 DiagnosticsEngine *Diags,
                                 bool DefaultDiagColor) {
+  std::optional<DiagnosticOptions> IgnoringDiagOpts;
   std::optional<DiagnosticsEngine> IgnoringDiags;
   if (!Diags) {
-    IgnoringDiags.emplace(new DiagnosticIDs(), new DiagnosticOptions(),
+    IgnoringDiagOpts.emplace();
+    IgnoringDiags.emplace(new DiagnosticIDs(), *IgnoringDiagOpts,
                           new IgnoringDiagConsumer());
     Diags = &*IgnoringDiags;
   }

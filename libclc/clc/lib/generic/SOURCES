@@ -1,7 +1,9 @@
+async/clc_prefetch.cl
 common/clc_degrees.cl
 common/clc_radians.cl
 common/clc_sign.cl
 common/clc_smoothstep.cl
+common/clc_step.cl
 geometric/clc_cross.cl
 geometric/clc_distance.cl
 geometric/clc_dot.cl
@@ -146,3 +148,5 @@ relational/clc_signbit.cl
 shared/clc_clamp.cl
 shared/clc_max.cl
 shared/clc_min.cl
+shared/clc_vload.cl
+shared/clc_vstore.cl

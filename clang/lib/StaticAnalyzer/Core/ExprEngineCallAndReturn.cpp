@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PrettyStackTraceLocationContext.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -21,7 +20,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -44,8 +42,6 @@ STAT_COUNTER(NumReachedInlineCountMax,
 void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
                                   ExplodedNode *Pred) {
   // Get the entry block in the CFG of the callee.
-  const StackFrameContext *calleeCtx = CE.getCalleeContext();
-  PrettyStackTraceLocationContext CrashInfo(calleeCtx);
   const CFGBlock *Entry = CE.getEntry();
 
   // Validate the CFG.
@@ -56,7 +52,7 @@ void ExprEngine::processCallEnter(NodeBuilderContext& BC, CallEnter CE,
   const CFGBlock *Succ = *(Entry->succ_begin());
 
   // Construct an edge representing the starting location in the callee.
-  BlockEdge Loc(Entry, Succ, calleeCtx);
+  BlockEdge Loc(Entry, Succ, CE.getCalleeContext());
 
   ProgramStateRef state = Pred->getState();
 
@@ -253,7 +249,6 @@ ProgramStateRef ExprEngine::removeStateTraitsUsedForArrayEvaluation(
 /// 5. PostStmt<CallExpr>
 void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // Step 1 CEBNode was generated before the call.
-  PrettyStackTraceLocationContext CrashInfo(CEBNode->getLocationContext());
   const StackFrameContext *calleeCtx = CEBNode->getStackFrame();
 
   // The parent context might not be a stack frame, so make sure we

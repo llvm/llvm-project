@@ -34,7 +34,11 @@ bool NoSanitizeList::containsGlobal(SanitizerMask Mask, StringRef GlobalName,
 
 bool NoSanitizeList::containsType(SanitizerMask Mask, StringRef MangledTypeName,
                                   StringRef Category) const {
-  return SSCL->inSection(Mask, "type", MangledTypeName, Category);
+  auto NoSan = SSCL->inSectionBlame(Mask, "type", MangledTypeName, Category);
+  if (NoSan == llvm::SpecialCaseList::NotFound)
+    return false;
+  auto San = SSCL->inSectionBlame(Mask, "type", MangledTypeName, "sanitize");
+  return San == llvm::SpecialCaseList::NotFound || NoSan > San;
 }
 
 bool NoSanitizeList::containsFunction(SanitizerMask Mask,
@@ -44,7 +48,11 @@ bool NoSanitizeList::containsFunction(SanitizerMask Mask,
 
 bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
                                   StringRef Category) const {
-  return SSCL->inSection(Mask, "src", FileName, Category);
+  auto NoSan = SSCL->inSectionBlame(Mask, "src", FileName, Category);
+  if (NoSan == llvm::SpecialCaseList::NotFound)
+    return false;
+  auto San = SSCL->inSectionBlame(Mask, "src", FileName, "sanitize");
+  return San == llvm::SpecialCaseList::NotFound || NoSan > San;
 }
 
 bool NoSanitizeList::containsMainFile(SanitizerMask Mask, StringRef FileName,

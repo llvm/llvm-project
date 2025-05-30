@@ -471,15 +471,14 @@ public:
 
   /// Look up the specified global in the module symbol table.
   /// If it does not exist, invoke a callback to create a declaration of the
-  /// global and return it. The global is constantexpr casted to the expected
-  /// type if necessary.
-  Constant *
+  /// global and return it.
+  GlobalVariable *
   getOrInsertGlobal(StringRef Name, Type *Ty,
                     function_ref<GlobalVariable *()> CreateGlobalCallback);
 
   /// Look up the specified global in the module symbol table. If required, this
   /// overload constructs the global variable using its constructor's defaults.
-  Constant *getOrInsertGlobal(StringRef Name, Type *Ty);
+  GlobalVariable *getOrInsertGlobal(StringRef Name, Type *Ty);
 
 /// @}
 /// @name Global Alias Accessors
@@ -609,6 +608,9 @@ private:
   static GlobalListType Module::*getSublistAccess(GlobalVariable*) {
     return &Module::GlobalList;
   }
+  static size_t getSublistOffset(GlobalVariable *) {
+    return offsetof(Module, GlobalList);
+  }
   friend class llvm::SymbolTableListTraits<llvm::GlobalVariable>;
 
 public:
@@ -618,6 +620,9 @@ public:
   FunctionListType       &getFunctionList()           { return FunctionList; }
   static FunctionListType Module::*getSublistAccess(Function*) {
     return &Module::FunctionList;
+  }
+  static size_t getSublistOffset(Function *) {
+    return offsetof(Module, FunctionList);
   }
 
   /// Detach \p Alias from the list but don't delete it.
@@ -658,6 +663,9 @@ private: // Please use functions like insertAlias(), removeAlias() etc.
   static AliasListType Module::*getSublistAccess(GlobalAlias*) {
     return &Module::AliasList;
   }
+  static size_t getSublistOffset(GlobalAlias *) {
+    return offsetof(Module, AliasList);
+  }
   friend class llvm::SymbolTableListTraits<llvm::GlobalAlias>;
 
   /// Get the Module's list of ifuncs (constant).
@@ -667,6 +675,9 @@ private: // Please use functions like insertAlias(), removeAlias() etc.
 
   static IFuncListType Module::*getSublistAccess(GlobalIFunc*) {
     return &Module::IFuncList;
+  }
+  static size_t getSublistOffset(GlobalIFunc *) {
+    return offsetof(Module, IFuncList);
   }
   friend class llvm::SymbolTableListTraits<llvm::GlobalIFunc>;
 

@@ -13,7 +13,7 @@
 ; an assert in the LVDWARFReader:
 ; $ clang++ -g -c dw-at-specification.cpp -o dw-at-specification.o
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
+; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer,size \
 ; RUN:                         --output-sort=name \
 ; RUN:                         --print=symbols \
 ; RUN:                         %p/Inputs/dw-at-specification.o 2>&1 | \
@@ -25,5 +25,5 @@
 ; CHECK: [001]             {CompileUnit} 'a.cpp'
 ; CHECK: [002]               {Producer} 'clang version 11.0.0 ({{.*}})'
 ; CHECK: [002]               {Variable} 'Arr' -> 'const int [3]'
-; CHECK: [002]     1         {Struct} 'S'
+; CHECK: [002]     1         {Struct} 'S' [Size = 1]
 ; CHECK: [003]     2           {Member} extern public 'Arr' -> 'const int [1]'

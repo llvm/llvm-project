@@ -433,6 +433,15 @@ Error LVBinaryReader::createInstructions(LVScope *Scope,
 
   ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(*SectionContentsOrErr);
   uint64_t Offset = Address - SectionAddress;
+  if (Offset > Bytes.size()) {
+    LLVM_DEBUG({
+      dbgs() << "offset (" << hexValue(Offset) << ") is beyond section size ("
+             << hexValue(Bytes.size()) << "); malformed input?\n";
+    });
+    return createStringError(
+        errc::bad_address,
+        "Failed to parse instructions; offset beyond section size");
+  }
   uint8_t const *Begin = Bytes.data() + Offset;
   uint8_t const *End = Bytes.data() + Offset + Size;
 
