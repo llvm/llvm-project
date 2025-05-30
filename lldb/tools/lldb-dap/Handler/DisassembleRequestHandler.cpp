@@ -193,21 +193,6 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
     return llvm::make_error<DAPError>(
         "Memory reference not found in the current binary.");
 
-  std::string flavor_string;
-  const auto target_triple = llvm::StringRef(dap.target.GetTriple());
-  // This handles both 32 and 64bit x86 architecture. The logic is duplicated in
-  // `CommandObjectDisassemble::CommandOptions::OptionParsingStarting`
-  if (target_triple.starts_with("x86")) {
-    const lldb::SBStructuredData flavor =
-        dap.debugger.GetSetting("target.x86-disassembly-flavor");
-
-    const size_t str_length = flavor.GetStringValue(nullptr, 0);
-    if (str_length != 0) {
-      flavor_string.resize(str_length + 1);
-      flavor.GetStringValue(flavor_string.data(), flavor_string.length());
-    }
-  }
-
   // Offset (in instructions) to be applied after the byte offset (if any)
   // before disassembling. Can be negative.
   int64_t instruction_offset = args.instructionOffset.value_or(0);
@@ -220,7 +205,7 @@ DisassembleRequestHandler::Run(const DisassembleArguments &args) const {
         "Unexpected error while disassembling instructions.");
 
   lldb::SBInstructionList insts = dap.target.ReadInstructions(
-      disassemble_start_addr, args.instructionCount, flavor_string.c_str());
+      disassemble_start_addr, args.instructionCount);
   if (!insts.IsValid())
     return llvm::make_error<DAPError>(
         "Unexpected error while disassembling instructions.");
