@@ -1678,7 +1678,7 @@ namespace {
   static void EmitSanitizerDtorCallback(
       CodeGenFunction &CGF, StringRef Name, llvm::Value *Ptr,
       std::optional<CharUnits::QuantityType> PoisonSize = {}) {
-    CodeGenFunction::SanitizerScope SanScope(&CGF);
+    CodeGenFunction::SanitizerScope SanScope(&CGF, {});
     // Pass in void pointer and size of region as arguments to runtime
     // function
     SmallVector<llvm::Value *, 2> Args = {Ptr};
@@ -2885,7 +2885,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
           SanitizerMask::bitPosToMask(M), TypeName))
     return;
 
-  SanitizerScope SanScope(this);
+  SanitizerScope SanScope(this, {M});
   EmitSanitizerStatReport(SSK);
 
   llvm::Metadata *MD =
@@ -2942,11 +2942,10 @@ bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
 llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
     const CXXRecordDecl *RD, llvm::Value *VTable, llvm::Type *VTableTy,
     uint64_t VTableByteOffset) {
-  SanitizerScope SanScope(this);
+  auto CheckOrdinal = SanitizerKind::SO_CFIVCall;
+  SanitizerScope SanScope(this, {CheckOrdinal});
 
   EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
-  ApplyDebugLocation ApplyTrapDI(
-      *this, SanitizerAnnotateDebugInfo(SanitizerKind::SO_CFIVCall));
 
   llvm::Metadata *MD =
       CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
@@ -2965,7 +2964,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   if (SanOpts.has(SanitizerKind::CFIVCall) &&
       !getContext().getNoSanitizeList().containsType(SanitizerKind::CFIVCall,
                                                      TypeName)) {
-    EmitCheck(std::make_pair(CheckResult, SanitizerKind::SO_CFIVCall),
+    EmitCheck(std::make_pair(CheckResult, CheckOrdinal),
               SanitizerHandler::CFICheckFail, {}, {});
   }
 

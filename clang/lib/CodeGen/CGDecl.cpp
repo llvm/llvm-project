@@ -765,14 +765,15 @@ void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
 
   // Check if the right hand side of the assignment is nonnull, if the left
   // hand side must be nonnull.
-  SanitizerScope SanScope(this);
+  auto CheckOrdinal = SanitizerKind::SO_NullabilityAssign;
+  SanitizerScope SanScope(this, {CheckOrdinal});
   llvm::Value *IsNotNull = Builder.CreateIsNotNull(RHS);
   llvm::Constant *StaticData[] = {
       EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(LHS.getType()),
       llvm::ConstantInt::get(Int8Ty, 0), // The LogAlignment info is unused.
       llvm::ConstantInt::get(Int8Ty, TCK_NonnullAssign)};
-  EmitCheck({{IsNotNull, SanitizerKind::SO_NullabilityAssign}},
-            SanitizerHandler::TypeMismatch, StaticData, RHS);
+  EmitCheck({{IsNotNull, CheckOrdinal}}, SanitizerHandler::TypeMismatch,
+            StaticData, RHS);
 }
 
 void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
@@ -2852,7 +2853,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   if (requiresReturnValueNullabilityCheck()) {
     auto Nullability = Ty->getNullability();
     if (Nullability && *Nullability == NullabilityKind::NonNull) {
-      SanitizerScope SanScope(this);
+      SanitizerScope SanScope(this, {});
       RetValNullabilityPrecondition =
           Builder.CreateAnd(RetValNullabilityPrecondition,
                             Builder.CreateIsNotNull(Arg.getAnyValue()));

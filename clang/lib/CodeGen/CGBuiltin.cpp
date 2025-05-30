@@ -2008,10 +2008,11 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   if (!SanOpts.has(SanitizerKind::Builtin))
     return ArgValue;
 
-  SanitizerScope SanScope(this);
+  auto CheckOrdinal = SanitizerKind::SO_Builtin;
+  SanitizerScope SanScope(this, {CheckOrdinal});
   Value *Cond = Builder.CreateICmpNE(
       ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
-  EmitCheck(std::make_pair(Cond, SanitizerKind::SO_Builtin),
+  EmitCheck(std::make_pair(Cond, CheckOrdinal),
             SanitizerHandler::InvalidBuiltin,
             {EmitCheckSourceLocation(E->getExprLoc()),
              llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
@@ -2024,10 +2025,10 @@ Value *CodeGenFunction::EmitCheckedArgForAssume(const Expr *E) {
   if (!SanOpts.has(SanitizerKind::Builtin))
     return ArgValue;
 
-  SanitizerScope SanScope(this);
+  auto CheckOrdinal = SanitizerKind::SO_Builtin;
+  SanitizerScope SanScope(this, {CheckOrdinal});
   EmitCheck(
-      std::make_pair(ArgValue, SanitizerKind::SO_Builtin),
-      SanitizerHandler::InvalidBuiltin,
+      std::make_pair(ArgValue, CheckOrdinal), SanitizerHandler::InvalidBuiltin,
       {EmitCheckSourceLocation(E->getExprLoc()),
        llvm::ConstantInt::get(Builder.getInt8Ty(), BCK_AssumePassedFalse)},
       std::nullopt);
@@ -2050,7 +2051,10 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
       return EmitAbs(CGF, ArgValue, true);
   }
 
-  CodeGenFunction::SanitizerScope SanScope(&CGF);
+  SmallVector<SanitizerKind::SanitizerOrdinal, 1> Ordinals;
+  if (SanitizeOverflow)
+    Ordinals.push_back(SanitizerKind::SO_SignedIntegerOverflow);
+  CodeGenFunction::SanitizerScope SanScope(&CGF, Ordinals);
 
   Constant *Zero = Constant::getNullValue(ArgValue->getType());
   Value *ResultAndOverflow = CGF.Builder.CreateBinaryIntrinsic(
