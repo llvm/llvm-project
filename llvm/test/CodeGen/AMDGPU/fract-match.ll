@@ -2103,16 +2103,16 @@ define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) write
 ; GFX6-NEXT:    v_min_f32_e32 v7, 0x3f7fffff, v7
 ; GFX6-NEXT:    v_cndmask_b32_e32 v6, v6, v1, vcc
 ; GFX6-NEXT:    v_cmp_u_f32_e32 vcc, v0, v0
-; GFX6-NEXT:    v_mov_b32_e32 v8, 0x204
+; GFX6-NEXT:    v_mov_b32_e32 v8, 0x1fb
 ; GFX6-NEXT:    v_cndmask_b32_e32 v7, v7, v0, vcc
 ; GFX6-NEXT:    v_cmp_class_f32_e32 vcc, v0, v8
 ; GFX6-NEXT:    s_mov_b32 s6, 0
-; GFX6-NEXT:    v_cndmask_b32_e64 v0, v7, 0, vcc
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, 0, v7, vcc
 ; GFX6-NEXT:    v_cmp_class_f32_e32 vcc, v1, v8
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s4, s6
 ; GFX6-NEXT:    s_mov_b32 s5, s6
-; GFX6-NEXT:    v_cndmask_b32_e64 v1, v6, 0, vcc
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, 0, v6, vcc
 ; GFX6-NEXT:    buffer_store_dwordx2 v[4:5], v[2:3], s[4:7], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
@@ -2778,19 +2778,19 @@ define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) wri
 ; GFX6-NEXT:    v_cndmask_b32_e32 v11, v11, v3, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v10, v10, v2, vcc
 ; GFX6-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
-; GFX6-NEXT:    v_mov_b32_e32 v14, 0x204
+; GFX6-NEXT:    v_mov_b32_e32 v14, 0x1fb
 ; GFX6-NEXT:    v_cndmask_b32_e32 v13, v13, v1, vcc
 ; GFX6-NEXT:    v_cndmask_b32_e32 v12, v12, v0, vcc
 ; GFX6-NEXT:    v_cmp_class_f64_e32 vcc, v[0:1], v14
 ; GFX6-NEXT:    s_mov_b32 s6, 0
-; GFX6-NEXT:    v_cndmask_b32_e64 v0, v12, 0, vcc
-; GFX6-NEXT:    v_cndmask_b32_e64 v1, v13, 0, vcc
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, 0, v12, vcc
+; GFX6-NEXT:    v_cndmask_b32_e32 v1, 0, v13, vcc
 ; GFX6-NEXT:    v_cmp_class_f64_e32 vcc, v[2:3], v14
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s4, s6
 ; GFX6-NEXT:    s_mov_b32 s5, s6
-; GFX6-NEXT:    v_cndmask_b32_e64 v2, v10, 0, vcc
-; GFX6-NEXT:    v_cndmask_b32_e64 v3, v11, 0, vcc
+; GFX6-NEXT:    v_cndmask_b32_e32 v2, 0, v10, vcc
+; GFX6-NEXT:    v_cndmask_b32_e32 v3, 0, v11, vcc
 ; GFX6-NEXT:    buffer_store_dwordx4 v[6:9], v[4:5], s[4:7], 0 addr64
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]

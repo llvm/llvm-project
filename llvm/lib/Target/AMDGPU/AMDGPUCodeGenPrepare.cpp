@@ -313,6 +313,7 @@ public:
                       FastMathFlags FMF) const;
   Value *emitSqrtIEEE2ULP(IRBuilder<> &Builder, Value *Src,
                           FastMathFlags FMF) const;
+  bool swapSelectOperands(CmpInst &I);
 
 public:
   bool visitFDiv(BinaryOperator &I);
@@ -321,6 +322,7 @@ public:
   bool visitBinaryOperator(BinaryOperator &I);
   bool visitLoadInst(LoadInst &I);
   bool visitICmpInst(ICmpInst &I);
+  bool visitFCmpInst(FCmpInst &I);
   bool visitSelectInst(SelectInst &I);
   bool visitPHINode(PHINode &I);
   bool visitAddrSpaceCastInst(AddrSpaceCastInst &I);
@@ -889,6 +891,44 @@ static Value *emitRsqIEEE1ULP(IRBuilder<> &Builder, Value *Src,
       NeedScale, OutputScale, IsNegative ? ConstantFP::get(Ty, -1.0) : One);
 
   return Builder.CreateFMul(Rsq, OutputScaleFactor);
+}
+
+// check if select operands should be swapped
+// so that v_cndmask can be later shrinked into vop2
+bool AMDGPUCodeGenPrepareImpl::swapSelectOperands(CmpInst &I) {
+  int ShouldSwap = 0;
+  for (auto Use = I.use_begin(); Use != I.use_end(); Use++) {
+    auto User = Use->getUser();
+
+    if (!isa<SelectInst>(User))
+      return false;
+
+    auto SelectI = dyn_cast<SelectInst>(User);
+
+    auto Op1 = SelectI->getOperand(1);
+    auto Op2 = SelectI->getOperand(2);
+
+    if (!UA.isDivergent(Op1) && UA.isDivergent(Op2))
+      ShouldSwap++;
+    else if (UA.isDivergent(Op1) && !UA.isDivergent(Op2))
+      ShouldSwap--;
+  }
+
+  if (ShouldSwap <= 0)
+    return false;
+
+  // swapping operands requires us to invert the comparison
+  I.setPredicate(I.getInversePredicate());
+
+  for (auto Use = I.use_begin(); Use != I.use_end(); Use++) {
+    auto SelectI = dyn_cast<Instruction>(Use->getUser());
+
+    auto Op = SelectI->getOperand(1);
+
+    SelectI->setOperand(1, SelectI->getOperand(2));
+    SelectI->setOperand(2, Op);
+  }
+  return true;
 }
 
 bool AMDGPUCodeGenPrepareImpl::canOptimizeWithRsq(const FPMathOperator *SqrtOp,
@@ -1768,6 +1808,10 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
   return false;
 }
 
+bool AMDGPUCodeGenPrepareImpl::visitFCmpInst(FCmpInst &I){
+  return swapSelectOperands(I);
+}
+
 bool AMDGPUCodeGenPrepareImpl::visitICmpInst(ICmpInst &I) {
   bool Changed = false;
 
@@ -1775,40 +1819,7 @@ bool AMDGPUCodeGenPrepareImpl::visitICmpInst(ICmpInst &I) {
       UA.isUniform(&I))
     Changed |= promoteUniformOpToI32(I);
 
-  // check if select operands should be swapped
-  // so that v_cndmask can be later shrinked into
-  // vop2
-  int ShouldSwap = 0;
-  for (auto Use = I.use_begin(); Use != I.use_end(); Use++) {
-    auto User = Use->getUser();
-
-    if (!isa<SelectInst>(User))
-      return Changed;
-
-    auto SelectI = dyn_cast<SelectInst>(User);
-
-    auto Op1 = SelectI->getOperand(1);
-    auto Op2 = SelectI->getOperand(2);
-
-    if (!UA.isDivergent(Op1) && UA.isDivergent(Op2))
-      ShouldSwap++;
-    else if (UA.isDivergent(Op1) && !UA.isDivergent(Op2))
-      ShouldSwap--;
-  }
-
-  if (ShouldSwap <= 0)
-    return Changed;
-
-  I.setPredicate(I.getInverseCmpPredicate());
-
-  for (auto Use = I.use_begin(); Use != I.use_end(); Use++) {
-    auto SelectI = dyn_cast<Instruction>(Use->getUser());
-
-    auto Op = SelectI->getOperand(1);
-
-    SelectI->setOperand(1, SelectI->getOperand(2));
-    SelectI->setOperand(2, Op);
-  }
+  Changed |= swapSelectOperands(I);
 
   return Changed;
 }

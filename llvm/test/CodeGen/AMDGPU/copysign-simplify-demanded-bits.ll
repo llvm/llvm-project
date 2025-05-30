@@ -218,8 +218,8 @@ define float @copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_select(fl
 ; GFX9-LABEL: copysign_f32_f32_sign_known_p0_or_n0__mag_known_positive_select:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_lt_f32_e32 vcc, 0, v0
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
+; GFX9-NEXT:    v_max_f32_e32 v0, 0, v0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
 ; GFX9-NEXT:    s_brev_b32 s4, -2
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v0, v1
