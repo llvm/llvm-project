@@ -12739,7 +12739,10 @@ SDValue DAGCombiner::foldPartialReduceAdd(SDNode *N) {
 
   SDValue UnextOp1 = Op1.getOperand(0);
   EVT UnextOp1VT = UnextOp1.getValueType();
-  if (!TLI.isPartialReduceMLALegalOrCustom(N->getValueType(0), UnextOp1VT))
+  auto *Context = DAG.getContext();
+  if (!TLI.isPartialReduceMLALegalOrCustom(
+          TLI.getTypeToTransformTo(*Context, N->getValueType(0)),
+          TLI.getTypeToTransformTo(*Context, UnextOp1VT)))
     return SDValue();
 
   bool Op1IsSigned = Op1Opcode == ISD::SIGN_EXTEND;

@@ -1275,7 +1275,8 @@ public:
   /// Get extra data associated with this derived type.
   /// Class type for pointer-to-members, objective-c property node for ivars,
   /// global constant wrapper for static members, virtual base pointer offset
-  /// for inheritance, or a tuple of template parameters for template aliases.
+  /// for inheritance, a tuple of template parameters for template aliases,
+  /// discriminant for a variant, or storage offset for a bit field.
   ///
   /// TODO: Separate out types that need this extra operand: pointer-to-member
   Metadata *getExtraData() const { return getRawExtraData(); }

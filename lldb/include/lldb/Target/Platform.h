@@ -21,6 +21,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
@@ -959,6 +960,8 @@ public:
   }
 
   virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
+
+  virtual lldb::StopInfoSP GetStopInfoFromSiginfo(Thread &thread) { return {}; }
 
   virtual Args GetExtraStartupCommands();
 
