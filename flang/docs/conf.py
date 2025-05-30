@@ -42,7 +42,10 @@ except ImportError:
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
-source_suffix = [".md"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".md": "markdown",
+}
 myst_heading_anchors = 6
 
 import sphinx
