@@ -12726,7 +12726,7 @@ SDValue DAGCombiner::foldPartialReduceMLAMulOp(SDNode *N) {
   EVT AccElemVT = Acc.getValueType().getVectorElementType();
   if (Op1.getValueType().getVectorElementType() != AccElemVT &&
       NewOpc != N->getOpcode())
-      return SDValue();
+    return SDValue();
 
   // Only perform these combines if the target supports folding
   // the extends into the operation.
