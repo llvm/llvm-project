@@ -82,7 +82,7 @@ enum class ShaderVisibility {
 
 // D3D12_FILTER enumeration:
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter
-enum class Filter {
+enum class SamplerFilter {
   MinMagMipPoint = 0,
   MinMagPointMipLinear = 0x1,
   MinPointMagLinearMipPoint = 0x4,
@@ -230,7 +230,7 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
 
 struct StaticSampler {
   Register Reg;
-  Filter Filter = Filter::Anisotropic;
+  SamplerFilter Filter = SamplerFilter::Anisotropic;
   TextureAddressMode AddressU = TextureAddressMode::Wrap;
   TextureAddressMode AddressV = TextureAddressMode::Wrap;
   TextureAddressMode AddressW = TextureAddressMode::Wrap;

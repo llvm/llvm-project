@@ -710,7 +710,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Filter = parseFilter();
+      auto Filter = parseSamplerFilter();
       if (!Filter.has_value())
         return std::nullopt;
       Params.Filter = Filter;
@@ -1009,7 +1009,8 @@ RootSignatureParser::parseShaderVisibility() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::Filter> RootSignatureParser::parseFilter() {
+std::optional<llvm::hlsl::rootsig::SamplerFilter>
+RootSignatureParser::parseSamplerFilter() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1024,7 +1025,7 @@ std::optional<llvm::hlsl::rootsig::Filter> RootSignatureParser::parseFilter() {
   switch (CurToken.TokKind) {
 #define FILTER_ENUM(NAME, LIT)                                                 \
   case TokenKind::en_##NAME:                                                   \
-    return Filter::NAME;                                                       \
+    return SamplerFilter::NAME;                                                \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
