@@ -310,6 +310,14 @@ define <2 x float> @sqrt_poison_fixed_vec() {
   ret <2 x float> %sqrt
 }
 
+define <2 x float> @sqrt_poison_elt_fixed_vec() {
+; CHECK-LABEL: @sqrt_poison_elt_fixed_vec(
+; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float poison>
+;
+  %sqrt = call <2 x float> @llvm.sqrt(<2 x float> <float 1.0, float poison>)
+  ret <2 x float> %sqrt
+}
+
 define <vscale x 2 x float> @sqrt_poison_scalable_vec() {
 ; CHECK-LABEL: @sqrt_poison_scalable_vec(
 ; CHECK-NEXT:    ret <vscale x 2 x float> poison
