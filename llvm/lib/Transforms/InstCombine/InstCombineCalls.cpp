@@ -1401,11 +1401,9 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
 /// try to shuffle after the intrinsic.
 Instruction *
 InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
-  if (!isTriviallyVectorizable(II->getIntrinsicID()))
+  if (!isTriviallyVectorizable(II->getIntrinsicID()) ||
+      !II->getCalledFunction()->isSpeculatable())
     return nullptr;
-
-  assert(isSafeToSpeculativelyExecute(II) &&
-         "Trivially vectorizable but not safe to speculatively execute?");
 
   // fabs is canonicalized to fabs (shuffle ...) in foldShuffleOfUnaryOps, so
   // avoid undoing it.
