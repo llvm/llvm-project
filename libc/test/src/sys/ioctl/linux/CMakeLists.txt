@@ -9,7 +9,7 @@ add_libc_unittest(
   SRCS
     ioctl_test.cpp
   DEPENDS
-    libc.include.sys_ioctl
+    libc.hdr.ioctl_macros
     libc.src.sys.ioctl.ioctl
     libc.src.errno.errno
     libc.src.fcntl.open

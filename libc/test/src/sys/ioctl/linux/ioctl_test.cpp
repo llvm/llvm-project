@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/sys/ioctl/ioctl.h"
@@ -12,7 +13,7 @@
 #include "src/unistd/read.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 
-#include <sys/ioctl.h>
+#include "hdr/sys_ioctl_macros.h"
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
