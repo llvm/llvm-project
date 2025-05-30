@@ -99,10 +99,3 @@ s_mov_to_global_b64 s[5:6], s[10:11]
 
 s_mov_to_global_b64 exec, s[10:11]
 // GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected an SGPR or vcc/vcc_lo/vcc_hi
-
-// FIXME temporary workaround DEGFX13-10092
-v_dual_mov_b32  v20, s3  ::  v_dual_mov_b32 v2, s6
-// GFX13-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: dst registers must be distinct
-// GFX13-ERR: v_dual_mov_b32  v20, s3  ::  v_dual_mov_b32 v2, s6
-// GFX13-ERR:                                             ^
-
