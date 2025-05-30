@@ -686,7 +686,8 @@ def top16Zero: PatLeaf<(i32 GPR32:$src), [{
   return Op.getValueType() == MVT::i32 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 16));
   }]> {
-  let GISelRegPredicateCode = [{return isTop16Zero(MO); }];
+  let GISelLeafPredicateCode = [{
+    return (VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(32, 16))); }];
 }
 
 // top32Zero - answer true if the upper 32 bits of $src are 0, false otherwise
@@ -694,7 +695,8 @@ def top32Zero: PatLeaf<(i64 GPR64:$src), [{
   return Op.getValueType() == MVT::i64 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(64, 32));
   }]> {
-  let GISelRegPredicateCode = [{ return isTop32Zero(MO); }];
+  let GISelLeafPredicateCode = [{ 
+    return (VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 32))); }];
 }
 
 // topbitsallzero - Return true if all bits except the lowest bit are known zero
@@ -702,13 +704,15 @@ def topbitsallzero32: PatLeaf<(i32 GPR32:$src), [{
   return Op.getValueType() == MVT::i32 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(32, 31));
   }]> {
-  let GISelRegPredicateCode = [{ return isTopBitsAllZero32(MO); }];
+  let GISelLeafPredicateCode = [{ 
+    return (VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(32, 31))); }];
 }
 def topbitsallzero64: PatLeaf<(i64 GPR64:$src), [{
   return Op.getValueType() == MVT::i64 &&
          CurDAG->MaskedValueIsZero(Op, APInt::getHighBitsSet(64, 63));
   }]> {
-  let GISelRegPredicateCode = [{ return isTopBitsAllZero64(MO); }];
+  let GISelLeafPredicateCode = [{ 
+    return (VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 63))); }];
 }
 
 // Node definitions.

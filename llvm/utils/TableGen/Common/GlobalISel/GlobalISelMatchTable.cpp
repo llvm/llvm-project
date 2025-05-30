@@ -33,7 +33,7 @@ Error failUnsupported(const Twine &Reason) {
 std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
   if (Predicate.hasGISelPredicateCode())
     return "GICXXPred_MI_" + Predicate.getFnName();
-  else if (Predicate.hasGISelRegPredicateCode())
+  if (Predicate.hasGISelLeafPredicateCode())
     return "GICXXPred_MO_" + Predicate.getFnName();
   return "GICXXPred_" + Predicate.getImmTypeIdentifier().str() + "_" +
          Predicate.getFnName();
@@ -1328,10 +1328,11 @@ void OperandImmPredicateMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::LineBreak;
 }
 
-//===- OperandRegPredicateMatcher -----------------------------------------===//
+//===- OperandLeafPredicateMatcher
+//-----------------------------------------===//
 
-void OperandRegPredicateMatcher::emitPredicateOpcodes(MatchTable &Table,
-                                                      RuleMatcher &Rule) const {
+void OperandLeafPredicateMatcher::emitPredicateOpcodes(
+    MatchTable &Table, RuleMatcher &Rule) const {
   Table << MatchTable::Opcode("GIM_CheckRegOperandPredicate")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("MO") << MatchTable::ULEB128Value(OpIdx)

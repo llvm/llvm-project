@@ -182,7 +182,7 @@ void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
   emitSubtargetFeatureBitsetImpl(OS, Rules);
   emitComplexPredicates(OS, ComplexOperandMatchers);
   emitMIPredicateFns(OS);
-  emitRegPredicateFns(OS);
+  emitLeafPredicateFns(OS);
   emitI64ImmPredicateFns(OS);
   emitAPFloatImmPredicateFns(OS);
   emitAPIntImmPredicateFns(OS);

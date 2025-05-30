@@ -2414,7 +2414,7 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   void emitAdditionalImpl(raw_ostream &OS) override;
 
   void emitMIPredicateFns(raw_ostream &OS) override;
-  void emitRegPredicateFns(raw_ostream &OS) override;
+  void emitLeafPredicateFns(raw_ostream &OS) override;
   void emitI64ImmPredicateFns(raw_ostream &OS) override;
   void emitAPFloatImmPredicateFns(raw_ostream &OS) override;
   void emitAPIntImmPredicateFns(raw_ostream &OS) override;
@@ -2582,9 +2582,9 @@ void GICombinerEmitter::emitMIPredicateFns(raw_ostream &OS) {
       [](const CXXPredicateCode *C) -> StringRef { return C->Code; });
 }
 
-void GICombinerEmitter::emitRegPredicateFns(raw_ostream &OS) {
+void GICombinerEmitter::emitLeafPredicateFns(raw_ostream &OS) {
   // Unused, but still needs to be called.
-  emitRegPredicateFnsImpl<unsigned>(
+  emitLeafPredicateFnsImpl<unsigned>(
       OS, "", {}, [](unsigned) { return ""; }, [](unsigned) { return ""; });
 }
 

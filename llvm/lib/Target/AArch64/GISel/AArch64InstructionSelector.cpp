@@ -7996,29 +7996,6 @@ bool AArch64InstructionSelector::isLoadStoreOfNumBytes(
   return (*MI.memoperands_begin())->getSize() == NumBytes;
 }
 
-bool AArch64InstructionSelector::isTop16Zero(const MachineOperand &MO) const {
-  Register Reg = MO.getReg();
-  return VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(32, 16));
-}
-
-//   bool isTop32Zero(const MachineOperand &MO) const;
-bool AArch64InstructionSelector::isTop32Zero(const MachineOperand &MO) const {
-  Register Reg = MO.getReg();
-  return VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 32));
-}
-
-bool AArch64InstructionSelector::isTopBitsAllZero32(
-    const MachineOperand &MO) const {
-  Register Reg = MO.getReg();
-  return VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(32, 31));
-}
-
-bool AArch64InstructionSelector::isTopBitsAllZero64(
-    const MachineOperand &MO) const {
-  Register Reg = MO.getReg();
-  return VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 63));
-}
-
 bool AArch64InstructionSelector::isDef32(const MachineInstr &MI) const {
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   if (MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() != 32)
