@@ -15,18 +15,18 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+bool check(wchar_t c, const wchar_t *s2) {
+  for (int n = 0; s2[n]; ++n) {
+    if (s2[n] == c)
+      return true;
+  }
+  return false;
+}
 LLVM_LIBC_FUNCTION(size_t, wcsspn, (const wchar_t *s1, const wchar_t *s2)) {
   size_t i = 0;
-  int in_s2 = 0;
   for (; s1[i]; ++i) {
-    for (int n = 0; s2[n] && in_s2 == 0; ++n) {
-      if (s1[i] == s2[n])
-        in_s2 = 1;
-    }
-    if (in_s2 == 0) {
+    if (!check(s1[i], s2))
       return i;
-    }
-    in_s2 = 0;
   }
   return i;
 }
