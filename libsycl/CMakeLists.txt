@@ -8,8 +8,8 @@ set(LLVM_SUBPROJECT_TITLE "libsycl")
 set(LIBSYCL_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBSYCL_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
+set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 #===============================================================================
@@ -59,7 +59,8 @@ set(LIBSYCL_MAJOR_VERSION 0)
 set(LIBSYCL_MINOR_VERSION 1)
 set(LIBSYCL_PATCH_VERSION 0)
 set(LIBSYCL_VERSION_STRING "${LIBSYCL_MAJOR_VERSION}.${LIBSYCL_MINOR_VERSION}.${LIBSYCL_PATCH_VERSION}")
-set(LIBSYCL_ABI_NAMESPACE "V${LIBSYCL_MAJOR_VERSION}" CACHE STRING "The inline ABI namespace used by libsycl. It defaults to Vn where `n` is the current ABI version.")
+set(LIBSYCL_ABI_NAMESPACE "V${LIBSYCL_MAJOR_VERSION}" CACHE STRING
+    "The inline ABI namespace used by libsycl. It defaults to Vn where `n` is the current ABI version.")
 
 #===============================================================================
 # Setup Compiler Flags
@@ -69,7 +70,7 @@ if(MSVC)
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
   # Skip asynchronous C++ exceptions catching and assume "extern C" functions
   # never throw C++ exceptions.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+  append("/EHsc" CMAKE_CXX_FLAGS)
 
   # Add PDB debug information
   list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
@@ -77,6 +78,7 @@ if(MSVC)
   check_linker_flag(CXX "LINKER:/DEBUG" LINKER_SUPPORTS_DEBUG)
   if(LINKER_SUPPORTS_DEBUG)
     # sccache is not compatible with /Zi flag
+    # https://github.com/mozilla/sccache?tab=readme-ov-file#usage
     if (CMAKE_CXX_COMPILER_LAUNCHER STREQUAL "sccache")
       # CMake may put /Zi by default
       if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -89,9 +91,9 @@ if(MSVC)
         string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
         string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
       endif()
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Z7")
+      append("/Z7" CMAKE_CXX_FLAGS)
     else()
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi")
+      append("/Zi" CMAKE_CXX_FLAGS)
     endif()
     add_link_options("LINKER:/DEBUG")
 
@@ -105,22 +107,21 @@ endif()
 
 # Enable all warnings by default
 if (MSVC)
-  set(CMAKE_CXX_FLAGS "/W4 ${CMAKE_CXX_FLAGS}")
+  append("/W4" CMAKE_CXX_FLAGS)
 else ()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+  append("-Wall -Wextra" CMAKE_CXX_FLAGS)
 endif()
 
 if(LIBSYCL_ENABLE_WERROR)
   if(MSVC)
-    set(CMAKE_CXX_FLAGS "/WX ${CMAKE_CXX_FLAGS}")
+    append("/WX" CMAKE_CXX_FLAGS)
   else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+    append("-Werror" CMAKE_CXX_FLAGS)
   endif()
 endif()
 
 # This is a workaround to detect changes (add or modify) in subtree which
 # are not detected by copy_directory command.
-# TODO: Detect removal in the source tree and reflect in the install directory.
 file(GLOB_RECURSE HEADERS_IN_SYCL_DIR CONFIGURE_DEPENDS "${LIBSYCL_INCLUDE_DIR}/sycl/*")
 
 string(REPLACE "${LIBSYCL_INCLUDE_DIR}" "${LIBSYCL_BUILD_INCLUDE_DIR}"

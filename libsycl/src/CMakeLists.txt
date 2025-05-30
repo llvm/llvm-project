@@ -92,7 +92,8 @@ endif()
 # Version-agnostic name of the import library, has effect on Windows only.
 set(IMPLIB_NAME "sycl")
 
-add_sycl_rt_library(${LIB_NAME} sycl_object COMPILE_OPTIONS ${LIBSYCL_EXTRA_OPTS} SOURCES ${LIBSYCL_SOURCES} IMPLIB_NAME ${IMPLIB_NAME})
+add_sycl_rt_library(${LIB_NAME} sycl_object COMPILE_OPTIONS ${LIBSYCL_EXTRA_OPTS}
+                    SOURCES ${LIBSYCL_SOURCES} IMPLIB_NAME ${IMPLIB_NAME})
 
 if (WIN32)
   add_library(sycl ALIAS ${LIB_NAME})
