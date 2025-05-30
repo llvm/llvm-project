@@ -125,7 +125,8 @@ TEST(Perf, RealPtraceScopeWhenNotExist) {
   auto buffer_or_error =
       errorOrToExpected(getProcFile("sys/kernel/yama/ptrace_scope"));
   if (buffer_or_error)
-    GTEST_SKIP() << "In order for this test to run, /proc/sys/kernel/yama/ptrace_scope should not exist";
+    GTEST_SKIP() << "In order for this test to run, "
+                    "/proc/sys/kernel/yama/ptrace_scope should not exist";
   consumeError(buffer_or_error.takeError());
 
   // At this point we should fail parsing the ptrace_scope value.
