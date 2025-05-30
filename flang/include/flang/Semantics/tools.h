@@ -781,10 +781,12 @@ inline bool checkForSymbolMatch(const Fortran::semantics::SomeExpr *lhs,
 namespace operation {
 
 enum class Operator {
+  Unknown,
   Add,
   And,
   Associated,
   Call,
+  Constant,
   Convert,
   Div,
   Eq,
@@ -807,7 +809,6 @@ enum class Operator {
   Resize, // Convert within the same TypeCategory
   Sub,
   True,
-  Unknown,
 };
 
 std::string ToString(Operator op);
@@ -893,6 +894,11 @@ Operator OperationCode(
   } else {
     return Operator::Convert;
   }
+}
+
+template <typename T>
+Operator OperationCode(const evaluate::Constant<T> &x) {
+  return Operator::Constant;
 }
 
 template <typename T> //

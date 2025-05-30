@@ -1758,6 +1758,12 @@ bool HadUseError(
 }
 
 namespace operation {
+template <typename T> //
+SomeExpr asSomeExpr(const T &x) {
+  auto copy{x};
+  return AsGenericExpr(std::move(copy));
+}
+
 template <bool IgnoreResizingConverts> //
 struct ArgumentExtractor
     : public evaluate::Traverse<ArgumentExtractor<IgnoreResizingConverts>,
@@ -1816,10 +1822,12 @@ struct ArgumentExtractor
 
   template <typename T> //
   Result operator()(const evaluate::Designator<T> &x) const {
-    evaluate::Designator<T> copy{x};
-    Result result{
-        operation::Operator::Identity, {AsGenericExpr(std::move(copy))}};
-    return result;
+    return {operation::Operator::Identity, {asSomeExpr(x)}};
+  }
+
+  template <typename T> //
+  Result operator()(const evaluate::Constant<T> &x) const {
+    return {operation::Operator::Identity, {asSomeExpr(x)}};
   }
 
   template <typename... Rs> //
@@ -1849,24 +1857,37 @@ private:
 
 std::string operation::ToString(operation::Operator op) {
   switch (op) {
+  default:
+  case Operator::Unknown:
+    return "??";
   case Operator::Add:
     return "+";
   case Operator::And:
     return "AND";
   case Operator::Associated:
     return "ASSOCIATED";
+  case Operator::Call:
+    return "function-call";
+  case Operator::Constant:
+    return "constant";
+  case Operator::Convert:
+    return "type-conversion";
   case Operator::Div:
     return "/";
   case Operator::Eq:
     return "==";
   case Operator::Eqv:
     return "EQV";
+  case Operator::False:
+    return ".FALSE.";
   case Operator::Ge:
     return ">=";
   case Operator::Gt:
     return ">";
   case Operator::Identity:
     return "identity";
+  case Operator::Intrinsic:
+    return "intrinsic";
   case Operator::Le:
     return "<=";
   case Operator::Lt:
@@ -1877,32 +1898,22 @@ std::string operation::ToString(operation::Operator op) {
     return "MIN";
   case Operator::Mul:
     return "*";
-  case Operator::Neqv:
-    return "NEQV/EOR";
   case Operator::Ne:
     return "/=";
+  case Operator::Neqv:
+    return "NEQV/EOR";
+  case Operator::Not:
+    return "NOT";
   case Operator::Or:
     return "OR";
+  case Operator::Pow:
+    return "**";
+  case Operator::Resize:
+    return "resize";
   case Operator::Sub:
     return "-";
   case Operator::True:
     return ".TRUE.";
-  case Operator::False:
-    return ".FALSE.";
-  case Operator::Not:
-    return "NOT";
-  case Operator::Convert:
-    return "type-conversion";
-  case Operator::Resize:
-    return "resize";
-  case Operator::Intrinsic:
-    return "intrinsic";
-  case Operator::Call:
-    return "function-call";
-  case Operator::Pow:
-    return "**";
-  default:
-    return "??";
   }
 }
 
@@ -1940,24 +1951,18 @@ struct ConvertCollector
   using Base::operator();
 
   template <typename T> //
-  Result asSomeExpr(const T &x) const {
-    auto copy{x};
-    return {AsGenericExpr(std::move(copy)), {}};
-  }
-
-  template <typename T> //
   Result operator()(const evaluate::Designator<T> &x) const {
-    return asSomeExpr(x);
+    return {asSomeExpr(x), {}};
   }
 
   template <typename T> //
   Result operator()(const evaluate::FunctionRef<T> &x) const {
-    return asSomeExpr(x);
+    return {asSomeExpr(x), {}};
   }
 
   template <typename T> //
   Result operator()(const evaluate::Constant<T> &x) const {
-    return asSomeExpr(x);
+    return {asSomeExpr(x), {}};
   }
 
   template <typename D, typename R, typename... Os>
@@ -1976,10 +1981,10 @@ struct ConvertCollector
         return Combine(
             {std::nullopt, {*x.GetType()}}, (*this)(x.template operand<0>()));
       } else {
-        return asSomeExpr(x.derived());
+        return {asSomeExpr(x.derived()), {}};
       }
     } else {
-      return asSomeExpr(x.derived());
+      return {asSomeExpr(x.derived()), {}};
     }
   }
 

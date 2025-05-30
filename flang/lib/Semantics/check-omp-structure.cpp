@@ -3459,6 +3459,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
     context_.Say(source,
         "This intrinsic function is not a valid ATOMIC UPDATE operation"_err_en_US);
     return;
+  case operation::Operator::Constant:
   case operation::Operator::Unknown:
     context_.Say(
         source, "This is not a valid ATOMIC UPDATE operation"_err_en_US);
