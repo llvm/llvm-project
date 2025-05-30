@@ -59,6 +59,7 @@ static lto::Config createConfig() {
   c.DisableVerify = ctx.arg.disableVerify;
   c.DiagHandler = diagnosticHandler;
   c.OptLevel = ctx.arg.ltoo;
+  c.CPU = getCPUStr();
   c.MAttrs = getMAttrs();
   c.CGOptLevel = ctx.arg.ltoCgo;
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;

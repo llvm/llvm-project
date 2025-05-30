@@ -1980,6 +1980,8 @@ PtrParts SplitPtrStructs::visitIntToPtrInst(IntToPtrInst &IP) {
 }
 
 PtrParts SplitPtrStructs::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
+  // TODO(krzysz00): handle casts from ptr addrspace(7) to global pointers
+  // by computing the effective address.
   if (!isSplitFatPtr(I.getType()))
     return {nullptr, nullptr};
   IRB.SetInsertPoint(&I);
@@ -1990,11 +1992,37 @@ PtrParts SplitPtrStructs::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
     SplitUsers.insert(&I);
     return {Rsrc, Off};
   }
-  if (I.getSrcAddressSpace() != AMDGPUAS::BUFFER_RESOURCE)
-    report_fatal_error("Only buffer resources (addrspace 8) can be cast to "
-                       "buffer fat pointers (addrspace 7)");
-  Type *OffTy = cast<StructType>(I.getType())->getElementType(1);
+
+  auto *ResTy = cast<StructType>(I.getType());
+  Type *RsrcTy = ResTy->getElementType(0);
+  Type *OffTy = ResTy->getElementType(1);
   Value *ZeroOff = Constant::getNullValue(OffTy);
+
+  // Special case for null pointers, undef, and poison, which can be created by
+  // address space propagation.
+  auto *InConst = dyn_cast<Constant>(In);
+  if (InConst && InConst->isNullValue()) {
+    Value *NullRsrc = Constant::getNullValue(RsrcTy);
+    SplitUsers.insert(&I);
+    return {NullRsrc, ZeroOff};
+  }
+  if (isa<PoisonValue>(In)) {
+    Value *PoisonRsrc = PoisonValue::get(RsrcTy);
+    Value *PoisonOff = PoisonValue::get(OffTy);
+    SplitUsers.insert(&I);
+    return {PoisonRsrc, PoisonOff};
+  }
+  if (isa<UndefValue>(In)) {
+    Value *UndefRsrc = UndefValue::get(RsrcTy);
+    Value *UndefOff = UndefValue::get(OffTy);
+    SplitUsers.insert(&I);
+    return {UndefRsrc, UndefOff};
+  }
+
+  if (I.getSrcAddressSpace() != AMDGPUAS::BUFFER_RESOURCE)
+    report_fatal_error(
+        "only buffer resources (addrspace 8) and null/poison pointers can be "
+        "cast to buffer fat pointers (addrspace 7)");
   SplitUsers.insert(&I);
   return {In, ZeroOff};
 }
@@ -2161,6 +2189,7 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   case Intrinsic::memset:
   case Intrinsic::memset_inline:
   case Intrinsic::experimental_memset_pattern:
+  case Intrinsic::amdgcn_load_to_lds:
     return true;
   }
 }
@@ -2248,6 +2277,25 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     NewRsrc->takeName(&I);
     SplitUsers.insert(&I);
     return {NewRsrc, Off};
+  }
+  case Intrinsic::amdgcn_load_to_lds: {
+    Value *Ptr = I.getArgOperand(0);
+    if (!isSplitFatPtr(Ptr->getType()))
+      return {nullptr, nullptr};
+    IRB.SetInsertPoint(&I);
+    auto [Rsrc, Off] = getPtrParts(Ptr);
+    Value *LDSPtr = I.getArgOperand(1);
+    Value *LoadSize = I.getArgOperand(2);
+    Value *ImmOff = I.getArgOperand(3);
+    Value *Aux = I.getArgOperand(4);
+    Value *SOffset = IRB.getInt32(0);
+    Instruction *NewLoad = IRB.CreateIntrinsic(
+        Intrinsic::amdgcn_raw_ptr_buffer_load_lds, {},
+        {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
+    copyMetadata(NewLoad, &I);
+    SplitUsers.insert(&I);
+    I.replaceAllUsesWith(NewLoad);
+    return {nullptr, nullptr};
   }
   }
   return {nullptr, nullptr};

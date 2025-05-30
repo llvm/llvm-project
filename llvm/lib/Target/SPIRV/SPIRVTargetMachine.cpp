@@ -274,8 +274,7 @@ namespace {
 class SPIRVInstructionSelect : public InstructionSelect {
   // We don't use register banks, so unset the requirement for them
   MachineFunctionProperties getRequiredProperties() const override {
-    return InstructionSelect::getRequiredProperties().reset(
-        MachineFunctionProperties::Property::RegBankSelected);
+    return InstructionSelect::getRequiredProperties().resetRegBankSelected();
   }
 };
 } // namespace

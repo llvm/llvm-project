@@ -209,7 +209,7 @@ on support follow.
      ``Zihintntl``     Supported
      ``Zihintpause``   Assembly Support
      ``Zihpm``         (`See Note <#riscv-i2p1-note>`__)
-     ``Zilsd``         Assembly Support
+     ``Zilsd``         Supported
      ``Zimop``         Supported
      ``Zkn``           Supported
      ``Zknd``          Supported (`See note <#riscv-scalar-crypto-note2>`__)
@@ -306,7 +306,7 @@ Supported
 .. _riscv-zacas-note:
 
 ``Zacas``
-  The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibilty. These can only be used in the assembler.
+  The compiler will not generate amocas.d on RV32 or amocas.q on RV64 due to ABI compatibility. These can only be used in the assembler.
 
 Atomics ABIs
 ============
@@ -391,6 +391,9 @@ The current vendor extensions supported are:
 
 ``XVentanaCondOps``
   LLVM implements `version 1.0.0 of the VTx-family custom instructions specification <https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf>`__ by Ventana Micro Systems.  All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above.  These instructions are only available for riscv64 at this time.
+
+``Xsfmm*``
+  LLVM implements `version 0.6 of the Xsfmm Family of Attached Matrix Extensions Specification <https://www.sifive.com/document-file/xsfmm-matrix-extensions-specification>`__ by SiFive.  All instructions are prefixed with `sf.` as described in the specification.
 
 ``XSfvcp``
   LLVM implements `version 1.1.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/Zn3m1R5LeNNTwnLS_vcix-spec-software-v1p1.pdf>`__ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.

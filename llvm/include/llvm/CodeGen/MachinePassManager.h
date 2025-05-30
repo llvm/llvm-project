@@ -24,6 +24,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassManagerInternal.h"
 #include "llvm/Support/Error.h"
@@ -31,10 +32,6 @@
 namespace llvm {
 class Module;
 class Function;
-class MachineFunction;
-
-extern template class AnalysisManager<MachineFunction>;
-using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
 
 /// An RAII based helper class to modify MachineFunctionProperties when running
 /// pass. Define a MFPropsModifier in PassT::run to set

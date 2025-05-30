@@ -79,6 +79,12 @@ clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
   TARGET CXX11AttributeInfo
   )
 
+  clang_tablegen(AttributeSpellingList.inc -gen-attribute-spelling-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET AttributeSpellingList
+  )
+
 clang_tablegen(Builtins.inc -gen-clang-builtins
   SOURCE Builtins.td
   TARGET ClangBuiltins)
@@ -201,3 +207,12 @@ clang_tablegen(riscv_sifive_vector_builtin_cg.inc -gen-riscv-sifive-vector-built
 clang_tablegen(riscv_sifive_vector_builtin_sema.inc -gen-riscv-sifive-vector-builtin-sema
   SOURCE riscv_sifive_vector.td
   TARGET ClangRISCVSiFiveVectorBuiltinSema)
+clang_tablegen(riscv_andes_vector_builtins.inc -gen-riscv-andes-vector-builtins
+  SOURCE riscv_andes_vector.td
+  TARGET ClangRISCVAndesVectorBuiltins)
+clang_tablegen(riscv_andes_vector_builtin_cg.inc -gen-riscv-andes-vector-builtin-codegen
+  SOURCE riscv_andes_vector.td
+  TARGET ClangRISCVAndesVectorBuiltinCG)
+clang_tablegen(riscv_andes_vector_builtin_sema.inc -gen-riscv-andes-vector-builtin-sema
+  SOURCE riscv_andes_vector.td
+  TARGET ClangRISCVAndesVectorBuiltinSema)

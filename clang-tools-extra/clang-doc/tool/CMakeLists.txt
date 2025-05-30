@@ -25,7 +25,7 @@ set(assets
   clang-doc-default-stylesheet.css
   clang-doc-mustache.css
   class-template.mustache
-  comments-template.mustache
+  comment-template.mustache
   enum-template.mustache
   function-template.mustache
   namespace-template.mustache

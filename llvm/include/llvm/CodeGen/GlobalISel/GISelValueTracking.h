@@ -14,13 +14,16 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_GISELVALUETRACKING_H
 #define LLVM_CODEGEN_GLOBALISEL_GISELVALUETRACKING_H
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 
 namespace llvm {
 
@@ -41,6 +44,18 @@ class GISelValueTracking : public GISelChangeObserver {
 
   unsigned computeNumSignBitsMin(Register Src0, Register Src1,
                                  const APInt &DemandedElts, unsigned Depth = 0);
+
+  void computeKnownFPClass(Register R, KnownFPClass &Known,
+                           FPClassTest InterestedClasses, unsigned Depth);
+
+  void computeKnownFPClassForFPTrunc(const MachineInstr &MI,
+                                     const APInt &DemandedElts,
+                                     FPClassTest InterestedClasses,
+                                     KnownFPClass &Known, unsigned Depth);
+
+  void computeKnownFPClass(Register R, const APInt &DemandedElts,
+                           FPClassTest InterestedClasses, KnownFPClass &Known,
+                           unsigned Depth);
 
 public:
   GISelValueTracking(MachineFunction &MF, unsigned MaxDepth = 6);
@@ -86,6 +101,34 @@ public:
 
   /// \return The known alignment for the pointer-like value \p R.
   Align computeKnownAlignment(Register R, unsigned Depth = 0);
+
+  /// Determine which floating-point classes are valid for \p V, and return them
+  /// in KnownFPClass bit sets.
+  ///
+  /// This function is defined on values with floating-point type, values
+  /// vectors of floating-point type, and arrays of floating-point type.
+
+  /// \p InterestedClasses is a compile time optimization hint for which
+  /// floating point classes should be queried. Queries not specified in \p
+  /// InterestedClasses should be reliable if they are determined during the
+  /// query.
+  KnownFPClass computeKnownFPClass(Register R, const APInt &DemandedElts,
+                                   FPClassTest InterestedClasses,
+                                   unsigned Depth);
+
+  KnownFPClass computeKnownFPClass(Register R,
+                                   FPClassTest InterestedClasses = fcAllFlags,
+                                   unsigned Depth = 0);
+
+  /// Wrapper to account for known fast math flags at the use instruction.
+  KnownFPClass computeKnownFPClass(Register R, const APInt &DemandedElts,
+                                   uint32_t Flags,
+                                   FPClassTest InterestedClasses,
+                                   unsigned Depth);
+
+  KnownFPClass computeKnownFPClass(Register R, uint32_t Flags,
+                                   FPClassTest InterestedClasses,
+                                   unsigned Depth);
 
   // Observer API. No-op for non-caching implementation.
   void erasingInstr(MachineInstr &MI) override {}

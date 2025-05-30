@@ -654,8 +654,8 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
   if (count)
     return count;
   // Synthetic symbol names are not added to the name indexes, but they start
-  // with a prefix and end with a the symbol UserID. This allows users to find
-  // these symbols without having to add them to the name indexes. These
+  // with a prefix and end with the symbol file address. This allows users to
+  // find these symbols without having to add them to the name indexes. These
   // queries will not happen very often since the names don't mean anything, so
   // performance is not paramount in this case.
   llvm::StringRef name = symbol_name.GetStringRef();
@@ -663,11 +663,12 @@ uint32_t Symtab::GetNameIndexes(ConstString symbol_name,
   if (!name.consume_front(Symbol::GetSyntheticSymbolPrefix()))
     return 0; // Not a synthetic symbol name
 
-  // Extract the user ID from the symbol name
-  unsigned long long uid = 0;
-  if (getAsUnsignedInteger(name, /*Radix=*/10, uid))
+  // Extract the file address from the symbol name
+  unsigned long long file_address = 0;
+  if (getAsUnsignedInteger(name, /*Radix=*/16, file_address))
     return 0; // Failed to extract the user ID as an integer
-  Symbol *symbol = FindSymbolByID(uid);
+
+  Symbol *symbol = FindSymbolAtFileAddress(static_cast<addr_t>(file_address));
   if (symbol == nullptr)
     return 0;
   const uint32_t symbol_idx = GetIndexForSymbol(symbol);

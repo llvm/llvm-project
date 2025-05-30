@@ -9,8 +9,12 @@
 #include "ClangDocTest.h"
 #include "Generators.h"
 #include "Representation.h"
+#include "config.h"
+#include "support/Utils.h"
 #include "clang/Basic/Version.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -40,13 +44,43 @@ getClangDocContext(std::vector<std::string> UserStylesheets = {},
   return CDCtx;
 }
 
+static void verifyFileContents(const Twine &Path, StringRef Contents) {
+  auto Buffer = MemoryBuffer::getFile(Path);
+  ASSERT_TRUE((bool)Buffer);
+  StringRef Data = Buffer.get()->getBuffer();
+  ASSERT_EQ(Data, Contents);
+}
+
 TEST(HTMLMustacheGeneratorTest, createResources) {
   auto G = getHTMLMustacheGenerator();
   ASSERT_THAT(G, NotNull()) << "Could not find HTMLMustacheGenerator";
   ClangDocContext CDCtx = getClangDocContext();
+  EXPECT_THAT_ERROR(G->createResources(CDCtx), Failed())
+      << "Empty UserStylesheets or JsScripts should fail!";
+
+  unittest::TempDir RootTestDirectory("createResourcesTest", /*Unique=*/true);
+  CDCtx.OutDirectory = RootTestDirectory.path();
+
+  unittest::TempFile CSS("clang-doc-mustache", "css", "CSS");
+  unittest::TempFile JS("mustache", "js", "JavaScript");
+
+  CDCtx.UserStylesheets[0] = CSS.path();
+  CDCtx.JsScripts[0] = JS.path();
 
   EXPECT_THAT_ERROR(G->createResources(CDCtx), Succeeded())
-      << "Failed to create resources.";
+      << "Failed to create resources with valid UserStylesheets and JsScripts";
+  {
+    SmallString<256> PathBuf;
+    llvm::sys::path::append(PathBuf, RootTestDirectory.path(),
+                            "clang-doc-mustache.css");
+    verifyFileContents(PathBuf, "CSS");
+  }
+
+  {
+    SmallString<256> PathBuf;
+    llvm::sys::path::append(PathBuf, RootTestDirectory.path(), "mustache.js");
+    verifyFileContents(PathBuf, "JavaScript");
+  }
 }
 
 TEST(HTMLMustacheGeneratorTest, generateDocs) {
@@ -54,8 +88,15 @@ TEST(HTMLMustacheGeneratorTest, generateDocs) {
   assert(G && "Could not find HTMLMustacheGenerator");
   ClangDocContext CDCtx = getClangDocContext();
 
-  StringRef RootDir = "";
-  EXPECT_THAT_ERROR(G->generateDocs(RootDir, {}, CDCtx), Succeeded())
+  unittest::TempDir RootTestDirectory("generateDocsTest", /*Unique=*/true);
+  CDCtx.OutDirectory = RootTestDirectory.path();
+
+  // FIXME: We can't read files during unit tests. Migrate to lit once
+  // tool support lands.
+  // getMustacheHtmlFiles(CLANG_DOC_TEST_ASSET_DIR, CDCtx);
+
+  EXPECT_THAT_ERROR(G->generateDocs(RootTestDirectory.path(), {}, CDCtx),
+                    Failed())
       << "Failed to generate docs.";
 }
 
@@ -79,8 +120,7 @@ TEST(HTMLMustacheGeneratorTest, generateDocsForInfo) {
   I.Children.Functions.back().Name = "OneFunction";
   I.Children.Enums.emplace_back();
 
-  EXPECT_THAT_ERROR(G->generateDocForInfo(&I, Actual, CDCtx), Succeeded())
-      << "Failed to generate docs.";
+  EXPECT_THAT_ERROR(G->generateDocForInfo(&I, Actual, CDCtx), Failed());
 
   std::string Expected = R"raw()raw";
   EXPECT_THAT(Actual.str(), Eq(Expected));

@@ -61,7 +61,7 @@ LogicalResult PackedStochRoundFp8Op::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// FatRawBuferCastOp
+// FatRawBufferCastOp
 //===----------------------------------------------------------------------===//
 
 /// Convert the type `source` to one with the same sizes and strides - and
@@ -128,6 +128,14 @@ static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
     return intMemorySpace.getInt() == 3;
   if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
+  return false;
+}
+
+static bool hasFatRawBufferMemorySpace(Attribute memorySpace) {
+  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 7;
+  if (auto gpuMemorySpace = dyn_cast<amdgpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == amdgpu::AddressSpace::FatRawBuffer;
   return false;
 }
 
@@ -476,9 +484,8 @@ LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
-  if (!memref::isStaticShapeAndContiguousRowMajor(dstType))
-    return emitOpError(
-        "destination types must have static shape  and contiguous");
+  if (!dstType.areTrailingDimsContiguous(dstType.getRank()))
+    return emitOpError("destination types must be contiguous");
 
   auto elemType = srcType.getElementType();
   // Check $src and $dst element types are the same.
@@ -497,8 +504,10 @@ LogicalResult GatherToLDSOp::verify() {
   if (transferSize != 8 && transferSize != 16 && transferSize != 32)
     return emitOpError("Transfering type size must be 8, 16, or 32 bits");
 
-  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
-    return emitOpError("source memory address space must be Global");
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()) &&
+      !hasFatRawBufferMemorySpace(srcType.getMemorySpace()))
+    return emitOpError(
+        "source memory address space must be global or fat raw buffer");
 
   if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
     return emitOpError("destination memory address space must be Workgroup");

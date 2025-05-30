@@ -332,9 +332,11 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
   // are required for a code size reduction. If no base adjustment is required,
   // then copying the register costs one new c.mv (or c.li Rd, 0 for "copying"
   // the zero register) and therefore two uses are required for a code size
-  // reduction.
-  if (MIs.size() < 2 || (RegImm.Imm != 0 && MIs.size() < 3))
-    return RISCV::NoRegister;
+  // reduction. For GPR pairs, we need 2 ADDIs to copy so we need three users.
+  unsigned CopyCost = RISCV::GPRPairRegClass.contains(RegImm.Reg) ? 2 : 1;
+  assert((RegImm.Imm == 0 || CopyCost == 1) && "GPRPair should have zero imm");
+  if (MIs.size() <= CopyCost || (RegImm.Imm != 0 && MIs.size() <= 2))
+    return Register();
 
   // Find a compressible register which will be available from the first
   // instruction we care about to the last.
@@ -452,13 +454,21 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
             .addReg(RegImm.Reg);
       } else if (RISCV::GPRPairRegClass.contains(RegImm.Reg)) {
         assert(RegImm.Imm == 0);
+        MCRegister EvenReg = TRI.getSubReg(RegImm.Reg, RISCV::sub_gpr_even);
+        MCRegister OddReg;
+        // We need to special case odd reg for X0_PAIR.
+        if (RegImm.Reg == RISCV::X0_Pair)
+          OddReg = RISCV::X0;
+        else
+          OddReg = TRI.getSubReg(RegImm.Reg, RISCV::sub_gpr_odd);
+        assert(NewReg != RISCV::X0_Pair && "Cannot write to X0_Pair");
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI),
                 TRI.getSubReg(NewReg, RISCV::sub_gpr_even))
-            .addReg(TRI.getSubReg(RegImm.Reg, RISCV::sub_gpr_even))
+            .addReg(EvenReg)
             .addImm(0);
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI),
                 TRI.getSubReg(NewReg, RISCV::sub_gpr_odd))
-            .addReg(TRI.getSubReg(RegImm.Reg, RISCV::sub_gpr_odd))
+            .addReg(OddReg)
             .addImm(0);
       } else {
         assert((RISCV::FPR32RegClass.contains(RegImm.Reg) ||

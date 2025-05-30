@@ -28,6 +28,7 @@ namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
   VPTypeAnalysis &TypeInfo;
+  bool VerifyLate;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -60,8 +61,9 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
-      : VPDT(VPDT), TypeInfo(TypeInfo) {}
+  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo,
+                bool VerifyLate)
+      : VPDT(VPDT), TypeInfo(TypeInfo), VerifyLate(VerifyLate) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -113,7 +115,7 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     RecipeI++;
   }
 
-  if (NumActiveLaneMaskPhiRecipes > 1) {
+  if (!VerifyLate && NumActiveLaneMaskPhiRecipes > 1) {
     errs() << "There should be no more than one VPActiveLaneMaskPHIRecipe";
     return false;
   }
@@ -151,7 +153,7 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
     }
     return true;
   };
-  return all_of(EVL.users(), [&VerifyEVLUse](VPUser *U) {
+  return all_of(EVL.users(), [this, &VerifyEVLUse](VPUser *U) {
     return TypeSwitch<const VPUser *, bool>(U)
         .Case<VPWidenIntrinsicRecipe>([&](const VPWidenIntrinsicRecipe *S) {
           return VerifyEVLUse(*S, S->getNumOperands() - 1);
@@ -174,7 +176,7 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
                       "users\n";
             return false;
           }
-          if (!isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
+          if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
             errs() << "Result of VPInstruction::Add with EVL operand is "
                       "not used by VPEVLBasedIVPHIRecipe\n";
             return false;
@@ -243,7 +245,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           continue;
         }
         // TODO: Also verify VPPredInstPHIRecipe.
-        if (isa<VPPredInstPHIRecipe>(UI))
+        if (isa<VPPredInstPHIRecipe>(UI) ||
+            (isa<VPInstruction>(UI) && (cast<VPInstruction>(UI)->getOpcode() ==
+                                        VPInstruction::ResumePhi)))
           continue;
 
         // If the user is in the same block, check it comes after R in the
@@ -302,18 +306,20 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
-  if (VPB->getNumSuccessors() > 1 ||
-      (VPBB && VPBB->getParent() && VPBB->isExiting() &&
-       !VPBB->getParent()->isReplicator())) {
-    if (!VPBB || !VPBB->getTerminator()) {
-      errs() << "Block has multiple successors but doesn't "
-                "have a proper branch recipe!\n";
-      return false;
-    }
-  } else {
-    if (VPBB && VPBB->getTerminator()) {
-      errs() << "Unexpected branch recipe!\n";
-      return false;
+  if (!isa<VPIRBasicBlock>(VPB)) {
+    if (VPB->getNumSuccessors() > 1 ||
+        (VPBB && VPBB->getParent() && VPBB->isExiting() &&
+         !VPBB->getParent()->isReplicator())) {
+      if (!VPBB || !VPBB->getTerminator()) {
+        errs() << "Block has multiple successors but doesn't "
+                  "have a proper branch recipe!\n";
+        return false;
+      }
+    } else {
+      if (VPBB && VPBB->getTerminator()) {
+        errs() << "Unexpected branch recipe!\n";
+        return false;
+      }
     }
   }
 
@@ -409,6 +415,10 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
     return false;
 
   const VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
+  // TODO: Verify all blocks using vp_depth_first_deep iterators.
+  if (!TopRegion)
+    return true;
+
   if (!verifyRegionRec(TopRegion))
     return false;
 
@@ -423,7 +433,8 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
     return false;
   }
 
-  if (!isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
+  // TODO: Remove once loop regions are dissolved before execution.
+  if (!VerifyLate && !isa<VPCanonicalIVPHIRecipe>(&*Entry->begin())) {
     errs() << "VPlan vector loop header does not start with a "
               "VPCanonicalIVPHIRecipe\n";
     return false;
@@ -452,10 +463,10 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   return true;
 }
 
-bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
+bool llvm::verifyVPlanIsValid(const VPlan &Plan, bool VerifyLate) {
   VPDominatorTree VPDT;
   VPDT.recalculate(const_cast<VPlan &>(Plan));
   VPTypeAnalysis TypeInfo(Plan);
-  VPlanVerifier Verifier(VPDT, TypeInfo);
+  VPlanVerifier Verifier(VPDT, TypeInfo, VerifyLate);
   return Verifier.verify(Plan);
 }

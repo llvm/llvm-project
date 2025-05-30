@@ -18,6 +18,60 @@ extern "C" {
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Defines Return/Error codes
+typedef enum ol_errc_t {
+  /// success
+  OL_ERRC_SUCCESS = 0,
+  /// unknown or internal error
+  OL_ERRC_UNKNOWN = 1,
+  /// I/O error on host
+  OL_ERRC_HOST_IO = 2,
+  /// a provided binary image is malformed
+  OL_ERRC_INVALID_BINARY = 3,
+  /// a pointer argument is null when it should not be
+  OL_ERRC_INVALID_NULL_POINTER = 4,
+  /// an argument is invalid
+  OL_ERRC_INVALID_ARGUMENT = 5,
+  /// requested object was not found in the binary image
+  OL_ERRC_NOT_FOUND = 6,
+  /// out of resources
+  OL_ERRC_OUT_OF_RESOURCES = 7,
+  /// invalid size or dimensions (e.g., must not be zero, or is out of bounds)
+  OL_ERRC_INVALID_SIZE = 8,
+  /// enumerator argument is not valid
+  OL_ERRC_INVALID_ENUMERATION = 9,
+  /// a required binary (linker, etc.) was not found on the host
+  OL_ERRC_HOST_TOOL_NOT_FOUND = 10,
+  /// invalid value
+  OL_ERRC_INVALID_VALUE = 11,
+  /// generic error code for features currently unimplemented by the
+  /// device/backend
+  OL_ERRC_UNIMPLEMENTED = 12,
+  /// generic error code for features unsupported by the device/backend
+  OL_ERRC_UNSUPPORTED = 13,
+  /// assembler failure while processing binary image
+  OL_ERRC_ASSEMBLE_FAILURE = 14,
+  /// linker failure while processing binary image
+  OL_ERRC_LINK_FAILURE = 15,
+  /// the plugin backend is in an invalid or unsupported state
+  OL_ERRC_BACKEND_FAILURE = 16,
+  /// a handle argument is null when it should not be
+  OL_ERRC_INVALID_NULL_HANDLE = 17,
+  /// invalid platform
+  OL_ERRC_INVALID_PLATFORM = 18,
+  /// invalid device
+  OL_ERRC_INVALID_DEVICE = 19,
+  /// invalid queue
+  OL_ERRC_INVALID_QUEUE = 20,
+  /// invalid event
+  OL_ERRC_INVALID_EVENT = 21,
+  /// @cond
+  OL_ERRC_FORCE_UINT32 = 0x7fffffff
+  /// @endcond
+
+} ol_errc_t;
+
+///////////////////////////////////////////////////////////////////////////////
 #ifndef OL_VERSION_MAJOR
 /// @brief Major version of the Offload API
 #define OL_VERSION_MAJOR 0
@@ -100,47 +154,6 @@ typedef struct ol_program_impl_t *ol_program_handle_t;
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Handle of kernel object
 typedef void *ol_kernel_handle_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Defines Return/Error codes
-typedef enum ol_errc_t {
-  /// Success
-  OL_ERRC_SUCCESS = 0,
-  /// Invalid Value
-  OL_ERRC_INVALID_VALUE = 1,
-  /// Invalid platform
-  OL_ERRC_INVALID_PLATFORM = 2,
-  /// Invalid device
-  OL_ERRC_INVALID_DEVICE = 3,
-  /// Invalid queue
-  OL_ERRC_INVALID_QUEUE = 4,
-  /// Invalid event
-  OL_ERRC_INVALID_EVENT = 5,
-  /// Named kernel not found in the program binary
-  OL_ERRC_INVALID_KERNEL_NAME = 6,
-  /// Out of resources
-  OL_ERRC_OUT_OF_RESOURCES = 7,
-  /// generic error code for unsupported features
-  OL_ERRC_UNSUPPORTED_FEATURE = 8,
-  /// generic error code for invalid arguments
-  OL_ERRC_INVALID_ARGUMENT = 9,
-  /// handle argument is not valid
-  OL_ERRC_INVALID_NULL_HANDLE = 10,
-  /// pointer argument may not be nullptr
-  OL_ERRC_INVALID_NULL_POINTER = 11,
-  /// invalid size or dimensions (e.g., must not be zero, or is out of bounds)
-  OL_ERRC_INVALID_SIZE = 12,
-  /// enumerator argument is not valid
-  OL_ERRC_INVALID_ENUMERATION = 13,
-  /// enumerator argument is not supported by the device
-  OL_ERRC_UNSUPPORTED_ENUMERATION = 14,
-  /// Unknown or internal error
-  OL_ERRC_UNKNOWN = 15,
-  /// @cond
-  OL_ERRC_FORCE_UINT32 = 0x7fffffff
-  /// @endcond
-
-} ol_errc_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Details of the error condition returned by an API call
@@ -477,7 +490,8 @@ OL_APIEXPORT ol_result_t OL_APICALL olMemFree(
 /// @brief Enqueue a memcpy operation.
 ///
 /// @details
-///    - For host pointers, use the device returned by olGetHostDevice
+///    - For host pointers, use the host device belonging to the
+///    OL_PLATFORM_BACKEND_HOST platform.
 ///    - If a queue is specified, at least one device must be a non-host device
 ///    - If a queue is not specified, the memcpy happens synchronously
 ///

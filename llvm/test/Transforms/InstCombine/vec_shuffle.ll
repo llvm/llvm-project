@@ -248,6 +248,58 @@ define <2 x i8> @test13a(i8 %x1, i8 %x2) {
   ret <2 x i8> %D
 }
 
+define <1 x ptr> @shuffle_gep(ptr %x1, ptr %x2) {
+; CHECK-LABEL: @shuffle_gep(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x ptr> poison, ptr [[X2:%.*]], i64 0
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i8, <1 x ptr> [[TMP1]], i64 5
+; CHECK-NEXT:    ret <1 x ptr> [[RET]]
+;
+  %ins.1 = insertelement <2 x ptr> poison, ptr %x1, i32 0
+  %ins.2 = insertelement <2 x ptr> %ins.1, ptr %x2, i32 1
+  %gep = getelementptr i8, <2 x ptr> %ins.2, i64 5
+  %ret = shufflevector <2 x ptr> %gep, <2 x ptr> poison, <1 x i32> <i32 1>
+  ret <1 x ptr> %ret
+}
+
+define <1 x ptr> @shuffle_gep_inbounds(ptr %x1, ptr %x2) {
+; CHECK-LABEL: @shuffle_gep_inbounds(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x ptr> poison, ptr [[X2:%.*]], i64 0
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr inbounds i8, <1 x ptr> [[TMP1]], i64 5
+; CHECK-NEXT:    ret <1 x ptr> [[RET]]
+;
+  %ins.1 = insertelement <2 x ptr> poison, ptr %x1, i32 0
+  %ins.2 = insertelement <2 x ptr> %ins.1, ptr %x2, i32 1
+  %gep = getelementptr inbounds i8, <2 x ptr> %ins.2, i64 5
+  %ret = shufflevector <2 x ptr> %gep, <2 x ptr> poison, <1 x i32> <i32 1>
+  ret <1 x ptr> %ret
+}
+
+define <1 x ptr> @shuffle_gep_nuw(ptr %x1, ptr %x2) {
+; CHECK-LABEL: @shuffle_gep_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x ptr> poison, ptr [[X2:%.*]], i64 0
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr nuw i8, <1 x ptr> [[TMP1]], i64 5
+; CHECK-NEXT:    ret <1 x ptr> [[RET]]
+;
+  %ins.1 = insertelement <2 x ptr> poison, ptr %x1, i32 0
+  %ins.2 = insertelement <2 x ptr> %ins.1, ptr %x2, i32 1
+  %gep = getelementptr nuw i8, <2 x ptr> %ins.2, i64 5
+  %ret = shufflevector <2 x ptr> %gep, <2 x ptr> poison, <1 x i32> <i32 1>
+  ret <1 x ptr> %ret
+}
+
+define <1 x ptr> @shuffle_gep_nusw(ptr %x1, ptr %x2) {
+; CHECK-LABEL: @shuffle_gep_nusw(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <1 x ptr> poison, ptr [[X2:%.*]], i64 0
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr nusw i8, <1 x ptr> [[TMP1]], i64 5
+; CHECK-NEXT:    ret <1 x ptr> [[RET]]
+;
+  %ins.1 = insertelement <2 x ptr> poison, ptr %x1, i32 0
+  %ins.2 = insertelement <2 x ptr> %ins.1, ptr %x2, i32 1
+  %gep = getelementptr nusw i8, <2 x ptr> %ins.2, i64 5
+  %ret = shufflevector <2 x ptr> %gep, <2 x ptr> poison, <1 x i32> <i32 1>
+  ret <1 x ptr> %ret
+}
+
 ; Increasing length of vector ops is not a good canonicalization.
 
 define <3 x i32> @add_wider(i32 %y, i32 %z) {
@@ -680,8 +732,11 @@ define <4 x i16> @widening_shuffle_shl_constant_op1_non0(<2 x i16> %v) {
   ret <4 x i16> %bo
 }
 
-; A binop that does not produce undef in the high lanes can not be moved before the shuffle.
-; This is not ok because 'or -1, undef --> -1' but moving the shuffle results in undef instead.
+; Previously, a shufflevector would produce an undef element from an undef mask
+; index, which meant that pulling the shuffle out wasn't correct if the original
+; binary op produced a non-undef result, e.g. or -1, undef --> -1.
+;
+; However nowadays shufflevector produces poison, which is safe to propagate.
 
 define <4 x i16> @widening_shuffle_or(<2 x i16> %v) {
 ; CHECK-LABEL: @widening_shuffle_or(

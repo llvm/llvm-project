@@ -367,12 +367,12 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
                   100.0 * UnmappedHotness / NumTotalCounts);
 }
 
-uint64_t Heatmap::resizeBucket(uint64_t Pow2Scale) {
+void Heatmap::resizeBucket(uint64_t NewSize) {
   std::map<uint64_t, uint64_t> NewMap;
   for (const auto [Bucket, Count] : Map)
-    NewMap[Bucket >> Pow2Scale] += Count;
+    NewMap[Bucket * BucketSize / NewSize] += Count;
   Map = NewMap;
-  return BucketSize <<= Pow2Scale;
+  BucketSize = NewSize;
 }
 } // namespace bolt
 } // namespace llvm

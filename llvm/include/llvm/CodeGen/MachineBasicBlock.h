@@ -18,6 +18,7 @@
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/IR/DebugLoc.h"
@@ -46,8 +47,6 @@ class LiveIntervals;
 class LiveVariables;
 class TargetRegisterClass;
 class TargetRegisterInfo;
-template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
-using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
 
 // This structure uniquely identifies a basic block section.
 // Possible values are
