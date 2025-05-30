@@ -436,7 +436,8 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
     }
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
-          op, "scaling extf is not using scale operand of type f8E8M0FNU");
+          op, "scaling_extf is using scales of type which can not be converted "
+              "to f8E8M0FNU");
     }
     Type resultTy = op.getType();
     // extf on scale will essentially create f32 number that is 2^scale and will
@@ -467,7 +468,8 @@ struct ScalingTruncFOpConverter
     }
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
-          op, "scaling truncf is not using scale operand of type f8E8M0FNU");
+          op, "scaling_truncf is using scales type which can not be converted "
+              "to f8E8M0FNU");
     }
 
     Type resultTy = op.getType();
