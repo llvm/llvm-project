@@ -22,8 +22,8 @@
 #include "../../../../std/ranges/range.adaptors/range.stride.view/types.h"
 
 void test_base_nodiscard() {
-  const std::vector<int> intv = {1, 2, 3};
-  auto sv                     = std::ranges::stride_view(intv, 3);
+  const int range[] = {1, 2, 3};
+  auto sv           = std::ranges::stride_view(range, 3);
 
   sv.base();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::move(sv).base(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
