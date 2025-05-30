@@ -2,7 +2,7 @@
 // RUN: %clangxx -O2 %s -o %t
 // RUN: %env HOME=%t.homedir TMPDIR=%t.tmpdir %run %t 2>&1 | FileCheck %s
 
-// FIXME: Environment variables are no propagated or not properly read on android.
+// FIXME: Environment variables are not propagated or not properly read on android.
 // XFAIL: android
 
 #include <sanitizer/common_interface_defs.h>
