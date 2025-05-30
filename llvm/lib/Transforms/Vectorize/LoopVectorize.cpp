@@ -7238,8 +7238,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
 
   auto *EpiRedHeaderPhi =
       cast<VPReductionPHIRecipe>(EpiRedResult->getOperand(0));
-  const RecurrenceDescriptor &RdxDesc =
-      EpiRedHeaderPhi->getRecurrenceDescriptor();
   Value *MainResumeValue;
   if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
     assert((VPI->getOpcode() == VPInstruction::Broadcast ||
@@ -7248,10 +7246,11 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
   } else
     MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
-          RdxDesc.getRecurrenceKind())) {
+  RecurKind Kind = EpiRedHeaderPhi->getRecurrenceKind();
+  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind)) {
     Value *StartV = EpiRedResult->getOperand(1)->getLiveInIRValue();
     (void)StartV;
+
     auto *Cmp = cast<ICmpInst>(MainResumeValue);
     assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
            "AnyOf expected to start with ICMP_NE");
@@ -7259,8 +7258,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
            "AnyOf expected to start by comparing main resume value to original "
            "start value");
     MainResumeValue = Cmp->getOperand(0);
-  } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-                 RdxDesc.getRecurrenceKind())) {
+  } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind)) {
     Value *StartV = getStartValueFromReductionResult(EpiRedResult);
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
@@ -9037,8 +9035,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (!PhiR || !PhiR->isInLoop() || (MinVF.isScalar() && !PhiR->isOrdered()))
       continue;
 
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    RecurKind Kind = RdxDesc.getRecurrenceKind();
+    RecurKind Kind = PhiR->getRecurrenceKind();
     assert(
         !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
@@ -9144,6 +9141,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(CurrentLinkI->getParent()))
         CondOp = RecipeBuilder.getBlockInMask(CurrentLink->getParent());
 
+      const RecurrenceDescriptor &RdxDesc = Legal->getReductionVars().lookup(
+          cast<PHINode>(PhiR->getUnderlyingInstr()));
       // Non-FP RdxDescs will have all fast math flags set, so clear them.
       FastMathFlags FMFs = isa<FPMathOperator>(CurrentLinkI)
                                ? RdxDesc.getFastMathFlags()
@@ -9174,7 +9173,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (!PhiR)
       continue;
 
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+    const RecurrenceDescriptor &RdxDesc = Legal->getReductionVars().lookup(
+        cast<PHINode>(PhiR->getUnderlyingInstr()));
     Type *PhiTy = PhiR->getUnderlyingValue()->getType();
     // If tail is folded by masking, introduce selects between the phi
     // and the users outside the vector region of each reduction, at the
@@ -9811,14 +9811,9 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
           }));
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
-      const RecurrenceDescriptor &RdxDesc =
-          ReductionPhi->getRecurrenceDescriptor();
-      RecurKind RK = RdxDesc.getRecurrenceKind();
+      RecurKind RK = ReductionPhi->getRecurrenceKind();
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
         Value *StartV = RdxResult->getOperand(1)->getLiveInIRValue();
-        assert(RdxDesc.getRecurrenceStartValue() == StartV &&
-               "start value from ComputeAnyOfResult must match");
-
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
         // to the start value.
@@ -9827,9 +9822,6 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
       } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
         Value *StartV = getStartValueFromReductionResult(RdxResult);
-        assert(RdxDesc.getRecurrenceStartValue() == StartV &&
-               "start value from ComputeFindLastIVResult must match");
-
         ToFrozen[StartV] = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
             EPI.MainLoopIterationCountCheck);
 
