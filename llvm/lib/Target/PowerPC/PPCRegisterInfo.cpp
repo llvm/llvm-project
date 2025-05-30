@@ -1295,8 +1295,8 @@ void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
-  bool IsKilled = MI.getOperand(0).isKill();
   Register SrcReg = MI.getOperand(0).getReg();
+  bool IsKilled = MI.getOperand(0).isKill();
 
   bool IsPrimed = PPC::ACCRCRegClass.contains(SrcReg);
   Register Reg =
