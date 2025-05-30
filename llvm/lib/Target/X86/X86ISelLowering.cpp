@@ -2574,22 +2574,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::x86amx, &X86::TILERegClass);
   }
 
-  // Handle 512-bit vector CTSELECT without AVX512 by setting them to Expand
-  // This allows type legalization to split them into smaller vectors
-  for (auto VT : {MVT::v64i8, MVT::v32i16, MVT::v16i32, MVT::v8i64, MVT::v32f16,
-                  MVT::v16f32, MVT::v8f64}) {
-    setOperationAction(ISD::CTSELECT, VT, Expand);
-  }
-
-  // Handle 256-bit vector CTSELECT without AVX by setting them to Expand
-  // This allows type legalization to split them into 128-bit vectors
-  if (!Subtarget.hasAVX()) {
-    for (auto VT : {MVT::v4f64, MVT::v4i64, MVT::v8i32, MVT::v16i16,
-                    MVT::v16f16, MVT::v32i8, MVT::v8f32}) {
-      setOperationAction(ISD::CTSELECT, VT, Expand);
-    }
-  }
-
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
@@ -24975,18 +24959,27 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
 
     unsigned VectorWidth = VT.getSizeInBits();
     MVT EltVT = VT.getVectorElementType();
+    // Check if we have the necessary SIMD support
+    bool HasSSE = Subtarget.hasSSE1();
+    bool HasAVX = Subtarget.hasAVX();
+    bool HasAVX512 = Subtarget.hasAVX512();
 
-    // 512-bit vectors without AVX512 are now handled by type legalization
-    // (Expand action) 256-bit vectors without AVX are now handled by type
-    // legalization (Expand action)
+    // For 512-bit vectors, we need AVX512
+    if (VectorWidth == 512 && !HasAVX512)
+      return SDValue();
 
-    if (VectorWidth == 128 && !Subtarget.hasSSE1())
+    // For 256-bit vectors, we need at least AVX
+    if (VectorWidth == 256 && !HasAVX)
+      return SDValue();
+
+    // For 128-bit vectors, we need at least SSE
+    if (VectorWidth == 128 && !HasSSE)
       return SDValue();
 
     // Handle special cases for floating point vectors
     if (EltVT.isFloatingPoint()) {
       // For vector floating point with AVX, use VBLENDV-style operations
-      if (Subtarget.hasAVX() && (VectorWidth == 256 || VectorWidth == 128)) {
+      if (HasAVX && (VectorWidth == 256 || VectorWidth == 128)) {
         // Convert to bitwise operations using the condition
         MVT IntVT = VT.changeVectorElementTypeToInteger();
         SDValue IntOp1 = DAG.getBitcast(IntVT, TrueOp);
@@ -25027,7 +25020,13 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
       CC = Cond.getOperand(0);
       SDValue Cmp = Cond.getOperand(1);
 
-      if ((isX86LogicalCmp(Cmp)) || Cmp.getOpcode() == X86ISD::BT) {
+      bool IllegalFPCMov = false;
+      if (VT.isFloatingPoint() && !VT.isVector() &&
+          !isScalarFPTypeInSSEReg(VT) && Subtarget.canUseCMOV())
+        IllegalFPCMov = !hasFPCMov(cast<ConstantSDNode>(CC)->getSExtValue());
+
+      if ((isX86LogicalCmp(Cmp) && !IllegalFPCMov) ||
+          Cmp.getOpcode() == X86ISD::BT) {
         Cond = Cmp;
         AddTest = false;
       }
@@ -25076,9 +25075,9 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
     if (T1.getValueType() == T2.getValueType() &&
         T1.getOpcode() != ISD::CopyFromReg &&
         T2.getOpcode() != ISD::CopyFromReg) {
-      SDValue CtSelect = DAG.getNode(X86ISD::CTSELECT, DL, T1.getValueType(),
-                                     T2, T1, CC, ProcessedCond);
-      return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), CtSelect);
+      SDValue Cmov = DAG.getNode(X86ISD::CTSELECT, DL, T1.getValueType(), T2,
+                                 T1, CC, ProcessedCond);
+      return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Cmov);
     }
   }
 
@@ -25089,8 +25088,8 @@ SDValue X86TargetLowering::LowerCTSELECT(SDValue Op, SelectionDAG &DAG) const {
     TrueOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, TrueOp);
     FalseOp = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, FalseOp);
     SDValue Ops[] = {FalseOp, TrueOp, CC, ProcessedCond};
-    SDValue CtSelect = DAG.getNode(X86ISD::CTSELECT, DL, MVT::i32, Ops);
-    return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), CtSelect);
+    SDValue Cmov = DAG.getNode(X86ISD::CTSELECT, DL, MVT::i32, Ops);
+    return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Cmov);
   }
 
   if (isScalarFPTypeInSSEReg(VT)) {
