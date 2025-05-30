@@ -1229,19 +1229,23 @@ def Arith_ScalingExtFOp
   let summary =
       "cast from floating-point to larger floating-point using provided scales";
   let description = [{
-    Implements micro-scaling floating point ExtF op. It expects both scales and input operand to be of same shape. 
-    Scale operand is expected to be of type f8E8M0. But that can be relaxed in future.  
-    Scale is usually calculated per block.  
-    Let's say originally input is shape <dim1 x dim2 x dim3 .. x dimN> then, given blockSize it can be reshaped to <dim1 x dim2 x ... (dimN/blockSize) x blockSize>. 
-    Scales will be calculated on the block axis. Therefore scale will be of shape <dim1 x dim2 x dim3 ... (dimN/blockSize) x 1>. 
-    Before calling into `arith.scaling_extf`, scales must be broadcasted appropariately to make it as same shape as input making `arith.scaling_extf` an elemenwise op.  
-    In above example. scales should be broadcasted to shape of <dim1 x dim2 x dim3 x ... (dimN/blockSize) x blockSize>.
+    This operations upcasts quantized floating point value using provided scales values. 
+    It expects both scales and input operand to be of same shape and therefore operation is an elementwise operation. 
+    Scales are usually calculated per block following OCP MXFP spec as described in  https://arxiv.org/abs/2310.10537.
+    If Scales are calculated per block where blockSize != 1 then, Scales may require broadcasting to make this operation elementwise. 
+    For example, let's say input is of shape <dim1 x dim2 x ... dimN> then given blockSize != 1 and assuming quantization happens on last axis, 
+    then input can be reshaped to `<dim1 x dim2 x ... (dimN/blockSize) x blockSize>`. Scales will be calculated per block on last axis. Therefore 
+    scales will be of shape `<dim1 x dim2 x .. (dimN/blockSize) x 1>`.
+    Scales could also be of some other shape as long as it is broadcast compatible with input e.g. <1x1x...(dimN/blockSize)x1>. 
+    In this example, before calling into arith.scaling_extf, scales must be broadcasted to <dim1 x dim2 x dim3 ... (dimN/blockSize) x blockSize>. 
+    Note that there could be multiple quantization axes. 
+    Internally, `arith.scaling_extf` would do following:
     ```
     resultTy = get_type(result) 
     scaleTy  = get_type(scale)
     inputTy = get_type(input)
+    assert(scaleTy.shape() == inputTy.shape() == resultTy.shape())
     scale.exponent = arith.truncf(scale) : scaleTy to f8E8M0
-    scale.bcast = broadcast_to_same_shape_as(result)
     scale.extf = arith.extf(sale.bcast) : f8E8M0 to resultTy
     input.extf = arith.extf(input) : inputTy to resultTy
     result = arith.mulf(scale.extf, input.extf)
@@ -1335,26 +1339,31 @@ def Arith_ScalingTruncFOp
   let summary =
       "cast from floating-point to narrower floating-point with scales";
   let description = [{
-    This operation implements micro-scaling (OCP MXFP) quantization of input using provided scale values.
-    This quantization usually happens over a block of values. All values in that block share same scale value for quantization purposes. 
-    Therefore original input of shape `<dim1 x dim2 ... dimN>` can be thought of as of shape `<dim1 x dim2 x ... (dimN / blockSize) x blockSize>`, 
-    assuming quantization axis is the last axis. 
-    Original scales values therefore would be of shape `<dim1 x dim2 x ... x dimN-1 x (dimN/blockSize)>`. 
-    `arith.scaling_truncf` operation is an elementwise operation. Therefore, before calling into `arith.scaling_truncf`, if `blockSize != 1` then 
-    Scales must be broadcast appropriately to ensure they are of the same shape as the input operand.
-    Internally arith.scaling_truncf does the following:
+    This operation quantizes input using provided scales value. 
+    It expects both scales and input operand to be of same shape and therefore operation is an elementwise operation. 
+    Scales are usually calculated per block following OCP MXFP spec as described in  https://arxiv.org/abs/2310.10537.
+    If Scales are calculated per block where blockSize != 1 then, Scales may require broadcasting to make this operation elementwise. 
+    For example, let's say input is of shape <dim1 x dim2 x ... dimN> then given blockSize != 1 and assuming quantization happens on last axis, 
+    then input can be reshaped to `<dim1 x dim2 x ... (dimN/blockSize) x blockSize>`. Scales will be calculated per block on last axis. Therefore 
+    scales will be of shape `<dim1 x dim2 x .. (dimN/blockSize) x 1>`.
+    Scales could also be of some other shape as long as it is broadcast compatible with input e.g. <1x1x...(dimN/blockSize)x1>. 
+    In this example, before calling into arith.scaling_truncf, scales must be broadcasted to <dim1 x dim2 x dim3 ... (dimN/blockSize) x blockSize>. 
+    Note that there could be multiple quantization axes. 
+    Internally, `arith.scaling_truncf` would do following:
     ```
     scaleETy = get_type(scale)
     inputETy = get_type(input)
     resultETy = get_type(result)
-    scale.bcast = broadcast_to_same_shape_as(input)
+    // prepare Scale values with normalization and clamping
     scale.exponent = arith.truncf(scale.bcst) : scaleETy to f8E8M0
     scale.extf = arith.extf(scale.exponent)  : f8E8M0 to inputETy
-    result = arith.divf(input, scale.extf)
+    scale.normalize = arith.divf(scale.extf, emax)  // emax is calculated as exponent of the largest normal value in quantized type. 
+    scale.clamped = clamp(scale.normalize) // clamp underflows
+    input.flused = flush_denorms(input)
+    result = arith.divf(input.flushed, scale.clamped)
     result.cast = arith.truncf(result, resultETy)
     ```
-    OCP MXFP spec flushes denorm input value before quantization. NaNs are propagated. 
-
+    Flushing of denorms in input and scale normalization with emax is added as per the OCP MXFP spec. 
   }];
   let hasVerifier = 1;
   let assemblyFormat =
