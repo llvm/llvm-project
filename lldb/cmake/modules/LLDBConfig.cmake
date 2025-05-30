@@ -52,7 +52,7 @@ macro(add_optional_dependency variable description package found)
 endmacro()
 
 set(LLDB_LIBXML2_VERSION "2.8" CACHE STRING
-  "Sepcify the version of libxml 2 to use with LLDB. This is only meant to be overridden for local
+  "Specify the version of libxml 2 to use with LLDB. This is only meant to be overridden for local
   static builds of libxml 2. Use at your own risk.")
 mark_as_advanced(LLDB_LIBXML2_VERSION)
 
