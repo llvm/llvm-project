@@ -1352,7 +1352,12 @@ static StringRef getIdentStringFromSourceLocation(CodeGenFunction &CGF,
   llvm::raw_svector_ostream OS(Buffer);
   // Build debug location
   PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-  OS << ";" << PLoc.getFilename() << ";";
+  OS << ";";
+  if (auto *DbgInfo = CGF.getDebugInfo())
+    OS << DbgInfo->remapDIPath(PLoc.getFilename());
+  else
+    OS << PLoc.getFilename();
+  OS << ";";
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CGF.CurFuncDecl))
     OS << FD->getQualifiedNameAsString();
   OS << ";" << PLoc.getLine() << ";" << PLoc.getColumn() << ";;";
@@ -1370,10 +1375,14 @@ llvm::Value *CGOpenMPRuntime::emitUpdateLocation(CodeGenFunction &CGF,
     SrcLocStr = OMPBuilder.getOrCreateDefaultSrcLocStr(SrcLocStrSize);
   } else {
     std::string FunctionName;
+    std::string FileName;
     if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CGF.CurFuncDecl))
       FunctionName = FD->getQualifiedNameAsString();
     PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-    const char *FileName = PLoc.getFilename();
+    if (auto *DbgInfo = CGF.getDebugInfo())
+      FileName = DbgInfo->remapDIPath(PLoc.getFilename());
+    else
+      FileName = PLoc.getFilename();
     unsigned Line = PLoc.getLine();
     unsigned Column = PLoc.getColumn();
     SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(FunctionName, FileName, Line,
@@ -8840,10 +8849,14 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
     ExprName = MapExprs.getMapDecl()->getNameAsString();
   }
 
+  std::string FileName;
   PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-  return OMPBuilder.getOrCreateSrcLocStr(PLoc.getFilename(), ExprName,
-                                         PLoc.getLine(), PLoc.getColumn(),
-                                         SrcLocStrSize);
+  if (auto *DbgInfo = CGF.getDebugInfo())
+    FileName = DbgInfo->remapDIPath(PLoc.getFilename());
+  else
+    FileName = PLoc.getFilename();
+  return OMPBuilder.getOrCreateSrcLocStr(FileName, ExprName, PLoc.getLine(),
+                                         PLoc.getColumn(), SrcLocStrSize);
 }
 /// Emit the arrays used to pass the captures and map information to the
 /// offloading runtime library. If there is no map or capture information,
