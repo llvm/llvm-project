@@ -4898,6 +4898,9 @@ void CGOpenMPRuntime::emitSingleReductionCombiner(CodeGenFunction &CGF,
   }
 }
 
+static std::string generateUniqueName(CodeGenModule &CGM,
+                                      llvm::StringRef Prefix, const Expr *Ref);
+
 void CGOpenMPRuntime::emitPrivateReduction(
     CodeGenFunction &CGF, SourceLocation Loc, const Expr *Privates,
     const Expr *LHSExprs, const Expr *RHSExprs, const Expr *ReductionOps) {
@@ -4929,7 +4932,8 @@ void CGOpenMPRuntime::emitPrivateReduction(
   const OMPDeclareReductionDecl *UDR = getReductionInit(ReductionOps);
   std::string ReductionVarNameStr;
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Privates->IgnoreParenCasts()))
-    ReductionVarNameStr = DRE->getDecl()->getNameAsString();
+    ReductionVarNameStr =
+        generateUniqueName(CGM, DRE->getDecl()->getNameAsString(), Privates);
   else
     ReductionVarNameStr = "unnamed_priv_var";
 
@@ -5460,16 +5464,10 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
 
   CGF.EmitBranch(DefaultBB);
   CGF.EmitBlock(DefaultBB, /*IsFinished=*/true);
-  assert(!LHSExprs.empty() && "PrivateVarReduction: LHSExprs is empty");
-  assert(!Privates.empty() && "PrivateVarReduction: Privates is empty");
-  assert(!ReductionOps.empty() && "PrivateVarReduction: ReductionOps is empty");
-  assert(LHSExprs.size() == Privates.size() &&
+  assert(OrgLHSExprs.size() == OrgPrivates.size() &&
          "PrivateVarReduction: Privates size mismatch");
-  assert(LHSExprs.size() == ReductionOps.size() &&
+  assert(OrgLHSExprs.size() == OrgReductionOps.size() &&
          "PrivateVarReduction: ReductionOps size mismatch");
-  assert(LHSExprs.size() == Options.IsPrivateVarReduction.size() &&
-         "PrivateVarReduction: IsPrivateVarReduction size mismatch");
-
   for (unsigned I : llvm::seq<unsigned>(
            std::min(OrgReductionOps.size(), OrgLHSExprs.size()))) {
     if (Options.IsPrivateVarReduction[I])
