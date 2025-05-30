@@ -518,35 +518,41 @@ public:
 
   /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {
-    return getProfileInstr() == ProfileClangInstr;
+    return getProfileInstr() ==
+           llvm::driver::ProfileInstrKind::ProfileClangInstr;
   }
 
   /// Check if IR level profile instrumentation is on.
   bool hasProfileIRInstr() const {
-    return getProfileInstr() == ProfileIRInstr;
+    return getProfileInstr() == llvm::driver::ProfileInstrKind::ProfileIRInstr;
   }
 
   /// Check if CS IR level profile instrumentation is on.
   bool hasProfileCSIRInstr() const {
-    return getProfileInstr() == ProfileCSIRInstr;
+    return getProfileInstr() ==
+           llvm::driver::ProfileInstrKind::ProfileCSIRInstr;
   }
 
   /// Check if any form of instrumentation is on.
-  bool hasProfileInstr() const { return getProfileInstr() != ProfileNone; }
+  bool hasProfileInstr() const {
+    return getProfileInstr() != llvm::driver::ProfileInstrKind::ProfileNone;
+  }
 
   /// Check if Clang profile use is on.
   bool hasProfileClangUse() const {
-    return getProfileUse() == ProfileClangInstr;
+    return getProfileUse() == llvm::driver::ProfileInstrKind::ProfileClangInstr;
   }
 
   /// Check if IR level profile use is on.
   bool hasProfileIRUse() const {
-    return getProfileUse() == ProfileIRInstr ||
-           getProfileUse() == ProfileCSIRInstr;
+    return getProfileUse() == llvm::driver::ProfileInstrKind::ProfileIRInstr ||
+           getProfileUse() == llvm::driver::ProfileInstrKind::ProfileCSIRInstr;
   }
 
   /// Check if CSIR profile use is on.
-  bool hasProfileCSIRUse() const { return getProfileUse() == ProfileCSIRInstr; }
+  bool hasProfileCSIRUse() const {
+    return getProfileUse() == llvm::driver::ProfileInstrKind::ProfileCSIRInstr;
+  }
 
   /// Check if type and variable info should be emitted.
   bool hasReducedDebugInfo() const {
