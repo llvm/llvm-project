@@ -106,7 +106,7 @@ static void ParseAndSetPath(const char *pattern, char *dest,
                             const uptr dest_size) {
   CHECK(pattern);
   CHECK(dest);
-  CHECK_GT(dest_size, 1);
+  CHECK_GE(dest_size, 1);
   dest[0] = '\0';
   uptr next_substr_start_idx = 0;
   for (uptr i = 0; i < internal_strlen(pattern) - 1; i++) {
