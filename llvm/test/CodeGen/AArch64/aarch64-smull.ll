@@ -199,7 +199,6 @@ define <4 x i32> @smull_zext_v4i16_v4i32(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    fmov w9, s1
 ; CHECK-GI-NEXT:    fmov w10, s2
 ; CHECK-GI-NEXT:    fmov w11, s3
-; CHECK-GI-NEXT:    ldr d2, [x1]
 ; CHECK-GI-NEXT:    uxtb w9, w9
 ; CHECK-GI-NEXT:    uxtb w10, w10
 ; CHECK-GI-NEXT:    uxtb w11, w11
@@ -208,9 +207,9 @@ define <4 x i32> @smull_zext_v4i16_v4i32(ptr %A, ptr %B) nounwind {
 ; CHECK-GI-NEXT:    mov v1.h[1], w11
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    sshll v1.4s, v2.4h, #0
-; CHECK-GI-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    smull v0.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    ret
   %load.A = load <4 x i8>, ptr %A
   %load.B = load <4 x i16>, ptr %B
