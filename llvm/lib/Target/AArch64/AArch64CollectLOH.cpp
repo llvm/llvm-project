@@ -192,6 +192,7 @@ static bool isCandidateStore(const MachineInstr &MI, const MachineOperand &MO) {
   switch (MI.getOpcode()) {
   default:
     return false;
+  // STR
   case AArch64::STRBBui:
   case AArch64::STRHHui:
   case AArch64::STRBui:
@@ -201,12 +202,37 @@ static bool isCandidateStore(const MachineInstr &MI, const MachineOperand &MO) {
   case AArch64::STRSui:
   case AArch64::STRDui:
   case AArch64::STRQui:
+  // STUR
+  case AArch64::STURBi:
+  case AArch64::STURBBi:
+  case AArch64::STURHi:
+  case AArch64::STURHHi:
+  case AArch64::STURWi:
+  case AArch64::STURXi:
+  case AArch64::STURSi:
+  case AArch64::STURDi:
+  case AArch64::STURQi:
     // We can only optimize the index operand.
     // In case we have str xA, [xA, #imm], this is two different uses
     // of xA and we cannot fold, otherwise the xA stored may be wrong,
     // even if #imm == 0.
     return MO.getOperandNo() == 1 &&
            MI.getOperand(0).getReg() != MI.getOperand(1).getReg();
+  // STP
+  case AArch64::STPWi:
+  case AArch64::STPXi:
+  case AArch64::STPSi:
+  case AArch64::STPDi:
+  case AArch64::STPQi:
+  // STNP
+  case AArch64::STNPWi:
+  case AArch64::STNPXi:
+  case AArch64::STNPSi:
+  case AArch64::STNPDi:
+  case AArch64::STNPQi:
+    return MO.getOperandNo() == 2 &&
+           MI.getOperand(0).getReg() != MI.getOperand(2).getReg() &&
+           MI.getOperand(1).getReg() != MI.getOperand(2).getReg();
   }
 }
 
@@ -216,6 +242,7 @@ static bool isCandidateLoad(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     return false;
+  // LDR
   case AArch64::LDRSBWui:
   case AArch64::LDRSBXui:
   case AArch64::LDRSHWui:
@@ -228,11 +255,40 @@ static bool isCandidateLoad(const MachineInstr &MI) {
   case AArch64::LDRSui:
   case AArch64::LDRDui:
   case AArch64::LDRQui:
+  // LDUR
+  case AArch64::LDURBBi:
+  case AArch64::LDURBi:
+  case AArch64::LDURDi:
+  case AArch64::LDURHHi:
+  case AArch64::LDURHi:
+  case AArch64::LDURQi:
+  case AArch64::LDURSBWi:
+  case AArch64::LDURSBXi:
+  case AArch64::LDURSHWi:
+  case AArch64::LDURSHXi:
+  case AArch64::LDURSWi:
+  case AArch64::LDURSi:
+  case AArch64::LDURWi:
+  case AArch64::LDURXi:
     return !(MI.getOperand(2).getTargetFlags() & AArch64II::MO_GOT);
+  // LDP
+  case AArch64::LDPSi:
+  case AArch64::LDPSWi:
+  case AArch64::LDPDi:
+  case AArch64::LDPQi:
+  case AArch64::LDPWi:
+  case AArch64::LDPXi:
+  // LDNP
+  case AArch64::LDNPSi:
+  case AArch64::LDNPDi:
+  case AArch64::LDNPQi:
+  case AArch64::LDNPWi:
+  case AArch64::LDNPXi:
+    return !(MI.getOperand(3).getTargetFlags() & AArch64II::MO_GOT);
   }
 }
 
-/// Check whether the given instruction can load a litteral.
+/// Check whether the given instruction can load a literal.
 static bool supportLoadFromLiteral(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
