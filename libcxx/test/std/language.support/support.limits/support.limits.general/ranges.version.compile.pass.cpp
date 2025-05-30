@@ -64,13 +64,13 @@
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
 
-# ifdef __cpp_lib_ranges_stride
-#   error "__cpp_lib_ranges_stride should not be defined before c++23"
-# endif
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
+#  endif
 
-# ifdef __cpp_lib_ranges_to_container
-#   error "__cpp_lib_ranges_to_container should not be defined before c++23"
-# endif
+#  ifdef __cpp_lib_ranges_to_container
+#    error "__cpp_lib_ranges_to_container should not be defined before c++23"
+#  endif
 
 #  ifdef __cpp_lib_ranges_zip
 #    error "__cpp_lib_ranges_zip should not be defined before c++23"
@@ -122,13 +122,13 @@
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
 
-# ifdef __cpp_lib_ranges_stride
-#   error "__cpp_lib_ranges_stride should not be defined before c++23"
-# endif
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
+#  endif
 
-# ifdef __cpp_lib_ranges_to_container
-#   error "__cpp_lib_ranges_to_container should not be defined before c++23"
-# endif
+#  ifdef __cpp_lib_ranges_to_container
+#    error "__cpp_lib_ranges_to_container should not be defined before c++23"
+#  endif
 
 #  ifdef __cpp_lib_ranges_zip
 #    error "__cpp_lib_ranges_zip should not be defined before c++23"
@@ -180,13 +180,13 @@
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
 
-# ifdef __cpp_lib_ranges_stride
-#   error "__cpp_lib_ranges_stride should not be defined before c++23"
-# endif
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
+#  endif
 
-# ifdef __cpp_lib_ranges_to_container
-#   error "__cpp_lib_ranges_to_container should not be defined before c++23"
-# endif
+#  ifdef __cpp_lib_ranges_to_container
+#    error "__cpp_lib_ranges_to_container should not be defined before c++23"
+#  endif
 
 #  ifdef __cpp_lib_ranges_zip
 #    error "__cpp_lib_ranges_zip should not be defined before c++23"
@@ -241,13 +241,13 @@
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
 
-# ifdef __cpp_lib_ranges_stride
-#   error "__cpp_lib_ranges_stride should not be defined before c++23"
-# endif
+#  ifdef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should not be defined before c++23"
+#  endif
 
-# ifdef __cpp_lib_ranges_to_container
-#   error "__cpp_lib_ranges_to_container should not be defined before c++23"
-# endif
+#  ifdef __cpp_lib_ranges_to_container
+#    error "__cpp_lib_ranges_to_container should not be defined before c++23"
+#  endif
 
 #  ifdef __cpp_lib_ranges_zip
 #    error "__cpp_lib_ranges_zip should not be defined before c++23"
@@ -341,19 +341,19 @@
 #    endif
 #  endif
 
-# ifndef __cpp_lib_ranges_stride
-#   error "__cpp_lib_ranges_stride should be defined in c++23"
-# endif
-# if __cpp_lib_ranges_stride != 202207L
-#   error "__cpp_lib_ranges_stride should have the value 202207L in c++23"
-# endif
+#  ifndef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_stride != 202207L
+#    error "__cpp_lib_ranges_stride should have the value 202207L in c++23"
+#  endif
 
-# ifndef __cpp_lib_ranges_to_container
-#   error "__cpp_lib_ranges_to_container should be defined in c++23"
-# endif
-# if __cpp_lib_ranges_to_container != 202202L
-#   error "__cpp_lib_ranges_to_container should have the value 202202L in c++23"
-# endif
+#  ifndef __cpp_lib_ranges_to_container
+#    error "__cpp_lib_ranges_to_container should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_to_container != 202202L
+#    error "__cpp_lib_ranges_to_container should have the value 202202L in c++23"
+#  endif
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_zip
@@ -477,19 +477,19 @@
 #    endif
 #  endif
 
-# ifndef __cpp_lib_ranges_stride
-#   error "__cpp_lib_ranges_stride should be defined in c++26"
-# endif
-# if __cpp_lib_ranges_stride != 202207L
-#   error "__cpp_lib_ranges_stride should have the value 202207L in c++26"
-# endif
+#  ifndef __cpp_lib_ranges_stride
+#    error "__cpp_lib_ranges_stride should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_stride != 202207L
+#    error "__cpp_lib_ranges_stride should have the value 202207L in c++26"
+#  endif
 
-# ifndef __cpp_lib_ranges_to_container
-#   error "__cpp_lib_ranges_to_container should be defined in c++26"
-# endif
-# if __cpp_lib_ranges_to_container != 202202L
-#   error "__cpp_lib_ranges_to_container should have the value 202202L in c++26"
-# endif
+#  ifndef __cpp_lib_ranges_to_container
+#    error "__cpp_lib_ranges_to_container should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_to_container != 202202L
+#    error "__cpp_lib_ranges_to_container should have the value 202202L in c++26"
+#  endif
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_zip
