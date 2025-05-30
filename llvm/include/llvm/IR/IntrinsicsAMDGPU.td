@@ -15,6 +15,7 @@ def global_ptr_ty : LLVMQualPointerType<1>;
 def local_ptr_ty : LLVMQualPointerType<3>;
 #ifdef LLPC_BUILD_NPI
 def dds_ptr_ty : LLVMQualPointerType<11>;
+def laneshared_ptr_ty : LLVMQualPointerType<10>;
 #endif /* LLPC_BUILD_NPI */
 
 // The amdgpu-no-* attributes (ex amdgpu-no-workitem-id-z) typically inferred
@@ -4312,6 +4313,11 @@ def int_amdgcn_query_shared_rank : DefaultAttrsIntrinsic<
   [dds_ptr_ty],
   [IntrNoMem, ReadNone<ArgIndex<0>>, IntrSpeculatable]>;
 
+def int_amdgcn_map_shared_rank : DefaultAttrsIntrinsic<
+  [dds_ptr_ty],
+  [local_ptr_ty, llvm_i32_ty],
+  [IntrNoMem, ReadNone<ArgIndex<0>>, IntrSpeculatable]>;
+
 #endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
@@ -5282,6 +5288,28 @@ class AMDGPUClusterLoad<LLVMType ptr_ty>:
 def int_amdgcn_cluster_load_b32         : AMDGPUClusterLoad<global_ptr_ty>;
 def int_amdgcn_cluster_load_b64         : AMDGPUClusterLoad<global_ptr_ty>;
 def int_amdgcn_cluster_load_b128        : AMDGPUClusterLoad<global_ptr_ty>;
+
+class AMDGPULoadMCast:
+  Intrinsic<
+    [],
+    [laneshared_ptr_ty, // laneshared destination pointer
+                        // The argument must be uniform; otherwise, the result is undefined.
+     llvm_anyptr_ty,    // Global, LDS, or DDS pointer to load from
+     llvm_i32_ty,       // gfx12+ cachepolicy (only applies to load argument):
+                        //   bits [0-2] = th
+                        //   bits [3-4] = scope
+     llvm_i32_ty],      // workgroup and SIMD broadcast mask (in M0)
+                        //   bits [0-15] = workgroup select
+                        //   bits [16] = Early Timeout
+                        //   bits [18-19] = SIMD select
+    [IntrArgMemOnly, IntrConvergent, WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+     NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<2>>],
+    "", [SDNPMemOperand]
+  >;
+
+def int_amdgcn_load_mcast_b32         : AMDGPULoadMCast;
+def int_amdgcn_load_mcast_b64         : AMDGPULoadMCast;
+def int_amdgcn_load_mcast_b128        : AMDGPULoadMCast;
 
 class AMDGPULoadMonitor<LLVMType ptr_ty>:
   Intrinsic<

@@ -529,9 +529,15 @@ static bool isSupportedMemset(MemSetInst *I, const Value &V, Type *ValueType,
 
 bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
                         DenseSet<Value *> &Pointers) {
+
+  // If multicast is used, and we cannot promote the used variable to VGPRs, it
+  // is a fatal error.
+  bool RejectIsError = false;
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
     LLVM_DEBUG(dbgs() << "  Cannot promote to vgpr: " << Msg << "\n"
                       << "    " << *Inst << "\n");
+    if (RejectIsError)
+      report_fatal_error("Cannot promote multicast allocation to vgpr: " + Msg);
     return false;
   };
 
@@ -631,6 +637,12 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
 
     if (auto *Intr = dyn_cast<IntrinsicInst>(Inst)) {
       if (Intr->getIntrinsicID() == Intrinsic::objectsize) {
+        continue;
+      }
+      if (Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b32 ||
+          Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b64 ||
+          Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b128) {
+        RejectIsError = true;
         continue;
       }
     }

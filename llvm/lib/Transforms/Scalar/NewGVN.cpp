@@ -1540,12 +1540,9 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
 
   // All of the below are only true if the loaded pointer is produced
   // by the dependent instruction.
-  if (LoadPtr != lookupOperandLeader(DepInst) &&
-#if LLPC_BUILD_NPI
-     (!DepInst->getType()->isPointerTy() || !AA->isMustAlias(LoadPtr, DepInst)))
-#else /* LLPC_BUILD_NPI */
-      (!DepInst->getType()->isPointerTy() || !AA->isMustAlias(LoadPtr, DepInst)))
-#endif /* LLPC_BUILD_NPI */
+  if (!DepInst->getType()->isPointerTy() ||
+      (LoadPtr != lookupOperandLeader(DepInst) &&
+       !AA->isMustAlias(LoadPtr, DepInst)))
     return nullptr;
   // If this load really doesn't depend on anything, then we must be loading an
   // undef value.  This can happen when loading for a fresh allocation with no

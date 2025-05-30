@@ -290,7 +290,7 @@ foreach vt = Reg32Types.types in {
 }
 
 #ifdef LLPC_BUILD_NPI
-let HasOpSel = 1, EmitDstSel = 0, HasOMod = 0 in {
+let HasOpSel = 1, EmitDstSel = 0, HasOMod = 0, HasClamp = 0 in {
 def VOP_F32_BF16_OP_SEL : VOPProfile <[f32, bf16, untyped, untyped]>;
 }
 

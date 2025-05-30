@@ -7989,6 +7989,22 @@ bool AMDGPULegalizerInfo::legalizeSetFPEnv(MachineInstr &MI,
   return true;
 }
 
+#if LLPC_BUILD_NPI
+bool AMDGPULegalizerInfo::legalizeMapSharedRank(MachineInstr &MI,
+                                                MachineRegisterInfo &MRI,
+                                                MachineIRBuilder &B) const {
+  MachineOperand Pointer = MI.getOperand(2);
+  MachineOperand Rank = MI.getOperand(3);
+  Register PointerAsInt = B.buildPtrToInt(S32, Pointer).getReg(0);
+  Register DstAsInt = B.buildOr(S32, PointerAsInt,
+                                B.buildShl(S32, Rank, B.buildConstant(S32, 24)))
+                          .getReg(0);
+  B.buildIntToPtr(MI.getOperand(0), DstAsInt);
+  MI.eraseFromParent();
+  return true;
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -8446,6 +8462,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+#if LLPC_BUILD_NPI
+  case Intrinsic::amdgcn_map_shared_rank:
+    return legalizeMapSharedRank(MI, MRI, B);
+#endif /* LLPC_BUILD_NPI */
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

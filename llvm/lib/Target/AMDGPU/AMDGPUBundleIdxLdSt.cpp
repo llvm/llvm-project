@@ -605,6 +605,18 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   if (MI->getOpcode() == AMDGPU::V_MOV_B64_PSEUDO && !ST->hasMovB64())
     return false;
 
+  // If multicast is used, and we cannot bundle its destination laneshared
+  // access, it is a fatal error, because we might clobber private vgprs in
+  // other SIMDs.
+  bool RejectIsError = SIInstrInfo::isMulticastToVGPRs(*MI);
+  const auto rejectUser = [&](MachineInstr *Inst) {
+    LLVM_DEBUG(dbgs() << "  Cannot bundle operand in :" << "\n"
+                      << "    " << *Inst << "\n");
+    if (RejectIsError)
+      report_fatal_error("Failed to bundle multicast dest");
+    return false;
+  };
+
   MachineFunction *MF = MI->getParent()->getParent();
   MachineBasicBlock *MBB = MI->getParent();
   SmallVector<BundleItem, 4> Worklist;
@@ -627,12 +639,14 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     MachineInstr *StoreMI = UseOfMI->getParent();
     if (StoreMI->getOpcode() != AMDGPU::V_STORE_IDX)
       continue;
-    // If we tried to sink it but couldn't, skip.
-    if (StoreMI->getParent() != MBB)
-      continue;
     if (STI->getNamedOperand(*StoreMI, AMDGPU::OpName::data_op)->getReg() !=
         DefReg)
       continue;
+    // If we tried to sink it but couldn't, skip.
+    if (StoreMI->getParent() != MBB) {
+      rejectUser(MI);
+      continue;
+    }
 
     if (ST->needsAlignedVGPRs() && MI->getOpcode() != AMDGPU::V_LOAD_IDX &&
         AMDGPU::getRegOperandSize(TRI, MI->getDesc(), Def.getOperandNo()) > 4) {
@@ -640,8 +654,10 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       // alignment.
       unsigned Offset =
           STI->getNamedOperand(*StoreMI, AMDGPU::OpName::offset)->getImm();
-      if (Offset & 1)
+      if (Offset & 1) {
+        rejectUser(MI);
         continue;
+      }
     }
 
     MachineOperand *IdxOp = STI->getNamedOperand(*StoreMI, AMDGPU::OpName::idx);
@@ -663,7 +679,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       for (++I; I != E; ++I) {
         if (I->mayStore() && MI->mayAlias(AA, *I, false)) {
           LLVM_DEBUG(dbgs() << " *** Conflict with "; I->print(dbgs()));
-          return false;
+          return rejectUser(MI);
         }
       }
     }
@@ -683,7 +699,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       continue;
     // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
     if (Use.isTied())
-      return false;
+      return rejectUser(MI);
     Register UseReg = Use.getReg();
     if (!UseReg.isVirtual())
       continue;

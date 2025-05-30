@@ -4105,6 +4105,15 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
+#if LLPC_BUILD_NPI
+  if (isVLdStIdx(MIa.getOpcode()) || isVLdStIdx(MIb.getOpcode())) {
+    if (isVLdStIdx(MIa.getOpcode()) && isVLdStIdx(MIb.getOpcode())) {
+      return checkInstOffsetsDoNotOverlap(MIa, MIb);
+    }
+    return true;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   if (isLDSDMA(MIa) || isLDSDMA(MIb))
     return false;
 
@@ -4152,15 +4161,6 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
     return false;
   }
 
-#if LLPC_BUILD_NPI
-  if (isVLdStIdx(MIa.getOpcode()) || isVLdStIdx(MIb.getOpcode())) {
-    if (isVLdStIdx(MIa.getOpcode()) && isVLdStIdx(MIb.getOpcode())) {
-      return checkInstOffsetsDoNotOverlap(MIa, MIb);
-    }
-    return true;
-  }
-
-#endif /* LLPC_BUILD_NPI */
   return false;
 }
 
@@ -7019,6 +7019,15 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
   SAddr->setReg(ToSGPR);
 }
 
+#if LLPC_BUILD_NPI
+void SIInstrInfo::legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI,
+                                           MachineInstr &MI) const {
+  MachineOperand &Idx = MI.getOperand(1);
+  if (Idx.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Idx.getReg())))
+    Idx.setReg(readlaneVGPRToSGPR(Idx.getReg(), MI, MRI));
+}
+
+#endif /* LLPC_BUILD_NPI */
 void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
                                          MachineBasicBlock::iterator I,
                                          const TargetRegisterClass *DstRC,
@@ -7389,6 +7398,13 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
+#if LLPC_BUILD_NPI
+  if (isVLdStIdx(MI.getOpcode())) {
+    legalizeOperandsVLdStIdx(MRI, MI);
+    return CreatedBB;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   // Legalize REG_SEQUENCE and PHI
   // The register class of the operands much be the same type as the register
   // class of the output.
@@ -7690,9 +7706,14 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
 #if LLPC_BUILD_NPI
         .add(SrcMO);
     SrcMO.ChangeToRegister(Reg, false);
+#else /* LLPC_BUILD_NPI */
+        .add(Src0);
+    Src0.ChangeToRegister(Reg, false);
+#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
+#if LLPC_BUILD_NPI
   if (MI.getOpcode() == AMDGPU::V_PERMUTE_PAIR_GENSGPR_B32) {
     const DebugLoc &DL = MI.getDebugLoc();
     Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
@@ -7716,14 +7737,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
         .addImm(AMDGPU::sub1);
 
     Src1.ChangeToRegister(Reg, false);
-#else /* LLPC_BUILD_NPI */
-        .add(Src0);
-    Src0.ChangeToRegister(Reg, false);
-#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
-#if LLPC_BUILD_NPI
   // Legalize TENSOR_LOAD_TO_LDS, TENSOR_LOAD_TO_LDS_D2, TENSOR_STORE_FROM_LDS,
   // TENSOR_STORE_FROM_LDS_D2. All their operands are scalar.
   if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||

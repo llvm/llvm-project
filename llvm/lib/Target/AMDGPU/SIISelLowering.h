@@ -305,6 +305,10 @@ private:
   // Wrap a 64-bit pointer into a v4i32 (which is how all SelectionDAG code
   // represents ptr addrspace(8)) using the flags specified in the intrinsic.
   SDValue lowerPointerAsRsrcIntrin(SDNode *Op, SelectionDAG &DAG) const;
+#if LLPC_BUILD_NPI
+
+  SDValue lowerMapSharedRank(SDNode *Op, SelectionDAG &DAG) const;
+#endif /* LLPC_BUILD_NPI */
 
   // Handle 8 bit and 16 bit buffer loads
   SDValue handleByteShortBufferLoads(SelectionDAG &DAG, EVT LoadVT, SDLoc DL,

@@ -6395,7 +6395,12 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
       return nullptr;
     Expr *Arg = ArgRes.get();
     QualType ArgType = Arg->getType();
+#if LLPC_BUILD_NPI
+    if (!ParamType->isPointerType() ||
+        ParamType->getPointeeType().hasAddressSpace() ||
+#else /* LLPC_BUILD_NPI */
     if (!ParamType->isPointerType() || ParamType.hasAddressSpace() ||
+#endif /* LLPC_BUILD_NPI */
         !ArgType->isPointerType() ||
         !ArgType->getPointeeType().hasAddressSpace() ||
         isPtrSizeAddressSpace(ArgType->getPointeeType().getAddressSpace())) {
@@ -6404,9 +6409,12 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
     }
 
     QualType PointeeType = ParamType->getPointeeType();
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
     if (PointeeType.hasAddressSpace())
       continue;
 
+#endif /* LLPC_BUILD_NPI */
     NeedsNewDecl = true;
     LangAS AS = ArgType->getPointeeType().getAddressSpace();
 

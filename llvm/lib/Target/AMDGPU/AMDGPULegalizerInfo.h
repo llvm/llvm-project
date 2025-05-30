@@ -127,6 +127,11 @@ public:
   bool legalizePointerAsRsrcIntrin(MachineInstr &MI, MachineRegisterInfo &MRI,
                                    MachineIRBuilder &B) const;
 
+#if LLPC_BUILD_NPI
+  bool legalizeMapSharedRank(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                   MachineIRBuilder &B) const;
+
+#endif /* LLPC_BUILD_NPI */
   bool legalizePreloadedArgIntrin(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B,
     AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
