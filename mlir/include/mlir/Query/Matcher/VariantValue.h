@@ -21,7 +21,7 @@
 namespace mlir::query::matcher {
 
 // All types that VariantValue can contain.
-enum class ArgKind { Matcher, String };
+enum class ArgKind { Boolean, Matcher, Signed, String };
 
 // A variant matcher object to abstract simple and complex matchers into a
 // single object type.
@@ -81,6 +81,8 @@ public:
   // Specific constructors for each supported type.
   VariantValue(const llvm::StringRef string);
   VariantValue(const VariantMatcher &matcher);
+  VariantValue(int64_t signedValue);
+  VariantValue(bool setBoolean);
 
   // String value functions.
   bool isString() const;
@@ -92,21 +94,36 @@ public:
   const VariantMatcher &getMatcher() const;
   void setMatcher(const VariantMatcher &matcher);
 
+  // Signed value functions.
+  bool isSigned() const;
+  int64_t getSigned() const;
+  void setSigned(int64_t signedValue);
+
+  // Boolean value functions.
+  bool isBoolean() const;
+  bool getBoolean() const;
+  void setBoolean(bool booleanValue);
   // String representation of the type of the value.
   std::string getTypeAsString() const;
+  explicit operator bool() const { return hasValue(); }
+  bool hasValue() const { return type != ValueType::Nothing; }
 
 private:
   void reset();
 
   // All supported value types.
   enum class ValueType {
-    Nothing,
-    String,
+    Boolean,
     Matcher,
+    Nothing,
+    Signed,
+    String,
   };
 
   // All supported value types.
   union AllValues {
+    bool Boolean;
+    int64_t Signed;
     llvm::StringRef *String;
     VariantMatcher *Matcher;
   };

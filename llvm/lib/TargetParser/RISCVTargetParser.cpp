@@ -164,6 +164,15 @@ unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
   return VTypeI;
 }
 
+unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt) {
+  assert(isValidSEW(SEW) && "Invalid SEW");
+  assert((Widen == 1 || Widen == 2 || Widen == 4) && "Invalid Widen");
+  unsigned VSEWBits = encodeSEW(SEW);
+  unsigned TWiden = Log2_32(Widen) + 1;
+  unsigned VTypeI = (VSEWBits << 3) | AltFmt << 8 | TWiden << 9;
+  return VTypeI;
+}
+
 std::pair<unsigned, bool> decodeVLMUL(VLMUL VLMul) {
   switch (VLMul) {
   default:

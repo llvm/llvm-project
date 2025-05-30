@@ -144,6 +144,10 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-Wuser-defined-warnings"),
         actions=[AddCompileFlag("-Wuser-defined-warnings")],
     ),
+    Feature(
+        name="character-conversion-warnings",
+        when=lambda cfg: hasCompileFlag(cfg, "-Wcharacter-conversion"),
+    ),
     # Tests to validate whether the compiler has a way to set the maximum number
     # of steps during constant evaluation. Since the flag differs per compiler
     # store the "valid" flag as a feature. This allows passing the proper compile

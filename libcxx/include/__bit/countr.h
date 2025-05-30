@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___BIT_COUNTR_H
 #define _LIBCPP___BIT_COUNTR_H
 
-#include <__assert>
 #include <__concepts/arithmetic.h>
 #include <__config>
 #include <__type_traits/is_unsigned.h>

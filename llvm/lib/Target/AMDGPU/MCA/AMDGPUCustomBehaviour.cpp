@@ -303,7 +303,7 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
 bool AMDGPUCustomBehaviour::isVMEM(const MCInstrDesc &MCID) {
   return MCID.TSFlags & SIInstrFlags::MUBUF ||
          MCID.TSFlags & SIInstrFlags::MTBUF ||
-         MCID.TSFlags & SIInstrFlags::MIMG;
+         MCID.TSFlags & SIInstrFlags::MIMG || MCID.TSFlags & SIInstrFlags::FLAT;
 }
 
 // taken from SIInstrInfo::hasModifiersSet()

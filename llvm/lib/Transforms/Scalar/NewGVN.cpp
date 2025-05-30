@@ -1074,10 +1074,9 @@ PHIExpression *NewGVN::createPHIExpression(ArrayRef<ValPair> PHIOperands,
     HasBackedge = HasBackedge || isBackedge(BB, PHIBlock);
     return lookupOperandLeader(P.first) != I;
   });
-  std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
-                 [&](const ValPair &P) -> Value * {
-                   return lookupOperandLeader(P.first);
-                 });
+  llvm::transform(Filtered, op_inserter(E), [&](const ValPair &P) -> Value * {
+    return lookupOperandLeader(P.first);
+  });
   return E;
 }
 
@@ -1267,14 +1266,14 @@ NewGVN::createAggregateValueExpression(Instruction *I) const {
         AggregateValueExpression(I->getNumOperands(), II->getNumIndices());
     setBasicExpressionInfo(I, E);
     E->allocateIntOperands(ExpressionAllocator);
-    std::copy(II->idx_begin(), II->idx_end(), int_op_inserter(E));
+    llvm::copy(II->indices(), int_op_inserter(E));
     return E;
   } else if (auto *EI = dyn_cast<ExtractValueInst>(I)) {
     auto *E = new (ExpressionAllocator)
         AggregateValueExpression(I->getNumOperands(), EI->getNumIndices());
     setBasicExpressionInfo(EI, E);
     E->allocateIntOperands(ExpressionAllocator);
-    std::copy(EI->idx_begin(), EI->idx_end(), int_op_inserter(E));
+    llvm::copy(EI->indices(), int_op_inserter(E));
     return E;
   }
   llvm_unreachable("Unhandled type of aggregate value operation");
@@ -1530,10 +1529,20 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
     }
   }
 
+  if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+      auto *LifetimePtr = II->getOperand(1);
+      if (LoadPtr == lookupOperandLeader(LifetimePtr) ||
+          AA->isMustAlias(LoadPtr, LifetimePtr))
+        return createConstantExpression(UndefValue::get(LoadType));
+    }
+  }
+
   // All of the below are only true if the loaded pointer is produced
   // by the dependent instruction.
-  if (LoadPtr != lookupOperandLeader(DepInst) &&
-      DepInst->getType()->isPointerTy() && !AA->isMustAlias(LoadPtr, DepInst))
+  if (!DepInst->getType()->isPointerTy() ||
+      (LoadPtr != lookupOperandLeader(DepInst) &&
+       !AA->isMustAlias(LoadPtr, DepInst)))
     return nullptr;
   // If this load really doesn't depend on anything, then we must be loading an
   // undef value.  This can happen when loading for a fresh allocation with no
@@ -1541,12 +1550,6 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   // that the result of the allocation is pointer equal to the load ptr.
   if (isa<AllocaInst>(DepInst)) {
     return createConstantExpression(UndefValue::get(LoadType));
-  }
-  // If this load occurs either right after a lifetime begin,
-  // then the loaded value is undefined.
-  else if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
-    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-      return createConstantExpression(UndefValue::get(LoadType));
   } else if (auto *InitVal =
                  getInitialValueOfAllocation(DepInst, TLI, LoadType))
       return createConstantExpression(InitVal);
@@ -2381,7 +2384,7 @@ void NewGVN::performCongruenceFinding(Instruction *I, const Expression *E) {
     EClass = TOPClass;
   }
   if (!EClass) {
-    auto lookupResult = ExpressionToClass.insert({E, nullptr});
+    auto lookupResult = ExpressionToClass.try_emplace(E);
 
     // If it's not in the value table, create a new congruence class.
     if (lookupResult.second) {
@@ -2738,7 +2741,6 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
   if (!isCycleFree(I))
     return nullptr;
 
-  SmallPtrSet<const Value *, 8> ProcessedPHIs;
   // TODO: We don't do phi translation on memory accesses because it's
   // complicated. For a load, we'd need to be able to simulate a new memoryuse,
   // which we don't have a good way of doing ATM.

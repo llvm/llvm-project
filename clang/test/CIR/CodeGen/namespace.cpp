@@ -4,10 +4,7 @@
 namespace {
   int g1 = 1;
 
-  // Note: This causes a warning about the function being undefined, but we
-  // currently have a problem with duplicate definitions when we call functions.
-  // This should be updated when that problem is fixed.
-  void f1(void);
+  void f1(void) {}
 }
 
 
@@ -46,10 +43,10 @@ int f4(void) {
 // CHECK:   cir.call @_ZN4test2f2Ev()
 // CHECK:   cir.call @_ZN4test5test22f3Ev()
 // CHECK:   %[[G1_ADDR:.*]] = cir.get_global @_ZN12_GLOBAL__N_12g1E : !cir.ptr<!s32i>
-// CHECK:   %[[G1_VAL:.*]] = cir.load %[[G1_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CHECK:   %[[G1_VAL:.*]] = cir.load{{.*}} %[[G1_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CHECK:   %[[G2_ADDR:.*]] = cir.get_global @_ZN4test2g2E : !cir.ptr<!s32i>
-// CHECK:   %[[G2_VAL:.*]] = cir.load %[[G2_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CHECK:   %[[G2_VAL:.*]] = cir.load{{.*}} %[[G2_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CHECK:   %[[SUM:.*]] = cir.binop(add, %[[G1_VAL]], %[[G2_VAL]]) nsw : !s32i
 // CHECK:   %[[G3_ADDR:.*]] = cir.get_global @_ZN4test5test22g3E : !cir.ptr<!s32i>
-// CHECK:   %[[G3_VAL:.*]] = cir.load %[[G3_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CHECK:   %[[G3_VAL:.*]] = cir.load{{.*}} %[[G3_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CHECK:   %[[SUM2:.*]] = cir.binop(add, %[[SUM]], %[[G3_VAL]]) nsw : !s32i

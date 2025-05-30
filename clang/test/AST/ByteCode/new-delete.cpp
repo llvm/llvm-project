@@ -610,7 +610,8 @@ namespace std {
     }
     constexpr void deallocate(void *p) {
       __builtin_operator_delete(p); // both-note 2{{std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}} \
-                                    // both-note {{used to delete a null pointer}}
+                                    // both-note {{used to delete a null pointer}} \
+                                    // both-note {{delete of pointer '&no_deallocate_nonalloc' that does not point to a heap-allocated object}}
     }
   };
   template<typename T, typename ...Args>
@@ -618,6 +619,10 @@ namespace std {
     new (p) T((Args&&)args...);
   }
 }
+
+constexpr int *escape = std::allocator<int>().allocate(3); // both-error {{constant expression}} \
+                                                           // both-note {{pointer to subobject of heap-allocated}} \
+                                                           // both-note {{heap allocation performed here}}
 
 /// Specialization for float, using operator new/delete.
 namespace std {
@@ -677,17 +682,16 @@ namespace OperatorNewDelete {
   }
   static_assert(zeroAlloc());
 
-  /// FIXME: This is broken in the current interpreter.
   constexpr int arrayAlloc() {
     int *F = std::allocator<int>().allocate(2);
-    F[0] = 10; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    F[0] = 10; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
     F[1] = 13;
     int Res = F[1] + F[0];
     std::allocator<int>().deallocate(F);
     return Res;
   }
-  static_assert(arrayAlloc() == 23); // ref-error {{not an integral constant expression}} \
-                                     // ref-note {{in call to}}
+  static_assert(arrayAlloc() == 23); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
 
   struct S {
     int i;
@@ -1003,6 +1007,10 @@ namespace WrongFrame {
                         // both-note {{in call to}}
 
 }
+
+constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&no_deallocate_nonalloc), 1); // both-error {{constant expression}} \
+                                                                                                             // both-note {{in call}} \
+                                                                                                             // both-note {{declared here}}
 
 #else
 /// Make sure we reject this prior to C++20

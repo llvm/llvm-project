@@ -159,8 +159,8 @@ protected:
 
 public:
   explicit PPCAsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+                         std::unique_ptr<MCStreamer> Streamer, char &ID)
+      : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "PowerPC Assembly Printer"; }
 
@@ -216,9 +216,11 @@ public:
 /// PPCLinuxAsmPrinter - PowerPC assembly printer, customized for Linux
 class PPCLinuxAsmPrinter : public PPCAsmPrinter {
 public:
+  static char ID;
+
   explicit PPCLinuxAsmPrinter(TargetMachine &TM,
                               std::unique_ptr<MCStreamer> Streamer)
-      : PPCAsmPrinter(TM, std::move(Streamer)) {}
+      : PPCAsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override {
     return "Linux PPC Assembly Printer";
@@ -262,8 +264,10 @@ private:
   uint64_t getAliasOffset(const Constant *C);
 
 public:
+  static char ID;
+
   PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : PPCAsmPrinter(TM, std::move(Streamer)) {
+      : PPCAsmPrinter(TM, std::move(Streamer), ID) {
     if (MAI->isLittleEndian())
       report_fatal_error(
           "cannot create AIX PPC Assembly Printer for a little-endian target");
@@ -2219,6 +2223,11 @@ void PPCLinuxAsmPrinter::emitFunctionBodyEnd() {
   }
 }
 
+char PPCLinuxAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(PPCLinuxAsmPrinter, "ppc-linux-asm-printer",
+                "Linux PPC Assembly Printer", false, false)
+
 void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
                                    MCSymbol *GVSym) const {
   MCSymbolAttr LinkageAttr = MCSA_Invalid;
@@ -3139,9 +3148,8 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     if (Aliasee->hasCommonLinkage()) {
       report_fatal_error("Aliases to common variables are not allowed on AIX:"
                          "\n\tAlias attribute for " +
-                             Alias.getGlobalIdentifier() +
-                             " is invalid because " + Aliasee->getName() +
-                             " is common.",
+                             Alias.getName() + " is invalid because " +
+                             Aliasee->getName() + " is common.",
                          false);
     }
 
@@ -3369,6 +3377,11 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
   }
   OutStreamer->emitXCOFFCInfoSym(".GCC.command.line", RSOS.str());
 }
+
+char PPCAIXAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(PPCAIXAsmPrinter, "ppc-aix-asm-printer",
+                "AIX PPC Assembly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmPrinter() {

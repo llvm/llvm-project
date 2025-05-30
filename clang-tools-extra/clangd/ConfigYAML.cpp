@@ -249,6 +249,10 @@ private:
       if (auto HeaderInsertion = scalarValue(N, "HeaderInsertion"))
         F.HeaderInsertion = *HeaderInsertion;
     });
+    Dict.handle("CodePatterns", [&](Node &N) {
+      if (auto CodePatterns = scalarValue(N, "CodePatterns"))
+        F.CodePatterns = *CodePatterns;
+    });
     Dict.parse(N);
   }
 

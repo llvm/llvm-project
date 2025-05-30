@@ -26,12 +26,12 @@
 // CHECK-SAME: [[PARENTPATH]]/second_tool.so
 // CHECK-SAME: [[PARENTPATH]]/third_tool.so
 // CHECK-NEXT: Opening [[PARENTPATH]]/non_existing_file.so... Failed:
-// CHECK-SAME: [[PARENTPATH]]/non_existing_file.so: cannot open shared object
-// CHECK-SAME: file: No such file or directory
+// CHECK-SAME: [[PARENTPATH]]/non_existing_file.so: {{cannot open shared object file|open failed}}:
+// CHECK-SAME: No such file or directory
 // CHECK-NEXT: Opening [[PARENTPATH]]/first_tool.so... Success.
 // CHECK-NEXT: Searching for ompt_start_tool in
 // CHECK-SAME: [[PARENTPATH]]/first_tool.so... Failed:
-// CHECK-SAME: [[PARENTPATH]]/first_tool.so: undefined symbol: ompt_start_tool
+// CHECK-SAME: {{.*/first_tool.so: undefined symbol: ompt_start_tool|ld.so.1: .*: ompt_start_tool: can't find symbol}}
 // CHECK-NEXT: Opening [[PARENTPATH]]/second_tool.so... Success.
 // CHECK-NEXT: Searching for ompt_start_tool in
 // CHECK-SAME: [[PARENTPATH]]/second_tool.so... 0: Do not initialize tool

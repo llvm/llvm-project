@@ -64,7 +64,7 @@ RT_API_ATTRS bool EmitEncoded(
     } else {
       // CHARACTER kind conversion for internal output
       while (chars-- > 0) {
-        char32_t buffer = *data++;
+        char32_t buffer = static_cast<char32_t>(*data++);
         char *p{reinterpret_cast<char *>(&buffer)};
         if constexpr (!isHostLittleEndian) {
           p += sizeof(buffer) - internalKind;

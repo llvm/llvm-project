@@ -1717,7 +1717,7 @@ class piecewise_linear_distribution
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/algorithm>
 #  include <__cxx03/climits>
 #  include <__cxx03/cmath>

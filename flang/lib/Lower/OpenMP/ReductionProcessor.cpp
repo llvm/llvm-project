@@ -25,6 +25,7 @@
 #include "flang/Parser/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/CommandLine.h"
+#include <type_traits>
 
 static llvm::cl::opt<bool> forceByrefReduction(
     "force-byref-reduction",
@@ -37,6 +38,37 @@ using ReductionModifier =
 namespace Fortran {
 namespace lower {
 namespace omp {
+
+// explicit template declarations
+template void
+ReductionProcessor::processReductionArguments<omp::clause::Reduction>(
+    mlir::Location currentLocation, lower::AbstractConverter &converter,
+    const omp::clause::Reduction &reduction,
+    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    llvm::SmallVectorImpl<bool> &reduceVarByRef,
+    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    mlir::omp::ReductionModifierAttr *reductionMod);
+
+template void
+ReductionProcessor::processReductionArguments<omp::clause::TaskReduction>(
+    mlir::Location currentLocation, lower::AbstractConverter &converter,
+    const omp::clause::TaskReduction &reduction,
+    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    llvm::SmallVectorImpl<bool> &reduceVarByRef,
+    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    mlir::omp::ReductionModifierAttr *reductionMod);
+
+template void
+ReductionProcessor::processReductionArguments<omp::clause::InReduction>(
+    mlir::Location currentLocation, lower::AbstractConverter &converter,
+    const omp::clause::InReduction &reduction,
+    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    llvm::SmallVectorImpl<bool> &reduceVarByRef,
+    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    mlir::omp::ReductionModifierAttr *reductionMod);
 
 ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
     const omp::clause::ProcedureDesignator &pd) {
@@ -538,28 +570,30 @@ mlir::omp::ReductionModifier translateReductionModifier(ReductionModifier mod) {
   return mlir::omp::ReductionModifier::defaultmod;
 }
 
+template <class T>
 void ReductionProcessor::processReductionArguments(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
-    const omp::clause::Reduction &reduction,
-    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    const T &reduction, llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
-    mlir::omp::ReductionModifierAttr &reductionMod) {
+    mlir::omp::ReductionModifierAttr *reductionMod) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  auto mod = std::get<std::optional<ReductionModifier>>(reduction.t);
-  if (mod.has_value()) {
-    if (mod.value() == ReductionModifier::Task)
-      TODO(currentLocation, "Reduction modifier `task` is not supported");
-    else
-      reductionMod = mlir::omp::ReductionModifierAttr::get(
-          firOpBuilder.getContext(), translateReductionModifier(mod.value()));
+  if constexpr (std::is_same_v<T, omp::clause::Reduction>) {
+    auto mod = std::get<std::optional<ReductionModifier>>(reduction.t);
+    if (mod.has_value()) {
+      if (mod.value() == ReductionModifier::Task)
+        TODO(currentLocation, "Reduction modifier `task` is not supported");
+      else
+        *reductionMod = mlir::omp::ReductionModifierAttr::get(
+            firOpBuilder.getContext(), translateReductionModifier(mod.value()));
+    }
   }
 
   mlir::omp::DeclareReductionOp decl;
   const auto &redOperatorList{
-      std::get<omp::clause::Reduction::ReductionIdentifiers>(reduction.t)};
+      std::get<typename T::ReductionIdentifiers>(reduction.t)};
   assert(redOperatorList.size() == 1 && "Expecting single operator");
   const auto &redOperator = redOperatorList.front();
   const auto &objectList{std::get<omp::ObjectList>(reduction.t)};

@@ -644,6 +644,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginPlatformPOSIX",
+        ":PluginProcessUtility",
         ":PluginTypeSystemClangHeaders",
         "//lldb:Breakpoint",
         "//lldb:Core",
@@ -826,6 +827,18 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "LanguageCPlusPlusProperties",
+    strip_include_prefix = "Language/CPlusPlus",
+    tbl_outs = {
+        "Language/CPlusPlus/LanguageCPlusPlusProperties.inc": ["-gen-lldb-property-defs"],
+        "Language/CPlusPlus/LanguageCPlusPlusPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "Language/CPlusPlus/LanguageCPlusPlusProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
 cc_library(
     name = "PluginCPlusPlusLanguageHeaders",
     hdrs = glob(["Language/CPlusPlus/*.h"]),
@@ -842,6 +855,7 @@ cc_library(
     srcs = glob(["Language/CPlusPlus/*.cpp"]),
     includes = [".."],
     deps = [
+        ":LanguageCPlusPlusProperties",
         ":PluginCPPRuntime",
         ":PluginCPlusPlusLanguageHeaders",
         ":PluginClangCommon",
@@ -853,6 +867,7 @@ cc_library(
         "//lldb:DataFormatters",
         "//lldb:Headers",
         "//lldb:Host",
+        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",

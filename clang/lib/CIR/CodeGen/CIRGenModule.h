@@ -111,6 +111,8 @@ public:
   /// Handling globals
   /// -------
 
+  mlir::Operation *lastGlobalOp = nullptr;
+
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
 
   /// If the specified mangled name is not in the module, create and return an
@@ -122,6 +124,13 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
+  static cir::GlobalOp createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
+                                      llvm::StringRef name, mlir::Type t,
+                                      mlir::Operation *insertPoint = nullptr);
+
+  llvm::StringMap<unsigned> cgGlobalNames;
+  std::string getUniqueGlobalName(const std::string &baseName);
+
   /// Return the mlir::Value for the address of the given global variable.
   /// If Ty is non-null and if the global doesn't exist, then it will be created
   /// with the specified type instead of whatever the normal requested type
@@ -131,6 +140,14 @@ public:
   mlir::Value
   getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty = {},
                      ForDefinition_t isForDefinition = NotForDefinition);
+
+  /// Return a constant array for the given string.
+  mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
+
+  /// Return a global symbol reference to a constant array for the given string
+  /// literal.
+  cir::GlobalOp getGlobalForStringLiteral(const StringLiteral *s,
+                                          llvm::StringRef name = ".str");
 
   const TargetCIRGenInfo &getTargetCIRGenInfo();
 
@@ -179,6 +196,10 @@ public:
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
 
+  void emitTentativeDefinition(const VarDecl *d);
+
+  static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
+
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,
                          clang::GlobalDecl gd, bool forVTable,
@@ -191,7 +212,7 @@ public:
                                 const clang::FunctionDecl *funcDecl);
 
   mlir::IntegerAttr getSize(CharUnits size) {
-    return builder.getSizeFromCharUnits(&getMLIRContext(), size);
+    return builder.getSizeFromCharUnits(size);
   }
 
   const llvm::Triple &getTriple() const { return target.getTriple(); }

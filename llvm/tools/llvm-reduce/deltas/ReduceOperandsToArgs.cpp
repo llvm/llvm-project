@@ -138,9 +138,8 @@ static void substituteOperandWithArgument(Function *OldF,
                         OldF->getFunctionType()->isVarArg());
 
   // Create the new function...
-  Function *NewF =
-      Function::Create(FTy, OldF->getLinkage(), OldF->getAddressSpace(),
-                       OldF->getName(), OldF->getParent());
+  Function *NewF = Function::Create(
+      FTy, OldF->getLinkage(), OldF->getAddressSpace(), "", OldF->getParent());
 
   // In order to preserve function order, we move NewF behind OldF
   NewF->removeFromParent();

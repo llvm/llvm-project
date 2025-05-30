@@ -281,49 +281,68 @@ RangeSelector transformer::statements(std::string ID) {
 
 namespace {
 
-SourceLocation getRLoc(const CallExpr &E) { return E.getRParenLoc(); }
-
-SourceLocation getRLoc(const CXXConstructExpr &E) {
-  return E.getParenOrBraceRange().getEnd();
-}
-
-tok::TokenKind getStartToken(const CallExpr &E) {
-  return tok::TokenKind::l_paren;
-}
-
-tok::TokenKind getStartToken(const CXXConstructExpr &E) {
-  return isa<CXXTemporaryObjectExpr>(E) ? tok::TokenKind::l_paren
-                                        : tok::TokenKind::l_brace;
-}
-
-template <typename ExprWithArgs>
-SourceLocation findArgStartDelimiter(const ExprWithArgs &E, SourceLocation RLoc,
+SourceLocation findArgStartDelimiter(const CallExpr &E, SourceLocation RLoc,
                                      const SourceManager &SM,
                                      const LangOptions &LangOpts) {
   SourceLocation Loc = E.getNumArgs() == 0 ? RLoc : E.getArg(0)->getBeginLoc();
-  return findPreviousTokenKind(Loc, SM, LangOpts, getStartToken(E));
+  return findPreviousTokenKind(Loc, SM, LangOpts, tok::TokenKind::l_paren);
 }
-// Returns the range of the source between the call's or construct expr's
-// parentheses/braces.
-template <typename ExprWithArgs>
-CharSourceRange getArgumentsRange(const MatchResult &Result,
-                                  const ExprWithArgs &CE) {
-  const SourceLocation RLoc = getRLoc(CE);
+
+// Returns the location after the last argument of the construct expr. Returns
+// an invalid location if there are no arguments.
+SourceLocation findLastArgEnd(const CXXConstructExpr &CE,
+                              const SourceManager &SM,
+                              const LangOptions &LangOpts) {
+  for (int i = CE.getNumArgs() - 1; i >= 0; --i) {
+    const Expr *Arg = CE.getArg(i);
+    if (isa<CXXDefaultArgExpr>(Arg))
+      continue;
+    return Lexer::getLocForEndOfToken(Arg->getEndLoc(), 0, SM, LangOpts);
+  }
+  return {};
+}
+
+// Returns the range of the source between the call's parentheses/braces.
+CharSourceRange getCallArgumentsRange(const MatchResult &Result,
+                                      const CallExpr &CE) {
+  const SourceLocation RLoc = CE.getRParenLoc();
   return CharSourceRange::getCharRange(
       findArgStartDelimiter(CE, RLoc, *Result.SourceManager,
                             Result.Context->getLangOpts())
           .getLocWithOffset(1),
       RLoc);
 }
+
+// Returns the range of the source between the construct expr's
+// parentheses/braces.
+CharSourceRange getConstructArgumentsRange(const MatchResult &Result,
+                                           const CXXConstructExpr &CE) {
+  if (SourceRange R = CE.getParenOrBraceRange(); R.isValid()) {
+    return CharSourceRange::getCharRange(
+        Lexer::getLocForEndOfToken(R.getBegin(), 0, *Result.SourceManager,
+                                   Result.Context->getLangOpts()),
+        R.getEnd());
+  }
+
+  if (CE.getNumArgs() > 0) {
+    return CharSourceRange::getCharRange(
+        CE.getArg(0)->getBeginLoc(),
+        findLastArgEnd(CE, *Result.SourceManager,
+                       Result.Context->getLangOpts()));
+  }
+
+  return {};
+}
+
 } // namespace
 
 RangeSelector transformer::callArgs(std::string ID) {
-  return RelativeSelector<CallExpr, getArgumentsRange<CallExpr>>(std::move(ID));
+  return RelativeSelector<CallExpr, getCallArgumentsRange>(std::move(ID));
 }
 
 RangeSelector transformer::constructExprArgs(std::string ID) {
-  return RelativeSelector<CXXConstructExpr,
-                          getArgumentsRange<CXXConstructExpr>>(std::move(ID));
+  return RelativeSelector<CXXConstructExpr, getConstructArgumentsRange>(
+      std::move(ID));
 }
 
 namespace {

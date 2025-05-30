@@ -27,7 +27,7 @@ using namespace mlir::tblgen;
 static std::string getUniqueOutputLabel(const RecordKeeper &records,
                                         StringRef tag) {
   // Use the input file name when generating a unique name.
-  std::string inputFilename = records.getInputFilename();
+  StringRef inputFilename = records.getInputFilename();
 
   // Drop all but the base filename.
   StringRef nameRef = sys::path::filename(inputFilename);

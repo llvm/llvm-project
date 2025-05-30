@@ -36,7 +36,7 @@ AMDGPUMCExpr::AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args,
   // allocation (e.g., through SmallVector's grow).
   RawArgs = static_cast<const MCExpr **>(
       Ctx.allocate(sizeof(const MCExpr *) * Args.size()));
-  std::uninitialized_copy(Args.begin(), Args.end(), RawArgs);
+  llvm::uninitialized_copy(Args, RawArgs);
   this->Args = ArrayRef<const MCExpr *>(RawArgs, Args.size());
 }
 
@@ -542,7 +542,7 @@ static void knownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
 
     // Variable value retrieval is not for actual use but only for knownbits
     // analysis.
-    const MCExpr *SymVal = Sym.getVariableValue(/*setUsed=*/false);
+    const MCExpr *SymVal = Sym.getVariableValue();
     knownBitsMapHelper(SymVal, KBM, Depth + 1);
 
     // Explicitly copy-construct so that there exists a local KnownBits in case
