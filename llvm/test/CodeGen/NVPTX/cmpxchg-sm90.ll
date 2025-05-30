@@ -2,6 +2,51 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 | FileCheck %s --check-prefix=SM90
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 | %ptxas-verify -arch=sm_90 %}
 
+define i8 @monotonic_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: monotonic_monotonic_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_generic_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB0_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB0_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB0_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB0_1;
+; SM90-NEXT:  $L__BB0_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new monotonic monotonic
+    ret i8 %new
+}
+
 define i8 @monotonic_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-LABEL: monotonic_monotonic_i8_generic_sys(
 ; SM90:       {
@@ -27,20 +72,20 @@ define i8 @monotonic_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB0_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB1_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB0_3;
+; SM90-NEXT:    @%p1 bra $L__BB1_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB0_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB1_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB0_1;
-; SM90-NEXT:  $L__BB0_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB1_1;
+; SM90-NEXT:  $L__BB1_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("") monotonic monotonic
@@ -72,20 +117,20 @@ define i8 @monotonic_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB1_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB2_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB1_3;
+; SM90-NEXT:    @%p1 bra $L__BB2_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB1_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB2_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB1_1;
-; SM90-NEXT:  $L__BB1_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB2_1;
+; SM90-NEXT:  $L__BB2_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("block") monotonic monotonic
@@ -117,20 +162,20 @@ define i8 @monotonic_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB2_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB3_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB2_3;
+; SM90-NEXT:    @%p1 bra $L__BB3_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB2_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB3_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB2_1;
-; SM90-NEXT:  $L__BB2_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB3_1;
+; SM90-NEXT:  $L__BB3_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("cluster") monotonic monotonic
@@ -162,23 +207,68 @@ define i8 @monotonic_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB3_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB4_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB3_3;
+; SM90-NEXT:    @%p1 bra $L__BB4_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB3_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB4_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB3_1;
-; SM90-NEXT:  $L__BB3_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB4_1;
+; SM90-NEXT:  $L__BB4_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") monotonic monotonic
+    ret i8 %new
+}
+
+define i8 @monotonic_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: monotonic_monotonic_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_global_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB5_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB5_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB5_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB5_1;
+; SM90-NEXT:  $L__BB5_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new monotonic monotonic
     ret i8 %new
 }
 
@@ -207,20 +297,20 @@ define i8 @monotonic_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB4_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB6_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB4_3;
+; SM90-NEXT:    @%p1 bra $L__BB6_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB4_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB6_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB4_1;
-; SM90-NEXT:  $L__BB4_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB6_1;
+; SM90-NEXT:  $L__BB6_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("") monotonic monotonic
@@ -252,20 +342,20 @@ define i8 @monotonic_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB5_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB7_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB5_3;
+; SM90-NEXT:    @%p1 bra $L__BB7_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB5_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB7_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB5_1;
-; SM90-NEXT:  $L__BB5_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB7_1;
+; SM90-NEXT:  $L__BB7_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("block") monotonic monotonic
@@ -297,20 +387,20 @@ define i8 @monotonic_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB6_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB8_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB6_3;
+; SM90-NEXT:    @%p1 bra $L__BB8_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB6_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB8_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB6_1;
-; SM90-NEXT:  $L__BB6_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB8_1;
+; SM90-NEXT:  $L__BB8_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("cluster") monotonic monotonic
@@ -342,23 +432,68 @@ define i8 @monotonic_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB7_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB9_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB9_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB9_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB9_1;
+; SM90-NEXT:  $L__BB9_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") monotonic monotonic
+    ret i8 %new
+}
+
+define i8 @monotonic_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: monotonic_monotonic_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_shared_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB10_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB7_3;
+; SM90-NEXT:    @%p1 bra $L__BB10_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB7_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB10_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB7_1;
-; SM90-NEXT:  $L__BB7_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB10_1;
+; SM90-NEXT:  $L__BB10_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
-    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") monotonic monotonic
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new monotonic monotonic
     ret i8 %new
 }
 
@@ -387,20 +522,20 @@ define i8 @monotonic_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB8_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB11_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB8_3;
+; SM90-NEXT:    @%p1 bra $L__BB11_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB8_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB11_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB8_1;
-; SM90-NEXT:  $L__BB8_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB11_1;
+; SM90-NEXT:  $L__BB11_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("") monotonic monotonic
@@ -432,20 +567,20 @@ define i8 @monotonic_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB9_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB12_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB9_3;
+; SM90-NEXT:    @%p1 bra $L__BB12_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB9_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB12_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB9_1;
-; SM90-NEXT:  $L__BB9_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB12_1;
+; SM90-NEXT:  $L__BB12_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("block") monotonic monotonic
@@ -477,20 +612,20 @@ define i8 @monotonic_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB10_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB13_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB10_3;
+; SM90-NEXT:    @%p1 bra $L__BB13_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB10_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB13_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB10_1;
-; SM90-NEXT:  $L__BB10_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB13_1;
+; SM90-NEXT:  $L__BB13_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("cluster") monotonic monotonic
@@ -522,23 +657,69 @@ define i8 @monotonic_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB11_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB14_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB11_3;
+; SM90-NEXT:    @%p1 bra $L__BB14_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB11_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB14_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB11_1;
-; SM90-NEXT:  $L__BB11_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB14_1;
+; SM90-NEXT:  $L__BB14_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") monotonic monotonic
+    ret i8 %new
+}
+
+define i8 @monotonic_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: monotonic_acquire_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_generic_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB15_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB15_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB15_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB15_1;
+; SM90-NEXT:  $L__BB15_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new monotonic acquire
     ret i8 %new
 }
 
@@ -567,20 +748,20 @@ define i8 @monotonic_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB12_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB16_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB12_3;
+; SM90-NEXT:    @%p1 bra $L__BB16_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB12_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB16_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB12_1;
-; SM90-NEXT:  $L__BB12_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB16_1;
+; SM90-NEXT:  $L__BB16_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -613,20 +794,20 @@ define i8 @monotonic_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB13_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB17_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB13_3;
+; SM90-NEXT:    @%p1 bra $L__BB17_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB13_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB17_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB13_1;
-; SM90-NEXT:  $L__BB13_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB17_1;
+; SM90-NEXT:  $L__BB17_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -659,20 +840,20 @@ define i8 @monotonic_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB14_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB18_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB14_3;
+; SM90-NEXT:    @%p1 bra $L__BB18_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB14_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB18_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB14_1;
-; SM90-NEXT:  $L__BB14_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB18_1;
+; SM90-NEXT:  $L__BB18_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -705,24 +886,70 @@ define i8 @monotonic_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB15_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB19_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB15_3;
+; SM90-NEXT:    @%p1 bra $L__BB19_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB15_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB19_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB15_1;
-; SM90-NEXT:  $L__BB15_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB19_1;
+; SM90-NEXT:  $L__BB19_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") monotonic acquire
+    ret i8 %new
+}
+
+define i8 @monotonic_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: monotonic_acquire_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_global_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB20_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB20_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB20_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB20_1;
+; SM90-NEXT:  $L__BB20_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new monotonic acquire
     ret i8 %new
 }
 
@@ -751,20 +978,20 @@ define i8 @monotonic_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB16_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB21_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB16_3;
+; SM90-NEXT:    @%p1 bra $L__BB21_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB16_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB21_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB16_1;
-; SM90-NEXT:  $L__BB16_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB21_1;
+; SM90-NEXT:  $L__BB21_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -797,20 +1024,20 @@ define i8 @monotonic_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB17_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB22_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB17_3;
+; SM90-NEXT:    @%p1 bra $L__BB22_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB17_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB22_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB17_1;
-; SM90-NEXT:  $L__BB17_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB22_1;
+; SM90-NEXT:  $L__BB22_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -843,20 +1070,20 @@ define i8 @monotonic_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB18_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB23_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB18_3;
+; SM90-NEXT:    @%p1 bra $L__BB23_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB18_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB23_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB18_1;
-; SM90-NEXT:  $L__BB18_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB23_1;
+; SM90-NEXT:  $L__BB23_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -889,24 +1116,70 @@ define i8 @monotonic_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB19_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB24_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB24_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB24_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB24_1;
+; SM90-NEXT:  $L__BB24_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.gpu;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") monotonic acquire
+    ret i8 %new
+}
+
+define i8 @monotonic_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: monotonic_acquire_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_shared_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB25_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB19_3;
+; SM90-NEXT:    @%p1 bra $L__BB25_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB19_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB25_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB19_1;
-; SM90-NEXT:  $L__BB19_3: // %partword.cmpxchg.end
-; SM90-NEXT:    fence.acquire.gpu;
+; SM90-NEXT:    @%p2 bra $L__BB25_1;
+; SM90-NEXT:  $L__BB25_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
-    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") monotonic acquire
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new monotonic acquire
     ret i8 %new
 }
 
@@ -935,20 +1208,20 @@ define i8 @monotonic_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB20_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB26_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB20_3;
+; SM90-NEXT:    @%p1 bra $L__BB26_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB20_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB26_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB20_1;
-; SM90-NEXT:  $L__BB20_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB26_1;
+; SM90-NEXT:  $L__BB26_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -981,20 +1254,20 @@ define i8 @monotonic_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB21_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB27_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB21_3;
+; SM90-NEXT:    @%p1 bra $L__BB27_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB21_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB27_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB21_1;
-; SM90-NEXT:  $L__BB21_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB27_1;
+; SM90-NEXT:  $L__BB27_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1027,20 +1300,20 @@ define i8 @monotonic_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB22_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB28_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB22_3;
+; SM90-NEXT:    @%p1 bra $L__BB28_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB22_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB28_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB22_1;
-; SM90-NEXT:  $L__BB22_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB28_1;
+; SM90-NEXT:  $L__BB28_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1073,24 +1346,71 @@ define i8 @monotonic_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB23_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB29_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB23_3;
+; SM90-NEXT:    @%p1 bra $L__BB29_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB23_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB29_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB23_1;
-; SM90-NEXT:  $L__BB23_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB29_1;
+; SM90-NEXT:  $L__BB29_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") monotonic acquire
+    ret i8 %new
+}
+
+define i8 @monotonic_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: monotonic_seq_cst_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB30_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB30_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB30_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB30_1;
+; SM90-NEXT:  $L__BB30_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new monotonic seq_cst
     ret i8 %new
 }
 
@@ -1120,20 +1440,20 @@ define i8 @monotonic_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB24_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB31_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB24_3;
+; SM90-NEXT:    @%p1 bra $L__BB31_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB24_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB31_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB24_1;
-; SM90-NEXT:  $L__BB24_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB31_1;
+; SM90-NEXT:  $L__BB31_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1167,20 +1487,20 @@ define i8 @monotonic_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB25_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB32_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB25_3;
+; SM90-NEXT:    @%p1 bra $L__BB32_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB25_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB32_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB25_1;
-; SM90-NEXT:  $L__BB25_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB32_1;
+; SM90-NEXT:  $L__BB32_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1214,20 +1534,20 @@ define i8 @monotonic_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB26_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB33_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB26_3;
+; SM90-NEXT:    @%p1 bra $L__BB33_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB26_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB33_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB26_1;
-; SM90-NEXT:  $L__BB26_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB33_1;
+; SM90-NEXT:  $L__BB33_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1261,24 +1581,71 @@ define i8 @monotonic_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB27_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB34_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB27_3;
+; SM90-NEXT:    @%p1 bra $L__BB34_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB27_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB34_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB27_1;
-; SM90-NEXT:  $L__BB27_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB34_1;
+; SM90-NEXT:  $L__BB34_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") monotonic seq_cst
+    ret i8 %new
+}
+
+define i8 @monotonic_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: monotonic_seq_cst_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB35_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB35_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB35_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB35_1;
+; SM90-NEXT:  $L__BB35_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new monotonic seq_cst
     ret i8 %new
 }
 
@@ -1308,20 +1675,20 @@ define i8 @monotonic_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB28_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB36_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB28_3;
+; SM90-NEXT:    @%p1 bra $L__BB36_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB28_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB36_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB28_1;
-; SM90-NEXT:  $L__BB28_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB36_1;
+; SM90-NEXT:  $L__BB36_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1355,20 +1722,20 @@ define i8 @monotonic_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB29_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB37_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB29_3;
+; SM90-NEXT:    @%p1 bra $L__BB37_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB29_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB37_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB29_1;
-; SM90-NEXT:  $L__BB29_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB37_1;
+; SM90-NEXT:  $L__BB37_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1402,20 +1769,20 @@ define i8 @monotonic_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB30_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB38_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB30_3;
+; SM90-NEXT:    @%p1 bra $L__BB38_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB30_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB38_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB30_1;
-; SM90-NEXT:  $L__BB30_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB38_1;
+; SM90-NEXT:  $L__BB38_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1449,24 +1816,71 @@ define i8 @monotonic_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB31_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB39_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB39_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB39_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB39_1;
+; SM90-NEXT:  $L__BB39_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.gpu;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") monotonic seq_cst
+    ret i8 %new
+}
+
+define i8 @monotonic_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: monotonic_seq_cst_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB40_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB31_3;
+; SM90-NEXT:    @%p1 bra $L__BB40_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB31_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB40_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB31_1;
-; SM90-NEXT:  $L__BB31_3: // %partword.cmpxchg.end
-; SM90-NEXT:    fence.acquire.gpu;
+; SM90-NEXT:    @%p2 bra $L__BB40_1;
+; SM90-NEXT:  $L__BB40_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
-    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") monotonic seq_cst
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new monotonic seq_cst
     ret i8 %new
 }
 
@@ -1496,20 +1910,20 @@ define i8 @monotonic_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB32_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB41_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB32_3;
+; SM90-NEXT:    @%p1 bra $L__BB41_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB32_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB41_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB32_1;
-; SM90-NEXT:  $L__BB32_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB41_1;
+; SM90-NEXT:  $L__BB41_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1543,20 +1957,20 @@ define i8 @monotonic_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB33_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB42_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB33_3;
+; SM90-NEXT:    @%p1 bra $L__BB42_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB33_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB42_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB33_1;
-; SM90-NEXT:  $L__BB33_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB42_1;
+; SM90-NEXT:  $L__BB42_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1590,20 +2004,20 @@ define i8 @monotonic_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB34_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB43_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB34_3;
+; SM90-NEXT:    @%p1 bra $L__BB43_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB34_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB43_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB34_1;
-; SM90-NEXT:  $L__BB34_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB43_1;
+; SM90-NEXT:  $L__BB43_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1637,24 +2051,70 @@ define i8 @monotonic_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB35_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB44_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB35_3;
+; SM90-NEXT:    @%p1 bra $L__BB44_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB35_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB44_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB35_1;
-; SM90-NEXT:  $L__BB35_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB44_1;
+; SM90-NEXT:  $L__BB44_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") monotonic seq_cst
+    ret i8 %new
+}
+
+define i8 @acquire_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acquire_monotonic_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_generic_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB45_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB45_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB45_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB45_1;
+; SM90-NEXT:  $L__BB45_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acquire monotonic
     ret i8 %new
 }
 
@@ -1683,20 +2143,20 @@ define i8 @acquire_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB36_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB46_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r17, %r20, %r3;
-; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB36_3;
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB46_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB36_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB46_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
-; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB36_1;
-; SM90-NEXT:  $L__BB36_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB46_1;
+; SM90-NEXT:  $L__BB46_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1729,20 +2189,20 @@ define i8 @acquire_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB37_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB47_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r17, %r20, %r3;
-; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB37_3;
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB47_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB37_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB47_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
-; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB37_1;
-; SM90-NEXT:  $L__BB37_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB47_1;
+; SM90-NEXT:  $L__BB47_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1775,20 +2235,20 @@ define i8 @acquire_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB38_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB48_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r17, %r20, %r3;
-; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB38_3;
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB48_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB38_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB48_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
-; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB38_1;
-; SM90-NEXT:  $L__BB38_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB48_1;
+; SM90-NEXT:  $L__BB48_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1821,24 +2281,70 @@ define i8 @acquire_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB39_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB49_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r17, %r20, %r3;
-; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB39_3;
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB49_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB39_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB49_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
-; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB39_1;
-; SM90-NEXT:  $L__BB39_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB49_1;
+; SM90-NEXT:  $L__BB49_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") acquire monotonic
+    ret i8 %new
+}
+
+define i8 @acquire_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acquire_monotonic_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_global_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB50_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB50_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB50_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB50_1;
+; SM90-NEXT:  $L__BB50_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acquire monotonic
     ret i8 %new
 }
 
@@ -1867,20 +2373,20 @@ define i8 @acquire_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB40_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB51_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r17, %r20, %r3;
-; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB40_3;
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB51_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB40_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB51_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
-; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB40_1;
-; SM90-NEXT:  $L__BB40_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB51_1;
+; SM90-NEXT:  $L__BB51_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1913,20 +2419,20 @@ define i8 @acquire_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB41_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB52_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r17, %r20, %r3;
-; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB41_3;
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB52_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB41_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB52_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
-; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB41_1;
-; SM90-NEXT:  $L__BB41_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB52_1;
+; SM90-NEXT:  $L__BB52_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -1959,20 +2465,20 @@ define i8 @acquire_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB42_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB53_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r17, %r20, %r3;
-; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB42_3;
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB53_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB42_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB53_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
-; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB42_1;
-; SM90-NEXT:  $L__BB42_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB53_1;
+; SM90-NEXT:  $L__BB53_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2005,24 +2511,70 @@ define i8 @acquire_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB43_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB54_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r17, %r20, %r3;
-; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB43_3;
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB54_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB43_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB54_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
-; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB43_1;
-; SM90-NEXT:  $L__BB43_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB54_1;
+; SM90-NEXT:  $L__BB54_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") acquire monotonic
+    ret i8 %new
+}
+
+define i8 @acquire_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acquire_monotonic_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_shared_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB55_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB55_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB55_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB55_1;
+; SM90-NEXT:  $L__BB55_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acquire monotonic
     ret i8 %new
 }
 
@@ -2051,20 +2603,20 @@ define i8 @acquire_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB44_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB56_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r17, %r20, %r3;
-; SM90-NEXT:    or.b32 %r18, %r20, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB44_3;
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB56_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB44_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB56_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r20, %r8;
-; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB44_1;
-; SM90-NEXT:  $L__BB44_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB56_1;
+; SM90-NEXT:  $L__BB56_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2097,20 +2649,20 @@ define i8 @acquire_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB45_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB57_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB45_3;
+; SM90-NEXT:    @%p1 bra $L__BB57_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB45_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB57_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB45_1;
-; SM90-NEXT:  $L__BB45_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB57_1;
+; SM90-NEXT:  $L__BB57_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2143,20 +2695,20 @@ define i8 @acquire_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB46_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB58_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB46_3;
+; SM90-NEXT:    @%p1 bra $L__BB58_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB46_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB58_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB46_1;
-; SM90-NEXT:  $L__BB46_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB58_1;
+; SM90-NEXT:  $L__BB58_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2189,24 +2741,70 @@ define i8 @acquire_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB47_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB59_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB47_3;
+; SM90-NEXT:    @%p1 bra $L__BB59_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB47_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB59_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB47_1;
-; SM90-NEXT:  $L__BB47_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB59_1;
+; SM90-NEXT:  $L__BB59_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") acquire monotonic
+    ret i8 %new
+}
+
+define i8 @acquire_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acquire_acquire_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_generic_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB60_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB60_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB60_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB60_1;
+; SM90-NEXT:  $L__BB60_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acquire acquire
     ret i8 %new
 }
 
@@ -2235,20 +2833,20 @@ define i8 @acquire_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB48_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB61_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB48_3;
+; SM90-NEXT:    @%p1 bra $L__BB61_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB48_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB61_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB48_1;
-; SM90-NEXT:  $L__BB48_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB61_1;
+; SM90-NEXT:  $L__BB61_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2281,20 +2879,20 @@ define i8 @acquire_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB49_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB62_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB49_3;
+; SM90-NEXT:    @%p1 bra $L__BB62_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB49_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB62_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB49_1;
-; SM90-NEXT:  $L__BB49_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB62_1;
+; SM90-NEXT:  $L__BB62_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2327,20 +2925,20 @@ define i8 @acquire_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB50_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB63_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB50_3;
+; SM90-NEXT:    @%p1 bra $L__BB63_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB50_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB63_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB50_1;
-; SM90-NEXT:  $L__BB50_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB63_1;
+; SM90-NEXT:  $L__BB63_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2373,24 +2971,70 @@ define i8 @acquire_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB51_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB64_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB51_3;
+; SM90-NEXT:    @%p1 bra $L__BB64_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB51_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB64_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB51_1;
-; SM90-NEXT:  $L__BB51_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB64_1;
+; SM90-NEXT:  $L__BB64_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") acquire acquire
+    ret i8 %new
+}
+
+define i8 @acquire_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acquire_acquire_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_global_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB65_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB65_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB65_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB65_1;
+; SM90-NEXT:  $L__BB65_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acquire acquire
     ret i8 %new
 }
 
@@ -2419,20 +3063,20 @@ define i8 @acquire_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB52_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB66_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB52_3;
+; SM90-NEXT:    @%p1 bra $L__BB66_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB52_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB66_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB52_1;
-; SM90-NEXT:  $L__BB52_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB66_1;
+; SM90-NEXT:  $L__BB66_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2465,20 +3109,20 @@ define i8 @acquire_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB53_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB67_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB53_3;
+; SM90-NEXT:    @%p1 bra $L__BB67_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB53_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB67_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB53_1;
-; SM90-NEXT:  $L__BB53_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB67_1;
+; SM90-NEXT:  $L__BB67_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2511,20 +3155,20 @@ define i8 @acquire_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB54_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB68_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB54_3;
+; SM90-NEXT:    @%p1 bra $L__BB68_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB54_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB68_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB54_1;
-; SM90-NEXT:  $L__BB54_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB68_1;
+; SM90-NEXT:  $L__BB68_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2557,24 +3201,70 @@ define i8 @acquire_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB55_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB69_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB69_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB69_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB69_1;
+; SM90-NEXT:  $L__BB69_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.gpu;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") acquire acquire
+    ret i8 %new
+}
+
+define i8 @acquire_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acquire_acquire_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_shared_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB70_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB55_3;
+; SM90-NEXT:    @%p1 bra $L__BB70_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB55_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB70_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB55_1;
-; SM90-NEXT:  $L__BB55_3: // %partword.cmpxchg.end
-; SM90-NEXT:    fence.acquire.gpu;
+; SM90-NEXT:    @%p2 bra $L__BB70_1;
+; SM90-NEXT:  $L__BB70_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
-    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") acquire acquire
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acquire acquire
     ret i8 %new
 }
 
@@ -2603,20 +3293,20 @@ define i8 @acquire_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB56_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB71_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB56_3;
+; SM90-NEXT:    @%p1 bra $L__BB71_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB56_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB71_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB56_1;
-; SM90-NEXT:  $L__BB56_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB71_1;
+; SM90-NEXT:  $L__BB71_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2649,20 +3339,20 @@ define i8 @acquire_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB57_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB72_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB57_3;
+; SM90-NEXT:    @%p1 bra $L__BB72_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB57_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB72_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB57_1;
-; SM90-NEXT:  $L__BB57_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB72_1;
+; SM90-NEXT:  $L__BB72_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2695,20 +3385,20 @@ define i8 @acquire_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB58_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB73_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB58_3;
+; SM90-NEXT:    @%p1 bra $L__BB73_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB58_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB73_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB58_1;
-; SM90-NEXT:  $L__BB58_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB73_1;
+; SM90-NEXT:  $L__BB73_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2741,24 +3431,71 @@ define i8 @acquire_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB59_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB74_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB59_3;
+; SM90-NEXT:    @%p1 bra $L__BB74_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB59_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB74_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB59_1;
-; SM90-NEXT:  $L__BB59_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB74_1;
+; SM90-NEXT:  $L__BB74_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") acquire acquire
+    ret i8 %new
+}
+
+define i8 @acquire_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acquire_seq_cst_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB75_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB75_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB75_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB75_1;
+; SM90-NEXT:  $L__BB75_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acquire seq_cst
     ret i8 %new
 }
 
@@ -2788,20 +3525,20 @@ define i8 @acquire_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB60_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB76_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB60_3;
+; SM90-NEXT:    @%p1 bra $L__BB76_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB60_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB76_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB60_1;
-; SM90-NEXT:  $L__BB60_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB76_1;
+; SM90-NEXT:  $L__BB76_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2835,20 +3572,20 @@ define i8 @acquire_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB61_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB77_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB61_3;
+; SM90-NEXT:    @%p1 bra $L__BB77_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB61_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB77_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB61_1;
-; SM90-NEXT:  $L__BB61_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB77_1;
+; SM90-NEXT:  $L__BB77_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2882,20 +3619,20 @@ define i8 @acquire_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB62_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB78_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB62_3;
+; SM90-NEXT:    @%p1 bra $L__BB78_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB62_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB78_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB62_1;
-; SM90-NEXT:  $L__BB62_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB78_1;
+; SM90-NEXT:  $L__BB78_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -2929,24 +3666,71 @@ define i8 @acquire_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB63_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB79_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB63_3;
+; SM90-NEXT:    @%p1 bra $L__BB79_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB63_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB79_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB63_1;
-; SM90-NEXT:  $L__BB63_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB79_1;
+; SM90-NEXT:  $L__BB79_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") acquire seq_cst
+    ret i8 %new
+}
+
+define i8 @acquire_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acquire_seq_cst_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB80_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB80_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB80_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB80_1;
+; SM90-NEXT:  $L__BB80_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acquire seq_cst
     ret i8 %new
 }
 
@@ -2976,20 +3760,20 @@ define i8 @acquire_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB64_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB81_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB64_3;
+; SM90-NEXT:    @%p1 bra $L__BB81_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB64_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB81_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB64_1;
-; SM90-NEXT:  $L__BB64_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB81_1;
+; SM90-NEXT:  $L__BB81_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -3023,20 +3807,20 @@ define i8 @acquire_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB65_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB82_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB65_3;
+; SM90-NEXT:    @%p1 bra $L__BB82_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB65_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB82_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB65_1;
-; SM90-NEXT:  $L__BB65_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB82_1;
+; SM90-NEXT:  $L__BB82_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -3070,20 +3854,20 @@ define i8 @acquire_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB66_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB83_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB66_3;
+; SM90-NEXT:    @%p1 bra $L__BB83_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB66_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB83_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB66_1;
-; SM90-NEXT:  $L__BB66_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB83_1;
+; SM90-NEXT:  $L__BB83_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -3117,24 +3901,71 @@ define i8 @acquire_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB67_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB84_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB84_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB84_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB84_1;
+; SM90-NEXT:  $L__BB84_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.gpu;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") acquire seq_cst
+    ret i8 %new
+}
+
+define i8 @acquire_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acquire_seq_cst_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB85_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB67_3;
+; SM90-NEXT:    @%p1 bra $L__BB85_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB67_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB85_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB67_1;
-; SM90-NEXT:  $L__BB67_3: // %partword.cmpxchg.end
-; SM90-NEXT:    fence.acquire.gpu;
+; SM90-NEXT:    @%p2 bra $L__BB85_1;
+; SM90-NEXT:  $L__BB85_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
-    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") acquire seq_cst
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acquire seq_cst
     ret i8 %new
 }
 
@@ -3164,20 +3995,20 @@ define i8 @acquire_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB68_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB86_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB68_3;
+; SM90-NEXT:    @%p1 bra $L__BB86_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB68_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB86_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB68_1;
-; SM90-NEXT:  $L__BB68_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB86_1;
+; SM90-NEXT:  $L__BB86_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -3211,20 +4042,20 @@ define i8 @acquire_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB69_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB87_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB69_3;
+; SM90-NEXT:    @%p1 bra $L__BB87_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB69_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB87_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB69_1;
-; SM90-NEXT:  $L__BB69_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB87_1;
+; SM90-NEXT:  $L__BB87_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -3258,20 +4089,20 @@ define i8 @acquire_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB70_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB88_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB70_3;
+; SM90-NEXT:    @%p1 bra $L__BB88_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB70_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB88_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB70_1;
-; SM90-NEXT:  $L__BB70_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB88_1;
+; SM90-NEXT:  $L__BB88_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -3305,24 +4136,70 @@ define i8 @acquire_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB71_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB89_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB71_3;
+; SM90-NEXT:    @%p1 bra $L__BB89_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB71_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB89_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB71_1;
-; SM90-NEXT:  $L__BB71_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB89_1;
+; SM90-NEXT:  $L__BB89_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") acquire seq_cst
+    ret i8 %new
+}
+
+define i8 @release_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: release_monotonic_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_generic_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB90_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB90_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB90_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB90_1;
+; SM90-NEXT:  $L__BB90_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new release monotonic
     ret i8 %new
 }
 
@@ -3352,20 +4229,20 @@ define i8 @release_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB72_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB91_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB72_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB91_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB72_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB91_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB72_1;
-; SM90-NEXT:  $L__BB72_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB91_1;
+; SM90-NEXT:  $L__BB91_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("") release monotonic
@@ -3398,20 +4275,20 @@ define i8 @release_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB73_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB92_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB73_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB92_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB73_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB92_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB73_1;
-; SM90-NEXT:  $L__BB73_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB92_1;
+; SM90-NEXT:  $L__BB92_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("block") release monotonic
@@ -3444,20 +4321,20 @@ define i8 @release_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB74_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB93_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB74_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB93_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB74_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB93_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB74_1;
-; SM90-NEXT:  $L__BB74_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB93_1;
+; SM90-NEXT:  $L__BB93_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("cluster") release monotonic
@@ -3490,23 +4367,69 @@ define i8 @release_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB75_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB94_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB75_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB94_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB75_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB94_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB75_1;
-; SM90-NEXT:  $L__BB75_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB94_1;
+; SM90-NEXT:  $L__BB94_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") release monotonic
+    ret i8 %new
+}
+
+define i8 @release_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: release_monotonic_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_global_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB95_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB95_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB95_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB95_1;
+; SM90-NEXT:  $L__BB95_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new release monotonic
     ret i8 %new
 }
 
@@ -3536,20 +4459,20 @@ define i8 @release_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB76_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB96_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB76_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB96_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB76_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB96_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB76_1;
-; SM90-NEXT:  $L__BB76_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB96_1;
+; SM90-NEXT:  $L__BB96_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("") release monotonic
@@ -3582,20 +4505,20 @@ define i8 @release_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB77_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB97_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB77_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB97_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB77_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB97_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB77_1;
-; SM90-NEXT:  $L__BB77_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB97_1;
+; SM90-NEXT:  $L__BB97_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("block") release monotonic
@@ -3628,20 +4551,20 @@ define i8 @release_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB78_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB98_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB78_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB98_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB78_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB98_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB78_1;
-; SM90-NEXT:  $L__BB78_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB98_1;
+; SM90-NEXT:  $L__BB98_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("cluster") release monotonic
@@ -3674,23 +4597,69 @@ define i8 @release_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB79_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB99_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB79_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB99_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB79_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB99_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB79_1;
-; SM90-NEXT:  $L__BB79_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB99_1;
+; SM90-NEXT:  $L__BB99_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") release monotonic
+    ret i8 %new
+}
+
+define i8 @release_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: release_monotonic_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_shared_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB100_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB100_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB100_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB100_1;
+; SM90-NEXT:  $L__BB100_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new release monotonic
     ret i8 %new
 }
 
@@ -3720,20 +4689,20 @@ define i8 @release_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB80_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB101_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB80_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB101_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB80_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB101_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB80_1;
-; SM90-NEXT:  $L__BB80_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB101_1;
+; SM90-NEXT:  $L__BB101_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("") release monotonic
@@ -3766,20 +4735,20 @@ define i8 @release_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB81_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB102_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB81_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB102_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB81_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB102_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB81_1;
-; SM90-NEXT:  $L__BB81_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB102_1;
+; SM90-NEXT:  $L__BB102_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("block") release monotonic
@@ -3812,20 +4781,20 @@ define i8 @release_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB82_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB103_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB82_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB103_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB82_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB103_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB82_1;
-; SM90-NEXT:  $L__BB82_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB103_1;
+; SM90-NEXT:  $L__BB103_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("cluster") release monotonic
@@ -3858,23 +4827,70 @@ define i8 @release_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB83_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB104_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB83_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB104_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB83_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB104_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB83_1;
-; SM90-NEXT:  $L__BB83_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB104_1;
+; SM90-NEXT:  $L__BB104_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") release monotonic
+    ret i8 %new
+}
+
+define i8 @release_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: release_acquire_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_generic_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB105_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB105_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB105_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB105_1;
+; SM90-NEXT:  $L__BB105_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new release acquire
     ret i8 %new
 }
 
@@ -3904,20 +4920,20 @@ define i8 @release_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB84_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB106_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB84_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB106_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB84_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB106_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB84_1;
-; SM90-NEXT:  $L__BB84_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB106_1;
+; SM90-NEXT:  $L__BB106_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -3951,20 +4967,20 @@ define i8 @release_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB85_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB107_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB85_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB107_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB85_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB107_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB85_1;
-; SM90-NEXT:  $L__BB85_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB107_1;
+; SM90-NEXT:  $L__BB107_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -3998,20 +5014,20 @@ define i8 @release_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB86_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB108_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB86_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB108_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB86_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB108_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB86_1;
-; SM90-NEXT:  $L__BB86_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB108_1;
+; SM90-NEXT:  $L__BB108_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4045,24 +5061,71 @@ define i8 @release_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB87_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB109_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB87_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB109_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB87_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB109_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB87_1;
-; SM90-NEXT:  $L__BB87_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB109_1;
+; SM90-NEXT:  $L__BB109_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") release acquire
+    ret i8 %new
+}
+
+define i8 @release_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: release_acquire_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_global_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB110_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB110_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB110_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB110_1;
+; SM90-NEXT:  $L__BB110_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new release acquire
     ret i8 %new
 }
 
@@ -4092,20 +5155,20 @@ define i8 @release_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB88_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB111_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB88_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB111_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB88_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB111_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB88_1;
-; SM90-NEXT:  $L__BB88_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB111_1;
+; SM90-NEXT:  $L__BB111_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4139,20 +5202,20 @@ define i8 @release_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB89_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB112_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    or.b32 %r16, %r19, %r3;
-; SM90-NEXT:    or.b32 %r17, %r19, %r4;
-; SM90-NEXT:    atom.relaxed.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM90-NEXT:    setp.eq.b32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB89_3;
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB112_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB89_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB112_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
-; SM90-NEXT:    setp.ne.b32 %p2, %r19, %r8;
-; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB89_1;
-; SM90-NEXT:  $L__BB89_3: // %partword.cmpxchg.end
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB112_1;
+; SM90-NEXT:  $L__BB112_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4186,20 +5249,20 @@ define i8 @release_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB90_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB113_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB90_3;
+; SM90-NEXT:    @%p1 bra $L__BB113_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB90_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB113_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB90_1;
-; SM90-NEXT:  $L__BB90_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB113_1;
+; SM90-NEXT:  $L__BB113_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4233,24 +5296,71 @@ define i8 @release_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB91_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB114_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB91_3;
+; SM90-NEXT:    @%p1 bra $L__BB114_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB91_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB114_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB91_1;
-; SM90-NEXT:  $L__BB91_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB114_1;
+; SM90-NEXT:  $L__BB114_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") release acquire
+    ret i8 %new
+}
+
+define i8 @release_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: release_acquire_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_shared_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [release_acquire_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB115_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB115_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB115_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB115_1;
+; SM90-NEXT:  $L__BB115_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new release acquire
     ret i8 %new
 }
 
@@ -4280,20 +5390,20 @@ define i8 @release_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB92_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB116_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB92_3;
+; SM90-NEXT:    @%p1 bra $L__BB116_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB92_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB116_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB92_1;
-; SM90-NEXT:  $L__BB92_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB116_1;
+; SM90-NEXT:  $L__BB116_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4327,20 +5437,20 @@ define i8 @release_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB93_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB117_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB93_3;
+; SM90-NEXT:    @%p1 bra $L__BB117_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB93_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB117_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB93_1;
-; SM90-NEXT:  $L__BB93_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB117_1;
+; SM90-NEXT:  $L__BB117_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4374,20 +5484,20 @@ define i8 @release_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB94_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB118_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB94_3;
+; SM90-NEXT:    @%p1 bra $L__BB118_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB94_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB118_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB94_1;
-; SM90-NEXT:  $L__BB94_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB118_1;
+; SM90-NEXT:  $L__BB118_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4421,24 +5531,71 @@ define i8 @release_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB95_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB119_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB95_3;
+; SM90-NEXT:    @%p1 bra $L__BB119_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB95_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB119_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB95_1;
-; SM90-NEXT:  $L__BB95_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB119_1;
+; SM90-NEXT:  $L__BB119_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") release acquire
+    ret i8 %new
+}
+
+define i8 @release_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: release_seq_cst_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB120_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB120_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB120_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB120_1;
+; SM90-NEXT:  $L__BB120_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new release seq_cst
     ret i8 %new
 }
 
@@ -4468,20 +5625,20 @@ define i8 @release_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB96_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB121_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB96_3;
+; SM90-NEXT:    @%p1 bra $L__BB121_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB96_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB121_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB96_1;
-; SM90-NEXT:  $L__BB96_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB121_1;
+; SM90-NEXT:  $L__BB121_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4515,20 +5672,20 @@ define i8 @release_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB97_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB122_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB97_3;
+; SM90-NEXT:    @%p1 bra $L__BB122_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB97_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB122_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB97_1;
-; SM90-NEXT:  $L__BB97_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB122_1;
+; SM90-NEXT:  $L__BB122_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4562,20 +5719,20 @@ define i8 @release_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB98_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB123_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB98_3;
+; SM90-NEXT:    @%p1 bra $L__BB123_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB98_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB123_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB98_1;
-; SM90-NEXT:  $L__BB98_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB123_1;
+; SM90-NEXT:  $L__BB123_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4609,24 +5766,71 @@ define i8 @release_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB99_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB124_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB99_3;
+; SM90-NEXT:    @%p1 bra $L__BB124_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB99_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB124_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB99_1;
-; SM90-NEXT:  $L__BB99_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB124_1;
+; SM90-NEXT:  $L__BB124_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") release seq_cst
+    ret i8 %new
+}
+
+define i8 @release_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: release_seq_cst_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB125_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB125_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB125_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB125_1;
+; SM90-NEXT:  $L__BB125_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new release seq_cst
     ret i8 %new
 }
 
@@ -4656,20 +5860,20 @@ define i8 @release_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB100_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB126_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB100_3;
+; SM90-NEXT:    @%p1 bra $L__BB126_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB100_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB126_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB100_1;
-; SM90-NEXT:  $L__BB100_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB126_1;
+; SM90-NEXT:  $L__BB126_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4703,20 +5907,20 @@ define i8 @release_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB101_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB127_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB101_3;
+; SM90-NEXT:    @%p1 bra $L__BB127_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB101_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB127_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB101_1;
-; SM90-NEXT:  $L__BB101_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB127_1;
+; SM90-NEXT:  $L__BB127_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4750,20 +5954,20 @@ define i8 @release_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB102_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB128_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB102_3;
+; SM90-NEXT:    @%p1 bra $L__BB128_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB102_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB128_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB102_1;
-; SM90-NEXT:  $L__BB102_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB128_1;
+; SM90-NEXT:  $L__BB128_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4797,24 +6001,71 @@ define i8 @release_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB103_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB129_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB103_3;
+; SM90-NEXT:    @%p1 bra $L__BB129_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB103_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB129_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB103_1;
-; SM90-NEXT:  $L__BB103_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB129_1;
+; SM90-NEXT:  $L__BB129_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") release seq_cst
+    ret i8 %new
+}
+
+define i8 @release_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: release_seq_cst_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB130_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB130_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB130_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB130_1;
+; SM90-NEXT:  $L__BB130_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new release seq_cst
     ret i8 %new
 }
 
@@ -4844,20 +6095,20 @@ define i8 @release_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB104_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB131_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB104_3;
+; SM90-NEXT:    @%p1 bra $L__BB131_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB104_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB131_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB104_1;
-; SM90-NEXT:  $L__BB104_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB131_1;
+; SM90-NEXT:  $L__BB131_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4891,20 +6142,20 @@ define i8 @release_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB105_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB132_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB105_3;
+; SM90-NEXT:    @%p1 bra $L__BB132_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB105_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB132_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB105_1;
-; SM90-NEXT:  $L__BB105_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB132_1;
+; SM90-NEXT:  $L__BB132_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4938,20 +6189,20 @@ define i8 @release_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB106_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB133_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB106_3;
+; SM90-NEXT:    @%p1 bra $L__BB133_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB106_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB133_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB106_1;
-; SM90-NEXT:  $L__BB106_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB133_1;
+; SM90-NEXT:  $L__BB133_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -4985,24 +6236,71 @@ define i8 @release_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB107_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB134_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB107_3;
+; SM90-NEXT:    @%p1 bra $L__BB134_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB107_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB134_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB107_1;
-; SM90-NEXT:  $L__BB107_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB134_1;
+; SM90-NEXT:  $L__BB134_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") release seq_cst
+    ret i8 %new
+}
+
+define i8 @acq_rel_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acq_rel_monotonic_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_generic_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB135_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB135_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB135_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB135_1;
+; SM90-NEXT:  $L__BB135_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acq_rel monotonic
     ret i8 %new
 }
 
@@ -5032,20 +6330,20 @@ define i8 @acq_rel_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB108_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB136_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB108_3;
+; SM90-NEXT:    @%p1 bra $L__BB136_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB108_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB136_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB108_1;
-; SM90-NEXT:  $L__BB108_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB136_1;
+; SM90-NEXT:  $L__BB136_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5079,20 +6377,20 @@ define i8 @acq_rel_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB109_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB137_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB109_3;
+; SM90-NEXT:    @%p1 bra $L__BB137_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB109_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB137_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB109_1;
-; SM90-NEXT:  $L__BB109_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB137_1;
+; SM90-NEXT:  $L__BB137_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5126,20 +6424,20 @@ define i8 @acq_rel_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB110_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB138_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB110_3;
+; SM90-NEXT:    @%p1 bra $L__BB138_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB110_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB138_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB110_1;
-; SM90-NEXT:  $L__BB110_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB138_1;
+; SM90-NEXT:  $L__BB138_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5173,24 +6471,71 @@ define i8 @acq_rel_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB111_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB139_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB111_3;
+; SM90-NEXT:    @%p1 bra $L__BB139_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB111_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB139_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB111_1;
-; SM90-NEXT:  $L__BB111_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB139_1;
+; SM90-NEXT:  $L__BB139_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") acq_rel monotonic
+    ret i8 %new
+}
+
+define i8 @acq_rel_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acq_rel_monotonic_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_global_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB140_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB140_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB140_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB140_1;
+; SM90-NEXT:  $L__BB140_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acq_rel monotonic
     ret i8 %new
 }
 
@@ -5220,20 +6565,20 @@ define i8 @acq_rel_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB112_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB141_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB112_3;
+; SM90-NEXT:    @%p1 bra $L__BB141_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB112_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB141_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB112_1;
-; SM90-NEXT:  $L__BB112_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB141_1;
+; SM90-NEXT:  $L__BB141_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5267,20 +6612,20 @@ define i8 @acq_rel_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB113_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB142_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB113_3;
+; SM90-NEXT:    @%p1 bra $L__BB142_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB113_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB142_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB113_1;
-; SM90-NEXT:  $L__BB113_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB142_1;
+; SM90-NEXT:  $L__BB142_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5314,20 +6659,20 @@ define i8 @acq_rel_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB114_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB143_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB114_3;
+; SM90-NEXT:    @%p1 bra $L__BB143_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB114_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB143_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB114_1;
-; SM90-NEXT:  $L__BB114_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB143_1;
+; SM90-NEXT:  $L__BB143_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5361,24 +6706,71 @@ define i8 @acq_rel_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB115_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB144_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB115_3;
+; SM90-NEXT:    @%p1 bra $L__BB144_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB115_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB144_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB115_1;
-; SM90-NEXT:  $L__BB115_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB144_1;
+; SM90-NEXT:  $L__BB144_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") acq_rel monotonic
+    ret i8 %new
+}
+
+define i8 @acq_rel_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acq_rel_monotonic_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_shared_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB145_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB145_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB145_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB145_1;
+; SM90-NEXT:  $L__BB145_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acq_rel monotonic
     ret i8 %new
 }
 
@@ -5408,20 +6800,20 @@ define i8 @acq_rel_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB116_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB146_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB116_3;
+; SM90-NEXT:    @%p1 bra $L__BB146_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB116_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB146_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB116_1;
-; SM90-NEXT:  $L__BB116_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB146_1;
+; SM90-NEXT:  $L__BB146_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5455,20 +6847,20 @@ define i8 @acq_rel_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB117_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB147_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB117_3;
+; SM90-NEXT:    @%p1 bra $L__BB147_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB117_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB147_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB117_1;
-; SM90-NEXT:  $L__BB117_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB147_1;
+; SM90-NEXT:  $L__BB147_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5502,20 +6894,20 @@ define i8 @acq_rel_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB118_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB148_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB118_3;
+; SM90-NEXT:    @%p1 bra $L__BB148_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB118_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB148_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB118_1;
-; SM90-NEXT:  $L__BB118_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB148_1;
+; SM90-NEXT:  $L__BB148_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5549,24 +6941,71 @@ define i8 @acq_rel_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB119_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB149_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB119_3;
+; SM90-NEXT:    @%p1 bra $L__BB149_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB119_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB149_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB119_1;
-; SM90-NEXT:  $L__BB119_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB149_1;
+; SM90-NEXT:  $L__BB149_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") acq_rel monotonic
+    ret i8 %new
+}
+
+define i8 @acq_rel_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acq_rel_acquire_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_generic_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB150_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB150_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB150_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB150_1;
+; SM90-NEXT:  $L__BB150_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acq_rel acquire
     ret i8 %new
 }
 
@@ -5596,20 +7035,20 @@ define i8 @acq_rel_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB120_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB151_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB120_3;
+; SM90-NEXT:    @%p1 bra $L__BB151_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB120_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB151_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB120_1;
-; SM90-NEXT:  $L__BB120_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB151_1;
+; SM90-NEXT:  $L__BB151_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5643,20 +7082,20 @@ define i8 @acq_rel_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB121_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB152_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB121_3;
+; SM90-NEXT:    @%p1 bra $L__BB152_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB121_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB152_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB121_1;
-; SM90-NEXT:  $L__BB121_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB152_1;
+; SM90-NEXT:  $L__BB152_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5690,20 +7129,20 @@ define i8 @acq_rel_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB122_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB153_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB122_3;
+; SM90-NEXT:    @%p1 bra $L__BB153_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB122_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB153_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB122_1;
-; SM90-NEXT:  $L__BB122_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB153_1;
+; SM90-NEXT:  $L__BB153_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5737,24 +7176,71 @@ define i8 @acq_rel_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB123_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB154_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB123_3;
+; SM90-NEXT:    @%p1 bra $L__BB154_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB123_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB154_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB123_1;
-; SM90-NEXT:  $L__BB123_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB154_1;
+; SM90-NEXT:  $L__BB154_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") acq_rel acquire
+    ret i8 %new
+}
+
+define i8 @acq_rel_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acq_rel_acquire_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_global_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB155_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB155_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB155_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB155_1;
+; SM90-NEXT:  $L__BB155_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acq_rel acquire
     ret i8 %new
 }
 
@@ -5784,20 +7270,20 @@ define i8 @acq_rel_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB124_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB156_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB124_3;
+; SM90-NEXT:    @%p1 bra $L__BB156_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB124_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB156_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB124_1;
-; SM90-NEXT:  $L__BB124_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB156_1;
+; SM90-NEXT:  $L__BB156_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5831,20 +7317,20 @@ define i8 @acq_rel_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB125_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB157_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB125_3;
+; SM90-NEXT:    @%p1 bra $L__BB157_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB125_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB157_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB125_1;
-; SM90-NEXT:  $L__BB125_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB157_1;
+; SM90-NEXT:  $L__BB157_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5878,20 +7364,20 @@ define i8 @acq_rel_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB126_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB158_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB126_3;
+; SM90-NEXT:    @%p1 bra $L__BB158_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB126_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB158_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB126_1;
-; SM90-NEXT:  $L__BB126_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB158_1;
+; SM90-NEXT:  $L__BB158_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -5925,24 +7411,71 @@ define i8 @acq_rel_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB127_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB159_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB127_3;
+; SM90-NEXT:    @%p1 bra $L__BB159_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB127_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB159_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB127_1;
-; SM90-NEXT:  $L__BB127_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB159_1;
+; SM90-NEXT:  $L__BB159_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") acq_rel acquire
+    ret i8 %new
+}
+
+define i8 @acq_rel_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acq_rel_acquire_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_shared_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB160_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB160_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB160_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB160_1;
+; SM90-NEXT:  $L__BB160_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acq_rel acquire
     ret i8 %new
 }
 
@@ -5972,20 +7505,20 @@ define i8 @acq_rel_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB128_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB161_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB128_3;
+; SM90-NEXT:    @%p1 bra $L__BB161_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB128_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB161_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB128_1;
-; SM90-NEXT:  $L__BB128_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB161_1;
+; SM90-NEXT:  $L__BB161_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6019,20 +7552,20 @@ define i8 @acq_rel_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB129_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB162_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB129_3;
+; SM90-NEXT:    @%p1 bra $L__BB162_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB129_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB162_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB129_1;
-; SM90-NEXT:  $L__BB129_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB162_1;
+; SM90-NEXT:  $L__BB162_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6066,20 +7599,20 @@ define i8 @acq_rel_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB130_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB163_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB130_3;
+; SM90-NEXT:    @%p1 bra $L__BB163_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB130_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB163_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB130_1;
-; SM90-NEXT:  $L__BB130_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB163_1;
+; SM90-NEXT:  $L__BB163_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6113,24 +7646,71 @@ define i8 @acq_rel_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB131_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB164_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB131_3;
+; SM90-NEXT:    @%p1 bra $L__BB164_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB131_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB164_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB131_1;
-; SM90-NEXT:  $L__BB131_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB164_1;
+; SM90-NEXT:  $L__BB164_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") acq_rel acquire
+    ret i8 %new
+}
+
+define i8 @acq_rel_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB165_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB165_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB165_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB165_1;
+; SM90-NEXT:  $L__BB165_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acq_rel seq_cst
     ret i8 %new
 }
 
@@ -6160,20 +7740,20 @@ define i8 @acq_rel_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB132_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB166_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB132_3;
+; SM90-NEXT:    @%p1 bra $L__BB166_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB132_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB166_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB132_1;
-; SM90-NEXT:  $L__BB132_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB166_1;
+; SM90-NEXT:  $L__BB166_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6207,20 +7787,20 @@ define i8 @acq_rel_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB133_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB167_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB133_3;
+; SM90-NEXT:    @%p1 bra $L__BB167_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB133_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB167_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB133_1;
-; SM90-NEXT:  $L__BB133_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB167_1;
+; SM90-NEXT:  $L__BB167_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6254,20 +7834,20 @@ define i8 @acq_rel_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB134_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB168_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB134_3;
+; SM90-NEXT:    @%p1 bra $L__BB168_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB134_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB168_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB134_1;
-; SM90-NEXT:  $L__BB134_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB168_1;
+; SM90-NEXT:  $L__BB168_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6301,24 +7881,71 @@ define i8 @acq_rel_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB135_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB169_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB135_3;
+; SM90-NEXT:    @%p1 bra $L__BB169_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB135_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB169_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB135_1;
-; SM90-NEXT:  $L__BB135_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB169_1;
+; SM90-NEXT:  $L__BB169_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") acq_rel seq_cst
+    ret i8 %new
+}
+
+define i8 @acq_rel_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB170_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB170_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB170_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB170_1;
+; SM90-NEXT:  $L__BB170_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acq_rel seq_cst
     ret i8 %new
 }
 
@@ -6348,20 +7975,20 @@ define i8 @acq_rel_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB136_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB171_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB136_3;
+; SM90-NEXT:    @%p1 bra $L__BB171_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB136_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB171_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB136_1;
-; SM90-NEXT:  $L__BB136_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB171_1;
+; SM90-NEXT:  $L__BB171_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6395,20 +8022,20 @@ define i8 @acq_rel_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB137_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB172_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB137_3;
+; SM90-NEXT:    @%p1 bra $L__BB172_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB137_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB172_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB137_1;
-; SM90-NEXT:  $L__BB137_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB172_1;
+; SM90-NEXT:  $L__BB172_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6442,20 +8069,20 @@ define i8 @acq_rel_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB138_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB173_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB138_3;
+; SM90-NEXT:    @%p1 bra $L__BB173_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB138_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB173_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB138_1;
-; SM90-NEXT:  $L__BB138_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB173_1;
+; SM90-NEXT:  $L__BB173_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6489,24 +8116,71 @@ define i8 @acq_rel_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB139_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB174_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB139_3;
+; SM90-NEXT:    @%p1 bra $L__BB174_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB139_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB174_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB139_1;
-; SM90-NEXT:  $L__BB139_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB174_1;
+; SM90-NEXT:  $L__BB174_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") acq_rel seq_cst
+    ret i8 %new
+}
+
+define i8 @acq_rel_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB175_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB175_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB175_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB175_1;
+; SM90-NEXT:  $L__BB175_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acq_rel seq_cst
     ret i8 %new
 }
 
@@ -6536,20 +8210,20 @@ define i8 @acq_rel_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB140_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB176_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB140_3;
+; SM90-NEXT:    @%p1 bra $L__BB176_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB140_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB176_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB140_1;
-; SM90-NEXT:  $L__BB140_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB176_1;
+; SM90-NEXT:  $L__BB176_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6583,20 +8257,20 @@ define i8 @acq_rel_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB141_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB177_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB141_3;
+; SM90-NEXT:    @%p1 bra $L__BB177_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB141_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB177_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB141_1;
-; SM90-NEXT:  $L__BB141_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB177_1;
+; SM90-NEXT:  $L__BB177_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6630,20 +8304,20 @@ define i8 @acq_rel_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB142_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB178_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB142_3;
+; SM90-NEXT:    @%p1 bra $L__BB178_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB142_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB178_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB142_1;
-; SM90-NEXT:  $L__BB142_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB178_1;
+; SM90-NEXT:  $L__BB178_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6677,24 +8351,71 @@ define i8 @acq_rel_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB143_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB179_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB143_3;
+; SM90-NEXT:    @%p1 bra $L__BB179_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB143_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB179_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB143_1;
-; SM90-NEXT:  $L__BB143_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB179_1;
+; SM90-NEXT:  $L__BB179_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") acq_rel seq_cst
+    ret i8 %new
+}
+
+define i8 @seq_cst_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: seq_cst_monotonic_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB180_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB180_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB180_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB180_1;
+; SM90-NEXT:  $L__BB180_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new seq_cst monotonic
     ret i8 %new
 }
 
@@ -6724,20 +8445,20 @@ define i8 @seq_cst_monotonic_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB144_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB181_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB144_3;
+; SM90-NEXT:    @%p1 bra $L__BB181_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB144_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB181_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB144_1;
-; SM90-NEXT:  $L__BB144_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB181_1;
+; SM90-NEXT:  $L__BB181_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6771,20 +8492,20 @@ define i8 @seq_cst_monotonic_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB145_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB182_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB145_3;
+; SM90-NEXT:    @%p1 bra $L__BB182_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB145_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB182_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB145_1;
-; SM90-NEXT:  $L__BB145_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB182_1;
+; SM90-NEXT:  $L__BB182_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6818,20 +8539,20 @@ define i8 @seq_cst_monotonic_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB146_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB183_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB146_3;
+; SM90-NEXT:    @%p1 bra $L__BB183_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB146_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB183_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB146_1;
-; SM90-NEXT:  $L__BB146_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB183_1;
+; SM90-NEXT:  $L__BB183_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6865,24 +8586,71 @@ define i8 @seq_cst_monotonic_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB147_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB184_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB147_3;
+; SM90-NEXT:    @%p1 bra $L__BB184_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB147_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB184_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB147_1;
-; SM90-NEXT:  $L__BB147_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB184_1;
+; SM90-NEXT:  $L__BB184_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") seq_cst monotonic
+    ret i8 %new
+}
+
+define i8 @seq_cst_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: seq_cst_monotonic_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB185_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB185_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB185_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB185_1;
+; SM90-NEXT:  $L__BB185_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new seq_cst monotonic
     ret i8 %new
 }
 
@@ -6912,20 +8680,20 @@ define i8 @seq_cst_monotonic_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB148_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB186_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB148_3;
+; SM90-NEXT:    @%p1 bra $L__BB186_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB148_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB186_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB148_1;
-; SM90-NEXT:  $L__BB148_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB186_1;
+; SM90-NEXT:  $L__BB186_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -6959,20 +8727,20 @@ define i8 @seq_cst_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB149_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB187_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB149_3;
+; SM90-NEXT:    @%p1 bra $L__BB187_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB149_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB187_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB149_1;
-; SM90-NEXT:  $L__BB149_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB187_1;
+; SM90-NEXT:  $L__BB187_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7006,20 +8774,20 @@ define i8 @seq_cst_monotonic_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB150_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB188_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB150_3;
+; SM90-NEXT:    @%p1 bra $L__BB188_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB150_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB188_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB150_1;
-; SM90-NEXT:  $L__BB150_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB188_1;
+; SM90-NEXT:  $L__BB188_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7053,24 +8821,71 @@ define i8 @seq_cst_monotonic_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB151_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB189_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB151_3;
+; SM90-NEXT:    @%p1 bra $L__BB189_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB151_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB189_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB151_1;
-; SM90-NEXT:  $L__BB151_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB189_1;
+; SM90-NEXT:  $L__BB189_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") seq_cst monotonic
+    ret i8 %new
+}
+
+define i8 @seq_cst_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: seq_cst_monotonic_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB190_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB190_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB190_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB190_1;
+; SM90-NEXT:  $L__BB190_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new seq_cst monotonic
     ret i8 %new
 }
 
@@ -7100,20 +8915,20 @@ define i8 @seq_cst_monotonic_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB152_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB191_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB152_3;
+; SM90-NEXT:    @%p1 bra $L__BB191_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB152_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB191_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB152_1;
-; SM90-NEXT:  $L__BB152_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB191_1;
+; SM90-NEXT:  $L__BB191_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7147,20 +8962,20 @@ define i8 @seq_cst_monotonic_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB153_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB192_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB153_3;
+; SM90-NEXT:    @%p1 bra $L__BB192_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB153_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB192_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB153_1;
-; SM90-NEXT:  $L__BB153_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB192_1;
+; SM90-NEXT:  $L__BB192_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7194,20 +9009,20 @@ define i8 @seq_cst_monotonic_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, 
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB154_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB193_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB154_3;
+; SM90-NEXT:    @%p1 bra $L__BB193_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB154_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB193_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB154_1;
-; SM90-NEXT:  $L__BB154_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB193_1;
+; SM90-NEXT:  $L__BB193_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7241,24 +9056,71 @@ define i8 @seq_cst_monotonic_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB155_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB194_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB155_3;
+; SM90-NEXT:    @%p1 bra $L__BB194_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB155_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB194_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB155_1;
-; SM90-NEXT:  $L__BB155_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB194_1;
+; SM90-NEXT:  $L__BB194_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") seq_cst monotonic
+    ret i8 %new
+}
+
+define i8 @seq_cst_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: seq_cst_acquire_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB195_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB195_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB195_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB195_1;
+; SM90-NEXT:  $L__BB195_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new seq_cst acquire
     ret i8 %new
 }
 
@@ -7288,20 +9150,20 @@ define i8 @seq_cst_acquire_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB156_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB196_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB156_3;
+; SM90-NEXT:    @%p1 bra $L__BB196_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB156_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB196_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB156_1;
-; SM90-NEXT:  $L__BB156_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB196_1;
+; SM90-NEXT:  $L__BB196_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7335,20 +9197,20 @@ define i8 @seq_cst_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB157_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB197_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB157_3;
+; SM90-NEXT:    @%p1 bra $L__BB197_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB157_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB197_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB157_1;
-; SM90-NEXT:  $L__BB157_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB197_1;
+; SM90-NEXT:  $L__BB197_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7382,20 +9244,20 @@ define i8 @seq_cst_acquire_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB158_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB198_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB158_3;
+; SM90-NEXT:    @%p1 bra $L__BB198_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB158_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB198_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB158_1;
-; SM90-NEXT:  $L__BB158_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB198_1;
+; SM90-NEXT:  $L__BB198_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7429,24 +9291,71 @@ define i8 @seq_cst_acquire_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB159_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB199_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB159_3;
+; SM90-NEXT:    @%p1 bra $L__BB199_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB159_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB199_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB159_1;
-; SM90-NEXT:  $L__BB159_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB199_1;
+; SM90-NEXT:  $L__BB199_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") seq_cst acquire
+    ret i8 %new
+}
+
+define i8 @seq_cst_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: seq_cst_acquire_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB200_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB200_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB200_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB200_1;
+; SM90-NEXT:  $L__BB200_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new seq_cst acquire
     ret i8 %new
 }
 
@@ -7476,20 +9385,20 @@ define i8 @seq_cst_acquire_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB160_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB201_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB160_3;
+; SM90-NEXT:    @%p1 bra $L__BB201_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB160_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB201_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB160_1;
-; SM90-NEXT:  $L__BB160_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB201_1;
+; SM90-NEXT:  $L__BB201_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7523,20 +9432,20 @@ define i8 @seq_cst_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB161_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB202_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB161_3;
+; SM90-NEXT:    @%p1 bra $L__BB202_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB161_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB202_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB161_1;
-; SM90-NEXT:  $L__BB161_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB202_1;
+; SM90-NEXT:  $L__BB202_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7570,20 +9479,20 @@ define i8 @seq_cst_acquire_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB162_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB203_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB162_3;
+; SM90-NEXT:    @%p1 bra $L__BB203_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB162_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB203_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB162_1;
-; SM90-NEXT:  $L__BB162_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB203_1;
+; SM90-NEXT:  $L__BB203_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7617,24 +9526,71 @@ define i8 @seq_cst_acquire_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB163_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB204_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB163_3;
+; SM90-NEXT:    @%p1 bra $L__BB204_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB163_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB204_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB163_1;
-; SM90-NEXT:  $L__BB163_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB204_1;
+; SM90-NEXT:  $L__BB204_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") seq_cst acquire
+    ret i8 %new
+}
+
+define i8 @seq_cst_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: seq_cst_acquire_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB205_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB205_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB205_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB205_1;
+; SM90-NEXT:  $L__BB205_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new seq_cst acquire
     ret i8 %new
 }
 
@@ -7664,20 +9620,20 @@ define i8 @seq_cst_acquire_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB164_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB206_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB164_3;
+; SM90-NEXT:    @%p1 bra $L__BB206_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB164_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB206_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB164_1;
-; SM90-NEXT:  $L__BB164_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB206_1;
+; SM90-NEXT:  $L__BB206_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7711,20 +9667,20 @@ define i8 @seq_cst_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB165_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB207_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB165_3;
+; SM90-NEXT:    @%p1 bra $L__BB207_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB165_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB207_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB165_1;
-; SM90-NEXT:  $L__BB165_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB207_1;
+; SM90-NEXT:  $L__BB207_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7758,20 +9714,20 @@ define i8 @seq_cst_acquire_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB166_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB208_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB166_3;
+; SM90-NEXT:    @%p1 bra $L__BB208_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB166_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB208_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB166_1;
-; SM90-NEXT:  $L__BB166_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB208_1;
+; SM90-NEXT:  $L__BB208_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7805,24 +9761,71 @@ define i8 @seq_cst_acquire_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB167_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB209_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB167_3;
+; SM90-NEXT:    @%p1 bra $L__BB209_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB167_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB209_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB167_1;
-; SM90-NEXT:  $L__BB167_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB209_1;
+; SM90-NEXT:  $L__BB209_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") seq_cst acquire
+    ret i8 %new
+}
+
+define i8 @seq_cst_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i8_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_generic_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB210_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB210_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB210_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB210_1;
+; SM90-NEXT:  $L__BB210_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new seq_cst seq_cst
     ret i8 %new
 }
 
@@ -7852,20 +9855,20 @@ define i8 @seq_cst_seq_cst_i8_generic_sys(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB168_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB211_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB168_3;
+; SM90-NEXT:    @%p1 bra $L__BB211_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB168_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB211_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB168_1;
-; SM90-NEXT:  $L__BB168_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB211_1;
+; SM90-NEXT:  $L__BB211_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7899,20 +9902,20 @@ define i8 @seq_cst_seq_cst_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB169_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB212_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB169_3;
+; SM90-NEXT:    @%p1 bra $L__BB212_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB169_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB212_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB169_1;
-; SM90-NEXT:  $L__BB169_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB212_1;
+; SM90-NEXT:  $L__BB212_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7946,20 +9949,20 @@ define i8 @seq_cst_seq_cst_i8_generic_cluster(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB170_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB213_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB170_3;
+; SM90-NEXT:    @%p1 bra $L__BB213_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB170_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB213_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB170_1;
-; SM90-NEXT:  $L__BB170_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB213_1;
+; SM90-NEXT:  $L__BB213_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -7993,24 +9996,71 @@ define i8 @seq_cst_seq_cst_i8_generic_gpu(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB171_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB214_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB171_3;
+; SM90-NEXT:    @%p1 bra $L__BB214_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB171_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB214_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB171_1;
-; SM90-NEXT:  $L__BB171_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB214_1;
+; SM90-NEXT:  $L__BB214_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("device") seq_cst seq_cst
+    ret i8 %new
+}
+
+define i8 @seq_cst_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i8_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_global_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB215_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB215_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB215_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB215_1;
+; SM90-NEXT:  $L__BB215_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new seq_cst seq_cst
     ret i8 %new
 }
 
@@ -8040,20 +10090,20 @@ define i8 @seq_cst_seq_cst_i8_global_sys(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB172_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB216_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB172_3;
+; SM90-NEXT:    @%p1 bra $L__BB216_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB172_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB216_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB172_1;
-; SM90-NEXT:  $L__BB172_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB216_1;
+; SM90-NEXT:  $L__BB216_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -8087,20 +10137,20 @@ define i8 @seq_cst_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB173_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB217_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB173_3;
+; SM90-NEXT:    @%p1 bra $L__BB217_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB173_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB217_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB173_1;
-; SM90-NEXT:  $L__BB173_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB217_1;
+; SM90-NEXT:  $L__BB217_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -8134,20 +10184,20 @@ define i8 @seq_cst_seq_cst_i8_global_cluster(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB174_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB218_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB174_3;
+; SM90-NEXT:    @%p1 bra $L__BB218_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB174_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB218_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB174_1;
-; SM90-NEXT:  $L__BB174_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB218_1;
+; SM90-NEXT:  $L__BB218_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -8181,24 +10231,71 @@ define i8 @seq_cst_seq_cst_i8_global_gpu(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB175_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB219_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB175_3;
+; SM90-NEXT:    @%p1 bra $L__BB219_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB175_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB219_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB175_1;
-; SM90-NEXT:  $L__BB175_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB219_1;
+; SM90-NEXT:  $L__BB219_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new syncscope("device") seq_cst seq_cst
+    ret i8 %new
+}
+
+define i8 @seq_cst_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i8_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<21>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r9, %rd2;
+; SM90-NEXT:    and.b32 %r10, %r9, 3;
+; SM90-NEXT:    shl.b32 %r1, %r10, 3;
+; SM90-NEXT:    mov.b32 %r11, 255;
+; SM90-NEXT:    shl.b32 %r12, %r11, %r1;
+; SM90-NEXT:    not.b32 %r2, %r12;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs1;
+; SM90-NEXT:    and.b32 %r14, %r13, 255;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_shared_param_1];
+; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
+; SM90-NEXT:    and.b32 %r20, %r16, %r2;
+; SM90-NEXT:  $L__BB220_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r17, %r20, %r3;
+; SM90-NEXT:    or.b32 %r18, %r20, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM90-NEXT:    @%p1 bra $L__BB220_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB220_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM90-NEXT:    mov.b32 %r20, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB220_1;
+; SM90-NEXT:  $L__BB220_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new seq_cst seq_cst
     ret i8 %new
 }
 
@@ -8228,20 +10325,20 @@ define i8 @seq_cst_seq_cst_i8_shared_sys(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB176_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB221_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB176_3;
+; SM90-NEXT:    @%p1 bra $L__BB221_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB176_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB221_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB176_1;
-; SM90-NEXT:  $L__BB176_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB221_1;
+; SM90-NEXT:  $L__BB221_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -8275,20 +10372,20 @@ define i8 @seq_cst_seq_cst_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB177_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB222_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB177_3;
+; SM90-NEXT:    @%p1 bra $L__BB222_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB177_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB222_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB177_1;
-; SM90-NEXT:  $L__BB177_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB222_1;
+; SM90-NEXT:  $L__BB222_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -8322,20 +10419,20 @@ define i8 @seq_cst_seq_cst_i8_shared_cluster(ptr addrspace(3) %addr, i8 %cmp, i8
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB178_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB223_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB178_3;
+; SM90-NEXT:    @%p1 bra $L__BB223_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB178_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB223_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB178_1;
-; SM90-NEXT:  $L__BB178_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB223_1;
+; SM90-NEXT:  $L__BB223_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
@@ -8369,25 +10466,69 @@ define i8 @seq_cst_seq_cst_i8_shared_gpu(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r15, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM90-NEXT:    and.b32 %r20, %r16, %r2;
-; SM90-NEXT:  $L__BB179_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB224_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM90-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r18, %r17;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r18;
-; SM90-NEXT:    @%p1 bra $L__BB179_3;
+; SM90-NEXT:    @%p1 bra $L__BB224_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB179_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB224_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r20, %r8;
 ; SM90-NEXT:    mov.b32 %r20, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB179_1;
-; SM90-NEXT:  $L__BB179_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB224_1;
+; SM90-NEXT:  $L__BB224_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new syncscope("device") seq_cst seq_cst
     ret i8 %new
+}
+
+define i16 @monotonic_monotonic_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: monotonic_monotonic_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_generic_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_generic_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB225_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB225_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB225_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB225_1;
+; SM90-NEXT:  $L__BB225_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new monotonic monotonic
+    ret i16 %new
 }
 
 define i16 @monotonic_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
@@ -8414,20 +10555,20 @@ define i16 @monotonic_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB180_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB226_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB180_3;
+; SM90-NEXT:    @%p1 bra $L__BB226_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB180_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB226_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB180_1;
-; SM90-NEXT:  $L__BB180_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB226_1;
+; SM90-NEXT:  $L__BB226_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("") monotonic monotonic
@@ -8458,20 +10599,20 @@ define i16 @monotonic_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB181_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB227_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB181_3;
+; SM90-NEXT:    @%p1 bra $L__BB227_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB181_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB227_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB181_1;
-; SM90-NEXT:  $L__BB181_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB227_1;
+; SM90-NEXT:  $L__BB227_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("block") monotonic monotonic
@@ -8502,20 +10643,20 @@ define i16 @monotonic_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %ne
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB182_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB228_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB182_3;
+; SM90-NEXT:    @%p1 bra $L__BB228_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB182_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB228_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB182_1;
-; SM90-NEXT:  $L__BB182_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB228_1;
+; SM90-NEXT:  $L__BB228_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("cluster") monotonic monotonic
@@ -8546,23 +10687,67 @@ define i16 @monotonic_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB183_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB229_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB183_3;
+; SM90-NEXT:    @%p1 bra $L__BB229_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB183_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB229_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB183_1;
-; SM90-NEXT:  $L__BB183_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB229_1;
+; SM90-NEXT:  $L__BB229_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") monotonic monotonic
+    ret i16 %new
+}
+
+define i16 @monotonic_monotonic_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: monotonic_monotonic_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_global_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_global_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB230_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB230_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB230_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB230_1;
+; SM90-NEXT:  $L__BB230_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new monotonic monotonic
     ret i16 %new
 }
 
@@ -8590,20 +10775,20 @@ define i16 @monotonic_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB184_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB231_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB184_3;
+; SM90-NEXT:    @%p1 bra $L__BB231_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB184_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB231_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB184_1;
-; SM90-NEXT:  $L__BB184_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB231_1;
+; SM90-NEXT:  $L__BB231_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("") monotonic monotonic
@@ -8634,20 +10819,20 @@ define i16 @monotonic_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB185_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB232_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB185_3;
+; SM90-NEXT:    @%p1 bra $L__BB232_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB185_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB232_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB185_1;
-; SM90-NEXT:  $L__BB185_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB232_1;
+; SM90-NEXT:  $L__BB232_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("block") monotonic monotonic
@@ -8678,20 +10863,20 @@ define i16 @monotonic_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB186_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB233_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB186_3;
+; SM90-NEXT:    @%p1 bra $L__BB233_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB186_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB233_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB186_1;
-; SM90-NEXT:  $L__BB186_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB233_1;
+; SM90-NEXT:  $L__BB233_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("cluster") monotonic monotonic
@@ -8722,23 +10907,67 @@ define i16 @monotonic_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB187_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB234_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB187_3;
+; SM90-NEXT:    @%p1 bra $L__BB234_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB187_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB234_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB187_1;
-; SM90-NEXT:  $L__BB187_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB234_1;
+; SM90-NEXT:  $L__BB234_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") monotonic monotonic
+    ret i16 %new
+}
+
+define i16 @monotonic_monotonic_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: monotonic_monotonic_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_monotonic_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i16_shared_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_monotonic_i16_shared_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB235_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB235_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB235_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB235_1;
+; SM90-NEXT:  $L__BB235_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new monotonic monotonic
     ret i16 %new
 }
 
@@ -8766,20 +10995,20 @@ define i16 @monotonic_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB188_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB236_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB188_3;
+; SM90-NEXT:    @%p1 bra $L__BB236_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB188_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB236_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB188_1;
-; SM90-NEXT:  $L__BB188_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB236_1;
+; SM90-NEXT:  $L__BB236_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("") monotonic monotonic
@@ -8810,20 +11039,20 @@ define i16 @monotonic_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB189_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB237_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB189_3;
+; SM90-NEXT:    @%p1 bra $L__BB237_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB189_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB237_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB189_1;
-; SM90-NEXT:  $L__BB189_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB237_1;
+; SM90-NEXT:  $L__BB237_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("block") monotonic monotonic
@@ -8854,20 +11083,20 @@ define i16 @monotonic_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB190_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB238_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB190_3;
+; SM90-NEXT:    @%p1 bra $L__BB238_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB190_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB238_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB190_1;
-; SM90-NEXT:  $L__BB190_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB238_1;
+; SM90-NEXT:  $L__BB238_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("cluster") monotonic monotonic
@@ -8898,23 +11127,68 @@ define i16 @monotonic_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB191_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB239_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB191_3;
+; SM90-NEXT:    @%p1 bra $L__BB239_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB191_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB239_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB191_1;
-; SM90-NEXT:  $L__BB191_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB239_1;
+; SM90-NEXT:  $L__BB239_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") monotonic monotonic
+    ret i16 %new
+}
+
+define i16 @monotonic_acquire_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: monotonic_acquire_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_generic_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_generic_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB240_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB240_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB240_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB240_1;
+; SM90-NEXT:  $L__BB240_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new monotonic acquire
     ret i16 %new
 }
 
@@ -8942,20 +11216,20 @@ define i16 @monotonic_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB192_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB241_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB192_3;
+; SM90-NEXT:    @%p1 bra $L__BB241_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB192_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB241_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB192_1;
-; SM90-NEXT:  $L__BB192_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB241_1;
+; SM90-NEXT:  $L__BB241_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -8987,20 +11261,20 @@ define i16 @monotonic_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB193_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB242_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB193_3;
+; SM90-NEXT:    @%p1 bra $L__BB242_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB193_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB242_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB193_1;
-; SM90-NEXT:  $L__BB193_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB242_1;
+; SM90-NEXT:  $L__BB242_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9032,20 +11306,20 @@ define i16 @monotonic_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB194_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB243_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB194_3;
+; SM90-NEXT:    @%p1 bra $L__BB243_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB194_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB243_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB194_1;
-; SM90-NEXT:  $L__BB194_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB243_1;
+; SM90-NEXT:  $L__BB243_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9077,24 +11351,69 @@ define i16 @monotonic_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB195_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB244_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB195_3;
+; SM90-NEXT:    @%p1 bra $L__BB244_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB195_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB244_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB195_1;
-; SM90-NEXT:  $L__BB195_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB244_1;
+; SM90-NEXT:  $L__BB244_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") monotonic acquire
+    ret i16 %new
+}
+
+define i16 @monotonic_acquire_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: monotonic_acquire_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_global_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_global_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB245_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB245_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB245_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB245_1;
+; SM90-NEXT:  $L__BB245_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new monotonic acquire
     ret i16 %new
 }
 
@@ -9122,20 +11441,20 @@ define i16 @monotonic_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB196_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB246_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB196_3;
+; SM90-NEXT:    @%p1 bra $L__BB246_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB196_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB246_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB196_1;
-; SM90-NEXT:  $L__BB196_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB246_1;
+; SM90-NEXT:  $L__BB246_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9167,20 +11486,20 @@ define i16 @monotonic_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB197_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB247_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB197_3;
+; SM90-NEXT:    @%p1 bra $L__BB247_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB197_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB247_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB197_1;
-; SM90-NEXT:  $L__BB197_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB247_1;
+; SM90-NEXT:  $L__BB247_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9212,20 +11531,20 @@ define i16 @monotonic_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB198_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB248_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB198_3;
+; SM90-NEXT:    @%p1 bra $L__BB248_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB198_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB248_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB198_1;
-; SM90-NEXT:  $L__BB198_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB248_1;
+; SM90-NEXT:  $L__BB248_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9257,24 +11576,69 @@ define i16 @monotonic_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB199_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB249_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB199_3;
+; SM90-NEXT:    @%p1 bra $L__BB249_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB199_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB249_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB199_1;
-; SM90-NEXT:  $L__BB199_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB249_1;
+; SM90-NEXT:  $L__BB249_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") monotonic acquire
+    ret i16 %new
+}
+
+define i16 @monotonic_acquire_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: monotonic_acquire_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_acquire_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i16_shared_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_acquire_i16_shared_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB250_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB250_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB250_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB250_1;
+; SM90-NEXT:  $L__BB250_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new monotonic acquire
     ret i16 %new
 }
 
@@ -9302,20 +11666,20 @@ define i16 @monotonic_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB200_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB251_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB200_3;
+; SM90-NEXT:    @%p1 bra $L__BB251_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB200_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB251_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB200_1;
-; SM90-NEXT:  $L__BB200_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB251_1;
+; SM90-NEXT:  $L__BB251_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9347,20 +11711,20 @@ define i16 @monotonic_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB201_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB252_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB201_3;
+; SM90-NEXT:    @%p1 bra $L__BB252_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB201_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB252_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB201_1;
-; SM90-NEXT:  $L__BB201_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB252_1;
+; SM90-NEXT:  $L__BB252_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9392,20 +11756,20 @@ define i16 @monotonic_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB202_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB253_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB202_3;
+; SM90-NEXT:    @%p1 bra $L__BB253_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB202_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB253_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB202_1;
-; SM90-NEXT:  $L__BB202_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB253_1;
+; SM90-NEXT:  $L__BB253_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9437,24 +11801,70 @@ define i16 @monotonic_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB203_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB254_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB203_3;
+; SM90-NEXT:    @%p1 bra $L__BB254_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB203_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB254_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB203_1;
-; SM90-NEXT:  $L__BB203_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB254_1;
+; SM90-NEXT:  $L__BB254_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") monotonic acquire
+    ret i16 %new
+}
+
+define i16 @monotonic_seq_cst_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: monotonic_seq_cst_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB255_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB255_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB255_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB255_1;
+; SM90-NEXT:  $L__BB255_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new monotonic seq_cst
     ret i16 %new
 }
 
@@ -9483,20 +11893,20 @@ define i16 @monotonic_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB204_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB256_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB204_3;
+; SM90-NEXT:    @%p1 bra $L__BB256_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB204_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB256_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB204_1;
-; SM90-NEXT:  $L__BB204_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB256_1;
+; SM90-NEXT:  $L__BB256_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9529,20 +11939,20 @@ define i16 @monotonic_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB205_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB257_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB205_3;
+; SM90-NEXT:    @%p1 bra $L__BB257_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB205_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB257_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB205_1;
-; SM90-NEXT:  $L__BB205_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB257_1;
+; SM90-NEXT:  $L__BB257_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9575,20 +11985,20 @@ define i16 @monotonic_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB206_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB258_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB206_3;
+; SM90-NEXT:    @%p1 bra $L__BB258_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB206_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB258_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB206_1;
-; SM90-NEXT:  $L__BB206_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB258_1;
+; SM90-NEXT:  $L__BB258_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9621,24 +12031,70 @@ define i16 @monotonic_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB207_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB259_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB207_3;
+; SM90-NEXT:    @%p1 bra $L__BB259_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB207_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB259_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB207_1;
-; SM90-NEXT:  $L__BB207_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB259_1;
+; SM90-NEXT:  $L__BB259_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") monotonic seq_cst
+    ret i16 %new
+}
+
+define i16 @monotonic_seq_cst_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: monotonic_seq_cst_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB260_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB260_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB260_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB260_1;
+; SM90-NEXT:  $L__BB260_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new monotonic seq_cst
     ret i16 %new
 }
 
@@ -9667,20 +12123,20 @@ define i16 @monotonic_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB208_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB261_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB208_3;
+; SM90-NEXT:    @%p1 bra $L__BB261_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB208_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB261_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB208_1;
-; SM90-NEXT:  $L__BB208_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB261_1;
+; SM90-NEXT:  $L__BB261_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9713,20 +12169,20 @@ define i16 @monotonic_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB209_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB262_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB209_3;
+; SM90-NEXT:    @%p1 bra $L__BB262_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB209_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB262_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB209_1;
-; SM90-NEXT:  $L__BB209_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB262_1;
+; SM90-NEXT:  $L__BB262_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9759,20 +12215,20 @@ define i16 @monotonic_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB210_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB263_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB210_3;
+; SM90-NEXT:    @%p1 bra $L__BB263_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB210_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB263_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB210_1;
-; SM90-NEXT:  $L__BB210_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB263_1;
+; SM90-NEXT:  $L__BB263_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9805,24 +12261,70 @@ define i16 @monotonic_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB211_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB264_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB211_3;
+; SM90-NEXT:    @%p1 bra $L__BB264_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB211_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB264_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB211_1;
-; SM90-NEXT:  $L__BB211_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB264_1;
+; SM90-NEXT:  $L__BB264_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") monotonic seq_cst
+    ret i16 %new
+}
+
+define i16 @monotonic_seq_cst_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: monotonic_seq_cst_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [monotonic_seq_cst_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i16_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [monotonic_seq_cst_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB265_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB265_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB265_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB265_1;
+; SM90-NEXT:  $L__BB265_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new monotonic seq_cst
     ret i16 %new
 }
 
@@ -9851,20 +12353,20 @@ define i16 @monotonic_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB212_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB266_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB212_3;
+; SM90-NEXT:    @%p1 bra $L__BB266_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB212_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB266_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB212_1;
-; SM90-NEXT:  $L__BB212_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB266_1;
+; SM90-NEXT:  $L__BB266_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9897,20 +12399,20 @@ define i16 @monotonic_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB213_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB267_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB213_3;
+; SM90-NEXT:    @%p1 bra $L__BB267_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB213_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB267_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB213_1;
-; SM90-NEXT:  $L__BB213_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB267_1;
+; SM90-NEXT:  $L__BB267_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9943,20 +12445,20 @@ define i16 @monotonic_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB214_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB268_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB214_3;
+; SM90-NEXT:    @%p1 bra $L__BB268_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB214_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB268_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB214_1;
-; SM90-NEXT:  $L__BB214_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB268_1;
+; SM90-NEXT:  $L__BB268_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -9989,24 +12491,69 @@ define i16 @monotonic_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB215_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB269_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB215_3;
+; SM90-NEXT:    @%p1 bra $L__BB269_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB215_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB269_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB215_1;
-; SM90-NEXT:  $L__BB215_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB269_1;
+; SM90-NEXT:  $L__BB269_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") monotonic seq_cst
+    ret i16 %new
+}
+
+define i16 @acquire_monotonic_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acquire_monotonic_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_generic_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_generic_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB270_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB270_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB270_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB270_1;
+; SM90-NEXT:  $L__BB270_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new acquire monotonic
     ret i16 %new
 }
 
@@ -10034,20 +12581,20 @@ define i16 @acquire_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB216_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB271_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB216_3;
+; SM90-NEXT:    @%p1 bra $L__BB271_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB216_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB271_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB216_1;
-; SM90-NEXT:  $L__BB216_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB271_1;
+; SM90-NEXT:  $L__BB271_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10079,20 +12626,20 @@ define i16 @acquire_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB217_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB272_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB217_3;
+; SM90-NEXT:    @%p1 bra $L__BB272_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB217_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB272_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB217_1;
-; SM90-NEXT:  $L__BB217_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB272_1;
+; SM90-NEXT:  $L__BB272_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10124,20 +12671,20 @@ define i16 @acquire_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB218_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB273_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB218_3;
+; SM90-NEXT:    @%p1 bra $L__BB273_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB218_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB273_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB218_1;
-; SM90-NEXT:  $L__BB218_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB273_1;
+; SM90-NEXT:  $L__BB273_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10169,24 +12716,69 @@ define i16 @acquire_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB219_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB274_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB219_3;
+; SM90-NEXT:    @%p1 bra $L__BB274_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB219_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB274_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB219_1;
-; SM90-NEXT:  $L__BB219_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB274_1;
+; SM90-NEXT:  $L__BB274_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") acquire monotonic
+    ret i16 %new
+}
+
+define i16 @acquire_monotonic_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acquire_monotonic_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_global_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_global_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB275_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB275_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB275_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB275_1;
+; SM90-NEXT:  $L__BB275_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new acquire monotonic
     ret i16 %new
 }
 
@@ -10214,20 +12806,20 @@ define i16 @acquire_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB220_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB276_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB220_3;
+; SM90-NEXT:    @%p1 bra $L__BB276_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB220_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB276_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB220_1;
-; SM90-NEXT:  $L__BB220_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB276_1;
+; SM90-NEXT:  $L__BB276_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10259,20 +12851,20 @@ define i16 @acquire_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB221_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB277_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB221_3;
+; SM90-NEXT:    @%p1 bra $L__BB277_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB221_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB277_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB221_1;
-; SM90-NEXT:  $L__BB221_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB277_1;
+; SM90-NEXT:  $L__BB277_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10304,20 +12896,20 @@ define i16 @acquire_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB222_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB278_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB222_3;
+; SM90-NEXT:    @%p1 bra $L__BB278_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB222_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB278_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB222_1;
-; SM90-NEXT:  $L__BB222_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB278_1;
+; SM90-NEXT:  $L__BB278_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10349,24 +12941,69 @@ define i16 @acquire_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB223_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB279_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB223_3;
+; SM90-NEXT:    @%p1 bra $L__BB279_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB223_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB279_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB223_1;
-; SM90-NEXT:  $L__BB223_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB279_1;
+; SM90-NEXT:  $L__BB279_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") acquire monotonic
+    ret i16 %new
+}
+
+define i16 @acquire_monotonic_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acquire_monotonic_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_monotonic_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i16_shared_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_monotonic_i16_shared_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB280_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB280_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB280_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB280_1;
+; SM90-NEXT:  $L__BB280_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new acquire monotonic
     ret i16 %new
 }
 
@@ -10394,20 +13031,20 @@ define i16 @acquire_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB224_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB281_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB224_3;
+; SM90-NEXT:    @%p1 bra $L__BB281_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB224_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB281_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB224_1;
-; SM90-NEXT:  $L__BB224_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB281_1;
+; SM90-NEXT:  $L__BB281_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10439,20 +13076,20 @@ define i16 @acquire_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB225_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB282_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB225_3;
+; SM90-NEXT:    @%p1 bra $L__BB282_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB225_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB282_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB225_1;
-; SM90-NEXT:  $L__BB225_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB282_1;
+; SM90-NEXT:  $L__BB282_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10484,20 +13121,20 @@ define i16 @acquire_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB226_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB283_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB226_3;
+; SM90-NEXT:    @%p1 bra $L__BB283_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB226_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB283_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB226_1;
-; SM90-NEXT:  $L__BB226_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB283_1;
+; SM90-NEXT:  $L__BB283_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10529,24 +13166,69 @@ define i16 @acquire_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB227_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB284_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB227_3;
+; SM90-NEXT:    @%p1 bra $L__BB284_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB227_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB284_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB227_1;
-; SM90-NEXT:  $L__BB227_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB284_1;
+; SM90-NEXT:  $L__BB284_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") acquire monotonic
+    ret i16 %new
+}
+
+define i16 @acquire_acquire_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acquire_acquire_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_generic_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_generic_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB285_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB285_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB285_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB285_1;
+; SM90-NEXT:  $L__BB285_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new acquire acquire
     ret i16 %new
 }
 
@@ -10574,20 +13256,20 @@ define i16 @acquire_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB228_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB286_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB228_3;
+; SM90-NEXT:    @%p1 bra $L__BB286_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB228_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB286_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB228_1;
-; SM90-NEXT:  $L__BB228_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB286_1;
+; SM90-NEXT:  $L__BB286_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10619,20 +13301,20 @@ define i16 @acquire_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB229_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB287_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB229_3;
+; SM90-NEXT:    @%p1 bra $L__BB287_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB229_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB287_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB229_1;
-; SM90-NEXT:  $L__BB229_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB287_1;
+; SM90-NEXT:  $L__BB287_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10664,20 +13346,20 @@ define i16 @acquire_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB230_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB288_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB230_3;
+; SM90-NEXT:    @%p1 bra $L__BB288_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB230_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB288_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB230_1;
-; SM90-NEXT:  $L__BB230_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB288_1;
+; SM90-NEXT:  $L__BB288_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10709,24 +13391,69 @@ define i16 @acquire_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB231_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB289_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB231_3;
+; SM90-NEXT:    @%p1 bra $L__BB289_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB231_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB289_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB231_1;
-; SM90-NEXT:  $L__BB231_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB289_1;
+; SM90-NEXT:  $L__BB289_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") acquire acquire
+    ret i16 %new
+}
+
+define i16 @acquire_acquire_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acquire_acquire_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_global_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_global_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB290_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB290_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB290_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB290_1;
+; SM90-NEXT:  $L__BB290_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new acquire acquire
     ret i16 %new
 }
 
@@ -10754,20 +13481,20 @@ define i16 @acquire_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB232_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB291_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB232_3;
+; SM90-NEXT:    @%p1 bra $L__BB291_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB232_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB291_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB232_1;
-; SM90-NEXT:  $L__BB232_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB291_1;
+; SM90-NEXT:  $L__BB291_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10799,20 +13526,20 @@ define i16 @acquire_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB233_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB292_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB233_3;
+; SM90-NEXT:    @%p1 bra $L__BB292_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB233_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB292_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB233_1;
-; SM90-NEXT:  $L__BB233_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB292_1;
+; SM90-NEXT:  $L__BB292_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10844,20 +13571,20 @@ define i16 @acquire_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB234_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB293_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB234_3;
+; SM90-NEXT:    @%p1 bra $L__BB293_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB234_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB293_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB234_1;
-; SM90-NEXT:  $L__BB234_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB293_1;
+; SM90-NEXT:  $L__BB293_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10889,24 +13616,69 @@ define i16 @acquire_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB235_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB294_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB235_3;
+; SM90-NEXT:    @%p1 bra $L__BB294_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB235_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB294_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB235_1;
-; SM90-NEXT:  $L__BB235_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB294_1;
+; SM90-NEXT:  $L__BB294_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") acquire acquire
+    ret i16 %new
+}
+
+define i16 @acquire_acquire_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acquire_acquire_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_acquire_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i16_shared_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_acquire_i16_shared_param_1];
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB295_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB295_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB295_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB295_1;
+; SM90-NEXT:  $L__BB295_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new acquire acquire
     ret i16 %new
 }
 
@@ -10934,20 +13706,20 @@ define i16 @acquire_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB236_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB296_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB236_3;
+; SM90-NEXT:    @%p1 bra $L__BB296_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB236_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB296_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB236_1;
-; SM90-NEXT:  $L__BB236_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB296_1;
+; SM90-NEXT:  $L__BB296_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -10979,20 +13751,20 @@ define i16 @acquire_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB237_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB297_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB237_3;
+; SM90-NEXT:    @%p1 bra $L__BB297_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB237_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB297_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB237_1;
-; SM90-NEXT:  $L__BB237_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB297_1;
+; SM90-NEXT:  $L__BB297_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11024,20 +13796,20 @@ define i16 @acquire_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB238_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB298_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB238_3;
+; SM90-NEXT:    @%p1 bra $L__BB298_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB238_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB298_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB238_1;
-; SM90-NEXT:  $L__BB238_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB298_1;
+; SM90-NEXT:  $L__BB298_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11069,24 +13841,70 @@ define i16 @acquire_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB239_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB299_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB239_3;
+; SM90-NEXT:    @%p1 bra $L__BB299_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB239_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB299_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB239_1;
-; SM90-NEXT:  $L__BB239_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB299_1;
+; SM90-NEXT:  $L__BB299_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") acquire acquire
+    ret i16 %new
+}
+
+define i16 @acquire_seq_cst_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acquire_seq_cst_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB300_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB300_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB300_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB300_1;
+; SM90-NEXT:  $L__BB300_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new acquire seq_cst
     ret i16 %new
 }
 
@@ -11115,20 +13933,20 @@ define i16 @acquire_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB240_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB301_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB240_3;
+; SM90-NEXT:    @%p1 bra $L__BB301_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB240_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB301_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB240_1;
-; SM90-NEXT:  $L__BB240_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB301_1;
+; SM90-NEXT:  $L__BB301_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11161,20 +13979,20 @@ define i16 @acquire_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB241_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB302_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB241_3;
+; SM90-NEXT:    @%p1 bra $L__BB302_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB241_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB302_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB241_1;
-; SM90-NEXT:  $L__BB241_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB302_1;
+; SM90-NEXT:  $L__BB302_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11207,20 +14025,20 @@ define i16 @acquire_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB242_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB303_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB242_3;
+; SM90-NEXT:    @%p1 bra $L__BB303_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB242_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB303_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB242_1;
-; SM90-NEXT:  $L__BB242_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB303_1;
+; SM90-NEXT:  $L__BB303_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11253,24 +14071,70 @@ define i16 @acquire_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB243_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB304_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB243_3;
+; SM90-NEXT:    @%p1 bra $L__BB304_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB243_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB304_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB243_1;
-; SM90-NEXT:  $L__BB243_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB304_1;
+; SM90-NEXT:  $L__BB304_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") acquire seq_cst
+    ret i16 %new
+}
+
+define i16 @acquire_seq_cst_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acquire_seq_cst_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB305_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB305_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB305_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB305_1;
+; SM90-NEXT:  $L__BB305_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new acquire seq_cst
     ret i16 %new
 }
 
@@ -11299,20 +14163,20 @@ define i16 @acquire_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB244_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB306_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB244_3;
+; SM90-NEXT:    @%p1 bra $L__BB306_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB244_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB306_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB244_1;
-; SM90-NEXT:  $L__BB244_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB306_1;
+; SM90-NEXT:  $L__BB306_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11345,20 +14209,20 @@ define i16 @acquire_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB245_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB307_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB245_3;
+; SM90-NEXT:    @%p1 bra $L__BB307_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB245_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB307_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB245_1;
-; SM90-NEXT:  $L__BB245_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB307_1;
+; SM90-NEXT:  $L__BB307_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11391,20 +14255,20 @@ define i16 @acquire_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB246_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB308_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB246_3;
+; SM90-NEXT:    @%p1 bra $L__BB308_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB246_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB308_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB246_1;
-; SM90-NEXT:  $L__BB246_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB308_1;
+; SM90-NEXT:  $L__BB308_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11437,24 +14301,70 @@ define i16 @acquire_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB247_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB309_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB247_3;
+; SM90-NEXT:    @%p1 bra $L__BB309_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB247_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB309_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB247_1;
-; SM90-NEXT:  $L__BB247_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB309_1;
+; SM90-NEXT:  $L__BB309_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") acquire seq_cst
+    ret i16 %new
+}
+
+define i16 @acquire_seq_cst_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acquire_seq_cst_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acquire_seq_cst_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i16_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acquire_seq_cst_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB310_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB310_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB310_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB310_1;
+; SM90-NEXT:  $L__BB310_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new acquire seq_cst
     ret i16 %new
 }
 
@@ -11483,20 +14393,20 @@ define i16 @acquire_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB248_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB311_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB248_3;
+; SM90-NEXT:    @%p1 bra $L__BB311_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB248_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB311_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB248_1;
-; SM90-NEXT:  $L__BB248_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB311_1;
+; SM90-NEXT:  $L__BB311_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11529,20 +14439,20 @@ define i16 @acquire_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB249_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB312_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB249_3;
+; SM90-NEXT:    @%p1 bra $L__BB312_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB249_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB312_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB249_1;
-; SM90-NEXT:  $L__BB249_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB312_1;
+; SM90-NEXT:  $L__BB312_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11575,20 +14485,20 @@ define i16 @acquire_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB250_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB313_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB250_3;
+; SM90-NEXT:    @%p1 bra $L__BB313_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB250_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB313_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB250_1;
-; SM90-NEXT:  $L__BB250_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB313_1;
+; SM90-NEXT:  $L__BB313_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -11621,24 +14531,69 @@ define i16 @acquire_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB251_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB314_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB251_3;
+; SM90-NEXT:    @%p1 bra $L__BB314_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB251_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB314_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB251_1;
-; SM90-NEXT:  $L__BB251_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB314_1;
+; SM90-NEXT:  $L__BB314_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") acquire seq_cst
+    ret i16 %new
+}
+
+define i16 @release_monotonic_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: release_monotonic_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_generic_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB315_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB315_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB315_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB315_1;
+; SM90-NEXT:  $L__BB315_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new release monotonic
     ret i16 %new
 }
 
@@ -11667,20 +14622,20 @@ define i16 @release_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB252_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB316_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB252_3;
+; SM90-NEXT:    @%p1 bra $L__BB316_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB252_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB316_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB252_1;
-; SM90-NEXT:  $L__BB252_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB316_1;
+; SM90-NEXT:  $L__BB316_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("") release monotonic
@@ -11712,20 +14667,20 @@ define i16 @release_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB253_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB317_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB253_3;
+; SM90-NEXT:    @%p1 bra $L__BB317_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB253_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB317_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB253_1;
-; SM90-NEXT:  $L__BB253_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB317_1;
+; SM90-NEXT:  $L__BB317_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("block") release monotonic
@@ -11757,20 +14712,20 @@ define i16 @release_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB254_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB318_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB254_3;
+; SM90-NEXT:    @%p1 bra $L__BB318_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB254_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB318_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB254_1;
-; SM90-NEXT:  $L__BB254_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB318_1;
+; SM90-NEXT:  $L__BB318_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("cluster") release monotonic
@@ -11802,23 +14757,68 @@ define i16 @release_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB255_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB319_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB255_3;
+; SM90-NEXT:    @%p1 bra $L__BB319_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB255_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB319_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB255_1;
-; SM90-NEXT:  $L__BB255_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB319_1;
+; SM90-NEXT:  $L__BB319_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") release monotonic
+    ret i16 %new
+}
+
+define i16 @release_monotonic_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: release_monotonic_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_global_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB320_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB320_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB320_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB320_1;
+; SM90-NEXT:  $L__BB320_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new release monotonic
     ret i16 %new
 }
 
@@ -11847,20 +14847,20 @@ define i16 @release_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB256_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB321_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB256_3;
+; SM90-NEXT:    @%p1 bra $L__BB321_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB256_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB321_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB256_1;
-; SM90-NEXT:  $L__BB256_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB321_1;
+; SM90-NEXT:  $L__BB321_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("") release monotonic
@@ -11892,20 +14892,20 @@ define i16 @release_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB257_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB322_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB257_3;
+; SM90-NEXT:    @%p1 bra $L__BB322_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB257_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB322_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB257_1;
-; SM90-NEXT:  $L__BB257_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB322_1;
+; SM90-NEXT:  $L__BB322_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("block") release monotonic
@@ -11937,20 +14937,20 @@ define i16 @release_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB258_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB323_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB258_3;
+; SM90-NEXT:    @%p1 bra $L__BB323_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB258_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB323_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB258_1;
-; SM90-NEXT:  $L__BB258_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB323_1;
+; SM90-NEXT:  $L__BB323_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("cluster") release monotonic
@@ -11982,23 +14982,68 @@ define i16 @release_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB259_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB324_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB259_3;
+; SM90-NEXT:    @%p1 bra $L__BB324_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB259_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB324_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB259_1;
-; SM90-NEXT:  $L__BB259_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB324_1;
+; SM90-NEXT:  $L__BB324_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") release monotonic
+    ret i16 %new
+}
+
+define i16 @release_monotonic_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: release_monotonic_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [release_monotonic_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i16_shared_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [release_monotonic_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB325_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB325_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB325_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB325_1;
+; SM90-NEXT:  $L__BB325_3: // %partword.cmpxchg.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new release monotonic
     ret i16 %new
 }
 
@@ -12027,20 +15072,20 @@ define i16 @release_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB260_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB326_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB260_3;
+; SM90-NEXT:    @%p1 bra $L__BB326_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB260_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB326_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB260_1;
-; SM90-NEXT:  $L__BB260_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB326_1;
+; SM90-NEXT:  $L__BB326_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("") release monotonic
@@ -12072,20 +15117,20 @@ define i16 @release_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB261_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB327_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB261_3;
+; SM90-NEXT:    @%p1 bra $L__BB327_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB261_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB327_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB261_1;
-; SM90-NEXT:  $L__BB261_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB327_1;
+; SM90-NEXT:  $L__BB327_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("block") release monotonic
@@ -12117,20 +15162,20 @@ define i16 @release_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB262_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB328_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB262_3;
+; SM90-NEXT:    @%p1 bra $L__BB328_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB262_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB328_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB262_1;
-; SM90-NEXT:  $L__BB262_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB328_1;
+; SM90-NEXT:  $L__BB328_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("cluster") release monotonic
@@ -12162,23 +15207,69 @@ define i16 @release_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB263_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB329_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB263_3;
+; SM90-NEXT:    @%p1 bra $L__BB329_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB263_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB329_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB263_1;
-; SM90-NEXT:  $L__BB263_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB329_1;
+; SM90-NEXT:  $L__BB329_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") release monotonic
+    ret i16 %new
+}
+
+define i16 @release_acquire_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: release_acquire_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_generic_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB330_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB330_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB330_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB330_1;
+; SM90-NEXT:  $L__BB330_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new release acquire
     ret i16 %new
 }
 
@@ -12207,20 +15298,20 @@ define i16 @release_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB264_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB331_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB264_3;
+; SM90-NEXT:    @%p1 bra $L__BB331_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB264_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB331_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB264_1;
-; SM90-NEXT:  $L__BB264_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB331_1;
+; SM90-NEXT:  $L__BB331_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12253,20 +15344,20 @@ define i16 @release_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB265_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB332_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB265_3;
+; SM90-NEXT:    @%p1 bra $L__BB332_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB265_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB332_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB265_1;
-; SM90-NEXT:  $L__BB265_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB332_1;
+; SM90-NEXT:  $L__BB332_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12299,20 +15390,20 @@ define i16 @release_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB266_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB333_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB266_3;
+; SM90-NEXT:    @%p1 bra $L__BB333_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB266_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB333_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB266_1;
-; SM90-NEXT:  $L__BB266_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB333_1;
+; SM90-NEXT:  $L__BB333_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12345,24 +15436,70 @@ define i16 @release_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB267_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB334_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB267_3;
+; SM90-NEXT:    @%p1 bra $L__BB334_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB267_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB334_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB267_1;
-; SM90-NEXT:  $L__BB267_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB334_1;
+; SM90-NEXT:  $L__BB334_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") release acquire
+    ret i16 %new
+}
+
+define i16 @release_acquire_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: release_acquire_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_global_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB335_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB335_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB335_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB335_1;
+; SM90-NEXT:  $L__BB335_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new release acquire
     ret i16 %new
 }
 
@@ -12391,20 +15528,20 @@ define i16 @release_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB268_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB336_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB268_3;
+; SM90-NEXT:    @%p1 bra $L__BB336_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB268_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB336_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB268_1;
-; SM90-NEXT:  $L__BB268_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB336_1;
+; SM90-NEXT:  $L__BB336_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12437,20 +15574,20 @@ define i16 @release_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB269_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB337_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB269_3;
+; SM90-NEXT:    @%p1 bra $L__BB337_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB269_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB337_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB269_1;
-; SM90-NEXT:  $L__BB269_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB337_1;
+; SM90-NEXT:  $L__BB337_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12483,20 +15620,20 @@ define i16 @release_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB270_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB338_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB270_3;
+; SM90-NEXT:    @%p1 bra $L__BB338_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB270_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB338_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB270_1;
-; SM90-NEXT:  $L__BB270_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB338_1;
+; SM90-NEXT:  $L__BB338_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12529,24 +15666,70 @@ define i16 @release_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB271_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB339_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB271_3;
+; SM90-NEXT:    @%p1 bra $L__BB339_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB271_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB339_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB271_1;
-; SM90-NEXT:  $L__BB271_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB339_1;
+; SM90-NEXT:  $L__BB339_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") release acquire
+    ret i16 %new
+}
+
+define i16 @release_acquire_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: release_acquire_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [release_acquire_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i16_shared_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [release_acquire_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB340_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB340_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB340_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB340_1;
+; SM90-NEXT:  $L__BB340_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new release acquire
     ret i16 %new
 }
 
@@ -12575,20 +15758,20 @@ define i16 @release_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB272_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB341_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB272_3;
+; SM90-NEXT:    @%p1 bra $L__BB341_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB272_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB341_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB272_1;
-; SM90-NEXT:  $L__BB272_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB341_1;
+; SM90-NEXT:  $L__BB341_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12621,20 +15804,20 @@ define i16 @release_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB273_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB342_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB273_3;
+; SM90-NEXT:    @%p1 bra $L__BB342_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB273_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB342_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB273_1;
-; SM90-NEXT:  $L__BB273_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB342_1;
+; SM90-NEXT:  $L__BB342_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12667,20 +15850,20 @@ define i16 @release_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB274_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB343_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB274_3;
+; SM90-NEXT:    @%p1 bra $L__BB343_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB274_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB343_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB274_1;
-; SM90-NEXT:  $L__BB274_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB343_1;
+; SM90-NEXT:  $L__BB343_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12713,24 +15896,70 @@ define i16 @release_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB275_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB344_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB275_3;
+; SM90-NEXT:    @%p1 bra $L__BB344_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB275_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB344_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB275_1;
-; SM90-NEXT:  $L__BB275_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB344_1;
+; SM90-NEXT:  $L__BB344_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") release acquire
+    ret i16 %new
+}
+
+define i16 @release_seq_cst_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: release_seq_cst_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB345_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB345_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB345_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB345_1;
+; SM90-NEXT:  $L__BB345_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new release seq_cst
     ret i16 %new
 }
 
@@ -12759,20 +15988,20 @@ define i16 @release_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB276_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB346_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB276_3;
+; SM90-NEXT:    @%p1 bra $L__BB346_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB276_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB346_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB276_1;
-; SM90-NEXT:  $L__BB276_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB346_1;
+; SM90-NEXT:  $L__BB346_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12805,20 +16034,20 @@ define i16 @release_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB277_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB347_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB277_3;
+; SM90-NEXT:    @%p1 bra $L__BB347_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB277_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB347_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB277_1;
-; SM90-NEXT:  $L__BB277_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB347_1;
+; SM90-NEXT:  $L__BB347_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12851,20 +16080,20 @@ define i16 @release_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB278_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB348_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB278_3;
+; SM90-NEXT:    @%p1 bra $L__BB348_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB278_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB348_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB278_1;
-; SM90-NEXT:  $L__BB278_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB348_1;
+; SM90-NEXT:  $L__BB348_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12897,24 +16126,70 @@ define i16 @release_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB279_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB349_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB279_3;
+; SM90-NEXT:    @%p1 bra $L__BB349_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB279_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB349_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB279_1;
-; SM90-NEXT:  $L__BB279_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB349_1;
+; SM90-NEXT:  $L__BB349_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") release seq_cst
+    ret i16 %new
+}
+
+define i16 @release_seq_cst_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: release_seq_cst_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB350_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB350_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB350_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB350_1;
+; SM90-NEXT:  $L__BB350_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new release seq_cst
     ret i16 %new
 }
 
@@ -12943,20 +16218,20 @@ define i16 @release_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB280_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB351_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB280_3;
+; SM90-NEXT:    @%p1 bra $L__BB351_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB280_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB351_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB280_1;
-; SM90-NEXT:  $L__BB280_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB351_1;
+; SM90-NEXT:  $L__BB351_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -12989,20 +16264,20 @@ define i16 @release_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB281_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB352_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB281_3;
+; SM90-NEXT:    @%p1 bra $L__BB352_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB281_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB352_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB281_1;
-; SM90-NEXT:  $L__BB281_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB352_1;
+; SM90-NEXT:  $L__BB352_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13035,20 +16310,20 @@ define i16 @release_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB282_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB353_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB282_3;
+; SM90-NEXT:    @%p1 bra $L__BB353_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB282_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB353_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB282_1;
-; SM90-NEXT:  $L__BB282_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB353_1;
+; SM90-NEXT:  $L__BB353_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13081,24 +16356,70 @@ define i16 @release_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB283_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB354_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB283_3;
+; SM90-NEXT:    @%p1 bra $L__BB354_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB283_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB354_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB283_1;
-; SM90-NEXT:  $L__BB283_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB354_1;
+; SM90-NEXT:  $L__BB354_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") release seq_cst
+    ret i16 %new
+}
+
+define i16 @release_seq_cst_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: release_seq_cst_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [release_seq_cst_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i16_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [release_seq_cst_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB355_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB355_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB355_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB355_1;
+; SM90-NEXT:  $L__BB355_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new release seq_cst
     ret i16 %new
 }
 
@@ -13127,20 +16448,20 @@ define i16 @release_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB284_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB356_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB284_3;
+; SM90-NEXT:    @%p1 bra $L__BB356_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB284_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB356_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB284_1;
-; SM90-NEXT:  $L__BB284_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB356_1;
+; SM90-NEXT:  $L__BB356_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13173,20 +16494,20 @@ define i16 @release_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB285_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB357_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB285_3;
+; SM90-NEXT:    @%p1 bra $L__BB357_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB285_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB357_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB285_1;
-; SM90-NEXT:  $L__BB285_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB357_1;
+; SM90-NEXT:  $L__BB357_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13219,20 +16540,20 @@ define i16 @release_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB286_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB358_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB286_3;
+; SM90-NEXT:    @%p1 bra $L__BB358_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB286_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB358_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB286_1;
-; SM90-NEXT:  $L__BB286_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB358_1;
+; SM90-NEXT:  $L__BB358_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13265,24 +16586,70 @@ define i16 @release_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB287_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB359_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB287_3;
+; SM90-NEXT:    @%p1 bra $L__BB359_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB287_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB359_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB287_1;
-; SM90-NEXT:  $L__BB287_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB359_1;
+; SM90-NEXT:  $L__BB359_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") release seq_cst
+    ret i16 %new
+}
+
+define i16 @acq_rel_monotonic_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acq_rel_monotonic_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_generic_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB360_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB360_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB360_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB360_1;
+; SM90-NEXT:  $L__BB360_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new acq_rel monotonic
     ret i16 %new
 }
 
@@ -13311,20 +16678,20 @@ define i16 @acq_rel_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB288_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB361_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB288_3;
+; SM90-NEXT:    @%p1 bra $L__BB361_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB288_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB361_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB288_1;
-; SM90-NEXT:  $L__BB288_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB361_1;
+; SM90-NEXT:  $L__BB361_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13357,20 +16724,20 @@ define i16 @acq_rel_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB289_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB362_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB289_3;
+; SM90-NEXT:    @%p1 bra $L__BB362_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB289_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB362_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB289_1;
-; SM90-NEXT:  $L__BB289_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB362_1;
+; SM90-NEXT:  $L__BB362_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13403,20 +16770,20 @@ define i16 @acq_rel_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB290_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB363_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB290_3;
+; SM90-NEXT:    @%p1 bra $L__BB363_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB290_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB363_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB290_1;
-; SM90-NEXT:  $L__BB290_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB363_1;
+; SM90-NEXT:  $L__BB363_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13449,24 +16816,70 @@ define i16 @acq_rel_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB291_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB364_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB291_3;
+; SM90-NEXT:    @%p1 bra $L__BB364_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB291_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB364_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB291_1;
-; SM90-NEXT:  $L__BB291_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB364_1;
+; SM90-NEXT:  $L__BB364_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") acq_rel monotonic
+    ret i16 %new
+}
+
+define i16 @acq_rel_monotonic_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acq_rel_monotonic_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_global_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB365_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB365_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB365_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB365_1;
+; SM90-NEXT:  $L__BB365_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new acq_rel monotonic
     ret i16 %new
 }
 
@@ -13495,20 +16908,20 @@ define i16 @acq_rel_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB292_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB366_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB292_3;
+; SM90-NEXT:    @%p1 bra $L__BB366_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB292_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB366_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB292_1;
-; SM90-NEXT:  $L__BB292_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB366_1;
+; SM90-NEXT:  $L__BB366_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13541,20 +16954,20 @@ define i16 @acq_rel_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB293_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB367_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB293_3;
+; SM90-NEXT:    @%p1 bra $L__BB367_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB293_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB367_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB293_1;
-; SM90-NEXT:  $L__BB293_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB367_1;
+; SM90-NEXT:  $L__BB367_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13587,20 +17000,20 @@ define i16 @acq_rel_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB294_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB368_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB294_3;
+; SM90-NEXT:    @%p1 bra $L__BB368_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB294_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB368_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB294_1;
-; SM90-NEXT:  $L__BB294_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB368_1;
+; SM90-NEXT:  $L__BB368_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13633,24 +17046,70 @@ define i16 @acq_rel_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB295_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB369_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB295_3;
+; SM90-NEXT:    @%p1 bra $L__BB369_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB295_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB369_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB295_1;
-; SM90-NEXT:  $L__BB295_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB369_1;
+; SM90-NEXT:  $L__BB369_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") acq_rel monotonic
+    ret i16 %new
+}
+
+define i16 @acq_rel_monotonic_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acq_rel_monotonic_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_monotonic_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i16_shared_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_monotonic_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB370_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB370_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB370_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB370_1;
+; SM90-NEXT:  $L__BB370_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new acq_rel monotonic
     ret i16 %new
 }
 
@@ -13679,20 +17138,20 @@ define i16 @acq_rel_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB296_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB371_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB296_3;
+; SM90-NEXT:    @%p1 bra $L__BB371_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB296_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB371_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB296_1;
-; SM90-NEXT:  $L__BB296_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB371_1;
+; SM90-NEXT:  $L__BB371_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13725,20 +17184,20 @@ define i16 @acq_rel_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB297_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB372_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB297_3;
+; SM90-NEXT:    @%p1 bra $L__BB372_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB297_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB372_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB297_1;
-; SM90-NEXT:  $L__BB297_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB372_1;
+; SM90-NEXT:  $L__BB372_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13771,20 +17230,20 @@ define i16 @acq_rel_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB298_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB373_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB298_3;
+; SM90-NEXT:    @%p1 bra $L__BB373_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB298_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB373_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB298_1;
-; SM90-NEXT:  $L__BB298_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB373_1;
+; SM90-NEXT:  $L__BB373_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13817,24 +17276,70 @@ define i16 @acq_rel_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB299_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB374_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB299_3;
+; SM90-NEXT:    @%p1 bra $L__BB374_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB299_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB374_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB299_1;
-; SM90-NEXT:  $L__BB299_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB374_1;
+; SM90-NEXT:  $L__BB374_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") acq_rel monotonic
+    ret i16 %new
+}
+
+define i16 @acq_rel_acquire_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acq_rel_acquire_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_generic_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB375_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB375_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB375_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB375_1;
+; SM90-NEXT:  $L__BB375_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new acq_rel acquire
     ret i16 %new
 }
 
@@ -13863,20 +17368,20 @@ define i16 @acq_rel_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB300_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB376_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB300_3;
+; SM90-NEXT:    @%p1 bra $L__BB376_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB300_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB376_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB300_1;
-; SM90-NEXT:  $L__BB300_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB376_1;
+; SM90-NEXT:  $L__BB376_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13909,20 +17414,20 @@ define i16 @acq_rel_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB301_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB377_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB301_3;
+; SM90-NEXT:    @%p1 bra $L__BB377_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB301_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB377_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB301_1;
-; SM90-NEXT:  $L__BB301_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB377_1;
+; SM90-NEXT:  $L__BB377_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -13955,20 +17460,20 @@ define i16 @acq_rel_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB302_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB378_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB302_3;
+; SM90-NEXT:    @%p1 bra $L__BB378_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB302_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB378_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB302_1;
-; SM90-NEXT:  $L__BB302_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB378_1;
+; SM90-NEXT:  $L__BB378_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14001,24 +17506,70 @@ define i16 @acq_rel_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB303_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB379_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB303_3;
+; SM90-NEXT:    @%p1 bra $L__BB379_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB303_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB379_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB303_1;
-; SM90-NEXT:  $L__BB303_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB379_1;
+; SM90-NEXT:  $L__BB379_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") acq_rel acquire
+    ret i16 %new
+}
+
+define i16 @acq_rel_acquire_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acq_rel_acquire_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_global_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB380_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB380_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB380_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB380_1;
+; SM90-NEXT:  $L__BB380_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new acq_rel acquire
     ret i16 %new
 }
 
@@ -14047,20 +17598,20 @@ define i16 @acq_rel_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB304_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB381_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB304_3;
+; SM90-NEXT:    @%p1 bra $L__BB381_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB304_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB381_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB304_1;
-; SM90-NEXT:  $L__BB304_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB381_1;
+; SM90-NEXT:  $L__BB381_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14093,20 +17644,20 @@ define i16 @acq_rel_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB305_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB382_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB305_3;
+; SM90-NEXT:    @%p1 bra $L__BB382_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB305_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB382_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB305_1;
-; SM90-NEXT:  $L__BB305_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB382_1;
+; SM90-NEXT:  $L__BB382_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14139,20 +17690,20 @@ define i16 @acq_rel_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB306_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB383_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB306_3;
+; SM90-NEXT:    @%p1 bra $L__BB383_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB306_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB383_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB306_1;
-; SM90-NEXT:  $L__BB306_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB383_1;
+; SM90-NEXT:  $L__BB383_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14185,24 +17736,70 @@ define i16 @acq_rel_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB307_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB384_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB307_3;
+; SM90-NEXT:    @%p1 bra $L__BB384_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB307_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB384_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB307_1;
-; SM90-NEXT:  $L__BB307_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB384_1;
+; SM90-NEXT:  $L__BB384_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") acq_rel acquire
+    ret i16 %new
+}
+
+define i16 @acq_rel_acquire_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acq_rel_acquire_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_acquire_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i16_shared_param_0];
+; SM90-NEXT:    fence.release.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_acquire_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB385_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB385_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB385_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB385_1;
+; SM90-NEXT:  $L__BB385_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new acq_rel acquire
     ret i16 %new
 }
 
@@ -14231,20 +17828,20 @@ define i16 @acq_rel_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB308_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB386_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB308_3;
+; SM90-NEXT:    @%p1 bra $L__BB386_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB308_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB386_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB308_1;
-; SM90-NEXT:  $L__BB308_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB386_1;
+; SM90-NEXT:  $L__BB386_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14277,20 +17874,20 @@ define i16 @acq_rel_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB309_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB387_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB309_3;
+; SM90-NEXT:    @%p1 bra $L__BB387_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB309_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB387_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB309_1;
-; SM90-NEXT:  $L__BB309_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB387_1;
+; SM90-NEXT:  $L__BB387_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14323,20 +17920,20 @@ define i16 @acq_rel_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB310_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB388_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB310_3;
+; SM90-NEXT:    @%p1 bra $L__BB388_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB310_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB388_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB310_1;
-; SM90-NEXT:  $L__BB310_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB388_1;
+; SM90-NEXT:  $L__BB388_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14369,24 +17966,70 @@ define i16 @acq_rel_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB311_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB389_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB311_3;
+; SM90-NEXT:    @%p1 bra $L__BB389_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB311_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB389_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB311_1;
-; SM90-NEXT:  $L__BB311_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB389_1;
+; SM90-NEXT:  $L__BB389_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") acq_rel acquire
+    ret i16 %new
+}
+
+define i16 @acq_rel_seq_cst_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB390_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB390_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB390_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB390_1;
+; SM90-NEXT:  $L__BB390_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new acq_rel seq_cst
     ret i16 %new
 }
 
@@ -14415,20 +18058,20 @@ define i16 @acq_rel_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB312_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB391_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB312_3;
+; SM90-NEXT:    @%p1 bra $L__BB391_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB312_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB391_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB312_1;
-; SM90-NEXT:  $L__BB312_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB391_1;
+; SM90-NEXT:  $L__BB391_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14461,20 +18104,20 @@ define i16 @acq_rel_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB313_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB392_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB313_3;
+; SM90-NEXT:    @%p1 bra $L__BB392_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB313_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB392_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB313_1;
-; SM90-NEXT:  $L__BB313_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB392_1;
+; SM90-NEXT:  $L__BB392_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14507,20 +18150,20 @@ define i16 @acq_rel_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB314_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB393_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB314_3;
+; SM90-NEXT:    @%p1 bra $L__BB393_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB314_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB393_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB314_1;
-; SM90-NEXT:  $L__BB314_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB393_1;
+; SM90-NEXT:  $L__BB393_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14553,24 +18196,70 @@ define i16 @acq_rel_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB315_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB394_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB315_3;
+; SM90-NEXT:    @%p1 bra $L__BB394_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB315_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB394_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB315_1;
-; SM90-NEXT:  $L__BB315_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB394_1;
+; SM90-NEXT:  $L__BB394_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") acq_rel seq_cst
+    ret i16 %new
+}
+
+define i16 @acq_rel_seq_cst_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB395_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB395_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB395_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB395_1;
+; SM90-NEXT:  $L__BB395_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new acq_rel seq_cst
     ret i16 %new
 }
 
@@ -14599,20 +18288,20 @@ define i16 @acq_rel_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB316_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB396_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB316_3;
+; SM90-NEXT:    @%p1 bra $L__BB396_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB316_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB396_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB316_1;
-; SM90-NEXT:  $L__BB316_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB396_1;
+; SM90-NEXT:  $L__BB396_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14645,20 +18334,20 @@ define i16 @acq_rel_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB317_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB397_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB317_3;
+; SM90-NEXT:    @%p1 bra $L__BB397_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB317_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB397_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB317_1;
-; SM90-NEXT:  $L__BB317_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB397_1;
+; SM90-NEXT:  $L__BB397_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14691,20 +18380,20 @@ define i16 @acq_rel_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB318_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB398_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB318_3;
+; SM90-NEXT:    @%p1 bra $L__BB398_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB318_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB398_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB318_1;
-; SM90-NEXT:  $L__BB318_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB398_1;
+; SM90-NEXT:  $L__BB398_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14737,24 +18426,70 @@ define i16 @acq_rel_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB319_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB399_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB319_3;
+; SM90-NEXT:    @%p1 bra $L__BB399_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB319_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB399_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB319_1;
-; SM90-NEXT:  $L__BB319_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB399_1;
+; SM90-NEXT:  $L__BB399_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") acq_rel seq_cst
+    ret i16 %new
+}
+
+define i16 @acq_rel_seq_cst_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [acq_rel_seq_cst_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i16_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [acq_rel_seq_cst_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB400_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB400_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB400_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB400_1;
+; SM90-NEXT:  $L__BB400_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new acq_rel seq_cst
     ret i16 %new
 }
 
@@ -14783,20 +18518,20 @@ define i16 @acq_rel_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB320_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB401_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB320_3;
+; SM90-NEXT:    @%p1 bra $L__BB401_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB320_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB401_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB320_1;
-; SM90-NEXT:  $L__BB320_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB401_1;
+; SM90-NEXT:  $L__BB401_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14829,20 +18564,20 @@ define i16 @acq_rel_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB321_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB402_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB321_3;
+; SM90-NEXT:    @%p1 bra $L__BB402_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB321_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB402_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB321_1;
-; SM90-NEXT:  $L__BB321_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB402_1;
+; SM90-NEXT:  $L__BB402_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14875,20 +18610,20 @@ define i16 @acq_rel_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB322_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB403_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB322_3;
+; SM90-NEXT:    @%p1 bra $L__BB403_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB322_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB403_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB322_1;
-; SM90-NEXT:  $L__BB322_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB403_1;
+; SM90-NEXT:  $L__BB403_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -14921,24 +18656,70 @@ define i16 @acq_rel_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB323_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB404_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB323_3;
+; SM90-NEXT:    @%p1 bra $L__BB404_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB323_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB404_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB323_1;
-; SM90-NEXT:  $L__BB323_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB404_1;
+; SM90-NEXT:  $L__BB404_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") acq_rel seq_cst
+    ret i16 %new
+}
+
+define i16 @seq_cst_monotonic_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: seq_cst_monotonic_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB405_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB405_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB405_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB405_1;
+; SM90-NEXT:  $L__BB405_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new seq_cst monotonic
     ret i16 %new
 }
 
@@ -14967,20 +18748,20 @@ define i16 @seq_cst_monotonic_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB324_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB406_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB324_3;
+; SM90-NEXT:    @%p1 bra $L__BB406_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB324_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB406_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB324_1;
-; SM90-NEXT:  $L__BB324_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB406_1;
+; SM90-NEXT:  $L__BB406_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15013,20 +18794,20 @@ define i16 @seq_cst_monotonic_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB325_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB407_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB325_3;
+; SM90-NEXT:    @%p1 bra $L__BB407_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB325_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB407_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB325_1;
-; SM90-NEXT:  $L__BB325_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB407_1;
+; SM90-NEXT:  $L__BB407_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15059,20 +18840,20 @@ define i16 @seq_cst_monotonic_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new)
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB326_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB408_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB326_3;
+; SM90-NEXT:    @%p1 bra $L__BB408_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB326_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB408_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB326_1;
-; SM90-NEXT:  $L__BB326_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB408_1;
+; SM90-NEXT:  $L__BB408_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15105,24 +18886,70 @@ define i16 @seq_cst_monotonic_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB327_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB409_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB327_3;
+; SM90-NEXT:    @%p1 bra $L__BB409_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB327_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB409_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB327_1;
-; SM90-NEXT:  $L__BB327_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB409_1;
+; SM90-NEXT:  $L__BB409_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") seq_cst monotonic
+    ret i16 %new
+}
+
+define i16 @seq_cst_monotonic_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: seq_cst_monotonic_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB410_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB410_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB410_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB410_1;
+; SM90-NEXT:  $L__BB410_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new seq_cst monotonic
     ret i16 %new
 }
 
@@ -15151,20 +18978,20 @@ define i16 @seq_cst_monotonic_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB328_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB411_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB328_3;
+; SM90-NEXT:    @%p1 bra $L__BB411_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB328_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB411_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB328_1;
-; SM90-NEXT:  $L__BB328_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB411_1;
+; SM90-NEXT:  $L__BB411_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15197,20 +19024,20 @@ define i16 @seq_cst_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB329_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB412_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB329_3;
+; SM90-NEXT:    @%p1 bra $L__BB412_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB329_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB412_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB329_1;
-; SM90-NEXT:  $L__BB329_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB412_1;
+; SM90-NEXT:  $L__BB412_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15243,20 +19070,20 @@ define i16 @seq_cst_monotonic_i16_global_cluster(ptr addrspace(1) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB330_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB413_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB330_3;
+; SM90-NEXT:    @%p1 bra $L__BB413_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB330_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB413_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB330_1;
-; SM90-NEXT:  $L__BB330_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB413_1;
+; SM90-NEXT:  $L__BB413_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15289,24 +19116,70 @@ define i16 @seq_cst_monotonic_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB331_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB414_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB331_3;
+; SM90-NEXT:    @%p1 bra $L__BB414_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB331_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB414_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB331_1;
-; SM90-NEXT:  $L__BB331_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB414_1;
+; SM90-NEXT:  $L__BB414_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") seq_cst monotonic
+    ret i16 %new
+}
+
+define i16 @seq_cst_monotonic_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: seq_cst_monotonic_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_monotonic_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i16_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_monotonic_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB415_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB415_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB415_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB415_1;
+; SM90-NEXT:  $L__BB415_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new seq_cst monotonic
     ret i16 %new
 }
 
@@ -15335,20 +19208,20 @@ define i16 @seq_cst_monotonic_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB332_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB416_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB332_3;
+; SM90-NEXT:    @%p1 bra $L__BB416_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB332_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB416_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB332_1;
-; SM90-NEXT:  $L__BB332_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB416_1;
+; SM90-NEXT:  $L__BB416_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15381,20 +19254,20 @@ define i16 @seq_cst_monotonic_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB333_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB417_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB333_3;
+; SM90-NEXT:    @%p1 bra $L__BB417_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB333_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB417_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB333_1;
-; SM90-NEXT:  $L__BB333_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB417_1;
+; SM90-NEXT:  $L__BB417_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15427,20 +19300,20 @@ define i16 @seq_cst_monotonic_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cm
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB334_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB418_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB334_3;
+; SM90-NEXT:    @%p1 bra $L__BB418_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB334_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB418_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB334_1;
-; SM90-NEXT:  $L__BB334_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB418_1;
+; SM90-NEXT:  $L__BB418_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15473,24 +19346,70 @@ define i16 @seq_cst_monotonic_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB335_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB419_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB335_3;
+; SM90-NEXT:    @%p1 bra $L__BB419_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB335_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB419_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB335_1;
-; SM90-NEXT:  $L__BB335_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB419_1;
+; SM90-NEXT:  $L__BB419_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") seq_cst monotonic
+    ret i16 %new
+}
+
+define i16 @seq_cst_acquire_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: seq_cst_acquire_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB420_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB420_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB420_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB420_1;
+; SM90-NEXT:  $L__BB420_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new seq_cst acquire
     ret i16 %new
 }
 
@@ -15519,20 +19438,20 @@ define i16 @seq_cst_acquire_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB336_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB421_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB336_3;
+; SM90-NEXT:    @%p1 bra $L__BB421_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB336_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB421_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB336_1;
-; SM90-NEXT:  $L__BB336_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB421_1;
+; SM90-NEXT:  $L__BB421_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15565,20 +19484,20 @@ define i16 @seq_cst_acquire_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB337_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB422_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB337_3;
+; SM90-NEXT:    @%p1 bra $L__BB422_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB337_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB422_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB337_1;
-; SM90-NEXT:  $L__BB337_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB422_1;
+; SM90-NEXT:  $L__BB422_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15611,20 +19530,20 @@ define i16 @seq_cst_acquire_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB338_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB423_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB338_3;
+; SM90-NEXT:    @%p1 bra $L__BB423_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB338_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB423_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB338_1;
-; SM90-NEXT:  $L__BB338_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB423_1;
+; SM90-NEXT:  $L__BB423_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15657,24 +19576,70 @@ define i16 @seq_cst_acquire_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB339_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB424_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB339_3;
+; SM90-NEXT:    @%p1 bra $L__BB424_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB339_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB424_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB339_1;
-; SM90-NEXT:  $L__BB339_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB424_1;
+; SM90-NEXT:  $L__BB424_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") seq_cst acquire
+    ret i16 %new
+}
+
+define i16 @seq_cst_acquire_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: seq_cst_acquire_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB425_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB425_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB425_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB425_1;
+; SM90-NEXT:  $L__BB425_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new seq_cst acquire
     ret i16 %new
 }
 
@@ -15703,20 +19668,20 @@ define i16 @seq_cst_acquire_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB340_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB426_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB340_3;
+; SM90-NEXT:    @%p1 bra $L__BB426_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB340_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB426_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB340_1;
-; SM90-NEXT:  $L__BB340_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB426_1;
+; SM90-NEXT:  $L__BB426_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15749,20 +19714,20 @@ define i16 @seq_cst_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB341_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB427_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB341_3;
+; SM90-NEXT:    @%p1 bra $L__BB427_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB341_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB427_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB341_1;
-; SM90-NEXT:  $L__BB341_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB427_1;
+; SM90-NEXT:  $L__BB427_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15795,20 +19760,20 @@ define i16 @seq_cst_acquire_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB342_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB428_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB342_3;
+; SM90-NEXT:    @%p1 bra $L__BB428_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB342_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB428_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB342_1;
-; SM90-NEXT:  $L__BB342_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB428_1;
+; SM90-NEXT:  $L__BB428_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15841,24 +19806,70 @@ define i16 @seq_cst_acquire_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB343_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB429_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB343_3;
+; SM90-NEXT:    @%p1 bra $L__BB429_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB343_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB429_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB343_1;
-; SM90-NEXT:  $L__BB343_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB429_1;
+; SM90-NEXT:  $L__BB429_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") seq_cst acquire
+    ret i16 %new
+}
+
+define i16 @seq_cst_acquire_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: seq_cst_acquire_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_acquire_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i16_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_acquire_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB430_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB430_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB430_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB430_1;
+; SM90-NEXT:  $L__BB430_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new seq_cst acquire
     ret i16 %new
 }
 
@@ -15887,20 +19898,20 @@ define i16 @seq_cst_acquire_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB344_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB431_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB344_3;
+; SM90-NEXT:    @%p1 bra $L__BB431_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB344_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB431_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB344_1;
-; SM90-NEXT:  $L__BB344_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB431_1;
+; SM90-NEXT:  $L__BB431_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15933,20 +19944,20 @@ define i16 @seq_cst_acquire_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB345_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB432_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB345_3;
+; SM90-NEXT:    @%p1 bra $L__BB432_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB345_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB432_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB345_1;
-; SM90-NEXT:  $L__BB345_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB432_1;
+; SM90-NEXT:  $L__BB432_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -15979,20 +19990,20 @@ define i16 @seq_cst_acquire_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB346_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB433_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB346_3;
+; SM90-NEXT:    @%p1 bra $L__BB433_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB346_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB433_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB346_1;
-; SM90-NEXT:  $L__BB346_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB433_1;
+; SM90-NEXT:  $L__BB433_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -16025,24 +20036,70 @@ define i16 @seq_cst_acquire_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB347_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB434_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB347_3;
+; SM90-NEXT:    @%p1 bra $L__BB434_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB347_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB434_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB347_1;
-; SM90-NEXT:  $L__BB347_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB434_1;
+; SM90-NEXT:  $L__BB434_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") seq_cst acquire
+    ret i16 %new
+}
+
+define i16 @seq_cst_seq_cst_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i16_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_generic_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_generic_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB435_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB435_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB435_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB435_1;
+; SM90-NEXT:  $L__BB435_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new seq_cst seq_cst
     ret i16 %new
 }
 
@@ -16071,20 +20128,20 @@ define i16 @seq_cst_seq_cst_i16_generic_sys(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB348_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB436_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB348_3;
+; SM90-NEXT:    @%p1 bra $L__BB436_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB348_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB436_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB348_1;
-; SM90-NEXT:  $L__BB348_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB436_1;
+; SM90-NEXT:  $L__BB436_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -16117,20 +20174,20 @@ define i16 @seq_cst_seq_cst_i16_generic_cta(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB349_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB437_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB349_3;
+; SM90-NEXT:    @%p1 bra $L__BB437_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB349_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB437_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB349_1;
-; SM90-NEXT:  $L__BB349_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB437_1;
+; SM90-NEXT:  $L__BB437_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -16163,20 +20220,20 @@ define i16 @seq_cst_seq_cst_i16_generic_cluster(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB350_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB438_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB350_3;
+; SM90-NEXT:    @%p1 bra $L__BB438_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB350_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB438_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB350_1;
-; SM90-NEXT:  $L__BB350_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB438_1;
+; SM90-NEXT:  $L__BB438_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -16209,24 +20266,70 @@ define i16 @seq_cst_seq_cst_i16_generic_gpu(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB351_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB439_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB351_3;
+; SM90-NEXT:    @%p1 bra $L__BB439_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB351_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB439_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB351_1;
-; SM90-NEXT:  $L__BB351_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB439_1;
+; SM90-NEXT:  $L__BB439_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new syncscope("device") seq_cst seq_cst
+    ret i16 %new
+}
+
+define i16 @seq_cst_seq_cst_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i16_global(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_global_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_global_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB440_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB440_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB440_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB440_1;
+; SM90-NEXT:  $L__BB440_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new seq_cst seq_cst
     ret i16 %new
 }
 
@@ -16255,20 +20358,20 @@ define i16 @seq_cst_seq_cst_i16_global_sys(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB352_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB441_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB352_3;
+; SM90-NEXT:    @%p1 bra $L__BB441_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB352_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB441_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB352_1;
-; SM90-NEXT:  $L__BB352_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB441_1;
+; SM90-NEXT:  $L__BB441_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -16301,20 +20404,20 @@ define i16 @seq_cst_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB353_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB442_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB353_3;
+; SM90-NEXT:    @%p1 bra $L__BB442_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB353_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB442_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB353_1;
-; SM90-NEXT:  $L__BB353_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB442_1;
+; SM90-NEXT:  $L__BB442_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -16347,20 +20450,20 @@ define i16 @seq_cst_seq_cst_i16_global_cluster(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB354_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB443_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB354_3;
+; SM90-NEXT:    @%p1 bra $L__BB443_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB354_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB443_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB354_1;
-; SM90-NEXT:  $L__BB354_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB443_1;
+; SM90-NEXT:  $L__BB443_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -16393,24 +20496,70 @@ define i16 @seq_cst_seq_cst_i16_global_gpu(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.global.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB355_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB444_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.global.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB355_3;
+; SM90-NEXT:    @%p1 bra $L__BB444_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB355_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB444_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB355_1;
-; SM90-NEXT:  $L__BB355_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB444_1;
+; SM90-NEXT:  $L__BB444_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i16 %cmp, i16 %new syncscope("device") seq_cst seq_cst
+    ret i16 %new
+}
+
+define i16 @seq_cst_seq_cst_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i16_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<20>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b16 %rs1, [seq_cst_seq_cst_i16_shared_param_2];
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i16_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b16 %r9, [seq_cst_seq_cst_i16_shared_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM90-NEXT:    and.b32 %r11, %r10, 3;
+; SM90-NEXT:    shl.b32 %r1, %r11, 3;
+; SM90-NEXT:    mov.b32 %r12, 65535;
+; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM90-NEXT:    not.b32 %r2, %r13;
+; SM90-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM90-NEXT:    shl.b32 %r3, %r14, %r1;
+; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
+; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
+; SM90-NEXT:    and.b32 %r19, %r15, %r2;
+; SM90-NEXT:  $L__BB445_1: // %partword.cmpxchg.loop
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    or.b32 %r16, %r19, %r3;
+; SM90-NEXT:    or.b32 %r17, %r19, %r4;
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
+; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM90-NEXT:    @%p1 bra $L__BB445_3;
+; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
+; SM90-NEXT:    // in Loop: Header=BB445_1 Depth=1
+; SM90-NEXT:    and.b32 %r8, %r7, %r2;
+; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM90-NEXT:    mov.b32 %r19, %r8;
+; SM90-NEXT:    @%p2 bra $L__BB445_1;
+; SM90-NEXT:  $L__BB445_3: // %partword.cmpxchg.end
+; SM90-NEXT:    fence.acquire.sys;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new seq_cst seq_cst
     ret i16 %new
 }
 
@@ -16439,20 +20588,20 @@ define i16 @seq_cst_seq_cst_i16_shared_sys(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB356_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB446_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB356_3;
+; SM90-NEXT:    @%p1 bra $L__BB446_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB356_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB446_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB356_1;
-; SM90-NEXT:  $L__BB356_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB446_1;
+; SM90-NEXT:  $L__BB446_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -16485,20 +20634,20 @@ define i16 @seq_cst_seq_cst_i16_shared_cta(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB357_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB447_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cta.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB357_3;
+; SM90-NEXT:    @%p1 bra $L__BB447_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB357_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB447_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB357_1;
-; SM90-NEXT:  $L__BB357_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB447_1;
+; SM90-NEXT:  $L__BB447_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -16531,20 +20680,20 @@ define i16 @seq_cst_seq_cst_i16_shared_cluster(ptr addrspace(3) %addr, i16 %cmp,
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB358_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB448_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.cluster.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB358_3;
+; SM90-NEXT:    @%p1 bra $L__BB448_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB358_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB448_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB358_1;
-; SM90-NEXT:  $L__BB358_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB448_1;
+; SM90-NEXT:  $L__BB448_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.cluster;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
@@ -16577,25 +20726,42 @@ define i16 @seq_cst_seq_cst_i16_shared_gpu(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM90-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM90-NEXT:    ld.shared.b32 %r15, [%rd1];
 ; SM90-NEXT:    and.b32 %r19, %r15, %r2;
-; SM90-NEXT:  $L__BB359_1: // %partword.cmpxchg.loop
+; SM90-NEXT:  $L__BB449_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM90-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM90-NEXT:    atom.relaxed.gpu.shared.cas.b32 %r7, [%rd1], %r17, %r16;
 ; SM90-NEXT:    setp.eq.s32 %p1, %r7, %r17;
-; SM90-NEXT:    @%p1 bra $L__BB359_3;
+; SM90-NEXT:    @%p1 bra $L__BB449_3;
 ; SM90-NEXT:  // %bb.2: // %partword.cmpxchg.failure
-; SM90-NEXT:    // in Loop: Header=BB359_1 Depth=1
+; SM90-NEXT:    // in Loop: Header=BB449_1 Depth=1
 ; SM90-NEXT:    and.b32 %r8, %r7, %r2;
 ; SM90-NEXT:    setp.ne.s32 %p2, %r19, %r8;
 ; SM90-NEXT:    mov.b32 %r19, %r8;
-; SM90-NEXT:    @%p2 bra $L__BB359_1;
-; SM90-NEXT:  $L__BB359_3: // %partword.cmpxchg.end
+; SM90-NEXT:    @%p2 bra $L__BB449_1;
+; SM90-NEXT:  $L__BB449_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    fence.acquire.gpu;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i16 %cmp, i16 %new syncscope("device") seq_cst seq_cst
     ret i16 %new
+}
+
+define i32 @monotonic_monotonic_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: monotonic_monotonic_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_generic_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_generic_param_2];
+; SM90-NEXT:    atom.relaxed.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new monotonic monotonic
+    ret i32 %new
 }
 
 define i32 @monotonic_monotonic_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
@@ -16663,6 +20829,23 @@ define i32 @monotonic_monotonic_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new syncscope("device") monotonic monotonic
+    ret i32 %new
+}
+
+define i32 @monotonic_monotonic_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: monotonic_monotonic_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_global_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_global_param_2];
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new monotonic monotonic
     ret i32 %new
 }
 
@@ -16734,6 +20917,23 @@ define i32 @monotonic_monotonic_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp,
     ret i32 %new
 }
 
+define i32 @monotonic_monotonic_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: monotonic_monotonic_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i32_shared_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_monotonic_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_monotonic_i32_shared_param_2];
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new monotonic monotonic
+    ret i32 %new
+}
+
 define i32 @monotonic_monotonic_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: monotonic_monotonic_i32_shared_sys(
 ; SM90:       {
@@ -16799,6 +20999,23 @@ define i32 @monotonic_monotonic_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp,
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new syncscope("device") monotonic monotonic
+    ret i32 %new
+}
+
+define i32 @monotonic_acquire_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: monotonic_acquire_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_generic_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new monotonic acquire
     ret i32 %new
 }
 
@@ -16870,6 +21087,23 @@ define i32 @monotonic_acquire_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
     ret i32 %new
 }
 
+define i32 @monotonic_acquire_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: monotonic_acquire_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_global_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new monotonic acquire
+    ret i32 %new
+}
+
 define i32 @monotonic_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: monotonic_acquire_i32_global_sys(
 ; SM90:       {
@@ -16938,6 +21172,23 @@ define i32 @monotonic_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
     ret i32 %new
 }
 
+define i32 @monotonic_acquire_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: monotonic_acquire_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i32_shared_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_acquire_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_acquire_i32_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new monotonic acquire
+    ret i32 %new
+}
+
 define i32 @monotonic_acquire_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: monotonic_acquire_i32_shared_sys(
 ; SM90:       {
@@ -17003,6 +21254,24 @@ define i32 @monotonic_acquire_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new syncscope("device") monotonic acquire
+    ret i32 %new
+}
+
+define i32 @monotonic_seq_cst_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: monotonic_seq_cst_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new monotonic seq_cst
     ret i32 %new
 }
 
@@ -17078,6 +21347,24 @@ define i32 @monotonic_seq_cst_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
     ret i32 %new
 }
 
+define i32 @monotonic_seq_cst_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: monotonic_seq_cst_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new monotonic seq_cst
+    ret i32 %new
+}
+
 define i32 @monotonic_seq_cst_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: monotonic_seq_cst_i32_global_sys(
 ; SM90:       {
@@ -17147,6 +21434,24 @@ define i32 @monotonic_seq_cst_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("device") monotonic seq_cst
+    ret i32 %new
+}
+
+define i32 @monotonic_seq_cst_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: monotonic_seq_cst_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i32_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [monotonic_seq_cst_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [monotonic_seq_cst_i32_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new monotonic seq_cst
     ret i32 %new
 }
 
@@ -17222,6 +21527,23 @@ define i32 @monotonic_seq_cst_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
     ret i32 %new
 }
 
+define i32 @acquire_monotonic_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acquire_monotonic_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_generic_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new acquire monotonic
+    ret i32 %new
+}
+
 define i32 @acquire_monotonic_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: acquire_monotonic_i32_generic_sys(
 ; SM90:       {
@@ -17287,6 +21609,23 @@ define i32 @acquire_monotonic_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new syncscope("device") acquire monotonic
+    ret i32 %new
+}
+
+define i32 @acquire_monotonic_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acquire_monotonic_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_global_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new acquire monotonic
     ret i32 %new
 }
 
@@ -17358,6 +21697,23 @@ define i32 @acquire_monotonic_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
     ret i32 %new
 }
 
+define i32 @acquire_monotonic_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acquire_monotonic_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i32_shared_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_monotonic_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_monotonic_i32_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new acquire monotonic
+    ret i32 %new
+}
+
 define i32 @acquire_monotonic_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: acquire_monotonic_i32_shared_sys(
 ; SM90:       {
@@ -17423,6 +21779,23 @@ define i32 @acquire_monotonic_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new syncscope("device") acquire monotonic
+    ret i32 %new
+}
+
+define i32 @acquire_acquire_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acquire_acquire_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_generic_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new acquire acquire
     ret i32 %new
 }
 
@@ -17494,6 +21867,23 @@ define i32 @acquire_acquire_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
     ret i32 %new
 }
 
+define i32 @acquire_acquire_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acquire_acquire_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_global_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new acquire acquire
+    ret i32 %new
+}
+
 define i32 @acquire_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: acquire_acquire_i32_global_sys(
 ; SM90:       {
@@ -17562,6 +21952,23 @@ define i32 @acquire_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
     ret i32 %new
 }
 
+define i32 @acquire_acquire_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acquire_acquire_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i32_shared_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_acquire_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_acquire_i32_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new acquire acquire
+    ret i32 %new
+}
+
 define i32 @acquire_acquire_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: acquire_acquire_i32_shared_sys(
 ; SM90:       {
@@ -17627,6 +22034,24 @@ define i32 @acquire_acquire_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new syncscope("device") acquire acquire
+    ret i32 %new
+}
+
+define i32 @acquire_seq_cst_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acquire_seq_cst_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new acquire seq_cst
     ret i32 %new
 }
 
@@ -17702,6 +22127,24 @@ define i32 @acquire_seq_cst_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
     ret i32 %new
 }
 
+define i32 @acquire_seq_cst_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acquire_seq_cst_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new acquire seq_cst
+    ret i32 %new
+}
+
 define i32 @acquire_seq_cst_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: acquire_seq_cst_i32_global_sys(
 ; SM90:       {
@@ -17771,6 +22214,24 @@ define i32 @acquire_seq_cst_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("device") acquire seq_cst
+    ret i32 %new
+}
+
+define i32 @acquire_seq_cst_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acquire_seq_cst_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i32_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [acquire_seq_cst_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acquire_seq_cst_i32_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new acquire seq_cst
     ret i32 %new
 }
 
@@ -17846,6 +22307,23 @@ define i32 @acquire_seq_cst_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
     ret i32 %new
 }
 
+define i32 @release_monotonic_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: release_monotonic_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_generic_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_generic_param_2];
+; SM90-NEXT:    atom.release.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new release monotonic
+    ret i32 %new
+}
+
 define i32 @release_monotonic_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: release_monotonic_i32_generic_sys(
 ; SM90:       {
@@ -17911,6 +22389,23 @@ define i32 @release_monotonic_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new syncscope("device") release monotonic
+    ret i32 %new
+}
+
+define i32 @release_monotonic_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: release_monotonic_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_global_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_global_param_2];
+; SM90-NEXT:    atom.release.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new release monotonic
     ret i32 %new
 }
 
@@ -17982,6 +22477,23 @@ define i32 @release_monotonic_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
     ret i32 %new
 }
 
+define i32 @release_monotonic_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: release_monotonic_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i32_shared_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_monotonic_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_monotonic_i32_shared_param_2];
+; SM90-NEXT:    atom.release.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new release monotonic
+    ret i32 %new
+}
+
 define i32 @release_monotonic_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: release_monotonic_i32_shared_sys(
 ; SM90:       {
@@ -18047,6 +22559,23 @@ define i32 @release_monotonic_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new syncscope("device") release monotonic
+    ret i32 %new
+}
+
+define i32 @release_acquire_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: release_acquire_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_generic_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_generic_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new release acquire
     ret i32 %new
 }
 
@@ -18118,6 +22647,23 @@ define i32 @release_acquire_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
     ret i32 %new
 }
 
+define i32 @release_acquire_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: release_acquire_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_global_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_global_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new release acquire
+    ret i32 %new
+}
+
 define i32 @release_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: release_acquire_i32_global_sys(
 ; SM90:       {
@@ -18186,6 +22732,23 @@ define i32 @release_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
     ret i32 %new
 }
 
+define i32 @release_acquire_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: release_acquire_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i32_shared_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [release_acquire_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_acquire_i32_shared_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new release acquire
+    ret i32 %new
+}
+
 define i32 @release_acquire_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: release_acquire_i32_shared_sys(
 ; SM90:       {
@@ -18251,6 +22814,24 @@ define i32 @release_acquire_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new syncscope("device") release acquire
+    ret i32 %new
+}
+
+define i32 @release_seq_cst_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: release_seq_cst_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new release seq_cst
     ret i32 %new
 }
 
@@ -18326,6 +22907,24 @@ define i32 @release_seq_cst_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
     ret i32 %new
 }
 
+define i32 @release_seq_cst_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: release_seq_cst_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new release seq_cst
+    ret i32 %new
+}
+
 define i32 @release_seq_cst_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: release_seq_cst_i32_global_sys(
 ; SM90:       {
@@ -18395,6 +22994,24 @@ define i32 @release_seq_cst_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("device") release seq_cst
+    ret i32 %new
+}
+
+define i32 @release_seq_cst_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: release_seq_cst_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i32_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [release_seq_cst_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [release_seq_cst_i32_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new release seq_cst
     ret i32 %new
 }
 
@@ -18470,6 +23087,23 @@ define i32 @release_seq_cst_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
     ret i32 %new
 }
 
+define i32 @acq_rel_monotonic_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acq_rel_monotonic_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_generic_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_generic_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new acq_rel monotonic
+    ret i32 %new
+}
+
 define i32 @acq_rel_monotonic_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: acq_rel_monotonic_i32_generic_sys(
 ; SM90:       {
@@ -18535,6 +23169,23 @@ define i32 @acq_rel_monotonic_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new syncscope("device") acq_rel monotonic
+    ret i32 %new
+}
+
+define i32 @acq_rel_monotonic_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acq_rel_monotonic_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_global_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_global_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new acq_rel monotonic
     ret i32 %new
 }
 
@@ -18606,6 +23257,23 @@ define i32 @acq_rel_monotonic_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
     ret i32 %new
 }
 
+define i32 @acq_rel_monotonic_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acq_rel_monotonic_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i32_shared_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_monotonic_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_monotonic_i32_shared_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new acq_rel monotonic
+    ret i32 %new
+}
+
 define i32 @acq_rel_monotonic_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: acq_rel_monotonic_i32_shared_sys(
 ; SM90:       {
@@ -18671,6 +23339,23 @@ define i32 @acq_rel_monotonic_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new syncscope("device") acq_rel monotonic
+    ret i32 %new
+}
+
+define i32 @acq_rel_acquire_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acq_rel_acquire_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_generic_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_generic_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new acq_rel acquire
     ret i32 %new
 }
 
@@ -18742,6 +23427,23 @@ define i32 @acq_rel_acquire_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
     ret i32 %new
 }
 
+define i32 @acq_rel_acquire_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acq_rel_acquire_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_global_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_global_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new acq_rel acquire
+    ret i32 %new
+}
+
 define i32 @acq_rel_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: acq_rel_acquire_i32_global_sys(
 ; SM90:       {
@@ -18810,6 +23512,23 @@ define i32 @acq_rel_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
     ret i32 %new
 }
 
+define i32 @acq_rel_acquire_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acq_rel_acquire_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i32_shared_param_0];
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_acquire_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_acquire_i32_shared_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new acq_rel acquire
+    ret i32 %new
+}
+
 define i32 @acq_rel_acquire_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: acq_rel_acquire_i32_shared_sys(
 ; SM90:       {
@@ -18875,6 +23594,24 @@ define i32 @acq_rel_acquire_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new syncscope("device") acq_rel acquire
+    ret i32 %new
+}
+
+define i32 @acq_rel_seq_cst_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new acq_rel seq_cst
     ret i32 %new
 }
 
@@ -18950,6 +23687,24 @@ define i32 @acq_rel_seq_cst_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
     ret i32 %new
 }
 
+define i32 @acq_rel_seq_cst_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new acq_rel seq_cst
+    ret i32 %new
+}
+
 define i32 @acq_rel_seq_cst_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: acq_rel_seq_cst_i32_global_sys(
 ; SM90:       {
@@ -19019,6 +23774,24 @@ define i32 @acq_rel_seq_cst_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("device") acq_rel seq_cst
+    ret i32 %new
+}
+
+define i32 @acq_rel_seq_cst_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i32_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [acq_rel_seq_cst_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [acq_rel_seq_cst_i32_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new acq_rel seq_cst
     ret i32 %new
 }
 
@@ -19094,6 +23867,24 @@ define i32 @acq_rel_seq_cst_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
     ret i32 %new
 }
 
+define i32 @seq_cst_monotonic_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: seq_cst_monotonic_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new seq_cst monotonic
+    ret i32 %new
+}
+
 define i32 @seq_cst_monotonic_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: seq_cst_monotonic_i32_generic_sys(
 ; SM90:       {
@@ -19163,6 +23954,24 @@ define i32 @seq_cst_monotonic_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new syncscope("device") seq_cst monotonic
+    ret i32 %new
+}
+
+define i32 @seq_cst_monotonic_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: seq_cst_monotonic_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new seq_cst monotonic
     ret i32 %new
 }
 
@@ -19238,6 +24047,24 @@ define i32 @seq_cst_monotonic_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i
     ret i32 %new
 }
 
+define i32 @seq_cst_monotonic_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: seq_cst_monotonic_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i32_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_monotonic_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_monotonic_i32_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new seq_cst monotonic
+    ret i32 %new
+}
+
 define i32 @seq_cst_monotonic_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: seq_cst_monotonic_i32_shared_sys(
 ; SM90:       {
@@ -19307,6 +24134,24 @@ define i32 @seq_cst_monotonic_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new syncscope("device") seq_cst monotonic
+    ret i32 %new
+}
+
+define i32 @seq_cst_acquire_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: seq_cst_acquire_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new seq_cst acquire
     ret i32 %new
 }
 
@@ -19382,6 +24227,24 @@ define i32 @seq_cst_acquire_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
     ret i32 %new
 }
 
+define i32 @seq_cst_acquire_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: seq_cst_acquire_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new seq_cst acquire
+    ret i32 %new
+}
+
 define i32 @seq_cst_acquire_i32_global_sys(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: seq_cst_acquire_i32_global_sys(
 ; SM90:       {
@@ -19451,6 +24314,24 @@ define i32 @seq_cst_acquire_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new syncscope("device") seq_cst acquire
+    ret i32 %new
+}
+
+define i32 @seq_cst_acquire_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: seq_cst_acquire_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i32_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_acquire_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_acquire_i32_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new seq_cst acquire
     ret i32 %new
 }
 
@@ -19526,6 +24407,24 @@ define i32 @seq_cst_acquire_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
     ret i32 %new
 }
 
+define i32 @seq_cst_seq_cst_i32_generic(ptr %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i32_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_generic_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new seq_cst seq_cst
+    ret i32 %new
+}
+
 define i32 @seq_cst_seq_cst_i32_generic_sys(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: seq_cst_seq_cst_i32_generic_sys(
 ; SM90:       {
@@ -19595,6 +24494,24 @@ define i32 @seq_cst_seq_cst_i32_generic_gpu(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new syncscope("device") seq_cst seq_cst
+    ret i32 %new
+}
+
+define i32 @seq_cst_seq_cst_i32_global(ptr addrspace(1) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i32_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_global_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i32 %cmp, i32 %new seq_cst seq_cst
     ret i32 %new
 }
 
@@ -19670,6 +24587,24 @@ define i32 @seq_cst_seq_cst_i32_global_gpu(ptr addrspace(1) %addr, i32 %cmp, i32
     ret i32 %new
 }
 
+define i32 @seq_cst_seq_cst_i32_shared(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i32_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b32 %r<4>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i32_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b32 %r1, [seq_cst_seq_cst_i32_shared_param_1];
+; SM90-NEXT:    ld.param.b32 %r2, [seq_cst_seq_cst_i32_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b32 %r3, [%rd1], %r1, %r2;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i32 %cmp, i32 %new seq_cst seq_cst
+    ret i32 %new
+}
+
 define i32 @seq_cst_seq_cst_i32_shared_sys(ptr addrspace(3) %addr, i32 %cmp, i32 %new) {
 ; SM90-LABEL: seq_cst_seq_cst_i32_shared_sys(
 ; SM90:       {
@@ -19742,6 +24677,22 @@ define i32 @seq_cst_seq_cst_i32_shared_gpu(ptr addrspace(3) %addr, i32 %cmp, i32
     ret i32 %new
 }
 
+define i64 @monotonic_monotonic_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: monotonic_monotonic_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_generic_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_generic_param_2];
+; SM90-NEXT:    atom.relaxed.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new monotonic monotonic
+    ret i64 %new
+}
+
 define i64 @monotonic_monotonic_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: monotonic_monotonic_i64_generic_sys(
 ; SM90:       {
@@ -19803,6 +24754,22 @@ define i64 @monotonic_monotonic_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new syncscope("device") monotonic monotonic
+    ret i64 %new
+}
+
+define i64 @monotonic_monotonic_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: monotonic_monotonic_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_global_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_global_param_2];
+; SM90-NEXT:    atom.relaxed.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new monotonic monotonic
     ret i64 %new
 }
 
@@ -19870,6 +24837,22 @@ define i64 @monotonic_monotonic_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp,
     ret i64 %new
 }
 
+define i64 @monotonic_monotonic_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: monotonic_monotonic_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_monotonic_i64_shared_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_monotonic_i64_shared_param_2];
+; SM90-NEXT:    atom.relaxed.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new monotonic monotonic
+    ret i64 %new
+}
+
 define i64 @monotonic_monotonic_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: monotonic_monotonic_i64_shared_sys(
 ; SM90:       {
@@ -19931,6 +24914,22 @@ define i64 @monotonic_monotonic_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp,
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new syncscope("device") monotonic monotonic
+    ret i64 %new
+}
+
+define i64 @monotonic_acquire_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: monotonic_acquire_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_generic_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new monotonic acquire
     ret i64 %new
 }
 
@@ -19998,6 +24997,22 @@ define i64 @monotonic_acquire_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
     ret i64 %new
 }
 
+define i64 @monotonic_acquire_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: monotonic_acquire_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_global_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new monotonic acquire
+    ret i64 %new
+}
+
 define i64 @monotonic_acquire_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: monotonic_acquire_i64_global_sys(
 ; SM90:       {
@@ -20062,6 +25077,22 @@ define i64 @monotonic_acquire_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
     ret i64 %new
 }
 
+define i64 @monotonic_acquire_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: monotonic_acquire_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_acquire_i64_shared_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_acquire_i64_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new monotonic acquire
+    ret i64 %new
+}
+
 define i64 @monotonic_acquire_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: monotonic_acquire_i64_shared_sys(
 ; SM90:       {
@@ -20123,6 +25154,23 @@ define i64 @monotonic_acquire_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new syncscope("device") monotonic acquire
+    ret i64 %new
+}
+
+define i64 @monotonic_seq_cst_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: monotonic_seq_cst_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new monotonic seq_cst
     ret i64 %new
 }
 
@@ -20194,6 +25242,23 @@ define i64 @monotonic_seq_cst_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
     ret i64 %new
 }
 
+define i64 @monotonic_seq_cst_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: monotonic_seq_cst_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new monotonic seq_cst
+    ret i64 %new
+}
+
 define i64 @monotonic_seq_cst_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: monotonic_seq_cst_i64_global_sys(
 ; SM90:       {
@@ -20259,6 +25324,23 @@ define i64 @monotonic_seq_cst_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("device") monotonic seq_cst
+    ret i64 %new
+}
+
+define i64 @monotonic_seq_cst_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: monotonic_seq_cst_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [monotonic_seq_cst_i64_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [monotonic_seq_cst_i64_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new monotonic seq_cst
     ret i64 %new
 }
 
@@ -20330,6 +25412,22 @@ define i64 @monotonic_seq_cst_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
     ret i64 %new
 }
 
+define i64 @acquire_monotonic_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acquire_monotonic_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_generic_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new acquire monotonic
+    ret i64 %new
+}
+
 define i64 @acquire_monotonic_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: acquire_monotonic_i64_generic_sys(
 ; SM90:       {
@@ -20391,6 +25489,22 @@ define i64 @acquire_monotonic_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new syncscope("device") acquire monotonic
+    ret i64 %new
+}
+
+define i64 @acquire_monotonic_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acquire_monotonic_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_global_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new acquire monotonic
     ret i64 %new
 }
 
@@ -20458,6 +25572,22 @@ define i64 @acquire_monotonic_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
     ret i64 %new
 }
 
+define i64 @acquire_monotonic_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acquire_monotonic_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_monotonic_i64_shared_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_monotonic_i64_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new acquire monotonic
+    ret i64 %new
+}
+
 define i64 @acquire_monotonic_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: acquire_monotonic_i64_shared_sys(
 ; SM90:       {
@@ -20519,6 +25649,22 @@ define i64 @acquire_monotonic_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new syncscope("device") acquire monotonic
+    ret i64 %new
+}
+
+define i64 @acquire_acquire_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acquire_acquire_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_generic_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new acquire acquire
     ret i64 %new
 }
 
@@ -20586,6 +25732,22 @@ define i64 @acquire_acquire_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
     ret i64 %new
 }
 
+define i64 @acquire_acquire_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acquire_acquire_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_global_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new acquire acquire
+    ret i64 %new
+}
+
 define i64 @acquire_acquire_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: acquire_acquire_i64_global_sys(
 ; SM90:       {
@@ -20650,6 +25812,22 @@ define i64 @acquire_acquire_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
     ret i64 %new
 }
 
+define i64 @acquire_acquire_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acquire_acquire_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_acquire_i64_shared_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_acquire_i64_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new acquire acquire
+    ret i64 %new
+}
+
 define i64 @acquire_acquire_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: acquire_acquire_i64_shared_sys(
 ; SM90:       {
@@ -20711,6 +25889,23 @@ define i64 @acquire_acquire_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new syncscope("device") acquire acquire
+    ret i64 %new
+}
+
+define i64 @acquire_seq_cst_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acquire_seq_cst_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new acquire seq_cst
     ret i64 %new
 }
 
@@ -20782,6 +25977,23 @@ define i64 @acquire_seq_cst_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
     ret i64 %new
 }
 
+define i64 @acquire_seq_cst_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acquire_seq_cst_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new acquire seq_cst
+    ret i64 %new
+}
+
 define i64 @acquire_seq_cst_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: acquire_seq_cst_i64_global_sys(
 ; SM90:       {
@@ -20847,6 +26059,23 @@ define i64 @acquire_seq_cst_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("device") acquire seq_cst
+    ret i64 %new
+}
+
+define i64 @acquire_seq_cst_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acquire_seq_cst_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acquire_seq_cst_i64_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acquire_seq_cst_i64_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new acquire seq_cst
     ret i64 %new
 }
 
@@ -20918,6 +26147,22 @@ define i64 @acquire_seq_cst_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
     ret i64 %new
 }
 
+define i64 @release_monotonic_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: release_monotonic_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_generic_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_generic_param_2];
+; SM90-NEXT:    atom.release.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new release monotonic
+    ret i64 %new
+}
+
 define i64 @release_monotonic_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: release_monotonic_i64_generic_sys(
 ; SM90:       {
@@ -20979,6 +26224,22 @@ define i64 @release_monotonic_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new syncscope("device") release monotonic
+    ret i64 %new
+}
+
+define i64 @release_monotonic_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: release_monotonic_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_global_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_global_param_2];
+; SM90-NEXT:    atom.release.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new release monotonic
     ret i64 %new
 }
 
@@ -21046,6 +26307,22 @@ define i64 @release_monotonic_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
     ret i64 %new
 }
 
+define i64 @release_monotonic_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: release_monotonic_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_monotonic_i64_shared_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_monotonic_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_monotonic_i64_shared_param_2];
+; SM90-NEXT:    atom.release.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new release monotonic
+    ret i64 %new
+}
+
 define i64 @release_monotonic_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: release_monotonic_i64_shared_sys(
 ; SM90:       {
@@ -21107,6 +26384,22 @@ define i64 @release_monotonic_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new syncscope("device") release monotonic
+    ret i64 %new
+}
+
+define i64 @release_acquire_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: release_acquire_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_generic_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_generic_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new release acquire
     ret i64 %new
 }
 
@@ -21174,6 +26467,22 @@ define i64 @release_acquire_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
     ret i64 %new
 }
 
+define i64 @release_acquire_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: release_acquire_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_global_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_global_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new release acquire
+    ret i64 %new
+}
+
 define i64 @release_acquire_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: release_acquire_i64_global_sys(
 ; SM90:       {
@@ -21238,6 +26547,22 @@ define i64 @release_acquire_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
     ret i64 %new
 }
 
+define i64 @release_acquire_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: release_acquire_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_acquire_i64_shared_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [release_acquire_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_acquire_i64_shared_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new release acquire
+    ret i64 %new
+}
+
 define i64 @release_acquire_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: release_acquire_i64_shared_sys(
 ; SM90:       {
@@ -21299,6 +26624,23 @@ define i64 @release_acquire_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new syncscope("device") release acquire
+    ret i64 %new
+}
+
+define i64 @release_seq_cst_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: release_seq_cst_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new release seq_cst
     ret i64 %new
 }
 
@@ -21370,6 +26712,23 @@ define i64 @release_seq_cst_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
     ret i64 %new
 }
 
+define i64 @release_seq_cst_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: release_seq_cst_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new release seq_cst
+    ret i64 %new
+}
+
 define i64 @release_seq_cst_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: release_seq_cst_i64_global_sys(
 ; SM90:       {
@@ -21435,6 +26794,23 @@ define i64 @release_seq_cst_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("device") release seq_cst
+    ret i64 %new
+}
+
+define i64 @release_seq_cst_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: release_seq_cst_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [release_seq_cst_i64_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [release_seq_cst_i64_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new release seq_cst
     ret i64 %new
 }
 
@@ -21506,6 +26882,22 @@ define i64 @release_seq_cst_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
     ret i64 %new
 }
 
+define i64 @acq_rel_monotonic_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acq_rel_monotonic_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_generic_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_generic_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new acq_rel monotonic
+    ret i64 %new
+}
+
 define i64 @acq_rel_monotonic_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: acq_rel_monotonic_i64_generic_sys(
 ; SM90:       {
@@ -21567,6 +26959,22 @@ define i64 @acq_rel_monotonic_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new syncscope("device") acq_rel monotonic
+    ret i64 %new
+}
+
+define i64 @acq_rel_monotonic_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acq_rel_monotonic_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_global_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_global_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new acq_rel monotonic
     ret i64 %new
 }
 
@@ -21634,6 +27042,22 @@ define i64 @acq_rel_monotonic_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
     ret i64 %new
 }
 
+define i64 @acq_rel_monotonic_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acq_rel_monotonic_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_monotonic_i64_shared_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_monotonic_i64_shared_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new acq_rel monotonic
+    ret i64 %new
+}
+
 define i64 @acq_rel_monotonic_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: acq_rel_monotonic_i64_shared_sys(
 ; SM90:       {
@@ -21695,6 +27119,22 @@ define i64 @acq_rel_monotonic_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new syncscope("device") acq_rel monotonic
+    ret i64 %new
+}
+
+define i64 @acq_rel_acquire_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acq_rel_acquire_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_generic_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_generic_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new acq_rel acquire
     ret i64 %new
 }
 
@@ -21762,6 +27202,22 @@ define i64 @acq_rel_acquire_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
     ret i64 %new
 }
 
+define i64 @acq_rel_acquire_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acq_rel_acquire_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_global_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_global_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new acq_rel acquire
+    ret i64 %new
+}
+
 define i64 @acq_rel_acquire_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: acq_rel_acquire_i64_global_sys(
 ; SM90:       {
@@ -21826,6 +27282,22 @@ define i64 @acq_rel_acquire_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
     ret i64 %new
 }
 
+define i64 @acq_rel_acquire_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acq_rel_acquire_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_acquire_i64_shared_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_acquire_i64_shared_param_2];
+; SM90-NEXT:    atom.acq_rel.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new acq_rel acquire
+    ret i64 %new
+}
+
 define i64 @acq_rel_acquire_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: acq_rel_acquire_i64_shared_sys(
 ; SM90:       {
@@ -21887,6 +27359,23 @@ define i64 @acq_rel_acquire_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new syncscope("device") acq_rel acquire
+    ret i64 %new
+}
+
+define i64 @acq_rel_seq_cst_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new acq_rel seq_cst
     ret i64 %new
 }
 
@@ -21958,6 +27447,23 @@ define i64 @acq_rel_seq_cst_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
     ret i64 %new
 }
 
+define i64 @acq_rel_seq_cst_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new acq_rel seq_cst
+    ret i64 %new
+}
+
 define i64 @acq_rel_seq_cst_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: acq_rel_seq_cst_i64_global_sys(
 ; SM90:       {
@@ -22023,6 +27529,23 @@ define i64 @acq_rel_seq_cst_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("device") acq_rel seq_cst
+    ret i64 %new
+}
+
+define i64 @acq_rel_seq_cst_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: acq_rel_seq_cst_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [acq_rel_seq_cst_i64_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [acq_rel_seq_cst_i64_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new acq_rel seq_cst
     ret i64 %new
 }
 
@@ -22094,6 +27617,23 @@ define i64 @acq_rel_seq_cst_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
     ret i64 %new
 }
 
+define i64 @seq_cst_monotonic_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: seq_cst_monotonic_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new seq_cst monotonic
+    ret i64 %new
+}
+
 define i64 @seq_cst_monotonic_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: seq_cst_monotonic_i64_generic_sys(
 ; SM90:       {
@@ -22159,6 +27699,23 @@ define i64 @seq_cst_monotonic_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new syncscope("device") seq_cst monotonic
+    ret i64 %new
+}
+
+define i64 @seq_cst_monotonic_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: seq_cst_monotonic_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new seq_cst monotonic
     ret i64 %new
 }
 
@@ -22230,6 +27787,23 @@ define i64 @seq_cst_monotonic_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i
     ret i64 %new
 }
 
+define i64 @seq_cst_monotonic_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: seq_cst_monotonic_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_monotonic_i64_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_monotonic_i64_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new seq_cst monotonic
+    ret i64 %new
+}
+
 define i64 @seq_cst_monotonic_i64_shared_sys(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: seq_cst_monotonic_i64_shared_sys(
 ; SM90:       {
@@ -22295,6 +27869,23 @@ define i64 @seq_cst_monotonic_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new syncscope("device") seq_cst monotonic
+    ret i64 %new
+}
+
+define i64 @seq_cst_acquire_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: seq_cst_acquire_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new seq_cst acquire
     ret i64 %new
 }
 
@@ -22366,6 +27957,23 @@ define i64 @seq_cst_acquire_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
     ret i64 %new
 }
 
+define i64 @seq_cst_acquire_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: seq_cst_acquire_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new seq_cst acquire
+    ret i64 %new
+}
+
 define i64 @seq_cst_acquire_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: seq_cst_acquire_i64_global_sys(
 ; SM90:       {
@@ -22431,6 +28039,23 @@ define i64 @seq_cst_acquire_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("device") seq_cst acquire
+    ret i64 %new
+}
+
+define i64 @seq_cst_acquire_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: seq_cst_acquire_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_acquire_i64_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_acquire_i64_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new seq_cst acquire
     ret i64 %new
 }
 
@@ -22502,6 +28127,23 @@ define i64 @seq_cst_acquire_i64_shared_gpu(ptr addrspace(3) %addr, i64 %cmp, i64
     ret i64 %new
 }
 
+define i64 @seq_cst_seq_cst_i64_generic(ptr %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i64_generic(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_generic_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_generic_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_generic_param_2];
+; SM90-NEXT:    atom.acquire.sys.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new seq_cst seq_cst
+    ret i64 %new
+}
+
 define i64 @seq_cst_seq_cst_i64_generic_sys(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: seq_cst_seq_cst_i64_generic_sys(
 ; SM90:       {
@@ -22570,6 +28212,23 @@ define i64 @seq_cst_seq_cst_i64_generic_gpu(ptr %addr, i64 %cmp, i64 %new) {
     ret i64 %new
 }
 
+define i64 @seq_cst_seq_cst_i64_global(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i64_global(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_global_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_global_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_global_param_2];
+; SM90-NEXT:    atom.acquire.sys.global.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new seq_cst seq_cst
+    ret i64 %new
+}
+
 define i64 @seq_cst_seq_cst_i64_global_sys(ptr addrspace(1) %addr, i64 %cmp, i64 %new) {
 ; SM90-LABEL: seq_cst_seq_cst_i64_global_sys(
 ; SM90:       {
@@ -22635,6 +28294,23 @@ define i64 @seq_cst_seq_cst_i64_global_gpu(ptr addrspace(1) %addr, i64 %cmp, i64
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i64 %cmp, i64 %new syncscope("device") seq_cst seq_cst
+    ret i64 %new
+}
+
+define i64 @seq_cst_seq_cst_i64_shared(ptr addrspace(3) %addr, i64 %cmp, i64 %new) {
+; SM90-LABEL: seq_cst_seq_cst_i64_shared(
+; SM90:       {
+; SM90-NEXT:    .reg .b64 %rd<5>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [seq_cst_seq_cst_i64_shared_param_0];
+; SM90-NEXT:    fence.sc.sys;
+; SM90-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i64_shared_param_1];
+; SM90-NEXT:    ld.param.b64 %rd3, [seq_cst_seq_cst_i64_shared_param_2];
+; SM90-NEXT:    atom.acquire.sys.shared.cas.b64 %rd4, [%rd1], %rd2, %rd3;
+; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM90-NEXT:    ret;
+    %pairold = cmpxchg ptr addrspace(3) %addr, i64 %cmp, i64 %new seq_cst seq_cst
     ret i64 %new
 }
 

@@ -12,6 +12,14 @@ cmpxchg_func = Template(
 """
 )
 
+cmpxchg_func_no_scope = Template(
+    """define i$size @${success}_${failure}_i${size}_${addrspace}(ptr${addrspace_cast} %addr, i$size %cmp, i$size %new) {
+    %pairold = cmpxchg ptr${addrspace_cast} %addr, i$size %cmp, i$size %new $success $failure
+    ret i$size %new
+}
+"""
+)
+
 run_statement = Template(
     """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefix=SM${sm}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
@@ -38,25 +46,38 @@ if __name__ == "__main__":
     for sm, ptx in TESTS:
         with open("cmpxchg-sm{}.ll".format(str(sm)), "w") as fp:
             print(run_statement.substitute(sm=sm, ptx=ptx), file=fp)
-            for size, success, failure, addrspace, llvm_scope in product(
-                SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS, ADDRSPACES, LLVM_SCOPES
+            for size, success, failure, addrspace in product(
+                SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS, ADDRSPACES
             ):
-                # cluster ordering is supported from SM90 onwards
-                if sm != 90 and llvm_scope == "cluster":
-                    continue
                 if addrspace == 0:
                     addrspace_cast = ""
                 else:
                     addrspace_cast = " addrspace({})".format(str(addrspace))
+                # Test default scope
                 print(
-                    cmpxchg_func.substitute(
+                    cmpxchg_func_no_scope.substitute(
                         success=success,
                         failure=failure,
                         size=size,
                         addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
                         addrspace_cast=addrspace_cast,
-                        llvm_scope=llvm_scope,
-                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
                     ),
                     file=fp,
                 )
+
+                for  llvm_scope in LLVM_SCOPES:
+                    # cluster ordering is supported from SM90 onwards
+                    if sm < 90 and llvm_scope == "cluster":
+                        continue
+                    print(
+                        cmpxchg_func.substitute(
+                            success=success,
+                            failure=failure,
+                            size=size,
+                            addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                            addrspace_cast=addrspace_cast,
+                            llvm_scope=llvm_scope,
+                            ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                        ),
+                        file=fp,
+                    )
