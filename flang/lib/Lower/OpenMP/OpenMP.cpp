@@ -2673,6 +2673,17 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, clauseOps);
 }
 
+static mlir::omp::WorkdistributeOp genWorkdistributeOp(
+    lower::AbstractConverter &converter, lower::SymMap &symTable,
+    semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+    mlir::Location loc, const ConstructQueue &queue,
+    ConstructQueue::const_iterator item) {
+  return genOpWithBody<mlir::omp::WorkdistributeOp>(
+      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                        llvm::omp::Directive::OMPD_workdistribute),
+      queue, item);
+}
+
 //===----------------------------------------------------------------------===//
 // Code generation for atomic operations
 //===----------------------------------------------------------------------===//
@@ -3939,7 +3950,10 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     TODO(loc, "Unhandled loop directive (" +
                   llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
   }
-  // case llvm::omp::Directive::OMPD_workdistribute:
+  case llvm::omp::Directive::OMPD_workdistribute:
+    newOp = genWorkdistributeOp(converter, symTable, semaCtx, eval, loc, queue,
+                                item);
+    break;
   case llvm::omp::Directive::OMPD_workshare:
     newOp = genWorkshareOp(converter, symTable, stmtCtx, semaCtx, eval, loc,
                            queue, item);
