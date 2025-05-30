@@ -64,7 +64,8 @@ class LoopVectorizeHints {
     HK_FORCE,
     HK_ISVECTORIZED,
     HK_PREDICATE,
-    HK_SCALABLE
+    HK_SCALABLE,
+    HK_REASSOCIATE,
   };
 
   /// Hint - associates name and validation with the hint value.
@@ -96,6 +97,10 @@ class LoopVectorizeHints {
 
   /// Says whether we should use fixed width or scalable vectorization.
   Hint Scalable;
+
+  /// Says whether unsafe reassociation of computations is allowed
+  /// during the loop vectorization.
+  Hint Reassociate;
 
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
@@ -160,6 +165,13 @@ public:
   /// \return true if scalable vectorization has been explicitly disabled.
   bool isScalableVectorizationDisabled() const {
     return (ScalableForceKind)Scalable.Value == SK_FixedWidthOnly;
+  }
+
+  enum ForceKind getReassociate() const {
+    if ((ForceKind)Reassociate.Value == FK_Undefined &&
+        hasDisableAllTransformsHint(TheLoop))
+      return FK_Disabled;
+    return (ForceKind)Reassociate.Value;
   }
 
   /// If hints are provided that force vectorization, use the AlwaysPrint
