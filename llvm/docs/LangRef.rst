@@ -9596,6 +9596,14 @@ may not be equal to the address provided for the same block to this
 instruction's ``indirect labels`` operand. The assembly code may only transfer
 control to addresses provided via this instruction's ``indirect labels``.
 
+On target architectures that implement branch target enforcement by requiring
+indirect (register-controlled) branch instructions to jump only to locations
+marked by a special instruction (such as AArch64 ``bti``), the called code is
+expected not to use such an indirect branch to transfer control to the
+locations in ``indirect labels``. Therefore, including a label in the
+``indirect labels`` of a ``callbr`` does not require the compiler to put a
+``bti`` or equivalent instruction at the label.
+
 Arguments:
 """"""""""
 

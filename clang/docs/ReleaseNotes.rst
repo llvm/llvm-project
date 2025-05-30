@@ -41,6 +41,11 @@ Potentially Breaking Changes
 - For ARM targets when compiling assembly files, the features included in the selected CPU
   or Architecture's FPU are included. If you wish not to use a specific feature,
   the relevant ``+no`` option will need to be amended to the command line option.
+- When compiling with branch target enforcement, ``asm goto``
+  statements will no longer guarantee to place a ``bti`` or
+  ``endbr64`` instruction at the labels named as possible branch
+  destinations, so it is not safe to use a register-controlled branch
+  instruction to branch to one. (In line with gcc.)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
