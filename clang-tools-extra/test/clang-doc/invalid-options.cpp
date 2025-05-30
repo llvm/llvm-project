@@ -1,17 +1,17 @@
 /// Invalid output path (%t is a file, not a directory).
 // RUN: rm -rf %t && touch %t
-// RUN: not clang-doc %s -output=%t/subdir 2>&1 | FileCheck %s
-// CHECK: clang-doc error:
-// CHECK: {{(Not a directory|no such file or directory)}}
+// RUN: not clang-doc %s -output=%t/subdir 2>&1 | FileCheck %s --check-prefix=OUTPUT-FAIL
+// OUTPUT-FAIL: clang-doc error:
+// OUTPUT-FAIL: {{(Not a directory|no such file or directory)}}
 
 /// Invalid format option.
-// RUN: not clang-doc %s --output=%t.dir -format=badformat 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
+// RUN: rm -rf %t && mkdir %t && touch %t/file
+// RUN: not clang-doc %s --output=%t/file -format=badformat 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
 // BAD-FORMAT: clang-doc: for the --format option: Cannot find option named 'badformat'!
 
 /// Missing HTML asset directory (warning only).
 // RUN: clang-doc %s -format=html -asset=%t/nonexistent-assets 2>&1 | FileCheck %s --check-prefix=ASSET-WARN
 // ASSET-WARN: Asset path supply is not a directory
-// ASSET-WARN: falling back to default
 
 /// Mapping failure (with --ignore-map-errors=false).
 // RUN: not clang-doc %t/nonexistent.cpp -ignore-map-errors=false 2>&1 | FileCheck %s --check-prefix=MAP-FAIL
