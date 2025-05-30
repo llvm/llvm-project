@@ -143,6 +143,8 @@ endif()
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." ${LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT})
 
+option(LIBCXXABI_EXECUTE_ONLY_CODE "Compile libc++abi as execute-only." OFF)
+
 if(MINGW)
   set(LIBCXXABI_DEFAULT_TEST_CONFIG "llvm-libc++abi-mingw.cfg.in")
 elseif(WIN32) # clang-cl
@@ -443,6 +445,17 @@ endif()
 if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
   if (LIBCXXABI_HAS_PTHREAD_LIB)
     add_definitions(-D_LIBCXXABI_LINK_PTHREAD_LIB)
+  endif()
+endif()
+
+if (LIBCXXABI_EXECUTE_ONLY_CODE)
+  add_compile_flags_if_supported(-mexecute-only)
+  if (NOT CXX_SUPPORTS_MEXECUTE_ONLY_FLAG)
+    add_compile_flags_if_supported(-mpure-code)
+    if (NOT CXX_SUPPORTS_MPURE_CODE_FLAG)
+      message(SEND_ERROR
+        "Compiler doesn't support -mexecute-only or -mpure-code option!")
+    endif()
   endif()
 endif()
 
