@@ -1258,7 +1258,7 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
          CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(Ord)) &&
         CheckDI) {
       CheckDI = getDebugInfo()->CreateSyntheticInlineAt(
-          CheckDI, "__ubsan_check_singularity");
+          CheckDI, "__ubsan_check_debug_info_anchor");
       break;
     }
   }
