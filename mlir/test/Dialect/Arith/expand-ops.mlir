@@ -254,7 +254,7 @@ func.func @truncf_f32_to_f8E8M0FNU(%arg0 : f32) -> f8E8M0FNU {
     %0 = arith.truncf %arg0 : f32 to f8E8M0FNU
     return %0 : f8E8M0FNU
 }
-// CHECK-LABLE: @truncf_f32_to_f8E8M0FNU
+// CHECK-LABEL: @truncf_f32_to_f8E8M0FNU
 // CHECK: %[[BITCAST:.+]] = arith.bitcast %arg0 : f32 to i32
 // CHECK: %[[C23_i32:.+]] = arith.constant 23 : i32
 // CHECK: %[[SHRUI:.+]] = arith.shrui %[[BITCAST]], %[[C23_i32]] : i32
@@ -268,7 +268,7 @@ func.func @truncf_f16_to_f8E8M0FNU(%arg0 : f16) -> f8E8M0FNU {
     %0 = arith.truncf %arg0 : f16 to f8E8M0FNU
     return %0 : f8E8M0FNU
 }
-// CHECK-LABLE: @truncf_f16_to_f8E8M0FNU
+// CHECK-LABEL: @truncf_f16_to_f8E8M0FNU
 // CHECK: %[[EXTF:.+]] = arith.extf %arg0 : f16 to f32
 // CHECK: %[[BITCAST:.+]] = arith.bitcast %[[EXTF]] : f32 to i32
 // CHECK: %[[C23_i32:.+]] = arith.constant 23 : i32
@@ -317,27 +317,23 @@ func.func @scaling_truncf_f32_to_f4E2M1FN(%arg0 : f32, %arg1: f8E8M0FNU) -> f4E2
 
 // SCHECK-LABEL: @scaling_truncf_f32_to_f4E2M1FN
 // SCHECK: %[[C2:.+]] = arith.constant 2 : i32
-// SCHECK: %[[C127:.+]] = arith.constant 127 : i32
-// SCHECK: %[[CN127:.+]] = arith.constant -127 : i32
-// SCHECK: %[[BITCASTI8:.+]] =  arith.bitcast %arg1 : f8E8M0FNU to i8
-// SCHECK: %[[EXTI:.+]] = arith.extui %[[BITCASTI8]] : i8 to i32
-// SCHECK: %[[UNBIASEDSCALE:.+]] = arith.subi %[[EXTI]], %[[C127]] : i32
-// SCHECK: %[[NORMALIZED:.+]] = arith.subi %[[UNBIASEDSCALE]], %[[C2]] : i32
-// SCHECK: %[[UPPERCOND:.+]] = arith.cmpi sgt, %[[NORMALIZED]], %[[C127]] : i32
-// SCHECK: %[[LOWERCOND:.+]] = arith.cmpi slt, %[[NORMALIZED]], %[[CN127]] : i32
-// SCHECK: %[[LOWERSELECT:.+]] = arith.select %[[LOWERCOND]], %[[CN127]], %[[NORMALIZED]] : i32
-// SCHECK: %[[UPPERSELECT:.+]] = arith.select %[[UPPERCOND]], %[[C127]], %[[LOWERSELECT]] : i32
-// SCHECK: %[[BIASED:.+]] = arith.addi %[[UPPERSELECT]], %[[C127]] : i32
-// SCHECK: %[[BIASEDI8:.+]] = arith.trunci %[[BIASED]] : i32 to i8
-// SCHECK: %[[BITCASTF8:.+]] = arith.bitcast %[[BIASEDI8]] : i8 to f8E8M0FNU
-// SCHECK: %[[EXPSCALE:.+]] = arith.extf %[[BITCASTF8]] : f8E8M0FNU to f32
+// SCHECK: %[[C1:.+]] = arith.constant 1 : i32
+// SCHECK: %[[EMAX:.+]] = arith.shli %[[C1]], %[[C2]] : i32
+// SCHECK: %[[EMAXF32:.+]] = arith.sitofp %[[EMAX]] : i32 to f32
+// SCHECK: %[[SCALEF32:.+]] = arith.extf %arg1 : f8E8M0FNU to f32
+// SCHECK: %[[SCALEDIV:.+]] = arith.divf %[[SCALEF32]], %[[EMAXF32]] : f32
+// SCHECK: %[[SCALEDIVF8:.+]] = arith.truncf %[[SCALEDIV]] : f32 to f8E8M0FNU
+// SCHECK: %[[SCALEDIVI8:.+]] =  arith.bitcast %[[SCALEDIVF8]] : f8E8M0FNU to i8
+// SCHECK: %[[C0:.+]] = arith.constant 0 : i8
+// SCHECK: %[[UFLOWCOND:.+]] = arith.cmpi eq, %[[C0]], %[[SCALEDIVI8]] : i8
+// SCHECK: %[[CLAMPVAL:.+]] = arith.constant 5.877470e-39 : f32
+// SCHECK: %[[CLAMP:.+]] = arith.select %[[UFLOWCOND]], %[[CLAMPVAL]], %[[SCALEDIV]] : f32 
 // SCHECK: %[[INPUTEXP:.+]] = arith.truncf %arg0 : f32 to f8E8M0FNU
 // SCHECK: %[[INPUTEXPI8:.+]] = arith.bitcast %[[INPUTEXP]] : f8E8M0FNU to i8
-// SCHECK: %[[C0:.+]] = arith.constant 0 : i8
 // SCHECK: %[[FLUSHCOND:.+]] = arith.cmpi eq, %[[C0]], %[[INPUTEXPI8]] : i8
 // SCHECK: %[[CF0:.+]] = arith.constant 0.000000e+00 : f32
 // SCHECK: %[[FLUSHINPUT:.+]] = arith.select %[[FLUSHCOND]], %[[CF0]], %arg0 : f32
-// SCHECK: %[[DIVF:.+]] = arith.divf %[[FLUSHINPUT]], %[[EXPSCALE]] : f32
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[FLUSHINPUT]], %[[CLAMP]] : f32
 // SCHECK: %[[RESULT:.+]] = arith.truncf %[[DIVF]] : f32 to f4E2M1FN
 // SCHECK: return %[[RESULT]]
 
@@ -351,27 +347,23 @@ func.func @scaling_truncf_vector_f16_to_f6E3M2FN(%arg0 : vector<4xf16>, %arg1: v
 // SCHECK-LABEL: @scaling_truncf_vector_f16_to_f6E3M2FN
 // SCHECK: %[[INPUTF32:.+]] = arith.extf %arg0 : vector<4xf16> to vector<4xf32>
 // SCHECK: %[[C2:.+]] = arith.constant dense<4> : vector<4xi32>
-// SCHECK: %[[C127:.+]] = arith.constant dense<127> : vector<4xi32>
-// SCHECK: %[[CN127:.+]] = arith.constant dense<-127> : vector<4xi32>
-// SCHECK: %[[BITCASTI8:.+]] =  arith.bitcast %arg1 : vector<4xf8E8M0FNU> to vector<4xi8>
-// SCHECK: %[[EXTI:.+]] = arith.extui %[[BITCASTI8]] : vector<4xi8> to vector<4xi32>
-// SCHECK: %[[UNBIASEDSCALE:.+]] = arith.subi %[[EXTI]], %[[C127]] :  vector<4xi32>
-// SCHECK: %[[NORMALIZED:.+]] = arith.subi %[[UNBIASEDSCALE]], %[[C2]] : vector<4xi32>
-// SCHECK: %[[UPPERCOND:.+]] = arith.cmpi sgt, %[[NORMALIZED]], %[[C127]] : vector<4xi32>
-// SCHECK: %[[LOWERCOND:.+]] = arith.cmpi slt, %[[NORMALIZED]], %[[CN127]] : vector<4xi32>
-// SCHECK: %[[LOWERSELECT:.+]] = arith.select %[[LOWERCOND]], %[[CN127]], %[[NORMALIZED]] : vector<4xi1>, vector<4xi32>
-// SCHECK: %[[UPPERSELECT:.+]] = arith.select %[[UPPERCOND]], %[[C127]], %[[LOWERSELECT]] : vector<4xi1>, vector<4xi32>
-// SCHECK: %[[BIASED:.+]] = arith.addi %[[UPPERSELECT]], %[[C127]] : vector<4xi32>
-// SCHECK: %[[BIASEDI8:.+]] = arith.trunci %[[BIASED]] : vector<4xi32> to vector<4xi8>
-// SCHECK: %[[BITCASTF8:.+]] = arith.bitcast %[[BIASEDI8]] : vector<4xi8> to vector<4xf8E8M0FNU>
-// SCHECK: %[[EXPSCALE:.+]] = arith.extf %[[BITCASTF8]] : vector<4xf8E8M0FNU> to vector<4xf32>
+// SCHECK: %[[C1:.+]] = arith.constant dense<1> : vector<4xi32>
+// SCHECK: %[[EMAX:.+]] = arith.shli %[[C1]], %[[C2]] : vector<4xi32>
+// SCHECK: %[[EMAXF32:.+]] = arith.sitofp %[[EMAX]] : vector<4xi32> to vector<4xf32>
+// SCHECK: %[[SCALEF32:.+]] = arith.extf %arg1 : vector<4xf8E8M0FNU> to vector<4xf32>
+// SCHECK: %[[SCALEDIV:.+]] = arith.divf %[[SCALEF32]], %[[EMAXF32]] : vector<4xf32>
+// SCHECK: %[[SCALEDIVF8:.+]] = arith.truncf %[[SCALEDIV]] : vector<4xf32> to vector<4xf8E8M0FNU>
+// SCHECK: %[[SCALEDIVI8:.+]] =  arith.bitcast %[[SCALEDIVF8]] : vector<4xf8E8M0FNU> to vector<4xi8>
+// SCHECK: %[[C0:.+]] = arith.constant dense<0> : vector<4xi8>
+// SCHECK: %[[UFLOWCOND:.+]] = arith.cmpi eq, %[[C0]], %[[SCALEDIVI8]] : vector<4xi8>
+// SCHECK: %[[CLAMPVAL:.+]] = arith.constant dense<5.877470e-39> : vector<4xf32>
+// SCHECK: %[[CLAMP:.+]] = arith.select %[[UFLOWCOND]], %[[CLAMPVAL]], %[[SCALEDIV]] : vector<4xi1>, vector<4xf32>
 // SCHECK: %[[INPUTEXP:.+]] = arith.truncf %[[INPUTF32]] : vector<4xf32> to vector<4xf8E8M0FNU>
 // SCHECK: %[[INPUTEXPI8:.+]] = arith.bitcast %[[INPUTEXP]] : vector<4xf8E8M0FNU> to vector<4xi8> 
-// SCHECK: %[[C0:.+]] = arith.constant dense<0> : vector<4xi8>
 // SCHECK: %[[FLUSHCOND:.+]] = arith.cmpi eq, %[[C0]], %[[INPUTEXPI8]] : vector<4xi8>
 // SCHECK: %[[CF0:.+]] = arith.constant dense<0.000000e+00> : vector<4xf32>
 // SCHECK: %[[FLUSHINPUT:.+]] = arith.select %[[FLUSHCOND]], %[[CF0]], %[[INPUTF32]] : vector<4xi1>, vector<4xf32>
-// SCHECK: %[[DIVF:.+]] = arith.divf %[[FLUSHINPUT]], %[[EXPSCALE]] : vector<4xf32>
+// SCHECK: %[[DIVF:.+]] = arith.divf %[[FLUSHINPUT]], %[[CLAMP]] : vector<4xf32>
 // SCHECK: %[[RESULT:.+]] = arith.truncf %[[DIVF]] : vector<4xf32> to vector<4xf6E3M2FN>
 // SCHECK: return %[[RESULT]] : vector<4xf6E3M2FN>
 
@@ -381,7 +373,7 @@ func.func @scaling_truncf_propagate_rounding_mode(%arg0 : vector<4xf16>, %arg1: 
     %0 = arith.scaling_truncf %arg0, %arg1 to_nearest_even : vector<4xf16>, vector<4xf8E8M0FNU> to vector<4xf6E3M2FN>
     return %0 : vector<4xf6E3M2FN>
 }
-// SCHECK-LABLE: @scaling_truncf_propagate_rounding_mode
+// SCHECK-LABEL: @scaling_truncf_propagate_rounding_mode
 // SCHECK: %[[TRUNCF:.+]] = arith.truncf [[_:%[a-zA-Z0-9_]+]] to_nearest_even : vector<4xf32> to vector<4xf6E3M2FN>
 // SCHECK: return %[[TRUNCF]] : vector<4xf6E3M2FN>
 
@@ -390,7 +382,7 @@ func.func @scaling_truncf_f16_to_f4E2M1FN_using_f16_scales(%arg0: f16, %arg1 : f
     %0 = arith.scaling_truncf %arg0, %arg1 : f16, f16 to f4E2M1FN
     return %0 : f4E2M1FN
 }
-// SCHECK-LABLE: @scaling_truncf_f16_to_f4E2M1FN_using_f16_scales
+// SCHECK-LABEL: @scaling_truncf_f16_to_f4E2M1FN_using_f16_scales
 // SCHECK: %[[SCALETRUNCF:.+]] = arith.truncf %arg1 : f16 to f8E8M0FN
 // SCHECK: return
 
@@ -428,7 +420,7 @@ func.func @extf_f8E8M0FNU_to_f16(%arg0 : f8E8M0FNU) -> f16 {
     return %0 : f16
 }
 
-// CHECK-LABLE: @extf_f8E8M0FNU_to_f16
+// CHECK-LABEL: @extf_f8E8M0FNU_to_f16
 // CHECK: %[[BITCAST:.+]] = arith.bitcast %arg0 : f8E8M0FNU to i8
 // CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
 // CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
