@@ -14,7 +14,7 @@
 
 // The same type can appear multiple times within an ignorelist. Any ``=sanitize`` type
 // entries enable sanitizer instrumentation, even if it was ignored by entries before.
-// If multiple entries match the source, than the latest entry takes the
+// If multiple entries match the source, then the latest entry takes the
 // precedence.
 
 
