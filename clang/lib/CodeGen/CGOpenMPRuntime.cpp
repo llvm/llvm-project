@@ -4915,12 +4915,12 @@ void CGOpenMPRuntime::emitPrivateReduction(
   //    - Thread enters critical section.
   //    - Reads its private value from LHSExprs[i].
   //    - Updates __shared_reduction_var[i] = RedOp_i(__shared_reduction_var[i],
-  //    LHSExprs[i]).
+  //    Privates[i]).
   //    - Exits critical section.
   //
   //  Call __kmpc_barrier after combining.
   //
-  //  Each thread copies __shared_reduction_var[i] back to LHSExprs[i].
+  //  Each thread copies __shared_reduction_var[i] back to RHSExprs[i].
   //
   //  Final __kmpc_barrier to synchronize after broadcasting
   QualType PrivateType = Privates->getType();
@@ -5025,7 +5025,7 @@ void CGOpenMPRuntime::emitPrivateReduction(
   const Expr *ReductionOp = ReductionOps;
   const OMPDeclareReductionDecl *CurrentUDR = getReductionInit(ReductionOp);
   LValue SharedLV = CGF.MakeAddrLValue(SharedResult, PrivateType);
-  LValue LHSLV = CGF.EmitLValue(LHSExprs);
+  LValue LHSLV = CGF.EmitLValue(Privates);
 
   auto EmitCriticalReduction = [&](auto ReductionGen) {
     std::string CriticalName = getName({"reduction_critical"});
@@ -5114,7 +5114,7 @@ void CGOpenMPRuntime::emitPrivateReduction(
   else
     FinalResultVal = CGF.EmitLoadOfScalar(SharedLV1, Loc);
 
-  LValue TargetLHSLV = CGF.EmitLValue(LHSExprs);
+  LValue TargetLHSLV = CGF.EmitLValue(RHSExprs);
   if (IsAggregate) {
     CGF.EmitAggregateCopy(TargetLHSLV,
                           CGF.MakeAddrLValue(FinalResultAddr, PrivateType),
@@ -5126,13 +5126,23 @@ void CGOpenMPRuntime::emitPrivateReduction(
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                           CGM.getModule(), OMPRTL___kmpc_barrier),
                       BarrierArgs);
+
+  // Combiner with original list item
+  auto OriginalListCombiner = [&](CodeGenFunction &CGF,
+                                  PrePostActionTy &Action) {
+    Action.Enter(CGF);
+    emitSingleReductionCombiner(CGF, ReductionOps, Privates,
+                                cast<DeclRefExpr>(LHSExprs),
+                                cast<DeclRefExpr>(RHSExprs));
+  };
+  EmitCriticalReduction(OriginalListCombiner);
 }
 
 void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
-                                    ArrayRef<const Expr *> Privates,
-                                    ArrayRef<const Expr *> LHSExprs,
-                                    ArrayRef<const Expr *> RHSExprs,
-                                    ArrayRef<const Expr *> ReductionOps,
+                                    ArrayRef<const Expr *> OrgPrivates,
+                                    ArrayRef<const Expr *> OrgLHSExprs,
+                                    ArrayRef<const Expr *> OrgRHSExprs,
+                                    ArrayRef<const Expr *> OrgReductionOps,
                                     ReductionOptionsTy Options) {
   if (!CGF.HaveInsertPoint())
     return;
@@ -5179,10 +5189,10 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
 
   if (SimpleReduction) {
     CodeGenFunction::RunCleanupsScope Scope(CGF);
-    const auto *IPriv = Privates.begin();
-    const auto *ILHS = LHSExprs.begin();
-    const auto *IRHS = RHSExprs.begin();
-    for (const Expr *E : ReductionOps) {
+    const auto *IPriv = OrgPrivates.begin();
+    const auto *ILHS = OrgLHSExprs.begin();
+    const auto *IRHS = OrgRHSExprs.begin();
+    for (const Expr *E : OrgReductionOps) {
       emitSingleReductionCombiner(CGF, E, *IPriv, cast<DeclRefExpr>(*ILHS),
                                   cast<DeclRefExpr>(*IRHS));
       ++IPriv;
@@ -5191,6 +5201,26 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
     }
     return;
   }
+
+  // Filter out shared  reduction variables based on IsPrivateVarReduction flag.
+  // Only keep entries where the corresponding variable is not private.
+  SmallVector<const Expr *> FilteredPrivates, FilteredLHSExprs,
+      FilteredRHSExprs, FilteredReductionOps;
+  for (unsigned I : llvm::seq<unsigned>(
+           std::min(OrgReductionOps.size(), OrgLHSExprs.size()))) {
+    if (!Options.IsPrivateVarReduction[I]) {
+      FilteredPrivates.emplace_back(OrgPrivates[I]);
+      FilteredLHSExprs.emplace_back(OrgLHSExprs[I]);
+      FilteredRHSExprs.emplace_back(OrgRHSExprs[I]);
+      FilteredReductionOps.emplace_back(OrgReductionOps[I]);
+    }
+  }
+  // Wrap filtered vectors in ArrayRef for downstream shared reduction
+  // processing.
+  ArrayRef<const Expr *> Privates = FilteredPrivates;
+  ArrayRef<const Expr *> LHSExprs = FilteredLHSExprs;
+  ArrayRef<const Expr *> RHSExprs = FilteredRHSExprs;
+  ArrayRef<const Expr *> ReductionOps = FilteredReductionOps;
 
   // 1. Build a list of reduction variables.
   // void *RedList[<n>] = {<ReductionVars>[0], ..., <ReductionVars>[<n>-1]};
@@ -5439,11 +5469,12 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
          "PrivateVarReduction: ReductionOps size mismatch");
   assert(LHSExprs.size() == Options.IsPrivateVarReduction.size() &&
          "PrivateVarReduction: IsPrivateVarReduction size mismatch");
-  for (unsigned I :
-       llvm::seq<unsigned>(std::min(ReductionOps.size(), LHSExprs.size()))) {
+
+  for (unsigned I : llvm::seq<unsigned>(
+           std::min(OrgReductionOps.size(), OrgLHSExprs.size()))) {
     if (Options.IsPrivateVarReduction[I])
-      emitPrivateReduction(CGF, Loc, Privates[I], LHSExprs[I], RHSExprs[I],
-                           ReductionOps[I]);
+      emitPrivateReduction(CGF, Loc, OrgPrivates[I], OrgLHSExprs[I],
+                           OrgRHSExprs[I], OrgReductionOps[I]);
   }
 }
 
