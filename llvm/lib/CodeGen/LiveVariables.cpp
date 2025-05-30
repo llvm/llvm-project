@@ -249,12 +249,12 @@ void LiveVariables::HandlePhysRegUse(Register Reg, MachineInstr &MI) {
     // ...
     //    = EAX
     // All of the sub-registers must have been defined before the use of Reg!
-    // MachineInstr *LastPartialDef = FindLastPartialDef(Reg);
+    MachineInstr *LastPartialDef = FindLastPartialDef(Reg);
     // If LastPartialDef is NULL, it must be using a livein register.
-    // if (LastPartialDef) {
-    //   LastPartialDef->addOperand(
-    //     MachineOperand::CreateReg(Reg, true /*IsDef*/, true /*IsImp*/));
-    // }
+    if (LastPartialDef) {
+      LastPartialDef->addOperand(
+        MachineOperand::CreateReg(Reg, true /*IsDef*/, true /*IsImp*/));
+    }
   } else if (LastDef && !PhysRegUse[Reg.id()] &&
              !LastDef->findRegisterDefOperand(Reg, /*TRI=*/nullptr))
     // Last def defines the super register, add an implicit def of reg.
