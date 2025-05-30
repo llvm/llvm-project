@@ -143,7 +143,7 @@ struct __stride_iterator_category {};
 
 template <forward_range _View>
 struct __stride_iterator_category<_View> {
-  using _Cat = typename iterator_traits<iterator_t<_View>>::iterator_category;
+  using _Cat _LIBCPP_NODEBUG = typename iterator_traits<iterator_t<_View>>::iterator_category;
   using iterator_category =
       _If<derived_from<_Cat, random_access_iterator_tag>,
           /* then */ random_access_iterator_tag,
@@ -154,8 +154,8 @@ template <input_range _View>
   requires view<_View>
 template <bool _Const>
 class stride_view<_View>::__iterator : public __stride_iterator_category<_View> {
-  using _Parent = __maybe_const<_Const, stride_view<_View>>;
-  using _Base   = __maybe_const<_Const, _View>;
+  using _Parent _LIBCPP_NODEBUG = __maybe_const<_Const, stride_view<_View>>;
+  using _Base _LIBCPP_NODEBUG   = __maybe_const<_Const, _View>;
 
   _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_Base> __current_     = iterator_t<_Base>();
   _LIBCPP_NO_UNIQUE_ADDRESS ranges::sentinel_t<_Base> __end_ = ranges::sentinel_t<_Base>();
