@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+typedef unsigned short vus2 __attribute__((ext_vector_type(2)));
 typedef int vi4 __attribute__((ext_vector_type(4)));
 typedef int vi6 __attribute__((ext_vector_type(6)));
 typedef unsigned int uvi4 __attribute__((ext_vector_type(4)));
@@ -16,21 +17,21 @@ typedef double vd2 __attribute__((ext_vector_type(2)));
 vi4 vec_a;
 // CIR: cir.global external @[[VEC_A:.*]] = #cir.zero : !cir.vector<4 x !s32i>
 
-// LLVM: @[[VEC_A:.*]] = dso_local global <4 x i32> zeroinitializer
+// LLVM: @[[VEC_A:.*]] = global <4 x i32> zeroinitializer
 
 // OGCG: @[[VEC_A:.*]] = global <4 x i32> zeroinitializer
 
 vi3 vec_b;
 // CIR: cir.global external @[[VEC_B:.*]] = #cir.zero : !cir.vector<3 x !s32i>
 
-// LLVM: @[[VEC_B:.*]] = dso_local global <3 x i32> zeroinitializer
+// LLVM: @[[VEC_B:.*]] = global <3 x i32> zeroinitializer
 
 // OGCG: @[[VEC_B:.*]] = global <3 x i32> zeroinitializer
 
 vi2 vec_c;
 // CIR: cir.global external @[[VEC_C:.*]] = #cir.zero : !cir.vector<2 x !s32i>
 
-// LLVM: @[[VEC_C:.*]] = dso_local global <2 x i32> zeroinitializer
+// LLVM: @[[VEC_C:.*]] = global <2 x i32> zeroinitializer
 
 // OGCG: @[[VEC_C:.*]] = global <2 x i32> zeroinitializer
 
@@ -38,7 +39,7 @@ vd2 vec_d;
 
 // CIR: cir.global external @[[VEC_D:.*]] = #cir.zero : !cir.vector<2 x !cir.double>
 
-// LLVM: @[[VEC_D:.*]] = dso_local global <2 x double> zeroinitialize
+// LLVM: @[[VEC_D:.*]] = global <2 x double> zeroinitialize
 
 // OGCG: @[[VEC_D:.*]] = global <2 x double> zeroinitializer
 
@@ -47,7 +48,7 @@ vi4 vec_e = { 1, 2, 3, 4 };
 // CIR: cir.global external @[[VEC_E:.*]] = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> :
 // CIR-SAME: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 
-// LLVM: @[[VEC_E:.*]] = dso_local global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+// LLVM: @[[VEC_E:.*]] = global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
 
 // OGCG: @[[VEC_E:.*]] = global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
 
@@ -1073,3 +1074,20 @@ void foo16() {
 // OGCG: %[[SHUF_IDX_3:.*]] = extractelement <6 x i32> %[[MASK]], i64 3
 // OGCG: %[[SHUF_ELE_3:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_3]]
 // OGCG: %[[SHUF_INS_3:.*]] = insertelement <6 x i32> %[[SHUF_INS_2]], i32 %[[SHUF_ELE_3]], i64 3
+
+void foo17() {
+  vd2 a;
+  vus2 W = __builtin_convertvector(a, vus2);
+}
+
+// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["a"]
+// CIR: %[[TMP:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double>
+// CIR: %[[RES:.*]] = cir.cast(float_to_int, %[[TMP]] : !cir.vector<2 x !cir.double>), !cir.vector<2 x !u16i>
+
+// LLVM: %[[VEC_A:.*]] = alloca <2 x double>, i64 1, align 16
+// LLVM: %[[TMP:.*]] = load <2 x double>, ptr %[[VEC_A]], align 16
+// LLVM: %[[RES:.*]]= fptoui <2 x double> %[[TMP]] to <2 x i16>
+
+// OGCG: %[[VEC_A:.*]] = alloca <2 x double>, align 16
+// OGCG: %[[TMP:.*]] = load <2 x double>, ptr %[[VEC_A]], align 16
+// OGCG: %[[RES:.*]]= fptoui <2 x double> %[[TMP]] to <2 x i16>
