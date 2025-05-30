@@ -3512,7 +3512,7 @@ Instruction *InstCombinerImpl::foldICmpBitCast(ICmpInst &Cmp) {
 std::pair<Value *, bool>
 InstCombinerImpl::stripSignBitPreservingOrFlippingOperations(Value *X,
                                                              unsigned Depth) {
-  if (!X->hasOneUse() || Depth++ >= MaxAnalysisRecursionDepth)
+  if (Depth++ >= MaxAnalysisRecursionDepth)
     return {X, false};
 
   auto FlipSign = [](std::pair<Value *, bool> P, bool Flip) {
