@@ -1,5 +1,4 @@
-# XFAIL: system-darwin
-# XFAIL: system-windows
+# REQUIRES: system-linux
 # RUN: %lldb -b -s %s -c %p/Inputs/x86-64-linux-tkill.core | FileCheck %s
 
 thread list
