@@ -29,6 +29,8 @@
 #include <cmath>
 #include <memory>
 #include <string>
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "exegesis-benchmark-runner"
 
 #ifdef __linux__
 #ifdef HAVE_LIBPFM
@@ -709,6 +711,35 @@ std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
     }
     outs() << "Check generated assembly with: /usr/bin/objdump -d "
            << *ObjectFilePath << "\n";
+
+    int StdOutFD, StdErrFD;
+    SmallString<128> StdOutFile, StdErrFile;
+    sys::fs::createTemporaryFile("temp-objdump-out", "txt", StdOutFD, StdOutFile);
+    sys::fs::createTemporaryFile("temp-objdump-err", "txt", StdErrFD, StdErrFile);
+
+    std::vector<std::optional<StringRef>> Redirects = {
+        std::nullopt,           // stdin
+        StringRef(StdOutFile),  // stdout
+        StringRef(StdErrFile)   // stderr
+    };
+
+#ifdef __linux__
+    std::string ErrMsg;
+    int Result = sys::ExecuteAndWait(
+        "/usr/bin/objdump", {"/usr/bin/objdump", "-d", *ObjectFilePath},
+        std::nullopt, Redirects, 0, 0, &ErrMsg);
+    auto StdOutBuf = MemoryBuffer::getFile(StdOutFile);
+    if (StdOutBuf && !(*StdOutBuf)->getBuffer().empty())
+      LLVM_DEBUG(dbgs() << "[llvm-exegesis][objdump] Generated assembly:\n"
+                        << (*StdOutBuf)->getBuffer() << '\n');
+    auto StdErrBuf = MemoryBuffer::getFile(StdErrFile);
+    if (StdErrBuf && !(*StdErrBuf)->getBuffer().empty())
+      LLVM_DEBUG(dbgs() << "[llvm-exegesis][objdump] stderr:\n"
+                        << (*StdErrBuf)->getBuffer() << '\n');
+    if (!ErrMsg.empty())
+      LLVM_DEBUG(dbgs() << "[llvm-exegesis][objdump] process error: " << ErrMsg << '\n');
+#endif
+    sys::fs::remove(StdOutFile); sys::fs::remove(StdErrFile);
   }
 
   if (BenchmarkPhaseSelector < BenchmarkPhaseSelectorE::Measure) {
