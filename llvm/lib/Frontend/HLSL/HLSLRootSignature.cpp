@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -217,8 +218,8 @@ MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
 
 MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
-  std::string Name;
-  llvm::raw_string_ostream OS(Name);
+  llvm::SmallString<7> Name;
+  llvm::raw_svector_ostream OS(Name);
   OS << "Root" << ClauseType(llvm::to_underlying(Descriptor.Type));
 
   Metadata *Operands[] = {
