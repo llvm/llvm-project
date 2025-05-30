@@ -38,53 +38,65 @@ TEST(ValueTest, getNumUses) {
   Value v0 = op0->getResult(0);
   EXPECT_EQ(v0.getNumUses(), (unsigned)0);
 
-  createOp(&context, {v0}, builder.getIntegerType(16));
+  Operation *op1 = createOp(&context, {v0}, builder.getIntegerType(16));
   EXPECT_EQ(v0.getNumUses(), (unsigned)1);
 
-  createOp(&context, {v0, v0}, builder.getIntegerType(16));
+  Operation *op2 = createOp(&context, {v0, v0}, builder.getIntegerType(16));
   EXPECT_EQ(v0.getNumUses(), (unsigned)3);
+
+  op2->destroy();
+  op1->destroy();
+  op0->destroy();
 }
 
 TEST(ValueTest, hasNUses) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *op =
+  Operation *op0 =
       createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
-  Value v0 = op->getResult(0);
+  Value v0 = op0->getResult(0);
   EXPECT_TRUE(v0.hasNUses(0));
   EXPECT_FALSE(v0.hasNUses(1));
 
-  createOp(&context, {v0}, builder.getIntegerType(16));
+  Operation *op1 = createOp(&context, {v0}, builder.getIntegerType(16));
   EXPECT_FALSE(v0.hasNUses(0));
   EXPECT_TRUE(v0.hasNUses(1));
 
-  createOp(&context, {v0, v0}, builder.getIntegerType(16));
+  Operation *op2 = createOp(&context, {v0, v0}, builder.getIntegerType(16));
   EXPECT_FALSE(v0.hasNUses(0));
   EXPECT_FALSE(v0.hasNUses(1));
   EXPECT_TRUE(v0.hasNUses(3));
+
+  op2->destroy();
+  op1->destroy();
+  op0->destroy();
 }
 
 TEST(ValueTest, hasNUsesOrMore) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *op =
+  Operation *op0 =
       createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
-  Value v0 = op->getResult(0);
+  Value v0 = op0->getResult(0);
   EXPECT_TRUE(v0.hasNUsesOrMore(0));
   EXPECT_FALSE(v0.hasNUsesOrMore(1));
 
-  createOp(&context, {v0}, builder.getIntegerType(16));
+  Operation *op1 = createOp(&context, {v0}, builder.getIntegerType(16));
   EXPECT_TRUE(v0.hasNUsesOrMore(0));
   EXPECT_TRUE(v0.hasNUsesOrMore(1));
   EXPECT_FALSE(v0.hasNUsesOrMore(2));
 
-  createOp(&context, {v0, v0}, builder.getIntegerType(16));
+  Operation *op2 = createOp(&context, {v0, v0}, builder.getIntegerType(16));
   EXPECT_TRUE(v0.hasNUsesOrMore(0));
   EXPECT_TRUE(v0.hasNUsesOrMore(1));
   EXPECT_TRUE(v0.hasNUsesOrMore(3));
   EXPECT_FALSE(v0.hasNUsesOrMore(4));
+
+  op2->destroy();
+  op1->destroy();
+  op0->destroy();
 }
 
 } // end anonymous namespace
