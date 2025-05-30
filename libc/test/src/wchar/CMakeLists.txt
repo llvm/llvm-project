@@ -84,3 +84,13 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wmemcmp
 )
+
+add_libc_test(
+  wmemcpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wmemcpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wmemcpy
+)
