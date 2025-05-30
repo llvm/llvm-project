@@ -51,7 +51,7 @@ macro(add_optional_dependency variable description package found)
   message(STATUS "${description}: ${${variable}}")
 endmacro()
 
-option(LLDB_LIBXML2_VERSION "Sepcify the version of libxml 2 to use with LLDB" "2.8")
+set(LLDB_LIBXML2_VERSION "2.8" CACHE STRING "Sepcify the version of libxml 2 to use with LLDB")
 
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
