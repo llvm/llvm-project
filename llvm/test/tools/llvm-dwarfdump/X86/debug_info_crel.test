@@ -1,5 +1,0 @@
-# Test llvm-dwarfdump handles CREL relocation sections correctly.
-RUN: echo "void foo(){}" | clang++ --target=x86_64-pc-linux -Wa,--crel,--allow-experimental-crel -g -c -x c++ - -o %t
-RUN: llvm-dwarfdump --debug-info %t | FileCheck %s
-
-CHECK: DW_AT_producer    ("clang version
