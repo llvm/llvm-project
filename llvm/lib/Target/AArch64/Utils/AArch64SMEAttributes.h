@@ -203,6 +203,13 @@ public:
     return caller().hasAgnosticZAInterface() &&
            !callee().hasAgnosticZAInterface() && !callee().isSMEABIRoutine();
   }
+
+  bool operator==(SMECallAttrs const &Other) const {
+    return caller() == Other.caller() && callee() == Other.callee() &&
+           callsite() == Other.callsite();
+  }
+
+  bool operator!=(SMECallAttrs const &Other) const { return !(*this == Other); }
 };
 
 } // namespace llvm

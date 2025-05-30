@@ -26719,6 +26719,65 @@ static SDValue performSHLCombine(SDNode *N,
   return DAG.getNode(ISD::AND, DL, VT, NewShift, NewRHS);
 }
 
+static SDValue performSMECallCombine(SDNode *SMECallEnd,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     SelectionDAG &DAG) {
+  SDLoc DL(SMECallEnd);
+  SDNode *SMECallStart = findSMECallStart(SMECallEnd);
+  SDValue StartOutGlue = SDValue(SMECallStart, 2);
+  if (!StartOutGlue.use_empty())
+    return SDValue();
+
+  SDValue StartChain = SMECallStart->getOperand(0);
+  if (StartChain->getOpcode() != AArch64ISD::SME_CALL_END)
+    return SDValue();
+
+  // TODO: This probably does not need to be a CALLSEQ_END.
+  SDNode *PrevSMECallEnd = StartChain.getNode();
+  SDValue PrevCallOutChain = PrevSMECallEnd->getOperand(0);
+  if (PrevCallOutChain->getOpcode() != ISD::CALLSEQ_END)
+    return SDValue();
+
+  SDNode *PrevSMECallStart = findSMECallStart(PrevSMECallEnd);
+  SMECallAttrs CallAttrs = findSMECallAttrs(SMECallStart);
+  SMECallAttrs PrevCallAttrs = findSMECallAttrs(PrevSMECallStart);
+
+  // TODO: Handle case where we're already in (e.g.) streaming mode and just
+  // need to enable ZA etc.
+  if (CallAttrs != PrevCallAttrs)
+    return SDValue();
+
+  SDNode *MaybeSMSwitch = PrevSMECallEnd->getOperand(1).getNode();
+  if (MaybeSMSwitch->getOpcode() == AArch64ISD::SME_CALL_SM_CHANGE) {
+    SDNode *SMSwitch = SMECallEnd->getOperand(1).getNode();
+    // Remove duplicate SME_CALL_SM_CHANGE.
+    // FIXME: Can we avoid adding fake glue? This is needed as we need to remove
+    // this (duplicate) SME_CALL_SM_CHANGE, but it has been glued to another
+    // node so we need something to replace the glue.
+    SDValue FakeGlue = DAG.getUNDEF(MVT::Glue);
+    SDValue NopSMESwitch = DAG.getMergeValues(
+        {SMSwitch->getOperand(0), FakeGlue}, SDLoc(SMECallEnd));
+    DAG.ReplaceAllUsesWith(SMSwitch, NopSMESwitch.getNode());
+  }
+
+  // Update the last SME_CALL_END to point to the SME_CALL_START or
+  // SME_CALL_SM_CHANGE from the previous SME_CALL region:
+  DAG.UpdateNodeOperands(
+      SMECallEnd,
+      /*Chain=*/SMECallEnd->getOperand(0),
+      /*SMECallStart Or SMSwitch=*/PrevSMECallEnd->getOperand(1),
+      /*PStateSM=*/SMECallEnd->getOperand(2),
+      /*InGlue=*/SMECallEnd->getOperand(3));
+  // Remove the SME_CALL_END for the previous SME_CALL region:
+  DAG.ReplaceAllUsesWith(PrevSMECallEnd, PrevCallOutChain.getNode());
+  // Remove the SME_CALL_START for the current/next SME_CALL region:
+  SDValue NopSMECallStart = DAG.getMergeValues(
+      {SDValue(PrevSMECallStart, 0), PrevCallOutChain, DAG.getUNDEF(MVT::Glue)},
+      DL);
+  DAG.ReplaceAllUsesWith(SMECallStart, NopSMECallStart.getNode());
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -26880,6 +26939,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::UMULL:
   case AArch64ISD::PMULL:
     return performMULLCombine(N, DCI, DAG);
+  case AArch64ISD::SME_CALL_END:
+    return performSMECallCombine(N, DCI, DAG);
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN:
     switch (N->getConstantOperandVal(1)) {
