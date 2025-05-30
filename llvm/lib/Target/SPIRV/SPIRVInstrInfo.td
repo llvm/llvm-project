@@ -953,3 +953,9 @@ def OpSubgroup2DBlockPrefetchINTEL: Op<6234, (outs), (ins ID:$element_size, ID:$
 def OpSubgroup2DBlockStoreINTEL: Op<6235, (outs), (ins ID:$element_size, ID:$block_width, ID:$block_height,
                   ID:$block_count, ID:$src_ptr, ID:$dst_base_ptr, ID:$memory_width, ID:$memory_height, ID:$memory_pitch, ID:$coord),
                   "OpSubgroup2DBlockStoreINTEL $element_size $block_width $block_height $block_count $src_ptr $dst_base_ptr $memory_width $memory_height $memory_pitch $coord">;
+
+//SPV_INTEL_blocking_pipes
+def OpReadPipeBlockingINTEL :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpReadPipeBlockingINTEL $pipe $pointer $packetSize $packetAlignment">;
+def OpWritePipeBlockingINTEL :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpWritePipeBlockingINTEL $pipe $pointer $packetSize $packetAlignment">;
