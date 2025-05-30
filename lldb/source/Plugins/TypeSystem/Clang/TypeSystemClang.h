@@ -745,9 +745,6 @@ public:
 
   static bool IsObjCClassType(const CompilerType &type);
 
-  static bool IsObjCClassTypeAndHasIVars(const CompilerType &type,
-                                         bool check_superclass);
-
   static bool IsObjCObjectOrInterfaceType(const CompilerType &type);
 
   static bool IsObjCObjectPointerType(const CompilerType &type,
