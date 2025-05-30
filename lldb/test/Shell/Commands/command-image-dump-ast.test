@@ -1,4 +1,4 @@
-# Test the ${function.basename} frame-format variable.
+# Test `image dump ast` command.
 
 # RUN: split-file %s %t
 # RUN: %clang_host -g -gdwarf %t/main.cpp -o %t.out
