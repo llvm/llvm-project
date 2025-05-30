@@ -220,6 +220,23 @@ static void buildBatchMatmulOp(OpBuilder &b, OperationState &state,
                            attributes, regionBuilder);
 }
 
+static void buildBatchReduceMatmulOp(OpBuilder &b, OperationState &state,
+                                     std::optional<TypeRange> resultTensorTypes,
+                                     ValueRange inputs, ValueRange outputs,
+                                     ArrayRef<NamedAttribute> attributes,
+                                     RegionBuilderFn regionBuilder,
+                                     ArrayRef<AffineMap> indexingMaps) {
+  // Initialize indexingMaps attribute, for BatchReduceMatmulOp.
+  SmallVector<Attribute, 4> indexingMapsAttrVal;
+  indexingMapsAttrVal =
+      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
+        return AffineMapAttr::get(map);
+      });
+  state.addAttribute("indexing_maps", b.getArrayAttr(indexingMapsAttrVal));
+  return buildStructuredOp(b, state, resultTensorTypes, inputs, outputs,
+                           attributes, regionBuilder);
+}
+
 /// Common parsing used for both named structured ops created by ods-gen and by
 /// manually defined C++ ops. Does not handle regions.
 static ParseResult
@@ -1416,7 +1433,6 @@ static void addBodyWithPayloadOp(OpAsmParser &parser, OperationState &result,
   Region *body = result.addRegion();
   Block &block = body->emplaceBlock();
   b.setInsertionPointToStart(&block);
-  SmallVector<Value> bbArgs;
   for (auto &operand : operands) {
     block.addArgument(
         llvm::cast<ShapedType>(operand.getType()).getElementType(),
@@ -2283,6 +2299,24 @@ LogicalResult IndexOp::verify() {
   return success();
 }
 
+OpFoldResult IndexOp::fold(FoldAdaptor adaptor) {
+  auto linalgOp = dyn_cast_or_null<LinalgOp>((*this)->getParentOp());
+  // Bail out if `linalg.index` does not have a proper parent yet at this
+  // point, e.g., when calling `createOrFold` during IR construction in
+  // `genericOp::build`.
+  if (!linalgOp)
+    return OpFoldResult{};
+
+  // Index of unit dims is always 0.
+  SmallVector<int64_t, 4> loopBounds = linalgOp.getStaticLoopRanges();
+  uint64_t dim = getDim();
+  assert(dim < loopBounds.size() && "Dim is out of bounds");
+  if (loopBounds[dim] == 1)
+    return IntegerAttr::get(IndexType::get(getContext()), 0);
+
+  return OpFoldResult{};
+}
+
 /////// Operations corresponding to library calls defined with Tablegen ////////
 
 #include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.yamlgen.cpp.inc"
@@ -2368,7 +2402,7 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
     }
   }
   name.reserve(128);
-  std::replace(name.begin(), name.end(), '.', '_');
+  llvm::replace(name, '.', '_');
   llvm::raw_string_ostream ss(name);
   ss << "_" << fun;
   for (Type t : op->getOperandTypes()) {
@@ -3467,19 +3501,24 @@ static LogicalResult verifyExtendedMatmulSemantic(MatmulOp matmulOp,
   return success();
 }
 
-// Check general validity of input indexing map.
-static LogicalResult verifyInputMaps(BatchMatmulOp batchMatmulOp,
+// Check general validity of input indexing map of
+// BatchMatmulOp/BatchReduceMatmulOp.
+template <typename OpTy>
+static LogicalResult verifyInputMaps(OpTy batchVariantMatmulOp,
                                      AffineMap opIndexingMap,
                                      AffineMap defaultIndexingMap, bool isLHS) {
+  assert((isa<BatchMatmulOp>(batchVariantMatmulOp) ||
+          isa<BatchReduceMatmulOp>(batchVariantMatmulOp)) &&
+         "Expected BatchMatmulOp or BatchReduceMatmulOp");
   // Check the result dims are valid.
   if (!areResultExprsSubsetOf(opIndexingMap, defaultIndexingMap))
-    return batchMatmulOp->emitOpError()
+    return batchVariantMatmulOp->emitOpError()
            << "Unexpected result dim expression (outside the set of default "
               "result dims).";
 
   // Check for valid number of result dims of input maps.
   if (opIndexingMap.getNumResults() > 3)
-    return batchMatmulOp->emitOpError()
+    return batchVariantMatmulOp->emitOpError()
            << "no. of result dim expressions exceeds 3.";
 
   auto hasValidBatchDim = [](AffineMap map) {
@@ -3489,60 +3528,83 @@ static LogicalResult verifyInputMaps(BatchMatmulOp batchMatmulOp,
 
   // Check if the requested broadcast is valid.
   if (isBroadcasted(opIndexingMap, defaultIndexingMap)) {
-    if (!batchMatmulOp.isValidLhsRhsBroadcastMap(opIndexingMap, isLHS))
-      return batchMatmulOp->emitOpError() << "Invalid broadcast requested.";
+    if (!batchVariantMatmulOp.isValidLhsRhsBroadcastMap(opIndexingMap, isLHS))
+      return batchVariantMatmulOp->emitOpError()
+             << "Invalid broadcast requested.";
   } else if (!hasValidBatchDim(opIndexingMap)) {
-    return batchMatmulOp->emitOpError()
+    return batchVariantMatmulOp->emitOpError()
            << "Invalid batch dimension expression.";
   }
   return success();
 }
 
 /// This function checks if the given AffineMap for the output of a
-/// BatchMatmulOp has exactly 3 result dimensions and if the output map result
-/// dimensions are valid.
-static LogicalResult verifyOutputMap(BatchMatmulOp batchMatmulOp,
+/// BatchMatmulOp/BatchReduceMatmulOp has exactly the desired number of result
+/// dimensions and if the output map result dimensions are valid.
+template <typename OpTy>
+static LogicalResult verifyOutputMap(OpTy batchVariantMatmulOp,
                                      AffineMap opIndexingMap) {
-  if (opIndexingMap.getNumResults() != 3)
-    return batchMatmulOp->emitOpError()
+  assert((isa<BatchMatmulOp>(batchVariantMatmulOp) ||
+          isa<BatchReduceMatmulOp>(batchVariantMatmulOp)) &&
+         "Expected BatchMatmulOp or BatchReduceMatmulOp");
+  if (isa<BatchMatmulOp>(batchVariantMatmulOp) &&
+      opIndexingMap.getNumResults() != 3) {
+
+    return batchVariantMatmulOp->emitOpError()
            << "expects 3 dims, but got (" << opIndexingMap.getNumResults()
            << ").";
+  }
+  if (isa<BatchReduceMatmulOp>(batchVariantMatmulOp) &&
+      opIndexingMap.getNumResults() != 2) {
+    return batchVariantMatmulOp->emitOpError()
+           << "expects 2 dims, but got (" << opIndexingMap.getNumResults()
+           << ").";
+  }
 
-  auto areValidOutputResultDim = [](AffineMap outputMap) {
-    return outputMap.getResult(0).isFunctionOfDim(0) &&
-           outputMap.getResult(1).isFunctionOfDim(1) &&
-           outputMap.getResult(2).isFunctionOfDim(2);
+  auto areValidOutputResultDim = [&](AffineMap outputMap) {
+    return isa<BatchMatmulOp>(batchVariantMatmulOp)
+               ? outputMap.getResult(0).isFunctionOfDim(0) &&
+                     outputMap.getResult(1).isFunctionOfDim(1) &&
+                     outputMap.getResult(2).isFunctionOfDim(2)
+               : outputMap.getResult(0).isFunctionOfDim(1) &&
+                     outputMap.getResult(1).isFunctionOfDim(2);
   };
 
-  if (!areValidOutputResultDim(opIndexingMap))
-    return batchMatmulOp->emitOpError()
+  if (!areValidOutputResultDim(opIndexingMap)) {
+    return batchVariantMatmulOp->emitOpError()
            << "Invalid output map result dimension.";
+  }
 
   return success();
 }
 
 /// Verifies the broadcast and transpose semantic specified by the explicit
-/// indexing map for the BatchMatmulOp op for each operand specified by opIndex.
+/// indexing map for the BatchMatmulOp/BatchReduceMatmulOp op for each operand
+/// specified by opIndex.
+template <typename OpTy>
 static LogicalResult
-verifyExtendedBatchMatmulSemantic(BatchMatmulOp batchMatmulOp,
-                                  unsigned opIndex) {
+verifyExtendedBatchVariantMatmulSemantic(OpTy batchVariantMatmulOp,
+                                         unsigned opIndex) {
   SmallVector<AffineMap, 3> opIndexingMaps =
-      batchMatmulOp.getIndexingMapsArray();
+      batchVariantMatmulOp.getIndexingMapsArray();
   SmallVector<AffineMap, 3> defaultIndexingMaps =
-      batchMatmulOp.getDefaultIndexingMaps(batchMatmulOp->getContext());
+      batchVariantMatmulOp.getDefaultIndexingMaps(
+          batchVariantMatmulOp->getContext());
 
   if (opIndexingMaps.size() != 3)
-    return batchMatmulOp->emitOpError()
+    return batchVariantMatmulOp->emitOpError()
            << "Indexing_map attribute must have 3 affine maps.";
 
   auto opIndexingMap = opIndexingMaps[opIndex];
   auto defaultIndexingMap = defaultIndexingMaps[opIndex];
 
-  if (opIndex == 2 && failed(verifyOutputMap(batchMatmulOp, opIndexingMap)))
+  if (opIndex == 2 &&
+      failed(verifyOutputMap(batchVariantMatmulOp, opIndexingMap)))
     return failure();
 
-  if (failed(verifyInputMaps(batchMatmulOp, opIndexingMap, defaultIndexingMap,
-                             opIndex == 0)))
+  if (opIndex != 2 &&
+      failed(verifyInputMaps(batchVariantMatmulOp, opIndexingMap,
+                             defaultIndexingMap, opIndex == 0)))
     return failure();
 
   return success();
@@ -3618,12 +3680,18 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   helper.yieldOutputs(yields);
 }
 
-/// Returns true if the given broadcast map \p bcastMap is valid for this op.
+/// Returns true if the given bcastMap map is a valid broadcast map. A valid
+/// broadcast map must include K dimension.
+/// TODO: Strict inclusion of K dimension in the broadcast map is not
+/// necessary for both input matrices simultaneously. We can relax this
+/// condition to have K dimension for one input matrix map and infer the K
+/// dimension for other input matrix map from the one already having K
+/// dimension.
 bool MatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap) {
   assert(bcastMap.getNumResults() == 1 && "Expected single result dim expr.");
-  AffineExpr exp = bcastMap.getResult(0);
+  AffineExpr expr = bcastMap.getResult(0);
   // Invalid map if the common dimension of matmul not found.
-  return exp.isFunctionOfDim(bcastMap.getNumDims() - 1);
+  return expr.isFunctionOfDim(bcastMap.getNumDims() - 1);
 }
 
 FailureOr<ArrayAttr> parseIndexingMapsAttr(OpAsmParser &parser) {
@@ -3921,21 +3989,31 @@ bool BatchMatmulOp::hasUserDefinedMaps() {
   return defaultMaps != explicitMaps;
 }
 
-/// Returns true if the given broadcast map bcastMap is valid for this op.
+/// Returns true if the given bcastMap map is a valid broadcast map. A valid
+/// broadcast map must include K dimension.
+/// TODO: Strict inclusion of K dimension in the broadcast map is not
+/// necessary for both input matrices simultaneously. We can relax this
+/// condition to have K dimension for one input matrix map and infer the K
+/// dimension for other input matrix map from the one already having K
+/// dimension.
 bool BatchMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS) {
   assert(bcastMap.getNumResults() < 3 &&
          "Expected less than 3 result dim expr.");
   bool isValid = false;
   enum Indices { batchPos, mPos, nPos, kPos };
   if (bcastMap.getNumResults() == 1) {
-    AffineExpr exp = bcastMap.getResult(0);
-    isValid = exp.isFunctionOfDim(kPos);
+    AffineExpr expr = bcastMap.getResult(0);
+    isValid = expr.isFunctionOfDim(kPos);
   } else if (bcastMap.getNumResults() == 2) {
-    AffineExpr exp0 = bcastMap.getResult(0);
-    AffineExpr exp1 = bcastMap.getResult(1);
-    isValid = isLHS
-                  ? (exp0.isFunctionOfDim(mPos) && exp1.isFunctionOfDim(kPos))
-                  : (exp0.isFunctionOfDim(kPos) && exp1.isFunctionOfDim(nPos));
+    AffineExpr expr0 = bcastMap.getResult(0);
+    AffineExpr expr1 = bcastMap.getResult(1);
+    isValid =
+        isLHS ? ((expr0.isFunctionOfDim(batchPos) ||
+                  expr0.isFunctionOfDim(mPos)) &&
+                 expr1.isFunctionOfDim(kPos))
+              : ((expr0.isFunctionOfDim(batchPos) &&
+                  expr1.isFunctionOfDim(kPos)) ||
+                 (expr0.isFunctionOfDim(kPos) && expr1.isFunctionOfDim(nPos)));
   }
   return isValid;
 }
@@ -4027,7 +4105,7 @@ LogicalResult BatchMatmulOp::verify() {
     return success();
 
   for (unsigned opIndex = 0; opIndex < 3; opIndex++) {
-    if (failed(verifyExtendedBatchMatmulSemantic(*this, opIndex)))
+    if (failed(verifyExtendedBatchVariantMatmulSemantic(*this, opIndex)))
       return failure();
   }
   return success();
@@ -4249,8 +4327,9 @@ void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
     result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
                                    block.getArgument(1), block.getArgument(2));
 
-  } else
+  } else {
     assert(false && "found unhandled category in elemwise");
+  }
 
   yields.push_back(result);
   helper.yieldOutputs(yields);
@@ -4409,8 +4488,7 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
 
   // Return true if we have a zero-value tile.
   auto hasZeros = [&](ArrayRef<OpFoldResult> tiles) {
-    return llvm::any_of(
-        tiles, [](OpFoldResult tile) { return isConstantIntValue(tile, 0); });
+    return llvm::any_of(tiles, isZeroInteger);
   };
 
   // Verify tiles. Do not allow zero tiles.
@@ -5347,6 +5425,176 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// BatchReduceMatmulOp
+//===----------------------------------------------------------------------===//
+SmallVector<utils::IteratorType> BatchReduceMatmulOp::getIteratorTypesArray() {
+  return SmallVector<utils::IteratorType>{
+      utils::IteratorType::reduction, utils::IteratorType::parallel,
+      utils::IteratorType::parallel, utils::IteratorType::reduction};
+}
+
+SmallVector<AffineMap>
+BatchReduceMatmulOp::getDefaultIndexingMaps(MLIRContext *context) {
+  AffineExpr d0, d1, d2, d3;
+  SmallVector<AffineMap> indexingMaps;
+  bindDims(context, d0, d1, d2, d3);
+  indexingMaps.push_back(AffineMap::get(4, 0, {d0, d1, d3}, context));
+  indexingMaps.push_back(AffineMap::get(4, 0, {d0, d3, d2}, context));
+  indexingMaps.push_back(AffineMap::get(4, 0, {d1, d2}, context));
+  return indexingMaps;
+}
+
+unsigned BatchReduceMatmulOp::getNumRegionArgs() { return 3; }
+
+std::string BatchReduceMatmulOp::getLibraryCallName() {
+  return generateLibraryCallName(getOperation());
+}
+
+/// Check if the op has broadcast and/or transpose semantic. Returns true if
+/// the user defined indexing maps are not equal to default map.
+bool BatchReduceMatmulOp::hasUserDefinedMaps() {
+  SmallVector<AffineMap, 3> defaultMaps =
+      getDefaultIndexingMaps(this->getContext());
+  SmallVector<AffineMap, 3> explicitMaps = getIndexingMapsArray();
+  return defaultMaps != explicitMaps;
+}
+
+/// Returns true if the given bcastMap map is a valid broadcast map. A valid
+/// broadcast map must include K dimension.
+/// TODO: Strict inclusion of K dimension in the broadcast map is not
+/// necessary for both input matrices simultaneously. We can relax this
+/// condition to have K dimension for one input matrix map and infer the K
+/// dimension for other input matrix map from the one already having K
+/// dimension.
+bool BatchReduceMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap,
+                                                    bool isLHS) {
+  assert(bcastMap.getNumResults() < 3 &&
+         "Expected less than 3 result dim expr.");
+  bool isValid = false;
+  enum Indices { batchPos, mPos, nPos, kPos };
+  if (bcastMap.getNumResults() == 1) {
+    AffineExpr expr = bcastMap.getResult(0);
+    isValid = expr.isFunctionOfDim(kPos);
+  } else if (bcastMap.getNumResults() == 2) {
+    AffineExpr expr0 = bcastMap.getResult(0);
+    AffineExpr expr1 = bcastMap.getResult(1);
+    isValid =
+        isLHS ? ((expr0.isFunctionOfDim(batchPos) ||
+                  expr0.isFunctionOfDim(mPos)) &&
+                 expr1.isFunctionOfDim(kPos))
+              : ((expr0.isFunctionOfDim(batchPos) &&
+                  expr1.isFunctionOfDim(kPos)) ||
+                 (expr0.isFunctionOfDim(kPos) && expr1.isFunctionOfDim(nPos)));
+  }
+  return isValid;
+}
+
+void BatchReduceMatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                                        ArrayRef<NamedAttribute> attrs) {
+  assert(block.getNumArguments() == 3 &&
+         "BatchReduceMatmulOp regionBuilder expects 3 (>=0) args");
+  RegionBuilderHelper helper(b, block);
+  SmallVector<Value> yields;
+
+  auto toType = block.getArgument(2).getType();
+  Value castValA =
+      helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(0));
+  Value castValB =
+      helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(1));
+  Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
+  Value addVal =
+      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
+  yields.push_back(addVal);
+  helper.yieldOutputs(yields);
+}
+
+ParseResult BatchReduceMatmulOp::parse(OpAsmParser &parser,
+                                       OperationState &result) {
+  SmallVector<Attribute, 3> indexingMapsAttr;
+  Attribute mapAttr;
+  if (succeeded(parser.parseOptionalKeyword("indexing_maps"))) {
+    if (parser.parseEqual())
+      return failure();
+    if (parser.parseLSquare())
+      return failure();
+
+    do {
+      if (parser.parseAttribute(mapAttr))
+        return failure();
+      if (!isa<AffineMapAttr>(mapAttr)) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected affine map attribute");
+      }
+      indexingMapsAttr.push_back(mapAttr);
+
+      if (parser.parseOptionalComma())
+        break;
+    } while (true);
+
+    if (parser.parseRSquare())
+      return failure();
+  }
+  // Initialize indexingMaps, if not supplied explicitly.
+  if (indexingMapsAttr.empty()) {
+    indexingMapsAttr = llvm::map_to_vector(
+        BatchReduceMatmulOp::getDefaultIndexingMaps(parser.getContext()),
+        [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+  }
+  result.addAttribute("indexing_maps",
+                      parser.getBuilder().getArrayAttr(indexingMapsAttr));
+  return ::parseNamedStructuredOp(parser, result,
+                                  BatchReduceMatmulOp::getNumRegionArgs(),
+                                  BatchReduceMatmulOp::getRegionBuilder());
+}
+
+void BatchReduceMatmulOp::print(OpAsmPrinter &p) {
+  SmallVector<Attribute, 3> indexingMaps = llvm::map_to_vector(
+      BatchReduceMatmulOp::getDefaultIndexingMaps(getContext()),
+      [](AffineMap map) -> Attribute { return AffineMapAttr::get(map); });
+
+  if (!llvm::equal(getIndexingMaps(), indexingMaps)) {
+    p << " indexing_maps = [";
+    llvm::interleaveComma(getIndexingMaps(), p,
+                          [&](Attribute attr) { p.printAttribute(attr); });
+    p << "]";
+  }
+
+  SmallVector<StringRef, 3> elidedAttrs = {
+      "operandSegmentSizes", "linalg.memoized_indexing_maps", "indexing_maps"};
+  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs(),
+                           elidedAttrs);
+}
+
+/// Verify the user defined indexing maps.
+LogicalResult BatchReduceMatmulOp::verify() {
+  // Verification of pure batch_reduce_matmul is handled by
+  // verifyStructuredOpInterface().
+  if (!hasUserDefinedMaps())
+    return success();
+
+  for (unsigned opIndex = 0; opIndex < 3; opIndex++) {
+    if (failed(verifyExtendedBatchVariantMatmulSemantic(*this, opIndex)))
+      return failure();
+  }
+  return success();
+}
+LogicalResult BatchReduceMatmulOp::fold(FoldAdaptor,
+                                        SmallVectorImpl<OpFoldResult> &) {
+  return memref::foldMemRefCast(*this);
+}
+void BatchReduceMatmulOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (hasPureTensorSemantics())
+    return;
+  getGenericEffectsImpl(effects, cast<LinalgOp>(getOperation()));
+}
+
+Speculation::Speculatability BatchReduceMatmulOp::getSpeculatability() {
+  return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
+}
 
 } // namespace linalg
 } // namespace mlir

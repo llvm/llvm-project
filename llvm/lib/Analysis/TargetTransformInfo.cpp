@@ -57,6 +57,10 @@ struct NoTTIImpl : TargetTransformInfoImplCRTPBase<NoTTIImpl> {
 };
 } // namespace
 
+TargetTransformInfo::TargetTransformInfo(
+    std::unique_ptr<const TargetTransformInfoImplBase> Impl)
+    : TTIImpl(std::move(Impl)) {}
+
 bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
   // If the loop has irreducible control flow, it can not be converted to
   // Hardware loop.
@@ -199,7 +203,7 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
 }
 
 TargetTransformInfo::TargetTransformInfo(const DataLayout &DL)
-    : TTIImpl(new Model<NoTTIImpl>(NoTTIImpl(DL))) {}
+    : TTIImpl(std::make_unique<NoTTIImpl>(DL)) {}
 
 TargetTransformInfo::~TargetTransformInfo() = default;
 
@@ -626,9 +630,10 @@ bool TargetTransformInfo::isTargetIntrinsicWithStructReturnOverloadAtField(
 
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   return TTIImpl->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                           CostKind, VL);
+                                           CostKind, ForPoisonSrc, VL);
 }
 
 InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(
@@ -881,6 +886,10 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
   OperandValueKind OpInfo = OK_AnyValue;
   OperandValueProperties OpProps = OP_None;
 
+  // undef/poison don't materialize constants.
+  if (isa<UndefValue>(V))
+    return {OK_AnyValue, OP_None};
+
   if (isa<ConstantInt>(V) || isa<ConstantFP>(V)) {
     if (const auto *CI = dyn_cast<ConstantInt>(V)) {
       if (CI->getValue().isPowerOf2())
@@ -1049,9 +1058,10 @@ InstructionCost TargetTransformInfo::getCastInstrCost(
 }
 
 InstructionCost TargetTransformInfo::getExtractWithExtendCost(
-    unsigned Opcode, Type *Dst, VectorType *VecTy, unsigned Index) const {
+    unsigned Opcode, Type *Dst, VectorType *VecTy, unsigned Index,
+    TTI::TargetCostKind CostKind) const {
   InstructionCost Cost =
-      TTIImpl->getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
+      TTIImpl->getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1079,7 +1089,7 @@ InstructionCost TargetTransformInfo::getCmpSelInstrCost(
 
 InstructionCost TargetTransformInfo::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Op0, Value *Op1) const {
+    const Value *Op0, const Value *Op1) const {
   assert((Opcode == Instruction::InsertElement ||
           Opcode == Instruction::ExtractElement) &&
          "Expecting Opcode to be insertelement/extractelement.");
@@ -1389,9 +1399,8 @@ bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
   return TTIImpl->preferAlternateOpcodeVectorization();
 }
 
-bool TargetTransformInfo::preferPredicatedReductionSelect(unsigned Opcode,
-                                                          Type *Ty) const {
-  return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty);
+bool TargetTransformInfo::preferPredicatedReductionSelect() const {
+  return TTIImpl->preferPredicatedReductionSelect();
 }
 
 bool TargetTransformInfo::preferEpilogueVectorization() const {
@@ -1471,7 +1480,7 @@ void TargetTransformInfo::collectKernelLaunchBounds(
   return TTIImpl->collectKernelLaunchBounds(F, LB);
 }
 
-TargetTransformInfo::Concept::~Concept() = default;
+TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}
 

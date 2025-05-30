@@ -9034,7 +9034,7 @@ define void @store_i8_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm9 = zmm2[0,1,0,1],zmm0[0,1,0,1]
 ; AVX512-FCP-NEXT:    vpshufb {{.*#+}} ymm0 = ymm13[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,22,23,26,27,24,25,22,23,24,25,26,27,26,27,24,25]
 ; AVX512-FCP-NEXT:    vpshuflw {{.*#+}} ymm15 = ymm13[2,1,1,2,4,5,6,7,10,9,9,10,12,13,14,15]
-; AVX512-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm28 = [4,5,4,5,5,7,4,5,20,21,22,23,20,21,22,23]
+; AVX512-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm28 = [0,5,4,0,5,0,4,0,20,21,0,23,0,21,0,23]
 ; AVX512-FCP-NEXT:    vpermt2d %zmm0, %zmm28, %zmm15
 ; AVX512-FCP-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm13 # 32-byte Reload
 ; AVX512-FCP-NEXT:    vmovdqa64 %ymm29, %ymm0
@@ -9761,7 +9761,7 @@ define void @store_i8_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX512DQ-FCP-NEXT:    vshufi64x2 {{.*#+}} zmm9 = zmm2[0,1,0,1],zmm0[0,1,0,1]
 ; AVX512DQ-FCP-NEXT:    vpshufb {{.*#+}} ymm0 = ymm13[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,22,23,26,27,24,25,22,23,24,25,26,27,26,27,24,25]
 ; AVX512DQ-FCP-NEXT:    vpshuflw {{.*#+}} ymm15 = ymm13[2,1,1,2,4,5,6,7,10,9,9,10,12,13,14,15]
-; AVX512DQ-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm28 = [4,5,4,5,5,7,4,5,20,21,22,23,20,21,22,23]
+; AVX512DQ-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm28 = [0,5,4,0,5,0,4,0,20,21,0,23,0,21,0,23]
 ; AVX512DQ-FCP-NEXT:    vpermt2d %zmm0, %zmm28, %zmm15
 ; AVX512DQ-FCP-NEXT:    vmovdqu {{[-0-9]+}}(%r{{[sb]}}p), %ymm13 # 32-byte Reload
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %ymm29, %ymm0

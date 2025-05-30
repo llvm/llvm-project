@@ -169,7 +169,7 @@ static void commentInfoMapping(IO &IO, CommentInfo &I) {
 
 template <> struct MappingTraits<Location> {
   static void mapping(IO &IO, Location &Loc) {
-    IO.mapOptional("LineNumber", Loc.LineNumber, 0);
+    IO.mapOptional("LineNumber", Loc.StartLineNumber, 0);
     IO.mapOptional("Filename", Loc.Filename, SmallString<32>());
   }
 };

@@ -966,9 +966,6 @@ bool Function::hasAddressTaken(const User **PutOffender,
                                bool IgnoreCastedDirectCall) const {
   for (const Use &U : uses()) {
     const User *FU = U.getUser();
-    if (isa<BlockAddress>(FU))
-      continue;
-
     if (IgnoreCallbackUses) {
       AbstractCallSite ACS(&U);
       if (ACS && ACS.isCallbackCall())
@@ -1033,12 +1030,7 @@ bool Function::isDefTriviallyDead() const {
       !hasAvailableExternallyLinkage())
     return false;
 
-  // Check if the function is used by anything other than a blockaddress.
-  for (const User *U : users())
-    if (!isa<BlockAddress>(U))
-      return false;
-
-  return true;
+  return use_empty();
 }
 
 /// callsFunctionThatReturnsTwice - Return true if the function has a call to
@@ -1183,4 +1175,86 @@ bool llvm::NullPointerIsDefined(const Function *F, unsigned AS) {
     return true;
 
   return false;
+}
+
+bool llvm::CallingConv::supportsNonVoidReturnType(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::Fast:
+  case CallingConv::Cold:
+  case CallingConv::GHC:
+  case CallingConv::HiPE:
+  case CallingConv::AnyReg:
+  case CallingConv::PreserveMost:
+  case CallingConv::PreserveAll:
+  case CallingConv::Swift:
+  case CallingConv::CXX_FAST_TLS:
+  case CallingConv::Tail:
+  case CallingConv::CFGuard_Check:
+  case CallingConv::SwiftTail:
+  case CallingConv::PreserveNone:
+  case CallingConv::X86_StdCall:
+  case CallingConv::X86_FastCall:
+  case CallingConv::ARM_APCS:
+  case CallingConv::ARM_AAPCS:
+  case CallingConv::ARM_AAPCS_VFP:
+  case CallingConv::MSP430_INTR:
+  case CallingConv::X86_ThisCall:
+  case CallingConv::PTX_Device:
+  case CallingConv::SPIR_FUNC:
+  case CallingConv::Intel_OCL_BI:
+  case CallingConv::X86_64_SysV:
+  case CallingConv::Win64:
+  case CallingConv::X86_VectorCall:
+  case CallingConv::DUMMY_HHVM:
+  case CallingConv::DUMMY_HHVM_C:
+  case CallingConv::X86_INTR:
+  case CallingConv::AVR_INTR:
+  case CallingConv::AVR_SIGNAL:
+  case CallingConv::AVR_BUILTIN:
+    return true;
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
+  case CallingConv::AMDGPU_CS_Chain:
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+    return false;
+  case CallingConv::AMDGPU_VS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_GS:
+  case CallingConv::AMDGPU_PS:
+  case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_LS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::MSP430_BUILTIN:
+  case CallingConv::AArch64_VectorCall:
+  case CallingConv::AArch64_SVE_VectorCall:
+  case CallingConv::WASM_EmscriptenInvoke:
+  case CallingConv::AMDGPU_Gfx:
+  case CallingConv::M68k_INTR:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
+  case CallingConv::M68k_RTD:
+  case CallingConv::GRAAL:
+  case CallingConv::ARM64EC_Thunk_X64:
+  case CallingConv::ARM64EC_Thunk_Native:
+  case CallingConv::RISCV_VectorCall:
+  case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
+  case CallingConv::RISCV_VLSCall_32:
+  case CallingConv::RISCV_VLSCall_64:
+  case CallingConv::RISCV_VLSCall_128:
+  case CallingConv::RISCV_VLSCall_256:
+  case CallingConv::RISCV_VLSCall_512:
+  case CallingConv::RISCV_VLSCall_1024:
+  case CallingConv::RISCV_VLSCall_2048:
+  case CallingConv::RISCV_VLSCall_4096:
+  case CallingConv::RISCV_VLSCall_8192:
+  case CallingConv::RISCV_VLSCall_16384:
+  case CallingConv::RISCV_VLSCall_32768:
+  case CallingConv::RISCV_VLSCall_65536:
+    return true;
+  default:
+    return false;
+  }
+
+  llvm_unreachable("covered callingconv switch");
 }

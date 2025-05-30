@@ -608,6 +608,12 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
       return std::nullopt;
     }
 
+    if (effect.getValue() == nullptr) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "side-effect with no value, cannot analyze further\n");
+      return std::nullopt;
+    }
+
     // allow if and only if the reads are from the elemental indices, in order
     // => each iteration doesn't read values written by other iterations
     // don't allow reads from a different value which may alias: fir alias
@@ -875,8 +881,8 @@ public:
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
 
     mlir::RewritePatternSet patterns(context);
     // TODO: right now the patterns are non-conflicting,

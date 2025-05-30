@@ -19,21 +19,15 @@
 #include "Arch/SystemZ.h"
 #include "Arch/VE.h"
 #include "Arch/X86.h"
-#include "BareMetal.h"
 #include "HIPAMD.h"
 #include "Hexagon.h"
 #include "MSP430.h"
 #include "Solaris.h"
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/LangOptions.h"
-#include "clang/Basic/ObjCRuntime.h"
-#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
@@ -54,13 +48,11 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
@@ -860,7 +852,7 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
 
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
-                          const InputInfo &Input, bool IsThinLTO) {
+                          const InputInfoList &Inputs, bool IsThinLTO) {
   const llvm::Triple &Triple = ToolChain.getTriple();
   const bool IsOSAIX = Triple.isOSAIX();
   const bool IsAMDGCN = Triple.isAMDGCN();
@@ -870,6 +862,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   const bool IsFatLTO = Args.hasFlag(options::OPT_ffat_lto_objects,
                                      options::OPT_fno_fat_lto_objects, false);
   const bool IsUnifiedLTO = Args.hasArg(options::OPT_funified_lto);
+
+  assert(!Inputs.empty() && "Must have at least one input.");
+
+  auto Input = llvm::find_if(
+      Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
+  if (Input == Inputs.end()) {
+    // For a very rare case, all of the inputs to the linker are
+    // InputArg. If that happens, just use the first InputInfo.
+    Input = Inputs.begin();
+  }
+
   if (Linker != "lld" && Linker != "lld-link" &&
       llvm::sys::path::filename(LinkerPath) != "ld.lld" &&
       llvm::sys::path::stem(LinkerPath) != "ld.lld" && !Triple.isOSOpenBSD()) {
@@ -934,7 +937,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     std::optional<StringRef> OptVal =
         llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
             .Case("Accelerate", "Accelerate")
-            .Case("LIBMVEC", "LIBMVEC-X86")
+            .Case("libmvec", "LIBMVEC")
+            .Case("AMDLIBM", "AMDLIBM")
             .Case("MASSV", "MASSV")
             .Case("SVML", "SVML")
             .Case("SLEEF", "sleefgnuabi")
@@ -1162,7 +1166,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         Args.MakeArgString(Twine(PluginOptPrefix) + "-stack-size-section"));
 
   // Setup statistics file output.
-  SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
+  SmallString<128> StatsFile = getStatsFileName(Args, Output, *Input, D);
   if (!StatsFile.empty())
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "stats-file=" + StatsFile));
@@ -1180,7 +1184,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // Handle serialized remarks options: '-fsave-optimization-record'
   // and '-foptimization-record-*'.
   if (willEmitRemarks(Args))
-    renderRemarksOptions(Args, CmdArgs, ToolChain.getEffectiveTriple(), Input,
+    renderRemarksOptions(Args, CmdArgs, ToolChain.getEffectiveTriple(), *Input,
                          Output, PluginOptPrefix);
 
   // Handle remarks hotness/threshold related options.
@@ -1250,6 +1254,9 @@ void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
                                  ArgStringList &CmdArgs) {
   if (!Args.hasFlag(options::OPT_frtlib_add_rpath,
                     options::OPT_fno_rtlib_add_rpath, false))
+    return;
+
+  if (TC.getTriple().isOSAIX()) // TODO: AIX doesn't support -rpath option.
     return;
 
   SmallVector<std::string> CandidateRPaths(TC.getArchSpecificLibPaths());
@@ -1643,17 +1650,18 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
 }
 
 bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringList &CmdArgs) {
+  const XRayArgs &XRay = TC.getXRayArgs(Args);
   if (Args.hasArg(options::OPT_shared)) {
-    if (TC.getXRayArgs().needsXRayDSORt()) {
+    if (XRay.needsXRayDSORt()) {
       CmdArgs.push_back("--whole-archive");
       CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray-dso"));
       CmdArgs.push_back("--no-whole-archive");
       return true;
     }
-  } else if (TC.getXRayArgs().needsXRayRt()) {
+  } else if (XRay.needsXRayRt()) {
     CmdArgs.push_back("--whole-archive");
     CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray"));
-    for (const auto &Mode : TC.getXRayArgs().modeList())
+    for (const auto &Mode : XRay.modeList())
       CmdArgs.push_back(TC.getCompilerRTArgString(Args, Mode));
     CmdArgs.push_back("--no-whole-archive");
     return true;
@@ -2530,7 +2538,6 @@ static void GetSDLFromOffloadArchive(
 
   C.addTempFile(C.getArgs().MakeArgString(OutputLib));
 
-  ArgStringList CmdArgs;
   SmallString<128> DeviceTriple;
   DeviceTriple += Action::GetOffloadKindName(JA.getOffloadingDeviceKind());
   DeviceTriple += '-';
@@ -2574,8 +2581,6 @@ static void GetSDLFromOffloadArchive(
       InputInfo(&JA, C.getArgs().MakeArgString(OutputLib))));
 
   CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
-
-  return;
 }
 
 // Wrapper function used by driver for adding SDLs during link phase.
@@ -2794,6 +2799,11 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   for (const auto &LibPath : HostTC.getFilePaths())
     LibraryPaths.emplace_back(LibPath);
 
+  // Check the target specific library path for the triple as well.
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "lib", Triple.getTriple());
+  LibraryPaths.emplace_back(P);
+
   OptSpecifier LibomptargetBCPathOpt =
       Triple.isAMDGCN()  ? options::OPT_libomptarget_amdgpu_bc_path_EQ
       : Triple.isNVPTX() ? options::OPT_libomptarget_nvptx_bc_path_EQ
@@ -2801,7 +2811,7 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
 
   StringRef ArchPrefix = Triple.isAMDGCN()  ? "amdgpu"
                          : Triple.isNVPTX() ? "nvptx"
-                                            : "spirv64";
+                                            : "spirv";
   std::string LibOmpTargetName = ("libomptarget-" + ArchPrefix + ".bc").str();
 
   // First check whether user specifies bc library
@@ -2931,8 +2941,7 @@ void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
       Ok = CM == "small" || CM == "medium" ||
            (CM == "large" && Triple.isRISCV64());
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
-      Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
-                              CM);
+      Ok = llvm::is_contained({"small", "kernel", "medium", "large"}, CM);
     } else if (Triple.isNVPTX() || Triple.isAMDGPU() || Triple.isSPIRV()) {
       // NVPTX/AMDGPU/SPIRV does not care about the code model and will accept
       // whatever works for the host.
@@ -3144,4 +3153,17 @@ void tools::handleVectorizeSLPArgs(const ArgList &Args,
   if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
                    options::OPT_fno_slp_vectorize, EnableSLPVec))
     CmdArgs.push_back("-vectorize-slp");
+}
+
+void tools::handleInterchangeLoopsArgs(const ArgList &Args,
+                                       ArgStringList &CmdArgs) {
+  // FIXME: instead of relying on shouldEnableVectorizerAtOLevel, we may want to
+  // implement a separate function to infer loop interchange from opt level.
+  // For now, enable loop-interchange at the same opt levels as loop-vectorize.
+  bool EnableInterchange = shouldEnableVectorizerAtOLevel(Args, false);
+  OptSpecifier InterchangeAliasOption =
+      EnableInterchange ? options::OPT_O_Group : options::OPT_floop_interchange;
+  if (Args.hasFlag(options::OPT_floop_interchange, InterchangeAliasOption,
+                   options::OPT_fno_loop_interchange, EnableInterchange))
+    CmdArgs.push_back("-floop-interchange");
 }

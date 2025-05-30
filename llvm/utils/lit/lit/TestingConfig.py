@@ -66,6 +66,7 @@ class TestingConfig(object):
             "DFLTCC",
             "QEMU_LD_PREFIX",
             "QEMU_CPU",
+            "HOME",
         ]
 
         if sys.platform.startswith("aix"):

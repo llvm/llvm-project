@@ -414,7 +414,7 @@ namespace unresolved_template_specialization_type {
         AbslHashValue() {}
   };
   template enable_if<true> raw_hash_set<int>::AbslHashValue<HashStateBase>();
-  // CHECH: @_ZN39unresolved_template_specialization_type12raw_hash_setIiE13AbslHashValueINS_13HashStateBaseEEENS_9enable_ifIXsrNT_11is_hashableIiEE5valueEEEv
+  // CHECK: @_ZN39unresolved_template_specialization_type12raw_hash_setIiE13AbslHashValueINS_13HashStateBaseEEENS_9enable_ifIXsrNT_11is_hashableIiEE5valueEEEv
 } // namespace unresolved_template_specialization_type
 
 namespace GH133610 {

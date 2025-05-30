@@ -54,7 +54,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <utility>
@@ -163,6 +162,7 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
         F.getFnAttributeAsParsedInteger("patchable-function-entry", 9) * 4;
     break;
   case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TAIL_CALL:
   case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
     // An XRay sled can be 4 bytes of alignment plus a 32-byte block.
     NumBytes = 36;
@@ -10053,8 +10053,7 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
       (!MI.getOperand(0).getReg().isVirtual() ||
        MI.getOperand(0).getSubReg() == 0) &&
       (!MI.getOperand(0).getReg().isPhysical() ||
-       MI.findRegisterDefOperandIdx(MI.getOperand(0).getReg() - AArch64::W0 +
-                                        AArch64::X0,
+       MI.findRegisterDefOperandIdx(getXRegFromWReg(MI.getOperand(0).getReg()),
                                     /*TRI=*/nullptr) == -1))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
 

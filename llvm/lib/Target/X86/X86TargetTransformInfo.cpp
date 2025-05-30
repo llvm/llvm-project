@@ -1748,7 +1748,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
             getTypeLegalizationCost(
                 FixedVectorType::get(BaseTp->getElementType(), Mask.size()))
                 .first;
-        unsigned E = *NumOfDests.getValue();
+        unsigned E = NumOfDests.getValue();
         unsigned NormalizedVF =
             LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
         unsigned NumOfSrcRegs = NormalizedVF / LegalVT.getVectorNumElements();
@@ -4767,8 +4767,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
 InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, Value *Op0,
-                                               Value *Op1) const {
+                                               unsigned Index, const Value *Op0,
+                                               const Value *Op1) const {
   static const CostTblEntry SLMCostTbl[] = {
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i16,     4 },
@@ -4916,7 +4916,8 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
 InstructionCost X86TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   assert(DemandedElts.getBitWidth() ==
              cast<FixedVectorType>(Ty)->getNumElements() &&
          "Vector size mismatch");
@@ -4931,11 +4932,28 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
           (LegalVectorBitWidth % LaneBitWidth) == 0) &&
          "Illegal vector");
 
-  const int NumLegalVectors = *LT.first.getValue();
+  const int NumLegalVectors = LT.first.getValue();
   assert(NumLegalVectors >= 0 && "Negative cost!");
 
   // For insertions, a ISD::BUILD_VECTOR style vector initialization can be much
-  // cheaper than an accumulation of ISD::INSERT_VECTOR_ELT.
+  // cheaper than an accumulation of ISD::INSERT_VECTOR_ELT.  SLPVectorizer has
+  // a special heuristic regarding poison input which is passed here in
+  // ForPoisonSrc.
+  if (Insert && !ForPoisonSrc) {
+    // This is nearly identical to BaseT::getScalarizationOverhead(), except
+    // it is passing nullptr to getVectorInstrCost() for Op0 (instead of
+    // Constant::getNullValue()), which makes the X86TTIImpl
+    // getVectorInstrCost() return 0 instead of 1.
+    for (unsigned I : seq(DemandedElts.getBitWidth())) {
+      if (!DemandedElts[I])
+        continue;
+      Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, I,
+                                 Constant::getNullValue(Ty),
+                                 VL.empty() ? nullptr : VL[I]);
+    }
+    return Cost;
+  }
+
   if (Insert) {
     if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
         (MScalarTy.isInteger() && ST->hasSSE41()) ||
@@ -6164,7 +6182,7 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
   std::pair<InstructionCost, MVT> IdxsLT = getTypeLegalizationCost(IndexVTy);
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(SrcVTy);
   InstructionCost::CostType SplitFactor =
-      *std::max(IdxsLT.first, SrcLT.first).getValue();
+      std::max(IdxsLT.first, SrcLT.first).getValue();
   if (SplitFactor > 1) {
     // Handle splitting of vector of pointers
     auto *SplitSrcTy =

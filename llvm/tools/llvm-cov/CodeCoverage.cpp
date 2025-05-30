@@ -1283,6 +1283,10 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
                               cl::desc("Don't export branch data (LCOV)"),
                               cl::cat(ExportCategory));
 
+  cl::opt<bool> UnifyInstantiations("unify-instantiations", cl::Optional,
+                                    cl::desc("Unify function instantiations"),
+                                    cl::init(true), cl::cat(ExportCategory));
+
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
@@ -1290,6 +1294,7 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   ViewOpts.SkipExpansions = SkipExpansions;
   ViewOpts.SkipFunctions = SkipFunctions;
   ViewOpts.SkipBranches = SkipBranches;
+  ViewOpts.UnifyFunctionInstantiations = UnifyInstantiations;
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {

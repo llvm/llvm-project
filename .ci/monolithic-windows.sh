@@ -33,6 +33,7 @@ function at-exit {
   mkdir -p artifacts
   sccache --show-stats >> artifacts/sccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
+  cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
   # If building fails there will be no results files.
   shopt -s nullglob
@@ -51,8 +52,7 @@ projects="${1}"
 targets="${2}"
 
 echo "--- cmake"
-pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
-pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
+pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 export CC=cl
 export CXX=cl

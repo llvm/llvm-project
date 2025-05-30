@@ -23,8 +23,6 @@ public:
   ABIInfo(CIRGenTypes &cgt) : cgt(cgt) {}
 
   virtual ~ABIInfo();
-
-  virtual void computeInfo(CIRGenFunctionInfo &funcInfo) const = 0;
 };
 
 } // namespace clang::CIRGen

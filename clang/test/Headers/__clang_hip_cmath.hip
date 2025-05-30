@@ -6,7 +6,7 @@
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -o - \
-// RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefix=DEFAULT %s
+// RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=DEFAULT,CORRECT-DIV-SQRT %s
 
 // Check that we end up with fast math flags set on intrinsic calls
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
@@ -16,6 +16,15 @@
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -menable-no-infs \
 // RUN:   -menable-no-nans -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefix=FINITEONLY %s
+
+// Check that we end up with fpmath metadata set on sqrt calls
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 \
+// RUN:   -fno-hip-fp32-correctly-rounded-divide-sqrt -o - \
+// RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=DEFAULT,NO-CORRECT-DIV-SQRT %s
 
 // DEFAULT-LABEL: @test_fma_f16(
 // DEFAULT-NEXT:  entry:
@@ -141,4 +150,37 @@ namespace user_namespace {
     user_bfloat16 a = 1.0f, b = 2.0f;
     fma(a, b, b);
   }
+}
+
+// CORRECT-DIV-SQRT-LABEL: @test_sqrt_f32(
+// CORRECT-DIV-SQRT-NEXT:  entry:
+// CORRECT-DIV-SQRT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X:%.*]])
+// CORRECT-DIV-SQRT-NEXT:    ret float [[TMP0]]
+//
+// FINITEONLY-LABEL: @test_sqrt_f32(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.sqrt.f32(float nofpclass(nan inf) [[X:%.*]])
+// FINITEONLY-NEXT:    ret float [[TMP0]]
+//
+// NO-CORRECT-DIV-SQRT-LABEL: @test_sqrt_f32(
+// NO-CORRECT-DIV-SQRT-NEXT:  entry:
+// NO-CORRECT-DIV-SQRT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X:%.*]]), !fpmath [[META4:![0-9]+]]
+// NO-CORRECT-DIV-SQRT-NEXT:    ret float [[TMP0]]
+//
+extern "C" __device__ float test_sqrt_f32(float x) {
+  return sqrt(x);
+}
+
+// DEFAULT-LABEL: @test_sqrt_f64(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.sqrt.f64(double [[X:%.*]])
+// DEFAULT-NEXT:    ret double [[TMP0]]
+//
+// FINITEONLY-LABEL: @test_sqrt_f64(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.sqrt.f64(double nofpclass(nan inf) [[X:%.*]])
+// FINITEONLY-NEXT:    ret double [[TMP0]]
+//
+extern "C" __device__ double test_sqrt_f64(double x) {
+  return sqrt(x);
 }

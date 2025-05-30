@@ -1605,7 +1605,7 @@ void ConversionPatternRewriterImpl::notifyBlockInserted(
                              << "'(" << parent << ")\n";
         } else {
           logger.startLine()
-              << "** Insert Block into detached Region (nullptr parent op)'";
+              << "** Insert Block into detached Region (nullptr parent op)'\n";
         }
       });
 
@@ -2106,6 +2106,7 @@ OperationLegalizer::legalizeWithFold(Operation *op,
     rewriterImpl.logger.startLine() << "* Fold {\n";
     rewriterImpl.logger.indent();
   });
+  (void)rewriterImpl;
 
   // Try to fold the operation.
   SmallVector<Value, 2> replacementValues;
@@ -2519,19 +2520,19 @@ unsigned OperationLegalizer::applyCostModelToPatterns(
     return minDepth;
 
   // Sort the patterns by those likely to be the most beneficial.
-  std::stable_sort(patternsByDepth.begin(), patternsByDepth.end(),
-                   [](const std::pair<const Pattern *, unsigned> &lhs,
-                      const std::pair<const Pattern *, unsigned> &rhs) {
-                     // First sort by the smaller pattern legalization
-                     // depth.
-                     if (lhs.second != rhs.second)
-                       return lhs.second < rhs.second;
+  llvm::stable_sort(patternsByDepth,
+                    [](const std::pair<const Pattern *, unsigned> &lhs,
+                       const std::pair<const Pattern *, unsigned> &rhs) {
+                      // First sort by the smaller pattern legalization
+                      // depth.
+                      if (lhs.second != rhs.second)
+                        return lhs.second < rhs.second;
 
-                     // Then sort by the larger pattern benefit.
-                     auto lhsBenefit = lhs.first->getBenefit();
-                     auto rhsBenefit = rhs.first->getBenefit();
-                     return lhsBenefit > rhsBenefit;
-                   });
+                      // Then sort by the larger pattern benefit.
+                      auto lhsBenefit = lhs.first->getBenefit();
+                      auto rhsBenefit = rhs.first->getBenefit();
+                      return lhsBenefit > rhsBenefit;
+                    });
 
   // Update the legalization pattern to use the new sorted list.
   patterns.clear();
@@ -2746,8 +2747,7 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
 void mlir::reconcileUnrealizedCasts(
     ArrayRef<UnrealizedConversionCastOp> castOps,
     SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
-  SetVector<UnrealizedConversionCastOp> worklist(castOps.begin(),
-                                                 castOps.end());
+  SetVector<UnrealizedConversionCastOp> worklist(llvm::from_range, castOps);
   // This set is maintained only if `remainingCastOps` is provided.
   DenseSet<Operation *> erasedOps;
 
@@ -2880,6 +2880,8 @@ LogicalResult TypeConverter::convertType(Type t,
       if (t.getContext()->isMultithreadingEnabled())
         cacheWriteLock.lock();
       if (!succeeded(*result)) {
+        assert(results.size() == currentCount &&
+               "failed type conversion should not change results");
         cachedDirectConversions.try_emplace(t, nullptr);
         return failure();
       }
@@ -2889,6 +2891,9 @@ LogicalResult TypeConverter::convertType(Type t,
       else
         cachedMultiConversions.try_emplace(t, llvm::to_vector<2>(newTypes));
       return success();
+    } else {
+      assert(results.size() == currentCount &&
+             "failed type conversion should not change results");
     }
   }
   return failure();
@@ -2959,7 +2964,7 @@ TypeConverter::convertSignatureArgs(TypeRange types,
 Value TypeConverter::materializeSourceConversion(OpBuilder &builder,
                                                  Location loc, Type resultType,
                                                  ValueRange inputs) const {
-  for (const MaterializationCallbackFn &fn :
+  for (const SourceMaterializationCallbackFn &fn :
        llvm::reverse(sourceMaterializations))
     if (Value result = fn(builder, resultType, inputs, loc))
       return result;

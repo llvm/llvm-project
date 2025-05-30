@@ -170,7 +170,7 @@ class TestCase(TestBase):
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
             "totalSymbolTablesSavedToCache",
-            "totalSymbolsLoaded",
+            "totalSymbolTableSymbolCount",
             "totalSymbolTablesLoaded",
             "totalDebugInfoByteSize",
             "totalDebugInfoIndexTime",
@@ -179,8 +179,9 @@ class TestCase(TestBase):
             "totalDebugInfoParseTime",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
-        self.assertGreater(debug_stats["totalSymbolsLoaded"], 0)
-        self.assertGreater(debug_stats["totalSymbolTablesLoaded"], 0)
+        if self.getPlatform() != "windows":
+            self.assertGreater(debug_stats["totalSymbolTableSymbolCount"], 0)
+            self.assertGreater(debug_stats["totalSymbolTablesLoaded"], 0)
 
         # Verify target stats keys.
         target_stats = debug_stats["targets"][0]
@@ -202,12 +203,34 @@ class TestCase(TestBase):
         # Verify module stats keys.
         for module_stats in debug_stats["modules"]:
             module_stat_keys_exist = [
-                "symbolsLoaded",
+                "symbolTableSymbolCount",
             ]
             self.verify_keys(
                 module_stats, '"module_stats"', module_stat_keys_exist, None
             )
-            self.assertGreater(module_stats["symbolsLoaded"], 0)
+            if self.getPlatform() != "windows":
+                self.assertGreater(module_stats["symbolTableSymbolCount"], 0)
+
+    def test_default_no_run_no_preload_symbols(self):
+        """Test "statistics dump" without running the target and without
+        preloading symbols.
+
+        Checks that symbol count are zero.
+        """
+        # Make sure symbols will not be preloaded.
+        self.runCmd("settings set target.preload-symbols false")
+
+        # Build and load the target
+        self.build()
+        self.createTestTarget()
+
+        # Get statistics
+        debug_stats = self.get_stats()
+
+        # No symbols should be loaded in the main module.
+        main_module_stats = debug_stats["modules"][0]
+        if self.getPlatform() != "windows":
+            self.assertEqual(main_module_stats["symbolTableSymbolCount"], 0)
 
     def test_default_with_run(self):
         """Test "statistics dump" when running the target to a breakpoint.

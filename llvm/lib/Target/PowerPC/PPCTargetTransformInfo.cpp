@@ -344,6 +344,10 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   TargetSchedModel SchedModel;
   SchedModel.init(ST);
 
+  // FIXME: Sure there is no other way to get TTI? This should be cheap though.
+  TargetTransformInfo TTI =
+      TM.getTargetTransformInfo(*L->getHeader()->getParent());
+
   // Do not convert small short loops to CTR loop.
   unsigned ConstTripCount = SE.getSmallConstantTripCount(L);
   if (ConstTripCount && ConstTripCount < SmallCTRLoopThreshold) {
@@ -351,7 +355,7 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
     CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
     CodeMetrics Metrics;
     for (BasicBlock *BB : L->blocks())
-      Metrics.analyzeBasicBlock(BB, *this, EphValues);
+      Metrics.analyzeBasicBlock(BB, TTI, EphValues);
     // 6 is an approximate latency for the mtctr instruction.
     if (Metrics.NumInsts <= (6 * SchedModel.getIssueWidth()))
       return false;
@@ -670,8 +674,8 @@ InstructionCost PPCTTIImpl::getCmpSelInstrCost(
 
 InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                TTI::TargetCostKind CostKind,
-                                               unsigned Index, Value *Op0,
-                                               Value *Op1) const {
+                                               unsigned Index, const Value *Op0,
+                                               const Value *Op1) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1096,7 +1100,7 @@ InstructionCost PPCTTIImpl::getVPMemoryOpCost(unsigned Opcode, Type *Src,
     float AlignmentProb = ((float)Alignment.value()) / DesiredAlignment.value();
     float MisalignmentProb = 1.0 - AlignmentProb;
     return (MisalignmentProb * P9PipelineFlushEstimate) +
-           (AlignmentProb * *Cost.getValue());
+           (AlignmentProb * Cost.getValue());
   }
 
   // Usually we should not get to this point, but the following is an attempt to

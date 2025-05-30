@@ -284,11 +284,11 @@ def ACC_Atomic : Directive<"atomic"> {
 // 2.6.5
 def ACC_Data : Directive<"data"> {
   let allowedOnceClauses = [
-    VersionedClause<ACCC_Async, 32>,
     VersionedClause<ACCC_If>,
     VersionedClause<ACCC_Default>
   ];
   let allowedClauses = [
+    VersionedClause<ACCC_Async, 32>,
     VersionedClause<ACCC_DeviceType, 32>,
     VersionedClause<ACCC_Wait, 32>
   ];
@@ -556,35 +556,31 @@ def ACC_HostData : Directive<"host_data"> {
 
 // 2.11
 def ACC_KernelsLoop : Directive<"kernels loop"> {
-  let allowedClauses = [
-    VersionedClause<ACCC_Attach>,
-    VersionedClause<ACCC_Collapse>,
-    VersionedClause<ACCC_Copy>,
-    VersionedClause<ACCC_Copyin>,
-    VersionedClause<ACCC_Copyout>,
-    VersionedClause<ACCC_Create>,
-    VersionedClause<ACCC_DevicePtr>,
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_Gang>,
-    VersionedClause<ACCC_NoCreate>,
-    VersionedClause<ACCC_NumGangs>,
-    VersionedClause<ACCC_NumWorkers>,
-    VersionedClause<ACCC_Present>,
-    VersionedClause<ACCC_Private>,
-    VersionedClause<ACCC_Reduction>,
-    VersionedClause<ACCC_ShortLoop>,
-    VersionedClause<ACCC_Tile>,
-    VersionedClause<ACCC_Vector>,
-    VersionedClause<ACCC_VectorLength>,
-    VersionedClause<ACCC_Wait>,
-    VersionedClause<ACCC_Worker>
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_Default>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_Self>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_Async>,
+                        VersionedClause<ACCC_Attach>,
+                        VersionedClause<ACCC_Collapse>,
+                        VersionedClause<ACCC_Copy>,
+                        VersionedClause<ACCC_Copyin>,
+                        VersionedClause<ACCC_Copyout>,
+                        VersionedClause<ACCC_Create>,
+                        VersionedClause<ACCC_DevicePtr>,
+                        VersionedClause<ACCC_DeviceType>,
+                        VersionedClause<ACCC_Gang>,
+                        VersionedClause<ACCC_NoCreate>,
+                        VersionedClause<ACCC_NumGangs>,
+                        VersionedClause<ACCC_NumWorkers>,
+                        VersionedClause<ACCC_Present>,
+                        VersionedClause<ACCC_Private>,
+                        VersionedClause<ACCC_Reduction>,
+                        VersionedClause<ACCC_ShortLoop>,
+                        VersionedClause<ACCC_Tile>,
+                        VersionedClause<ACCC_Vector>,
+                        VersionedClause<ACCC_VectorLength>,
+                        VersionedClause<ACCC_Wait>,
+                        VersionedClause<ACCC_Worker>];
+  let allowedOnceClauses = [VersionedClause<ACCC_Default>,
+                            VersionedClause<ACCC_If>,
+                            VersionedClause<ACCC_Self>];
   let allowedExclusiveClauses = [
     VersionedClause<ACCC_Auto>,
     VersionedClause<ACCC_Independent>,
@@ -596,36 +592,32 @@ def ACC_KernelsLoop : Directive<"kernels loop"> {
 
 // 2.11
 def ACC_ParallelLoop : Directive<"parallel loop"> {
-  let allowedClauses = [
-    VersionedClause<ACCC_Attach>,
-    VersionedClause<ACCC_Collapse>,
-    VersionedClause<ACCC_Copy>,
-    VersionedClause<ACCC_Copyin>,
-    VersionedClause<ACCC_Copyout>,
-    VersionedClause<ACCC_Create>,
-    VersionedClause<ACCC_DevicePtr>,
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_FirstPrivate>,
-    VersionedClause<ACCC_Gang>,
-    VersionedClause<ACCC_NoCreate>,
-    VersionedClause<ACCC_NumGangs>,
-    VersionedClause<ACCC_NumWorkers>,
-    VersionedClause<ACCC_Present>,
-    VersionedClause<ACCC_Private>,
-    VersionedClause<ACCC_Reduction>,
-    VersionedClause<ACCC_ShortLoop>,
-    VersionedClause<ACCC_Tile>,
-    VersionedClause<ACCC_Vector>,
-    VersionedClause<ACCC_VectorLength>,
-    VersionedClause<ACCC_Wait>,
-    VersionedClause<ACCC_Worker>
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_Default>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_Self>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_Async>,
+                        VersionedClause<ACCC_Attach>,
+                        VersionedClause<ACCC_Collapse>,
+                        VersionedClause<ACCC_Copy>,
+                        VersionedClause<ACCC_Copyin>,
+                        VersionedClause<ACCC_Copyout>,
+                        VersionedClause<ACCC_Create>,
+                        VersionedClause<ACCC_DevicePtr>,
+                        VersionedClause<ACCC_DeviceType>,
+                        VersionedClause<ACCC_FirstPrivate>,
+                        VersionedClause<ACCC_Gang>,
+                        VersionedClause<ACCC_NoCreate>,
+                        VersionedClause<ACCC_NumGangs>,
+                        VersionedClause<ACCC_NumWorkers>,
+                        VersionedClause<ACCC_Present>,
+                        VersionedClause<ACCC_Private>,
+                        VersionedClause<ACCC_Reduction>,
+                        VersionedClause<ACCC_ShortLoop>,
+                        VersionedClause<ACCC_Tile>,
+                        VersionedClause<ACCC_Vector>,
+                        VersionedClause<ACCC_VectorLength>,
+                        VersionedClause<ACCC_Wait>,
+                        VersionedClause<ACCC_Worker>];
+  let allowedOnceClauses = [VersionedClause<ACCC_Default>,
+                            VersionedClause<ACCC_If>,
+                            VersionedClause<ACCC_Self>];
   let allowedExclusiveClauses = [
     VersionedClause<ACCC_Auto>,
     VersionedClause<ACCC_Independent>,
@@ -637,33 +629,29 @@ def ACC_ParallelLoop : Directive<"parallel loop"> {
 
 // 2.11
 def ACC_SerialLoop : Directive<"serial loop"> {
-  let allowedClauses = [
-    VersionedClause<ACCC_Attach>,
-    VersionedClause<ACCC_Collapse>,
-    VersionedClause<ACCC_Copy>,
-    VersionedClause<ACCC_Copyin>,
-    VersionedClause<ACCC_Copyout>,
-    VersionedClause<ACCC_Create>,
-    VersionedClause<ACCC_DevicePtr>,
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_FirstPrivate>,
-    VersionedClause<ACCC_Gang>,
-    VersionedClause<ACCC_NoCreate>,
-    VersionedClause<ACCC_Present>,
-    VersionedClause<ACCC_Private>,
-    VersionedClause<ACCC_Reduction>,
-    VersionedClause<ACCC_ShortLoop>,
-    VersionedClause<ACCC_Tile>,
-    VersionedClause<ACCC_Vector>,
-    VersionedClause<ACCC_Wait>,
-    VersionedClause<ACCC_Worker>
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_Default>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_Self>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_Async>,
+                        VersionedClause<ACCC_Attach>,
+                        VersionedClause<ACCC_Collapse>,
+                        VersionedClause<ACCC_Copy>,
+                        VersionedClause<ACCC_Copyin>,
+                        VersionedClause<ACCC_Copyout>,
+                        VersionedClause<ACCC_Create>,
+                        VersionedClause<ACCC_DevicePtr>,
+                        VersionedClause<ACCC_DeviceType>,
+                        VersionedClause<ACCC_FirstPrivate>,
+                        VersionedClause<ACCC_Gang>,
+                        VersionedClause<ACCC_NoCreate>,
+                        VersionedClause<ACCC_Present>,
+                        VersionedClause<ACCC_Private>,
+                        VersionedClause<ACCC_Reduction>,
+                        VersionedClause<ACCC_ShortLoop>,
+                        VersionedClause<ACCC_Tile>,
+                        VersionedClause<ACCC_Vector>,
+                        VersionedClause<ACCC_Wait>,
+                        VersionedClause<ACCC_Worker>];
+  let allowedOnceClauses = [VersionedClause<ACCC_Default>,
+                            VersionedClause<ACCC_If>,
+                            VersionedClause<ACCC_Self>];
   let allowedExclusiveClauses = [
     VersionedClause<ACCC_Auto>,
     VersionedClause<ACCC_Independent>,

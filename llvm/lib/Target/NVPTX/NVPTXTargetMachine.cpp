@@ -99,6 +99,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVVMIntrRangePass(PR);
   initializeGenericToNVVMLegacyPassPass(PR);
   initializeNVPTXAllocaHoistingPass(PR);
+  initializeNVPTXAsmPrinterPass(PR);
   initializeNVPTXAssignValidGlobalNamesPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
@@ -112,18 +113,21 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAAWrapperPassPass(PR);
   initializeNVPTXExternalAAWrapperPass(PR);
   initializeNVPTXPeepholePass(PR);
+  initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
 }
 
 static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
   std::string Ret = "e";
 
-  if (!is64Bit)
-    Ret += "-p:32:32";
-  else if (UseShortPointers)
-    Ret += "-p3:32:32-p4:32:32-p5:32:32";
-
   // Tensor Memory (addrspace:6) is always 32-bits.
-  Ret += "-p6:32:32";
+  // Distributed Shared Memory (addrspace:7) follows shared memory
+  // (addrspace:3).
+  if (!is64Bit)
+    Ret += "-p:32:32-p6:32:32-p7:32:32";
+  else if (UseShortPointers) {
+    Ret += "-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32";
+  } else
+    Ret += "-p6:32:32";
 
   Ret += "-i64:64-i128:128-v16:16-v32:32-n16:32:64";
 
@@ -230,7 +234,7 @@ MachineFunctionInfo *NVPTXTargetMachine::createMachineFunctionInfo(
                                                                     F, STI);
 }
 
-void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
+void NVPTXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<NVPTXAA>();
 }
 
@@ -266,7 +270,7 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 TargetTransformInfo
 NVPTXTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(NVPTXTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<NVPTXTTIImpl>(this, F));
 }
 
 std::pair<const Value *, unsigned>
@@ -280,8 +284,10 @@ NVPTXTargetMachine::getPredicatedAddrSpace(const Value *V) const {
     case Intrinsic::nvvm_isspacep_local:
       return std::make_pair(II->getArgOperand(0), llvm::ADDRESS_SPACE_LOCAL);
     case Intrinsic::nvvm_isspacep_shared:
-    case Intrinsic::nvvm_isspacep_shared_cluster:
       return std::make_pair(II->getArgOperand(0), llvm::ADDRESS_SPACE_SHARED);
+    case Intrinsic::nvvm_isspacep_shared_cluster:
+      return std::make_pair(II->getArgOperand(0),
+                            llvm::ADDRESS_SPACE_SHARED_CLUSTER);
     default:
       break;
     }
@@ -343,10 +349,7 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&RemoveLoadsIntoFakeUsesID);
 
   addPass(createNVPTXAAWrapperPass());
-  addPass(createExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
-    if (auto *WrapperPass = P.getAnalysisIfAvailable<NVPTXAAWrapperPass>())
-      AAR.addAAResult(WrapperPass->getResult());
-  }));
+  addPass(createNVPTXExternalAAWrapperPass());
 
   // NVVMReflectPass is added in addEarlyAsPossiblePasses, so hopefully running
   // it here does nothing.  But since we need it for correctness when lowering
@@ -391,6 +394,7 @@ void NVPTXPassConfig::addIRPasses() {
     if (!DisableLoadStoreVectorizer)
       addPass(createLoadStoreVectorizerPass());
     addPass(createSROAPass());
+    addPass(createNVPTXTagInvariantLoadsPass());
   }
 
   if (ST.hasPTXASUnreachableBug()) {

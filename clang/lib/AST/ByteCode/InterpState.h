@@ -32,6 +32,12 @@ class InterpStack;
 class InterpFrame;
 class SourceMapper;
 
+struct StdAllocatorCaller {
+  const Expr *Call = nullptr;
+  QualType AllocType;
+  explicit operator bool() { return Call; }
+};
+
 /// Interpreter context.
 class InterpState final : public State, public SourceMapper {
 public:
@@ -46,6 +52,8 @@ public:
 
   InterpState(const InterpState &) = delete;
   InterpState &operator=(const InterpState &) = delete;
+
+  bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
 
   // Stack frame accessors.
   Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
@@ -115,6 +123,8 @@ public:
   /// Will return \c false if there were any allocations to diagnose,
   /// \c true otherwise.
   bool maybeDiagnoseDanglingAllocations();
+
+  StdAllocatorCaller getStdAllocatorCaller(StringRef Name) const;
 
 private:
   friend class EvaluationResult;

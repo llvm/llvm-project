@@ -68,6 +68,7 @@ def ICarryBorrow : BuiltinGroup;
 def ExtendedBitOps : BuiltinGroup;
 def BindlessINTEL : BuiltinGroup;
 def TernaryBitwiseINTEL : BuiltinGroup;
+def Block2DLoadStore : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -687,15 +688,15 @@ defm : DemangledNativeBuiltin<"__spirv_Load", OpenCL_std, LoadStore, 1, 3, OpLoa
 defm : DemangledNativeBuiltin<"__spirv_Store", OpenCL_std, LoadStore, 2, 4, OpStore>;
 
 // Address Space Qualifier Functions/Pointers Conversion Instructions:
-defm : DemangledNativeBuiltin<"to_global", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"to_local", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"to_private", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"to_global", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"to_local", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"to_private", OpenCL_std, CastToPtr, 1, 1, OpGenericCastToPtrExplicit>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
-defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtrExplicit>;
+defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtrExplicit_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtrExplicit>;
 
 // Cooperative Matrix builtin records:
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadKHR", OpenCL_std, CoopMatr, 2, 4, OpCooperativeMatrixLoadKHR>;
@@ -717,6 +718,13 @@ defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSampledImageINTEL", OpenCL
 
 // SPV_INTEL_ternary_bitwise_function builtin records:
 defm : DemangledNativeBuiltin<"__spirv_BitwiseFunctionINTEL", OpenCL_std, TernaryBitwiseINTEL, 4, 4, OpBitwiseFunctionINTEL>;
+
+// SPV_INTEL_2d_block_io builtin records
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockLoadINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransposeINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockLoadTransposeINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockLoadTransformINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockLoadTransformINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockPrefetchINTEL", OpenCL_std, Block2DLoadStore, 9, 9, OpSubgroup2DBlockPrefetchINTEL>;
+defm : DemangledNativeBuiltin<"__spirv_Subgroup2DBlockStoreINTEL", OpenCL_std, Block2DLoadStore, 10, 10, OpSubgroup2DBlockStoreINTEL>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
@@ -763,6 +771,7 @@ class GroupBuiltin<string name, Op operation> {
   bit NoGroupOperation = !or(IsElect, IsAllOrAny, IsAllEqual,
                              IsBallot, IsInverseBallot,
                              IsBallotBitExtract, IsBallotFindBit,
+                             !eq(operation, OpSubgroupMatrixMultiplyAccumulateINTEL),
                              !eq(operation, OpGroupNonUniformShuffle),
                              !eq(operation, OpGroupNonUniformShuffleXor),
                              !eq(operation, OpGroupNonUniformShuffleUp),
@@ -846,6 +855,9 @@ defm : DemangledGroupBuiltin<"group_ballot_find_lsb", OnlySub, OpGroupNonUniform
 defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotFindLSB", 2, 2, OpGroupNonUniformBallotFindLSB>;
 defm : DemangledGroupBuiltin<"group_ballot_find_msb", OnlySub, OpGroupNonUniformBallotFindMSB>;
 defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotFindMSB", 2, 2, OpGroupNonUniformBallotFindMSB>;
+
+// SPV_INTEL_subgroup_matrix_multiply_accumulate
+defm : DemangledGroupBuiltinWrapper<"__spirv_SubgroupMatrixMultiplyAccumulateINTEL", 4, 5, OpSubgroupMatrixMultiplyAccumulateINTEL>;
 
 // cl_khr_subgroup_shuffle
 defm : DemangledGroupBuiltin<"group_shuffle", OnlySub, OpGroupNonUniformShuffle>;
