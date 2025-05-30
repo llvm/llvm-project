@@ -586,6 +586,10 @@ v_sin_bf16 v127, -|v127| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi
 // GFX1250: v_sin_bf16_dpp v127, -|v127| row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xfa,0xfc,0xfe,0x7e,0x7f,0x6f,0x35,0x30]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
+v_sin_bf16 v5.h, v1.h quad_perm:[3,2,1,0]
+// GFX1250: v_sin_bf16_dpp v5.h, v1.h quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xfc,0x0a,0x7f,0x81,0x1b,0x00,0xff]
+// GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
 v_cos_bf16 v5, v1 quad_perm:[3,2,1,0]
 // GFX1250: v_cos_bf16_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xfe,0x0a,0x7e,0x01,0x1b,0x00,0xff]
 // GFX12-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU

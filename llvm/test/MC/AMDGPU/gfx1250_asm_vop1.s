@@ -499,6 +499,9 @@ v_sin_bf16 v5, src_scc
 v_sin_bf16 v127, 0x8000
 // GFX1250: v_sin_bf16_e32 v127, 0x8000             ; encoding: [0xff,0xfc,0xfe,0x7e,0x00,0x80,0x00,0x00]
 
+v_sin_bf16 v5.h, v1.h
+// GFX1250: v_sin_bf16_e32 v5.h, v1.h               ; encoding: [0x81,0xfd,0x0a,0x7f]
+
 v_cos_bf16 v5, v1
 // GFX1250: v_cos_bf16_e32 v5, v1                   ; encoding: [0x01,0xff,0x0a,0x7e]
 

@@ -1183,7 +1183,7 @@ defm V_SQRT_BF16             : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07a>;
 defm V_RSQ_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07b>;
 defm V_LOG_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07c>;
 defm V_EXP_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07d>;
-defm V_SIN_BF16_fake16       : VOP1_Real_FULL_t16_gfx1250<0x07e>;
+defm V_SIN_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x07e>;
 defm V_COS_BF16_fake16       : VOP1_Real_FULL_t16_gfx1250<0x07f>;
 
 //===----------------------------------------------------------------------===//
