@@ -82,7 +82,6 @@
 
 #include <cstdio>
 
-#include <mutex>
 #include <optional>
 
 using namespace lldb;
