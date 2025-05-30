@@ -8,35 +8,35 @@
 int a[10];
 // CIR: cir.global external @a = #cir.zero : !cir.array<!s32i x 10>
 
-// LLVM: @a = dso_local global [10 x i32] zeroinitializer
+// LLVM: @a = global [10 x i32] zeroinitializer
 
 // OGCG: @a = global [10 x i32] zeroinitializer
 
 int aa[10][5];
 // CIR: cir.global external @aa = #cir.zero : !cir.array<!cir.array<!s32i x 5> x 10>
 
-// LLVM: @aa = dso_local global [10 x [5 x i32]] zeroinitializer
+// LLVM: @aa = global [10 x [5 x i32]] zeroinitializer
 
 // OGCG: @aa = global [10 x [5 x i32]] zeroinitializer
 
 int c[10] = {};
 // CIR: cir.global external @c = #cir.zero : !cir.array<!s32i x 10>
 
-// LLVM: @c = dso_local global [10 x i32] zeroinitializer
+// LLVM: @c = global [10 x i32] zeroinitializer
 
 // OGCG: @c = global [10 x i32] zeroinitializer
 
 int d[3] = {1, 2, 3};
 // CIR: cir.global external @d = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 3>
 
-// LLVM: @d = dso_local global [3 x i32] [i32 1, i32 2, i32 3]
+// LLVM: @d = global [3 x i32] [i32 1, i32 2, i32 3]
 
 // OGCG: @d = global [3 x i32] [i32 1, i32 2, i32 3]
 
 int dd[3][2] = {{1, 2}, {3, 4}, {5, 6}};
 // CIR: cir.global external @dd = #cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<5> : !s32i, #cir.int<6> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 3>
 
-// LLVM: @dd = dso_local global [3 x [2 x i32]] [
+// LLVM: @dd = global [3 x [2 x i32]] [
 // LLVM: [2 x i32] [i32 1, i32 2], [2 x i32]
 // LLVM: [i32 3, i32 4], [2 x i32] [i32 5, i32 6]]
 
@@ -47,23 +47,25 @@ int dd[3][2] = {{1, 2}, {3, 4}, {5, 6}};
 int e[10] = {1, 2};
 // CIR: cir.global external @e = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>
 
-// LLVM: @e = dso_local global [10 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
+// LLVM: @e = global [10 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0]
+
+// OGCG: @e = global <{ i32, i32, [8 x i32] }> <{ i32 1, i32 2, [8 x i32] zeroinitializer }>
 
 int f[5] = {1, 2};
 // CIR: cir.global external @f = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.array<!s32i x 5>
 
-// LLVM: @f = dso_local global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
+// LLVM: @f = global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
 
 // OGCG: @f = global [5 x i32] [i32 1, i32 2, i32 0, i32 0, i32 0]
 
 extern int b[10];
-// CIR: cir.global external @b : !cir.array<!s32i x 10>
-// LLVM: @b = external dso_local global [10 x i32]
+// CIR: cir.global "private" external @b : !cir.array<!s32i x 10>
+// LLVM: @b = external global [10 x i32]
 // OGCG: @b = external global [10 x i32]
 
 extern int bb[10][5];
-// CIR: cir.global external @bb : !cir.array<!cir.array<!s32i x 5> x 10>
-// LLVM: @bb = external dso_local global [10 x [5 x i32]]
+// CIR: cir.global "private" external @bb : !cir.array<!cir.array<!s32i x 5> x 10>
+// LLVM: @bb = external global [10 x [5 x i32]]
 // OGCG: @bb = external global [10 x [5 x i32]]
 
 // This function is only here to make sure the external globals are emitted.
