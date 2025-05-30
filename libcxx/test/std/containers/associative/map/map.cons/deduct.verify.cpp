@@ -115,6 +115,5 @@ int main(int, char**) {
     std::map m(arr);
     // expected-error-re@-1{{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}map'}}
   }
-  
   return 0;
 }
