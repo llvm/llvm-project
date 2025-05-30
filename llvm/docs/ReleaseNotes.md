@@ -201,6 +201,7 @@ Changes to the RISC-V Backend
 * Adds experimental assembler support for the SiFive Xsfmm* Attached Matrix
   Extensions.
 * `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
+* The `Shlcofideleg` extension was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------

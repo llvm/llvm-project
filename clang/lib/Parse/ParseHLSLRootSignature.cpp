@@ -376,6 +376,28 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
 
   Sampler.Reg = Params->Reg.value();
 
+  // Fill in optional values
+  if (Params->AddressU.has_value())
+    Sampler.AddressU = Params->AddressU.value();
+
+  if (Params->AddressV.has_value())
+    Sampler.AddressV = Params->AddressV.value();
+
+  if (Params->AddressW.has_value())
+    Sampler.AddressW = Params->AddressW.value();
+
+  if (Params->MipLODBias.has_value())
+    Sampler.MipLODBias = Params->MipLODBias.value();
+
+  if (Params->MaxAnisotropy.has_value())
+    Sampler.MaxAnisotropy = Params->MaxAnisotropy.value();
+
+  if (Params->MinLOD.has_value())
+    Sampler.MinLOD = Params->MinLOD.value();
+
+  if (Params->MaxLOD.has_value())
+    Sampler.MaxLOD = Params->MaxLOD.value();
+
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
                            /*param of=*/TokenKind::kw_StaticSampler))
@@ -661,6 +683,125 @@ RootSignatureParser::parseStaticSamplerParams() {
         return std::nullopt;
       Params.Reg = Reg;
     }
+
+    // `addressU` `=` TEXTURE_ADDRESS
+    if (tryConsumeExpectedToken(TokenKind::kw_addressU)) {
+      if (Params.AddressU.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto AddressU = parseTextureAddressMode();
+      if (!AddressU.has_value())
+        return std::nullopt;
+      Params.AddressU = AddressU;
+    }
+
+    // `addressV` `=` TEXTURE_ADDRESS
+    if (tryConsumeExpectedToken(TokenKind::kw_addressV)) {
+      if (Params.AddressV.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto AddressV = parseTextureAddressMode();
+      if (!AddressV.has_value())
+        return std::nullopt;
+      Params.AddressV = AddressV;
+    }
+
+    // `addressW` `=` TEXTURE_ADDRESS
+    if (tryConsumeExpectedToken(TokenKind::kw_addressW)) {
+      if (Params.AddressW.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto AddressW = parseTextureAddressMode();
+      if (!AddressW.has_value())
+        return std::nullopt;
+      Params.AddressW = AddressW;
+    }
+
+    // `mipLODBias` `=` NUMBER
+    if (tryConsumeExpectedToken(TokenKind::kw_mipLODBias)) {
+      if (Params.MipLODBias.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto MipLODBias = parseFloatParam();
+      if (!MipLODBias.has_value())
+        return std::nullopt;
+      Params.MipLODBias = MipLODBias;
+    }
+
+    // `maxAnisotropy` `=` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::kw_maxAnisotropy)) {
+      if (Params.MaxAnisotropy.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto MaxAnisotropy = parseUIntParam();
+      if (!MaxAnisotropy.has_value())
+        return std::nullopt;
+      Params.MaxAnisotropy = MaxAnisotropy;
+    }
+
+    // `minLOD` `=` NUMBER
+    if (tryConsumeExpectedToken(TokenKind::kw_minLOD)) {
+      if (Params.MinLOD.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto MinLOD = parseFloatParam();
+      if (!MinLOD.has_value())
+        return std::nullopt;
+      Params.MinLOD = MinLOD;
+    }
+
+    // `maxLOD` `=` NUMBER
+    if (tryConsumeExpectedToken(TokenKind::kw_maxLOD)) {
+      if (Params.MaxLOD.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto MaxLOD = parseFloatParam();
+      if (!MaxLOD.has_value())
+        return std::nullopt;
+      Params.MaxLOD = MaxLOD;
+    }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   return Params;
@@ -709,6 +850,39 @@ std::optional<Register> RootSignatureParser::parseRegister() {
   return Reg;
 }
 
+std::optional<float> RootSignatureParser::parseFloatParam() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+  // Consume sign modifier
+  bool Signed =
+      tryConsumeExpectedToken({TokenKind::pu_plus, TokenKind::pu_minus});
+  bool Negated = Signed && CurToken.TokKind == TokenKind::pu_minus;
+
+  // DXC will treat a postive signed integer as unsigned
+  if (!Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
+    std::optional<uint32_t> UInt = handleUIntLiteral();
+    if (!UInt.has_value())
+      return std::nullopt;
+    return float(UInt.value());
+  }
+
+  if (Negated && tryConsumeExpectedToken(TokenKind::int_literal)) {
+    std::optional<int32_t> Int = handleIntLiteral(Negated);
+    if (!Int.has_value())
+      return std::nullopt;
+    return float(Int.value());
+  }
+
+  if (tryConsumeExpectedToken(TokenKind::float_literal)) {
+    std::optional<float> Float = handleFloatLiteral(Negated);
+    if (!Float.has_value())
+      return std::nullopt;
+    return Float.value();
+  }
+
+  return std::nullopt;
+}
+
 std::optional<llvm::hlsl::rootsig::ShaderVisibility>
 RootSignatureParser::parseShaderVisibility() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
@@ -726,6 +900,32 @@ RootSignatureParser::parseShaderVisibility() {
 #define SHADER_VISIBILITY_ENUM(NAME, LIT)                                      \
   case TokenKind::en_##NAME:                                                   \
     return ShaderVisibility::NAME;                                             \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  default:
+    llvm_unreachable("Switch for consumed enum token was not provided");
+  }
+
+  return std::nullopt;
+}
+
+std::optional<llvm::hlsl::rootsig::TextureAddressMode>
+RootSignatureParser::parseTextureAddressMode() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind Expected[] = {
+#define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  if (!tryConsumeExpectedToken(Expected))
+    return std::nullopt;
+
+  switch (CurToken.TokKind) {
+#define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT)                                   \
+  case TokenKind::en_##NAME:                                                   \
+    return TextureAddressMode::NAME;                                           \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
@@ -819,20 +1019,119 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
                                       PP.getSourceManager(), PP.getLangOpts(),
                                       PP.getTargetInfo(), PP.getDiagnostics());
   if (Literal.hadError)
-    return true; // Error has already been reported so just return
+    return std::nullopt; // Error has already been reported so just return
 
-  assert(Literal.isIntegerLiteral() && "IsNumberChar will only support digits");
+  assert(Literal.isIntegerLiteral() &&
+         "NumSpelling can only consist of digits");
 
-  llvm::APSInt Val = llvm::APSInt(32, false);
+  llvm::APSInt Val(32, /*IsUnsigned=*/true);
   if (Literal.GetIntegerValue(Val)) {
     // Report that the value has overflowed
     PP.getDiagnostics().Report(CurToken.TokLoc,
                                diag::err_hlsl_number_literal_overflow)
-        << 0 << CurToken.NumSpelling;
+        << /*integer type*/ 0 << /*is signed*/ 0;
     return std::nullopt;
   }
 
   return Val.getExtValue();
+}
+
+std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
+  // Parse the numeric value and do semantic checks on its specification
+  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
+                                      PP.getSourceManager(), PP.getLangOpts(),
+                                      PP.getTargetInfo(), PP.getDiagnostics());
+  if (Literal.hadError)
+    return std::nullopt; // Error has already been reported so just return
+
+  assert(Literal.isIntegerLiteral() &&
+         "NumSpelling can only consist of digits");
+
+  llvm::APSInt Val(32, /*IsUnsigned=*/true);
+  // GetIntegerValue will overwrite Val from the parsed Literal and return
+  // true if it overflows as a 32-bit unsigned int
+  bool Overflowed = Literal.GetIntegerValue(Val);
+
+  // So we then need to check that it doesn't overflow as a 32-bit signed int:
+  int64_t MaxNegativeMagnitude = -int64_t(std::numeric_limits<int32_t>::min());
+  Overflowed |= (Negated && MaxNegativeMagnitude < Val.getExtValue());
+
+  int64_t MaxPositiveMagnitude = int64_t(std::numeric_limits<int32_t>::max());
+  Overflowed |= (!Negated && MaxPositiveMagnitude < Val.getExtValue());
+
+  if (Overflowed) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*integer type*/ 0 << /*is signed*/ 1;
+    return std::nullopt;
+  }
+
+  if (Negated)
+    Val = -Val;
+
+  return int32_t(Val.getExtValue());
+}
+
+std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
+  // Parse the numeric value and do semantic checks on its specification
+  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
+                                      PP.getSourceManager(), PP.getLangOpts(),
+                                      PP.getTargetInfo(), PP.getDiagnostics());
+  if (Literal.hadError)
+    return std::nullopt; // Error has already been reported so just return
+
+  assert(Literal.isFloatingLiteral() &&
+         "NumSpelling consists only of [0-9.ef+-]. Any malformed NumSpelling "
+         "will be caught and reported by NumericLiteralParser.");
+
+  // DXC used `strtod` to convert the token string to a float which corresponds
+  // to:
+  auto DXCSemantics = llvm::APFloat::Semantics::S_IEEEdouble;
+  auto DXCRoundingMode = llvm::RoundingMode::NearestTiesToEven;
+
+  llvm::APFloat Val(llvm::APFloat::EnumToSemantics(DXCSemantics));
+  llvm::APFloat::opStatus Status(Literal.GetFloatValue(Val, DXCRoundingMode));
+
+  // Note: we do not error when opStatus::opInexact by itself as this just
+  // denotes that rounding occured but not that it is invalid
+  assert(!(Status & llvm::APFloat::opStatus::opInvalidOp) &&
+         "NumSpelling consists only of [0-9.ef+-]. Any malformed NumSpelling "
+         "will be caught and reported by NumericLiteralParser.");
+
+  assert(!(Status & llvm::APFloat::opStatus::opDivByZero) &&
+         "It is not possible for a division to be performed when "
+         "constructing an APFloat from a string");
+
+  if (Status & llvm::APFloat::opStatus::opUnderflow) {
+    // Report that the value has underflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_underflow);
+    return std::nullopt;
+  }
+
+  if (Status & llvm::APFloat::opStatus::opOverflow) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*float type*/ 1;
+    return std::nullopt;
+  }
+
+  if (Negated)
+    Val = -Val;
+
+  double DoubleVal = Val.convertToDouble();
+  double FloatMax = double(std::numeric_limits<float>::max());
+  if (FloatMax < DoubleVal || DoubleVal < -FloatMax) {
+    // Report that the value has overflowed
+    PP.getDiagnostics().Report(CurToken.TokLoc,
+                               diag::err_hlsl_number_literal_overflow)
+        << /*float type*/ 1;
+    return std::nullopt;
+  }
+
+  return static_cast<float>(DoubleVal);
 }
 
 bool RootSignatureParser::verifyZeroFlag() {
