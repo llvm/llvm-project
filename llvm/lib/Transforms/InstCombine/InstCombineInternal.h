@@ -812,6 +812,12 @@ public:
       return takeLog2(Op, /*Depth=*/0, AssumeNonZero, /*DoFold=*/true);
     return nullptr;
   }
+
+  /// Try to strip off sign bit preserving/flipping operations.
+  /// The second return value indicates whether we should flip the sign bit
+  /// first.
+  std::pair<Value *, bool>
+  stripSignBitPreservingOrFlippingOperations(Value *X, unsigned Depth);
 };
 
 class Negator final {
