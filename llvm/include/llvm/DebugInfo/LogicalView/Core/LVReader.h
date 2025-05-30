@@ -133,9 +133,8 @@ protected:
   // Only for ELF format. The CodeView is handled in a different way.
   LVSectionIndex DotTextSectionIndex = UndefinedSectionIndex;
 
-  // Tombstone value. Assume 64 bits. The value is updated for each
-  // Compile Unit that is processed.
-  LVAddress TombstoneAddress = MaxAddress;
+  // The value is updated for each Compile Unit that is processed.
+  LVAddress TombstoneAddress = InvalidTombstone;
 
   // Record Compilation Unit entry.
   void addCompileUnitOffset(LVOffset Offset, LVScopeCompileUnit *CompileUnit) {
@@ -262,7 +261,10 @@ public:
   }
 
   void setTombstoneAddress(LVAddress Address) { TombstoneAddress = Address; }
-  LVAddress getTombstoneAddress() const { return TombstoneAddress; }
+  LVAddress getTombstoneAddress() const {
+    assert(TombstoneAddress != InvalidTombstone && "Invalid tombstone value");
+    return TombstoneAddress;
+  }
 
   // Access to the scopes root.
   LVScopeRoot *getScopesRoot() const { return Root; }
