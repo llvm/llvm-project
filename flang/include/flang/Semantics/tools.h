@@ -896,7 +896,7 @@ Operator OperationCode(
   }
 }
 
-template <typename T>
+template <typename T> //
 Operator OperationCode(const evaluate::Constant<T> &x) {
   return Operator::Constant;
 }

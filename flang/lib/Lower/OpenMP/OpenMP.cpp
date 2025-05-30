@@ -40,8 +40,8 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
