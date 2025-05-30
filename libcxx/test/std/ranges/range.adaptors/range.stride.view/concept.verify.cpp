@@ -11,11 +11,9 @@
 
 // template <input_range _View> requires view<_View>
 
-#include "__ranges/stride_view.h"
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
 #include "test_range.h"
-#include "types.h"
 
 template <typename I, std::ranges::range_difference_t<I> D>
 concept CanStrideView = requires { std::ranges::stride_view<I>{I{}, D}; };

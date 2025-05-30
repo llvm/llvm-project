@@ -13,7 +13,6 @@
 
 #include <ranges>
 
-#include "__ranges/stride_view.h"
 #include "test_iterators.h"
 #include "types.h"
 
