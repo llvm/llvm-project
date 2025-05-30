@@ -5460,16 +5460,10 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
 
   CGF.EmitBranch(DefaultBB);
   CGF.EmitBlock(DefaultBB, /*IsFinished=*/true);
-  assert(!LHSExprs.empty() && "PrivateVarReduction: LHSExprs is empty");
-  assert(!Privates.empty() && "PrivateVarReduction: Privates is empty");
-  assert(!ReductionOps.empty() && "PrivateVarReduction: ReductionOps is empty");
-  assert(LHSExprs.size() == Privates.size() &&
+  assert(OrgLHSExprs.size() == OrgPrivates.size() &&
          "PrivateVarReduction: Privates size mismatch");
-  assert(LHSExprs.size() == ReductionOps.size() &&
+  assert(OrgLHSExprs.size() == OrgReductionOps.size() &&
          "PrivateVarReduction: ReductionOps size mismatch");
-  assert(LHSExprs.size() == Options.IsPrivateVarReduction.size() &&
-         "PrivateVarReduction: IsPrivateVarReduction size mismatch");
-
   for (unsigned I : llvm::seq<unsigned>(
            std::min(OrgReductionOps.size(), OrgLHSExprs.size()))) {
     if (Options.IsPrivateVarReduction[I])
