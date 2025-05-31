@@ -1862,8 +1862,7 @@ static void removeBranchOnConst(VPlan &Plan) {
 
     VPBasicBlock *RemovedSucc =
         cast<VPBasicBlock>(VPBB->getSuccessors()[RemovedIdx]);
-    const auto &Preds = RemovedSucc->getPredecessors();
-    assert(count(Preds, VPBB) == 1 &&
+    assert(count(RemovedSucc->getPredecessors(), VPBB) == 1 &&
            "There must be a single edge between VPBB and its successor");
     // Values coming from VPBB into phi recipes of RemoveSucc are removed from
     // these recipes.
