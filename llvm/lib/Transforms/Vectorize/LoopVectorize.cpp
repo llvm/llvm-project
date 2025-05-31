@@ -815,7 +815,7 @@ static void debugVectorizationMessage(const StringRef Prefix,
 static OptimizationRemarkAnalysis
 createLVAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
                  Instruction *I, DebugLoc DL = {}) {
-  Value *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
+  BasicBlock *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
   // If debug location is attached to the instruction, use it. Otherwise if DL
   // was not provided, use the loop's.
   if (I && I->getDebugLoc())
