@@ -348,7 +348,8 @@ static bool Wide;
 std::string objdump::Prefix;
 uint32_t objdump::PrefixStrip;
 
-DebugVarsFormat objdump::DbgVariables = DVDisabled;
+DebugFormat objdump::DbgVariables = DVDisabled;
+DebugFormat objdump::DbgInlinedFunctions = DVDisabled;
 
 int objdump::DbgIndent = 52;
 
@@ -678,6 +679,7 @@ public:
             LiveVariablePrinter &LVP) {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printStartLine(OS, Address);
     LVP.printBetweenInsts(OS, false);
 
     printRawData(Bytes, Address.Address, OS, STI);
@@ -867,6 +869,7 @@ public:
                  LiveVariablePrinter &LVP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printStartLine(OS, Address);
     LVP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -921,6 +924,7 @@ public:
                  LiveVariablePrinter &LVP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printStartLine(OS, Address);
     LVP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -959,6 +963,7 @@ public:
                  LiveVariablePrinter &LVP) override {
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+    LVP.printStartLine(OS, Address);
     LVP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
@@ -1859,7 +1864,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   std::unique_ptr<DWARFContext> DICtx;
   LiveVariablePrinter LVP(*DT->Context->getRegisterInfo(), *DT->SubtargetInfo);
 
-  if (DbgVariables != DVDisabled) {
+  if (DbgVariables != DVDisabled || DbgInlinedFunctions != DVDisabled) {
     DICtx = DWARFContext::create(DbgObj);
     for (const std::unique_ptr<DWARFUnit> &CU : DICtx->compile_units())
       LVP.addCompileUnit(CU->getUnitDIE(false));
@@ -2333,8 +2338,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 ThisBytes.size(),
                 DT->DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
 
-          LVP.update({Index, Section.getIndex()},
-                     {Index + Size, Section.getIndex()}, Index + Size != End);
+          LVP.update({ThisAddr, Section.getIndex()},
+                     {ThisAddr + Size, Section.getIndex()},
+                     Index + Size != End);
 
           DT->InstPrinter->setCommentStream(CommentStream);
 
@@ -2542,6 +2548,10 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             ++RelCur;
           }
         }
+
+        object::SectionedAddress NextAddr = {
+            SectionAddr + Index + VMAAdjustment + Size, Section.getIndex()};
+        LVP.printEndLine(FOS, NextAddr);
 
         Index += Size;
       }
@@ -3582,13 +3592,25 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   Prefix = InputArgs.getLastArgValue(OBJDUMP_prefix).str();
   parseIntArg(InputArgs, OBJDUMP_prefix_strip, PrefixStrip);
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {
-    DbgVariables = StringSwitch<DebugVarsFormat>(A->getValue())
+    DbgVariables = StringSwitch<DebugFormat>(A->getValue())
                        .Case("ascii", DVASCII)
                        .Case("unicode", DVUnicode)
                        .Default(DVInvalid);
     if (DbgVariables == DVInvalid)
       invalidArgValue(A);
   }
+
+  if (const opt::Arg *A =
+          InputArgs.getLastArg(OBJDUMP_debug_inlined_funcs_EQ)) {
+    DbgInlinedFunctions = StringSwitch<DebugFormat>(A->getValue())
+                              .Case("ascii", DVASCII)
+                              .Case("unicode", DVUnicode)
+                              .Case("line", DVLine)
+                              .Default(DVInvalid);
+    if (DbgInlinedFunctions == DVInvalid)
+      invalidArgValue(A);
+  }
+
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_disassembler_color_EQ)) {
     DisassemblyColor = StringSwitch<ColorOutput>(A->getValue())
                            .Case("on", ColorOutput::Enable)
@@ -3599,7 +3621,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
       invalidArgValue(A);
   }
 
-  parseIntArg(InputArgs, OBJDUMP_debug_vars_indent_EQ, DbgIndent);
+  parseIntArg(InputArgs, OBJDUMP_debug_indent_EQ, DbgIndent);
 
   parseMachOOptions(InputArgs);
 

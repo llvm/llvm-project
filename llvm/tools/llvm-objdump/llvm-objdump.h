@@ -40,11 +40,12 @@ class XCOFFObjectFile;
 
 namespace objdump {
 
-enum DebugVarsFormat { DVDisabled, DVUnicode, DVASCII, DVInvalid };
+enum DebugFormat { DVDisabled, DVUnicode, DVASCII, DVLine, DVInvalid };
 
 extern bool ArchiveHeaders;
 extern int DbgIndent;
-extern DebugVarsFormat DbgVariables;
+extern DebugFormat DbgVariables;
+extern DebugFormat DbgInlinedFunctions;
 extern bool Demangle;
 extern bool Disassemble;
 extern bool DisassembleAll;

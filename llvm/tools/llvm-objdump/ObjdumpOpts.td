@@ -248,7 +248,13 @@ def debug_vars_EQ : Joined<["--"], "debug-vars=">,
   Values<"unicode,ascii">;
 def : Flag<["--"], "debug-vars">, Alias<debug_vars_EQ>, AliasArgs<["unicode"]>;
 
-def debug_vars_indent_EQ : Joined<["--"], "debug-vars-indent=">,
+def debug_inlined_funcs_EQ : Joined<["--"], "debug-inlined-funcs=">,
+  HelpText<"Print the locations of inlined functions alongside disassembly. "
+           "Supported formats: ascii, unicode (default) and line">,
+  Values<"unicode,ascii,line">;
+def : Flag<["--"], "debug-inlined-funcs">, Alias<debug_inlined_funcs_EQ>, AliasArgs<["unicode"]>;
+
+def debug_indent_EQ : Joined<["--"], "debug-indent=">,
   HelpText<"Distance to indent the source-level variable display, "
            "relative to the start of the disassembly">;
 
