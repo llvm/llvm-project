@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(wchar_t *, wmemmove,
-                   (wchar_t * dest, const wchar_t *src, size_t n)) {
+                   (wchar_t *dest, const wchar_t *src, size_t n)) {
   LIBC_CRASH_ON_NULLPTR(dest);
   LIBC_CRASH_ON_NULLPTR(src);
 
