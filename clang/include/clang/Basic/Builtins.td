@@ -970,6 +970,12 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Prototype = "bool(void*)";
 }
 
+def ClearPadding : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_clear_padding"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(void*)";
+}
+
 // GCC exception builtins
 def EHReturn : Builtin {
   let Spellings = ["__builtin_eh_return"];
