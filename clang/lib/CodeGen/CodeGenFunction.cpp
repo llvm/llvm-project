@@ -1633,10 +1633,10 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
         !CGM.MayDropFunctionReturn(FD->getASTContext(), FD->getReturnType());
     if (SanOpts.has(SanitizerKind::Return)) {
       auto CheckOrdinal = SanitizerKind::SO_Return;
-      SanitizerScope SanScope(this, {CheckOrdinal});
+      auto CheckHandler = SanitizerHandler::MissingReturn;
+      SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
       llvm::Value *IsFalse = Builder.getFalse();
-      EmitCheck(std::make_pair(IsFalse, CheckOrdinal),
-                SanitizerHandler::MissingReturn,
+      EmitCheck(std::make_pair(IsFalse, CheckOrdinal), CheckHandler,
                 EmitCheckSourceLocation(FD->getLocation()), {});
     } else if (ShouldEmitUnreachable) {
       if (CGM.getCodeGenOpts().OptimizationLevel == 0)
@@ -2539,7 +2539,8 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
           //   greater than zero.
           if (SanOpts.has(SanitizerKind::VLABound)) {
             auto CheckOrdinal = SanitizerKind::SO_VLABound;
-            SanitizerScope SanScope(this, {CheckOrdinal});
+            auto CheckHandler = SanitizerHandler::VLABoundNotPositive;
+            SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
             llvm::Value *Zero = llvm::Constant::getNullValue(size->getType());
             clang::QualType SEType = sizeExpr->getType();
             llvm::Value *CheckCondition =
@@ -2550,7 +2551,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
                 EmitCheckSourceLocation(sizeExpr->getBeginLoc()),
                 EmitCheckTypeDescriptor(SEType)};
             EmitCheck(std::make_pair(CheckCondition, CheckOrdinal),
-                      SanitizerHandler::VLABoundNotPositive, StaticArgs, size);
+                      CheckHandler, StaticArgs, size);
           }
 
           // Always zexting here would be wrong if it weren't
@@ -2753,15 +2754,20 @@ Address CodeGenFunction::EmitFieldAnnotations(const FieldDecl *D,
 
 CodeGenFunction::CGCapturedStmtInfo::~CGCapturedStmtInfo() { }
 
-CodeGenFunction::SanitizerScope::SanitizerScope(
-    CodeGenFunction *CGF, ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals)
+CodeGenFunction::SanitizerScope::SanitizerScope(CodeGenFunction *CGF)
     : CGF(CGF) {
   assert(!CGF->IsSanitizerScope);
   CGF->IsSanitizerScope = true;
 
   assert(!this->ApplyTrapDI);
-  this->ApplyTrapDI =
-      new ApplyDebugLocation(*CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals));
+}
+
+CodeGenFunction::SanitizerScope::SanitizerScope(
+    CodeGenFunction *CGF, ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler)
+    : SanitizerScope(CGF) {
+  this->ApplyTrapDI = new ApplyDebugLocation(
+      *CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler));
 }
 
 CodeGenFunction::SanitizerScope::~SanitizerScope() {
@@ -3202,7 +3208,8 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
 
   {
     auto CheckOrdinal = SanitizerKind::SO_Alignment;
-    SanitizerScope SanScope(this, {CheckOrdinal});
+    auto CheckHandler = SanitizerHandler::AlignmentAssumption;
+    SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
 
     if (!OffsetValue)
       OffsetValue = Builder.getInt1(false); // no offset.
@@ -3211,8 +3218,8 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
                                     EmitCheckSourceLocation(SecondaryLoc),
                                     EmitCheckTypeDescriptor(Ty)};
     llvm::Value *DynamicData[] = {Ptr, Alignment, OffsetValue};
-    EmitCheck({std::make_pair(TheCheck, CheckOrdinal)},
-              SanitizerHandler::AlignmentAssumption, StaticData, DynamicData);
+    EmitCheck({std::make_pair(TheCheck, CheckOrdinal)}, CheckHandler,
+              StaticData, DynamicData);
   }
 
   // We are now in the (new, empty) "cont" basic block.

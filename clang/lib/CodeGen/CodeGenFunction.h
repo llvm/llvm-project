@@ -602,8 +602,10 @@ public:
     void *ApplyTrapDI = nullptr;
 
   public:
+    SanitizerScope(CodeGenFunction *CGF);
     SanitizerScope(CodeGenFunction *CGF,
-                   ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals);
+                   ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+                   SanitizerHandler Handler);
     ~SanitizerScope();
   };
 
@@ -3398,8 +3400,9 @@ public:
   /// Returns debug info, with additional annotation if
   /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
   /// any of the ordinals.
-  llvm::DILocation *SanitizerAnnotateDebugInfo(
-      ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals);
+  llvm::DILocation *
+  SanitizerAnnotateDebugInfo(ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+                             SanitizerHandler Handler);
 
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);

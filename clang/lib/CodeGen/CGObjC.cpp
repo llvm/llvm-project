@@ -1968,7 +1968,8 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
         ObjPtrTy ? ObjPtrTy->getInterfaceType() : nullptr;
     if (InterfaceTy) {
       auto CheckOrdinal = SanitizerKind::SO_ObjCCast;
-      SanitizerScope SanScope(this, {CheckOrdinal});
+      auto CheckHandler = SanitizerHandler::InvalidObjCCast;
+      SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
       auto &C = CGM.getContext();
       assert(InterfaceTy->getDecl() && "No decl for ObjC interface type");
       Selector IsKindOfClassSel = GetUnarySelector("isKindOfClass", C);
@@ -1985,7 +1986,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
       llvm::Constant *StaticData[] = {
           EmitCheckSourceLocation(S.getBeginLoc()),
           EmitCheckTypeDescriptor(QualType(InterfaceTy, 0))};
-      EmitCheck({{IsClass, CheckOrdinal}}, SanitizerHandler::InvalidObjCCast,
+      EmitCheck({{IsClass, CheckOrdinal}}, CheckHandler,
                 ArrayRef<llvm::Constant *>(StaticData), CurrentItem);
     }
   }

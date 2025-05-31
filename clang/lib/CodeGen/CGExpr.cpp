@@ -748,9 +748,11 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   if (Ty.isVolatileQualified())
     return;
 
-  SanitizerScope SanScope(
-      this, {SanitizerKind::SO_Null, SanitizerKind::SO_ObjectSize,
-             SanitizerKind::SO_Alignment, SanitizerKind::SO_Vptr});
+  auto CheckHandler = SanitizerHandler::TypeMismatch;
+  SanitizerScope SanScope(this,
+                          {SanitizerKind::SO_Null, SanitizerKind::SO_ObjectSize,
+                           SanitizerKind::SO_Alignment, SanitizerKind::SO_Vptr},
+                          CheckHandler);
 
   SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>, 3>
       Checks;
@@ -846,8 +848,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
         EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(Ty),
         llvm::ConstantInt::get(Int8Ty, AlignVal ? llvm::Log2(*AlignVal) : 1),
         llvm::ConstantInt::get(Int8Ty, TCK)};
-    EmitCheck(Checks, SanitizerHandler::TypeMismatch, StaticData,
-              PtrAsInt ? PtrAsInt : Ptr);
+    EmitCheck(Checks, CheckHandler, StaticData, PtrAsInt ? PtrAsInt : Ptr);
   }
 
   // If possible, check that the vptr indicates that there is a subobject of
@@ -991,7 +992,7 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
     if (CE->getCastKind() == CK_ArrayToPointerDecay &&
         !CE->getSubExpr()->isFlexibleArrayMemberLike(CGF.getContext(),
                                                      StrictFlexArraysLevel)) {
-      CodeGenFunction::SanitizerScope SanScope(&CGF, {});
+      CodeGenFunction::SanitizerScope SanScope(&CGF);
 
       IndexedType = CE->getSubExpr()->getType();
       const ArrayType *AT = IndexedType->castAsArrayTypeUnsafe();
@@ -1004,7 +1005,7 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
     }
   }
 
-  CodeGenFunction::SanitizerScope SanScope(&CGF, {});
+  CodeGenFunction::SanitizerScope SanScope(&CGF);
 
   QualType EltTy{Base->getType()->getPointeeOrArrayElementType(), 0};
   if (llvm::Value *POS = CGF.LoadPassedObjectSize(Base, EltTy)) {
@@ -1227,7 +1228,8 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
     return;
 
   auto CheckKind = SanitizerKind::SO_ArrayBounds;
-  SanitizerScope SanScope(this, {CheckKind});
+  auto CheckHandler = SanitizerHandler::OutOfBounds;
+  SanitizerScope SanScope(this, {CheckKind}, CheckHandler);
 
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
   llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
@@ -1240,25 +1242,33 @@ void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
   };
   llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexVal, BoundVal)
                                 : Builder.CreateICmpULE(IndexVal, BoundVal);
-  EmitCheck(std::make_pair(Check, CheckKind), SanitizerHandler::OutOfBounds,
-            StaticData, Index);
+  EmitCheck(std::make_pair(Check, CheckKind), CheckHandler, StaticData, Index);
 }
 
 llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
-    ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals) {
+    ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler) {
+  std::string Label;
+  switch (Handler) {
+#define SANITIZER_CHECK(Enum, Name, Version)                                   \
+  case Enum:                                                                   \
+    Label = "__ubsan_check_" #Name;                                            \
+    break;
+
+    LIST_SANITIZER_CHECKS
+#undef SANITIZER_CHECK
+  };
+
   llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
 
-  // TODO: the annotation could be more precise:
-  // 1) use the ordinal name if there is only one ordinal; and/or,
-  // 2) use the overarching SanitizerHandler if there are multiple ordinals
-  //    (this may be confusing to users)
+  // TODO: the annotation could be more precise e.g.,
+  //       use the ordinal name if there is only one ordinal
   for (auto Ord : Ordinals) {
     // TODO: deprecate ClArrayBoundsPseudoFn
     if (((ClArrayBoundsPseudoFn && Ord == SanitizerKind::SO_ArrayBounds) ||
          CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(Ord)) &&
         CheckDI) {
-      CheckDI = getDebugInfo()->CreateSyntheticInlineAt(
-          CheckDI, "__ubsan_check_debug_info_anchor");
+      CheckDI = getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
       break;
     }
   }
@@ -1991,7 +2001,8 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
       NeedsEnumCheck ? SanitizerKind::SO_Enum : SanitizerKind::SO_Bool;
 
   auto &Ctx = getLLVMContext();
-  SanitizerScope SanScope(this, {Kind});
+  auto CheckHandler = SanitizerHandler::LoadInvalidValue;
+  SanitizerScope SanScope(this, {Kind}, CheckHandler);
   llvm::Value *Check;
   --End;
   if (!Min) {
@@ -2005,8 +2016,7 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   }
   llvm::Constant *StaticArgs[] = {EmitCheckSourceLocation(Loc),
                                   EmitCheckTypeDescriptor(Ty)};
-  EmitCheck(std::make_pair(Check, Kind), SanitizerHandler::LoadInvalidValue,
-            StaticArgs, Value);
+  EmitCheck(std::make_pair(Check, Kind), CheckHandler, StaticArgs, Value);
   return true;
 }
 
@@ -3925,14 +3935,17 @@ void CodeGenFunction::EmitCfiCheckStub() {
 // can be nullptr if the calling module has -fsanitize-trap behavior for this
 // check kind; in this case __cfi_check_fail traps as well.
 void CodeGenFunction::EmitCfiCheckFail() {
+  auto CheckHandler = SanitizerHandler::CFICheckFail;
   // TODO: the SanitizerKind is not yet determined for this check (and might
   // not even be available, if Data == nullptr). However, we still want to
   // annotate the instrumentation. We approximate this by using all the CFI
   // kinds.
   SanitizerScope SanScope(
-      this, {SanitizerKind::SO_CFIVCall, SanitizerKind::SO_CFINVCall,
-             SanitizerKind::SO_CFIDerivedCast,
-             SanitizerKind::SO_CFIUnrelatedCast, SanitizerKind::SO_CFIICall});
+      this,
+      {SanitizerKind::SO_CFIVCall, SanitizerKind::SO_CFINVCall,
+       SanitizerKind::SO_CFIDerivedCast, SanitizerKind::SO_CFIUnrelatedCast,
+       SanitizerKind::SO_CFIICall},
+      CheckHandler);
   FunctionArgList Args;
   ImplicitParamDecl ArgData(getContext(), getContext().VoidPtrTy,
                             ImplicitParamKind::Other);
@@ -4019,7 +4032,7 @@ void CodeGenFunction::EmitCfiCheckFail() {
       // Although the compiler allows SanitizeMergeHandlers to be set
       // independently of CGM.getLangOpts().Sanitize, Driver/SanitizerArgs.cpp
       // requires that SanitizeMergeHandlers is a subset of Sanitize.
-      EmitTrapCheck(Cond, SanitizerHandler::CFICheckFail, /*NoMerge=*/false);
+      EmitTrapCheck(Cond, CheckHandler, /*NoMerge=*/false);
   }
 
   FinishFunction();
@@ -4031,11 +4044,11 @@ void CodeGenFunction::EmitCfiCheckFail() {
 void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
   if (SanOpts.has(SanitizerKind::Unreachable)) {
     auto CheckOrdinal = SanitizerKind::SO_Unreachable;
-    SanitizerScope SanScope(this, {CheckOrdinal});
+    auto CheckHandler = SanitizerHandler::BuiltinUnreachable;
+    SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
     EmitCheck(std::make_pair(static_cast<llvm::Value *>(Builder.getFalse()),
                              CheckOrdinal),
-              SanitizerHandler::BuiltinUnreachable,
-              EmitCheckSourceLocation(Loc), {});
+              CheckHandler, EmitCheckSourceLocation(Loc), {});
   }
   Builder.CreateUnreachable();
 }
@@ -6273,7 +6286,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     if (llvm::Constant *PrefixSig =
             CGM.getTargetCodeGenInfo().getUBSanFunctionSignature(CGM)) {
       auto CheckOrdinal = SanitizerKind::SO_Function;
-      SanitizerScope SanScope(this, {CheckOrdinal});
+      auto CheckHandler = SanitizerHandler::FunctionTypeMismatch;
+      SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
       auto *TypeHash = getUBSanFunctionTypeHash(PointeeType);
 
       llvm::Type *PrefixSigType = PrefixSig->getType();
@@ -6333,9 +6347,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
           Builder.CreateICmpEQ(CalleeTypeHash, TypeHash);
       llvm::Constant *StaticData[] = {EmitCheckSourceLocation(E->getBeginLoc()),
                                       EmitCheckTypeDescriptor(CalleeType)};
-      EmitCheck(std::make_pair(CalleeTypeHashMatch, CheckOrdinal),
-                SanitizerHandler::FunctionTypeMismatch, StaticData,
-                {CalleePtr});
+      EmitCheck(std::make_pair(CalleeTypeHashMatch, CheckOrdinal), CheckHandler,
+                StaticData, {CalleePtr});
 
       Builder.CreateBr(Cont);
       EmitBlock(Cont);
@@ -6353,7 +6366,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   if (SanOpts.has(SanitizerKind::CFIICall) &&
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
     auto CheckOrdinal = SanitizerKind::SO_CFIICall;
-    SanitizerScope SanScope(this, {CheckOrdinal});
+    auto CheckHandler = SanitizerHandler::CFICheckFail;
+    SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
 
     llvm::Metadata *MD;
@@ -6378,9 +6392,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       EmitCfiSlowPathCheck(CheckOrdinal, TypeTest, CrossDsoTypeId, CalleePtr,
                            StaticData);
     } else {
-      EmitCheck(std::make_pair(TypeTest, CheckOrdinal),
-                SanitizerHandler::CFICheckFail, StaticData,
-                {CalleePtr, llvm::UndefValue::get(IntPtrTy)});
+      EmitCheck(std::make_pair(TypeTest, CheckOrdinal), CheckHandler,
+                StaticData, {CalleePtr, llvm::UndefValue::get(IntPtrTy)});
     }
   }
 

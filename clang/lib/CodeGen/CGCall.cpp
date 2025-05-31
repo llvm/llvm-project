@@ -4156,7 +4156,7 @@ void CodeGenFunction::EmitReturnValueCheck(llvm::Value *RV) {
     Handler = SanitizerHandler::NullabilityReturn;
   }
 
-  SanitizerScope SanScope(this, {CheckKind});
+  SanitizerScope SanScope(this, {CheckKind}, Handler);
 
   // Make sure the "return" source location is valid. If we're checking a
   // nullability annotation, make sure the preconditions for the check are met.
@@ -4541,7 +4541,7 @@ void CodeGenFunction::EmitNonNullArgCheck(RValue RV, QualType ArgType,
     Handler = SanitizerHandler::NullabilityArg;
   }
 
-  SanitizerScope SanScope(this, {CheckKind});
+  SanitizerScope SanScope(this, {CheckKind}, Handler);
   llvm::Value *Cond = EmitNonNullRValueCheck(RV, ArgType);
   llvm::Constant *StaticData[] = {
       EmitCheckSourceLocation(ArgLoc),
@@ -5976,7 +5976,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // attribute to insert handler calls.
       if (SanOpts.hasOneOf(SanitizerKind::Address |
                            SanitizerKind::KernelAddress)) {
-        SanitizerScope SanScope(this, {});
+        SanitizerScope SanScope(this);
         llvm::IRBuilder<>::InsertPointGuard IPGuard(Builder);
         Builder.SetInsertPoint(CI);
         auto *FnType = llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);

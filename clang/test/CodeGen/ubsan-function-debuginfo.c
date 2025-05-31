@@ -62,7 +62,7 @@ void call_prototype(void (*f)(void)) { f(); }
 // CHECK: [[META26]] = !{i32 -1056584962, i32 -747727454}
 // CHECK: [[META27]] = !DILocation(line: 0, scope: [[DBG18]])
 // CHECK: [[DBG28]] = !DILocation(line: 0, scope: [[META29:![0-9]+]], inlinedAt: [[DBG31]])
-// CHECK: [[META29]] = distinct !DISubprogram(name: "__ubsan_check_debug_info_anchor", scope: [[META6]], file: [[META6]], type: [[META30:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
+// CHECK: [[META29]] = distinct !DISubprogram(name: "__ubsan_check_function_type_mismatch", scope: [[META6]], file: [[META6]], type: [[META30:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK: [[META30]] = !DISubroutineType(types: null)
 // CHECK: [[DBG31]] = !DILocation(line: 37, column: 40, scope: [[DBG18]])
 // CHECK: [[META32]] = !{}
