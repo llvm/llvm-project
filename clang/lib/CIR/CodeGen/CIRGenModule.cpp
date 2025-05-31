@@ -317,6 +317,36 @@ cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
   return g;
 }
 
+void CIRGenModule::setCommonAttributes(GlobalDecl gd, mlir::Operation *gv) {
+  const Decl *d = gd.getDecl();
+  if (isa_and_nonnull<NamedDecl>(d))
+    setGVProperties(gv, dyn_cast<NamedDecl>(d));
+  assert(!cir::MissingFeatures::defaultVisibility());
+  assert(!cir::MissingFeatures::opGlobalUsedOrCompilerUsed());
+}
+
+void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
+  setCommonAttributes(gd, op);
+
+  assert(!cir::MissingFeatures::opGlobalUsedOrCompilerUsed());
+  assert(!cir::MissingFeatures::opGlobalSection());
+  assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
+  assert(!cir::MissingFeatures::opFuncSection());
+
+  assert(!cir::MissingFeatures::setTargetAttributes());
+}
+
+static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
+  // Set linkage and visibility in case we never see a definition.
+  LinkageInfo lv = nd->getLinkageAndVisibility();
+  // Don't set internal linkage on declarations.
+  // "extern_weak" is overloaded in LLVM; we probably should have
+  // separate linkage types for this.
+  if (isExternallyVisible(lv.getLinkage()) &&
+      (nd->hasAttr<WeakAttr>() || nd->isWeakImported()))
+    gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+}
+
 /// If the specified mangled name is not in the module,
 /// create and return an mlir GlobalOp with the specified type (TODO(cir):
 /// address space).
@@ -387,7 +417,8 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
     gv.setAlignmentAttr(getSize(astContext.getDeclAlign(d)));
     assert(!cir::MissingFeatures::opGlobalConstant());
-    assert(!cir::MissingFeatures::opGlobalLinkage());
+
+    setLinkageForGV(gv, d);
 
     if (d->getTLSKind())
       errorNYI(d->getSourceRange(), "thread local global variable");
@@ -555,8 +586,6 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     errorNYI(vd->getSourceRange(), "annotate global variable");
   }
 
-  assert(!cir::MissingFeatures::opGlobalLinkage());
-
   if (langOpts.CUDA) {
     errorNYI(vd->getSourceRange(), "CUDA global variable");
   }
@@ -577,6 +606,12 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   assert(!cir::MissingFeatures::opGlobalDLLImportExport());
   if (linkage == cir::GlobalLinkageKind::CommonLinkage)
     errorNYI(initExpr->getSourceRange(), "common linkage");
+
+  setNonAliasAttributes(vd, gv);
+
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+
+  maybeSetTrivialComdat(*vd, gv);
 }
 
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
@@ -666,6 +701,15 @@ static bool shouldBeInCOMDAT(CIRGenModule &cgm, const Decl &d) {
     return true;
   }
   llvm_unreachable("No such linkage");
+}
+
+void CIRGenModule::maybeSetTrivialComdat(const Decl &d, mlir::Operation *op) {
+  if (!shouldBeInCOMDAT(*this, d))
+    return;
+  if (auto globalOp = dyn_cast_or_null<cir::GlobalOp>(op))
+    globalOp.setComdat(true);
+
+  assert(!cir::MissingFeatures::opFuncSetComdat());
 }
 
 // TODO(CIR): this could be a common method between LLVM codegen.
@@ -830,10 +874,10 @@ CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd, bool isConstant) {
   return getCIRLinkageForDeclarator(vd, linkage, isConstant);
 }
 
-static cir::GlobalOp generateStringLiteral(mlir::Location loc,
-                                           mlir::TypedAttr c, CIRGenModule &cgm,
-                                           StringRef globalName,
-                                           CharUnits alignment) {
+static cir::GlobalOp
+generateStringLiteral(mlir::Location loc, mlir::TypedAttr c,
+                      cir::GlobalLinkageKind lt, CIRGenModule &cgm,
+                      StringRef globalName, CharUnits alignment) {
   assert(!cir::MissingFeatures::addressSpace());
 
   // Create a global variable for this string
@@ -843,7 +887,8 @@ static cir::GlobalOp generateStringLiteral(mlir::Location loc,
 
   // Set up extra information and add to the module
   gv.setAlignmentAttr(cgm.getSize(alignment));
-  assert(!cir::MissingFeatures::opGlobalLinkage());
+  gv.setLinkageAttr(
+      cir::GlobalLinkageKindAttr::get(cgm.getBuilder().getContext(), lt));
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
   CIRGenModule::setInitializer(gv, c);
@@ -907,7 +952,8 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
   mlir::Location loc = getLoc(s->getSourceRange());
   auto typedC = llvm::cast<mlir::TypedAttr>(c);
   cir::GlobalOp gv =
-      generateStringLiteral(loc, typedC, *this, uniqueName, alignment);
+      generateStringLiteral(loc, typedC, cir::GlobalLinkageKind::PrivateLinkage,
+                            *this, uniqueName, alignment);
   setDSOLocal(static_cast<mlir::Operation *>(gv));
 
   assert(!cir::MissingFeatures::sanitizers());

@@ -149,6 +149,12 @@ public:
   cir::GlobalOp getGlobalForStringLiteral(const StringLiteral *s,
                                           llvm::StringRef name = ".str");
 
+  /// Set attributes which are common to any form of a global definition (alias,
+  /// Objective-C method, function, global variable).
+  ///
+  /// NOTE: This should only be called for definitions.
+  void setCommonAttributes(GlobalDecl gd, mlir::Operation *op);
+
   const TargetCIRGenInfo &getTargetCIRGenInfo();
 
   /// Helpers to convert the presumed location of Clang's SourceLocation to an
@@ -209,6 +215,7 @@ public:
   void emitTentativeDefinition(const VarDecl *d);
 
   bool supportsCOMDAT() const;
+  void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
@@ -285,6 +292,8 @@ private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
+
+  void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 };
 } // namespace CIRGen
 
