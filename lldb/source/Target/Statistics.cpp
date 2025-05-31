@@ -467,21 +467,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   }
 
   if (include_plugins) {
-    json::Object plugin_stats;
-    for (const PluginNamespace &plugin_ns :
-         PluginManager::GetPluginNamespaces()) {
-      json::Array namespace_stats;
-
-      for (const RegisteredPluginInfo &plugin : plugin_ns.get_info()) {
-        json::Object plugin_json;
-        plugin_json.try_emplace("name", plugin.name);
-        plugin_json.try_emplace("enabled", plugin.enabled);
-
-        namespace_stats.emplace_back(std::move(plugin_json));
-      }
-      plugin_stats.try_emplace(plugin_ns.name, std::move(namespace_stats));
-    }
-    global_stats.try_emplace("plugins", std::move(plugin_stats));
+    global_stats.try_emplace("plugins", PluginManager::GetJSON());
   }
 
   return std::move(global_stats);

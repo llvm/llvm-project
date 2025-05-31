@@ -105,7 +105,7 @@ public:
   // If pattern is given it will be used to filter the plugins that are
   // are returned. The pattern filters the plugin names using the
   // PluginManager::MatchPluginName() function.
-  static llvm::json::Object GetJSON(llvm::StringRef pattern);
+  static llvm::json::Object GetJSON(llvm::StringRef pattern = "");
 
   // Return true if the pattern matches the plugin name.
   //
@@ -115,7 +115,7 @@ public:
   //
   // An empty pattern matches all plugins.
   static bool MatchPluginName(llvm::StringRef pattern,
-                              const PluginNamespace &ns,
+                              const PluginNamespace &plugin_ns,
                               const RegisteredPluginInfo &plugin);
 
   // ABI
