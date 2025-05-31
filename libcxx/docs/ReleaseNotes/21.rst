@@ -47,6 +47,7 @@ Implemented Papers
 - P1222R4: A Standard ``flat_set`` (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
 - P2897R7: ``aligned_accessor``: An mdspan accessor expressing pointer over-alignment (`Github <https://github.com/llvm/llvm-project/issues/118372>`__)
 - P3247R2: Deprecate the notion of trivial types (`Github <https://github.com/llvm/llvm-project/issues/118387>`__)
+- P3372R3: ``constexpr`` containers and adaptors (`Github <https://github.com/llvm/llvm-project/issues/128673>`__) (Only ``constexpr flat_map`` is implemented)
 
 Improvements and New Features
 -----------------------------
