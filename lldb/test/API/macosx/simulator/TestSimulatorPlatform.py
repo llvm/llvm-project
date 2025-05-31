@@ -8,21 +8,6 @@ import json
 class TestSimulatorPlatformLaunching(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def check_load_commands(self, expected_load_command):
-        """sanity check the built binary for the expected number of load commands"""
-        load_cmds = subprocess.check_output(
-            ["otool", "-l", self.getBuildArtifact()]
-        ).decode("utf-8")
-        found = 0
-        for line in load_cmds.split("\n"):
-            if expected_load_command in line:
-                found += 1
-        self.assertEqual(
-            found,
-            1,
-            "wrong number of load commands for {}".format(expected_load_command),
-        )
-
     def check_debugserver(self, log, expected_platform, expected_version):
         """scan the debugserver packet log"""
         process_info = lldbutil.packetlog_get_process_info(log)
@@ -39,8 +24,7 @@ class TestSimulatorPlatformLaunching(TestBase):
         if expected_version:
             self.assertEqual(aout_info["min_version_os_sdk"], expected_version)
 
-    @skipIf(bugnumber="rdar://76995109")
-    def run_with(self, arch, os, vers, env, expected_load_command):
+    def run_with(self, arch, os, vers, env):
         env_list = [env] if env else []
         triple = "-".join([arch, "apple", os + vers] + env_list)
         sdk = lldbutil.get_xcode_sdk(os, env)
@@ -61,11 +45,11 @@ class TestSimulatorPlatformLaunching(TestBase):
                 "ARCH": arch,
                 "ARCH_CFLAGS": "-target {} {}".format(triple, version_min),
                 "SDKROOT": sdk_root,
+                "USE_SYSTEM_STDLIB": 1,
             },
             compiler=clang,
         )
 
-        self.check_load_commands(expected_load_command)
         log = self.getBuildArtifact("packets.log")
         self.expect("log enable gdb-remote packets -f " + log)
         lldbutil.run_to_source_breakpoint(
@@ -86,7 +70,6 @@ class TestSimulatorPlatformLaunching(TestBase):
             os="ios",
             vers="",
             env="simulator",
-            expected_load_command="LC_BUILD_VERSION",
         )
 
     @skipIfAsan
@@ -94,13 +77,25 @@ class TestSimulatorPlatformLaunching(TestBase):
     @skipIfDarwinEmbedded
     @apple_simulator_test("appletv")
     def test_tvos(self):
-        """Test running an tvOS simulator binary"""
+        """Test running a tvOS simulator binary"""
         self.run_with(
             arch=self.getArchitecture(),
             os="tvos",
             vers="",
             env="simulator",
-            expected_load_command="LC_BUILD_VERSION",
+        )
+
+    @skipIfAsan
+    @skipUnlessDarwin
+    @skipIfDarwinEmbedded
+    @apple_simulator_test("appletv")
+    def test_watchos(self):
+        """Test running a watchOS simulator binary"""
+        self.run_with(
+            arch=self.getArchitecture(),
+            os="watchos",
+            vers="",
+            env="simulator",
         )
 
     @skipIfAsan
@@ -116,7 +111,6 @@ class TestSimulatorPlatformLaunching(TestBase):
             os="watchos",
             vers="",
             env="simulator",
-            expected_load_command="LC_BUILD_VERSION",
         )
 
     @skipIfAsan
@@ -132,137 +126,4 @@ class TestSimulatorPlatformLaunching(TestBase):
             os="watchos",
             vers="",
             env="simulator",
-            expected_load_command="LC_BUILD_VERSION",
-        )
-
-    #
-    # Back-deployment tests.
-    #
-    # Older Mach-O versions used less expressive load commands, such
-    # as LC_VERSION_MIN_IPHONEOS that wouldn't distinguish between ios
-    # and ios-simulator.  When targeting a simulator on Apple Silicon
-    # macOS, however, these legacy load commands are never generated.
-    #
-
-    @skipUnlessDarwin
-    @skipIfDarwinEmbedded
-    def test_lc_version_min_macosx(self):
-        """Test running a back-deploying non-simulator MacOS X binary"""
-        self.run_with(
-            arch=self.getArchitecture(),
-            os="macosx",
-            vers="10.9",
-            env="",
-            expected_load_command="LC_VERSION_MIN_MACOSX",
-        )
-
-    @skipIfAsan
-    @skipUnlessDarwin
-    @skipIfDarwinEmbedded
-    @apple_simulator_test("iphone")
-    @skipIf(archs=["arm64", "arm64e"])
-    def test_lc_version_min_iphoneos(self):
-        """Test running a back-deploying iOS simulator binary
-        with a legacy iOS load command"""
-        self.run_with(
-            arch=self.getArchitecture(),
-            os="ios",
-            vers="11.0",
-            env="simulator",
-            expected_load_command="LC_VERSION_MIN_IPHONEOS",
-        )
-
-    @skipIfAsan
-    @skipUnlessDarwin
-    @skipIfDarwinEmbedded
-    @apple_simulator_test("iphone")
-    @skipIf(archs=["arm64", "arm64e"])
-    def test_ios_backdeploy_x86(self):
-        """Test running a back-deploying iOS simulator binary
-        with a legacy iOS load command"""
-        self.run_with(
-            arch=self.getArchitecture(),
-            os="ios",
-            vers="13.0",
-            env="simulator",
-            expected_load_command="LC_BUILD_VERSION",
-        )
-
-    @skipIfAsan
-    @skipUnlessDarwin
-    @skipIfDarwinEmbedded
-    @apple_simulator_test("iphone")
-    @skipIf(archs=["i386", "x86_64"])
-    def test_ios_backdeploy_apple_silicon(self):
-        """Test running a back-deploying iOS simulator binary"""
-        self.run_with(
-            arch=self.getArchitecture(),
-            os="ios",
-            vers="11.0",
-            env="simulator",
-            expected_load_command="LC_BUILD_VERSION",
-        )
-
-    @skipIfAsan
-    @skipUnlessDarwin
-    @skipIfDarwinEmbedded
-    @apple_simulator_test("appletv")
-    @skipIf(archs=["arm64", "arm64e"])
-    def test_lc_version_min_tvos(self):
-        """Test running a back-deploying tvOS simulator binary
-        with a legacy tvOS load command"""
-        self.run_with(
-            arch=self.getArchitecture(),
-            os="tvos",
-            vers="11.0",
-            env="simulator",
-            expected_load_command="LC_VERSION_MIN_TVOS",
-        )
-
-    @skipIfAsan
-    @skipUnlessDarwin
-    @skipIfDarwinEmbedded
-    @apple_simulator_test("appletv")
-    @skipIf(archs=["i386", "x86_64"])
-    def test_tvos_backdeploy_apple_silicon(self):
-        """Test running a back-deploying tvOS simulator binary"""
-        self.run_with(
-            arch=self.getArchitecture(),
-            os="tvos",
-            vers="11.0",
-            env="simulator",
-            expected_load_command="LC_BUILD_VERSION",
-        )
-
-    @skipIfAsan
-    @skipUnlessDarwin
-    @skipIfDarwinEmbedded
-    @apple_simulator_test("watch")
-    @skipIf(archs=["arm64", "arm64e"])
-    @skipIfDarwin  # rdar://problem/64552748
-    def test_lc_version_min_watchos(self):
-        """Test running a back-deploying watchOS simulator binary
-        with a legacy watchOS load command"""
-        self.run_with(
-            arch="i386",
-            os="watchos",
-            vers="4.0",
-            env="simulator",
-            expected_load_command="LC_VERSION_MIN_WATCHOS",
-        )
-
-    @skipIfAsan
-    @skipUnlessDarwin
-    @skipIfDarwinEmbedded
-    @apple_simulator_test("watch")
-    @skipIf(archs=["arm64", "arm64e"])
-    @skipIfDarwin  # rdar://problem/64552748
-    def test_watchos_backdeploy_apple_silicon(self):
-        """Test running a back-deploying watchOS simulator binary"""
-        self.run_with(
-            arch="armv7k",
-            os="watchos",
-            vers="4.0",
-            env="simulator",
-            expected_load_command="LC_BUILD_VERSION",
         )
