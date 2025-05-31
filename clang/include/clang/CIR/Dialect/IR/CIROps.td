@@ -2156,6 +2156,50 @@ def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// VecShuffleOp
+//===----------------------------------------------------------------------===//
+
+// TODO: Create an interface that both VecShuffleOp and VecShuffleDynamicOp
+// implement.  This could be useful for passes that don't care how the vector
+// shuffle was specified.
+
+def VecShuffleOp : CIR_Op<"vec.shuffle",
+                   [Pure, AllTypesMatch<["vec1", "vec2"]>]> {
+  let summary = "Combine two vectors using indices passed as constant integers";
+  let description = [{
+    The `cir.vec.shuffle` operation implements the documented form of Clang's
+    __builtin_shufflevector, where the indices of the shuffled result are
+    integer constants.
+
+    The two input vectors, which must have the same type, are concatenated.
+    Each of the integer constant arguments is interpreted as an index into that
+    concatenated vector, with a value of -1 meaning that the result value
+    doesn't matter. The result vector, which must have the same element type as
+    the input vectors and the same number of elements as the list of integer
+    constant indices, is constructed by taking the elements at the given
+    indices from the concatenated vector.
+
+    ```mlir
+    %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<2 x !s32i>)
+        [#cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<2 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VectorType:$vec1,
+    CIR_VectorType:$vec2,
+    TypedArrayAttrBase<IntAttr, "Integer array attribute">:$indices
+  );
+
+  let results = (outs CIR_VectorType:$result);
+  let assemblyFormat = [{
+    `(` $vec1 `,` $vec2 `:` qualified(type($vec1)) `)` $indices `:`
+     qualified(type($result)) attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // VecShuffleDynamicOp
 //===----------------------------------------------------------------------===//
 
