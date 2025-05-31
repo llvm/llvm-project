@@ -43,6 +43,7 @@ struct MemoryOpGroup {
   enum class Type { Load, Store };
   Type type;
   SmallVector<Operation *> ops;
+  int64_t elementsCount = 0;
 
   MemoryOpGroup(Type t) : type(t) {}
 
@@ -68,30 +69,37 @@ static bool maybeWriteOp(Operation *op) {
   return effectInterface.hasEffect<MemoryEffects::Write>();
 }
 
-static Type getVectorElementType(VectorType vectorType) {
-  if (vectorType.getRank() > 1 || vectorType.isScalable() ||
-      vectorType.getNumElements() != 1)
-    return {};
+static std::optional<std::pair<Type, int64_t>>
+getVectorElementTypeAndCount(VectorType vectorType) {
+  if (vectorType.getRank() > 1 || vectorType.isScalable())
+    return std::nullopt;
 
-  return vectorType.getElementType();
+  return std::make_pair(vectorType.getElementType(),
+                        vectorType.getNumElements());
 }
 
-static Type getElementType(Operation *op) {
+static std::optional<std::pair<Type, int64_t>>
+getElementTypeAndCount(Operation *op) {
   assert(op && "null op");
   if (auto loadOp = dyn_cast<memref::LoadOp>(op))
-    return loadOp.getResult().getType();
+    return std::make_pair(loadOp.getResult().getType(), 1);
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))
-    return storeOp.getValueToStore().getType();
+    return std::make_pair(storeOp.getValueToStore().getType(), 1);
   if (auto loadOp = dyn_cast<vector::LoadOp>(op))
-    return getVectorElementType(loadOp.getVectorType());
+    return getVectorElementTypeAndCount(loadOp.getVectorType());
   if (auto storeOp = dyn_cast<vector::StoreOp>(op))
-    return getVectorElementType(storeOp.getVectorType());
-  return {};
+    return getVectorElementTypeAndCount(storeOp.getVectorType());
+  return std::nullopt;
 }
 
 static bool isSupportedMemOp(Operation *op) {
   assert(op && "null op");
-  return isa_and_present<IntegerType, FloatType, IndexType>(getElementType(op));
+  auto typeAndCount = getElementTypeAndCount(op);
+  if (!typeAndCount)
+    return false;
+
+  return isa_and_present<IntegerType, FloatType, IndexType>(
+      typeAndCount->first);
 }
 
 /// Collect all memory operations in the block into groups.
@@ -177,7 +185,7 @@ static ValueRange getIndices(Operation *op) {
   return {};
 }
 
-static bool isAdjacentAffineMapIndices(Value idx1, Value idx2) {
+static bool isAdjacentAffineMapIndices(Value idx1, Value idx2, int64_t offset) {
   auto applyOp1 = idx1.getDefiningOp<affine::AffineApplyOp>();
   if (!applyOp1)
     return false;
@@ -195,28 +203,29 @@ static bool isAdjacentAffineMapIndices(Value idx1, Value idx2) {
       simplifyAffineExpr(expr2 - expr1, 0, applyOp1.getOperands().size());
 
   auto diffConst = dyn_cast<AffineConstantExpr>(diff);
-  return diffConst && diffConst.getValue() == 1;
+  return diffConst && diffConst.getValue() == offset;
 }
 
 /// Check if two indices are consecutive, i.e index1 + 1 == index2.
-static bool isAdjacentIndices(Value idx1, Value idx2) {
+static bool isAdjacentIndices(Value idx1, Value idx2, int64_t offset) {
   if (auto c1 = getConstantIntValue(idx1)) {
     if (auto c2 = getConstantIntValue(idx2))
-      return *c1 + 1 == *c2;
+      return *c1 + offset == *c2;
   }
 
   if (auto addOp2 = idx2.getDefiningOp<arith::AddIOp>()) {
-    if (addOp2.getLhs() == idx1 && getConstantIntValue(addOp2.getRhs()) == 1)
+    if (addOp2.getLhs() == idx1 &&
+        getConstantIntValue(addOp2.getRhs()) == offset)
       return true;
 
     if (auto addOp1 = idx1.getDefiningOp<arith::AddIOp>()) {
       if (addOp1.getLhs() == addOp2.getLhs() &&
-          isAdjacentIndices(addOp1.getRhs(), addOp2.getRhs()))
+          isAdjacentIndices(addOp1.getRhs(), addOp2.getRhs(), offset))
         return true;
     }
   }
 
-  if (isAdjacentAffineMapIndices(idx1, idx2))
+  if (isAdjacentAffineMapIndices(idx1, idx2, offset))
     return true;
 
   return false;
@@ -224,19 +233,22 @@ static bool isAdjacentIndices(Value idx1, Value idx2) {
 
 /// Check if two ranges of indices are consecutive, i.e fastest index differs
 /// by 1 and all other indices are the same.
-static bool isAdjacentIndices(ValueRange idx1, ValueRange idx2) {
+static bool isAdjacentIndices(ValueRange idx1, ValueRange idx2,
+                              int64_t offset) {
   if (idx1.empty() || idx1.size() != idx2.size())
     return false;
 
   if (idx1.drop_back() != idx2.drop_back())
     return false;
 
-  return isAdjacentIndices(idx1.back(), idx2.back());
+  return isAdjacentIndices(idx1.back(), idx2.back(), offset);
 }
 
 /// Check if two operations are adjacent and can be combined into a vector op.
 /// This is done by checking if the base memrefs are the same, the last
-/// dimension is contiguous, and the element types and indices are compatible
+/// dimension is contiguous, and the element types and indices are compatible.
+/// If source read/write is already vectorized, only merge ops if vector
+/// elements count is the same.
 static bool isAdjacentOps(Operation *op1, Operation *op2) {
   assert(op1 && "null op1");
   assert(op2 && "null op2");
@@ -249,10 +261,19 @@ static bool isAdjacentOps(Operation *op1, Operation *op2) {
   if (!isContiguousLastDim(base1))
     return false;
 
-  if (getElementType(op1) != getElementType(op2))
+  auto typeAndCount1 = getElementTypeAndCount(op1);
+  if (!typeAndCount1)
     return false;
 
-  return isAdjacentIndices(getIndices(op1), getIndices(op2));
+  auto typeAndCount2 = getElementTypeAndCount(op2);
+  if (!typeAndCount2)
+    return false;
+
+  if (typeAndCount1 != typeAndCount2)
+    return false;
+
+  return isAdjacentIndices(getIndices(op1), getIndices(op2),
+                           typeAndCount1->second);
 }
 
 // Extract contiguous groups from a MemoryOpGroup
@@ -271,6 +292,7 @@ extractContiguousGroups(const MemoryOpGroup &group) {
     // Start a new group with this operation
     result.emplace_back(group.type);
     MemoryOpGroup &currentGroup = result.back();
+    currentGroup.elementsCount = getElementTypeAndCount(op)->second;
     auto &currentOps = currentGroup.ops;
     currentOps.push_back(op);
     processedOps.insert(op);
@@ -310,7 +332,9 @@ extractContiguousGroups(const MemoryOpGroup &group) {
   return result;
 }
 
-static bool isVectorizable(Operation *op) {
+static bool
+isVectorizable(Operation *op,
+               std::optional<int64_t> expectedElementsCount = std::nullopt) {
   if (!OpTrait::hasElementwiseMappableTraits(op))
     return false;
 
@@ -319,13 +343,17 @@ static bool isVectorizable(Operation *op) {
 
   for (auto type :
        llvm::concat<Type>(op->getResultTypes(), op->getOperandTypes())) {
+    int64_t vectorElementsCount = 1;
     if (auto vectorType = dyn_cast<VectorType>(type)) {
-      if (vectorType.getRank() > 1 || vectorType.isScalable() ||
-          vectorType.getNumElements() != 1)
+      if (vectorType.getRank() > 1 || vectorType.isScalable())
         return false;
 
       type = vectorType.getElementType();
+      vectorElementsCount = vectorType.getNumElements();
     }
+
+    if (expectedElementsCount && vectorElementsCount != *expectedElementsCount)
+      return false;
 
     if (!isa<IntegerType, FloatType, IndexType>(type))
       return false;
@@ -347,6 +375,7 @@ struct SLPGraphNode {
   SmallVector<SLPGraphNode *> users;
   SmallVector<SLPGraphNode *> operands;
   Operation *insertionPoint = nullptr;
+  int64_t elementsCount = 0;
   bool isRoot = false;
 
   SLPGraphNode() = default;
@@ -354,6 +383,7 @@ struct SLPGraphNode {
       : ops(operations.begin(), operations.end()) {}
 
   size_t opsCount() const { return ops.size(); }
+  size_t vectorSize() const { return elementsCount * opsCount(); }
 
   Operation *op() const {
     assert(!ops.empty() && "empty ops");
@@ -415,17 +445,20 @@ public:
   SLPGraph &operator=(SLPGraph &&) = default;
 
   /// Add a new node to the graph
-  SLPGraphNode *addNode(ArrayRef<Operation *> operations) {
+  SLPGraphNode *addNode(ArrayRef<Operation *> operations,
+                        int64_t elementsCount) {
     nodes.push_back(std::make_unique<SLPGraphNode>(operations));
     auto *node = nodes.back().get();
+    node->elementsCount = elementsCount;
     for (Operation *op : operations)
       opToNode[op] = node;
     return node;
   }
 
   /// Add a root node (memory operation)
-  SLPGraphNode *addRoot(ArrayRef<Operation *> operations) {
-    auto *node = addNode(operations);
+  SLPGraphNode *addRoot(ArrayRef<Operation *> operations,
+                        int64_t elementsCount) {
+    auto *node = addNode(operations, elementsCount);
     node->isRoot = true;
     return node;
   }
@@ -699,13 +732,14 @@ static bool
 checkOpVecType(SLPGraphNode *node,
                llvm::function_ref<bool(Type, size_t)> isValidVecType) {
   Operation *op = node->op();
-  size_t size = node->opsCount();
+  size_t size = node->vectorSize();
   auto checkRes = [](bool res) -> bool {
     LLVM_DEBUG(llvm::dbgs() << (res ? "true" : "false") << "\n");
     return res;
   };
 
-  if (Type elementType = getElementType(op)) {
+  if (auto typeAndCount = getElementTypeAndCount(op)) {
+    Type elementType = typeAndCount->first;
     LLVM_DEBUG(llvm::dbgs() << "Checking if type " << elementType
                             << " with size " << size << " can be vectorized: ");
     return checkRes(isValidVecType(elementType, size));
@@ -777,7 +811,7 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
 
   // First, create nodes for each contiguous memory operation group
   for (const auto &group : rootGroups) {
-    auto *node = graph.addRoot(group.ops);
+    auto *node = graph.addRoot(group.ops, group.elementsCount);
     worklist.push_back(node);
 
     LLVM_DEBUG({
@@ -800,7 +834,7 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
       return;
     }
 
-    if (!isVectorizable(user))
+    if (!isVectorizable(user, node->elementsCount))
       return;
 
     Fingerprint expectedFingerprint = fingerprints.getFingerprint(user);
@@ -830,7 +864,7 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
     if (currentOps.size() == 1)
       return;
 
-    auto *newNode = graph.addNode(currentOps);
+    auto *newNode = graph.addNode(currentOps, node->elementsCount);
     graph.addEdge(node, newNode);
     for (Operation *op : currentOps)
       fingerprints.invalidate(op);
@@ -877,7 +911,7 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
         currentOps.push_back(otherOp);
         ++currentIndex;
       }
-    } else if (isVectorizable(srcOp)) {
+    } else if (isVectorizable(srcOp, node->elementsCount)) {
       LLVM_DEBUG(llvm::dbgs() << "  Processing vectorizable op "
                               << srcOp->getName() << "\n");
 
@@ -898,7 +932,7 @@ static SLPGraph buildSLPGraph(ArrayRef<MemoryOpGroup> rootGroups) {
     if (currentOps.size() == 1)
       return;
 
-    auto *newNode = graph.addNode(currentOps);
+    auto *newNode = graph.addNode(currentOps, node->elementsCount);
     graph.addEdge(newNode, node);
     for (Operation *op : currentOps)
       fingerprints.invalidate(op);
@@ -1000,7 +1034,7 @@ SLPGraph::vectorize(IRRewriter &rewriter,
     LLVM_DEBUG(llvm::dbgs() << "  Insertion point: " << *ip << "\n");
 
     rewriter.setInsertionPoint(ip);
-    int64_t numElements = node->opsCount();
+    int64_t numElements = node->vectorSize();
     Location loc = op->getLoc();
 
     auto handleNonVectorInputs = [&](ValueRange operands) {
@@ -1009,10 +1043,20 @@ SLPGraph::vectorize(IRRewriter &rewriter,
           continue;
 
         SmallVector<Value> args;
-        for (Operation *defOp : node->ops)
-          args.push_back(defOp->getOperand(i));
+        for (Operation *defOp : node->ops) {
+          Value arg = defOp->getOperand(i);
+          if (auto vecType = dyn_cast<VectorType>(arg.getType())) {
+            assert(vecType.getRank() == 1);
+            for (auto j : llvm::seq(vecType.getNumElements()))
+              args.push_back(rewriter.create<vector::ExtractOp>(loc, arg, j));
 
-        auto vecType = VectorType::get(numElements, operand.getType());
+          } else {
+            args.push_back(arg);
+          }
+        }
+
+        auto vecType = VectorType::get(numElements,
+                                       getElementTypeOrSelf(operand.getType()));
         Value vector =
             rewriter.create<vector::FromElementsOp>(loc, vecType, args);
         mapping.map(operand, vector);
@@ -1043,7 +1087,8 @@ SLPGraph::vectorize(IRRewriter &rewriter,
     };
 
     if (maybeReadOp(op)) {
-      auto vecType = VectorType::get(numElements, getElementType(op));
+      auto vecType =
+          VectorType::get(numElements, getElementTypeAndCount(op)->first);
       Value result = rewriter.create<vector::LoadOp>(loc, vecType, getBase(op),
                                                      getIndices(op));
       mapping.map(op->getResult(0), result);
