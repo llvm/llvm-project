@@ -120,6 +120,8 @@ private:
     std::optional<llvm::hlsl::rootsig::StaticBorderColor> BorderColor;
     std::optional<float> MinLOD;
     std::optional<float> MaxLOD;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
   };
   std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 
