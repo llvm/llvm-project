@@ -1,5 +1,7 @@
-# RUN: llvm-mc --filetype=obj --triple=loongarch64 %s -o %t
-# RUN: llvm-readobj -r %t | FileCheck %s
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=-relax %s \
+# RUN:     | llvm-readobj -r - | FileCheck %s
+# RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s \
+# RUN:     | llvm-readobj -r - | FileCheck %s --check-prefix=RELAX
 
 ## Check that subtraction expressions emit R_LARCH_32_PCREL and R_LARCH_64_PCREL relocations.
 
@@ -7,13 +9,46 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rela.data {
-# CHECK-NEXT:     0x0 R_LARCH_64_PCREL sx 0x0
-# CHECK-NEXT:     0x8 R_LARCH_64_PCREL sy 0x0
-# CHECK-NEXT:     0x10 R_LARCH_32_PCREL sx 0x0
-# CHECK-NEXT:     0x14 R_LARCH_32_PCREL sy 0x0
+# CHECK-NEXT:     0x0 R_LARCH_64_PCREL sx 0x4
+# CHECK-NEXT:     0x8 R_LARCH_64_PCREL sy 0x4
+# CHECK-NEXT:     0x10 R_LARCH_32_PCREL sx 0x4
+# CHECK-NEXT:     0x14 R_LARCH_32_PCREL sy 0x4
+# CHECK-NEXT:     0x18 R_LARCH_ADD64 sx 0x4
+# CHECK-NEXT:     0x18 R_LARCH_SUB64 sy 0x4
+# CHECK-NEXT:     0x20 R_LARCH_ADD64 sy 0x4
+# CHECK-NEXT:     0x20 R_LARCH_SUB64 sx 0x4
+# CHECK-NEXT:     0x28 R_LARCH_ADD32 sx 0x4
+# CHECK-NEXT:     0x28 R_LARCH_SUB32 sy 0x4
+# CHECK-NEXT:     0x2C R_LARCH_ADD32 sy 0x4
+# CHECK-NEXT:     0x2C R_LARCH_SUB32 sx 0x4
+# CHECK-NEXT:     0x30 R_LARCH_ADD64 .data 0x30
+# CHECK-NEXT:     0x30 R_LARCH_SUB64 sx 0x4
+# CHECK-NEXT:     0x38 R_LARCH_ADD32 .data 0x38
+# CHECK-NEXT:     0x38 R_LARCH_SUB32 sy 0x4
 # CHECK-NEXT:   }
 
+# RELAX:      Relocations [
+# RELAX-NEXT:   Section ({{.*}}) .rela.data {
+# RELAX-NEXT:     0x0 R_LARCH_64_PCREL x 0x0
+# RELAX-NEXT:     0x8 R_LARCH_64_PCREL y 0x0
+# RELAX-NEXT:     0x10 R_LARCH_32_PCREL x 0x0
+# RELAX-NEXT:     0x14 R_LARCH_32_PCREL y 0x0
+# RELAX-NEXT:     0x18 R_LARCH_ADD64 x 0x0
+# RELAX-NEXT:     0x18 R_LARCH_SUB64 y 0x0
+# RELAX-NEXT:     0x20 R_LARCH_ADD64 y 0x0
+# RELAX-NEXT:     0x20 R_LARCH_SUB64 x 0x0
+# RELAX-NEXT:     0x28 R_LARCH_ADD32 x 0x0
+# RELAX-NEXT:     0x28 R_LARCH_SUB32 y 0x0
+# RELAX-NEXT:     0x2C R_LARCH_ADD32 y 0x0
+# RELAX-NEXT:     0x2C R_LARCH_SUB32 x 0x0
+# RELAX-NEXT:     0x30 R_LARCH_ADD64 {{.*}} 0x0
+# RELAX-NEXT:     0x30 R_LARCH_SUB64 x 0x0
+# RELAX-NEXT:     0x38 R_LARCH_ADD32 {{.*}} 0x0
+# RELAX-NEXT:     0x38 R_LARCH_SUB32 y 0x0
+# RELAX-NEXT:   }
+
 .section sx,"a"
+nop
 x:
 nop
 
@@ -22,7 +57,14 @@ nop
 .8byte y-.
 .4byte x-.
 .4byte y-.
+.8byte x-y
+.8byte y-x
+.4byte x-y
+.4byte y-x
+.8byte .-x
+.4byte .-y
 
 .section sy,"a"
+nop
 y:
 nop
