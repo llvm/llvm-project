@@ -1091,3 +1091,28 @@ void foo17() {
 // OGCG: %[[VEC_A:.*]] = alloca <2 x double>, align 16
 // OGCG: %[[TMP:.*]] = load <2 x double>, ptr %[[VEC_A]], align 16
 // OGCG: %[[RES:.*]]= fptoui <2 x double> %[[TMP]] to <2 x i16>
+
+void foo19() {
+  vi4 a;
+  vi4 b;
+  vi4 u = __builtin_shufflevector(a, b, 7, 5, 3, 1);
+}
+
+// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["b"]
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>) [#cir.int<7> :
+// CIR-SAME: !s64i, #cir.int<5> : !s64i, #cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<4 x !s32i>
+
+// LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[VEC_B:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// LLVM: %[[SHUF:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]], <4 x i32> <i32 7, i32 5, i32 3, i32 1>
+
+// OGCG: %[[VEC_A:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[VEC_B:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// OGCG: %[[SHUF:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]], <4 x i32> <i32 7, i32 5, i32 3, i32 1>
