@@ -669,7 +669,7 @@ define i32 @test_phi_to_zext(i8 noundef %0) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB1]] ], [ 0, [[BB4]] ], [ 255, [[BB3]] ]
+; CHECK-NEXT:    [[DOT0:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
 start:
@@ -713,7 +713,7 @@ define i32 @test_phi_to_sext(i8 noundef %0) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB1]] ], [ 0, [[BB4]] ], [ -1, [[BB3]] ]
+; CHECK-NEXT:    [[DOT0:%.*]] = sext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
 start:
@@ -757,7 +757,8 @@ define i32 @test_phi_to_sext_inverted(i8 noundef %0) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ -2, [[BB1]] ], [ -1, [[BB4]] ], [ 0, [[BB3]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[TMP0]], -1
+; CHECK-NEXT:    [[DOT0:%.*]] = sext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[DOT0]]
 ;
 start:
@@ -843,7 +844,7 @@ define i8 @test_phi_to_trunc(i32 %0) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ -1, [[BB1]] ], [ 1, [[BB4]] ], [ 0, [[START:%.*]] ]
+; CHECK-NEXT:    [[DOT0:%.*]] = trunc nuw i32 [[TMP0]] to i8
 ; CHECK-NEXT:    ret i8 [[DOT0]]
 ;
 start:
@@ -882,7 +883,8 @@ define i8 @test_phi_to_trunc_inverted(i32 %0) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ 0, [[BB1]] ], [ -2, [[BB4]] ], [ -1, [[START:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[TMP0]] to i8
+; CHECK-NEXT:    [[DOT0:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[DOT0]]
 ;
 start:

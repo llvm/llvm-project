@@ -1325,8 +1325,12 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
     return nullptr;
   }
 
-  if (Cond->getType() != PN.getType())
-    return nullptr;
+  unsigned CondBitWidth = Cond->getType()->getScalarSizeInBits();
+  unsigned PNBitWidth = PN.getType()->getScalarSizeInBits();
+  Instruction::CastOps CastType =
+      CondBitWidth == PNBitWidth  ? Instruction::BitCast
+      : CondBitWidth < PNBitWidth ? Instruction::ZExt
+                                  : Instruction::Trunc;
 
   // Check that edges outgoing from the idom's terminators dominate respective
   // inputs of the Phi.
@@ -1335,6 +1339,20 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
     auto *Input = cast<ConstantInt>(std::get<0>(Pair));
     BasicBlock *Pred = std::get<1>(Pair);
     auto IsCorrectInput = [&](ConstantInt *Input) {
+      if (CastType != Instruction::BitCast) {
+        APInt InputValue = Input->getValue();
+        if (CastType == Instruction::Trunc)
+          InputValue = InputValue.zext(CondBitWidth);
+        else if (CastType == Instruction::ZExt &&
+                 InputValue.isIntN(CondBitWidth))
+          InputValue = InputValue.trunc(CondBitWidth);
+        else if (InputValue.isSignedIntN(CondBitWidth)) {
+          CastType = Instruction::SExt;
+          InputValue = InputValue.trunc(CondBitWidth);
+        } else
+          return false;
+        Input = ConstantInt::get(Context, InputValue);
+      }
       // The input needs to be dominated by the corresponding edge of the idom.
       // This edge cannot be a multi-edge, as that would imply that multiple
       // different condition values follow the same edge.
@@ -1360,19 +1378,27 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
     Invert = NeedsInvert;
   }
 
-  if (!*Invert)
+  if (!*Invert && CastType == Instruction::BitCast)
     return Cond;
+
+  auto InsertPt = BB->getFirstInsertionPt();
+  if (InsertPt == BB->end())
+    return nullptr;
+
+  Self.Builder.SetInsertPoint(&*BB, InsertPt);
+
+  if (CastType != Instruction::BitCast) {
+    Cond = Self.Builder.CreateCast(CastType, Cond, PN.getType());
+    if (auto *Trunc = dyn_cast<TruncInst>(Cond))
+      Trunc->setHasNoUnsignedWrap(true);
+    if (!*Invert)
+      return Cond;
+  }
 
   // This Phi is actually opposite to branching condition of IDom. We invert
   // the condition that will potentially open up some opportunities for
   // sinking.
-  auto InsertPt = BB->getFirstInsertionPt();
-  if (InsertPt != BB->end()) {
-    Self.Builder.SetInsertPoint(&*BB, InsertPt);
-    return Self.Builder.CreateNot(Cond);
-  }
-
-  return nullptr;
+  return Self.Builder.CreateNot(Cond);
 }
 
 // Fold  iv = phi(start, iv.next = iv2.next op start)
