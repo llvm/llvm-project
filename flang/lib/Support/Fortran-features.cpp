@@ -147,7 +147,7 @@ static bool SensitiveWarningNameMatch(llvm::StringRef l, llvm::StringRef r) {
     return false;
   }
   bool atStartOfWord{true};
-  size_t wordCount{0}, j; // j is the number of word characters checked in r.
+  size_t wordCount{0}, j{0}; // j is the number of word characters checked in r.
   for (; j < rs; j++) {
     if (wordCount + j >= ls) {
       // `l` was shorter once the hiphens were removed.

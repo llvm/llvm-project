@@ -40,7 +40,7 @@ TEST(EnumClassTest, ParseCLIUsageWarning) {
   EXPECT_EQ(
       parseCLIUsageWarning("nopointertoundefinable", false), std::nullopt);
 
-  EXPECT_EQ((parseCLIUsageWarning("no-twenty-one", false)), std::nullopt);
+  EXPECT_EQ((parseCLIUsageWarning("no-twenty-one", true)), std::nullopt);
   EXPECT_EQ((parseCLIUsageWarning("twenty-one", true)), std::nullopt);
   EXPECT_EQ((parseCLIUsageWarning("no-seven-seven-seven", true)), std::nullopt);
   EXPECT_EQ((parseCLIUsageWarning("seven-seven-seven", true)), std::nullopt);
