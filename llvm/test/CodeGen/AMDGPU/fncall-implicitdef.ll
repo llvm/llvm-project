@@ -5,14 +5,14 @@ define amdgpu_ps <4 x float> @caller(ptr %ptr) {
 ; CHECK-LABEL: caller:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    flat_load_dword v1, v[0:1]
-; CHECK-NEXT:    s_mov_b32 s5, fn@abs32@hi
-; CHECK-NEXT:    s_mov_b32 s4, fn@abs32@lo
-; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_mov_b32 s2, 0
-; CHECK-NEXT:    s_mov_b32 s3, 0
+; CHECK-NEXT:    s_mov_b32 s5, fn@abs32@hi
+; CHECK-NEXT:    s_mov_b32 s4, fn@abs32@lo
+; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
