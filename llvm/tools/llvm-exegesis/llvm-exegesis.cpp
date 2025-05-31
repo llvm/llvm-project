@@ -107,6 +107,12 @@ static cl::opt<Benchmark::RepetitionModeE> RepetitionMode(
                    "Middle half loop mode")),
     cl::init(Benchmark::Duplicate));
 
+static cl::opt<bool> AArch64DisablePacControl(
+    "aarch64-disable-pac-control",
+    cl::desc("Disable PAC key control at runtime for benchmarking. Use this if "
+             "llvm-exegesis crashes or instruction timings are affected."),
+    cl::init(false));
+
 static cl::opt<bool> BenchmarkMeasurementsPrintProgress(
     "measurements-print-progress",
     cl::desc("Produce progress indicator when performing measurements"),
@@ -444,8 +450,7 @@ static void runBenchmarkConfigurations(
     Benchmark &Result = AllResults.front();
 
     // If any of our measurements failed, pretend they all have failed.
-    if (AllResults.size() > 1 &&
-        any_of(AllResults, [](const Benchmark &R) {
+    if (AllResults.size() > 1 && any_of(AllResults, [](const Benchmark &R) {
           return R.Measurements.empty();
         }))
       Result.Measurements.clear();
@@ -643,8 +648,7 @@ static void analysisMain() {
       errorOrToExpected(MemoryBuffer::getFile(BenchmarkFile, /*IsText=*/true)));
 
   const auto TriplesAndCpus = ExitOnFileError(
-      BenchmarkFile,
-      Benchmark::readTriplesAndCpusFromYamls(*MemoryBuffer));
+      BenchmarkFile, Benchmark::readTriplesAndCpusFromYamls(*MemoryBuffer));
   if (TriplesAndCpus.empty()) {
     errs() << "no benchmarks to analyze\n";
     return;
