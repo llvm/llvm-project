@@ -292,6 +292,8 @@ uptr asan_mz_size(const void *ptr);
 void asan_mz_force_lock();
 void asan_mz_force_unlock();
 
+int asan_update_deallocation_context(void* addr, BufferedStackTrace *stack);
+
 void PrintInternalAllocatorStats();
 void AsanSoftRssLimitExceededCallback(bool exceeded);
 
