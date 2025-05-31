@@ -103,9 +103,9 @@ TEST(LlvmLibcWMemmoveTest, DstFollowSrc) {
 TEST(LlvmLibcWMemmoveTest, NullptrCrash) {
   wchar_t buffer[] = {L'a', L'b'};
   // Passing in a nullptr should crash the program.
-  EXPECT_DEATH([buffer] { LIBC_NAMESPACE::wmemmove(buffer, nullptr, 2); },
+  EXPECT_DEATH([&buffer] { LIBC_NAMESPACE::wmemmove(buffer, nullptr, 2); },
                WITH_SIGNAL(-1));
-  EXPECT_DEATH([buffer] { LIBC_NAMESPACE::wmemmove(nullptr, buffer, 2); },
+  EXPECT_DEATH([&buffer] { LIBC_NAMESPACE::wmemmove(nullptr, buffer, 2); },
                WITH_SIGNAL(-1));
 }
 #endif // LIBC_HAS_ADDRESS_SANITIZER
