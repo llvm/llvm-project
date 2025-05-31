@@ -373,7 +373,9 @@ bool ReportNonAffBranch::classof(const RejectReason *RR) {
 
 std::string ReportNoBasePtr::getRemarkName() const { return "NoBasePtr"; }
 
-const BasicBlock *ReportNoBasePtr::getRemarkBB() const { return Inst->getParent(); }
+const BasicBlock *ReportNoBasePtr::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportNoBasePtr::getMessage() const { return "No base pointer"; }
 
@@ -482,7 +484,9 @@ ReportLoopBound::ReportLoopBound(Loop *L, const SCEV *LoopCount)
 
 std::string ReportLoopBound::getRemarkName() const { return "LoopBound"; }
 
-const BasicBlock *ReportLoopBound::getRemarkBB() const { return L->getHeader(); }
+const BasicBlock *ReportLoopBound::getRemarkBB() const {
+  return L->getHeader();
+}
 
 std::string ReportLoopBound::getMessage() const {
   return "Non affine loop bound '" + *LoopCount +
@@ -506,7 +510,9 @@ std::string ReportLoopHasNoExit::getRemarkName() const {
   return "LoopHasNoExit";
 }
 
-const BasicBlock *ReportLoopHasNoExit::getRemarkBB() const { return L->getHeader(); }
+const BasicBlock *ReportLoopHasNoExit::getRemarkBB() const {
+  return L->getHeader();
+}
 
 std::string ReportLoopHasNoExit::getMessage() const {
   return "Loop " + L->getHeader()->getName() + " has no exit.";
@@ -582,7 +588,9 @@ ReportFuncCall::ReportFuncCall(Instruction *Inst)
 
 std::string ReportFuncCall::getRemarkName() const { return "FuncCall"; }
 
-const BasicBlock *ReportFuncCall::getRemarkBB() const { return Inst->getParent(); }
+const BasicBlock *ReportFuncCall::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportFuncCall::getMessage() const {
   return "Call instruction: " + *Inst;
@@ -735,7 +743,9 @@ ReportAlloca::ReportAlloca(Instruction *Inst)
 
 std::string ReportAlloca::getRemarkName() const { return "Alloca"; }
 
-const BasicBlock *ReportAlloca::getRemarkBB() const { return Inst->getParent(); }
+const BasicBlock *ReportAlloca::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportAlloca::getMessage() const {
   return "Alloca instruction: " + *Inst;
@@ -807,7 +817,9 @@ ReportUnprofitable::ReportUnprofitable(Region *R)
 
 std::string ReportUnprofitable::getRemarkName() const { return "Unprofitable"; }
 
-const BasicBlock *ReportUnprofitable::getRemarkBB() const { return R->getEntry(); }
+const BasicBlock *ReportUnprofitable::getRemarkBB() const {
+  return R->getEntry();
+}
 
 std::string ReportUnprofitable::getMessage() const {
   return "Region can not profitably be optimized!";
