@@ -3580,7 +3580,7 @@ private:
   BasicBlock *Latch = nullptr;
   BasicBlock *Exit = nullptr;
 
-  // Hold the MLIR value for the `lastiter` of the canonical loop.
+  // Hold the LLVM value for the `lastiter` of the canonical loop.
   Value *LastIter = nullptr;
 
   /// Add the control blocks of this loop to \p BBs.
