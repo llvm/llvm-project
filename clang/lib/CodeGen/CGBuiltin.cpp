@@ -2600,6 +2600,14 @@ static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
 
 namespace {
 
+
+// PaddingClearer is a utility class that clears padding bits in a
+// c++ type. It traverses the type recursively, collecting occupied
+// bit intervals, and then compute the padding intervals.
+// In the end, it clears the padding bits by writing zeros
+// to the padding intervals bytes-by-bytes. If a byte only contains
+// some padding bits, it writes zeros to only those bits. This is
+// the case for bit-fields.
 struct PaddingClearer {
   PaddingClearer(CodeGenFunction &F)
       : CGF(F), CharWidth(CGF.getContext().getCharWidth()) {}
@@ -2610,8 +2618,8 @@ struct PaddingClearer {
 
     Queue.push_back(Data{0, Ty, true});
     while (!Queue.empty()) {
-      auto Current = Queue.front();
-      Queue.pop_front();
+      auto Current = Queue.back();
+      Queue.pop_back();
       Visit(Current);
     }
 
@@ -2693,7 +2701,7 @@ private:
 
       Queue.push_back(
           Data{StartBitOffset + ArrIndex * Offset.getQuantity() * CharWidth,
-               ElementQualType, true});
+               ElementQualType, /*VisitVirtualBase*/true});
     }
   }
 
@@ -2726,8 +2734,8 @@ private:
 
       llvm::dbgs() << "visiting base at offset " << StartBitOffset << " + "
                    << BaseOffset * CharWidth << '\n';
-      Queue.push_back(
-          Data{StartBitOffset + BaseOffset * CharWidth, Base.getType(), false});
+      Queue.push_back(Data{StartBitOffset + BaseOffset * CharWidth,
+                           Base.getType(), /*VisitVirtualBase*/ false});
     };
 
     for (auto Base : R->bases()) {
@@ -2756,8 +2764,8 @@ private:
                         StartBitOffset + FieldOffset +
                             Field->getBitWidthValue()});
       } else {
-        Queue.push_back(
-            Data{StartBitOffset + FieldOffset, Field->getType(), true});
+        Queue.push_back(Data{StartBitOffset + FieldOffset, Field->getType(),
+                             /*VisitVirtualBase*/ true});
       }
     }
   }
@@ -2772,9 +2780,10 @@ private:
                  << StartBitOffset << "Img from "
                  << StartBitOffset + ImgOffset.getQuantity() * CharWidth
                  << "\n";
-    Queue.push_back(Data{StartBitOffset, ElementQualType, true});
+    Queue.push_back(
+        Data{StartBitOffset, ElementQualType, /*VisitVirtualBase*/ true});
     Queue.push_back(Data{StartBitOffset + ImgOffset.getQuantity() * CharWidth,
-                         ElementQualType, true});
+                         ElementQualType, /*VisitVirtualBase*/ true});
   }
 
   void MergeOccuppiedIntervals() {
@@ -5151,12 +5160,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Ptr);
   }
   case Builtin::BI__builtin_clear_padding: {
-    const Expr *Op = E->getArg(0);
-    Value *Address = EmitScalarExpr(Op);
-    auto PointeeTy = Op->getType()->getPointeeType();
+    Address Src = EmitPointerWithAlignment(E->getArg(0));
+    auto PointeeTy = E->getArg(0)->getType()->getPointeeType();
     PaddingClearer clearer{*this};
-    clearer.run(Address, PointeeTy);
-    //RecursivelyClearPadding(*this, Address, PointeeTy);
+    clearer.run(Src.getBasePointer(), PointeeTy);
     return RValue::get(nullptr);
   }
   case Builtin::BI__sync_fetch_and_add:
