@@ -32,6 +32,31 @@ class RegisterValue;
 class Stream;
 class Target;
 class UnwindPlan;
+class EmulateInstruction;
+
+using BreakpointLocations = std::vector<lldb::addr_t>;
+
+class SingleStepBreakpointLocationsPredictor {
+public:
+  SingleStepBreakpointLocationsPredictor(
+      std::unique_ptr<EmulateInstruction> emulator_up)
+      : m_emulator_up{std::move(emulator_up)} {}
+
+  virtual BreakpointLocations GetBreakpointLocations(Status &status);
+
+  virtual unsigned GetBreakpointSize(lldb::addr_t, Status &) { return 4; }
+
+  virtual ~SingleStepBreakpointLocationsPredictor() = default;
+
+protected:
+  lldb::addr_t GetSequentiallyNextInstructionPC(Status &error);
+
+  lldb::addr_t GetBreakpointLocationAddress(lldb::addr_t entry_pc,
+                                            Status &error);
+
+  std::unique_ptr<EmulateInstruction> m_emulator_up;
+  bool m_emulation_result = false;
+};
 
 /// \class EmulateInstruction EmulateInstruction.h
 /// "lldb/Core/EmulateInstruction.h"
@@ -497,7 +522,19 @@ public:
   static uint32_t GetInternalRegisterNumber(RegisterContext *reg_ctx,
                                             const RegisterInfo &reg_info);
 
+  static std::unique_ptr<SingleStepBreakpointLocationsPredictor>
+  CreateBreakpointLocationPredictor(
+      std::unique_ptr<EmulateInstruction> emulator_up);
+
+  // Helper functions
+  std::optional<lldb::addr_t> ReadPC();
+  bool WritePC(lldb::addr_t addr);
+
 protected:
+  using BreakpointLocationsPredictorCreator =
+      std::function<std::unique_ptr<SingleStepBreakpointLocationsPredictor>(
+          std::unique_ptr<EmulateInstruction>)>;
+
   ArchSpec m_arch;
   void *m_baton = nullptr;
   ReadMemoryCallback m_read_mem_callback = &ReadMemoryDefault;
@@ -508,6 +545,14 @@ protected:
   Opcode m_opcode;
 
 private:
+  virtual BreakpointLocationsPredictorCreator
+  GetSingleStepBreakpointLocationsPredictorCreator() {
+    return [](std::unique_ptr<EmulateInstruction> emulator_up) {
+      return std::make_unique<SingleStepBreakpointLocationsPredictor>(
+          std::move(emulator_up));
+    };
+  }
+
   // For EmulateInstruction only
   EmulateInstruction(const EmulateInstruction &) = delete;
   const EmulateInstruction &operator=(const EmulateInstruction &) = delete;
