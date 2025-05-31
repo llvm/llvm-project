@@ -1867,10 +1867,8 @@ static void removeBranchOnConst(VPlan &Plan) {
            "There must be a single edge between VPBB and its successor");
     // Values coming from VPBB into phi recipes of RemoveSucc are removed from
     // these recipes.
-    for (VPRecipeBase &R : make_early_inc_range(*RemovedSucc)) {
-      auto *Phi = dyn_cast<VPPhiAccessors>(&R);
-      if (!Phi)
-        break;
+    for (VPRecipeBase &R : RemovedSucc->phis()) {
+      auto *Phi = cast<VPPhiAccessors>(&R);
       assert((!isa<VPIRPhi>(&R) || RemovedSucc->getNumPredecessors() == 1) &&
              "VPIRPhis must have a single predecessor");
       Phi->removeIncomingValueFor(VPBB);

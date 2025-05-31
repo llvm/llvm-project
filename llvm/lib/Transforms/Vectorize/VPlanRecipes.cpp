@@ -1191,7 +1191,6 @@ void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
   assert(R->getNumOperands() == Preds.size() &&
          "Number of phi operands must match number of predecessors");
   unsigned Position = std::distance(Preds.begin(), find(Preds, IncomingBlock));
-  R->getOperand(Position)->removeUser(*R);
   R->removeOperand(Position);
 }
 

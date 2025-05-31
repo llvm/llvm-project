@@ -3530,8 +3530,8 @@ public:
 
 /// Casting from VPRecipeBase -> VPPhiAccessors is supported for all recipe
 /// types implementing VPPhiAccessors. Used by isa<> & co.
-template <typename SrcTy> struct CastIsPossible<VPPhiAccessors, SrcTy> {
-  static inline bool isPossible(SrcTy f) {
+template <> struct CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
+  static inline bool isPossible(const VPRecipeBase *f) {
     // TODO: include VPPredInstPHIRecipe too, once it implements VPPhiAccessors.
     return isa<VPIRPhi, VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPhi>(f);
   }
@@ -3539,8 +3539,7 @@ template <typename SrcTy> struct CastIsPossible<VPPhiAccessors, SrcTy> {
 /// Support casting from VPRecipeBase -> VPPhiAccessors, by down-casting to the
 /// recipe types implementing VPPhiAccessors. Used by cast<>, dyn_cast<> & co.
 template <typename SrcTy>
-struct CastInfo<VPPhiAccessors, SrcTy>
-    : public CastIsPossible<VPPhiAccessors, SrcTy> {
+struct CastInfoVPPhiAccessors : public CastIsPossible<VPPhiAccessors, SrcTy> {
 
   using Self = CastInfo<VPPhiAccessors, SrcTy>;
 
@@ -3567,6 +3566,12 @@ struct CastInfo<VPPhiAccessors, SrcTy>
     return doCast(f);
   }
 };
+template <>
+struct CastInfo<VPPhiAccessors, VPRecipeBase *>
+    : CastInfoVPPhiAccessors<VPRecipeBase *> {};
+template <>
+struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
+    : CastInfoVPPhiAccessors<const VPRecipeBase *> {};
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of

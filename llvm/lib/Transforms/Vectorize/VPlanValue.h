@@ -205,7 +205,12 @@ class VPUser {
 
   SmallVector<VPValue *, 2> Operands;
 
-  void removeOperand(unsigned Idx) { Operands.erase(Operands.begin() + Idx); }
+  /// Removes the operand at index \p Idx. This also removes the VPUser from the
+  /// use-list of the operand.
+  void removeOperand(unsigned Idx) {
+    getOperand(Idx)->removeUser(*this);
+    Operands.erase(Operands.begin() + Idx);
+  }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

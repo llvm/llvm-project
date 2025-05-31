@@ -548,7 +548,7 @@ void VPlanTransforms::prepareForVectorization(
 
   assert(MiddleVPBB->getNumSuccessors() == 2 && "must have 2 successors");
 
-  // Add a check in the middle block to see if we have completed$ all of the
+  // Add a check in the middle block to see if we have completed all of the
   // iterations in the first vector loop.
   //
   // Three cases:

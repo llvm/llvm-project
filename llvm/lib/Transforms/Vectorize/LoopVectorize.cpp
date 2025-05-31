@@ -2381,7 +2381,6 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   // We just connected a new block to the scalar preheader. Update all
   // VPPhis by adding an incoming value for it, replicating the last value.
   unsigned NumPredecessors = ScalarPH->getNumPredecessors();
-  (void)NumPredecessors;
   for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
     assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
     assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
