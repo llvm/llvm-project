@@ -884,7 +884,6 @@ function(add_libc_multi_impl_test name suite)
       string(SUBSTRING ${fq_config_name} ${name_loc} -1 target_name)
       add_libc_test(
         ${target_name}_test
-        ${unit_test_only}
         SUITE
           ${suite}
         COMPILE_OPTIONS
