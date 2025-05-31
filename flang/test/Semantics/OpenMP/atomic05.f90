@@ -8,20 +8,20 @@ program OmpAtomic
     use omp_lib
     integer :: g, x
 
-    !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
+    !ERROR: At most one clause from the 'memory-order' group is allowed on ATOMIC construct
     !$omp atomic relaxed, seq_cst
         x = x + 1
-    !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
+    !ERROR: At most one clause from the 'memory-order' group is allowed on ATOMIC construct
     !$omp atomic read seq_cst, relaxed
         x = g
-    !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
+    !ERROR: At most one clause from the 'memory-order' group is allowed on ATOMIC construct
     !$omp atomic write relaxed, release
         x = 2 * 4
-    !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
+    !ERROR: At most one clause from the 'memory-order' group is allowed on ATOMIC construct
     !$omp atomic update release, seq_cst
-    !ERROR: Invalid or missing operator in atomic update statement
+    !ERROR: The atomic variable x should appear as an argument in the update operation
         x = 10
-    !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
+    !ERROR: At most one clause from the 'memory-order' group is allowed on ATOMIC construct
     !$omp atomic capture release, seq_cst
         x = g
         g = x * 10
