@@ -533,15 +533,26 @@ static bool calculateConstraintSatisfaction(
   if (!NumExpansions)
     return false;
 
+  if(*NumExpansions == 0) {
+    Satisfaction.IsSatisfied = Conjunction;
+    return true;
+  }
+
+  //bool HasAnyFailed = false;
   for (unsigned I = 0; I < *NumExpansions; I++) {
     Sema::ArgPackSubstIndexRAII SubstIndex(S, I);
+    Satisfaction.IsSatisfied = false;
+    Satisfaction.ContainsErrors = false;
     bool Success = calculateConstraintSatisfaction(
         S, FE.getNormalizedPattern(), Template, TemplateNameLoc,
         *SubstitutedArgs, Satisfaction, UnsignedOrNone(I));
     if (!Success)
       return false;
-    bool IsRHSSatisfied = Satisfaction.IsSatisfied;
-    if (!Conjunction && IsRHSSatisfied) {
+    if(!Satisfaction.IsSatisfied || Satisfaction.ContainsErrors) {
+      if(Conjunction)
+        return true;
+    }
+    if (!Conjunction && Satisfaction.IsSatisfied) {
       auto EffectiveDetailEnd = Satisfaction.Details.begin();
       std::advance(EffectiveDetailEnd, EffectiveDetailEndIndex);
       Satisfaction.Details.erase(EffectiveDetailEnd,
