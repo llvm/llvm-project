@@ -1449,17 +1449,19 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
   // happen to be processing that implementation, fake up the g++ ?:
   // semantics. See LWG issue 2141 for more information on the bug.  The bugs
   // are fixed in g++ and libstdc++ 4.9.0 (2014-04-22).
-  const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
-  CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
-  if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&
-      DT->isReferenceType() &&
-      RD->getEnclosingNamespaceContext() == SemaRef.getStdNamespace() &&
-      RD->getIdentifier() && RD->getIdentifier()->isStr("common_type") &&
-      D->getIdentifier() && D->getIdentifier()->isStr("type") &&
-      SemaRef.getSourceManager().isInSystemHeader(D->getBeginLoc()))
-    // Fold it to the (non-reference) type which g++ would have produced.
-    DI = SemaRef.Context.getTrivialTypeSourceInfo(
-      DI->getType().getNonReferenceType());
+  if (SemaRef.getPreprocessor().NeedsStdLibCxxWorkaroundBefore(2014'04'22)) {
+    const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
+    CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
+    if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&
+        DT->isReferenceType() &&
+        RD->getEnclosingNamespaceContext() == SemaRef.getStdNamespace() &&
+        RD->getIdentifier() && RD->getIdentifier()->isStr("common_type") &&
+        D->getIdentifier() && D->getIdentifier()->isStr("type") &&
+        SemaRef.getSourceManager().isInSystemHeader(D->getBeginLoc()))
+      // Fold it to the (non-reference) type which g++ would have produced.
+      DI = SemaRef.Context.getTrivialTypeSourceInfo(
+          DI->getType().getNonReferenceType());
+  }
 
   // Create the new typedef
   TypedefNameDecl *Typedef;
