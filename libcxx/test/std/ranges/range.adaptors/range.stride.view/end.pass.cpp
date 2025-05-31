@@ -36,7 +36,7 @@ concept HasOnlyConstEnd = HasConstEnd<T> && !HasConstAndNonConstEnd<T>;
 
 static_assert(HasOnlyNonConstEnd<std::ranges::stride_view<UnSimpleNoConstCommonView>>);
 static_assert(HasOnlyConstEnd<std::ranges::stride_view<BasicTestView<int*, int*>>>);
-static_assert(HasConstAndNonConstEnd<std::ranges::stride_view<UnsimpleConstView>>);
+static_assert(HasConstAndNonConstEnd<std::ranges::stride_view<UnSimpleConstView>>);
 
 static_assert(simple_view<SimpleUnCommonConstView>);
 static_assert(!std::ranges::common_range<SimpleUnCommonConstView>);
@@ -70,8 +70,8 @@ constexpr bool test_default_sentinel() {
   {
     static_assert(!simple_view<UnsimpleUnCommonConstView>);
     static_assert(!std::ranges::common_range<UnsimpleUnCommonConstView>);
-    static_assert(std::ranges::sized_range<UnsimpleConstView>);
-    static_assert(std::ranges::forward_range<UnsimpleConstView>);
+    static_assert(std::ranges::sized_range<UnSimpleConstView>);
+    static_assert(std::ranges::forward_range<UnSimpleConstView>);
 
     auto v  = UnsimpleUnCommonConstView{};
     auto sv = std::ranges::stride_view<UnsimpleUnCommonConstView>(v, 1);
