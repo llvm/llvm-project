@@ -52,22 +52,13 @@ llvm::StringRef translate(llvm::StringRef Value) {
 }
 }
 
-// TODO: simplify the matcher
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(binaryOperator(
         unless(isExpansionInSystemHeader()),
         hasAnyOperatorName("|", "&", "|=", "&="),
         hasEitherOperand(expr(ignoringImpCasts(hasType(booleanType())))),
-        optionally(hasEitherOperand(
-            expr(ignoringImpCasts(hasType(isVolatileQualified())))
-                .bind("vol"))),
         optionally(hasAncestor(
-            binaryOperator().bind("p"))),
-        optionally(hasRHS(ignoringParenCasts(
-            binaryOperator().bind("r")))),
-        optionally(hasLHS(ignoringParenCasts(
-            declRefExpr().bind("l")
-        )))
+            binaryOperator().bind("p")))
         )
     .bind("op"), this);
 }
@@ -80,16 +71,9 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if (isInTemplateFunction(MatchedExpr, *Result.Context))
     return;
 
-  // if (MatchedExpr->isInstantiationDependent())
-  //   return;
-  // if
-  // (removeCVRef(MatchedExpr->getLHS()->IgnoreImpCasts()->getType())->isTemplateTypeParmType()
-  // &&
-  //     removeCVRef(MatchedExpr->getRHS()->IgnoreImpCasts()->getType())->isTemplateTypeParmType())
-  //   return;
-
-  const auto *VolatileOperand = Result.Nodes.getNodeAs<Expr>("vol");
-  if (VolatileOperand)
+  const bool HasVolatileOperand = MatchedExpr->getLHS()->IgnoreImpCasts()->getType().isVolatileQualified() ||
+                                  MatchedExpr->getRHS()->IgnoreImpCasts()->getType().isVolatileQualified();
+  if (HasVolatileOperand)
     return;
 
   SourceLocation Loc = MatchedExpr->getOperatorLoc();
@@ -116,7 +100,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   FixItHint InsertEqual, ReplaceOperator, InsertBrace1, InsertBrace2;
   if (MatchedExpr->isCompoundAssignmentOp()) {
-    const auto *DelcRefLHS = Result.Nodes.getNodeAs<DeclRefExpr>("l");
+    const auto *DelcRefLHS = dyn_cast<DeclRefExpr>(MatchedExpr->getLHS()->IgnoreImpCasts());
     if (!DelcRefLHS)
       return;
     const SourceLocation LocLHS = DelcRefLHS->getEndLoc();
@@ -137,12 +121,13 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p"); Parent)
     ParentOpcode = Parent->getOpcode();
 
-  const auto *RHS = Result.Nodes.getNodeAs<BinaryOperator>("r");
+  const auto *RHS = dyn_cast<BinaryOperator>(MatchedExpr->getRHS()->IgnoreParenCasts());
   std::optional<BinaryOperatorKind> RHSOpcode;
   if (RHS)
     RHSOpcode = RHS->getOpcode();
 
   const BinaryOperator* SurroundedExpr = nullptr;
+  // TODO: `*ParentOpcode == BO_Xor` - forgot about OR operator
   if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode.has_value() && *ParentOpcode == BO_LAnd) ||
       (MatchedExpr->getOpcode() == BO_And && ParentOpcode.has_value() && *ParentOpcode == BO_Xor)) {
     SurroundedExpr = MatchedExpr;

@@ -118,6 +118,11 @@ void bad_with_priors() {
     // CHECK-MESSAGES: :[[@LINE-2]]:47: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-MESSAGES: :[[@LINE-3]]:72: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-FIXES: bool q = (true && (false || true)) && ((false || true) && (false && (true || false)));
+    
+    // TODO: ?? a && (b | c);
+    
+    // TODO: ?? a && (q ^ (b | c));
+
 }
 
 void bad_with_priors2() {
@@ -132,6 +137,12 @@ void bad_with_priors2() {
     b & c ^ a;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-FIXES: (b && c) ^ a;
+
+    // TODO: make a test case from it
+    // bool d = false;
+    // d ^ (a && b & c);
+
+    // TODO: is there a hidden problem with priority when for example `|` surrounded by `||` changed to `||`
 }
 
 void bad_with_priors_compound() {
@@ -148,6 +159,8 @@ void bad_with_priors_compound() {
     a |= b && c;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-FIXES: a = a || b && c;
+    
+    // TODO: test for already braced, `a &= (b || c);`
 }
 
 void bad_with_priors_nontraditional() {
