@@ -16,7 +16,9 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/detected_or.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/nat.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_class.h>
 #include <__type_traits/is_function.h>
@@ -34,67 +36,37 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// clang-format off
-#define _LIBCPP_CLASS_TRAITS_HAS_XXX(NAME, PROPERTY)                                                                   \
-  template <class _Tp, class = void>                                                                                   \
-  struct NAME : false_type {};                                                                                         \
-  template <class _Tp>                                                                                                 \
-  struct NAME<_Tp, __void_t<typename _Tp::PROPERTY> > : true_type {}
-// clang-format on
-
-_LIBCPP_CLASS_TRAITS_HAS_XXX(__has_pointer, pointer);
-_LIBCPP_CLASS_TRAITS_HAS_XXX(__has_element_type, element_type);
-
-template <class _Ptr, bool = __has_element_type<_Ptr>::value>
-struct __pointer_traits_element_type {};
-
 template <class _Ptr>
-struct __pointer_traits_element_type<_Ptr, true> {
-  using type _LIBCPP_NODEBUG = typename _Ptr::element_type;
-};
+struct __pointer_traits_element_type_impl {};
 
 template <template <class, class...> class _Sp, class _Tp, class... _Args>
-struct __pointer_traits_element_type<_Sp<_Tp, _Args...>, true> {
-  using type _LIBCPP_NODEBUG = typename _Sp<_Tp, _Args...>::element_type;
-};
-
-template <template <class, class...> class _Sp, class _Tp, class... _Args>
-struct __pointer_traits_element_type<_Sp<_Tp, _Args...>, false> {
+struct __pointer_traits_element_type_impl<_Sp<_Tp, _Args...> > {
   using type _LIBCPP_NODEBUG = _Tp;
 };
 
-template <class _Tp, class = void>
-struct __has_difference_type : false_type {};
-
-template <class _Tp>
-struct __has_difference_type<_Tp, __void_t<typename _Tp::difference_type> > : true_type {};
-
-template <class _Ptr, bool = __has_difference_type<_Ptr>::value>
-struct __pointer_traits_difference_type {
-  using type _LIBCPP_NODEBUG = ptrdiff_t;
-};
+template <class _Ptr, class = void>
+struct __pointer_traits_element_type : __pointer_traits_element_type_impl<_Ptr> {};
 
 template <class _Ptr>
-struct __pointer_traits_difference_type<_Ptr, true> {
-  using type _LIBCPP_NODEBUG = typename _Ptr::difference_type;
+struct __pointer_traits_element_type<_Ptr, __void_t<typename _Ptr::element_type>> {
+  using type _LIBCPP_NODEBUG = typename _Ptr::element_type;
 };
 
 template <class _Tp, class _Up>
-struct __has_rebind {
-private:
-  template <class _Xp>
-  static false_type __test(...);
-  _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-  template <class _Xp>
-  static true_type __test(typename _Xp::template rebind<_Up>* = 0);
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
-
-public:
-  static const bool value = decltype(__test<_Tp>(0))::value;
+struct __pointer_traits_rebind_impl {
+  static_assert(false, "Cannot rebind pointer; did you forget to add a rebind member to your pointer?");
 };
 
-template <class _Tp, class _Up, bool = __has_rebind<_Tp, _Up>::value>
-struct __pointer_traits_rebind {
+template <template <class, class...> class _Sp, class _Tp, class... _Args, class _Up>
+struct __pointer_traits_rebind_impl<_Sp<_Tp, _Args...>, _Up> {
+  using type _LIBCPP_NODEBUG = _Sp<_Up, _Args...>;
+};
+
+template <class _Tp, class _Up, class = void>
+struct __pointer_traits_rebind : __pointer_traits_rebind_impl<_Tp, _Up> {};
+
+template <class _Tp, class _Up>
+struct __pointer_traits_rebind<_Tp, _Up, __void_t<typename _Tp::template rebind<_Up> > > {
 #ifndef _LIBCPP_CXX03_LANG
   using type _LIBCPP_NODEBUG = typename _Tp::template rebind<_Up>;
 #else
@@ -102,19 +74,8 @@ struct __pointer_traits_rebind {
 #endif
 };
 
-template <template <class, class...> class _Sp, class _Tp, class... _Args, class _Up>
-struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, true> {
-#ifndef _LIBCPP_CXX03_LANG
-  using type _LIBCPP_NODEBUG = typename _Sp<_Tp, _Args...>::template rebind<_Up>;
-#else
-  using type _LIBCPP_NODEBUG = typename _Sp<_Tp, _Args...>::template rebind<_Up>::other;
-#endif
-};
-
-template <template <class, class...> class _Sp, class _Tp, class... _Args, class _Up>
-struct __pointer_traits_rebind<_Sp<_Tp, _Args...>, _Up, false> {
-  typedef _Sp<_Up, _Args...> type;
-};
+template <class _Tp>
+using __difference_type_member = typename _Tp::difference_type;
 
 template <class _Ptr, class = void>
 struct __pointer_traits_impl {};
@@ -123,7 +84,7 @@ template <class _Ptr>
 struct __pointer_traits_impl<_Ptr, __void_t<typename __pointer_traits_element_type<_Ptr>::type> > {
   typedef _Ptr pointer;
   typedef typename __pointer_traits_element_type<pointer>::type element_type;
-  typedef typename __pointer_traits_difference_type<pointer>::type difference_type;
+  using difference_type = __detected_or_t<ptrdiff_t, __difference_type_member, pointer>;
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class _Up>
@@ -134,9 +95,6 @@ struct __pointer_traits_impl<_Ptr, __void_t<typename __pointer_traits_element_ty
     typedef typename __pointer_traits_rebind<pointer, _Up>::type other;
   };
 #endif // _LIBCPP_CXX03_LANG
-
-private:
-  struct __nat {};
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
@@ -163,9 +121,6 @@ struct pointer_traits<_Tp*> {
     typedef _Up* other;
   };
 #endif
-
-private:
-  struct __nat {};
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
@@ -257,20 +212,23 @@ template <class _Tp>
 struct __pointer_of {};
 
 template <class _Tp>
-  requires(__has_pointer<_Tp>::value)
+concept __use_pointer_member = requires { typename _Tp::pointer; };
+
+template <__use_pointer_member _Tp>
 struct __pointer_of<_Tp> {
   using type _LIBCPP_NODEBUG = typename _Tp::pointer;
 };
 
 template <class _Tp>
-  requires(!__has_pointer<_Tp>::value && __has_element_type<_Tp>::value)
+concept __use_element_type_member = !__use_pointer_member<_Tp> && requires { typename _Tp::element_type; };
+
+template <__use_element_type_member _Tp>
 struct __pointer_of<_Tp> {
   using type _LIBCPP_NODEBUG = typename _Tp::element_type*;
 };
 
 template <class _Tp>
-  requires(!__has_pointer<_Tp>::value && !__has_element_type<_Tp>::value &&
-           __has_element_type<pointer_traits<_Tp>>::value)
+  requires(!__use_element_type_member<_Tp>)
 struct __pointer_of<_Tp> {
   using type _LIBCPP_NODEBUG = typename pointer_traits<_Tp>::element_type*;
 };
