@@ -4,7 +4,7 @@
 ;; user (otherwise the dbg use becomes poison after the original phi is
 ;; deleted). Check the new phi inherits the DebugLoc.
 
-; CHECK: %[[phi:.*]] = phi i8 [ 1, %{{.*}} ], [ 0, %{{.*}} ], !dbg ![[dbg:[0-9]+]]
+; CHECK: %[[phi:.*]] = phi i8 [ 2, %{{.*}} ], [ 0, %{{.*}} ], !dbg ![[dbg:[0-9]+]]
 ; CHECK: #dbg_value(i8 %[[phi]], ![[#]], !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)
 ; CHECK: ![[dbg]] = !DILocation(line: 123,
 
@@ -19,7 +19,7 @@ if.then:                                          ; preds = entry
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %p.0 = phi i32 [ 1, %if.then ], [ 0, %entry ], !dbg !13
+  %p.0 = phi i32 [ 2, %if.then ], [ 0, %entry ], !dbg !13
   call void @llvm.dbg.value(metadata i32 %p.0, metadata !4, metadata !DIExpression()), !dbg !13
   %x = trunc i32 %p.0 to i8
   %callff = call float @ff(i8  %x)
