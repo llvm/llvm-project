@@ -35549,8 +35549,11 @@ bool X86TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
   return !(SrcVT == MVT::i32 && DestVT == MVT::i16);
 }
 
-bool X86TargetLowering::shouldFoldSelectWithIdentityConstant(unsigned Opcode,
-                                                             EVT VT) const {
+bool X86TargetLowering::shouldFoldSelectWithIdentityConstant(
+    unsigned BinOpcode, EVT VT, unsigned SelectOpcode, SDValue X,
+    SDValue Y) const {
+  if (SelectOpcode != ISD::VSELECT)
+    return false;
   // TODO: This is too general. There are cases where pre-AVX512 codegen would
   //       benefit. The transform may also be profitable for scalar code.
   if (!Subtarget.hasAVX512())
@@ -42368,6 +42371,20 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
   case X86ISD::VZEXT_MOVL: {
     SDValue N0 = N.getOperand(0);
 
+    // Fold (vzmovl (shift x, y)) -> (shift (vzmovl x), y)
+    // Zeroing out the upper elements means we're just shifting a zero value.
+    // TODO: Try harder to move vzmovl upward towards SCALAR_TO_VECTOR nodes.
+    // TODO: Move this to canonicalizeShuffleWithOp once we add zero handling.
+    if (N0.getOpcode() == X86ISD::VSHL || N0.getOpcode() == X86ISD::VSHLI ||
+        N0.getOpcode() == X86ISD::VSRL || N0.getOpcode() == X86ISD::VSRLI ||
+        N0.getOpcode() == X86ISD::VSRA || N0.getOpcode() == X86ISD::VSRAI) {
+      if (N0.hasOneUse())
+        return DAG.getNode(
+            N0.getOpcode(), DL, VT,
+            DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, N0.getOperand(0)),
+            N0.getOperand(1));
+    }
+
     // If this a vzmovl of a full vector load, replace it with a vzload, unless
     // the load is volatile.
     if (N0.hasOneUse() && ISD::isNormalLoad(N0.getNode())) {
@@ -44772,7 +44789,7 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     // Only known if known in both the LHS and RHS.
     Known = Known.intersectWith(Known2);
-    break;
+    return false;
   }
   case X86ISD::BEXTR:
   case X86ISD::BEXTRI: {
@@ -59532,6 +59549,7 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   unsigned SizeInBits = VT.getSizeInBits();
   unsigned InSizeInBits = InVecVT.getSizeInBits();
   unsigned NumSubElts = VT.getVectorNumElements();
+  unsigned NumInElts = InVecVT.getVectorNumElements();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(N);
 
@@ -59598,22 +59616,22 @@ static SDValue combineEXTRACT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // If we're extracting an upper subvector from a broadcast we should just
-  // extract the lowest subvector instead which should allow
+  // If we're extracting an upper subvector see if we'd get the same elements if
+  // we extracted the lowest subvector instead which should allow
   // SimplifyDemandedVectorElts do more simplifications.
-  if (IdxVal != 0 && (InVec.getOpcode() == X86ISD::VBROADCAST ||
-                      InVec.getOpcode() == X86ISD::VBROADCAST_LOAD ||
-                      DAG.isSplatValue(InVec, /*AllowUndefs*/ false)))
-    return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
+  if (IdxVal != 0) {
+    bool AllEquiv = all_of(seq<unsigned>(NumSubElts), [&](unsigned I) {
+      return IsElementEquivalent(NumInElts, InVec, InVec, I, I + IdxVal);
+    });
+    if (AllEquiv)
+      return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
+  }
 
   // Check if we're extracting a whole broadcasted subvector.
   if (InVec.getOpcode() == X86ISD::SUBV_BROADCAST_LOAD) {
     auto *MemIntr = cast<MemIntrinsicSDNode>(InVec);
     EVT MemVT = MemIntr->getMemoryVT();
     if (MemVT == VT) {
-      // Just use the lowest subvector.
-      if (IdxVal != 0)
-        return extractSubVector(InVec, 0, DAG, DL, SizeInBits);
       // If this is the only use, we can replace with a regular load (this may
       // have been missed by SimplifyDemandedVectorElts due to extra uses of the
       // memory chain).
