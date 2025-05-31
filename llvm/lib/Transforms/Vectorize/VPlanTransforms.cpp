@@ -1852,10 +1852,7 @@ static void removeBranchOnCondTrue(VPlan &Plan) {
       continue;
 
     VPBasicBlock *RemovedSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
-    const auto &Preds = RemovedSucc->getPredecessors();
-    assert(count(Preds, VPBB) == 1 &&
-           "There must be a single edge between VPBB and its successor");
-    unsigned DeadIdx = std::distance(Preds.begin(), find(Preds, VPBB));
+    unsigned DeadIdx = RemovedSucc->getIndexForPredecessor(VPBB);
 
     // Values coming from VPBB into ResumePhi recipes of RemoveSucc are removed
     // from these recipes.
