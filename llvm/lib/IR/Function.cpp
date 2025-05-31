@@ -340,6 +340,10 @@ void Argument::removeAttr(Attribute::AttrKind Kind) {
   getParent()->removeParamAttr(getArgNo(), Kind);
 }
 
+void Argument::removeAttr(StringRef Kind) {
+  getParent()->removeParamAttr(getArgNo(), Kind);
+}
+
 void Argument::removeAttrs(const AttributeMask &AM) {
   AttributeList AL = getParent()->getAttributes();
   AL = AL.removeParamAttributes(Parent->getContext(), getArgNo(), AM);

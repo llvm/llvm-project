@@ -173,6 +173,8 @@ public:
   /// Remove attributes from an argument.
   void removeAttr(Attribute::AttrKind Kind);
 
+  void removeAttr(StringRef Kind);
+
   void removeAttrs(const AttributeMask &AM);
 
   /// Check if an argument has a given attribute.
