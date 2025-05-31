@@ -163,12 +163,13 @@ void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
 
   // Create the end entry based on the last existing entry.
   MCDwarfLineEntry EndEntry = Entries.back();
-  EndEntry.setEndLabel(EndLabel);
+
   // An end entry is just for marking the end of a sequence of code locations.
   // It should not carry forward a LineStreamLabel from a previous special entry
   // if Entries.back() happened to be such an entry. So here we clear
   // LineStreamLabel.
   EndEntry.LineStreamLabel = nullptr;
+  EndEntry.setEndLabel(EndLabel);
   Entries.push_back(EndEntry);
 }
 
