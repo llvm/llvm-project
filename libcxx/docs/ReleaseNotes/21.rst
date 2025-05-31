@@ -47,6 +47,9 @@ Implemented Papers
 - P1222R4: A Standard ``flat_set`` (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
 - P2897R7: ``aligned_accessor``: An mdspan accessor expressing pointer over-alignment (`Github <https://github.com/llvm/llvm-project/issues/118372>`__)
 - P3247R2: Deprecate the notion of trivial types (`Github <https://github.com/llvm/llvm-project/issues/118387>`__)
+- P2441R2: ``views::join_with`` (`Github <https://github.com/llvm/llvm-project/issues/105185>`__)
+- P2711R1: Making multi-param constructors of ``views`` ``explicit`` (`Github <https://github.com/llvm/llvm-project/issues/105252>`__)
+- P2770R0: Stashing stashing ``iterators`` for proper flattening (`Github <https://github.com/llvm/llvm-project/issues/105250>`__)
 
 Improvements and New Features
 -----------------------------
