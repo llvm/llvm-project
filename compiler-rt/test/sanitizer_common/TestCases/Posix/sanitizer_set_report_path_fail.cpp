@@ -1,10 +1,10 @@
 // RUN: %clangxx -O2 %s -o %t
 
 // Case 1: Try setting a path that is an invalid/inaccessible directory.
-// RUN: not %env %run %t 2>&1 | FileCheck %s --check-prefix=ERROR1
+// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=ERROR1
 
 // Case 2: Try setting a path that is too large.
-// RUN: not %env %run %t A 2>&1 | FileCheck %s --check-prefix=ERROR2
+// RUN: not %run %t A 2>&1 | FileCheck %s --check-prefix=ERROR2
 
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>

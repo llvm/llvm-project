@@ -21864,8 +21864,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
         "SiFive-CLIC-stack-swap",
         "SiFive-CLIC-preemptible-stack-swap",
     };
-    if (llvm::find(SupportedInterruptKinds, Kind) ==
-        std::end(SupportedInterruptKinds))
+    if (!llvm::is_contained(SupportedInterruptKinds, Kind))
       report_fatal_error(
         "Function interrupt attribute argument not supported!");
 
