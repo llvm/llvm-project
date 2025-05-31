@@ -68,7 +68,6 @@ constexpr bool test() {
 
     std::same_as<CopyableInputView> decltype(auto) s = std::move(str).base();
     assert(*s.begin() == *buff);
-
   }
 
   // const &&
