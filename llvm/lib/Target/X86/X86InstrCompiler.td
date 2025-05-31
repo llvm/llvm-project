@@ -2237,3 +2237,6 @@ def : Pat<(cttz_zero_undef (loadi64 addr:$src)), (BSF64rm (i64 (IMPLICIT_DEF)), 
 let Predicates = [HasMOVBE] in {
  def : Pat<(bswap GR16:$src), (ROL16ri GR16:$src, (i8 8))>;
 }
+
+// Use the LFENCE instruction as a barrier.
+def : Pat<(int_speculative_data_barrier), (LFENCE)>;
