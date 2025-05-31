@@ -757,7 +757,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FABS, MVT::v2f16, Legal);
 
     // Can do this in one BFI plus a constant materialize.
-    setOperationAction(ISD::FCOPYSIGN, {MVT::v2f16, MVT::v2bf16}, Custom);
+    setOperationAction(ISD::FCOPYSIGN,
+                       {MVT::v2f16, MVT::v2bf16, MVT::v4f16, MVT::v4bf16},
+                       Custom);
 
     setOperationAction({ISD::FMAXNUM, ISD::FMINNUM}, MVT::f16, Custom);
     setOperationAction({ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE}, MVT::f16, Legal);
@@ -5936,10 +5938,11 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
                                               SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
-         VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v16i16 ||
-         VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
+  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16 ||
+         VT == MVT::v4f32 || VT == MVT::v8i16 || VT == MVT::v8f16 ||
+         VT == MVT::v16i16 || VT == MVT::v16f16 || VT == MVT::v8f32 ||
+         VT == MVT::v16f32 || VT == MVT::v32f32 || VT == MVT::v32i16 ||
+         VT == MVT::v32f16);
 
   auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
@@ -7122,17 +7125,16 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
 
 SDValue SITargetLowering::lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const {
   SDValue Mag = Op.getOperand(0);
-  SDValue Sign = Op.getOperand(1);
-
   EVT MagVT = Mag.getValueType();
-  EVT SignVT = Sign.getValueType();
 
-  assert(MagVT.isVector());
+  if (MagVT.getVectorNumElements() > 2)
+    return splitBinaryVectorOp(Op, DAG);
+
+  SDValue Sign = Op.getOperand(1);
+  EVT SignVT = Sign.getValueType();
 
   if (MagVT == SignVT)
     return Op;
-
-  assert(MagVT.getVectorNumElements() == 2);
 
   // fcopysign v2f16:mag, v2f32:sign ->
   //   fcopysign v2f16:mag, bitcast (trunc (bitcast sign to v2i32) to v2i16)
