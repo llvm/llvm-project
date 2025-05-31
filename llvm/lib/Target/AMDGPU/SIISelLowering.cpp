@@ -759,7 +759,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     // Can do this in one BFI plus a constant materialize.
     setOperationAction(ISD::FCOPYSIGN,
                        {MVT::v2f16, MVT::v2bf16, MVT::v4f16, MVT::v4bf16,
-                        MVT::v8f16, MVT::v8bf16},
+                        MVT::v8f16, MVT::v8bf16, MVT::v16f16, MVT::v16bf16},
                        Custom);
 
     setOperationAction({ISD::FMAXNUM, ISD::FMINNUM}, MVT::f16, Custom);
@@ -5942,8 +5942,8 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
   assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16 ||
          VT == MVT::v4f32 || VT == MVT::v8i16 || VT == MVT::v8f16 ||
          VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
-         VT == MVT::v8f32 || VT == MVT::v16f32 || VT == MVT::v32f32 ||
-         VT == MVT::v32i16 || VT == MVT::v32f16);
+         VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
+         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16);
 
   auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
