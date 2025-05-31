@@ -14,6 +14,7 @@
 // Note: Checks here are augmented by checks in
 // iterator/ctor.copy.pass.cpp.
 
+#include <concepts>
 #include <ranges>
 
 #include "types.h"
@@ -24,25 +25,46 @@ concept HasConstBegin = requires(const T& ct) { ct.begin(); };
 template <class T>
 concept HasBegin = requires(T& t) { t.begin(); };
 
+// _View has const-qualified begin and end methods and
+// is _not_ a simple view.
 template <class T>
-concept HasConstAndNonConstBegin = HasConstBegin<T> && requires(T& t, const T& ct) {
+concept HasConstAndNonConstBegin = requires(T& t, const T& ct) {
+  // The return types for begin are different when this is const or not:
+  // the iterator's _Const non-type-template parameter is true in the former
+  // and false in the latter.
   requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>;
 };
 
+// _View does not have const-qualified begin and end methods and
+// is _not_ a simple view.
 template <class T>
+// There is a begin but it's not const qualified => Only non-const qualified begin.
 concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
 
+// _View does have const-qualified begin and end methods and
+// is a simple view.
 template <class T>
+// There is a const-qualified begin and there are not both const- and non-const qualified begin => Only const-qualified begin.
 concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
 
 static_assert(HasOnlyNonConstBegin<std::ranges::stride_view<UnSimpleNoConstCommonView>>);
 static_assert(HasOnlyConstBegin<std::ranges::stride_view<BasicTestView<int*, int*>>>);
-static_assert(HasConstAndNonConstBegin<std::ranges::stride_view<UnsimpleConstView>>);
+static_assert(HasConstAndNonConstBegin<std::ranges::stride_view<UnSimpleConstView>>);
+
+constexpr bool test() {
+  const auto const_basic    = UnSimpleConstView();
+  const auto sv_const_basic = std::ranges::stride_view(const_basic, 1);
+  static_assert(std::same_as<decltype(*sv_const_basic.begin()), double&>);
+
+  auto non_const_basic    = SimpleCommonConstView();
+  auto sv_non_const_basic = std::ranges::stride_view(non_const_basic, 1);
+  static_assert(std::same_as<decltype(*sv_non_const_basic.begin()), int&>);
+
+  return true;
+}
 
 int main(int, char**) {
-  int buffer[] = {1, 2, 3};
-  auto sv      = std::ranges::stride_view(BasicTestView<int*, int*>(buffer, buffer + 3), 1);
-  assert(1 == *(sv.begin()));
-
+  test();
+  static_assert(test());
   return 0;
 }
