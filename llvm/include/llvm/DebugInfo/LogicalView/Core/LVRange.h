@@ -54,11 +54,14 @@ class LVRange final : public LVObject {
   LVAllocator Allocator;
   LVRangesTree RangesTree;
   LVRangeEntries RangeEntries;
-  LVAddress Lower = MaxAddress;
+  LVAddress TombstoneAddress;
+  LVAddress Lower;
   LVAddress Upper = 0;
 
 public:
-  LVRange() : LVObject(), RangesTree(Allocator) {}
+  LVRange(LVAddress Address = InvalidTombstone)
+      : LVObject(), RangesTree(Allocator), TombstoneAddress(Address),
+        Lower(Address) {}
   LVRange(const LVRange &) = delete;
   LVRange &operator=(const LVRange &) = delete;
   ~LVRange() = default;
@@ -75,7 +78,7 @@ public:
 
   void clear() {
     RangeEntries.clear();
-    Lower = MaxAddress;
+    Lower = TombstoneAddress;
     Upper = 0;
   }
   bool empty() const { return RangeEntries.empty(); }
