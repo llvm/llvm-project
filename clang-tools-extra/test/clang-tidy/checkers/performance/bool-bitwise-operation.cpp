@@ -17,7 +17,7 @@ bool& normal() {
     return st;
 }
 
-void bad() {
+bool bad() {
     bool a = true, b = false;
     a | b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
@@ -31,6 +31,34 @@ void bad() {
     a &= b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-FIXES: a = a && b;
+
+    return true;
+}
+
+bool global_1 = bad() | bad();
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+// CHECK-FIXES: bool global_1 = bad() || bad();
+bool global_2 = bad() & bad();
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+// CHECK-FIXES: bool global_2 = bad() && bad();
+
+using Boolean = bool;
+
+bool bad_typedef() {
+    Boolean a = true, b = false;
+    a | b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a || b;
+    a & b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a && b;
+    a |= b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a = a || b;
+    a &= b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a = a && b;
+    return true;
 }
 
 void bad_volatile_bool() {
@@ -84,6 +112,12 @@ void bad_with_priors() {
     b | c && a;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-FIXES: (b || c) && a;
+
+    bool q = (true && false | true) && (false | true && (false && true | false));
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:47: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:72: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: bool q = (true && (false || true)) && ((false || true) && (false && (true || false)));
 }
 
 void bad_with_priors2() {
@@ -256,8 +290,47 @@ void good_in_unreachable_template(T a, T b) {
     a &= b;
 }
 
-// TODO: test for in template
-// TODO: test for type in typedef
-// TODO: test for expressions in parentheses
+template<typename T>
+int bad_in_template(T a, T b) {
+    bool c = false;
+    a | b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    a & b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    a |= b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    a &= b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    c &= a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    return 0;
+}
+
+template<typename T>
+int bad_in_template_lamnda_captured(T a, T b) {
+    [=] mutable {
+        bool c = false;
+        a | b;
+        // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+        // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+        a & b;
+        // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+        // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+        a |= b;
+        // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+        // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+        b &= a;
+        // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+        // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    }();
+    return 0;
+}
+
+int dummy = bad_in_template(true, false) + bad_in_template_lamnda_captured(false, true);
 
 

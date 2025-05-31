@@ -17,6 +17,20 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 namespace {
+template<typename AstNode>
+bool isInTemplateFunction(const AstNode* AN, ASTContext& Context) {
+  auto Parents = Context.getParents(*AN);
+  for (const auto& Parent : Parents) {
+    if (const auto* FD = Parent.template get<FunctionDecl>()) {
+      return FD->isTemplateInstantiation() || 
+              FD->getTemplatedKind() != FunctionDecl::TK_NonTemplate;
+    }
+    if (const auto* S = Parent.template get<Stmt>()) {
+      return isInTemplateFunction(S, Context);
+    }
+  }
+  return false;
+}
 
 constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
     OperatorsTransformation{{{"|", "||"},
@@ -38,6 +52,7 @@ llvm::StringRef translate(llvm::StringRef Value) {
 }
 }
 
+// TODO: simplify the matcher
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(binaryOperator(
         unless(isExpansionInSystemHeader()),
@@ -61,6 +76,17 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("op");
 
   auto Diag = diag(MatchedExpr->getOperatorLoc(), "use logical operator instead of bitwise one for bool");
+
+  if (isInTemplateFunction(MatchedExpr, *Result.Context))
+    return;
+
+  // if (MatchedExpr->isInstantiationDependent())
+  //   return;
+  // if
+  // (removeCVRef(MatchedExpr->getLHS()->IgnoreImpCasts()->getType())->isTemplateTypeParmType()
+  // &&
+  //     removeCVRef(MatchedExpr->getRHS()->IgnoreImpCasts()->getType())->isTemplateTypeParmType())
+  //   return;
 
   const auto *VolatileOperand = Result.Nodes.getNodeAs<Expr>("vol");
   if (VolatileOperand)
