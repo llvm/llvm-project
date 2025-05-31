@@ -2622,11 +2622,10 @@ bool clang::internal::anyConflict(const SmallVectorImpl<FixItHint> &FixIts,
 
   for (const FixItHint &H : FixIts)
     All.push_back(&H);
-  std::sort(All.begin(), All.end(),
-            [&SM](const FixItHint *H1, const FixItHint *H2) {
-              return SM.isBeforeInTranslationUnit(H1->RemoveRange.getBegin(),
-                                                  H2->RemoveRange.getBegin());
-            });
+  llvm::sort(All, [&SM](const FixItHint *H1, const FixItHint *H2) {
+    return SM.isBeforeInTranslationUnit(H1->RemoveRange.getBegin(),
+                                        H2->RemoveRange.getBegin());
+  });
 
   const FixItHint *CurrHint = nullptr;
 
