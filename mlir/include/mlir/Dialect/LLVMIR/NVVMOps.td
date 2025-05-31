@@ -25,6 +25,7 @@ include "mlir/Dialect/LLVMIR/LLVMTypes.td"
 def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
 def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
+def LLVM_PointerLocal : LLVM_PointerInAddressSpace<5>;
 def LLVM_PointerTensor : LLVM_PointerInAddressSpace<6>;
 def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
 
@@ -116,6 +117,25 @@ class NVVM_PTXBuilder_Op<string mnemonic,
 class NVVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<NVVM_Dialect, attrName, traits> {
   let mnemonic = attrMnemonic;
+}
+
+// Cache Eviction Priority enum definitions
+def EvictNormal : I32EnumCase<"EvictNormal", 0, "evict_normal">;
+def EvictFirst : I32EnumCase<"EvictFirst", 1, "evict_first">;
+def EvictLast : I32EnumCase<"EvictLast", 2, "evict_last">;
+def EvictUnchanged : I32EnumCase<"EvictUnchanged", 3, "evict_unchanged">;
+def NoAllocate : I32EnumCase<"NoAllocate", 4, "no_allocate">;
+
+def CacheEvictionPriority : I32Enum<"CacheEvictionPriority",
+                                    "NVVM Cache Eviction Priority",
+                                    [EvictNormal, EvictFirst, EvictLast,   
+                                     EvictUnchanged, NoAllocate]> {
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def CacheEvictionPriorityAttr : EnumAttr<NVVM_Dialect, CacheEvictionPriority, 
+                                         "cache_eviction_priority"> {
+  let assemblyFormat = "$value";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2331,6 +2351,79 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
     }
   }];
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Prefetch Ops
+//===----------------------------------------------------------------------===//
+
+def NVVM_PrefetchL1Op : NVVM_Op<"prefetch.L1"> {
+  let summary = "Brings the cache line containing the specified address into L1 cache";
+  let description = [{
+    Brings the cache line containing the specified address into L1 cache.
+
+    Operand `addr` can be a global, local or generic address pointer.
+    No operation is performed if `addr` maps to a `shared` memory location.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu)
+  }];
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGlobal,
+                                  LLVM_PointerLocal,
+                                  LLVM_PointerGeneric]>:$addr);
+  let assemblyFormat = "$addr attr-dict `:` type($addr)";
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(Operation &op);
+  }];
+  let llvmBuilder = [{
+    auto intId = NVVM::PrefetchL1Op::getIntrinsicID(*op);
+    createIntrinsicCall(builder, intId, $addr);
+  }];
+}
+
+def NVVM_PrefetchL2Op : NVVM_Op<"prefetch.L2"> {
+  let summary = "Brings the cache line containing the specified address into L2 cache";
+  let description = [{
+    Brings the cache line containing the specified address into L2 cache.
+
+    Operand `addr` can be a global, local or generic address pointer.
+    No operation is performed if `addr` maps to a `shared` memory location.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu)
+  }];
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGlobal,
+                                  LLVM_PointerLocal,
+                                  LLVM_PointerGeneric]>:$addr,
+                       OptionalAttr<CacheEvictionPriorityAttr>:$evictPriority);
+  let assemblyFormat = "$addr (`,` `evict_priority` `=` $evictPriority^)? attr-dict `:` type($addr)";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static llvm::Intrinsic::ID getIntrinsicID(Operation &op);
+  }];
+  let llvmBuilder = [{
+    auto intId = NVVM::PrefetchL2Op::getIntrinsicID(*op);
+    createIntrinsicCall(builder, intId, $addr);
+  }];
+}
+
+def NVVM_PrefetchL1UniformOp : NVVM_Op<"prefetch.L1.uniform"> {
+  let summary = "Brings the cache line containing the specified address into L1 uniform cache";
+  let description = [{
+    Brings the cache line containing the specified address into L1 uniform 
+    cache.
+
+    Operand `addr` must be a generic address pointer and no operation is 
+    performed if `addr` maps to a `const`, `local`, or `shared` memory location.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu)
+  }];
+  let arguments = (ins LLVM_PointerGeneric:$addr);
+  let assemblyFormat = "$addr attr-dict `:` type($addr)";
+
+  let llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_prefetchu_L1, $addr);
+  }];
 }
 
 def NVVM_PrefetchTensorMapOp : NVVM_Op<"prefetch.tensormap",
