@@ -8,7 +8,9 @@
 
 #include "flang/Support/Fortran-features.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/optional.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringExtras.h"
 
 namespace Fortran::common {
 
@@ -94,6 +96,11 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
 }
 
+// Namespace for helper functions for parsing CLI options
+// used instead of static so that there can be unit tests for these
+// functions.
+namespace FortranFeaturesHelpers {
+
 // Ignore case and any inserted punctuation (like '-'/'_')
 static std::optional<char> GetWarningChar(char ch) {
   if (ch >= 'a' && ch <= 'z') {
@@ -107,44 +114,138 @@ static std::optional<char> GetWarningChar(char ch) {
   }
 }
 
-static bool WarningNameMatch(const char *a, const char *b) {
+// Check for case and punctuation insensitive string equality.
+// NB, b is probably not null terminated, so don't treat is like a C string.
+static bool InsensitiveWarningNameMatch(
+    std::string_view a, std::string_view b) {
+  size_t j{0}, aSize{a.size()}, k{0}, bSize{b.size()};
   while (true) {
-    auto ach{GetWarningChar(*a)};
-    while (!ach && *a) {
-      ach = GetWarningChar(*++a);
+    optional<char> ach{nullopt};
+    while (!ach && j < aSize) {
+      ach = GetWarningChar(a[j++]);
     }
-    auto bch{GetWarningChar(*b)};
-    while (!bch && *b) {
-      bch = GetWarningChar(*++b);
+    optional<char> bch{};
+    while (!bch && k < bSize) {
+      bch = GetWarningChar(b[k++]);
     }
     if (!ach && !bch) {
       return true;
     } else if (!ach || !bch || *ach != *bch) {
       return false;
     }
-    ++a, ++b;
+    ach = bch = nullopt;
   }
 }
 
-template <typename ENUM, std::size_t N>
-std::optional<ENUM> ScanEnum(const char *name) {
-  if (name) {
-    for (std::size_t j{0}; j < N; ++j) {
-      auto feature{static_cast<ENUM>(j)};
-      if (WarningNameMatch(name, EnumToString(feature).data())) {
-        return feature;
+// Check if lower case hyphenated words are equal to camel case words.
+// Because of out use case we know that 'r' the camel case string is
+// well formed in the sense that it is a sequence [a-zA-Z]+[a-zA-Z0-9]*.
+// This is checked in the enum-class.h file.
+static bool SensitiveWarningNameMatch(llvm::StringRef l, llvm::StringRef r) {
+  size_t ls{l.size()}, rs{r.size()};
+  if (ls < rs) {
+    return false;
+  }
+  bool atStartOfWord{true};
+  size_t wordCount{0}, j{0}; // j is the number of word characters checked in r.
+  for (; j < rs; j++) {
+    if (wordCount + j >= ls) {
+      // `l` was shorter once the hiphens were removed.
+      // If r is null terminated, then we are good.
+      return r[j] == '\0';
+    }
+    if (atStartOfWord) {
+      if (llvm::isUpper(r[j])) {
+        // Upper Case Run
+        if (l[wordCount + j] != llvm::toLower(r[j])) {
+          return false;
+        }
+      } else {
+        atStartOfWord = false;
+        if (l[wordCount + j] != r[j]) {
+          return false;
+        }
+      }
+    } else {
+      if (llvm::isUpper(r[j])) {
+        atStartOfWord = true;
+        if (l[wordCount + j] != '-') {
+          return false;
+        }
+        ++wordCount;
+        if (l[wordCount + j] != llvm::toLower(r[j])) {
+          return false;
+        }
+      } else if (l[wordCount + j] != r[j]) {
+        return false;
       }
     }
   }
-  return std::nullopt;
+  // If there are more characters in l after processing all the characters in r.
+  // then fail unless the string is null terminated.
+  if (ls > wordCount + j) {
+    return l[wordCount + j] == '\0';
+  }
+  return true;
 }
 
-std::optional<LanguageFeature> FindLanguageFeature(const char *name) {
-  return ScanEnum<LanguageFeature, LanguageFeature_enumSize>(name);
+// Parse a CLI enum option return the enum index and whether it should be
+// enabled (true) or disabled (false).
+template <typename T>
+optional<std::pair<bool, T>> ParseCLIEnum(llvm::StringRef input,
+    EnumClass::FindIndexType findIndex, bool insensitive) {
+  bool negated{false};
+  EnumClass::Predicate predicate;
+  if (insensitive) {
+    if (input.starts_with_insensitive("no")) {
+      negated = true;
+      input = input.drop_front(2);
+    }
+    predicate = [input](std::string_view r) {
+      return InsensitiveWarningNameMatch(input, r);
+    };
+  } else {
+    if (input.starts_with("no-")) {
+      negated = true;
+      input = input.drop_front(3);
+    }
+    predicate = [input](std::string_view r) {
+      return SensitiveWarningNameMatch(input, r);
+    };
+  }
+  optional<T> x = EnumClass::Find<T>(predicate, findIndex);
+  return MapOption<T, std::pair<bool, T>>(
+      x, [negated](T x) { return std::pair{!negated, x}; });
 }
 
-std::optional<UsageWarning> FindUsageWarning(const char *name) {
-  return ScanEnum<UsageWarning, UsageWarning_enumSize>(name);
+optional<std::pair<bool, UsageWarning>> parseCLIUsageWarning(
+    llvm::StringRef input, bool insensitive) {
+  return ParseCLIEnum<UsageWarning>(input, FindUsageWarningIndex, insensitive);
+}
+
+optional<std::pair<bool, LanguageFeature>> parseCLILanguageFeature(
+    llvm::StringRef input, bool insensitive) {
+  return ParseCLIEnum<LanguageFeature>(
+      input, FindLanguageFeatureIndex, insensitive);
+}
+
+} // namespace FortranFeaturesHelpers
+
+// Take a string from the CLI and apply it to the LanguageFeatureControl.
+// Return true if the option was applied recognized.
+bool LanguageFeatureControl::applyCLIOption(
+    std::string_view input, bool insensitive) {
+  llvm::StringRef inputRef{input};
+  if (auto result = FortranFeaturesHelpers::parseCLILanguageFeature(
+          inputRef, insensitive)) {
+    EnableWarning(result->second, result->first);
+    return true;
+  } else if (auto result = FortranFeaturesHelpers::parseCLIUsageWarning(
+                 inputRef, insensitive)) {
+    EnableWarning(result->second, result->first);
+    return true;
+  }
+  return false;
 }
 
 std::vector<const char *> LanguageFeatureControl::GetNames(
@@ -201,4 +302,33 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
   }
 }
 
+template <typename ENUM, std::size_t N>
+void ForEachEnum(std::function<void(ENUM)> f) {
+  for (size_t j{0}; j < N; ++j) {
+    f(static_cast<ENUM>(j));
+  }
+}
+
+void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
+  warnAllLanguage_ = yes;
+  warnLanguage_.reset();
+  if (yes) {
+    disableAllWarnings_ = false;
+    warnLanguage_.flip();
+    // These three features do not need to be warned about,
+    // but we do want their feature flags.
+    warnLanguage_.set(LanguageFeature::OpenMP, false);
+    warnLanguage_.set(LanguageFeature::OpenACC, false);
+    warnLanguage_.set(LanguageFeature::CUDA, false);
+  }
+}
+
+void LanguageFeatureControl::WarnOnAllUsage(bool yes) {
+  warnAllUsage_ = yes;
+  warnUsage_.reset();
+  if (yes) {
+    disableAllWarnings_ = false;
+    warnUsage_.flip();
+  }
+}
 } // namespace Fortran::common

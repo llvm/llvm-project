@@ -44,6 +44,7 @@ endif()
 
 add_flang_library(FortranSupport
   default-kinds.cpp
+  enum-class.cpp
   Flags.cpp
   Fortran.cpp
   Fortran-features.cpp

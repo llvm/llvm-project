@@ -27,6 +27,7 @@
 #define FORTRAN_COMMON_OPTIONAL_H
 
 #include "api-attrs.h"
+#include <functional>
 #include <optional>
 #include <type_traits>
 
@@ -237,6 +238,12 @@ using std::nullopt;
 using std::nullopt_t;
 using std::optional;
 #endif // !STD_OPTIONAL_UNSUPPORTED
+
+template <typename T, typename U>
+std::optional<U> inline MapOption(
+    std::optional<T> x, std::function<U(const T)> f) {
+  return x ? std::optional<U>{f(*x)} : std::nullopt;
+}
 
 } // namespace Fortran::common
 
