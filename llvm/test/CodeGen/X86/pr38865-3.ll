@@ -7,11 +7,17 @@ target triple = "x86_64-unknown-linux-gnux32"
 define void @foo(ptr %x) optsize {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $707406378, %eax # encoding: [0xb8,0x2a,0x2a,0x2a,0x2a]
-; CHECK-NEXT:    # imm = 0x2A2A2A2A
-; CHECK-NEXT:    movl $32, %ecx # encoding: [0xb9,0x20,0x00,0x00,0x00]
-; CHECK-NEXT:    # kill: def $edi killed $edi killed $rdi
-; CHECK-NEXT:    rep;stosl %eax, %es:(%edi) # encoding: [0xf3,0x67,0xab]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [42,42,42,42,42,42,42,42,42,42,42,42,42,42,42,42]
+; CHECK-NEXT:    # encoding: [0x0f,0x28,0x05,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 3, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    movups %xmm0, 112(%edi) # encoding: [0x67,0x0f,0x11,0x47,0x70]
+; CHECK-NEXT:    movups %xmm0, 96(%edi) # encoding: [0x67,0x0f,0x11,0x47,0x60]
+; CHECK-NEXT:    movups %xmm0, 80(%edi) # encoding: [0x67,0x0f,0x11,0x47,0x50]
+; CHECK-NEXT:    movups %xmm0, 64(%edi) # encoding: [0x67,0x0f,0x11,0x47,0x40]
+; CHECK-NEXT:    movups %xmm0, 48(%edi) # encoding: [0x67,0x0f,0x11,0x47,0x30]
+; CHECK-NEXT:    movups %xmm0, 32(%edi) # encoding: [0x67,0x0f,0x11,0x47,0x20]
+; CHECK-NEXT:    movups %xmm0, 16(%edi) # encoding: [0x67,0x0f,0x11,0x47,0x10]
+; CHECK-NEXT:    movups %xmm0, (%edi) # encoding: [0x67,0x0f,0x11,0x07]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   call void @llvm.memset.p0.i32(ptr align 4 %x, i8 42, i32 128, i1 false)
   ret void

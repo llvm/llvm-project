@@ -34,8 +34,8 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-LABEL: func64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl $-1, %ecx
 ; X86-NEXT:    cmovbl %ecx, %edx

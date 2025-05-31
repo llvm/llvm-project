@@ -336,8 +336,8 @@ define ptr @test_ptr(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, i1 
 ; DAG-X64-NEXT:    testb $1, %r10b
 ; DAG-X64-NEXT:    jne .LBB7_9
 ; DAG-X64-NEXT:  # %bb.2: # %cond.true.false
-; DAG-X64-NEXT:    testb $1, %dil
 ; DAG-X64-NEXT:    movq %rsi, %rax
+; DAG-X64-NEXT:    testb $1, %dil
 ; DAG-X64-NEXT:    jne .LBB7_9
 ; DAG-X64-NEXT:  # %bb.3: # %cond.true.false.false
 ; DAG-X64-NEXT:    movq %rdx, %rax
@@ -346,15 +346,15 @@ define ptr @test_ptr(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, i1 
 ; DAG-X64-NEXT:    testb $1, %r10b
 ; DAG-X64-NEXT:    je .LBB7_7
 ; DAG-X64-NEXT:  # %bb.5: # %cond.false.true
-; DAG-X64-NEXT:    testb $1, %dil
 ; DAG-X64-NEXT:    movq %rcx, %rax
+; DAG-X64-NEXT:    testb $1, %dil
 ; DAG-X64-NEXT:    jne .LBB7_9
 ; DAG-X64-NEXT:  # %bb.6: # %cond.false.true.false
 ; DAG-X64-NEXT:    movq %r8, %rax
 ; DAG-X64-NEXT:    retq
 ; DAG-X64-NEXT:  .LBB7_7: # %cond.false.false
-; DAG-X64-NEXT:    testb $1, %dil
 ; DAG-X64-NEXT:    movq %r9, %rax
+; DAG-X64-NEXT:    testb $1, %dil
 ; DAG-X64-NEXT:    jne .LBB7_9
 ; DAG-X64-NEXT:  # %bb.8: # %cond.false.false.false
 ; DAG-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
@@ -373,8 +373,8 @@ define ptr @test_ptr(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, i1 
 ; GLOBAL-X64-NEXT:    testb $1, %r10b
 ; GLOBAL-X64-NEXT:    jne .LBB7_9
 ; GLOBAL-X64-NEXT:  # %bb.2: # %cond.true.false
-; GLOBAL-X64-NEXT:    testb $1, %dil
 ; GLOBAL-X64-NEXT:    movq %rsi, %rax
+; GLOBAL-X64-NEXT:    testb $1, %dil
 ; GLOBAL-X64-NEXT:    jne .LBB7_9
 ; GLOBAL-X64-NEXT:  # %bb.3: # %cond.true.false.false
 ; GLOBAL-X64-NEXT:    movq %rdx, %rax
@@ -383,15 +383,15 @@ define ptr @test_ptr(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, i1 
 ; GLOBAL-X64-NEXT:    testb $1, %r10b
 ; GLOBAL-X64-NEXT:    je .LBB7_7
 ; GLOBAL-X64-NEXT:  # %bb.5: # %cond.false.true
-; GLOBAL-X64-NEXT:    testb $1, %dil
 ; GLOBAL-X64-NEXT:    movq %rcx, %rax
+; GLOBAL-X64-NEXT:    testb $1, %dil
 ; GLOBAL-X64-NEXT:    jne .LBB7_9
 ; GLOBAL-X64-NEXT:  # %bb.6: # %cond.false.true.false
 ; GLOBAL-X64-NEXT:    movq %r8, %rax
 ; GLOBAL-X64-NEXT:    retq
 ; GLOBAL-X64-NEXT:  .LBB7_7: # %cond.false.false
-; GLOBAL-X64-NEXT:    testb $1, %dil
 ; GLOBAL-X64-NEXT:    movq %r9, %rax
+; GLOBAL-X64-NEXT:    testb $1, %dil
 ; GLOBAL-X64-NEXT:    jne .LBB7_9
 ; GLOBAL-X64-NEXT:  # %bb.8: # %cond.false.false.false
 ; GLOBAL-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax

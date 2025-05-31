@@ -1987,9 +1987,9 @@ entry:
 define <2 x i64> @test_mm_mask_set1_epi64(<2 x i64> %__O, i8 zeroext %__M, i64 %__A)  {
 ; X86-LABEL: test_mm_mask_set1_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpbroadcastq %xmm1, %xmm0 {%k1}
 ; X86-NEXT:    retl
@@ -2011,9 +2011,9 @@ entry:
 define <2 x i64> @test_mm_maskz_set1_epi64(i8 zeroext %__M, i64 %__A)  {
 ; X86-LABEL: test_mm_maskz_set1_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpbroadcastq %xmm0, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
@@ -2036,9 +2036,9 @@ entry:
 define <4 x i64> @test_mm256_mask_set1_epi64(<4 x i64> %__O, i8 zeroext %__M, i64 %__A) {
 ; X86-LABEL: test_mm256_mask_set1_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpbroadcastq %xmm1, %ymm0 {%k1}
 ; X86-NEXT:    retl
@@ -2060,9 +2060,9 @@ entry:
 define <4 x i64> @test_mm256_maskz_set1_epi64(i8 zeroext %__M, i64 %__A)  {
 ; X86-LABEL: test_mm256_maskz_set1_epi64:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vpbroadcastq %xmm0, %ymm0 {%k1} {z}
 ; X86-NEXT:    retl

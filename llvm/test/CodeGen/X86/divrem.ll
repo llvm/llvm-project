@@ -41,8 +41,21 @@ define void @si64(i64 %x, i64 %y, ptr %p, ptr %q) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %r8
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rdx
+; X64-NEXT:    orq %rsi, %rdx
+; X64-NEXT:    shrq $32, %rdx
+; X64-NEXT:    je .LBB0_1
+; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    cqto
 ; X64-NEXT:    idivq %rsi
+; X64-NEXT:    jmp .LBB0_3
+; X64-NEXT:  .LBB0_1:
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %esi
+; X64-NEXT:    # kill: def $edx killed $edx def $rdx
+; X64-NEXT:    # kill: def $eax killed $eax def $rax
+; X64-NEXT:  .LBB0_3:
 ; X64-NEXT:    movq %rax, (%r8)
 ; X64-NEXT:    movq %rdx, (%rcx)
 ; X64-NEXT:    retq
@@ -182,8 +195,21 @@ define void @ui64(i64 %x, i64 %y, ptr %p, ptr %q) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %r8
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rdx
+; X64-NEXT:    orq %rsi, %rdx
+; X64-NEXT:    shrq $32, %rdx
+; X64-NEXT:    je .LBB4_1
+; X64-NEXT:  # %bb.2:
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divq %rsi
+; X64-NEXT:    jmp .LBB4_3
+; X64-NEXT:  .LBB4_1:
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %esi
+; X64-NEXT:    # kill: def $edx killed $edx def $rdx
+; X64-NEXT:    # kill: def $eax killed $eax def $rax
+; X64-NEXT:  .LBB4_3:
 ; X64-NEXT:    movq %rax, (%r8)
 ; X64-NEXT:    movq %rdx, (%rcx)
 ; X64-NEXT:    retq

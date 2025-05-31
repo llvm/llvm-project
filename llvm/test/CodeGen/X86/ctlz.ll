@@ -158,8 +158,8 @@ define i64 @ctlz_i64(i64 %x) {
 ; X86-CMOV:       # %bb.0:
 ; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-CMOV-NEXT:    bsrl %ecx, %edx
-; X86-CMOV-NEXT:    xorl $31, %edx
 ; X86-CMOV-NEXT:    bsrl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    xorl $31, %edx
 ; X86-CMOV-NEXT:    xorl $31, %eax
 ; X86-CMOV-NEXT:    orl $32, %eax
 ; X86-CMOV-NEXT:    testl %ecx, %ecx
@@ -890,10 +890,10 @@ define i32 @PR47603_zext(i32 %a0, ptr %a1) {
 ;
 ; X86-FASTLZCNT-LABEL: PR47603_zext:
 ; X86-FASTLZCNT:       # %bb.0:
-; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %ecx
-; X86-FASTLZCNT-NEXT:    xorl $31, %ecx
-; X86-FASTLZCNT-NEXT:    movsbl (%eax,%ecx), %eax
+; X86-FASTLZCNT-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-FASTLZCNT-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-FASTLZCNT-NEXT:    xorl $31, %eax
+; X86-FASTLZCNT-NEXT:    movsbl (%ecx,%eax), %eax
 ; X86-FASTLZCNT-NEXT:    retl
   %ctlz = tail call i32 @llvm.ctlz.i32(i32 %a0, i1 true)
   %xor = xor i32 %ctlz, 31

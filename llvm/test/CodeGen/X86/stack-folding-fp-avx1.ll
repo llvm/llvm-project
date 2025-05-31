@@ -1210,11 +1210,10 @@ define <4 x float> @stack_fold_cvtsi2ss_int(i32 %a0) {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2ssl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    popq %rbx
@@ -1301,11 +1300,10 @@ define <4 x float> @stack_fold_cvtsi642ss_int(i64 %a0) {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2ssq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    popq %rbx
@@ -1671,11 +1669,10 @@ declare <2 x double> @llvm.x86.sse41.dppd(<2 x double>, <2 x double>, i8) nounwi
 define <4 x float> @stack_fold_dpps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: stack_fold_dpps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vdpps $7, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vdpps $7, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call <4 x float> @llvm.x86.sse41.dpps(<4 x float> %a0, <4 x float> %a1, i8 7)
@@ -1686,11 +1683,10 @@ declare <4 x float> @llvm.x86.sse41.dpps(<4 x float>, <4 x float>, i8) nounwind 
 define <8 x float> @stack_fold_dpps_ymm(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: stack_fold_dpps_ymm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; CHECK-NEXT:    vdpps $7, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vdpps $7, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call <8 x float> @llvm.x86.avx.dp.ps.256(<8 x float> %a0, <8 x float> %a1, i8 7)
@@ -3333,7 +3329,7 @@ define i32 @stack_fold_ucomisd(double %a0, double %a1) {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vucomisd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    leal -1(%rax,%rax), %eax
+; CHECK-NEXT:    leal -1(,%rax,2), %eax
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = fcmp ueq double %a0, %a1
@@ -3370,7 +3366,7 @@ define i32 @stack_fold_ucomiss(float %a0, float %a1) {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vucomiss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    leal -1(%rax,%rax), %eax
+; CHECK-NEXT:    leal -1(,%rax,2), %eax
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = fcmp ueq float %a0, %a1

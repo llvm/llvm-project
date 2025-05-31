@@ -12,8 +12,8 @@ define void @fn1(i32 %k, ptr %p) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    cmpl %ecx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    setne %dl
-; CHECK-NEXT:    addl $c, %eax
 ; CHECK-NEXT:    movl %edx, (%eax)
+; CHECK-NEXT:    addl $c, %eax
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %r
 ; CHECK-NEXT:    retl

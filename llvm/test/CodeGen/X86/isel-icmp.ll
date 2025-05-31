@@ -155,10 +155,10 @@ define i32 @test_icmp_eq_i64(i64 %a, i64 %b) {
 ; FAST-X86-LABEL: test_icmp_eq_i64:
 ; FAST-X86:       ## %bb.0:
 ; FAST-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; FAST-X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; FAST-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; FAST-X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; FAST-X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; FAST-X86-NEXT:    orl %ecx, %eax
+; FAST-X86-NEXT:    orl %eax, %ecx
 ; FAST-X86-NEXT:    sete %al
 ; FAST-X86-NEXT:    andb $1, %al
 ; FAST-X86-NEXT:    movzbl %al, %eax

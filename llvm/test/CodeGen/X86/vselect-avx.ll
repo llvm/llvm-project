@@ -47,7 +47,7 @@ define void @test2(ptr %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    movq (%rdi,%rsi,8), %rax
-; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
+; AVX1-NEXT:    vmovapd {{.*#+}} ymm1 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
 ; AVX1-NEXT:    vblendvpd %ymm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; AVX1-NEXT:    vmovupd %ymm0, (%rax)
 ; AVX1-NEXT:    vzeroupper
@@ -57,9 +57,9 @@ define void @test2(ptr %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX2:       ## %bb.0: ## %bb
 ; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
-; AVX2-NEXT:    movq (%rdi,%rsi,8), %rax
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
+; AVX2-NEXT:    movq (%rdi,%rsi,8), %rax
 ; AVX2-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
 ; AVX2-NEXT:    vmovupd %ymm0, (%rax)
 ; AVX2-NEXT:    vzeroupper
@@ -69,8 +69,8 @@ define void @test2(ptr %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX512:       ## %bb.0: ## %bb
 ; AVX512-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; AVX512-NEXT:    movq (%rdi,%rsi,8), %rax
 ; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
+; AVX512-NEXT:    movq (%rdi,%rsi,8), %rax
 ; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 {%k1} = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmovupd %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
@@ -110,9 +110,9 @@ define void @test3(<4 x i32> %induction30, ptr %tmp16, ptr %tmp17,  <4 x i16> %t
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [2863311531,2863311531,2863311531,2863311531]
 ; AVX2-NEXT:    vpmulld %xmm3, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [715827882,715827882,715827882,715827882]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [1431655764,1431655764,1431655764,1431655764]
 ; AVX2-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1431655764,1431655764,1431655764,1431655764]
-; AVX2-NEXT:    vpminud %xmm3, %xmm0, %xmm3
+; AVX2-NEXT:    vpminud %xmm4, %xmm0, %xmm3
 ; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
 ; AVX2-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
@@ -176,7 +176,7 @@ define <32 x i8> @PR22706(<32 x i1> %x) {
 ; AVX512-LABEL: PR22706:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vpsllw $7, %ymm0, %ymm0
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX512-NEXT:    vpblendvb %ymm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %tmp = select <32 x i1> %x, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <32 x i8> <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
@@ -241,11 +241,11 @@ define void @blendv_split(ptr %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <
 ; AVX512-NEXT:    vpsrld $31, %ymm0, %ymm0
 ; AVX512-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512-NEXT:    vptestmd %ymm0, %ymm0, %k1
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm2[0],zero,xmm2[1],zero
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm3[0],zero,xmm3[1],zero
-; AVX512-NEXT:    vpslld %xmm2, %ymm1, %ymm2
-; AVX512-NEXT:    vpslld %xmm0, %ymm1, %ymm2 {%k1}
-; AVX512-NEXT:    vmovdqu %ymm2, (%rdi)
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm3[0],zero,xmm3[1],zero
+; AVX512-NEXT:    vpslld %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero
+; AVX512-NEXT:    vpslld %xmm2, %ymm1, %ymm0 {%k1}
+; AVX512-NEXT:    vmovdqu %ymm0, (%rdi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %signbits = ashr <8 x i32> %cond, <i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31, i32 31>
@@ -373,7 +373,7 @@ define void @vselect_concat_splat() {
 ; AVX512:       ## %bb.0: ## %entry
 ; AVX512-NEXT:    vmovups (%rax), %ymm0
 ; AVX512-NEXT:    vmovups (%rax), %xmm1
-; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
+; AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
 ; AVX512-NEXT:    vmovaps %ymm2, %ymm3
 ; AVX512-NEXT:    vpermi2ps %ymm1, %ymm0, %ymm3
 ; AVX512-NEXT:    vmovups 32, %xmm4
@@ -382,7 +382,7 @@ define void @vselect_concat_splat() {
 ; AVX512-NEXT:    kshiftlw $4, %k0, %k1
 ; AVX512-NEXT:    korw %k1, %k0, %k1
 ; AVX512-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
-; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [8,11,14,1,9,12,15,2]
+; AVX512-NEXT:    vmovaps {{.*#+}} ymm1 = [8,11,14,1,9,12,15,2]
 ; AVX512-NEXT:    vpermi2ps 0, %ymm4, %ymm1
 ; AVX512-NEXT:    vmovaps %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    vmovups %ymm0, (%rax)

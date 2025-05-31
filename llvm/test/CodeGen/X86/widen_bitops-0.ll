@@ -138,9 +138,9 @@ define <3 x i8> @and_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X86-NEXT:    pinsrb $1, {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    pinsrb $2, {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    pand %xmm0, %xmm1
-; X86-NEXT:    movd %xmm1, %eax
 ; X86-NEXT:    pextrb $1, %xmm1, %edx
 ; X86-NEXT:    pextrb $2, %xmm1, %ecx
+; X86-NEXT:    movd %xmm1, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    # kill: def $dl killed $dl killed $edx
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -155,9 +155,9 @@ define <3 x i8> @and_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X64-NEXT:    pinsrb $1, %esi, %xmm1
 ; X64-NEXT:    pinsrb $2, %edx, %xmm1
 ; X64-NEXT:    pand %xmm0, %xmm1
-; X64-NEXT:    movd %xmm1, %eax
 ; X64-NEXT:    pextrb $1, %xmm1, %edx
 ; X64-NEXT:    pextrb $2, %xmm1, %ecx
+; X64-NEXT:    movd %xmm1, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    # kill: def $dl killed $dl killed $edx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -179,9 +179,9 @@ define <3 x i8> @xor_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X86-NEXT:    pinsrb $1, {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    pinsrb $2, {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    pxor %xmm0, %xmm1
-; X86-NEXT:    movd %xmm1, %eax
 ; X86-NEXT:    pextrb $1, %xmm1, %edx
 ; X86-NEXT:    pextrb $2, %xmm1, %ecx
+; X86-NEXT:    movd %xmm1, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    # kill: def $dl killed $dl killed $edx
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -196,9 +196,9 @@ define <3 x i8> @xor_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X64-NEXT:    pinsrb $1, %esi, %xmm1
 ; X64-NEXT:    pinsrb $2, %edx, %xmm1
 ; X64-NEXT:    pxor %xmm0, %xmm1
-; X64-NEXT:    movd %xmm1, %eax
 ; X64-NEXT:    pextrb $1, %xmm1, %edx
 ; X64-NEXT:    pextrb $2, %xmm1, %ecx
+; X64-NEXT:    movd %xmm1, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    # kill: def $dl killed $dl killed $edx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -220,9 +220,9 @@ define <3 x i8> @or_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X86-NEXT:    pinsrb $1, {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    pinsrb $2, {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    por %xmm0, %xmm1
-; X86-NEXT:    movd %xmm1, %eax
 ; X86-NEXT:    pextrb $1, %xmm1, %edx
 ; X86-NEXT:    pextrb $2, %xmm1, %ecx
+; X86-NEXT:    movd %xmm1, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    # kill: def $dl killed $dl killed $edx
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -237,9 +237,9 @@ define <3 x i8> @or_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X64-NEXT:    pinsrb $1, %esi, %xmm1
 ; X64-NEXT:    pinsrb $2, %edx, %xmm1
 ; X64-NEXT:    por %xmm0, %xmm1
-; X64-NEXT:    movd %xmm1, %eax
 ; X64-NEXT:    pextrb $1, %xmm1, %edx
 ; X64-NEXT:    pextrb $2, %xmm1, %ecx
+; X64-NEXT:    movd %xmm1, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    # kill: def $dl killed $dl killed $edx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx

@@ -283,8 +283,8 @@ define <8 x float> @test11_undef(<8 x float> %a, <8 x float> %b) {
 ;
 ; SSE-FAST-LABEL: test11_undef:
 ; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    movaps %xmm3, %xmm1
 ; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
+; SSE-FAST-NEXT:    movaps %xmm3, %xmm1
 ; SSE-FAST-NEXT:    haddps %xmm3, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
@@ -680,8 +680,8 @@ define <4 x double> @add_pd_011(<4 x double> %0, <4 x double> %1) {
 ;
 ; SSE-FAST-LABEL: add_pd_011:
 ; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    movapd %xmm2, %xmm1
 ; SSE-FAST-NEXT:    haddpd %xmm0, %xmm0
+; SSE-FAST-NEXT:    movapd %xmm2, %xmm1
 ; SSE-FAST-NEXT:    haddpd %xmm2, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
@@ -888,16 +888,16 @@ define <8 x float> @PR40243(<8 x float> %a, <8 x float> %b) {
 define <4 x double> @PR44694(<4 x double> %0, <4 x double> %1) {
 ; SSE-SLOW-LABEL: PR44694:
 ; SSE-SLOW:       # %bb.0:
-; SSE-SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm1[0,0]
 ; SSE-SLOW-NEXT:    haddpd %xmm3, %xmm2
+; SSE-SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm1[0,0]
 ; SSE-SLOW-NEXT:    addpd %xmm1, %xmm0
 ; SSE-SLOW-NEXT:    movapd %xmm2, %xmm1
 ; SSE-SLOW-NEXT:    retq
 ;
 ; SSE-FAST-LABEL: PR44694:
 ; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    movapd %xmm1, %xmm0
 ; SSE-FAST-NEXT:    haddpd %xmm3, %xmm2
+; SSE-FAST-NEXT:    movapd %xmm1, %xmm0
 ; SSE-FAST-NEXT:    haddpd %xmm1, %xmm0
 ; SSE-FAST-NEXT:    movapd %xmm2, %xmm1
 ; SSE-FAST-NEXT:    retq
@@ -1104,8 +1104,8 @@ define <4 x double> @PR34724_add_v4f64_u123(<4 x double> %0, <4 x double> %1) {
 ;
 ; SSE-FAST-LABEL: PR34724_add_v4f64_u123:
 ; SSE-FAST:       # %bb.0:
-; SSE-FAST-NEXT:    movapd %xmm1, %xmm0
 ; SSE-FAST-NEXT:    haddpd %xmm3, %xmm2
+; SSE-FAST-NEXT:    movapd %xmm1, %xmm0
 ; SSE-FAST-NEXT:    haddpd %xmm1, %xmm0
 ; SSE-FAST-NEXT:    movapd %xmm2, %xmm1
 ; SSE-FAST-NEXT:    retq
@@ -1203,8 +1203,8 @@ define <4 x double> @PR34724_add_v4f64_01u3(<4 x double> %0, <4 x double> %1) {
 ; SSE-FAST-LABEL: PR34724_add_v4f64_01u3:
 ; SSE-FAST:       # %bb.0:
 ; SSE-FAST-NEXT:    haddpd %xmm1, %xmm0
-; SSE-FAST-NEXT:    haddpd %xmm3, %xmm3
 ; SSE-FAST-NEXT:    movapd %xmm3, %xmm1
+; SSE-FAST-NEXT:    haddpd %xmm3, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
 ; AVX-SLOW-LABEL: PR34724_add_v4f64_01u3:
@@ -1256,8 +1256,8 @@ define <4 x double> @PR34724_add_v4f64_012u(<4 x double> %0, <4 x double> %1) {
 ; SSE-FAST-LABEL: PR34724_add_v4f64_012u:
 ; SSE-FAST:       # %bb.0:
 ; SSE-FAST-NEXT:    haddpd %xmm1, %xmm0
-; SSE-FAST-NEXT:    haddpd %xmm2, %xmm2
 ; SSE-FAST-NEXT:    movapd %xmm2, %xmm1
+; SSE-FAST-NEXT:    haddpd %xmm2, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
 ; AVX-SLOW-LABEL: PR34724_add_v4f64_012u:

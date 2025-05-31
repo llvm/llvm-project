@@ -137,8 +137,7 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ;
 ; GFNIAVX2-LABEL: testv32i8:
 ; GFNIAVX2:       # %bb.0:
-; GFNIAVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; GFNIAVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; GFNIAVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX2-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; GFNIAVX2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; GFNIAVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
@@ -150,8 +149,7 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ;
 ; GFNIAVX512-LABEL: testv32i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; GFNIAVX512-NEXT:    # ymm1 = mem[0,1,0,1]
+; GFNIAVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX512-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; GFNIAVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
@@ -212,8 +210,7 @@ define <32 x i8> @testv32i8u(<32 x i8> %in) nounwind {
 ;
 ; GFNIAVX2-LABEL: testv32i8u:
 ; GFNIAVX2:       # %bb.0:
-; GFNIAVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; GFNIAVX2-NEXT:    # ymm1 = mem[0,1,0,1]
+; GFNIAVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX2-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; GFNIAVX2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; GFNIAVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
@@ -225,8 +222,7 @@ define <32 x i8> @testv32i8u(<32 x i8> %in) nounwind {
 ;
 ; GFNIAVX512-LABEL: testv32i8u:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; GFNIAVX512-NEXT:    # ymm1 = mem[0,1,0,1]
+; GFNIAVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX512-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; GFNIAVX512-NEXT:    vpxor %xmm3, %xmm3, %xmm3
@@ -317,8 +313,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ;
 ; GFNIAVX2-LABEL: testv64i8:
 ; GFNIAVX2:       # %bb.0:
-; GFNIAVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; GFNIAVX2-NEXT:    # ymm2 = mem[0,1,0,1]
+; GFNIAVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX2-NEXT:    vpshufb %ymm0, %ymm2, %ymm3
 ; GFNIAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16]
 ; GFNIAVX2-NEXT:    vgf2p8affineqb $0, %ymm4, %ymm0, %ymm0
@@ -338,8 +333,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; GFNIAVX512VL-LABEL: testv64i8:
 ; GFNIAVX512VL:       # %bb.0:
 ; GFNIAVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; GFNIAVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; GFNIAVX512VL-NEXT:    # ymm2 = mem[0,1,0,1]
+; GFNIAVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX512VL-NEXT:    vpshufb %ymm1, %ymm2, %ymm3
 ; GFNIAVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16]
 ; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, %ymm4, %ymm1, %ymm1
@@ -361,8 +355,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1
 ; GFNIAVX512BW-NEXT:    vptestnmb %zmm1, %zmm1, %k1
-; GFNIAVX512BW-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; GFNIAVX512BW-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; GFNIAVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX512BW-NEXT:    vpshufb %zmm0, %zmm2, %zmm0 {%k1} {z}
 ; GFNIAVX512BW-NEXT:    vpshufb %zmm1, %zmm2, %zmm1
 ; GFNIAVX512BW-NEXT:    vpaddb %zmm1, %zmm0, %zmm0
@@ -449,8 +442,7 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ;
 ; GFNIAVX2-LABEL: testv64i8u:
 ; GFNIAVX2:       # %bb.0:
-; GFNIAVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; GFNIAVX2-NEXT:    # ymm2 = mem[0,1,0,1]
+; GFNIAVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX2-NEXT:    vpshufb %ymm0, %ymm2, %ymm3
 ; GFNIAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16]
 ; GFNIAVX2-NEXT:    vgf2p8affineqb $0, %ymm4, %ymm0, %ymm0
@@ -470,8 +462,7 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; GFNIAVX512VL-LABEL: testv64i8u:
 ; GFNIAVX512VL:       # %bb.0:
 ; GFNIAVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; GFNIAVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; GFNIAVX512VL-NEXT:    # ymm2 = mem[0,1,0,1]
+; GFNIAVX512VL-NEXT:    vmovdqa {{.*#+}} ymm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX512VL-NEXT:    vpshufb %ymm1, %ymm2, %ymm3
 ; GFNIAVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16,0,0,0,0,128,64,32,16]
 ; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, %ymm4, %ymm1, %ymm1
@@ -493,8 +484,7 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1
 ; GFNIAVX512BW-NEXT:    vptestnmb %zmm1, %zmm1, %k1
-; GFNIAVX512BW-NEXT:    vbroadcasti32x4 {{.*#+}} zmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; GFNIAVX512BW-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; GFNIAVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; GFNIAVX512BW-NEXT:    vpshufb %zmm0, %zmm2, %zmm0 {%k1} {z}
 ; GFNIAVX512BW-NEXT:    vpshufb %zmm1, %zmm2, %zmm1
 ; GFNIAVX512BW-NEXT:    vpaddb %zmm1, %zmm0, %zmm0

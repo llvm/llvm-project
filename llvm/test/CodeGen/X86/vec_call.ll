@@ -9,13 +9,11 @@ define void @test() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [0,1,3,9]
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1,2,3,4]
+; CHECK-NEXT:    movups %xmm0, (%esp)
 ; CHECK-NEXT:    movl $7, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $6, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $5, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl $4, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl $3, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl $2, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl $1, (%esp)
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4,3,2,1]
 ; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [8,7,6,5]
 ; CHECK-NEXT:    movaps {{.*#+}} xmm2 = [6,4,2,0]

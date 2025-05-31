@@ -61,12 +61,12 @@ define i16 @func2(i8 %x, i8 %y) nounwind {
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    testw %ax, %ax
 ; X64-NEXT:    sets %dl
-; X64-NEXT:    addl $32767, %edx # imm = 0x7FFF
 ; X64-NEXT:    movl %eax, %esi
 ; X64-NEXT:    shll %cl, %esi
 ; X64-NEXT:    movswl %si, %edi
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    sarl %cl, %edi
+; X64-NEXT:    addl $32767, %edx # imm = 0x7FFF
 ; X64-NEXT:    cmpw %di, %ax
 ; X64-NEXT:    cmovnel %edx, %esi
 ; X64-NEXT:    movswl %si, %eax
@@ -227,9 +227,9 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %edx, %ebx
 ; X86-NEXT:    shll %cl, %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    shldl %cl, %edx, %esi
 ; X86-NEXT:    xorl %edi, %edi

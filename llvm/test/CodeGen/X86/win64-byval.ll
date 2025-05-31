@@ -13,10 +13,8 @@ define void @bar() {
 ; CHECK-NEXT:    .seh_stackalloc 56
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    movq .refptr.G(%rip), %rax
-; CHECK-NEXT:    movq (%rax), %rcx
-; CHECK-NEXT:    movq 8(%rax), %rax
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movups (%rax), %xmm0
+; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    nop
@@ -38,10 +36,8 @@ define void @baz(ptr byval({ float, double }) %arg) {
 ; CHECK-NEXT:    subq $56, %rsp
 ; CHECK-NEXT:    .seh_stackalloc 56
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    movq (%rcx), %rax
-; CHECK-NEXT:    movq 8(%rcx), %rcx
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movups (%rcx), %xmm0
+; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    nop
@@ -64,18 +60,12 @@ define void @test() {
 ; CHECK-NEXT:    .seh_stackalloc 136
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    movq .refptr.G(%rip), %rax
-; CHECK-NEXT:    movq (%rax), %rcx
-; CHECK-NEXT:    movq 8(%rax), %rax
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movups (%rax), %xmm0
+; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $10, {{[0-9]+}}(%rsp)

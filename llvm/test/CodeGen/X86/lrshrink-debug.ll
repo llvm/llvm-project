@@ -38,8 +38,8 @@ define noundef i32 @test(i1 %tobool1.not, i32 %sh.012, i1 %cmp, i64 %sh_prom, i6
 ; CHECK-NEXT:  # %bb.2: # %if.end
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    testb $1, %dl
 ; CHECK-NEXT:    movl $0, %ebp
+; CHECK-NEXT:    testb $1, %dl
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %if.end
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1

@@ -24,7 +24,7 @@ define <32 x half> @build_vec(ptr %p, <32 x i1> %mask) {
 ; CHECK-NEXT:    je .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %cond.load
 ; CHECK-NEXT:    vpinsrw $0, (%rdi), %xmm0, %xmm0
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [u,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
 ; CHECK-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vinserti32x4 $0, %xmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    testb $2, %al

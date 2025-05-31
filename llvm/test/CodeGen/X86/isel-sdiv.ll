@@ -49,9 +49,9 @@ define i16 @test_sdiv_i16(i16 %arg1, i16 %arg2) nounwind {
 ; GISEL-X86-LABEL: test_sdiv_i16:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GISEL-X86-NEXT:    cwtd
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    idivw %cx
 ; GISEL-X86-NEXT:    retl
   %ret = sdiv i16 %arg1, %arg2
@@ -77,13 +77,6 @@ define i32 @test_sdiv_i32(i32 %arg1, i32 %arg2) nounwind {
 }
 
 define i64 @test_sdiv_i64(i64 %arg1, i64 %arg2) nounwind {
-; X64-LABEL: test_sdiv_i64:
-; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    cqto
-; X64-NEXT:    idivq %rsi
-; X64-NEXT:    retq
-;
 ; DAG-X86-LABEL: test_sdiv_i64:
 ; DAG-X86:       # %bb.0:
 ; DAG-X86-NEXT:    subl $12, %esp

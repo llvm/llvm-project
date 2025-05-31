@@ -346,9 +346,9 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; X86-BMI1-NEXT:    pushl %esi
 ; X86-BMI1-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI1-NEXT:    movl $1, %eax
-; X86-BMI1-NEXT:    xorl %esi, %esi
 ; X86-BMI1-NEXT:    xorl %edx, %edx
 ; X86-BMI1-NEXT:    shldl %cl, %eax, %edx
+; X86-BMI1-NEXT:    xorl %esi, %esi
 ; X86-BMI1-NEXT:    shll %cl, %eax
 ; X86-BMI1-NEXT:    testb $32, %cl
 ; X86-BMI1-NEXT:    cmovnel %eax, %edx
@@ -365,9 +365,9 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; X86-BMI2-NEXT:    pushl %esi
 ; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI2-NEXT:    movl $1, %edx
-; X86-BMI2-NEXT:    xorl %esi, %esi
 ; X86-BMI2-NEXT:    xorl %eax, %eax
 ; X86-BMI2-NEXT:    shldl %cl, %edx, %eax
+; X86-BMI2-NEXT:    xorl %esi, %esi
 ; X86-BMI2-NEXT:    shlxl %ecx, %edx, %edx
 ; X86-BMI2-NEXT:    testb $32, %cl
 ; X86-BMI2-NEXT:    cmovnel %edx, %eax

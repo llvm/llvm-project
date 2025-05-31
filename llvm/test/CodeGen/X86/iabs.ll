@@ -126,7 +126,6 @@ define i128 @test_i128(i128 %a) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    sarl $31, %edx
@@ -140,6 +139,7 @@ define i128 @test_i128(i128 %a) nounwind {
 ; X86-NEXT:    subl %edx, %ebx
 ; X86-NEXT:    sbbl %edx, %edi
 ; X86-NEXT:    sbbl %edx, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    sbbl %edx, %ecx
 ; X86-NEXT:    movl %ebx, (%eax)
 ; X86-NEXT:    movl %edi, 4(%eax)

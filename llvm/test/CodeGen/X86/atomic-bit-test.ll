@@ -568,9 +568,9 @@ if.end:                                           ; preds = %entry
 define i32 @split_hoist_and(i32 %0) nounwind {
 ; X86-LABEL: split_hoist_and:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    lock btsl $3, v32
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    shll $3, %eax
 ; X86-NEXT:    testl %ecx, %ecx

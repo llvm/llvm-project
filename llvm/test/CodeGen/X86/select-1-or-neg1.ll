@@ -11,7 +11,7 @@ define i32 @PR28968(i32 %x) {
 ; BASE-NEXT:    xorl %eax, %eax
 ; BASE-NEXT:    cmpl $1, %edi
 ; BASE-NEXT:    sete %al
-; BASE-NEXT:    leal -1(%rax,%rax), %eax
+; BASE-NEXT:    leal -1(,%rax,2), %eax
 ; BASE-NEXT:    retq
 ;
 ; SLOWLEA3-LABEL: PR28968:

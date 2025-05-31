@@ -112,11 +112,11 @@ define <4 x i1> @p4_vector_urem_by_const__splat(<4 x i32> %x, <4 x i32> %y) {
 ; AVX2-LABEL: p4_vector_urem_by_const__splat:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [128,128,128,128]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2863311531,2863311531,2863311531,2863311531]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2863311531,2863311531,2863311531,2863311531]
-; AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrld $1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [715827882,715827882,715827882,715827882]
+; AVX2-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -149,7 +149,7 @@ define <4 x i1> @p5_vector_urem_by_const__nonsplat(<4 x i32> %x, <4 x i32> %y) {
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE4-NEXT:    pmovzxdq {{.*#+}} xmm1 = [1,2147483648]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [1,u,2147483648,u]
 ; SSE4-NEXT:    pmuludq %xmm0, %xmm1
 ; SSE4-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5],xmm0[6,7]
 ; SSE4-NEXT:    psrlq $32, %xmm1
@@ -212,11 +212,11 @@ define <4 x i1> @p6_vector_urem_by_const__nonsplat_undef0(<4 x i32> %x, <4 x i32
 ; AVX2-LABEL: p6_vector_urem_by_const__nonsplat_undef0:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [128,128,128,128]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2863311531,2863311531,2863311531,2863311531]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2863311531,2863311531,2863311531,2863311531]
-; AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrld $1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [715827882,715827882,715827882,715827882]
+; AVX2-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq

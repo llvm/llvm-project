@@ -98,7 +98,7 @@ define dso_local i64 @caller_argv64i1() #0 {
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    subl $88, %esp
-; X32-NEXT:    vbroadcastsd {{.*#+}} zmm0 = [2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1]
+; X32-NEXT:    vmovaps {{.*#+}} zmm0 = [2,1,2,1,2,1,2,1,2,1,2,1,2,1,2,1]
 ; X32-NEXT:    vmovups %xmm0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    vmovups %zmm0, (%esp)
 ; X32-NEXT:    movl $1, {{[0-9]+}}(%esp)

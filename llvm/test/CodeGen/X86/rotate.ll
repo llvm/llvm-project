@@ -10,9 +10,9 @@ define i64 @rotl64(i64 %A, i8 %Amt) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    shldl %cl, %esi, %edx
 ; X86-NEXT:    testb $32, %cl
@@ -63,10 +63,10 @@ define i64 @rotr64(i64 %A, i8 %Amt) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    shrl %cl, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    shrdl %cl, %esi, %eax
 ; X86-NEXT:    testb $32, %cl
@@ -655,11 +655,11 @@ define i64 @truncated_rot(i64 %x, i32 %amt) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    testb $32, %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl $0, %edi
+; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    jne .LBB28_2
 ; X86-NEXT:  # %bb.1: # %entry
 ; X86-NEXT:    movl %eax, %edi

@@ -173,9 +173,9 @@ define void @test_mm256_2intersect_epi32_b(ptr nocapture readonly %a, ptr nocapt
 ; X86-LABEL: test_mm256_2intersect_epi32_b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
+; X86-NEXT:    vpbroadcastd (%ecx), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x58,0x01]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x08]
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
-; X86-NEXT:    vpbroadcastd (%edx), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x58,0x02]
 ; X86-NEXT:    vp2intersectd (%ecx){1to8}, %ymm0, %k0 # encoding: [0x62,0xf2,0x7f,0x38,0x68,0x01]
 ; X86-NEXT:    kmovw %k1, %ecx # encoding: [0xc5,0xf8,0x93,0xc9]
 ; X86-NEXT:    kmovw %k0, %edx # encoding: [0xc5,0xf8,0x93,0xd0]

@@ -50,8 +50,8 @@ define i32 @test_x86_tbm_bextri_u32_z(i32 %a, i32 %b) nounwind {
 define i32 @test_x86_tbm_bextri_u32_z2(i32 %a, i32 %b, i32 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32_z2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    bextrl $3076, %edi, %eax # imm = 0xC04
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    bextrl $3076, %edi, %ecx # imm = 0xC04
 ; CHECK-NEXT:    cmovnel %edx, %eax
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %a, 4
@@ -125,8 +125,8 @@ define i64 @test_x86_tbm_bextri_u64_z(i64 %a, i64 %b) nounwind {
 define i64 @test_x86_tbm_bextri_u64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_z2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    bextrl $3076, %edi, %eax # imm = 0xC04
 ; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    bextrl $3076, %edi, %ecx # imm = 0xC04
 ; CHECK-NEXT:    cmovneq %rdx, %rax
 ; CHECK-NEXT:    retq
   %t0 = lshr i64 %a, 4

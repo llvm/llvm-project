@@ -1336,8 +1336,10 @@ define i32 @test_mul_spec(i32 %x) nounwind {
 ; X86-LABEL: test_mul_spec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal 42(%eax,%eax,8), %ecx
-; X86-NEXT:    leal 2(%eax,%eax,4), %eax
+; X86-NEXT:    leal (%eax,%eax,8), %ecx
+; X86-NEXT:    addl $42, %ecx
+; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    addl $2, %eax
 ; X86-NEXT:    imull %ecx, %eax
 ; X86-NEXT:    retl
 ;
@@ -1362,8 +1364,10 @@ define i32 @test_mul_spec(i32 %x) nounwind {
 ; X86-NOOPT-LABEL: test_mul_spec:
 ; X86-NOOPT:       # %bb.0:
 ; X86-NOOPT-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOOPT-NEXT:    leal 42(%eax,%eax,8), %ecx
-; X86-NOOPT-NEXT:    leal 2(%eax,%eax,4), %eax
+; X86-NOOPT-NEXT:    leal (%eax,%eax,8), %ecx
+; X86-NOOPT-NEXT:    addl $42, %ecx
+; X86-NOOPT-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NOOPT-NEXT:    addl $2, %eax
 ; X86-NOOPT-NEXT:    imull %ecx, %eax
 ; X86-NOOPT-NEXT:    retl
 ;

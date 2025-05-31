@@ -42,8 +42,8 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    seto %bl
 ; X86-NEXT:    movl %ecx, %edx
@@ -140,9 +140,9 @@ define signext i8 @func8(i8 signext %x, i8 signext %y, i8 signext %z) nounwind {
 define signext i4 @func4(i4 signext %x, i4 signext %y, i4 signext %z) nounwind {
 ; X86-LABEL: func4:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    mulb {{[0-9]+}}(%esp)
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shlb $4, %al
 ; X86-NEXT:    sarb $4, %al
 ; X86-NEXT:    subb %al, %cl

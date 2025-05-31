@@ -353,15 +353,16 @@ define <2 x double> @f14(<2 x double> %a, <2 x double> %b, <2 x double> %c) #0 {
 ; SSE-X86-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; SSE-X86-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; SSE-X86-NEXT:    movlps %xmm2, {{[0-9]+}}(%esp)
-; SSE-X86-NEXT:    movlps %xmm1, {{[0-9]+}}(%esp)
-; SSE-X86-NEXT:    movlps %xmm0, (%esp)
+; SSE-X86-NEXT:    movaps %xmm0, %xmm2
+; SSE-X86-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; SSE-X86-NEXT:    movups %xmm2, (%esp)
 ; SSE-X86-NEXT:    calll fma
 ; SSE-X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-X86-NEXT:    movhps %xmm0, {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-X86-NEXT:    movhps %xmm0, {{[0-9]+}}(%esp)
-; SSE-X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; SSE-X86-NEXT:    movhps %xmm0, (%esp)
+; SSE-X86-NEXT:    unpckhpd {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; SSE-X86-NEXT:    # xmm0 = xmm0[1],mem[1]
+; SSE-X86-NEXT:    movups %xmm0, (%esp)
 ; SSE-X86-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    calll fma

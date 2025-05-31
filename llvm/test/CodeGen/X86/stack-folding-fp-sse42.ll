@@ -1288,11 +1288,10 @@ declare <2 x double> @llvm.x86.sse41.dppd(<2 x double>, <2 x double>, i8) nounwi
 define <4 x float> @stack_fold_dpps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: stack_fold_dpps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    dpps $7, %xmm1, %xmm0
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    dpps $7, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call <4 x float> @llvm.x86.sse41.dpps(<4 x float> %a0, <4 x float> %a1, i8 7)
@@ -2306,7 +2305,7 @@ define i32 @stack_fold_ucomisd(double %a0, double %a1) {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomisd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    leal -1(%rax,%rax), %eax
+; CHECK-NEXT:    leal -1(,%rax,2), %eax
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = fcmp ueq double %a0, %a1
@@ -2343,7 +2342,7 @@ define i32 @stack_fold_ucomiss(float %a0, float %a1) {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    leal -1(%rax,%rax), %eax
+; CHECK-NEXT:    leal -1(,%rax,2), %eax
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = fcmp ueq float %a0, %a1

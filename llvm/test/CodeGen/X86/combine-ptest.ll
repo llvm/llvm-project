@@ -11,15 +11,15 @@
 define i32 @ptestz_128_invert0(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; SSE-LABEL: ptestz_128_invert0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ptest %xmm1, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovael %esi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ptestz_128_invert0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    cmovael %esi, %eax
 ; AVX-NEXT:    retq
   %t1 = xor <2 x i64> %c, <i64 -1, i64 -1>
@@ -36,15 +36,15 @@ define i32 @ptestz_128_invert0(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestz_128_invert1(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; SSE-LABEL: ptestz_128_invert1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ptest %xmm0, %xmm1
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovael %esi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ptestz_128_invert1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vptest %xmm0, %xmm1
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    cmovael %esi, %eax
 ; AVX-NEXT:    retq
   %t1 = xor <2 x i64> %d, <i64 -1, i64 -1>
@@ -61,15 +61,15 @@ define i32 @ptestz_128_invert1(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestc_128_invert0(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; SSE-LABEL: ptestc_128_invert0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ptest %xmm1, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovnel %esi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ptestc_128_invert0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
   %t1 = xor <2 x i64> %c, <i64 -1, i64 -1>
@@ -86,15 +86,15 @@ define i32 @ptestc_128_invert0(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestnzc_128_invert0(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; SSE-LABEL: ptestnzc_128_invert0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ptest %xmm1, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovnel %esi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ptestnzc_128_invert0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
   %t1 = xor <2 x i64> %c, <i64 -1, i64 -1>
@@ -111,17 +111,17 @@ define i32 @ptestnzc_128_invert0(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestc_128_not(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; SSE-LABEL: ptestc_128_not:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE-NEXT:    ptest %xmm1, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovael %esi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ptestc_128_not:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    cmovael %esi, %eax
 ; AVX-NEXT:    retq
   %t1 = xor <2 x i64> %c, <i64 -1, i64 -1>
@@ -138,15 +138,15 @@ define i32 @ptestc_128_not(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestz_128_and(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; SSE-LABEL: ptestz_128_and:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ptest %xmm1, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovnel %esi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ptestz_128_and:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
   %t1 = and <2 x i64> %c, %d
@@ -163,15 +163,15 @@ define i32 @ptestz_128_and(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestz_128_andc(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 ; SSE-LABEL: ptestz_128_andc:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ptest %xmm1, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovael %esi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ptestz_128_andc:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vptest %xmm1, %xmm0
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    cmovael %esi, %eax
 ; AVX-NEXT:    retq
   %t1 = xor <2 x i64> %c, <i64 -1, i64 -1>
@@ -189,15 +189,15 @@ define i32 @ptestz_128_andc(<2 x i64> %c, <2 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestz_128_allones0(<2 x i64> %c, i32 %a, i32 %b) {
 ; SSE-LABEL: ptestz_128_allones0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ptest %xmm0, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovnel %esi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ptestz_128_allones0:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
   %t1 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> <i64 -1, i64 -1>, <2 x i64> %c)
@@ -213,15 +213,15 @@ define i32 @ptestz_128_allones0(<2 x i64> %c, i32 %a, i32 %b) {
 define i32 @ptestz_128_allones1(<2 x i64> %c, i32 %a, i32 %b) {
 ; SSE-LABEL: ptestz_128_allones1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    ptest %xmm0, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovnel %esi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ptestz_128_allones1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    retq
   %t1 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %c, <2 x i64> <i64 -1, i64 -1>)
@@ -346,17 +346,17 @@ define i32 @ptestz_v8i16_signbits(<8 x i16> %c, i32 %a, i32 %b) {
 define i32 @ptestz_v2i64_concat(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; SSE-LABEL: ptestz_v2i64_concat:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    por %xmm3, %xmm2
 ; SSE-NEXT:    ptest %xmm2, %xmm0
+; SSE-NEXT:    movl %edi, %eax
 ; SSE-NEXT:    cmovnel %esi, %eax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: ptestz_v2i64_concat:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vptest %ymm1, %ymm0
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    cmovnel %esi, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq

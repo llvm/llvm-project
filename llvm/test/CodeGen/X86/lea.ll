@@ -34,7 +34,8 @@ define i32 @test2(i32 %x_offs) nounwind readnone {
 ; LINUX-NEXT:    leal -5(%rdi), %eax
 ; LINUX-NEXT:    andl $-4, %eax
 ; LINUX-NEXT:    negl %eax
-; LINUX-NEXT:    leal -4(%rdi,%rax), %eax
+; LINUX-NEXT:    addl %edi, %eax
+; LINUX-NEXT:    addl $-4, %eax
 ; LINUX-NEXT:    retq
 ; LINUX-NEXT:  .LBB1_2: # %bb2
 ; LINUX-NEXT:    movl %edi, %eax
@@ -49,7 +50,8 @@ define i32 @test2(i32 %x_offs) nounwind readnone {
 ; WIN-NEXT:    leal -5(%rcx), %eax
 ; WIN-NEXT:    andl $-4, %eax
 ; WIN-NEXT:    negl %eax
-; WIN-NEXT:    leal -4(%rcx,%rax), %eax
+; WIN-NEXT:    addl %ecx, %eax
+; WIN-NEXT:    addl $-4, %eax
 ; WIN-NEXT:    retq
 ; WIN-NEXT:  .LBB1_2: # %bb2
 ; WIN-NEXT:    movl %ecx, %eax

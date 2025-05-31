@@ -346,8 +346,8 @@ define void @test6(i32 %C, ptr %A, ptr %B) nounwind {
 ; MCU-NEXT:    fmul %st, %st(0)
 ; MCU-NEXT:    fxch %st(3)
 ; MCU-NEXT:    fmul %st, %st(0)
-; MCU-NEXT:    testl %eax, %eax
 ; MCU-NEXT:    flds (%edx)
+; MCU-NEXT:    testl %eax, %eax
 ; MCU-NEXT:    je .LBB5_2
 ; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    fstp %st(1)
@@ -744,13 +744,21 @@ define i64 @test9b(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 
 ;; Select between -1 and 1.
 define i64 @test10(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; CHECK-LABEL: test10:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq $1, %rdi
-; CHECK-NEXT:    setae %al
-; CHECK-NEXT:    leaq -1(%rax,%rax), %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test10:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    xorl %eax, %eax
+; GENERIC-NEXT:    cmpq $1, %rdi
+; GENERIC-NEXT:    setae %al
+; GENERIC-NEXT:    leaq -1(,%rax,2), %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test10:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    xorl %eax, %eax
+; ATOM-NEXT:    cmpq $1, %rdi
+; ATOM-NEXT:    setae %al
+; ATOM-NEXT:    leaq -1(%rax,%rax), %rax
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test10:
 ; ATHLON:       ## %bb.0:
@@ -983,13 +991,21 @@ define i8 @nezero_all_ones_or_const(i8 %x) {
 }
 
 define i32 @PR53006(i32 %x) {
-; CHECK-LABEL: PR53006:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    negl %edi
-; CHECK-NEXT:    setae %al
-; CHECK-NEXT:    leal -1(%rax,%rax), %eax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: PR53006:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    xorl %eax, %eax
+; GENERIC-NEXT:    negl %edi
+; GENERIC-NEXT:    setae %al
+; GENERIC-NEXT:    leal -1(,%rax,2), %eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: PR53006:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    xorl %eax, %eax
+; ATOM-NEXT:    negl %edi
+; ATOM-NEXT:    setae %al
+; ATOM-NEXT:    leal -1(%rax,%rax), %eax
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: PR53006:
 ; ATHLON:       ## %bb.0:
@@ -1005,7 +1021,7 @@ define i32 @PR53006(i32 %x) {
 ; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    negl %eax
 ; MCU-NEXT:    setae %cl
-; MCU-NEXT:    leal -1(%ecx,%ecx), %eax
+; MCU-NEXT:    leal -1(,%ecx,2), %eax
 ; MCU-NEXT:    retl
   %z = icmp eq i32 %x, 0
   %r = select i1 %z, i32 1, i32 -1
@@ -1328,14 +1344,14 @@ define void @clamp_i8(i32 %src, ptr %dst) {
 ;
 ; MCU-LABEL: clamp_i8:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    cmpl $127, %eax
 ; MCU-NEXT:    movl $127, %ecx
+; MCU-NEXT:    cmpl $127, %eax
 ; MCU-NEXT:    jg .LBB26_2
 ; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:  .LBB26_2:
-; MCU-NEXT:    cmpl $-128, %ecx
 ; MCU-NEXT:    movb $-128, %al
+; MCU-NEXT:    cmpl $-128, %ecx
 ; MCU-NEXT:    jl .LBB26_4
 ; MCU-NEXT:  # %bb.3:
 ; MCU-NEXT:    movl %ecx, %eax
@@ -1390,14 +1406,14 @@ define void @clamp(i32 %src, ptr %dst) {
 ;
 ; MCU-LABEL: clamp:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    cmpl $32768, %eax # imm = 0x8000
 ; MCU-NEXT:    movl $32767, %ecx # imm = 0x7FFF
+; MCU-NEXT:    cmpl $32768, %eax # imm = 0x8000
 ; MCU-NEXT:    jge .LBB27_2
 ; MCU-NEXT:  # %bb.1:
 ; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:  .LBB27_2:
-; MCU-NEXT:    cmpl $-32768, %ecx # imm = 0x8000
 ; MCU-NEXT:    movl $32768, %eax # imm = 0x8000
+; MCU-NEXT:    cmpl $-32768, %ecx # imm = 0x8000
 ; MCU-NEXT:    jl .LBB27_4
 ; MCU-NEXT:  # %bb.3:
 ; MCU-NEXT:    movl %ecx, %eax

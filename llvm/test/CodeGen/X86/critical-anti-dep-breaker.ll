@@ -24,9 +24,9 @@ define i32 @Part_Create(ptr %Anchor, i32 %TypeNum, i32 %F, i32 %Z, ptr %Status, 
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq NullToken@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq PartClass@GOTPCREL(%rip), %r10
+; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    movl (%r10), %ebp
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)

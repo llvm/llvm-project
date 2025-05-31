@@ -6,7 +6,7 @@ define i16 @lea16bit(i16 %in) {
 ; NO-NDD-LABEL: lea16bit:
 ; NO-NDD:       # %bb.0:
 ; NO-NDD-NEXT:    # kill: def $edi killed $edi def $rdi
-; NO-NDD-NEXT:    leal 1(%rdi,%rdi), %eax
+; NO-NDD-NEXT:    leal 1(,%rdi,2), %eax
 ; NO-NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NO-NDD-NEXT:    retq
 ;

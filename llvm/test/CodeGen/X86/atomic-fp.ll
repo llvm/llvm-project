@@ -1046,17 +1046,17 @@ define dso_local void @fsub_64g() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    fchs
 ; X86-SSE1-NEXT:    faddl (%esp)
 ; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, glob64
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
+; X86-SSE1-NEXT:    movlps %xmm1, glob64
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl
@@ -1212,17 +1212,17 @@ define dso_local void @fsub_64imm() nounwind {
 ; X86-SSE1-NEXT:    andl $-8, %esp
 ; X86-SSE1-NEXT:    subl $16, %esp
 ; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; X86-SSE1-NEXT:    xorps %xmm1, %xmm1
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
-; X86-SSE1-NEXT:    movss %xmm1, (%esp)
-; X86-SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-SSE1-NEXT:    movss %xmm1, {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    movss %xmm0, (%esp)
+; X86-SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; X86-SSE1-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; X86-SSE1-NEXT:    fld1
 ; X86-SSE1-NEXT:    fchs
 ; X86-SSE1-NEXT:    faddl (%esp)
 ; X86-SSE1-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
-; X86-SSE1-NEXT:    movlps %xmm0, -559038737
+; X86-SSE1-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
+; X86-SSE1-NEXT:    movlps %xmm1, -559038737
 ; X86-SSE1-NEXT:    movl %ebp, %esp
 ; X86-SSE1-NEXT:    popl %ebp
 ; X86-SSE1-NEXT:    retl

@@ -16,8 +16,8 @@ define i32 @foo(ptr nocapture %perm, i32 %n) {
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -24(%rsp,%rcx,8), %rdx
 ; CHECK-NEXT:    movups %xmm0, (%rdi,%rdx,8)
-; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    retq
