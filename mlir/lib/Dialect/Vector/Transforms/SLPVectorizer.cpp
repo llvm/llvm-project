@@ -68,6 +68,32 @@ static bool maybeWriteOp(Operation *op) {
   return effectInterface.hasEffect<MemoryEffects::Write>();
 }
 
+static Type getVectorElementType(VectorType vectorType) {
+  if (vectorType.getRank() > 1 || vectorType.isScalable() ||
+      vectorType.getNumElements() != 1)
+    return {};
+
+  return vectorType.getElementType();
+}
+
+static Type getElementType(Operation *op) {
+  assert(op && "null op");
+  if (auto loadOp = dyn_cast<memref::LoadOp>(op))
+    return loadOp.getResult().getType();
+  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
+    return storeOp.getValueToStore().getType();
+  if (auto loadOp = dyn_cast<vector::LoadOp>(op))
+    return getVectorElementType(loadOp.getVectorType());
+  if (auto storeOp = dyn_cast<vector::StoreOp>(op))
+    return getVectorElementType(storeOp.getVectorType());
+  return {};
+}
+
+static bool isSupportedMemOp(Operation *op) {
+  assert(op && "null op");
+  return isa_and_present<IntegerType, FloatType, IndexType>(getElementType(op));
+}
+
 /// Collect all memory operations in the block into groups.
 /// Each group contains either all loads or all stores, uninterrupted by
 /// operations of the other type.
@@ -85,7 +111,7 @@ static SmallVector<MemoryOpGroup> collectMemoryOpGroups(Block &block) {
       }
     }
 
-    if (!isa<memref::LoadOp, memref::StoreOp>(op))
+    if (!isSupportedMemOp(&op))
       continue;
 
     bool isLoad = maybeReadOp(&op);
@@ -109,6 +135,19 @@ static Value getBase(Operation *op) {
     return loadOp.getMemRef();
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))
     return storeOp.getMemRef();
+  if (auto loadOp = dyn_cast<vector::LoadOp>(op))
+    return loadOp.getBase();
+  if (auto storeOp = dyn_cast<vector::StoreOp>(op))
+    return storeOp.getBase();
+  return {};
+}
+
+static Value getValueToStore(Operation *op) {
+  assert(op && "null op");
+  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
+    return storeOp.getValueToStore();
+  if (auto storeOp = dyn_cast<vector::StoreOp>(op))
+    return storeOp.getValueToStore();
   return {};
 }
 
@@ -131,15 +170,10 @@ static ValueRange getIndices(Operation *op) {
     return loadOp.getIndices();
   if (auto storeOp = dyn_cast<memref::StoreOp>(op))
     return storeOp.getIndices();
-  return {};
-}
-
-static Type getElementType(Operation *op) {
-  assert(op && "null op");
-  if (auto loadOp = dyn_cast<memref::LoadOp>(op))
-    return loadOp.getResult().getType();
-  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
-    return storeOp.getValueToStore().getType();
+  if (auto loadOp = dyn_cast<vector::LoadOp>(op))
+    return loadOp.getIndices();
+  if (auto storeOp = dyn_cast<vector::StoreOp>(op))
+    return storeOp.getIndices();
   return {};
 }
 
@@ -285,7 +319,15 @@ static bool isVectorizable(Operation *op) {
 
   for (auto type :
        llvm::concat<Type>(op->getResultTypes(), op->getOperandTypes())) {
-    if (!type.isIntOrIndexOrFloat())
+    if (auto vectorType = dyn_cast<VectorType>(type)) {
+      if (vectorType.getRank() > 1 || vectorType.isScalable() ||
+          vectorType.getNumElements() != 1)
+        return false;
+
+      type = vectorType.getElementType();
+    }
+
+    if (!isa<IntegerType, FloatType, IndexType>(type))
       return false;
   }
 
@@ -464,8 +506,7 @@ public:
     for (const auto &node : nodes) {
       if (!node->isRoot)
         continue;
-      llvm::dbgs() << "  "
-                   << (isa<memref::LoadOp>(node->op()) ? "LOAD" : "STORE")
+      llvm::dbgs() << "  " << (maybeReadOp(node->op()) ? "LOAD" : "STORE")
                    << " group with " << node->size() << " operations:\n";
       for (auto *op : node->ops) {
         llvm::dbgs() << "    " << *op << "\n";
@@ -657,20 +698,36 @@ checkOpVecType(SLPGraphNode *node,
                llvm::function_ref<bool(Type, size_t)> isValidVecType) {
   Operation *op = node->op();
   size_t size = node->size();
-  if (Type elementType = getElementType(op))
-    return isValidVecType(elementType, size);
+  auto checkRes = [](bool res) -> bool {
+    LLVM_DEBUG(llvm::dbgs() << (res ? "true" : "false") << "\n");
+    return res;
+  };
+
+  if (Type elementType = getElementType(op)) {
+    LLVM_DEBUG(llvm::dbgs() << "Checking if type " << elementType
+                            << " with size " << size << " can be vectorized: ");
+    return checkRes(isValidVecType(elementType, size));
+  }
 
   if (isVectorizable(op)) {
     for (auto type :
          llvm::concat<Type>(op->getResultTypes(), op->getOperandTypes())) {
-      if (!isValidVecType(type, size))
+      Type elementType = getElementTypeOrSelf(type);
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Checking if type " << elementType << " with size " << size
+                 << " can be vectorized: ");
+      if (!checkRes(isValidVecType(elementType, size)))
         return false;
     }
     return true;
   }
 
-  if (auto extract = dyn_cast<vector::ExtractOp>(op))
-    return isValidVecType(extract.getResult().getType(), size);
+  if (auto extract = dyn_cast<vector::ExtractOp>(op)) {
+    Type type = extract.getResult().getType();
+    LLVM_DEBUG(llvm::dbgs() << "Checking if type " << type << " with size "
+                            << size << " can be vectorized: ");
+    return checkRes(isValidVecType(type, size));
+  }
 
   LLVM_DEBUG(llvm::dbgs() << "Unsupported op " << op->getName() << "\n");
   return false;
@@ -903,12 +960,19 @@ SLPGraph::vectorize(IRRewriter &rewriter,
     for (auto *operand : node->operands)
       size = std::min(size, operand->size());
 
-    node->ops.resize(size);
+    if (size < node->size()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Size mismatch, resizing node with " << node->size()
+                 << " operations to " << size << "\n");
+      node->ops.resize(size);
+    }
 
     while (node->size() > 1) {
       if (checkOpVecType(node, isValidVecType))
         break;
 
+      LLVM_DEBUG(llvm::dbgs() << "No a valid vector type, popping back op: "
+                              << node->ops.back()->getName() << "\n");
       node->ops.pop_back();
     }
   }
@@ -975,24 +1039,22 @@ SLPGraph::vectorize(IRRewriter &rewriter,
                                                             numElements, 1);
     };
 
-    if (auto load = dyn_cast<memref::LoadOp>(op)) {
-      auto vecType =
-          VectorType::get(numElements, load.getMemRefType().getElementType());
-      Value result = rewriter.create<vector::LoadOp>(
-          loc, vecType, load.getMemRef(), load.getIndices());
-      mapping.map(load.getResult(), result);
+    if (maybeReadOp(op)) {
+      auto vecType = VectorType::get(numElements, getElementType(op));
+      Value result = rewriter.create<vector::LoadOp>(loc, vecType, getBase(op),
+                                                     getIndices(op));
+      mapping.map(op->getResult(0), result);
       handleNonVectorOutputs(result);
-    } else if (auto store = dyn_cast<memref::StoreOp>(op)) {
-      handleNonVectorInputs(store.getValueToStore());
-      Value val = mapping.lookupOrDefault(store.getValueToStore());
+    } else if (maybeWriteOp(op)) {
+      handleNonVectorInputs(getValueToStore(op));
+      Value val = mapping.lookupOrDefault(getValueToStore(op));
       val = handleVecSizeMismatch(val);
-      rewriter.create<vector::StoreOp>(loc, val, store.getMemRef(),
-                                       store.getIndices());
+      rewriter.create<vector::StoreOp>(loc, val, getBase(op), getIndices(op));
     } else if (isVectorizable(op)) {
       handleNonVectorInputs(op->getOperands());
       Operation *newOp = rewriter.clone(*op, mapping);
-      auto resVectorType =
-          VectorType::get(numElements, op->getResultTypes().front());
+      Type resType = getElementTypeOrSelf(op->getResultTypes().front());
+      auto resVectorType = VectorType::get(numElements, resType);
 
       {
         OpBuilder::InsertionGuard guard(rewriter);
