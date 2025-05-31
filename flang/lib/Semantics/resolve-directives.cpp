@@ -550,6 +550,13 @@ public:
     return false;
   }
 
+  bool Pre(const parser::OmpClause::Uniform &x) {
+    for (const auto &name : x.v) {
+      ResolveOmpName(name, Symbol::Flag::OmpUniform);
+    }
+    return false;
+  }
+
   bool Pre(const parser::OmpInReductionClause &x) {
     auto &objects{std::get<parser::OmpObjectList>(x.t)};
     ResolveOmpObjectList(objects, Symbol::Flag::OmpInReduction);
