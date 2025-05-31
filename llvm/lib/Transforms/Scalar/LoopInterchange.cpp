@@ -209,8 +209,24 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
             Direction = '*';
           Dep.push_back(Direction);
         }
+
+        // In some cases, the Levels of Dependence may be less than the depth of
+        // the loop nest, particularly when the array's dimension is smaller
+        // than the loop nest depth. In such cases, fill the end of the
+        // direction vector with '*'
+        // TODO: This can be false dependency in some cases, e.g.,
+        //
+        //   for (int i=0; i<N; i++)
+        //     for (int j=0; j<N; j++)
+        //       for (int k=0; k<N; k++)
+        //         v[i] += a[i][j][k];
+        //
+        // In this example, a dependency exists between the load and store of
+        // v[i]. The direction vector returned by DependenceInfo would be [=],
+        // and thus it would become [= * *]. However, if the addition is
+        // associative, exchanging the j-loop and k-loop is legal.
         while (Dep.size() != Level) {
-          Dep.push_back('I');
+          Dep.push_back('*');
         }
 
         // Make sure we only add unique entries to the dependency matrix.
@@ -1214,7 +1230,7 @@ LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
 static bool canVectorize(const CharMatrix &DepMatrix, unsigned LoopId) {
   for (unsigned I = 0; I != DepMatrix.size(); I++) {
     char Dir = DepMatrix[I][LoopId];
-    if (Dir != 'I' && Dir != '=')
+    if (Dir != '=')
       return false;
   }
   return true;

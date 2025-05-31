@@ -71,10 +71,11 @@ for.end8:                                         ; preds = %for.cond1.for.inc6_
 
 ;; Not tightly nested. Do not interchange.
 ;; Not interchanged hence the phi's in the inner loop will not be split.
+;; FIXME: Currently this loops is rejected for dependence reasons.
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHIOuter
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        reduction_03
 
 ; IR-LABEL: @reduction_03(
