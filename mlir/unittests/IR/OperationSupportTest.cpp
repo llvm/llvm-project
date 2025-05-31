@@ -350,10 +350,10 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   auto req2 = b.getI32IntegerAttr(60);
   Operation *opWithProperty2 = b.create<test::OpAttrMatch1>(
       b.getUnknownLoc(), req2, nullptr, nullptr, req2);
-  EXPECT_NE(getHash(op1, OperationEquivalence::None),
-            getHash(op2, OperationEquivalence::None));
   EXPECT_EQ(getHash(opWithProperty1, OperationEquivalence::IgnoreProperties),
             getHash(opWithProperty2, OperationEquivalence::IgnoreProperties));
+  EXPECT_NE(getHash(opWithProperty1, OperationEquivalence::None),
+            getHash(opWithProperty2, OperationEquivalence::None));
   opWithProperty1->destroy();
   opWithProperty2->destroy();
 }
