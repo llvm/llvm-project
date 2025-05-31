@@ -40,7 +40,8 @@ protocol::Source CreateSource(const lldb::SBFileSpec &file);
 /// \return
 ///     A "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target);
+protocol::Source CreateSource(const lldb::SBAddress &address,
+                              const lldb::SBTarget &target);
 
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);

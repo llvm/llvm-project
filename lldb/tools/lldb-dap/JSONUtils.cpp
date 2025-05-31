@@ -10,6 +10,7 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
@@ -581,8 +582,8 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto target = frame.GetThread().GetProcess().GetTarget();
-  auto source = CreateSource(frame.GetPCAddress(), target);
+  protocol::Source source = CreateSource(
+      frame.GetPCAddress(), frame.GetThread().GetProcess().GetTarget());
   if (!IsAssemblySource(source)) {
     // This is a normal source with a valid line entry.
     auto line_entry = frame.GetLineEntry();

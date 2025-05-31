@@ -149,7 +149,7 @@ bool SBAddress::OffsetAddress(addr_t offset) {
   return false;
 }
 
-lldb::SBSection SBAddress::GetSection() {
+lldb::SBSection SBAddress::GetSection() const {
   LLDB_INSTRUMENT_VA(this);
 
   lldb::SBSection sb_section;
@@ -158,7 +158,7 @@ lldb::SBSection SBAddress::GetSection() {
   return sb_section;
 }
 
-lldb::addr_t SBAddress::GetOffset() {
+lldb::addr_t SBAddress::GetOffset() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_up->IsValid())
@@ -200,7 +200,7 @@ bool SBAddress::GetDescription(SBStream &description) {
   return true;
 }
 
-SBModule SBAddress::GetModule() {
+SBModule SBAddress::GetModule() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBModule sb_module;
@@ -209,7 +209,7 @@ SBModule SBAddress::GetModule() {
   return sb_module;
 }
 
-SBSymbolContext SBAddress::GetSymbolContext(uint32_t resolve_scope) {
+SBSymbolContext SBAddress::GetSymbolContext(uint32_t resolve_scope) const {
   LLDB_INSTRUMENT_VA(this, resolve_scope);
 
   SBSymbolContext sb_sc;
@@ -219,7 +219,7 @@ SBSymbolContext SBAddress::GetSymbolContext(uint32_t resolve_scope) {
   return sb_sc;
 }
 
-SBCompileUnit SBAddress::GetCompileUnit() {
+SBCompileUnit SBAddress::GetCompileUnit() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBCompileUnit sb_comp_unit;
@@ -228,7 +228,7 @@ SBCompileUnit SBAddress::GetCompileUnit() {
   return sb_comp_unit;
 }
 
-SBFunction SBAddress::GetFunction() {
+SBFunction SBAddress::GetFunction() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBFunction sb_function;
@@ -237,7 +237,7 @@ SBFunction SBAddress::GetFunction() {
   return sb_function;
 }
 
-SBBlock SBAddress::GetBlock() {
+SBBlock SBAddress::GetBlock() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBBlock sb_block;
@@ -246,7 +246,7 @@ SBBlock SBAddress::GetBlock() {
   return sb_block;
 }
 
-SBSymbol SBAddress::GetSymbol() {
+SBSymbol SBAddress::GetSymbol() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBSymbol sb_symbol;
@@ -255,7 +255,7 @@ SBSymbol SBAddress::GetSymbol() {
   return sb_symbol;
 }
 
-SBLineEntry SBAddress::GetLineEntry() {
+SBLineEntry SBAddress::GetLineEntry() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBLineEntry sb_line_entry;

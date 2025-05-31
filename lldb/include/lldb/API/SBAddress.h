@@ -56,7 +56,7 @@ public:
   // will only return valid values if the address has been resolved to a code
   // or data address using "void SBAddress::SetLoadAddress(...)" or
   // "lldb::SBAddress SBTarget::ResolveLoadAddress (...)".
-  lldb::SBSymbolContext GetSymbolContext(uint32_t resolve_scope);
+  lldb::SBSymbolContext GetSymbolContext(uint32_t resolve_scope) const;
 
   // The following functions grab individual objects for a given address and
   // are less efficient if you want more than one symbol related objects. Use
@@ -69,21 +69,21 @@ public:
   // One or more bits from the SymbolContextItem enumerations can be logically
   // OR'ed together to more efficiently retrieve multiple symbol objects.
 
-  lldb::SBSection GetSection();
+  lldb::SBSection GetSection() const;
 
-  lldb::addr_t GetOffset();
+  lldb::addr_t GetOffset() const;
 
-  lldb::SBModule GetModule();
+  lldb::SBModule GetModule() const;
 
-  lldb::SBCompileUnit GetCompileUnit();
+  lldb::SBCompileUnit GetCompileUnit() const;
 
-  lldb::SBFunction GetFunction();
+  lldb::SBFunction GetFunction() const;
 
-  lldb::SBBlock GetBlock();
+  lldb::SBBlock GetBlock() const;
 
-  lldb::SBSymbol GetSymbol();
+  lldb::SBSymbol GetSymbol() const;
 
-  lldb::SBLineEntry GetLineEntry();
+  lldb::SBLineEntry GetLineEntry() const;
 
 protected:
   friend class SBAddressRange;

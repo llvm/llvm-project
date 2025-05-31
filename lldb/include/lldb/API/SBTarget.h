@@ -585,7 +585,7 @@ public:
                                          lldb::addr_t vm_addr);
 
   SBSymbolContext ResolveSymbolContextForAddress(const SBAddress &addr,
-                                                 uint32_t resolve_scope);
+                                                 uint32_t resolve_scope) const;
 
   /// Read target memory. If a target process is running then memory
   /// is read from here. Otherwise the memory is read from the object

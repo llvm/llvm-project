@@ -182,7 +182,7 @@ std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec);
 ///
 /// \return
 ///     The line entry for the given address.
-lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
+lldb::SBLineEntry GetLineEntryForAddress(const lldb::SBTarget &target,
                                          const lldb::SBAddress &address);
 
 /// Helper for sending telemetry to lldb server, if client-telemetry is enabled.

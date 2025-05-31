@@ -15,7 +15,7 @@
 namespace lldb_dap {
 
 static bool ShouldDisplayAssemblySource(
-    lldb::SBAddress address,
+    const lldb::SBAddress &address,
     lldb::StopDisassemblyType stop_disassembly_display) {
   if (stop_disassembly_display == lldb::eStopDisassemblyTypeNever)
     return false;
@@ -40,7 +40,7 @@ static bool ShouldDisplayAssemblySource(
 }
 
 static protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
-                                             lldb::SBAddress address) {
+                                             const lldb::SBAddress &address) {
   protocol::Source source;
 
   auto symbol = address.GetSymbol();
@@ -87,7 +87,8 @@ protocol::Source CreateSource(const lldb::SBFileSpec &file) {
   return source;
 }
 
-protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target) {
+protocol::Source CreateSource(const lldb::SBAddress &address,
+                              const lldb::SBTarget &target) {
   lldb::SBDebugger debugger = target.GetDebugger();
   lldb::StopDisassemblyType stop_disassembly_display =
       GetStopDisassemblyDisplay(debugger);

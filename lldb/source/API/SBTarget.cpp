@@ -633,7 +633,7 @@ lldb::SBAddress SBTarget::ResolvePastLoadAddress(uint32_t stop_id,
 
 SBSymbolContext
 SBTarget::ResolveSymbolContextForAddress(const SBAddress &addr,
-                                         uint32_t resolve_scope) {
+                                         uint32_t resolve_scope) const {
   LLDB_INSTRUMENT_VA(this, addr, resolve_scope);
 
   SBSymbolContext sb_sc;
