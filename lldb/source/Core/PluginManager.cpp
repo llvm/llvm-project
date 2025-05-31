@@ -191,6 +191,22 @@ llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
   return PluginNamespaces;
 }
 
+bool PluginManager::MatchPluginName(llvm::StringRef pattern,
+                                    const PluginNamespace &ns,
+                                    const RegisteredPluginInfo &plugin_info) {
+  // The empty pattern matches all plugins.
+  if (pattern.empty())
+    return true;
+
+  // Check if the pattern matches the namespace.
+  if (pattern == ns.name)
+    return true;
+
+  // Check if the pattern matches the qualified name.
+  std::string qualified_name = (ns.name + "." + plugin_info.name).str();
+  return pattern == qualified_name;
+}
+
 template <typename Callback> struct PluginInstance {
   typedef Callback CallbackType;
 

@@ -20,6 +20,7 @@
 #include "lldb/lldb-private-interfaces.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -81,7 +82,41 @@ public:
 
   static void Terminate();
 
+  // Support for enabling and disabling plugins.
+
+  // Return the plugins that can be enabled or disabled by the user.
   static llvm::ArrayRef<PluginNamespace> GetPluginNamespaces();
+
+  // Generate a json object that describes the plugins that are available.
+  // This is a json representation of the plugin info returned by
+  // GetPluginNamespaces().
+  //
+  //    {
+  //       <plugin-namespace>: [
+  //           {
+  //               "enabled": <bool>,
+  //               "name": <plugin-name>,
+  //           },
+  //           ...
+  //       ],
+  //       ...
+  //    }
+  //
+  // If pattern is given it will be used to filter the plugins that are
+  // are returned. The pattern filters the plugin names using the
+  // PluginManager::MatchPluginName() function.
+  static llvm::json::Object GetJSON(llvm::StringRef pattern);
+
+  // Return true if the pattern matches the plugin name.
+  //
+  // The pattern matches the name if it is exactly equal to the namespace name
+  // or if it is equal to the qualified name, which is the namespace name
+  // followed by a dot and the plugin name (e.g. "system-runtime.foo").
+  //
+  // An empty pattern matches all plugins.
+  static bool MatchPluginName(llvm::StringRef pattern,
+                              const PluginNamespace &ns,
+                              const RegisteredPluginInfo &plugin);
 
   // ABI
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,

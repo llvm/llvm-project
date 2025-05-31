@@ -62,22 +62,12 @@ static int ActOnMatchingPlugins(
 
   for (const PluginNamespace &plugin_namespace :
        PluginManager::GetPluginNamespaces()) {
-    const bool match_namespace =
-        pattern.empty() || pattern == plugin_namespace.name;
 
     std::vector<RegisteredPluginInfo> matching_plugins;
     for (const RegisteredPluginInfo &plugin_info :
          plugin_namespace.get_info()) {
-
-      // If we match the namespace, we can skip the plugin name check.
-      bool match_qualified_name = false;
-      if (!match_namespace) {
-        std::string qualified_name =
-            (plugin_namespace.name + "." + plugin_info.name).str();
-        match_qualified_name = pattern == qualified_name;
-      }
-
-      if (match_namespace || match_qualified_name)
+      if (PluginManager::MatchPluginName(pattern, plugin_namespace,
+                                         plugin_info))
         matching_plugins.push_back(plugin_info);
     }
 
