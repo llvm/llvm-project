@@ -504,7 +504,7 @@ struct ScalingTruncFOpConverter
     Value cPow2F32 = b.create<arith::SIToFPOp>(f32Ty, cPow2);
     Value scaleF32 = b.create<arith::ExtFOp>(f32Ty, scaleOperand);
     // note that spec also does the clamping but it should only be done for
-    // underflows because diving by 2^emax will only make it smaller.
+    // underflows because dividing by 2^emax will only make it smaller.
     // https://github.com/microsoft/microxcaling/blob/7bc41952de394f5cc5e782baf132e7c7542eb4e4/mx/mx_ops.py#L282
     Value scaleNormalizedF32 = b.create<arith::DivFOp>(scaleF32, cPow2F32);
     // If it has underflown then scale will be a denorm FP32 number after
