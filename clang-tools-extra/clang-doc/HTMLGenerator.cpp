@@ -636,51 +636,51 @@ genHTML(const Index &Index, StringRef InfoPath, bool IsOutermostList) {
 
 static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
   switch (I.Kind) {
-    case CommentKind::CK_FullComment: {
-      auto FullComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
-      for (const auto &Child : I.Children) {
-        std::unique_ptr<HTMLNode> Node = genHTML(*Child);
-        if (Node)
-          FullComment->Children.emplace_back(std::move(Node));
-      }
-      return std::move(FullComment);
+  case CommentKind::CK_FullComment: {
+    auto FullComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
+    for (const auto &Child : I.Children) {
+      std::unique_ptr<HTMLNode> Node = genHTML(*Child);
+      if (Node)
+        FullComment->Children.emplace_back(std::move(Node));
     }
+    return std::move(FullComment);
+  }
 
-    case CommentKind::CK_ParagraphComment: {
-      auto ParagraphComment = std::make_unique<TagNode>(HTMLTag::TAG_P);
-      for (const auto &Child : I.Children) {
-        std::unique_ptr<HTMLNode> Node = genHTML(*Child);
-        if (Node)
-          ParagraphComment->Children.emplace_back(std::move(Node));
-      }
-      if (ParagraphComment->Children.empty())
-        return nullptr;
-      return std::move(ParagraphComment);
+  case CommentKind::CK_ParagraphComment: {
+    auto ParagraphComment = std::make_unique<TagNode>(HTMLTag::TAG_P);
+    for (const auto &Child : I.Children) {
+      std::unique_ptr<HTMLNode> Node = genHTML(*Child);
+      if (Node)
+        ParagraphComment->Children.emplace_back(std::move(Node));
     }
-
-    case CommentKind::CK_BlockCommandComment: {
-      auto BlockComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
-      BlockComment->Children.emplace_back(
-          std::make_unique<TagNode>(HTMLTag::TAG_DIV, I.Name));
-      for (const auto &Child : I.Children) {
-        std::unique_ptr<HTMLNode> Node = genHTML(*Child);
-        if (Node)
-          BlockComment->Children.emplace_back(std::move(Node));
-      }
-      if (BlockComment->Children.empty())
-        return nullptr;
-      return std::move(BlockComment);
-    }
-
-    case CommentKind::CK_TextComment: {
-      if (I.Text.empty())
-        return nullptr;
-      return std::make_unique<TextNode>(I.Text);
-    }
-
-    // For now, no handling — fallthrough.
-    default:
+    if (ParagraphComment->Children.empty())
       return nullptr;
+    return std::move(ParagraphComment);
+  }
+
+  case CommentKind::CK_BlockCommandComment: {
+    auto BlockComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
+    BlockComment->Children.emplace_back(
+        std::make_unique<TagNode>(HTMLTag::TAG_DIV, I.Name));
+    for (const auto &Child : I.Children) {
+      std::unique_ptr<HTMLNode> Node = genHTML(*Child);
+      if (Node)
+        BlockComment->Children.emplace_back(std::move(Node));
+    }
+    if (BlockComment->Children.empty())
+      return nullptr;
+    return std::move(BlockComment);
+  }
+
+  case CommentKind::CK_TextComment: {
+    if (I.Text.empty())
+      return nullptr;
+    return std::make_unique<TextNode>(I.Text);
+  }
+
+  // For now, no handling — fallthrough.
+  default:
+    return nullptr;
   }
 }
 

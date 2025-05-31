@@ -484,7 +484,7 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
 
 void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {
   StreamSubBlockGuard Block(Stream, BI_COMMENT_BLOCK_ID);
-  // Handle Kind (enum) separately, since it is not a string. 
+  // Handle Kind (enum) separately, since it is not a string.
   emitRecord(commentKindToString(I.Kind), COMMENT_KIND);
   for (const auto &L : std::vector<std::pair<llvm::StringRef, RecordId>>{
            {I.Text, COMMENT_TEXT},
