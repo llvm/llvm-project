@@ -99,7 +99,7 @@ void test() {
     assert(transparent_used);
   }
   {
-    // std::string and C string literal
+    // LWG4239 std::string and C string literal
     using M = std::flat_set<std::string, std::less<>>;
     M m{"alpha", "beta", "epsilon", "eta", "gamma"};
     auto it = m.upper_bound("beta");

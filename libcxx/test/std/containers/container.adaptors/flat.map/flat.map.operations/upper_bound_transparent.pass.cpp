@@ -91,7 +91,7 @@ int main(int, char**) {
     assert(transparent_used);
   }
   {
-    // std::string and C string literal
+    // LWG4239 std::string and C string literal
     using M = std::flat_map<std::string, int, std::less<>>;
     M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
     auto it = m.upper_bound("charlie");

@@ -124,7 +124,7 @@ void test() {
     ASSERT_SAME_TYPE(decltype(m.insert(m.begin(), m.end())), void);
   }
   {
-    // std::string and C string literal
+    // LWG4239 std::string and C string literal
     using M = std::flat_set<std::string, std::less<>>;
     M m{"alpha", "beta", "epsilon", "eta", "gamma"};
     auto [iter, inserted] = m.insert("beta");

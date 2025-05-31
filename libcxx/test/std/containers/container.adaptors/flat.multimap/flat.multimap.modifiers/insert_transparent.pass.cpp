@@ -132,7 +132,7 @@ int main(int, char**) {
     test_emplace_exception_guarantee(insert_func_iter);
   }
   {
-    // std::string and C string literal
+    // LWG4239 std::string and C string literal
     using M = std::flat_multimap<std::string, int, std::less<>>;
     M m{{"alpha", 1}, {"beta", 2}, {"beta", 1}, {"eta", 3}, {"gamma", 3}};
     auto it = m.insert({"beta", 1});
