@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LostStdMoveCheck.h"
-#include "../utils/DeclRefExprUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -15,11 +14,33 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-using utils::decl_ref_expr::allDeclRefExprs;
+template <typename Node>
+void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
+                        llvm::SmallPtrSet<const Node*, 16>& Nodes) {
+  for (const BoundNodes& Match : Matches)
+    Nodes.insert(Match.getNodeAs<Node>(ID));
+}
+
+llvm::SmallPtrSet<const DeclRefExpr*, 16> allDeclRefExprsHonourLambda(
+    const VarDecl& VarDecl, const Decl& Decl, ASTContext& Context) {
+  auto Matches = match(
+      decl(forEachDescendant(
+          declRefExpr(to(varDecl(equalsNode(&VarDecl))),
+
+                      unless(hasAncestor(lambdaExpr(hasAnyCapture(lambdaCapture(
+                          capturesVar(varDecl(equalsNode(&VarDecl))))))))
+
+                          )
+              .bind("declRef"))),
+      Decl, Context);
+  llvm::SmallPtrSet<const DeclRefExpr*, 16> DeclRefs;
+  extractNodesByIdTo(Matches, "declRef", DeclRefs);
+  return DeclRefs;
+}
 
 static const Expr* getLastVarUsage(const VarDecl& Var, const Decl& Func,
                                    ASTContext& Context) {
-  auto Exprs = allDeclRefExprs(Var, Func, Context);
+  auto Exprs = allDeclRefExprsHonourLambda(Var, Func, Context);
 
   const Expr* LastExpr = nullptr;
   for (const clang::DeclRefExpr* Expr : Exprs) {
@@ -36,17 +57,16 @@ AST_MATCHER(CXXRecordDecl, hasTrivialMoveConstructor) {
 }
 
 void LostStdMoveCheck::registerMatchers(MatchFinder* Finder) {
-  auto returnParent =
+  auto ReturnParent =
       hasParent(expr(hasParent(cxxConstructExpr(hasParent(returnStmt())))));
 
-  auto outermostExpr = expr(unless(hasParent(expr())));
-  auto leafStatement =
-      stmt(outermostExpr, unless(hasDescendant(outermostExpr)));
+  auto OutermostExpr = expr(unless(hasParent(expr())));
+  auto LeafStatement = stmt(OutermostExpr);
 
   Finder->addMatcher(
       declRefExpr(
           // not "return x;"
-          unless(returnParent),
+          unless(ReturnParent),
 
           unless(hasType(namedDecl(hasName("::std::string_view")))),
 
@@ -58,14 +78,17 @@ void LostStdMoveCheck::registerMatchers(MatchFinder* Finder) {
               hasDeclaration(cxxRecordDecl(hasTrivialMoveConstructor()))))),
 
           // Not in a cycle
-          unless(hasAncestor(forStmt())), unless(hasAncestor(doStmt())),
+          unless(hasAncestor(forStmt())),
+
+          unless(hasAncestor(doStmt())),
+
           unless(hasAncestor(whileStmt())),
 
           // only non-X&
           unless(hasDeclaration(
               varDecl(hasType(qualType(lValueReferenceType()))))),
 
-          hasAncestor(leafStatement.bind("leaf_statement")),
+          hasAncestor(LeafStatement.bind("leaf_statement")),
 
           hasDeclaration(
               varDecl(hasAncestor(functionDecl().bind("func"))).bind("decl")),
@@ -86,13 +109,6 @@ void LostStdMoveCheck::registerMatchers(MatchFinder* Finder) {
       this);
 }
 
-template <typename Node>
-void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
-                        llvm::SmallPtrSet<const Node*, 16>& Nodes) {
-  for (const BoundNodes& Match : Matches)
-    Nodes.insert(Match.getNodeAs<Node>(ID));
-}
-
 void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
   const auto* MatchedDecl = Result.Nodes.getNodeAs<VarDecl>("decl");
   const auto* MatchedFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
@@ -101,21 +117,35 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
   const auto* MatchedLeafStatement =
       Result.Nodes.getNodeAs<Stmt>("leaf_statement");
 
-  if (MatchedUseCall) return;
+  if (MatchedUseCall) {
+    return;
+  }
 
   const Expr* LastUsage =
       getLastVarUsage(*MatchedDecl, *MatchedFunc, *Result.Context);
-  if (LastUsage == nullptr) return;
 
-  if (LastUsage->getBeginLoc() > MatchedUse->getBeginLoc()) {
+  if (LastUsage && LastUsage->getBeginLoc() > MatchedUse->getBeginLoc()) {
     // "use" is not the last reference to x
+    return;
+  }
+
+  if (LastUsage &&
+      LastUsage->getSourceRange() != MatchedUse->getSourceRange()) {
     return;
   }
 
   // Calculate X usage count in the statement
   llvm::SmallPtrSet<const DeclRefExpr*, 16> DeclRefs;
   ArrayRef<BoundNodes> Matches = match(
-      findAll(declRefExpr(to(varDecl(equalsNode(MatchedDecl)))).bind("ref")),
+      findAll(declRefExpr(
+
+                  to(varDecl(equalsNode(MatchedDecl))),
+
+                  unless(hasAncestor(lambdaExpr(hasAnyCapture(lambdaCapture(
+                      capturesVar(varDecl(equalsNode(MatchedDecl))))))))
+
+                      )
+                  .bind("ref")),
       *MatchedLeafStatement, *Result.Context);
   extractNodesByIdTo(Matches, "ref", DeclRefs);
   if (DeclRefs.size() > 1) {
@@ -125,12 +155,21 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
 
   const SourceManager& Source = Result.Context->getSourceManager();
   const auto Range =
-      CharSourceRange::getTokenRange(LastUsage->getSourceRange());
+      CharSourceRange::getTokenRange(MatchedUse->getSourceRange());
   const StringRef NeedleExprCode =
       Lexer::getSourceText(Range, Source, Result.Context->getLangOpts());
-  diag(LastUsage->getBeginLoc(), "could be std::move()")
-      << FixItHint::CreateReplacement(
-             Range, ("std::move(" + NeedleExprCode + ")").str());
+
+  if (NeedleExprCode == "=") {
+
+    diag(MatchedUse->getBeginLoc(), "could be std::move()")
+        << FixItHint::CreateInsertion(
+               MatchedUse->getBeginLoc(),
+               ("std::move(" + MatchedDecl->getName() + "),").str());
+  } else {
+    diag(MatchedUse->getBeginLoc(), "could be std::move()")
+        << FixItHint::CreateReplacement(
+               Range, ("std::move(" + NeedleExprCode + ")").str());
+  }
 }
 
 }  // namespace clang::tidy::performance
