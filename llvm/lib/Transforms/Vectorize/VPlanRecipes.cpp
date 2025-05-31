@@ -458,7 +458,15 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Select:
   case VPInstruction::ComputeFindLastIVResult:
     return 3;
-  case Instruction::Call:
+  case Instruction::Call: {
+    VPValue *LastOp = getOperand(getNumOperands() - 1);
+    if (LastOp->isLiveIn() && isa<Function>(LastOp->getLiveInIRValue()))
+      return getNumOperands();
+    assert(
+        isa<Function>(getOperand(getNumOperands() - 2)->getLiveInIRValue()) &&
+        "Called function must either be the last or second-to-last operand");
+    return getNumOperands() - 1;
+  }
   case Instruction::PHI:
   case Instruction::GetElementPtr:
   case Instruction::Switch:
