@@ -151,7 +151,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     size_t argc = command.GetArgumentCount();
     if (argc > 1) {
-      result.AppendError("'plugin load' requires one argument");
+      result.AppendError("'plugin list' requires zero or one arguments");
       return;
     }
     llvm::StringRef pattern = argc ? command[0].ref() : "";
@@ -186,7 +186,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     size_t argc = command.GetArgumentCount();
-    if (argc > 1) {
+    if (argc != 1) {
       result.AppendError("'plugin enable' requires one argument");
       return;
     }
@@ -213,7 +213,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     size_t argc = command.GetArgumentCount();
-    if (argc > 1) {
+    if (argc != 1) {
       result.AppendError("'plugin disable' requires one argument");
       return;
     }

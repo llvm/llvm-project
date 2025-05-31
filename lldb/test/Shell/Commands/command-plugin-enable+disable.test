@@ -51,3 +51,12 @@ plugin enable system-runtime
 # RUN: %lldb -o "plugin enable some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
 # RUN: %lldb -o "plugin disable some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
 # ERROR_PLUGIN_NOT_FOUND: error: Found no matching plugins
+
+# Test plugin enable/disable requires a plugin name.
+# RUN: %lldb -o "plugin enable" 2>&1 | FileCheck %s --check-prefix=ERROR_ARGUMENTS_ENABLE
+# RUN: %lldb -o "plugin enable a b c" 2>&1 | FileCheck %s --check-prefix=ERROR_ARGUMENTS_ENABLE
+# ERROR_ARGUMENTS_ENABLE: error: 'plugin enable' requires one argument
+
+# RUN: %lldb -o "plugin disable" 2>&1 | FileCheck %s --check-prefix=ERROR_ARGUMENTS_DISABLE
+# RUN: %lldb -o "plugin disable a b c" 2>&1 | FileCheck %s --check-prefix=ERROR_ARGUMENTS_DISABLE
+# ERROR_ARGUMENTS_DISABLE: error: 'plugin disable' requires one argument

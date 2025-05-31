@@ -34,3 +34,7 @@ plugin list system-runtime
 # Test plugin list for unknown plugin returns an error.
 # RUN: %lldb -o "plugin list some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
 # ERROR_PLUGIN_NOT_FOUND: error: Found no matching plugins
+
+# Test plugin list fails on multiple arguments.
+# RUN: %lldb -o "plugin list a b c" 2>&1 | FileCheck %s --check-prefix=ERROR_ARGUMENTS
+# ERROR_ARGUMENTS: error: 'plugin list' requires zero or one arguments
