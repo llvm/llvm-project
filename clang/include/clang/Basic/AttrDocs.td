@@ -396,9 +396,13 @@ any option of a multiversioned function is undefined.
   }];
 }
 
-def SYCLKernelDocs : Documentation {
+def DeviceKernelDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "device_kernel, sycl_kernel, nvptx_kernel, amdgpu_kernel, "
+                "kernel, __kernel";
   let Content = [{
+These attributes specify that the function represents a kernel for device offloading.
+The specific semantics depend on the offloading language, target, and attribute spelling.
 The ``sycl_kernel`` attribute specifies that a function template will be used
 to outline device code and to generate an OpenCL kernel.
 Here is a code example of the SYCL program, which demonstrates the compiler's
