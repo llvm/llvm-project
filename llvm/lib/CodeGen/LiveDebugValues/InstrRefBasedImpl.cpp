@@ -668,6 +668,16 @@ public:
 
     auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
 
+    // If the expression is a DW_OP_entry_value, emit the variable location
+    // as-is.
+    if (DIExpr->isEntryValue()) {
+      Register Reg = MTracker->LocIdxToLocID[Num.getLoc()];
+      MachineOperand MO = MachineOperand::CreateReg(Reg, false);
+      PendingDbgValues.push_back(std::make_pair(
+          VarID, &*emitMOLoc(MO, Var, {DIExpr, Prop.Indirect, false})));
+      return true;
+    }
+
     // Is the variable appropriate for entry values (i.e., is a parameter).
     if (!isEntryValueVariable(Var, DIExpr))
       return false;
@@ -694,7 +704,7 @@ public:
     DebugVariableID VarID = DVMap.getDVID(Var);
 
     // Ignore non-register locations, we don't transfer those.
-    if (MI.isUndefDebugValue() ||
+    if (MI.isUndefDebugValue() || MI.getDebugExpression()->isEntryValue() ||
         all_of(MI.debug_operands(),
                [](const MachineOperand &MO) { return !MO.isReg(); })) {
       auto It = ActiveVLocs.find(VarID);
