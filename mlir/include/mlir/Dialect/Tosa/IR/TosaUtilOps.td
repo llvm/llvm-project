@@ -92,6 +92,7 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
 
   let arguments = (ins
     SymbolNameAttr:$name,
+    IndexElementsAttr:$var_shape,
     TypeAttr:$type,
     OptionalAttr<AnyAttr>:$initial_value
   );
@@ -101,11 +102,15 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
     Extension<[Tosa_EXT_VARIABLE]>,
   ];
 
+  let hasCustomAssemblyFormat = 1;
+
   let assemblyFormat = [{
     $name
     attr-dict
-    custom<TypeOrAttr>($type, $initial_value)
+    custom<VariableOpTypeOrInitialValue>($var_shape, $type, $initial_value)
   }];
+
+  let builders = [Tosa_VariableOpBuilder];
 
   let hasVerifier = 1;
 }
