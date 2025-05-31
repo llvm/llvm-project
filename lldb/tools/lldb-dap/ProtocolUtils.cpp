@@ -11,6 +11,7 @@
 
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBTarget.h"
+#include "lldb/Host/PosixApi.h" // Adds PATH_MAX for windows
 
 namespace lldb_dap {
 
