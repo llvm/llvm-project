@@ -572,6 +572,37 @@ public:
       SplitVecs.push_back(V);
     }
 
+    if (ORE) {
+      if (Instruction *Inst = dyn_cast<Instruction>(MatrixVal)) {
+        if (Found != Inst2ColumnMatrix.end()) {
+          ORE->emit([&]() {
+            // FIXME: SplitVecs.size() doesn't count the shuffles that
+            // embedInVector created.
+            return OptimizationRemarkAnalysis(DEBUG_TYPE, "mismatched-shape",
+                                              Inst)
+                   << "matrix reshape from "
+                   << ore::NV("FromRows", Found->second.getNumRows()) << "x"
+                   << ore::NV("FromCols", Found->second.getNumColumns())
+                   << " to " << ore::NV("ToRows", SI.NumRows) << "x"
+                   << ore::NV("ToCols", SI.NumColumns) << " using at least "
+                   << ore::NV("Shuffles", SplitVecs.size()) << " shuffles";
+          });
+        } else {
+          ORE->emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE,
+                                            "unknown-shape-lowering-def", Inst)
+                   << "splitting a " << ore::NV("Rows", SI.NumRows) << "x"
+                   << ore::NV("Cols", SI.NumColumns) << " matrix "
+                   << " with " << ore::NV("Shuffles", SplitVecs.size())
+                   << " shuffles because we do not have a shape-aware lowering "
+                      "for its def: "
+                   << ore::NV("Instr", Inst) << ore::setExtraArgs()
+                   << ore::NV("Opcode", Inst->getOpcodeName());
+          });
+        }
+      }
+    }
+
     return {SplitVecs};
   }
 
@@ -1351,11 +1382,24 @@ public:
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
     for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
-      if (!ShapeMap.contains(U.getUser())) {
-        if (!Flattened)
-          Flattened = Matrix.embedInVector(Builder);
-        U.set(Flattened);
+      if (ShapeMap.contains(U.getUser()))
+        continue;
+
+      if (!Flattened) {
+        Flattened = Matrix.embedInVector(Builder);
+        if (ORE)
+          if (Instruction *User = dyn_cast<Instruction>(U.getUser()))
+            ORE->emit(OptimizationRemarkMissed(
+                          DEBUG_TYPE, "unknown-shape-lowering-use", User)
+                      << "flattening a " << ore::NV("Rows", Matrix.getNumRows())
+                      << "x" << ore::NV("Cols", Matrix.getNumColumns())
+                      << " matrix " << ore::NV("Source", *Inst)
+                      << " because we do not have a shape-aware lowering for "
+                         "its user:"
+                      << ore::NV("Instr", *User) << ore::setExtraArgs()
+                      << ore::NV("Opcode", User->getOpcodeName()));
       }
+      U.set(Flattened);
     }
   }
 
