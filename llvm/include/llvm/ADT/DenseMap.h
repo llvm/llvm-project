@@ -226,6 +226,12 @@ public:
     return Default;
   }
 
+  ValueT lookup_or(const_arg_type_t<KeyT> Val, const ValueT &Default) const {
+    if (const BucketT *Bucket = doFind(Val))
+      return Bucket->getSecond();
+    return Default;
+  }
+
   /// at - Return the entry for the specified key, or abort if no such
   /// entry exists.
   const ValueT &at(const_arg_type_t<KeyT> Val) const {
