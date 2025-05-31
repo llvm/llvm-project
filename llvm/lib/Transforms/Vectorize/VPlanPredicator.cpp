@@ -72,7 +72,7 @@ public:
   }
 
   /// Compute and return the mask for the vector loop header block.
-  void createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail);
+  VPValue *createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail);
 
   /// Compute and return the predicate of \p VPBB, assuming that the header
   /// block of the loop is set to True, or to the loop mask when tail folding.
@@ -154,10 +154,11 @@ VPValue *VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   return BlockMask;
 }
 
-void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
+VPValue *VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB,
+                                        bool FoldTail) {
   if (!FoldTail) {
     setBlockInMask(HeaderVPBB, nullptr);
-    return;
+    return nullptr;
   }
 
   // Introduce the early-exit compare IV <= BTC to form header block mask.
@@ -173,6 +174,7 @@ void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
   VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
   VPValue *BlockMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
   setBlockInMask(HeaderVPBB, BlockMask);
+  return BlockMask;
 }
 
 void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
@@ -272,16 +274,27 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
   for (VPBlockBase *VPB : RPOT) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);
+    auto FirstNonPhi = VPBB->getFirstNonPhi();
     // Introduce the mask for VPBB, which may introduce needed edge masks, and
     // convert all phi recipes of VPBB to blend recipes unless VPBB is the
     // header.
+    VPValue *BlockInMask = nullptr;
     if (VPBB == Header) {
-      Predicator.createHeaderMask(Header, FoldTail);
-      continue;
+      BlockInMask = Predicator.createHeaderMask(Header, FoldTail);
+    } else {
+      BlockInMask = Predicator.createBlockInMask(VPBB);
+      Predicator.convertPhisToBlends(VPBB);
     }
 
-    Predicator.createBlockInMask(VPBB);
-    Predicator.convertPhisToBlends(VPBB);
+    if (!BlockInMask)
+      continue;
+
+    for (VPRecipeBase &R : make_range(FirstNonPhi, VPBB->end())) {
+      if (isa<VPWidenPHIRecipe>(&R))
+        continue;
+      auto *VPI = cast<VPInstruction>(&R);
+      VPI->addMask(BlockInMask);
+    }
   }
 
   // Linearize the blocks of the loop into one serial chain.
