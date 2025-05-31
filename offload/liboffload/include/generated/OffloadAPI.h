@@ -724,6 +724,54 @@ OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernel(
     ol_event_handle_t *EventOut);
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Size-related arguments for a kernel launch.
+typedef struct ol_kernel_launch_size_suggested_args_t {
+  size_t Dimensions;      /// Number of work dimensions
+  size_t NumItemsX;       /// Number of work items on the X dimension
+  size_t NumItemsY;       /// Number of work items on the Y dimension
+  size_t NumItemsZ;       /// Number of work items on the Z dimension
+  size_t DynSharedMemory; /// Size of dynamic shared memory in bytes.
+} ol_kernel_launch_size_suggested_args_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Enqueue a kernel launch with the specified work items and parameters.
+///
+/// @details
+///    - Behaves the same as olLaunchKernel, but the implementation
+///    automatically determines optimal work group sizes
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_ARGUMENT
+///         + `Queue == NULL && EventOut != NULL`
+///     - ::OL_ERRC_INVALID_ARGUMENT
+///         + `ArgumentsSize > 0 && ArgumentsData == NULL`
+///     - ::OL_ERRC_INVALID_DEVICE
+///         + If Queue is non-null but does not belong to Device
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///         + `NULL == Device`
+///         + `NULL == Kernel`
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == LaunchSizeArgs`
+OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernelSuggestedGroupSize(
+    // [in][optional] handle of the queue
+    ol_queue_handle_t Queue,
+    // [in] handle of the device to execute on
+    ol_device_handle_t Device,
+    // [in] handle of the kernel
+    ol_kernel_handle_t Kernel,
+    // [in][optional] pointer to the kernel argument struct
+    const void *ArgumentsData,
+    // [in] size of the kernel argument struct
+    size_t ArgumentsSize,
+    // [in] pointer to the struct containing launch size parameters
+    const ol_kernel_launch_size_suggested_args_t *LaunchSizeArgs,
+    // [out][optional] optional recorded event for the enqueued operation
+    ol_event_handle_t *EventOut);
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olGetPlatformInfo
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_get_platform_info_params_t {
@@ -875,6 +923,19 @@ typedef struct ol_launch_kernel_params_t {
 } ol_launch_kernel_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olLaunchKernelSuggestedGroupSize
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_launch_kernel_suggested_group_size_params_t {
+  ol_queue_handle_t *pQueue;
+  ol_device_handle_t *pDevice;
+  ol_kernel_handle_t *pKernel;
+  const void **pArgumentsData;
+  size_t *pArgumentsSize;
+  const ol_kernel_launch_size_suggested_args_t **pLaunchSizeArgs;
+  ol_event_handle_t **pEventOut;
+} ol_launch_kernel_suggested_group_size_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olInit that also sets source code location information
 /// @details See also ::olInit
 OL_APIEXPORT ol_result_t OL_APICALL
@@ -1014,6 +1075,16 @@ OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernelWithCodeLoc(
     ol_queue_handle_t Queue, ol_device_handle_t Device,
     ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
     const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+    ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olLaunchKernelSuggestedGroupSize that also sets source
+/// code location information
+/// @details See also ::olLaunchKernelSuggestedGroupSize
+OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernelSuggestedGroupSizeWithCodeLoc(
+    ol_queue_handle_t Queue, ol_device_handle_t Device,
+    ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
+    const ol_kernel_launch_size_suggested_args_t *LaunchSizeArgs,
     ol_event_handle_t *EventOut, ol_code_location_t *CodeLocation);
 
 #if defined(__cplusplus)
