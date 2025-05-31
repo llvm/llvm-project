@@ -9,8 +9,8 @@
 define i32 @ptestz_256_invert0(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_256_invert0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vptest %ymm1, %ymm0
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -28,8 +28,8 @@ define i32 @ptestz_256_invert0(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestz_256_invert1(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_256_invert1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vptest %ymm0, %ymm1
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmovael %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -47,8 +47,8 @@ define i32 @ptestz_256_invert1(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestc_256_invert0(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestc_256_invert0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vptest %ymm1, %ymm0
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -100,19 +100,19 @@ define i32 @ptestnzc_256_invert0_commute(<4 x i64> %c, <4 x i64> %d, i32 %a, i32
 define i32 @ptestc_256_not(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; AVX1-LABEL: ptestc_256_not:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
 ; AVX1-NEXT:    vptest %ymm1, %ymm0
+; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    cmovael %esi, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: ptestc_256_not:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl %edi, %eax
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
+; AVX2-NEXT:    movl %edi, %eax
 ; AVX2-NEXT:    cmovael %esi, %eax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -130,8 +130,8 @@ define i32 @ptestc_256_not(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestz_256_and(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_256_and:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vptest %ymm1, %ymm0
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmovel %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -149,8 +149,8 @@ define i32 @ptestz_256_and(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestz_256_andc(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_256_andc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vptest %ymm1, %ymm0
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmovbl %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -169,8 +169,8 @@ define i32 @ptestz_256_andc(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
 define i32 @ptestz_256_allones0(<4 x i64> %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_256_allones0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vptest %ymm0, %ymm0
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -187,8 +187,8 @@ define i32 @ptestz_256_allones0(<4 x i64> %c, i32 %a, i32 %b) {
 define i32 @ptestz_256_allones1(<4 x i64> %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: ptestz_256_allones1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    vptest %ymm0, %ymm0
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -205,12 +205,12 @@ define i32 @ptestz_256_allones1(<4 x i64> %c, i32 %a, i32 %b) {
 define i32 @ptestz_v8i32_signbits(<8 x i32> %c, i32 %a, i32 %b) {
 ; AVX1-LABEL: ptestz_v8i32_signbits:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vptest %ymm0, %ymm0
+; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    cmovnel %esi, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -233,13 +233,13 @@ define i32 @ptestz_v8i32_signbits(<8 x i32> %c, i32 %a, i32 %b) {
 define i32 @ptestz_v32i8_signbits(<32 x i8> %c, i32 %a, i32 %b) {
 ; AVX1-LABEL: ptestz_v32i8_signbits:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpgtb %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vptest %ymm0, %ymm0
+; AVX1-NEXT:    movl %edi, %eax
 ; AVX1-NEXT:    cmovnel %esi, %eax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq

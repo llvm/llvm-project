@@ -35,9 +35,9 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-LABEL: func64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmovbl %ecx, %edx
 ; X86-NEXT:    cmovbl %ecx, %eax
@@ -82,9 +82,9 @@ define zeroext i16 @func16(i16 zeroext %x, i16 zeroext %y, i16 zeroext %z) nounw
 define zeroext i8 @func8(i8 zeroext %x, i8 zeroext %y, i8 zeroext %z) nounwind {
 ; X86-LABEL: func8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    mulb {{[0-9]+}}(%esp)
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    subb %al, %cl
 ; X86-NEXT:    movzbl %cl, %eax

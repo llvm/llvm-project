@@ -64,7 +64,7 @@ define <8 x i32> @combine_pmaddwd_concat(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>
 define <8 x i32> @combine_pmaddwd_concat_freeze(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE-LABEL: combine_pmaddwd_concat_freeze:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmovsxbw {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
 ; SSE-NEXT:    pmaddwd %xmm2, %xmm0
 ; SSE-NEXT:    pmaddwd %xmm2, %xmm1
 ; SSE-NEXT:    retq

@@ -5,17 +5,19 @@ define void @loop(i64 %n, ptr nocapture %d) nounwind {
 ; CHECK-LABEL: loop:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    shlq $4, %rdi
+; CHECK-NEXT:    addq %rsi, %rdi
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [3.0E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm1
-; CHECK-NEXT:    movsd %xmm1, (%rax)
-; CHECK-NEXT:    addq $8, %rax
-; CHECK-NEXT:    incq %rdi
+; CHECK-NEXT:    movsd %xmm1, (%rdi,%rcx,8)
+; CHECK-NEXT:    incq %rcx
+; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq

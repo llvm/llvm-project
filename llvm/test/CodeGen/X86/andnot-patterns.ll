@@ -31,10 +31,10 @@ define i64 @andnot_rotl_i64(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NOBMI-NEXT:  .LBB0_3:
 ; X86-NOBMI-NEXT:    movl %esi, %eax
 ; X86-NOBMI-NEXT:    shldl %cl, %edx, %eax
-; X86-NOBMI-NEXT:    notl %eax
-; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NOBMI-NEXT:    shldl %cl, %esi, %edx
+; X86-NOBMI-NEXT:    notl %eax
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    notl %edx
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    popl %esi
@@ -272,10 +272,10 @@ define i64 @andnot_rotr_i64(i64 %a0, i64 %a1, i64 %a2) nounwind {
 ; X86-NOBMI-NEXT:  .LBB5_3:
 ; X86-NOBMI-NEXT:    movl %esi, %eax
 ; X86-NOBMI-NEXT:    shrdl %cl, %edx, %eax
-; X86-NOBMI-NEXT:    notl %eax
-; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NOBMI-NEXT:    shrdl %cl, %esi, %edx
+; X86-NOBMI-NEXT:    notl %eax
+; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI-NEXT:    notl %edx
 ; X86-NOBMI-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X86-NOBMI-NEXT:    popl %esi
@@ -454,8 +454,8 @@ define i32 @andnot_rotr_i32_multiuse_not(i32 %a0, i32 %a1, i32 %a2) nounwind {
 ; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    movl %eax, %edx
-; X86-BMI-NEXT:    notl %edx
 ; X86-BMI-NEXT:    rorl %cl, %eax
+; X86-BMI-NEXT:    notl %edx
 ; X86-BMI-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %esi
 ; X86-BMI-NEXT:    pushl %edx
 ; X86-BMI-NEXT:    calll use_i32@PLT

@@ -13,9 +13,9 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
 ; X64-NEXT:    callq __truncsfhf2@PLT
 ; X64-NEXT:    pextrw $0, %xmm0, %ecx
 ; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    andl $31744, %eax # imm = 0x7C00
 ; X64-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; X64-NEXT:    pextrw $0, %xmm0, %edx
+; X64-NEXT:    andl $31744, %eax # imm = 0x7C00
 ; X64-NEXT:    movl %edx, %esi
 ; X64-NEXT:    andl $32767, %esi # imm = 0x7FFF
 ; X64-NEXT:    cmpl $1024, %esi # imm = 0x400

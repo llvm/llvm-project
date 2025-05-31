@@ -66,12 +66,12 @@ define <4 x i32> @PR20355(<4 x i32> %a) nounwind {
 ;
 ; AVX2-LABEL: PR20355:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1431655766,1431655766,1431655766,1431655766]
-; AVX2-NEXT:    vpmuldq %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpmuldq %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1431655766,1431655766,1431655766,1431655766]
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; AVX2-NEXT:    vpmuldq %xmm1, %xmm2, %xmm2
+; AVX2-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3]
 ; AVX2-NEXT:    vpsrld $31, %xmm0, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq

@@ -200,8 +200,8 @@ define <16 x i8> @vselect_packss_v16i64(<16 x i64> %a0, <16 x i64> %a1, <16 x i8
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm7
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm7[1,0,3,2]
-; SSE2-NEXT:    pand %xmm7, %xmm8
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm6
+; SSE2-NEXT:    pand %xmm7, %xmm8
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm6, %xmm7
 ; SSE2-NEXT:    packssdw %xmm8, %xmm7
@@ -219,11 +219,11 @@ define <16 x i8> @vselect_packss_v16i64(<16 x i64> %a0, <16 x i64> %a1, <16 x i8
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    packssdw %xmm4, %xmm3
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm1
+; SSE2-NEXT:    packssdw %xmm4, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,3,2]
-; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpeqd {{[0-9]+}}(%rsp), %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    packssdw %xmm2, %xmm0
@@ -240,12 +240,12 @@ define <16 x i8> @vselect_packss_v16i64(<16 x i64> %a0, <16 x i64> %a1, <16 x i8
 ; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
 ; SSE42-NEXT:    pcmpeqq {{[0-9]+}}(%rsp), %xmm7
 ; SSE42-NEXT:    pcmpeqq {{[0-9]+}}(%rsp), %xmm6
-; SSE42-NEXT:    packssdw %xmm7, %xmm6
 ; SSE42-NEXT:    pcmpeqq {{[0-9]+}}(%rsp), %xmm5
 ; SSE42-NEXT:    pcmpeqq {{[0-9]+}}(%rsp), %xmm4
+; SSE42-NEXT:    packssdw %xmm7, %xmm6
 ; SSE42-NEXT:    packssdw %xmm5, %xmm4
-; SSE42-NEXT:    packssdw %xmm6, %xmm4
 ; SSE42-NEXT:    pcmpeqq {{[0-9]+}}(%rsp), %xmm3
+; SSE42-NEXT:    packssdw %xmm6, %xmm4
 ; SSE42-NEXT:    pcmpeqq {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    packssdw %xmm3, %xmm2
 ; SSE42-NEXT:    pcmpeqq {{[0-9]+}}(%rsp), %xmm1

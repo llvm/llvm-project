@@ -68,9 +68,9 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; SSE3-NEXT:    shll $8, %eax
 ; SSE3-NEXT:    pinsrw $2, %eax, %xmm0
 ; SSE3-NEXT:    psraw $8, %xmm0
-; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    pextrw $1, %xmm0, %edx
 ; SSE3-NEXT:    pextrw $2, %xmm0, %ecx
+; SSE3-NEXT:    movd %xmm0, %eax
 ; SSE3-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE3-NEXT:    # kill: def $dx killed $dx killed $edx
 ; SSE3-NEXT:    # kill: def $cx killed $cx killed $ecx
@@ -82,9 +82,9 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; SSE41-NEXT:    pinsrb $1, {{[0-9]+}}(%esp), %xmm0
 ; SSE41-NEXT:    pinsrb $2, {{[0-9]+}}(%esp), %xmm0
 ; SSE41-NEXT:    pmovsxbw %xmm0, %xmm0
-; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    pextrw $1, %xmm0, %edx
 ; SSE41-NEXT:    pextrw $2, %xmm0, %ecx
+; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE41-NEXT:    # kill: def $dx killed $dx killed $edx
 ; SSE41-NEXT:    # kill: def $cx killed $cx killed $ecx
@@ -96,9 +96,9 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; AVX-32-NEXT:    vpinsrb $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; AVX-32-NEXT:    vpinsrb $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; AVX-32-NEXT:    vpmovsxbw %xmm0, %xmm0
-; AVX-32-NEXT:    vmovd %xmm0, %eax
 ; AVX-32-NEXT:    vpextrw $1, %xmm0, %edx
 ; AVX-32-NEXT:    vpextrw $2, %xmm0, %ecx
+; AVX-32-NEXT:    vmovd %xmm0, %eax
 ; AVX-32-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-32-NEXT:    # kill: def $dx killed $dx killed $edx
 ; AVX-32-NEXT:    # kill: def $cx killed $cx killed $ecx
@@ -110,9 +110,9 @@ define <3 x i16> @sext_i8(<3 x i8>) {
 ; AVX-64-NEXT:    vpinsrb $1, %esi, %xmm0, %xmm0
 ; AVX-64-NEXT:    vpinsrb $2, %edx, %xmm0, %xmm0
 ; AVX-64-NEXT:    vpmovsxbw %xmm0, %xmm0
-; AVX-64-NEXT:    vmovd %xmm0, %eax
 ; AVX-64-NEXT:    vpextrw $1, %xmm0, %edx
 ; AVX-64-NEXT:    vpextrw $2, %xmm0, %ecx
+; AVX-64-NEXT:    vmovd %xmm0, %eax
 ; AVX-64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-64-NEXT:    # kill: def $dx killed $dx killed $edx
 ; AVX-64-NEXT:    # kill: def $cx killed $cx killed $ecx

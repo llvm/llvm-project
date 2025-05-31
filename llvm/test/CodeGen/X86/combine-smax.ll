@@ -54,7 +54,7 @@ define <16 x i8> @test_v16i8_nosignbit(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; AVX2-LABEL: test_v16i8_nosignbit:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0

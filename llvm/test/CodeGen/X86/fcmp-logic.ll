@@ -271,23 +271,35 @@ define i1 @une_uno_xor_f64_use1(double %w, double %x, double %y, double %z, ptr 
 ; SSE2-NEXT:    setp %al
 ; SSE2-NEXT:    setne %cl
 ; SSE2-NEXT:    orb %al, %cl
-; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    ucomisd %xmm3, %xmm2
+; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    setp %al
 ; SSE2-NEXT:    xorb %cl, %al
 ; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: une_uno_xor_f64_use1:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-NEXT:    setp %al
-; AVX-NEXT:    setne %cl
-; AVX-NEXT:    orb %al, %cl
-; AVX-NEXT:    movb %cl, (%rdi)
-; AVX-NEXT:    vucomisd %xmm3, %xmm2
-; AVX-NEXT:    setp %al
-; AVX-NEXT:    xorb %cl, %al
-; AVX-NEXT:    retq
+; AVX1-LABEL: une_uno_xor_f64_use1:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vucomisd %xmm1, %xmm0
+; AVX1-NEXT:    setp %al
+; AVX1-NEXT:    setne %cl
+; AVX1-NEXT:    orb %al, %cl
+; AVX1-NEXT:    vucomisd %xmm3, %xmm2
+; AVX1-NEXT:    movb %cl, (%rdi)
+; AVX1-NEXT:    setp %al
+; AVX1-NEXT:    xorb %cl, %al
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: une_uno_xor_f64_use1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vucomisd %xmm1, %xmm0
+; AVX512-NEXT:    setp %al
+; AVX512-NEXT:    setne %cl
+; AVX512-NEXT:    orb %al, %cl
+; AVX512-NEXT:    movb %cl, (%rdi)
+; AVX512-NEXT:    vucomisd %xmm3, %xmm2
+; AVX512-NEXT:    setp %al
+; AVX512-NEXT:    xorb %cl, %al
+; AVX512-NEXT:    retq
   %f1 = fcmp une double %w, %x
   store i1 %f1, ptr %p
   %f2 = fcmp uno double %y, %z
@@ -305,8 +317,8 @@ define i1 @une_uno_xor_f64_use2(double %w, double %x, double %y, double %z, ptr 
 ; SSE2-NEXT:    setne %cl
 ; SSE2-NEXT:    orb %al, %cl
 ; SSE2-NEXT:    ucomisd %xmm3, %xmm2
-; SSE2-NEXT:    setp %al
 ; SSE2-NEXT:    setp (%rdi)
+; SSE2-NEXT:    setp %al
 ; SSE2-NEXT:    xorb %cl, %al
 ; SSE2-NEXT:    retq
 ;
@@ -317,8 +329,8 @@ define i1 @une_uno_xor_f64_use2(double %w, double %x, double %y, double %z, ptr 
 ; AVX-NEXT:    setne %cl
 ; AVX-NEXT:    orb %al, %cl
 ; AVX-NEXT:    vucomisd %xmm3, %xmm2
-; AVX-NEXT:    setp %al
 ; AVX-NEXT:    setp (%rdi)
+; AVX-NEXT:    setp %al
 ; AVX-NEXT:    xorb %cl, %al
 ; AVX-NEXT:    retq
   %f1 = fcmp une double %w, %x

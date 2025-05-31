@@ -333,33 +333,33 @@ entry:
 define zeroext i8 @atomic_shl1_and_8_gpr_brnz(ptr %v, i8 zeroext %c) nounwind {
 ; X86-LABEL: atomic_shl1_and_8_gpr_brnz:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl $1, %ebx
-; X86-NEXT:    shll %cl, %ebx
-; X86-NEXT:    movb %bl, %ah
+; X86-NEXT:    movl $1, %edx
+; X86-NEXT:    shll %cl, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movb %dl, %ah
 ; X86-NEXT:    notb %ah
-; X86-NEXT:    movb (%edx), %al
+; X86-NEXT:    movb (%esi), %al
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB6_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movb %al, %ch
 ; X86-NEXT:    andb %ah, %ch
-; X86-NEXT:    lock cmpxchgb %ch, (%edx)
+; X86-NEXT:    lock cmpxchgb %ch, (%esi)
 ; X86-NEXT:    jne .LBB6_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    testl %eax, %ebx
+; X86-NEXT:    testl %eax, %edx
 ; X86-NEXT:    je .LBB6_3
 ; X86-NEXT:  # %bb.4: # %if.then
 ; X86-NEXT:    movzbl %cl, %eax
-; X86-NEXT:    movzbl (%edx,%eax), %eax
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    movzbl (%esi,%eax), %eax
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB6_3:
 ; X86-NEXT:    movb $123, %al
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: atomic_shl1_and_8_gpr_brnz:
@@ -491,29 +491,29 @@ define zeroext i8 @atomic_shl1_mask01_and_8_gpr_brnz(ptr %v, i8 zeroext %c) noun
 ; X86-LABEL: atomic_shl1_mask01_and_8_gpr_brnz:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movb %ah, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    andb $7, %cl
 ; X86-NEXT:    movl $1, %ebx
 ; X86-NEXT:    shll %cl, %ebx
-; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:    notb %cl
-; X86-NEXT:    movb (%edx), %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb %bl, %ah
+; X86-NEXT:    notb %ah
+; X86-NEXT:    movb (%ecx), %al
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB8_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    movb %al, %ch
-; X86-NEXT:    andb %cl, %ch
-; X86-NEXT:    lock cmpxchgb %ch, (%edx)
+; X86-NEXT:    movb %al, %dh
+; X86-NEXT:    andb %ah, %dh
+; X86-NEXT:    lock cmpxchgb %dh, (%ecx)
 ; X86-NEXT:    jne .LBB8_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
-; X86-NEXT:    movzbl %al, %ecx
-; X86-NEXT:    testl %ecx, %ebx
+; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    testl %eax, %ebx
 ; X86-NEXT:    je .LBB8_3
 ; X86-NEXT:  # %bb.4: # %if.then
-; X86-NEXT:    movzbl %ah, %eax
-; X86-NEXT:    movzbl (%edx,%eax), %eax
+; X86-NEXT:    movzbl %dl, %eax
+; X86-NEXT:    movzbl (%ecx,%eax), %eax
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB8_3:
@@ -1068,11 +1068,11 @@ define zeroext i16 @atomic_shl1_small_mask_xor_16_gpr_valz(ptr %v, i16 zeroext %
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andl $7, %ecx
 ; X86-NEXT:    movl $1, %esi
 ; X86-NEXT:    shll %cl, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl (%edx), %eax
 ; X86-NEXT:    movzwl %si, %esi
 ; X86-NEXT:    .p2align 4
@@ -1461,11 +1461,11 @@ define zeroext i16 @atomic_shl1_small_mask_xor_16_gpr_valnz(ptr %v, i16 zeroext 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andl $7, %ecx
 ; X86-NEXT:    movl $1, %esi
 ; X86-NEXT:    shll %cl, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl (%edx), %eax
 ; X86-NEXT:    movzwl %si, %esi
 ; X86-NEXT:    .p2align 4
@@ -1871,11 +1871,11 @@ define zeroext i16 @atomic_shl1_small_mask_xor_16_gpr_brz(ptr %v, i16 zeroext %c
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andl $7, %ecx
 ; X86-NEXT:    movl $1, %esi
 ; X86-NEXT:    shll %cl, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzwl (%edx), %eax
 ; X86-NEXT:    movzwl %si, %esi
 ; X86-NEXT:    .p2align 4
@@ -2288,10 +2288,10 @@ define zeroext i16 @atomic_shl1_and_16_gpr_val(ptr %v, i16 zeroext %c) nounwind 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $1, %edx
 ; X86-NEXT:    shll %cl, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl $-2, %edi
 ; X86-NEXT:    roll %cl, %edi
 ; X86-NEXT:    movzwl (%esi), %eax
@@ -2603,10 +2603,10 @@ define zeroext i16 @atomic_shl1_and_16_gpr_valnz(ptr %v, i16 zeroext %c) nounwin
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $1, %edx
 ; X86-NEXT:    shll %cl, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl $-2, %edi
 ; X86-NEXT:    roll %cl, %edi
 ; X86-NEXT:    movzwl (%esi), %eax
@@ -2873,27 +2873,27 @@ define zeroext i16 @atomic_shl1_mask01_and_16_gpr_valnz(ptr %v, i16 zeroext %c) 
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $15, %cl
-; X86-NEXT:    movl $1, %esi
-; X86-NEXT:    shll %cl, %esi
+; X86-NEXT:    movl $1, %edx
+; X86-NEXT:    shll %cl, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl $-2, %edi
 ; X86-NEXT:    roll %cl, %edi
-; X86-NEXT:    movzwl (%edx), %eax
+; X86-NEXT:    movzwl (%esi), %eax
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB46_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    andl %edi, %ecx
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NEXT:    lock cmpxchgw %cx, (%edx)
+; X86-NEXT:    lock cmpxchgw %cx, (%esi)
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB46_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    movzwl %ax, %ecx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testl %ecx, %esi
+; X86-NEXT:    testl %ecx, %edx
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    popl %esi
@@ -3017,28 +3017,28 @@ define zeroext i16 @atomic_shl1_and_16_gpr_brnz(ptr %v, i16 zeroext %c) nounwind
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl $1, %esi
-; X86-NEXT:    shll %cl, %esi
+; X86-NEXT:    movl $1, %edx
+; X86-NEXT:    shll %cl, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl $-2, %edi
 ; X86-NEXT:    roll %cl, %edi
-; X86-NEXT:    movzwl (%edx), %eax
+; X86-NEXT:    movzwl (%esi), %eax
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB48_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %eax, %ebx
 ; X86-NEXT:    andl %edi, %ebx
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NEXT:    lock cmpxchgw %bx, (%edx)
+; X86-NEXT:    lock cmpxchgw %bx, (%esi)
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB48_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-NEXT:    movzwl %ax, %eax
-; X86-NEXT:    testl %eax, %esi
+; X86-NEXT:    testl %eax, %edx
 ; X86-NEXT:    je .LBB48_3
 ; X86-NEXT:  # %bb.4: # %if.then
 ; X86-NEXT:    movzwl %cx, %eax
-; X86-NEXT:    movzwl (%edx,%eax,2), %eax
+; X86-NEXT:    movzwl (%esi,%eax,2), %eax
 ; X86-NEXT:    jmp .LBB48_5
 ; X86-NEXT:  .LBB48_3:
 ; X86-NEXT:    movw $123, %ax
@@ -3361,22 +3361,22 @@ define zeroext i16 @atomic_shl1_mask01_and_16_gpr_brnz(ptr %v, i16 zeroext %c) n
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %ebx, %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    andb $15, %cl
 ; X86-NEXT:    movl $1, %esi
 ; X86-NEXT:    shll %cl, %esi
-; X86-NEXT:    movl $-2, %edi
-; X86-NEXT:    roll %cl, %edi
-; X86-NEXT:    movzwl (%edx), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl $-2, %ebx
+; X86-NEXT:    roll %cl, %ebx
+; X86-NEXT:    movzwl (%edi), %eax
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB52_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl %edi, %ecx
+; X86-NEXT:    andl %ebx, %ecx
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NEXT:    lock cmpxchgw %cx, (%edx)
+; X86-NEXT:    lock cmpxchgw %cx, (%edi)
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
 ; X86-NEXT:    jne .LBB52_1
 ; X86-NEXT:  # %bb.2: # %atomicrmw.end
@@ -3384,8 +3384,8 @@ define zeroext i16 @atomic_shl1_mask01_and_16_gpr_brnz(ptr %v, i16 zeroext %c) n
 ; X86-NEXT:    testl %eax, %esi
 ; X86-NEXT:    je .LBB52_3
 ; X86-NEXT:  # %bb.4: # %if.then
-; X86-NEXT:    movzwl %bx, %eax
-; X86-NEXT:    movzwl (%edx,%eax,2), %eax
+; X86-NEXT:    movzwl %dx, %eax
+; X86-NEXT:    movzwl (%edi,%eax,2), %eax
 ; X86-NEXT:    jmp .LBB52_5
 ; X86-NEXT:  .LBB52_3:
 ; X86-NEXT:    movw $123, %ax

@@ -480,7 +480,7 @@ define <16 x i8> @test26(<16 x i8> %a, <16 x i8> %b) {
 ;
 ; AVX2-LABEL: test26:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; AVX2-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %1 = select <16 x i1> <i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <16 x i8> %a, <16 x i8> %b
@@ -694,12 +694,12 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; AVX-LABEL: simplify_select:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %edi, %xmm1
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,0,1,1]
 ; AVX-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
 ; AVX-NEXT:    vpinsrd $1, %edi, %xmm2, %xmm2
+; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX-NEXT:    retq
   %a = insertelement <2 x i32> <i32 0, i32 undef>, i32 %x, i32 1
@@ -715,33 +715,21 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; Test to make sure we don't try to insert a new setcc to swap the operands
 ; of select with all zeros LHS if the setcc has additional users.
 define void @vselect_allzeros_LHS_multiple_use_setcc(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, ptr %p1, ptr %p2) {
-; SSE2-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
-; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    pandn %xmm1, %xmm3
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm3, (%rdi)
-; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
-; SSE41-NEXT:    pand %xmm3, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pandn %xmm1, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm3, (%rdi)
-; SSE41-NEXT:    movdqa %xmm0, (%rsi)
-; SSE41-NEXT:    retq
+; SSE-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE-NEXT:    pand %xmm3, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm3, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    pandn %xmm1, %xmm3
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm3, (%rdi)
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8]
 ; AVX-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm1

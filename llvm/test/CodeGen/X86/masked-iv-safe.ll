@@ -7,7 +7,7 @@
 define void @count_up(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: count_up:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq $-80, %rax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
@@ -18,8 +18,9 @@ define void @count_up(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    mulsd %xmm0, %xmm3
 ; CHECK-NEXT:    mulsd %xmm1, %xmm3
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
-; CHECK-NEXT:    movsd %xmm3, 80(%rdi,%rax)
-; CHECK-NEXT:    addq $8, %rax
+; CHECK-NEXT:    movsd %xmm3, (%rdi,%rax,8)
+; CHECK-NEXT:    incq %rax
+; CHECK-NEXT:    cmpq $10, %rax
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
@@ -99,7 +100,7 @@ return:
 define void @count_up_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: count_up_signed:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq $-80, %rax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
@@ -110,8 +111,9 @@ define void @count_up_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    mulsd %xmm0, %xmm3
 ; CHECK-NEXT:    mulsd %xmm1, %xmm3
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
-; CHECK-NEXT:    movsd %xmm3, 80(%rdi,%rax)
-; CHECK-NEXT:    addq $8, %rax
+; CHECK-NEXT:    movsd %xmm3, (%rdi,%rax,8)
+; CHECK-NEXT:    incq %rax
+; CHECK-NEXT:    cmpq $10, %rax
 ; CHECK-NEXT:    jne .LBB2_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
@@ -245,7 +247,7 @@ return:
 define void @another_count_down(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: another_count_down:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq $-2040, %rax # imm = 0xF808
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
@@ -256,16 +258,17 @@ define void @another_count_down(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm3
-; CHECK-NEXT:    movsd %xmm3, 2040(%rdi,%rax)
+; CHECK-NEXT:    movsd %xmm3, (%rdi,%rax,8)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    divsd %xmm1, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rcx)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdx)
+; CHECK-NEXT:    addq $255, %rax
 ; CHECK-NEXT:    addq $-8, %rdx
 ; CHECK-NEXT:    addq $134217720, %rcx # imm = 0x7FFFFF8
-; CHECK-NEXT:    addq $2040, %rax # imm = 0x7F8
+; CHECK-NEXT:    cmpq $255, %rax
 ; CHECK-NEXT:    jne .LBB5_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
@@ -347,7 +350,7 @@ return:
 define void @another_count_down_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: another_count_down_signed:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl $8, %eax
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
@@ -358,9 +361,9 @@ define void @another_count_down_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    mulsd %xmm0, %xmm3
 ; CHECK-NEXT:    divsd %xmm1, %xmm3
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
-; CHECK-NEXT:    movsd %xmm3, -8(%rdi,%rax)
-; CHECK-NEXT:    addq $-8, %rax
-; CHECK-NEXT:    jne .LBB7_1
+; CHECK-NEXT:    movsd %xmm3, (%rdi,%rax,8)
+; CHECK-NEXT:    addq $-1, %rax
+; CHECK-NEXT:    jb .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
 entry:

@@ -40,8 +40,8 @@ define i32 @h(i1 %arg, i32 %arg1) {
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.5: # %bb14
 ; CHECK-NEXT:    movl %eax, %r8d
-; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    jne .LBB0_6
 ; CHECK-NEXT:  .LBB0_10: # %bb22
 ; CHECK-NEXT:    retq

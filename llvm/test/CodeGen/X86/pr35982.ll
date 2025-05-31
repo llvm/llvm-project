@@ -7,10 +7,10 @@ define float @PR35982_emms(<1 x i64>) nounwind {
 ; NO-POSTRA:       # %bb.0:
 ; NO-POSTRA-NEXT:    subl $8, %esp
 ; NO-POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; NO-POSTRA-NEXT:    emms
 ; NO-POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; NO-POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
 ; NO-POSTRA-NEXT:    movd %mm0, %ecx
-; NO-POSTRA-NEXT:    emms
 ; NO-POSTRA-NEXT:    movl %eax, (%esp)
 ; NO-POSTRA-NEXT:    fildl (%esp)
 ; NO-POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
@@ -21,12 +21,12 @@ define float @PR35982_emms(<1 x i64>) nounwind {
 ; POSTRA-LABEL: PR35982_emms:
 ; POSTRA:       # %bb.0:
 ; POSTRA-NEXT:    subl $8, %esp
+; POSTRA-NEXT:    emms
 ; POSTRA-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; POSTRA-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; POSTRA-NEXT:    punpckhdq %mm0, %mm0 # mm0 = mm0[1,1]
-; POSTRA-NEXT:    movd %mm0, %ecx
-; POSTRA-NEXT:    emms
 ; POSTRA-NEXT:    movl %eax, (%esp)
+; POSTRA-NEXT:    movd %mm0, %ecx
 ; POSTRA-NEXT:    fildl (%esp)
 ; POSTRA-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; POSTRA-NEXT:    fiaddl {{[0-9]+}}(%esp)

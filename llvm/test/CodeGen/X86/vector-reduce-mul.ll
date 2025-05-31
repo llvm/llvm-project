@@ -2326,8 +2326,8 @@ define i8 @illegal_v8i8(i8 %a0, ptr %a1) {
 ;
 ; AVX-LABEL: illegal_v8i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX-NEXT:    movl %edi, %eax
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]

@@ -639,9 +639,9 @@ define i32 @utest_f64i32_mm(double %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttsd2si %xmm0, %rcx
 ; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    sarq $63, %rdx
 ; CHECK-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttsd2si %xmm0, %rax
+; CHECK-NEXT:    sarq $63, %rdx
 ; CHECK-NEXT:    andq %rdx, %rax
 ; CHECK-NEXT:    orq %rcx, %rax
 ; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
@@ -700,9 +700,9 @@ define i32 @utest_f32i32_mm(float %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cvttss2si %xmm0, %rcx
 ; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    sarq $63, %rdx
 ; CHECK-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
+; CHECK-NEXT:    sarq $63, %rdx
 ; CHECK-NEXT:    andq %rdx, %rax
 ; CHECK-NEXT:    orq %rcx, %rax
 ; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
@@ -769,9 +769,9 @@ define i32 @utesth_f16i32_mm(half %x) nounwind {
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
 ; CHECK-NEXT:    cvttss2si %xmm0, %rcx
 ; CHECK-NEXT:    movq %rcx, %rdx
-; CHECK-NEXT:    sarq $63, %rdx
 ; CHECK-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttss2si %xmm0, %rax
+; CHECK-NEXT:    sarq $63, %rdx
 ; CHECK-NEXT:    andq %rdx, %rax
 ; CHECK-NEXT:    orq %rcx, %rax
 ; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF

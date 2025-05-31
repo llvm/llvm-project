@@ -12,13 +12,15 @@ define void @foo(ptr nocapture %ctx, i32 %n) local_unnamed_addr #0 {
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    movl 16(%rdi), %ecx
-; X64-NEXT:    leal 1(%rax,%rcx), %edx
+; X64-NEXT:    leal (%rax,%rcx), %edx
+; X64-NEXT:    incl %edx
 ; X64-NEXT:    movl %edx, 12(%rdi)
 ; X64-NEXT:    decl %esi
 ; X64-NEXT:    jne .LBB0_1
 ; X64-NEXT:  # %bb.2: # %exit
 ; X64-NEXT:    addl %ecx, %eax
-; X64-NEXT:    leal 1(%rcx,%rax), %eax
+; X64-NEXT:    addl %ecx, %eax
+; X64-NEXT:    incl %eax
 ; X64-NEXT:    movl %eax, 16(%rdi)
 ; X64-NEXT:    retq
 ;
@@ -37,13 +39,15 @@ define void @foo(ptr nocapture %ctx, i32 %n) local_unnamed_addr #0 {
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl (%eax), %edx
 ; X86-NEXT:    movl 16(%eax), %esi
-; X86-NEXT:    leal 1(%edx,%esi), %edi
+; X86-NEXT:    leal (%edx,%esi), %edi
+; X86-NEXT:    incl %edi
 ; X86-NEXT:    movl %edi, 12(%eax)
 ; X86-NEXT:    decl %ecx
 ; X86-NEXT:    jne .LBB0_1
 ; X86-NEXT:  # %bb.2: # %exit
 ; X86-NEXT:    addl %esi, %edx
-; X86-NEXT:    leal 1(%esi,%edx), %ecx
+; X86-NEXT:    leal (%esi,%edx), %ecx
+; X86-NEXT:    incl %ecx
 ; X86-NEXT:    movl %ecx, 16(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8

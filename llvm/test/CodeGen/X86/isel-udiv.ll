@@ -77,13 +77,6 @@ define i32 @test_udiv_i32(i32 %arg1, i32 %arg2) nounwind {
 }
 
 define i64 @test_udiv_i64(i64 %arg1, i64 %arg2) nounwind {
-; X64-LABEL: test_udiv_i64:
-; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divq %rsi
-; X64-NEXT:    retq
-;
 ; DAG-X86-LABEL: test_udiv_i64:
 ; DAG-X86:       # %bb.0:
 ; DAG-X86-NEXT:    subl $12, %esp

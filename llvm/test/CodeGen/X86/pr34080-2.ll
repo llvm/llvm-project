@@ -14,38 +14,39 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $40, %esp
 ; CHECK-NEXT:    movl 8(%ebp), %ebx
-; CHECK-NEXT:    movl 8(%ebx), %esi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $3, 12(%ebx)
+; CHECK-NEXT:    movl 8(%ebx), %edi
 ; CHECK-NEXT:    setl %al
-; CHECK-NEXT:    subl %eax, %esi
+; CHECK-NEXT:    subl %eax, %edi
 ; CHECK-NEXT:    movl $-1374389535, %ecx # imm = 0xAE147AE1
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    imull %ecx
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    shrl $31, %eax
-; CHECK-NEXT:    sarl $5, %ecx
-; CHECK-NEXT:    addl %eax, %ecx
 ; CHECK-NEXT:    movl $1374389535, %edx # imm = 0x51EB851F
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    imull %edx
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    shrl $31, %eax
-; CHECK-NEXT:    sarl $7, %edi
-; CHECK-NEXT:    addl %eax, %edi
-; CHECK-NEXT:    imull $36525, %esi, %eax # imm = 0x8EAD
+; CHECK-NEXT:    movl %edx, %esi
+; CHECK-NEXT:    imull $36525, %edi, %eax # imm = 0x8EAD
 ; CHECK-NEXT:    addl $172251900, %eax # imm = 0xA445AFC
 ; CHECK-NEXT:    movl $1374389535, %edx # imm = 0x51EB851F
 ; CHECK-NEXT:    imull %edx
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    sarl $5, %ecx
+; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    shrl $31, %eax
+; CHECK-NEXT:    sarl $7, %esi
+; CHECK-NEXT:    addl %eax, %esi
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    sarl $5, %edx
 ; CHECK-NEXT:    addl %eax, %edx
 ; CHECK-NEXT:    addl 16(%ebx), %ecx
-; CHECK-NEXT:    addl %edi, %ecx
-; CHECK-NEXT:    leal 257(%ecx,%edx), %eax
+; CHECK-NEXT:    addl %esi, %ecx
+; CHECK-NEXT:    leal (%ecx,%edx), %eax
+; CHECK-NEXT:    addl $257, %eax # imm = 0x101
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fildl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
@@ -60,18 +61,18 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    movb $1, 36(%ebx)
 ; CHECK-NEXT:    imull $3600000, 20(%ebx), %ecx # imm = 0x36EE80
 ; CHECK-NEXT:    imull $60000, 24(%ebx), %eax # imm = 0xEA60
-; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    fldl 28(%ebx)
 ; CHECK-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    orl $3072, %ecx # imm = 0xC00
-; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    sarl $31, %ecx
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    orl $3072, %edx # imm = 0xC00
+; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    sarl $31, %ecx
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax

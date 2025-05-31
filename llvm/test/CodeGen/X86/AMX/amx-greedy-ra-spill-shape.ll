@@ -124,9 +124,9 @@ define void @foo(i32 %M, i32 %N, i32 %K, ptr %A, ptr %B_rcr4, ptr %C, i32 %c_row
   ; CHECK-NEXT:   successors: %bb.6(0x7c000000), %bb.5(0x04000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PTILEZEROV:%[0-9]+]]:tile = PTILEZEROV [[COPY6]].sub_16bit, [[MOV32rm2]].sub_16bit
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gr64_nosp = MOVSX64rr32 [[COPY9]].sub_32bit
   ; CHECK-NEXT:   [[MOV64rm7:%[0-9]+]]:gr64 = MOV64rm %stack.13, 1, $noreg, 0, $noreg :: (load (s64) from %stack.13)
   ; CHECK-NEXT:   [[PTILELOADDV:%[0-9]+]]:tile = PTILELOADDV [[COPY6]].sub_16bit, [[COPY4]].sub_16bit, [[MOV64rm7]], 1, [[MOVSX64rr32_]], 0, $noreg
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gr64_nosp = MOVSX64rr32 [[COPY9]].sub_32bit
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:gr32 = COPY [[LEA64_32r1]]
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:gr64 = COPY [[MOV64rm1]]
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:gr32 = COPY [[COPY4]]

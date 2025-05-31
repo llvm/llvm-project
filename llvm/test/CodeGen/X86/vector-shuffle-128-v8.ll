@@ -1248,7 +1248,7 @@ define <8 x i16> @shuffle_v8i16_0213cedf(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX512VL-FAST-ALL-LABEL: shuffle_v8i16_0213cedf:
 ; AVX512VL-FAST-ALL:       # %bb.0:
-; AVX512VL-FAST-ALL-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [0,2,1,3,12,14,13,15]
+; AVX512VL-FAST-ALL-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,2,1,3,12,14,13,15]
 ; AVX512VL-FAST-ALL-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
 ; AVX512VL-FAST-ALL-NEXT:    retq
 ;
@@ -1370,7 +1370,7 @@ define <8 x i16> @shuffle_v8i16_032dXXXX(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX512VL-LABEL: shuffle_v8i16_032dXXXX:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [0,3,2,13,0,13,0,1]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,3,2,13,0,13,0,1]
 ; AVX512VL-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
@@ -1557,7 +1557,7 @@ define <8 x i16> @shuffle_v8i16_012dcde3(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX512VL-FAST-ALL-LABEL: shuffle_v8i16_012dcde3:
 ; AVX512VL-FAST-ALL:       # %bb.0:
-; AVX512VL-FAST-ALL-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [0,1,2,13,12,13,14,3]
+; AVX512VL-FAST-ALL-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,2,13,12,13,14,3]
 ; AVX512VL-FAST-ALL-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
 ; AVX512VL-FAST-ALL-NEXT:    retq
 ;
@@ -1666,7 +1666,7 @@ define <8 x i16> @shuffle_v8i16_XXX1X579(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX512VL-FAST-ALL-LABEL: shuffle_v8i16_XXX1X579:
 ; AVX512VL-FAST-ALL:       # %bb.0:
-; AVX512VL-FAST-ALL-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [1,1,1,1,4,5,7,9]
+; AVX512VL-FAST-ALL-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,1,1,1,4,5,7,9]
 ; AVX512VL-FAST-ALL-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
 ; AVX512VL-FAST-ALL-NEXT:    retq
 ;
@@ -1724,7 +1724,7 @@ define <8 x i16> @shuffle_v8i16_XX4X8acX(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX512VL-LABEL: shuffle_v8i16_XX4X8acX:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmovsxbw {{.*#+}} xmm2 = [4,5,4,5,8,10,12,10]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,5,4,5,8,10,12,10]
 ; AVX512VL-NEXT:    vpermt2w %xmm1, %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
 ;

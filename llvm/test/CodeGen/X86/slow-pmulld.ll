@@ -114,7 +114,7 @@ define <8 x i32> @test_mul_v8i32_v8i8(<8 x i8> %A) {
 ; SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SLOW-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; SLOW-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; SLOW-NEXT:    pmovsxwd {{.*#+}} xmm2 = [18778,18778,18778,18778]
+; SLOW-NEXT:    movdqa {{.*#+}} xmm2 = [18778,0,18778,0,18778,0,18778,0]
 ; SLOW-NEXT:    pmaddwd %xmm2, %xmm0
 ; SLOW-NEXT:    pmaddwd %xmm2, %xmm1
 ; SLOW-NEXT:    ret{{[l|q]}}
@@ -124,7 +124,7 @@ define <8 x i32> @test_mul_v8i32_v8i8(<8 x i8> %A) {
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE4-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; SSE4-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; SSE4-NEXT:    pmovsxwd {{.*#+}} xmm2 = [18778,18778,18778,18778]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm2 = [18778,0,18778,0,18778,0,18778,0]
 ; SSE4-NEXT:    pmaddwd %xmm2, %xmm0
 ; SSE4-NEXT:    pmaddwd %xmm2, %xmm1
 ; SSE4-NEXT:    ret{{[l|q]}}
@@ -221,7 +221,7 @@ define <16 x i32> @test_mul_v16i32_v16i8(<16 x i8> %A) {
 ; SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SLOW-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; SLOW-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; SLOW-NEXT:    pmovsxwd {{.*#+}} xmm4 = [18778,18778,18778,18778]
+; SLOW-NEXT:    movdqa {{.*#+}} xmm4 = [18778,0,18778,0,18778,0,18778,0]
 ; SLOW-NEXT:    pmaddwd %xmm4, %xmm0
 ; SLOW-NEXT:    pmaddwd %xmm4, %xmm1
 ; SLOW-NEXT:    pmaddwd %xmm4, %xmm2
@@ -237,7 +237,7 @@ define <16 x i32> @test_mul_v16i32_v16i8(<16 x i8> %A) {
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; SSE4-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; SSE4-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; SSE4-NEXT:    pmovsxwd {{.*#+}} xmm4 = [18778,18778,18778,18778]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm4 = [18778,0,18778,0,18778,0,18778,0]
 ; SSE4-NEXT:    pmaddwd %xmm4, %xmm0
 ; SSE4-NEXT:    pmaddwd %xmm4, %xmm1
 ; SSE4-NEXT:    pmaddwd %xmm4, %xmm2
@@ -347,7 +347,7 @@ define <4 x i32> @test_mul_v4i32_v4i16(<4 x i16> %A) {
 ;
 ; AVX2-SLOW-LABEL: test_mul_v4i32_v4i16:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [18778,18778,18778,18778,18778,18778,18778,18778]
+; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} xmm1 = [18778,18778,18778,18778,u,u,u,u]
 ; AVX2-SLOW-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm2
 ; AVX2-SLOW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
@@ -399,7 +399,7 @@ define <8 x i32> @test_mul_v8i32_v8i16(<8 x i16> %A) {
 ; SSE4-NEXT:    pxor %xmm1, %xmm1
 ; SSE4-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE4-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; SSE4-NEXT:    pmovsxwd {{.*#+}} xmm1 = [18778,18778,18778,18778]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm1 = [18778,18778,18778,18778]
 ; SSE4-NEXT:    pmulld %xmm1, %xmm2
 ; SSE4-NEXT:    pmulld %xmm0, %xmm1
 ; SSE4-NEXT:    movdqa %xmm2, %xmm0
@@ -407,7 +407,7 @@ define <8 x i32> @test_mul_v8i32_v8i16(<8 x i16> %A) {
 ;
 ; AVX2-SLOW-LABEL: test_mul_v8i32_v8i16:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [18778,18778,18778,18778,18778,18778,18778,18778]
+; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} xmm1 = [18778,18778,18778,18778,18778,18778,18778,18778]
 ; AVX2-SLOW-NEXT:    vpmulhuw %xmm1, %xmm0, %xmm2
 ; AVX2-SLOW-NEXT:    vpmullw %xmm1, %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
@@ -480,7 +480,7 @@ define <16 x i32> @test_mul_v16i32_v16i16(<16 x i16> %A) {
 ; SSE4-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
 ; SSE4-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE4-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
-; SSE4-NEXT:    pmovsxwd {{.*#+}} xmm3 = [18778,18778,18778,18778]
+; SSE4-NEXT:    movdqa {{.*#+}} xmm3 = [18778,18778,18778,18778]
 ; SSE4-NEXT:    pmulld %xmm3, %xmm0
 ; SSE4-NEXT:    pmulld %xmm3, %xmm4
 ; SSE4-NEXT:    pmulld %xmm3, %xmm2

@@ -580,7 +580,6 @@ define void @canonicalize_undef(double addrspace(1)* %out) {
 define <4 x float> @canon_fp32_varargsv4f32(<4 x float> %a) {
 ; X87-LABEL: canon_fp32_varargsv4f32:
 ; X87:       # %bb.0:
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fld %st(0)
 ; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
@@ -588,6 +587,7 @@ define <4 x float> @canon_fp32_varargsv4f32(<4 x float> %a) {
 ; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
 ; X87-NEXT:    fld %st(2)
 ; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fxch %st(3)
 ; X87-NEXT:    fmuls {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstps 12(%eax)
@@ -636,7 +636,6 @@ define <4 x float> @canon_fp32_varargsv4f32(<4 x float> %a) {
 define <4 x double> @canon_fp64_varargsv4f64(<4 x double> %a) {
 ; X87-LABEL: canon_fp64_varargsv4f64:
 ; X87:       # %bb.0:
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fld1
 ; X87-NEXT:    fld %st(0)
 ; X87-NEXT:    fmull {{[0-9]+}}(%esp)
@@ -644,6 +643,7 @@ define <4 x double> @canon_fp64_varargsv4f64(<4 x double> %a) {
 ; X87-NEXT:    fmull {{[0-9]+}}(%esp)
 ; X87-NEXT:    fld %st(2)
 ; X87-NEXT:    fmull {{[0-9]+}}(%esp)
+; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X87-NEXT:    fxch %st(3)
 ; X87-NEXT:    fmull {{[0-9]+}}(%esp)
 ; X87-NEXT:    fstpl 24(%eax)

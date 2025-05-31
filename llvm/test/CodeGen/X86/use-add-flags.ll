@@ -10,15 +10,15 @@
 define i32 @test1(ptr %x, i32 %y, i32 %a, i32 %b) nounwind {
 ; LNX-LABEL: test1:
 ; LNX:       # %bb.0:
-; LNX-NEXT:    movl %edx, %eax
 ; LNX-NEXT:    addl (%rdi), %esi
+; LNX-NEXT:    movl %edx, %eax
 ; LNX-NEXT:    cmovnsl %ecx, %eax
 ; LNX-NEXT:    retq
 ;
 ; WIN-LABEL: test1:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    movl %r8d, %eax
 ; WIN-NEXT:    addl (%rcx), %edx
+; WIN-NEXT:    movl %r8d, %eax
 ; WIN-NEXT:    cmovnsl %r9d, %eax
 ; WIN-NEXT:    retq
 	%tmp2 = load i32, ptr %x, align 4		; <i32> [#uses=1]

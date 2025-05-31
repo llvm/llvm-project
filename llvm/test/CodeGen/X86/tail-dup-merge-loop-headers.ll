@@ -143,8 +143,8 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    jae .LBB1_11
 ; CHECK-NEXT:  # %bb.13: # %if.end287.i
 ; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    # implicit-def: $cl
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_4
 ; CHECK-NEXT:  # %bb.14: # %if.end308.i
 ; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1

@@ -47,7 +47,8 @@ entry:
 define ptr @gep_nusw_zext_nneg_add_trunc_nuw_nsw(ptr %p, i64 %x) nounwind {
 ; CHECK-LABEL: gep_nusw_zext_nneg_add_trunc_nuw_nsw:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    leaq 20(%rdi,%rsi,4), %rax
+; CHECK-NEXT:    leaq (%rdi,%rsi,4), %rax
+; CHECK-NEXT:    addq $20, %rax
 ; CHECK-NEXT:    retq
 entry:
   %trunc = trunc nuw nsw i64 %x to i32

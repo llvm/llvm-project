@@ -44,9 +44,9 @@ define <4 x i32> @test_srem_odd_25(<4 x i32> %X) nounwind {
 ; CHECK-AVX2-LABEL: test_srem_odd_25:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3264175145,3264175145,3264175145,3264175145]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [85899345,85899345,85899345,85899345]
 ; CHECK-AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [85899345,85899345,85899345,85899345]
-; CHECK-AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [171798690,171798690,171798690,171798690]
 ; CHECK-AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -185,9 +185,9 @@ define <4 x i32> @test_srem_odd_neg25(<4 x i32> %X) nounwind {
 ; CHECK-AVX2-LABEL: test_srem_odd_neg25:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3264175145,3264175145,3264175145,3264175145]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [85899345,85899345,85899345,85899345]
 ; CHECK-AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [85899345,85899345,85899345,85899345]
-; CHECK-AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [171798690,171798690,171798690,171798690]
 ; CHECK-AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -360,12 +360,12 @@ define <4 x i32> @test_srem_odd_undef1(<4 x i32> %X) nounwind {
 ;
 ; CHECK-AVX2-LABEL: test_srem_odd_undef1:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
-; CHECK-AVX2-NEXT:    vpmuldq %xmm2, %xmm1, %xmm1
-; CHECK-AVX2-NEXT:    vpmuldq %xmm2, %xmm0, %xmm2
-; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; CHECK-AVX2-NEXT:    vpmuldq %xmm1, %xmm2, %xmm2
+; CHECK-AVX2-NEXT:    vpmuldq %xmm1, %xmm0, %xmm1
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm1, %xmm2
 ; CHECK-AVX2-NEXT:    vpsrad $3, %xmm1, %xmm1
 ; CHECK-AVX2-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
@@ -471,12 +471,12 @@ define <4 x i32> @test_srem_even_undef1(<4 x i32> %X) nounwind {
 ;
 ; CHECK-AVX2-LABEL: test_srem_even_undef1:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
-; CHECK-AVX2-NEXT:    vpmuldq %xmm2, %xmm1, %xmm1
-; CHECK-AVX2-NEXT:    vpmuldq %xmm2, %xmm0, %xmm2
-; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; CHECK-AVX2-NEXT:    vpmuldq %xmm1, %xmm2, %xmm2
+; CHECK-AVX2-NEXT:    vpmuldq %xmm1, %xmm0, %xmm1
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; CHECK-AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm1, %xmm2
 ; CHECK-AVX2-NEXT:    vpsrad $5, %xmm1, %xmm1
 ; CHECK-AVX2-NEXT:    vpaddd %xmm2, %xmm1, %xmm1

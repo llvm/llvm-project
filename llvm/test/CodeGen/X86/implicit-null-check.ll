@@ -137,8 +137,8 @@ define i256 @imp_null_check_load_i256(ptr %x) {
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB5_1: ## %is_null
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    movaps %xmm0, 16(%rax)
-; CHECK-NEXT:    movq $0, 8(%rax)
+; CHECK-NEXT:    movups %xmm0, 8(%rax)
+; CHECK-NEXT:    movq $0, 24(%rax)
 ; CHECK-NEXT:    movq $42, (%rax)
 ; CHECK-NEXT:    retq
 
@@ -408,7 +408,8 @@ define i32 @imp_null_check_gep_load_with_use_dep(ptr %x, i32 %a) {
 ; CHECK-NEXT:    movl (%rdi), %eax ## on-fault: LBB15_1
 ; CHECK-NEXT:  ## %bb.2: ## %not_null
 ; CHECK-NEXT:    addl %edi, %esi
-; CHECK-NEXT:    leal 4(%rax,%rsi), %eax
+; CHECK-NEXT:    addl %esi, %eax
+; CHECK-NEXT:    addl $4, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB15_1: ## %is_null
 ; CHECK-NEXT:    movl $42, %eax

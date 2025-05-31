@@ -40,8 +40,8 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    seto %bl
 ; X86-NEXT:    movl %ecx, %edx

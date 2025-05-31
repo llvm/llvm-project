@@ -50,8 +50,8 @@ define zeroext i16 @t2(i16 zeroext %x) nounwind readnone ssp {
 define i64 @t3(i64 %x) nounwind readnone ssp {
 ; X86-LABEL: t3:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    cmpl $18, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    movzbl %al, %eax

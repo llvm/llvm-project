@@ -15,22 +15,22 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; SSE-32-NEXT:    movl %esp, %ebp
 ; SSE-32-NEXT:    andl $-16, %esp
 ; SSE-32-NEXT:    subl $16, %esp
-; SSE-32-NEXT:    movaps 8(%ebp), %xmm4
+; SSE-32-NEXT:    movaps 8(%ebp), %xmm3
 ; SSE-32-NEXT:    xorl %eax, %eax
-; SSE-32-NEXT:    comiss %xmm4, %xmm2
-; SSE-32-NEXT:    movl $-1, %ecx
-; SSE-32-NEXT:    movl $0, %edx
-; SSE-32-NEXT:    cmoval %ecx, %edx
-; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1,1,1]
+; SSE-32-NEXT:    comiss %xmm3, %xmm2
+; SSE-32-NEXT:    movl $-1, %edx
+; SSE-32-NEXT:    movl $0, %ecx
+; SSE-32-NEXT:    cmoval %edx, %ecx
+; SSE-32-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
 ; SSE-32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
-; SSE-32-NEXT:    comiss %xmm4, %xmm2
-; SSE-32-NEXT:    cmoval %ecx, %eax
-; SSE-32-NEXT:    movd %eax, %xmm2
-; SSE-32-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE-32-NEXT:    pand %xmm3, %xmm0
-; SSE-32-NEXT:    pandn %xmm1, %xmm3
-; SSE-32-NEXT:    por %xmm3, %xmm0
+; SSE-32-NEXT:    comiss %xmm3, %xmm2
+; SSE-32-NEXT:    cmoval %edx, %eax
+; SSE-32-NEXT:    movd %ecx, %xmm2
+; SSE-32-NEXT:    movd %eax, %xmm3
+; SSE-32-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSE-32-NEXT:    pand %xmm2, %xmm0
+; SSE-32-NEXT:    pandn %xmm1, %xmm2
+; SSE-32-NEXT:    por %xmm2, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
@@ -42,16 +42,16 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; SSE-64-NEXT:    movl $-1, %ecx
 ; SSE-64-NEXT:    movl $0, %edx
 ; SSE-64-NEXT:    cmoval %ecx, %edx
-; SSE-64-NEXT:    movd %edx, %xmm4
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; SSE-64-NEXT:    comiss %xmm3, %xmm2
 ; SSE-64-NEXT:    cmoval %ecx, %eax
-; SSE-64-NEXT:    movd %eax, %xmm2
-; SSE-64-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
-; SSE-64-NEXT:    pand %xmm4, %xmm0
-; SSE-64-NEXT:    pandn %xmm1, %xmm4
-; SSE-64-NEXT:    por %xmm4, %xmm0
+; SSE-64-NEXT:    movd %edx, %xmm2
+; SSE-64-NEXT:    movd %eax, %xmm3
+; SSE-64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; SSE-64-NEXT:    pand %xmm2, %xmm0
+; SSE-64-NEXT:    pandn %xmm1, %xmm2
+; SSE-64-NEXT:    por %xmm2, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v2f32_ogt_s:
@@ -100,11 +100,11 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512-32-NEXT:    vcomiss 8(%ebp), %xmm2
 ; AVX512-32-NEXT:    seta %al
 ; AVX512-32-NEXT:    andl $1, %eax
-; AVX512-32-NEXT:    kmovw %eax, %k0
 ; AVX512-32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; AVX512-32-NEXT:    vcomiss 12(%ebp), %xmm2
-; AVX512-32-NEXT:    seta %al
-; AVX512-32-NEXT:    kmovw %eax, %k1
+; AVX512-32-NEXT:    seta %cl
+; AVX512-32-NEXT:    kmovw %eax, %k0
+; AVX512-32-NEXT:    kmovw %ecx, %k1
 ; AVX512-32-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512-32-NEXT:    kshiftrw $14, %k1, %k1
 ; AVX512-32-NEXT:    korw %k1, %k0, %k1
@@ -118,12 +118,12 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512-64-NEXT:    vcomiss %xmm3, %xmm2
 ; AVX512-64-NEXT:    seta %al
 ; AVX512-64-NEXT:    andl $1, %eax
-; AVX512-64-NEXT:    kmovw %eax, %k0
 ; AVX512-64-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm3[1,1,3,3]
 ; AVX512-64-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; AVX512-64-NEXT:    vcomiss %xmm3, %xmm2
-; AVX512-64-NEXT:    seta %al
-; AVX512-64-NEXT:    kmovw %eax, %k1
+; AVX512-64-NEXT:    seta %cl
+; AVX512-64-NEXT:    kmovw %eax, %k0
+; AVX512-64-NEXT:    kmovw %ecx, %k1
 ; AVX512-64-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512-64-NEXT:    kshiftrw $14, %k1, %k1
 ; AVX512-64-NEXT:    korw %k1, %k0, %k1
@@ -141,11 +141,11 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512F-32-NEXT:    vcomiss 8(%ebp), %xmm2
 ; AVX512F-32-NEXT:    seta %al
 ; AVX512F-32-NEXT:    andl $1, %eax
-; AVX512F-32-NEXT:    kmovw %eax, %k0
 ; AVX512F-32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; AVX512F-32-NEXT:    vcomiss 12(%ebp), %xmm2
-; AVX512F-32-NEXT:    seta %al
-; AVX512F-32-NEXT:    kmovw %eax, %k1
+; AVX512F-32-NEXT:    seta %cl
+; AVX512F-32-NEXT:    kmovw %eax, %k0
+; AVX512F-32-NEXT:    kmovw %ecx, %k1
 ; AVX512F-32-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512F-32-NEXT:    kshiftrw $14, %k1, %k1
 ; AVX512F-32-NEXT:    korw %k1, %k0, %k1
@@ -163,12 +163,12 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512F-64-NEXT:    vcomiss %xmm3, %xmm2
 ; AVX512F-64-NEXT:    seta %al
 ; AVX512F-64-NEXT:    andl $1, %eax
-; AVX512F-64-NEXT:    kmovw %eax, %k0
 ; AVX512F-64-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm3[1,1,3,3]
 ; AVX512F-64-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; AVX512F-64-NEXT:    vcomiss %xmm3, %xmm2
-; AVX512F-64-NEXT:    seta %al
-; AVX512F-64-NEXT:    kmovw %eax, %k1
+; AVX512F-64-NEXT:    seta %cl
+; AVX512F-64-NEXT:    kmovw %eax, %k0
+; AVX512F-64-NEXT:    kmovw %ecx, %k1
 ; AVX512F-64-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512F-64-NEXT:    kshiftrw $14, %k1, %k1
 ; AVX512F-64-NEXT:    korw %k1, %k0, %k1
@@ -193,10 +193,10 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; SSE-32-NEXT:    movaps 8(%ebp), %xmm4
 ; SSE-32-NEXT:    xorl %eax, %eax
 ; SSE-32-NEXT:    ucomiss %xmm4, %xmm2
-; SSE-32-NEXT:    movl $-1, %ecx
 ; SSE-32-NEXT:    movl $-1, %edx
 ; SSE-32-NEXT:    cmovnel %eax, %edx
 ; SSE-32-NEXT:    cmovpl %eax, %edx
+; SSE-32-NEXT:    movl $-1, %ecx
 ; SSE-32-NEXT:    movd %edx, %xmm3
 ; SSE-32-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1,1,1]
 ; SSE-32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
@@ -217,16 +217,16 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; SSE-64-NEXT:    xorl %eax, %eax
 ; SSE-64-NEXT:    ucomiss %xmm3, %xmm2
 ; SSE-64-NEXT:    movl $-1, %ecx
+; SSE-64-NEXT:    cmovnel %eax, %ecx
+; SSE-64-NEXT:    cmovpl %eax, %ecx
 ; SSE-64-NEXT:    movl $-1, %edx
-; SSE-64-NEXT:    cmovnel %eax, %edx
-; SSE-64-NEXT:    cmovpl %eax, %edx
-; SSE-64-NEXT:    movd %edx, %xmm4
+; SSE-64-NEXT:    movd %ecx, %xmm4
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; SSE-64-NEXT:    ucomiss %xmm3, %xmm2
-; SSE-64-NEXT:    cmovnel %eax, %ecx
-; SSE-64-NEXT:    cmovpl %eax, %ecx
-; SSE-64-NEXT:    movd %ecx, %xmm2
+; SSE-64-NEXT:    cmovnel %eax, %edx
+; SSE-64-NEXT:    cmovpl %eax, %edx
+; SSE-64-NEXT:    movd %edx, %xmm2
 ; SSE-64-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
 ; SSE-64-NEXT:    pand %xmm4, %xmm0
 ; SSE-64-NEXT:    pandn %xmm1, %xmm4
@@ -243,14 +243,14 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX-32-NEXT:    xorl %eax, %eax
 ; AVX-32-NEXT:    vucomiss 12(%ebp), %xmm3
 ; AVX-32-NEXT:    movl $-1, %ecx
-; AVX-32-NEXT:    movl $-1, %edx
-; AVX-32-NEXT:    cmovnel %eax, %edx
-; AVX-32-NEXT:    cmovpl %eax, %edx
-; AVX-32-NEXT:    vucomiss 8(%ebp), %xmm2
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
-; AVX-32-NEXT:    vmovd %ecx, %xmm2
-; AVX-32-NEXT:    vpinsrd $1, %edx, %xmm2, %xmm2
+; AVX-32-NEXT:    movl $-1, %edx
+; AVX-32-NEXT:    vucomiss 8(%ebp), %xmm2
+; AVX-32-NEXT:    cmovnel %eax, %edx
+; AVX-32-NEXT:    cmovpl %eax, %edx
+; AVX-32-NEXT:    vmovd %edx, %xmm2
+; AVX-32-NEXT:    vpinsrd $1, %ecx, %xmm2, %xmm2
 ; AVX-32-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX-32-NEXT:    movl %ebp, %esp
 ; AVX-32-NEXT:    popl %ebp
@@ -286,9 +286,9 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512-32-NEXT:    testb %al, %cl
 ; AVX512-32-NEXT:    setne %al
 ; AVX512-32-NEXT:    andl $1, %eax
-; AVX512-32-NEXT:    kmovw %eax, %k0
 ; AVX512-32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; AVX512-32-NEXT:    vucomiss 12(%ebp), %xmm2
+; AVX512-32-NEXT:    kmovw %eax, %k0
 ; AVX512-32-NEXT:    setnp %al
 ; AVX512-32-NEXT:    sete %cl
 ; AVX512-32-NEXT:    testb %al, %cl
@@ -339,9 +339,9 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; AVX512F-32-NEXT:    testb %al, %cl
 ; AVX512F-32-NEXT:    setne %al
 ; AVX512F-32-NEXT:    andl $1, %eax
-; AVX512F-32-NEXT:    kmovw %eax, %k0
 ; AVX512F-32-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; AVX512F-32-NEXT:    vucomiss 12(%ebp), %xmm2
+; AVX512F-32-NEXT:    kmovw %eax, %k0
 ; AVX512F-32-NEXT:    setnp %al
 ; AVX512F-32-NEXT:    sete %cl
 ; AVX512F-32-NEXT:    testb %al, %cl

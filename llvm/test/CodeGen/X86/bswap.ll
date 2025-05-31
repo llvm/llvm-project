@@ -351,21 +351,21 @@ define i528 @large_promotion(i528 %A) nounwind {
 ;
 ; CHECK64-LABEL: large_promotion:
 ; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    pushq %r14
 ; CHECK64-NEXT:    pushq %rbx
-; CHECK64-NEXT:    movq %rdi, %rax
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r14
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
-; CHECK64-NEXT:    bswapq %rdi
 ; CHECK64-NEXT:    bswapq %r10
-; CHECK64-NEXT:    shrdq $48, %r10, %rdi
 ; CHECK64-NEXT:    bswapq %r11
 ; CHECK64-NEXT:    shrdq $48, %r11, %r10
 ; CHECK64-NEXT:    bswapq %rbx
 ; CHECK64-NEXT:    shrdq $48, %rbx, %r11
+; CHECK64-NEXT:    bswapq %r14
+; CHECK64-NEXT:    shrdq $48, %r14, %rbx
 ; CHECK64-NEXT:    bswapq %r9
-; CHECK64-NEXT:    shrdq $48, %r9, %rbx
+; CHECK64-NEXT:    shrdq $48, %r9, %r14
 ; CHECK64-NEXT:    bswapq %r8
 ; CHECK64-NEXT:    shrdq $48, %r8, %r9
 ; CHECK64-NEXT:    bswapq %rcx
@@ -374,17 +374,19 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK64-NEXT:    shrdq $48, %rdx, %rcx
 ; CHECK64-NEXT:    bswapq %rsi
 ; CHECK64-NEXT:    shrdq $48, %rsi, %rdx
+; CHECK64-NEXT:    movq %rdi, %rax
 ; CHECK64-NEXT:    shrq $48, %rsi
-; CHECK64-NEXT:    movq %rdx, 56(%rax)
-; CHECK64-NEXT:    movq %rcx, 48(%rax)
-; CHECK64-NEXT:    movq %r8, 40(%rax)
-; CHECK64-NEXT:    movq %r9, 32(%rax)
-; CHECK64-NEXT:    movq %rbx, 24(%rax)
-; CHECK64-NEXT:    movq %r11, 16(%rax)
-; CHECK64-NEXT:    movq %r10, 8(%rax)
-; CHECK64-NEXT:    movq %rdi, (%rax)
-; CHECK64-NEXT:    movw %si, 64(%rax)
+; CHECK64-NEXT:    movq %rdx, 56(%rdi)
+; CHECK64-NEXT:    movq %rcx, 48(%rdi)
+; CHECK64-NEXT:    movq %r8, 40(%rdi)
+; CHECK64-NEXT:    movq %r9, 32(%rdi)
+; CHECK64-NEXT:    movq %r14, 24(%rdi)
+; CHECK64-NEXT:    movq %rbx, 16(%rdi)
+; CHECK64-NEXT:    movq %r11, 8(%rdi)
+; CHECK64-NEXT:    movq %r10, (%rdi)
+; CHECK64-NEXT:    movw %si, 64(%rdi)
 ; CHECK64-NEXT:    popq %rbx
+; CHECK64-NEXT:    popq %r14
 ; CHECK64-NEXT:    retq
   %Z = call i528 @llvm.bswap.i528(i528 %A)
   ret i528 %Z

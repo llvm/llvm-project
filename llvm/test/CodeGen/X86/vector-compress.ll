@@ -15,8 +15,8 @@ define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> 
 ; AVX2-NEXT:    movl %esi, %edi
 ; AVX2-NEXT:    subl %eax, %edi
 ; AVX2-NEXT:    vpextrd $2, %xmm1, %edx
-; AVX2-NEXT:    subl %edx, %edi
 ; AVX2-NEXT:    vpextrd $3, %xmm1, %ecx
+; AVX2-NEXT:    subl %edx, %edi
 ; AVX2-NEXT:    subl %ecx, %edi
 ; AVX2-NEXT:    andl $3, %edi
 ; AVX2-NEXT:    andl $1, %eax
@@ -74,8 +74,8 @@ define <4 x float> @test_compress_v4f32(<4 x float> %vec, <4 x i1> %mask, <4 x f
 ; AVX2-NEXT:    vmovd %xmm1, %esi
 ; AVX2-NEXT:    andl $1, %esi
 ; AVX2-NEXT:    movl %esi, %edi
-; AVX2-NEXT:    subl %edx, %edi
 ; AVX2-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX2-NEXT:    subl %edx, %edi
 ; AVX2-NEXT:    subl %ecx, %edi
 ; AVX2-NEXT:    vpextrd $3, %xmm1, %eax
 ; AVX2-NEXT:    subl %eax, %edi
@@ -262,8 +262,8 @@ define <8 x i32> @test_compress_v8i32(<8 x i32> %vec, <8 x i1> %mask, <8 x i32> 
 ; AVX2-NEXT:    vpextrd $3, %xmm2, %eax
 ; AVX2-NEXT:    addl %edx, %eax
 ; AVX2-NEXT:    addl %ecx, %eax
-; AVX2-NEXT:    andl $7, %eax
 ; AVX2-NEXT:    vpextrd $1, %xmm3, %ecx
+; AVX2-NEXT:    andl $7, %eax
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    vmovd %xmm3, %edx
 ; AVX2-NEXT:    andl $1, %edx
@@ -390,13 +390,13 @@ define <8 x float> @test_compress_v8f32(<8 x float> %vec, <8 x i1> %mask, <8 x f
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $7, %eax
 ; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $7, %eax
+; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rax,4)
 ; AVX2-NEXT:    vpextrd $2, %xmm1, %edx
 ; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $7, %ecx
-; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
 ; AVX2-NEXT:    vpextrd $3, %xmm1, %eax
+; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rdx, %rax
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
@@ -465,10 +465,10 @@ define <4 x i64> @test_compress_v4i64(<4 x i64> %vec, <4 x i1> %mask, <4 x i64> 
 ; AVX2-NEXT:    subq %rcx, %rdx
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, %rcx
-; AVX2-NEXT:    movl %edx, %edi
-; AVX2-NEXT:    subq %rcx, %rdx
+; AVX2-NEXT:    movq %rdx, %rdi
+; AVX2-NEXT:    subq %rcx, %rdi
 ; AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX2-NEXT:    movq %rdx, %r8
+; AVX2-NEXT:    movq %rdi, %r8
 ; AVX2-NEXT:    subq %rcx, %r8
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
@@ -476,9 +476,10 @@ define <4 x i64> @test_compress_v4i64(<4 x i64> %vec, <4 x i1> %mask, <4 x i64> 
 ; AVX2-NEXT:    cmovbq (%rsp,%rax,8), %rcx
 ; AVX2-NEXT:    vmovq %xmm0, (%rsp)
 ; AVX2-NEXT:    vpextrq $1, %xmm0, (%rsp,%rsi,8)
-; AVX2-NEXT:    vmovq %xmm1, (%rsp,%rdi,8)
-; AVX2-NEXT:    andl $3, %edx
-; AVX2-NEXT:    vpextrq $1, %xmm1, (%rsp,%rdx,8)
+; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    vmovq %xmm1, (%rsp,%rax,8)
+; AVX2-NEXT:    andl $3, %edi
+; AVX2-NEXT:    vpextrq $1, %xmm1, (%rsp,%rdi,8)
 ; AVX2-NEXT:    cmpq $3, %r8
 ; AVX2-NEXT:    movl $3, %eax
 ; AVX2-NEXT:    cmovbq %r8, %rax
@@ -600,23 +601,23 @@ define <16 x i32> @test_compress_v16i32(<16 x i32> %vec, <16 x i1> %mask, <16 x 
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $128, %rsp
 ; AVX2-NEXT:    vmovaps %ymm4, {{[0-9]+}}(%rsp)
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm4
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm5 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero,xmm4[4],zero,zero,zero,xmm4[5],zero,zero,zero,xmm4[6],zero,zero,zero,xmm4[7],zero,zero,zero
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm4 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero,xmm4[4],zero,zero,zero,xmm4[5],zero,zero,zero,xmm4[6],zero,zero,zero,xmm4[7],zero,zero,zero
+; AVX2-NEXT:    vpaddd %ymm4, %ymm5, %ymm4
+; AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm5
+; AVX2-NEXT:    vpaddd %xmm5, %xmm4, %xmm4
+; AVX2-NEXT:    vpextrd $1, %xmm4, %eax
 ; AVX2-NEXT:    vmovaps %ymm3, (%rsp)
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm4 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero,xmm3[4],zero,zero,zero,xmm3[5],zero,zero,zero,xmm3[6],zero,zero,zero,xmm3[7],zero,zero,zero
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[2,3,2,3]
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero,xmm3[4],zero,zero,zero,xmm3[5],zero,zero,zero,xmm3[6],zero,zero,zero,xmm3[7],zero,zero,zero
-; AVX2-NEXT:    vpaddd %ymm3, %ymm4, %ymm3
-; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm4
-; AVX2-NEXT:    vpaddd %xmm4, %xmm3, %xmm3
-; AVX2-NEXT:    vpextrd $1, %xmm3, %eax
-; AVX2-NEXT:    vmovd %xmm3, %ecx
+; AVX2-NEXT:    vmovd %xmm4, %ecx
+; AVX2-NEXT:    vpextrd $2, %xmm4, %edx
 ; AVX2-NEXT:    addl %eax, %ecx
-; AVX2-NEXT:    vpextrd $2, %xmm3, %eax
-; AVX2-NEXT:    vpextrd $3, %xmm3, %edx
-; AVX2-NEXT:    addl %eax, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    andl $15, %edx
-; AVX2-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX2-NEXT:    vpextrd $3, %xmm4, %eax
+; AVX2-NEXT:    addl %edx, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    andl $15, %eax
+; AVX2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX2-NEXT:    vpextrb $1, %xmm2, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    vmovd %xmm2, %ecx
@@ -793,42 +794,42 @@ define <16 x float> @test_compress_v16f32(<16 x float> %vec, <16 x i1> %mask, <1
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $15, %eax
 ; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $15, %eax
+; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rax,4)
 ; AVX2-NEXT:    vpextrb $6, %xmm2, %eax
 ; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    vpextrb $7, %xmm2, %edx
 ; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    vpextrb $7, %xmm2, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addq %rax, %rcx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    addq %rax, %rdx
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $15, %eax
 ; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rax,4)
 ; AVX2-NEXT:    vpextrb $8, %xmm2, %eax
 ; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX2-NEXT:    addq %rdx, %rax
+; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
+; AVX2-NEXT:    andl $15, %edx
+; AVX2-NEXT:    vmovss %xmm1, (%rsp,%rdx,4)
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    vmovss %xmm1, (%rsp,%rcx,4)
+; AVX2-NEXT:    vextractps $1, %xmm1, (%rsp,%rcx,4)
 ; AVX2-NEXT:    vpextrb $9, %xmm2, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
-; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vextractps $1, %xmm1, (%rsp,%rax,4)
 ; AVX2-NEXT:    vpextrb $10, %xmm2, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX2-NEXT:    andl $15, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm1, (%rsp,%rcx,4)
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    andl $15, %ecx
+; AVX2-NEXT:    vextractps $3, %xmm1, (%rsp,%rcx,4)
 ; AVX2-NEXT:    vpextrb $11, %xmm2, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
-; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vextractps $3, %xmm1, (%rsp,%rax,4)
 ; AVX2-NEXT:    vpextrb $12, %xmm2, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
@@ -842,13 +843,13 @@ define <16 x float> @test_compress_v16f32(<16 x float> %vec, <16 x i1> %mask, <1
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $15, %eax
 ; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $15, %eax
+; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rax,4)
 ; AVX2-NEXT:    vpextrb $14, %xmm2, %edx
 ; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
 ; AVX2-NEXT:    vpextrb $15, %xmm2, %eax
+; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rdx, %rax
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
@@ -1008,8 +1009,8 @@ define <8 x double> @test_compress_v8f64(<8 x double> %vec, <8 x i1> %mask, <8 x
 ; AVX2-NEXT:    vmovlps %xmm0, (%rsp)
 ; AVX2-NEXT:    vmovd %xmm2, %eax
 ; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    vmovhps %xmm0, (%rsp,%rax,8)
 ; AVX2-NEXT:    vpextrw $1, %xmm2, %ecx
+; AVX2-NEXT:    vmovhps %xmm0, (%rsp,%rax,8)
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
@@ -1098,53 +1099,53 @@ define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask, <16 x i8>
 ; AVX2-NEXT:    vmovaps %xmm2, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vpextrb $1, %xmm1, %r11d
 ; AVX2-NEXT:    vmovd %xmm1, %eax
-; AVX2-NEXT:    movzbl %al, %edx
+; AVX2-NEXT:    movzbl %al, %esi
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    andb $1, %al
 ; AVX2-NEXT:    subb %r11b, %al
-; AVX2-NEXT:    vpextrb $2, %xmm1, %esi
-; AVX2-NEXT:    subb %sil, %al
+; AVX2-NEXT:    vpextrb $2, %xmm1, %edi
 ; AVX2-NEXT:    vpextrb $3, %xmm1, %r13d
+; AVX2-NEXT:    subb %dil, %al
 ; AVX2-NEXT:    subb %r13b, %al
 ; AVX2-NEXT:    vpextrb $4, %xmm1, %r12d
 ; AVX2-NEXT:    subb %r12b, %al
 ; AVX2-NEXT:    vpextrb $5, %xmm1, %r15d
 ; AVX2-NEXT:    subb %r15b, %al
 ; AVX2-NEXT:    vpextrb $6, %xmm1, %r14d
-; AVX2-NEXT:    subb %r14b, %al
 ; AVX2-NEXT:    vpextrb $7, %xmm1, %ebp
+; AVX2-NEXT:    subb %r14b, %al
 ; AVX2-NEXT:    subb %bpl, %al
 ; AVX2-NEXT:    vpextrb $8, %xmm1, %ebx
 ; AVX2-NEXT:    subb %bl, %al
 ; AVX2-NEXT:    vpextrb $9, %xmm1, %r10d
 ; AVX2-NEXT:    subb %r10b, %al
 ; AVX2-NEXT:    vpextrb $10, %xmm1, %r9d
-; AVX2-NEXT:    subb %r9b, %al
 ; AVX2-NEXT:    vpextrb $11, %xmm1, %r8d
+; AVX2-NEXT:    subb %r9b, %al
 ; AVX2-NEXT:    subb %r8b, %al
-; AVX2-NEXT:    vpextrb $12, %xmm1, %edi
-; AVX2-NEXT:    subb %dil, %al
+; AVX2-NEXT:    vpextrb $12, %xmm1, %ecx
+; AVX2-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX2-NEXT:    subb %cl, %al
 ; AVX2-NEXT:    vpextrb $13, %xmm1, %ecx
 ; AVX2-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; AVX2-NEXT:    subb %cl, %al
-; AVX2-NEXT:    vpextrb $14, %xmm1, %ecx
-; AVX2-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; AVX2-NEXT:    subb %cl, %al
+; AVX2-NEXT:    vpextrb $14, %xmm1, %edx
 ; AVX2-NEXT:    vpextrb $15, %xmm1, %ecx
 ; AVX2-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX2-NEXT:    subb %dl, %al
 ; AVX2-NEXT:    subb %cl, %al
 ; AVX2-NEXT:    movzbl %al, %eax
 ; AVX2-NEXT:    andl $15, %eax
 ; AVX2-NEXT:    movzbl -40(%rsp,%rax), %eax
 ; AVX2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; AVX2-NEXT:    vpextrb $0, %xmm0, -{{[0-9]+}}(%rsp)
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    vpextrb $1, %xmm0, -40(%rsp,%rdx)
+; AVX2-NEXT:    andl $1, %esi
+; AVX2-NEXT:    vpextrb $1, %xmm0, -40(%rsp,%rsi)
 ; AVX2-NEXT:    movzbl %r11b, %eax
 ; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    addq %rdx, %rax
+; AVX2-NEXT:    addq %rsi, %rax
 ; AVX2-NEXT:    vpextrb $2, %xmm0, -40(%rsp,%rax)
-; AVX2-NEXT:    movzbl %sil, %ecx
+; AVX2-NEXT:    movzbl %dil, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
 ; AVX2-NEXT:    vpextrb $3, %xmm0, -40(%rsp,%rcx)
@@ -1155,72 +1156,72 @@ define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask, <16 x i8>
 ; AVX2-NEXT:    movzbl %r12b, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $15, %eax
+; AVX2-NEXT:    vpextrb $5, %xmm0, -40(%rsp,%rax)
 ; AVX2-NEXT:    movzbl %r15b, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    vpextrb $5, %xmm0, -40(%rsp,%rcx)
+; AVX2-NEXT:    vpextrb $6, %xmm0, -40(%rsp,%rcx)
 ; AVX2-NEXT:    movzbl %r14b, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $6, %xmm0, -40(%rsp,%rax)
+; AVX2-NEXT:    vpextrb $7, %xmm0, -40(%rsp,%rax)
 ; AVX2-NEXT:    movzbl %bpl, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    vpextrb $7, %xmm0, -40(%rsp,%rcx)
+; AVX2-NEXT:    vpextrb $8, %xmm0, -40(%rsp,%rcx)
 ; AVX2-NEXT:    movzbl %bl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $8, %xmm0, -40(%rsp,%rax)
+; AVX2-NEXT:    vpextrb $9, %xmm0, -40(%rsp,%rax)
 ; AVX2-NEXT:    movzbl %r10b, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    vpextrb $9, %xmm0, -40(%rsp,%rcx)
+; AVX2-NEXT:    vpextrb $10, %xmm0, -40(%rsp,%rcx)
 ; AVX2-NEXT:    movzbl %r9b, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $10, %xmm0, -40(%rsp,%rax)
+; AVX2-NEXT:    vpextrb $11, %xmm0, -40(%rsp,%rax)
 ; AVX2-NEXT:    movzbl %r8b, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    vpextrb $11, %xmm0, -40(%rsp,%rcx)
-; AVX2-NEXT:    movzbl %dil, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
-; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $12, %xmm0, -40(%rsp,%rax)
-; AVX2-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    vpextrb $13, %xmm0, -40(%rsp,%rcx)
+; AVX2-NEXT:    vpextrb $12, %xmm0, -40(%rsp,%rcx)
 ; AVX2-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 1-byte Folded Reload
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $14, %xmm0, -40(%rsp,%rax)
+; AVX2-NEXT:    vpextrb $13, %xmm0, -40(%rsp,%rax)
 ; AVX2-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    vpextrb $15, %xmm0, -40(%rsp,%rcx)
+; AVX2-NEXT:    vpextrb $14, %xmm0, -40(%rsp,%rcx)
+; AVX2-NEXT:    movzbl %dl, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addq %rax, %rcx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $15, %eax
+; AVX2-NEXT:    vpextrb $15, %xmm0, -40(%rsp,%rax)
+; AVX2-NEXT:    movzbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 1-byte Folded Reload
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    cmpq $15, %rax
 ; AVX2-NEXT:    movl $15, %ecx
 ; AVX2-NEXT:    cmovbq %rax, %rcx
@@ -1355,41 +1356,41 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpcmpgtb %ymm1, %ymm3, %ymm3
-; AVX2-NEXT:    vmovaps %ymm2, (%rsp)
 ; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm1
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm4
-; AVX2-NEXT:    vpand %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vpaddb %xmm4, %xmm2, %xmm2
-; AVX2-NEXT:    vpextrb $1, %xmm2, %eax
-; AVX2-NEXT:    vmovd %xmm2, %ecx
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX2-NEXT:    vpand %xmm4, %xmm1, %xmm5
+; AVX2-NEXT:    vpand %xmm4, %xmm3, %xmm4
+; AVX2-NEXT:    vpaddb %xmm5, %xmm4, %xmm4
+; AVX2-NEXT:    vpextrb $1, %xmm4, %eax
+; AVX2-NEXT:    vmovd %xmm4, %ecx
 ; AVX2-NEXT:    addb %al, %cl
-; AVX2-NEXT:    vpextrb $2, %xmm2, %eax
-; AVX2-NEXT:    vpextrb $3, %xmm2, %edx
+; AVX2-NEXT:    vpextrb $2, %xmm4, %eax
+; AVX2-NEXT:    vpextrb $3, %xmm4, %edx
 ; AVX2-NEXT:    addb %al, %dl
 ; AVX2-NEXT:    addb %cl, %dl
-; AVX2-NEXT:    vpextrb $4, %xmm2, %eax
-; AVX2-NEXT:    vpextrb $5, %xmm2, %ecx
+; AVX2-NEXT:    vpextrb $4, %xmm4, %eax
+; AVX2-NEXT:    vpextrb $5, %xmm4, %ecx
 ; AVX2-NEXT:    addb %al, %cl
-; AVX2-NEXT:    vpextrb $6, %xmm2, %eax
+; AVX2-NEXT:    vpextrb $6, %xmm4, %eax
 ; AVX2-NEXT:    addb %cl, %al
+; AVX2-NEXT:    vpextrb $7, %xmm4, %ecx
+; AVX2-NEXT:    vpextrb $8, %xmm4, %esi
 ; AVX2-NEXT:    addb %dl, %al
-; AVX2-NEXT:    vpextrb $7, %xmm2, %ecx
-; AVX2-NEXT:    vpextrb $8, %xmm2, %edx
+; AVX2-NEXT:    addb %cl, %sil
+; AVX2-NEXT:    vpextrb $9, %xmm4, %ecx
+; AVX2-NEXT:    addb %sil, %cl
+; AVX2-NEXT:    vpextrb $10, %xmm4, %edx
 ; AVX2-NEXT:    addb %cl, %dl
-; AVX2-NEXT:    vpextrb $9, %xmm2, %ecx
-; AVX2-NEXT:    addb %dl, %cl
-; AVX2-NEXT:    vpextrb $10, %xmm2, %edx
-; AVX2-NEXT:    addb %cl, %dl
+; AVX2-NEXT:    vpextrb $11, %xmm4, %ecx
+; AVX2-NEXT:    vpextrb $12, %xmm4, %esi
 ; AVX2-NEXT:    addb %al, %dl
-; AVX2-NEXT:    vpextrb $11, %xmm2, %eax
-; AVX2-NEXT:    vpextrb $12, %xmm2, %ecx
+; AVX2-NEXT:    addb %cl, %sil
+; AVX2-NEXT:    vpextrb $13, %xmm4, %eax
+; AVX2-NEXT:    vmovaps %ymm2, (%rsp)
+; AVX2-NEXT:    addb %sil, %al
+; AVX2-NEXT:    vpextrb $14, %xmm4, %ecx
 ; AVX2-NEXT:    addb %al, %cl
-; AVX2-NEXT:    vpextrb $13, %xmm2, %eax
-; AVX2-NEXT:    addb %cl, %al
-; AVX2-NEXT:    vpextrb $14, %xmm2, %ecx
-; AVX2-NEXT:    addb %al, %cl
-; AVX2-NEXT:    vpextrb $15, %xmm2, %eax
+; AVX2-NEXT:    vpextrb $15, %xmm4, %eax
 ; AVX2-NEXT:    addb %cl, %al
 ; AVX2-NEXT:    addb %dl, %al
 ; AVX2-NEXT:    movzbl %al, %eax
@@ -1424,60 +1425,60 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $6, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $7, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $7, %xmm3, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $7, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $8, %xmm3, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $8, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $9, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $9, %xmm3, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $9, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $10, %xmm3, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $10, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $11, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $11, %xmm3, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $11, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $12, %xmm3, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $12, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $13, %xmm3, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $14, %xmm3, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $14, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $15, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $15, %xmm3, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $15, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vmovd %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
@@ -1485,96 +1486,96 @@ define <32 x i8> @test_compress_v32i8(<32 x i8> %vec, <32 x i1> %mask, <32 x i8>
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vpextrb $0, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $1, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $1, %xmm1, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $1, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $2, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $2, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $3, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $3, %xmm1, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $3, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $4, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $4, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $5, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $5, %xmm1, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $5, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $6, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $6, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $7, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $7, %xmm1, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $7, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $8, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $8, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $9, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $9, %xmm1, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $9, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $10, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $10, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $11, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $11, %xmm1, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $11, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $12, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $12, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $13, %xmm1, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $14, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    # kill: def $edx killed $edx killed $rdx def $rdx
 ; AVX2-NEXT:    andl $31, %edx
 ; AVX2-NEXT:    vpextrb $14, %xmm0, (%rsp,%rdx)
+; AVX2-NEXT:    movl %ecx, %edx
+; AVX2-NEXT:    andl $31, %edx
+; AVX2-NEXT:    vpextrb $15, %xmm0, (%rsp,%rdx)
 ; AVX2-NEXT:    vpextrb $15, %xmm1, %edx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
-; AVX2-NEXT:    andl $31, %ecx
-; AVX2-NEXT:    vpextrb $15, %xmm0, (%rsp,%rcx)
 ; AVX2-NEXT:    cmpq $31, %rdx
 ; AVX2-NEXT:    movl $31, %ecx
 ; AVX2-NEXT:    cmovbq %rdx, %rcx
@@ -1661,15 +1662,16 @@ define <16 x i16> @test_compress_v16i16(<16 x i16> %vec, <16 x i1> %mask, <16 x 
 ; AVX2-NEXT:    addl %ecx, %edx
 ; AVX2-NEXT:    vpextrw $4, %xmm2, %eax
 ; AVX2-NEXT:    vpextrw $5, %xmm2, %ecx
+; AVX2-NEXT:    vpextrw $6, %xmm2, %esi
 ; AVX2-NEXT:    addl %eax, %ecx
-; AVX2-NEXT:    vpextrw $6, %xmm2, %eax
-; AVX2-NEXT:    addl %ecx, %eax
-; AVX2-NEXT:    addl %edx, %eax
-; AVX2-NEXT:    vpextrw $7, %xmm2, %ecx
-; AVX2-NEXT:    addl %eax, %ecx
-; AVX2-NEXT:    andl $15, %ecx
-; AVX2-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX2-NEXT:    vpextrw $1, %xmm1, %eax
+; AVX2-NEXT:    addl %ecx, %esi
+; AVX2-NEXT:    vpextrw $7, %xmm2, %eax
+; AVX2-NEXT:    addl %edx, %esi
+; AVX2-NEXT:    addl %esi, %eax
+; AVX2-NEXT:    vpextrw $1, %xmm1, %ecx
+; AVX2-NEXT:    andl $15, %eax
+; AVX2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX2-NEXT:    movq %rcx, %rax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    vmovd %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
@@ -1722,8 +1724,8 @@ define <16 x i16> @test_compress_v16i16(<16 x i16> %vec, <16 x i1> %mask, <16 x 
 ; AVX2-NEXT:    andl $1, %edi
 ; AVX2-NEXT:    addq %rcx, %rdi
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    cmpq $16, %rdi
 ; AVX2-NEXT:    vpextrw $7, %xmm1, %eax
+; AVX2-NEXT:    cmpq $16, %rdi
 ; AVX2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
 ; AVX2-NEXT:    cmovbw (%rsp,%rsi,2), %ax
 ; AVX2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -1807,19 +1809,10 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    pushq %r12
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    andq $-32, %rsp
-; AVX2-NEXT:    subq $128, %rsp
-; AVX2-NEXT:    # kill: def $r9d killed $r9d def $r9
-; AVX2-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX2-NEXT:    # kill: def $r8d killed $r8d def $r8
-; AVX2-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX2-NEXT:    movl %ecx, %r13d
-; AVX2-NEXT:    movl %edx, %r15d
-; AVX2-NEXT:    movl %esi, %ebx
-; AVX2-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX2-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX2-NEXT:    subq $96, %rsp
 ; AVX2-NEXT:    movl 360(%rbp), %eax
-; AVX2-NEXT:    movl 352(%rbp), %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm4
+; AVX2-NEXT:    movl 352(%rbp), %r10d
+; AVX2-NEXT:    vmovd %r10d, %xmm4
 ; AVX2-NEXT:    vpinsrb $1, %eax, %xmm4, %xmm4
 ; AVX2-NEXT:    movl 368(%rbp), %eax
 ; AVX2-NEXT:    vpinsrb $2, %eax, %xmm4, %xmm4
@@ -1881,176 +1874,183 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    vpinsrb $14, %eax, %xmm5, %xmm5
 ; AVX2-NEXT:    movl 344(%rbp), %eax
 ; AVX2-NEXT:    vpinsrb $15, %eax, %xmm5, %xmm5
-; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm5, %ymm4
 ; AVX2-NEXT:    movl 96(%rbp), %eax
-; AVX2-NEXT:    vmovd %eax, %xmm5
+; AVX2-NEXT:    vmovd %eax, %xmm6
 ; AVX2-NEXT:    movl 104(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $1, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $1, %eax, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 112(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $2, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $2, %eax, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 120(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $3, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $3, %eax, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 128(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $4, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $4, %eax, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 136(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $5, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $5, %eax, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 144(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $6, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $6, %eax, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 152(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $7, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $7, %eax, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 160(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $8, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $8, %eax, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 168(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $9, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $9, %eax, %xmm6, %xmm6
 ; AVX2-NEXT:    movl 176(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $10, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $10, %eax, %xmm6, %xmm6
+; AVX2-NEXT:    movl %ecx, %ebx
 ; AVX2-NEXT:    movl 184(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $11, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $11, %eax, %xmm6, %xmm6
+; AVX2-NEXT:    movl %edx, %r11d
 ; AVX2-NEXT:    movl 192(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $12, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $12, %eax, %xmm6, %xmm6
+; AVX2-NEXT:    movl %esi, %r10d
 ; AVX2-NEXT:    movl 200(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $13, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vpinsrb $13, %eax, %xmm6, %xmm6
+; AVX2-NEXT:    movl %edi, %r15d
 ; AVX2-NEXT:    movl 208(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $14, %eax, %xmm5, %xmm5
-; AVX2-NEXT:    movl 216(%rbp), %eax
-; AVX2-NEXT:    vpinsrb $15, %eax, %xmm5, %xmm5
-; AVX2-NEXT:    vmovd %edi, %xmm6
-; AVX2-NEXT:    vpinsrb $1, %esi, %xmm6, %xmm6
-; AVX2-NEXT:    vpinsrb $2, %edx, %xmm6, %xmm6
-; AVX2-NEXT:    vpinsrb $3, %r13d, %xmm6, %xmm6
-; AVX2-NEXT:    vpinsrb $4, %r8d, %xmm6, %xmm6
-; AVX2-NEXT:    vpinsrb $5, %r9d, %xmm6, %xmm6
-; AVX2-NEXT:    movl 16(%rbp), %esi
-; AVX2-NEXT:    vpinsrb $6, %esi, %xmm6, %xmm6
-; AVX2-NEXT:    movl 24(%rbp), %edi
-; AVX2-NEXT:    vpinsrb $7, %edi, %xmm6, %xmm6
-; AVX2-NEXT:    movl 32(%rbp), %r8d
-; AVX2-NEXT:    vpinsrb $8, %r8d, %xmm6, %xmm6
-; AVX2-NEXT:    movl 40(%rbp), %r9d
-; AVX2-NEXT:    vpinsrb $9, %r9d, %xmm6, %xmm6
-; AVX2-NEXT:    movl 48(%rbp), %r10d
-; AVX2-NEXT:    vpinsrb $10, %r10d, %xmm6, %xmm6
-; AVX2-NEXT:    movl 56(%rbp), %r11d
-; AVX2-NEXT:    vpinsrb $11, %r11d, %xmm6, %xmm6
-; AVX2-NEXT:    movl 64(%rbp), %r14d
-; AVX2-NEXT:    vpinsrb $12, %r14d, %xmm6, %xmm6
-; AVX2-NEXT:    movl 72(%rbp), %r12d
-; AVX2-NEXT:    vpinsrb $13, %r12d, %xmm6, %xmm6
-; AVX2-NEXT:    movl 80(%rbp), %eax
 ; AVX2-NEXT:    vpinsrb $14, %eax, %xmm6, %xmm6
-; AVX2-NEXT:    movl 88(%rbp), %eax
+; AVX2-NEXT:    # kill: def $r9d killed $r9d def $r9
+; AVX2-NEXT:    movl 216(%rbp), %eax
 ; AVX2-NEXT:    vpinsrb $15, %eax, %xmm6, %xmm6
-; AVX2-NEXT:    vinserti128 $1, %xmm5, %ymm6, %ymm5
+; AVX2-NEXT:    # kill: def $r8d killed $r8d def $r8
+; AVX2-NEXT:    vmovd %edi, %xmm7
+; AVX2-NEXT:    vpinsrb $1, %esi, %xmm7, %xmm7
+; AVX2-NEXT:    vpinsrb $2, %edx, %xmm7, %xmm7
+; AVX2-NEXT:    vpinsrb $3, %ecx, %xmm7, %xmm7
+; AVX2-NEXT:    vpinsrb $4, %r8d, %xmm7, %xmm7
+; AVX2-NEXT:    vpinsrb $5, %r9d, %xmm7, %xmm7
+; AVX2-NEXT:    movl 16(%rbp), %edi
+; AVX2-NEXT:    vpinsrb $6, %edi, %xmm7, %xmm7
+; AVX2-NEXT:    movl 24(%rbp), %r14d
+; AVX2-NEXT:    vpinsrb $7, %r14d, %xmm7, %xmm7
+; AVX2-NEXT:    movl 32(%rbp), %r12d
+; AVX2-NEXT:    vpinsrb $8, %r12d, %xmm7, %xmm7
+; AVX2-NEXT:    movl 40(%rbp), %r13d
+; AVX2-NEXT:    vpinsrb $9, %r13d, %xmm7, %xmm7
+; AVX2-NEXT:    movl 48(%rbp), %eax
+; AVX2-NEXT:    vpinsrb $10, %eax, %xmm7, %xmm7
+; AVX2-NEXT:    movl 56(%rbp), %eax
+; AVX2-NEXT:    vpinsrb $11, %eax, %xmm7, %xmm7
+; AVX2-NEXT:    movl 64(%rbp), %eax
+; AVX2-NEXT:    vpinsrb $12, %eax, %xmm7, %xmm7
+; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm5, %ymm4
+; AVX2-NEXT:    movl 72(%rbp), %eax
+; AVX2-NEXT:    vpinsrb $13, %eax, %xmm7, %xmm5
+; AVX2-NEXT:    movl 80(%rbp), %eax
+; AVX2-NEXT:    vpinsrb $14, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    movl 88(%rbp), %eax
+; AVX2-NEXT:    vpinsrb $15, %eax, %xmm5, %xmm5
+; AVX2-NEXT:    vinserti128 $1, %xmm6, %ymm5, %ymm5
 ; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm6 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX2-NEXT:    vpand %ymm6, %ymm5, %ymm5
 ; AVX2-NEXT:    vpand %ymm6, %ymm4, %ymm4
 ; AVX2-NEXT:    vpaddb %ymm4, %ymm5, %ymm4
 ; AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm5
 ; AVX2-NEXT:    vpaddb %xmm5, %xmm4, %xmm4
-; AVX2-NEXT:    vpextrb $1, %xmm4, %eax
+; AVX2-NEXT:    vpextrb $1, %xmm4, %esi
 ; AVX2-NEXT:    vmovd %xmm4, %ecx
-; AVX2-NEXT:    addb %al, %cl
 ; AVX2-NEXT:    vpextrb $2, %xmm4, %edx
 ; AVX2-NEXT:    vpextrb $3, %xmm4, %eax
+; AVX2-NEXT:    addb %sil, %cl
 ; AVX2-NEXT:    addb %dl, %al
+; AVX2-NEXT:    vpextrb $4, %xmm4, %edx
 ; AVX2-NEXT:    addb %cl, %al
-; AVX2-NEXT:    vpextrb $4, %xmm4, %ecx
-; AVX2-NEXT:    vpextrb $5, %xmm4, %edx
-; AVX2-NEXT:    addb %cl, %dl
-; AVX2-NEXT:    vpextrb $6, %xmm4, %ecx
+; AVX2-NEXT:    vpextrb $5, %xmm4, %ecx
 ; AVX2-NEXT:    addb %dl, %cl
-; AVX2-NEXT:    addb %al, %cl
-; AVX2-NEXT:    vpextrb $7, %xmm4, %eax
-; AVX2-NEXT:    vpextrb $8, %xmm4, %edx
-; AVX2-NEXT:    addb %al, %dl
-; AVX2-NEXT:    vpextrb $9, %xmm4, %eax
-; AVX2-NEXT:    addb %dl, %al
-; AVX2-NEXT:    vpextrb $10, %xmm4, %edx
-; AVX2-NEXT:    addb %al, %dl
+; AVX2-NEXT:    vpextrb $6, %xmm4, %edx
 ; AVX2-NEXT:    addb %cl, %dl
+; AVX2-NEXT:    addb %al, %dl
+; AVX2-NEXT:    vpextrb $7, %xmm4, %eax
+; AVX2-NEXT:    vpextrb $8, %xmm4, %ecx
+; AVX2-NEXT:    addb %al, %cl
+; AVX2-NEXT:    vpextrb $9, %xmm4, %eax
+; AVX2-NEXT:    addb %cl, %al
+; AVX2-NEXT:    vpextrb $10, %xmm4, %ecx
+; AVX2-NEXT:    addb %al, %cl
+; AVX2-NEXT:    addb %dl, %cl
 ; AVX2-NEXT:    vpextrb $11, %xmm4, %eax
-; AVX2-NEXT:    vpextrb $12, %xmm4, %ecx
-; AVX2-NEXT:    addb %al, %cl
+; AVX2-NEXT:    vpextrb $12, %xmm4, %edx
+; AVX2-NEXT:    addb %al, %dl
 ; AVX2-NEXT:    vpextrb $13, %xmm4, %eax
-; AVX2-NEXT:    addb %cl, %al
-; AVX2-NEXT:    vpextrb $14, %xmm4, %ecx
-; AVX2-NEXT:    addb %al, %cl
-; AVX2-NEXT:    vpextrb $15, %xmm4, %eax
-; AVX2-NEXT:    addb %cl, %al
 ; AVX2-NEXT:    addb %dl, %al
+; AVX2-NEXT:    vpextrb $14, %xmm4, %edx
+; AVX2-NEXT:    vpextrb $15, %xmm4, %esi
+; AVX2-NEXT:    addb %al, %dl
+; AVX2-NEXT:    addb %dl, %sil
+; AVX2-NEXT:    addb %cl, %sil
 ; AVX2-NEXT:    vmovaps %ymm3, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovaps %ymm2, (%rsp)
-; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    movzbl %sil, %eax
 ; AVX2-NEXT:    andl $63, %eax
-; AVX2-NEXT:    movzbl (%rsp,%rax), %eax
-; AVX2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX2-NEXT:    movzbl (%rsp,%rax), %esi
 ; AVX2-NEXT:    vpextrb $0, %xmm0, (%rsp)
-; AVX2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    vpextrb $1, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    andl $1, %ebx
-; AVX2-NEXT:    addq %rax, %rbx
-; AVX2-NEXT:    vpextrb $2, %xmm0, (%rsp,%rbx)
 ; AVX2-NEXT:    andl $1, %r15d
-; AVX2-NEXT:    addq %rbx, %r15
-; AVX2-NEXT:    vpextrb $3, %xmm0, (%rsp,%r15)
-; AVX2-NEXT:    andl $1, %r13d
-; AVX2-NEXT:    addq %r15, %r13
-; AVX2-NEXT:    vpextrb $4, %xmm0, (%rsp,%r13)
-; AVX2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addq %r13, %rcx
-; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    vpextrb $1, %xmm0, (%rsp,%r15)
+; AVX2-NEXT:    andl $1, %r10d
+; AVX2-NEXT:    addq %r15, %r10
+; AVX2-NEXT:    vpextrb $2, %xmm0, (%rsp,%r10)
+; AVX2-NEXT:    andl $1, %r11d
+; AVX2-NEXT:    addq %r10, %r11
+; AVX2-NEXT:    vpextrb $3, %xmm0, (%rsp,%r11)
+; AVX2-NEXT:    andl $1, %ebx
+; AVX2-NEXT:    addq %r11, %rbx
+; AVX2-NEXT:    vpextrb $4, %xmm0, (%rsp,%rbx)
+; AVX2-NEXT:    andl $1, %r8d
+; AVX2-NEXT:    addq %rbx, %r8
+; AVX2-NEXT:    movl %r8d, %eax
 ; AVX2-NEXT:    vpextrb $5, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    addq %rax, %rsi
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    andl $1, %r9d
+; AVX2-NEXT:    addq %r8, %r9
+; AVX2-NEXT:    movl %r9d, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $6, %xmm0, (%rsp,%rax)
 ; AVX2-NEXT:    andl $1, %edi
-; AVX2-NEXT:    addq %rsi, %rdi
-; AVX2-NEXT:    # kill: def $esi killed $esi killed $rsi def $rsi
-; AVX2-NEXT:    andl $63, %esi
-; AVX2-NEXT:    vpextrb $7, %xmm0, (%rsp,%rsi)
-; AVX2-NEXT:    andl $1, %r8d
-; AVX2-NEXT:    addq %rdi, %r8
+; AVX2-NEXT:    addq %r9, %rdi
+; AVX2-NEXT:    andl $1, %r14d
+; AVX2-NEXT:    addq %rdi, %r14
 ; AVX2-NEXT:    # kill: def $edi killed $edi killed $rdi def $rdi
 ; AVX2-NEXT:    andl $63, %edi
-; AVX2-NEXT:    vpextrb $8, %xmm0, (%rsp,%rdi)
-; AVX2-NEXT:    andl $1, %r9d
-; AVX2-NEXT:    addq %r8, %r9
-; AVX2-NEXT:    # kill: def $r8d killed $r8d killed $r8 def $r8
-; AVX2-NEXT:    andl $63, %r8d
-; AVX2-NEXT:    vpextrb $9, %xmm0, (%rsp,%r8)
-; AVX2-NEXT:    andl $1, %r10d
-; AVX2-NEXT:    addq %r9, %r10
-; AVX2-NEXT:    # kill: def $r9d killed $r9d killed $r9 def $r9
-; AVX2-NEXT:    andl $63, %r9d
-; AVX2-NEXT:    vpextrb $10, %xmm0, (%rsp,%r9)
-; AVX2-NEXT:    andl $1, %r11d
-; AVX2-NEXT:    addq %r10, %r11
-; AVX2-NEXT:    # kill: def $r10d killed $r10d killed $r10 def $r10
-; AVX2-NEXT:    andl $63, %r10d
-; AVX2-NEXT:    vpextrb $11, %xmm0, (%rsp,%r10)
-; AVX2-NEXT:    andl $1, %r14d
-; AVX2-NEXT:    addq %r11, %r14
-; AVX2-NEXT:    # kill: def $r11d killed $r11d killed $r11 def $r11
-; AVX2-NEXT:    andl $63, %r11d
-; AVX2-NEXT:    vpextrb $12, %xmm0, (%rsp,%r11)
+; AVX2-NEXT:    vpextrb $7, %xmm0, (%rsp,%rdi)
 ; AVX2-NEXT:    andl $1, %r12d
 ; AVX2-NEXT:    addq %r14, %r12
 ; AVX2-NEXT:    # kill: def $r14d killed $r14d killed $r14 def $r14
 ; AVX2-NEXT:    andl $63, %r14d
-; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%r14)
+; AVX2-NEXT:    vpextrb $8, %xmm0, (%rsp,%r14)
+; AVX2-NEXT:    movl %r12d, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $9, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    andl $1, %r13d
+; AVX2-NEXT:    addq %r12, %r13
+; AVX2-NEXT:    movl %r13d, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $10, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 48(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %r13, %rax
+; AVX2-NEXT:    movl 56(%rbp), %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $11, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 64(%rbp), %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addq %rdx, %rcx
+; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $12, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 72(%rbp), %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addq %rdx, %rcx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $14, %xmm0, (%rsp,%rax)
 ; AVX2-NEXT:    movl 80(%rbp), %eax
 ; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    addq %r12, %rax
-; AVX2-NEXT:    # kill: def $r12d killed $r12d killed $r12 def $r12
-; AVX2-NEXT:    andl $63, %r12d
-; AVX2-NEXT:    vpextrb $14, %xmm0, (%rsp,%r12)
+; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    movl 88(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
@@ -2070,22 +2070,23 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $1, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 112(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $2, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 120(%rbp), %ecx
+; AVX2-NEXT:    movl 112(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $3, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 120(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    movl 128(%rbp), %edx
 ; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $4, %xmm0, (%rsp,%rax)
 ; AVX2-NEXT:    movl 136(%rbp), %ecx
@@ -2094,22 +2095,23 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $5, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 144(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $6, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 152(%rbp), %ecx
+; AVX2-NEXT:    movl 144(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $7, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 152(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    movl 160(%rbp), %edx
 ; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $8, %xmm0, (%rsp,%rax)
 ; AVX2-NEXT:    movl 168(%rbp), %ecx
@@ -2118,22 +2120,23 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $9, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 176(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $10, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 184(%rbp), %ecx
+; AVX2-NEXT:    movl 176(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $11, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 184(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    movl 192(%rbp), %edx
 ; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $12, %xmm0, (%rsp,%rax)
 ; AVX2-NEXT:    movl 200(%rbp), %ecx
@@ -2142,22 +2145,23 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 208(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $14, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 216(%rbp), %ecx
+; AVX2-NEXT:    movl 208(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $15, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 216(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    movl 224(%rbp), %edx
 ; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $0, %xmm1, (%rsp,%rax)
 ; AVX2-NEXT:    movl 232(%rbp), %ecx
@@ -2166,22 +2170,23 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $1, %xmm1, (%rsp,%rax)
-; AVX2-NEXT:    movl 240(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $2, %xmm1, (%rsp,%rax)
-; AVX2-NEXT:    movl 248(%rbp), %ecx
+; AVX2-NEXT:    movl 240(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $3, %xmm1, (%rsp,%rax)
+; AVX2-NEXT:    movl 248(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    movl 256(%rbp), %edx
 ; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $4, %xmm1, (%rsp,%rax)
 ; AVX2-NEXT:    movl 264(%rbp), %ecx
@@ -2190,22 +2195,23 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $5, %xmm1, (%rsp,%rax)
-; AVX2-NEXT:    movl 272(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $6, %xmm1, (%rsp,%rax)
-; AVX2-NEXT:    movl 280(%rbp), %ecx
+; AVX2-NEXT:    movl 272(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $7, %xmm1, (%rsp,%rax)
+; AVX2-NEXT:    movl 280(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    movl 288(%rbp), %edx
 ; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $8, %xmm1, (%rsp,%rax)
 ; AVX2-NEXT:    movl 296(%rbp), %ecx
@@ -2214,22 +2220,23 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $9, %xmm1, (%rsp,%rax)
-; AVX2-NEXT:    movl 304(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $10, %xmm1, (%rsp,%rax)
-; AVX2-NEXT:    movl 312(%rbp), %ecx
+; AVX2-NEXT:    movl 304(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
+; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $11, %xmm1, (%rsp,%rax)
+; AVX2-NEXT:    movl 312(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    movl 320(%rbp), %edx
 ; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $12, %xmm1, (%rsp,%rax)
 ; AVX2-NEXT:    movl 328(%rbp), %ecx
@@ -2238,118 +2245,124 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $13, %xmm1, (%rsp,%rax)
-; AVX2-NEXT:    movl 336(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $14, %xmm1, (%rsp,%rax)
+; AVX2-NEXT:    movl 336(%rbp), %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addq %rdx, %rcx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $15, %xmm1, (%rsp,%rax)
 ; AVX2-NEXT:    movl 344(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
-; AVX2-NEXT:    andl $63, %eax
-; AVX2-NEXT:    vpextrb $15, %xmm1, (%rsp,%rax)
-; AVX2-NEXT:    movl 352(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm0
 ; AVX2-NEXT:    vpextrb $0, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 360(%rbp), %ecx
+; AVX2-NEXT:    movl 352(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    movl 360(%rbp), %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $1, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 368(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
-; AVX2-NEXT:    vpextrb $1, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 368(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
-; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $2, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $3, %xmm0, (%rsp,%rax)
 ; AVX2-NEXT:    movl 376(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
-; AVX2-NEXT:    andl $63, %eax
-; AVX2-NEXT:    vpextrb $3, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 384(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $4, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 392(%rbp), %ecx
+; AVX2-NEXT:    movl 384(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    movl 392(%rbp), %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $5, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 400(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
-; AVX2-NEXT:    vpextrb $5, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 400(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
-; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $6, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $7, %xmm0, (%rsp,%rax)
 ; AVX2-NEXT:    movl 408(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
-; AVX2-NEXT:    andl $63, %eax
-; AVX2-NEXT:    vpextrb $7, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 416(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $8, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 424(%rbp), %ecx
+; AVX2-NEXT:    movl 416(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    movl 424(%rbp), %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $9, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 432(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
-; AVX2-NEXT:    vpextrb $9, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 432(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
-; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $10, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $11, %xmm0, (%rsp,%rax)
 ; AVX2-NEXT:    movl 440(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
-; AVX2-NEXT:    andl $63, %eax
-; AVX2-NEXT:    vpextrb $11, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 448(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
 ; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $12, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 456(%rbp), %ecx
+; AVX2-NEXT:    movl 448(%rbp), %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    movl 456(%rbp), %edx
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    addq %rax, %rdx
+; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl 464(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
 ; AVX2-NEXT:    movl %edx, %eax
 ; AVX2-NEXT:    andl $63, %eax
-; AVX2-NEXT:    vpextrb $13, %xmm0, (%rsp,%rax)
-; AVX2-NEXT:    movl 464(%rbp), %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addq %rcx, %rdx
-; AVX2-NEXT:    movl %ecx, %eax
-; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vpextrb $14, %xmm0, (%rsp,%rax)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    movq %rcx, %rdx
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vpextrb $15, %xmm0, (%rsp,%rax)
 ; AVX2-NEXT:    movl 472(%rbp), %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    movl %edx, %eax
-; AVX2-NEXT:    andl $63, %eax
-; AVX2-NEXT:    vpextrb $15, %xmm0, (%rsp,%rax)
 ; AVX2-NEXT:    vpextrb $15, %xmm0, %eax
 ; AVX2-NEXT:    cmpq $64, %rcx
-; AVX2-NEXT:    cmovbl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Folded Reload
+; AVX2-NEXT:    cmovbl %esi, %eax
 ; AVX2-NEXT:    cmpq $63, %rcx
 ; AVX2-NEXT:    movq %rcx, %rdx
 ; AVX2-NEXT:    movl $63, %ecx
@@ -2916,42 +2929,42 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512F-NEXT:    kxorw %k1, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $1, %k0, %k1
 ; AVX512F-NEXT:    kxorw %k1, %k0, %k0
+; AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; AVX512F-NEXT:    vpcompressd %zmm2, %zmm2 {%k3} {z}
+; AVX512F-NEXT:    vpmovdb %zmm2, {{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    kmovw %k0, %edx
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm3 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
-; AVX512F-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
-; AVX512F-NEXT:    vpcompressd %zmm3, %zmm3 {%k1} {z}
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm4 {%k1} {z} = -1
-; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512F-NEXT:    andl $31, %eax
+; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
+; AVX512F-NEXT:    vpcompressd %zmm2, %zmm2 {%k2} {z}
+; AVX512F-NEXT:    vpmovdb %zmm2, 64(%rsp,%rax)
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; AVX512F-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; AVX512F-NEXT:    vpcompressd %zmm2, %zmm2 {%k1} {z}
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm5 {%k1} {z} = -1
-; AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm6 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; AVX512F-NEXT:    vpcompressd %zmm6, %zmm6 {%k3} {z}
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm7 {%k3} {z} = -1
+; AVX512F-NEXT:    vpmovdb %zmm2, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
 ; AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; AVX512F-NEXT:    vpcompressd %zmm0, %zmm0 {%k2} {z}
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm8 {%k2} {z} = -1
-; AVX512F-NEXT:    vpmovdb %zmm6, {{[0-9]+}}(%rsp)
-; AVX512F-NEXT:    andl $31, %eax
-; AVX512F-NEXT:    vpmovdb %zmm0, 64(%rsp,%rax)
-; AVX512F-NEXT:    vpmovdb %zmm3, {{[0-9]+}}(%rsp)
+; AVX512F-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
+; AVX512F-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 {%k1} {z} = -1
 ; AVX512F-NEXT:    andl $31, %ecx
-; AVX512F-NEXT:    vpmovdb %zmm2, 96(%rsp,%rcx)
+; AVX512F-NEXT:    vpmovdb %zmm0, 96(%rsp,%rcx)
 ; AVX512F-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm0
 ; AVX512F-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    andl $63, %edx
 ; AVX512F-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm0
 ; AVX512F-NEXT:    vmovaps %ymm0, 128(%rsp,%rdx)
-; AVX512F-NEXT:    vpmovdb %zmm4, %xmm0
-; AVX512F-NEXT:    vpmovdb %zmm5, %xmm2
+; AVX512F-NEXT:    vpmovdb %zmm2, %xmm0
+; AVX512F-NEXT:    vpmovdb %zmm3, %xmm2
 ; AVX512F-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
 ; AVX512F-NEXT:    vpblendvb %ymm0, {{[0-9]+}}(%rsp), %ymm2, %ymm0
-; AVX512F-NEXT:    vpmovdb %zmm7, %xmm2
-; AVX512F-NEXT:    vpmovdb %zmm8, %xmm3
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k3} {z} = -1
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 {%k2} {z} = -1
+; AVX512F-NEXT:    vpmovdb %zmm2, %xmm2
+; AVX512F-NEXT:    vpmovdb %zmm3, %xmm3
 ; AVX512F-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpblendvb %ymm2, {{[0-9]+}}(%rsp), %ymm1, %ymm1
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
@@ -2995,17 +3008,17 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX2-NEXT:    vpaddw %xmm5, %xmm4, %xmm4
 ; AVX2-NEXT:    vpextrw $1, %xmm4, %eax
 ; AVX2-NEXT:    vmovd %xmm4, %ecx
+; AVX2-NEXT:    vpextrw $2, %xmm4, %edx
+; AVX2-NEXT:    vpextrw $3, %xmm4, %esi
 ; AVX2-NEXT:    addl %eax, %ecx
-; AVX2-NEXT:    vpextrw $2, %xmm4, %eax
-; AVX2-NEXT:    vpextrw $3, %xmm4, %edx
-; AVX2-NEXT:    addl %eax, %edx
-; AVX2-NEXT:    addl %ecx, %edx
+; AVX2-NEXT:    addl %edx, %esi
 ; AVX2-NEXT:    vpextrw $4, %xmm4, %eax
+; AVX2-NEXT:    addl %ecx, %esi
 ; AVX2-NEXT:    vpextrw $5, %xmm4, %ecx
 ; AVX2-NEXT:    addl %eax, %ecx
 ; AVX2-NEXT:    vpextrw $6, %xmm4, %eax
 ; AVX2-NEXT:    addl %ecx, %eax
-; AVX2-NEXT:    addl %edx, %eax
+; AVX2-NEXT:    addl %esi, %eax
 ; AVX2-NEXT:    vpextrw $7, %xmm4, %ecx
 ; AVX2-NEXT:    addl %eax, %ecx
 ; AVX2-NEXT:    andl $31, %ecx
@@ -3121,13 +3134,13 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX2-NEXT:    vpextrb $14, %xmm3, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rdx, %rcx
-; AVX2-NEXT:    vpextrb $15, %xmm3, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    addq %rcx, %rax
-; AVX2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX2-NEXT:    vpextrb $15, %xmm3, %r13d
+; AVX2-NEXT:    andl $1, %r13d
+; AVX2-NEXT:    addq %rcx, %r13
+; AVX2-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    cmpq $32, %rax
 ; AVX2-NEXT:    vpextrw $7, %xmm2, %eax
+; AVX2-NEXT:    cmpq $32, %r13
 ; AVX2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
 ; AVX2-NEXT:    cmovbw (%rsp,%r13,2), %ax
 ; AVX2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -3234,17 +3247,16 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX512F-NEXT:    andq $-64, %rsp
 ; AVX512F-NEXT:    subq $128, %rsp
 ; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm5
-; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm4 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero,xmm5[8],zero,xmm5[9],zero,xmm5[10],zero,xmm5[11],zero,xmm5[12],zero,xmm5[13],zero,xmm5[14],zero,xmm5[15],zero
-; AVX512F-NEXT:    vpmovsxbd %xmm5, %zmm5
+; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm4
+; AVX512F-NEXT:    vpmovsxbd %xmm4, %zmm5
 ; AVX512F-NEXT:    vpslld $31, %zmm5, %zmm5
-; AVX512F-NEXT:    vptestmd %zmm5, %zmm5, %k1
 ; AVX512F-NEXT:    vpmovsxbd %xmm1, %zmm1
 ; AVX512F-NEXT:    vpslld $31, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmd %zmm1, %zmm1, %k2
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512F-NEXT:    vpcompressd %zmm1, %zmm1 {%k2} {z}
 ; AVX512F-NEXT:    vpmovdw %zmm1, (%rsp)
+; AVX512F-NEXT:    vptestmd %zmm5, %zmm5, %k1
 ; AVX512F-NEXT:    kshiftrw $8, %k2, %k0
 ; AVX512F-NEXT:    kxorw %k0, %k2, %k0
 ; AVX512F-NEXT:    kshiftrw $4, %k0, %k2
@@ -3259,10 +3271,11 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512F-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdw %zmm0, (%rsp,%rax,2)
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm0
-; AVX512F-NEXT:    vpsllw $15, %ymm4, %ymm1
-; AVX512F-NEXT:    vpsraw $15, %ymm1, %ymm1
-; AVX512F-NEXT:    vpblendvb %ymm1, {{[0-9]+}}(%rsp), %ymm0, %ymm0
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero,xmm4[8],zero,xmm4[9],zero,xmm4[10],zero,xmm4[11],zero,xmm4[12],zero,xmm4[13],zero,xmm4[14],zero,xmm4[15],zero
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm1
+; AVX512F-NEXT:    vpsllw $15, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsraw $15, %ymm0, %ymm0
+; AVX512F-NEXT:    vpblendvb %ymm0, {{[0-9]+}}(%rsp), %ymm1, %ymm0
 ; AVX512F-NEXT:    vpsllw $15, %ymm3, %ymm1
 ; AVX512F-NEXT:    vpsraw $15, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpblendvb %ymm1, (%rsp), %ymm2, %ymm1
@@ -3289,438 +3302,438 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $288, %rsp # imm = 0x120
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    # kill: def $r9d killed $r9d def $r9
-; AVX2-NEXT:    # kill: def $r8d killed $r8d def $r8
 ; AVX2-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX2-NEXT:    movq %rdi, %rax
 ; AVX2-NEXT:    vmovss %xmm0, (%rsp)
 ; AVX2-NEXT:    andl $1, %esi
 ; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rsi,4)
+; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
 ; AVX2-NEXT:    andl $1, %edx
 ; AVX2-NEXT:    addl %esi, %edx
 ; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rdx,4)
+; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addl %edx, %ecx
 ; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rcx,4)
+; AVX2-NEXT:    # kill: def $r9d killed $r9d def $r9
+; AVX2-NEXT:    # kill: def $r8d killed $r8d def $r8
 ; AVX2-NEXT:    andl $1, %r8d
 ; AVX2-NEXT:    addl %ecx, %r8d
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX2-NEXT:    vmovss %xmm0, (%rsp,%r8,4)
 ; AVX2-NEXT:    andl $1, %r9d
 ; AVX2-NEXT:    addl %r8d, %r9d
-; AVX2-NEXT:    movzbl 16(%rbp), %ecx
 ; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%r9,4)
+; AVX2-NEXT:    movzbl 16(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %r9d, %eax
+; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 24(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %r9d, %ecx
-; AVX2-NEXT:    movzbl 24(%rbp), %edx
-; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    movzbl 32(%rbp), %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 32(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 40(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 40(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
-; AVX2-NEXT:    vmovss %xmm1, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 48(%rbp), %ecx
-; AVX2-NEXT:    movzbl %cl, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm1, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 56(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vmovss %xmm1, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm1, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 48(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm1, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 64(%rbp), %ecx
+; AVX2-NEXT:    movzbl 56(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm1, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 72(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm1, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 64(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 72(%rbp), %ecx
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 80(%rbp), %ecx
-; AVX2-NEXT:    movzbl %cl, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 88(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 80(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 96(%rbp), %ecx
+; AVX2-NEXT:    movzbl 88(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 104(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
-; AVX2-NEXT:    vmovss %xmm2, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 112(%rbp), %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 96(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 104(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm2, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 120(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vmovss %xmm2, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm2, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 112(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm2, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 128(%rbp), %ecx
+; AVX2-NEXT:    movzbl 120(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm2, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 136(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm2, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 128(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 136(%rbp), %ecx
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm0
-; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 144(%rbp), %ecx
-; AVX2-NEXT:    movzbl %cl, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 152(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 144(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 160(%rbp), %ecx
+; AVX2-NEXT:    movzbl 152(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 168(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
-; AVX2-NEXT:    vmovss %xmm3, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 176(%rbp), %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 160(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 168(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm3, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 184(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vmovss %xmm3, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm3, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 176(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm3, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 192(%rbp), %ecx
+; AVX2-NEXT:    movzbl 184(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm3, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 200(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm3, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 192(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 200(%rbp), %ecx
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm0
-; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 208(%rbp), %ecx
-; AVX2-NEXT:    movzbl %cl, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 216(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 208(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 224(%rbp), %ecx
+; AVX2-NEXT:    movzbl 216(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 232(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
-; AVX2-NEXT:    vmovss %xmm4, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 240(%rbp), %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 224(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 232(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm4, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 248(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vmovss %xmm4, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm4, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 240(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm4, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 256(%rbp), %ecx
+; AVX2-NEXT:    movzbl 248(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm4, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 264(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm4, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 256(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 264(%rbp), %ecx
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vextractf128 $1, %ymm4, %xmm0
-; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 272(%rbp), %ecx
-; AVX2-NEXT:    movzbl %cl, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 280(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 272(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 288(%rbp), %ecx
+; AVX2-NEXT:    movzbl 280(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 296(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
-; AVX2-NEXT:    vmovss %xmm5, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 304(%rbp), %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 288(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 296(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm5, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 312(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vmovss %xmm5, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm5, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 304(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm5, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 320(%rbp), %ecx
+; AVX2-NEXT:    movzbl 312(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm5, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 328(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm5, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 320(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 328(%rbp), %ecx
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vextractf128 $1, %ymm5, %xmm0
-; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 336(%rbp), %ecx
-; AVX2-NEXT:    movzbl %cl, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 344(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 336(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 352(%rbp), %ecx
+; AVX2-NEXT:    movzbl 344(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 360(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
-; AVX2-NEXT:    vmovss %xmm6, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 368(%rbp), %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 352(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 360(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm6, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 376(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vmovss %xmm6, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm6, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 368(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm6, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 384(%rbp), %ecx
+; AVX2-NEXT:    movzbl 376(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm6, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 392(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm6, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 384(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 392(%rbp), %ecx
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vextractf128 $1, %ymm6, %xmm0
-; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 400(%rbp), %ecx
-; AVX2-NEXT:    movzbl %cl, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 408(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 400(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 416(%rbp), %ecx
+; AVX2-NEXT:    movzbl 408(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 424(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
-; AVX2-NEXT:    vmovss %xmm7, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 432(%rbp), %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 416(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 424(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm7, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 440(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vmovss %xmm7, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm7, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 432(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm7, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 448(%rbp), %ecx
+; AVX2-NEXT:    movzbl 440(%rbp), %ecx
 ; AVX2-NEXT:    movzbl %cl, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm7, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 456(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    andl $63, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $3, %xmm7, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 448(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movzbl 456(%rbp), %ecx
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    # kill: def $eax killed $eax def $rax
+; AVX2-NEXT:    andl $63, %eax
 ; AVX2-NEXT:    vextractf128 $1, %ymm7, %xmm0
-; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    movzbl 464(%rbp), %ecx
-; AVX2-NEXT:    movzbl %cl, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    addl %edx, %ecx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rdx,4)
-; AVX2-NEXT:    movzbl 472(%rbp), %edx
-; AVX2-NEXT:    movzbl %dl, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    addl %ecx, %edx
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; AVX2-NEXT:    vmovss %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movl %ecx, %eax
+; AVX2-NEXT:    andl $63, %eax
+; AVX2-NEXT:    vextractps $1, %xmm0, (%rsp,%rax,4)
+; AVX2-NEXT:    movzbl 464(%rbp), %eax
+; AVX2-NEXT:    movzbl %al, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    movl %eax, %ecx
 ; AVX2-NEXT:    andl $63, %ecx
 ; AVX2-NEXT:    vextractps $2, %xmm0, (%rsp,%rcx,4)
-; AVX2-NEXT:    andl $63, %edx
-; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rdx,4)
+; AVX2-NEXT:    movzbl 472(%rbp), %ecx
+; AVX2-NEXT:    movzbl %cl, %ecx
+; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    addl %eax, %ecx
+; AVX2-NEXT:    andl $63, %ecx
+; AVX2-NEXT:    vextractps $3, %xmm0, (%rsp,%rcx,4)
+; AVX2-NEXT:    movq %rdi, %rax
 ; AVX2-NEXT:    vmovaps (%rsp), %ymm0
 ; AVX2-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm1
 ; AVX2-NEXT:    vmovaps {{[0-9]+}}(%rsp), %ymm2
@@ -4392,20 +4405,10 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 }
 
 define <4 x i32> @test_compress_all_const() nounwind {
-; AVX2-LABEL: test_compress_all_const:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = [5,9,0,0]
-; AVX2-NEXT:    retq
-;
-; AVX512F-LABEL: test_compress_all_const:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [5,9,0,0]
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: test_compress_all_const:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [5,9,0,0]
-; AVX512VL-NEXT:    retq
+; CHECK-LABEL: test_compress_all_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = [5,9,0,0]
+; CHECK-NEXT:    retq
     %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> <i32 3, i32 5, i32 7, i32 9>,
                                                 <4 x i1>   <i1 0,  i1 1,  i1 0,  i1 1>,
                                                 <4 x i32> undef)
@@ -4510,68 +4513,68 @@ define <4 x i8> @test_compress_small(<4 x i8> %vec, <4 x i1> %mask) nounwind {
 ; AVX2-NEXT:    vpextrb $4, %xmm1, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    andl $15, %ecx
+; AVX2-NEXT:    vpextrb $5, %xmm0, -24(%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $5, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
-; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $5, %xmm0, -24(%rsp,%rax)
 ; AVX2-NEXT:    vpextrb $6, %xmm1, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX2-NEXT:    andl $15, %ecx
 ; AVX2-NEXT:    vpextrb $6, %xmm0, -24(%rsp,%rcx)
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    andl $15, %ecx
+; AVX2-NEXT:    vpextrb $7, %xmm0, -24(%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $7, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
-; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $7, %xmm0, -24(%rsp,%rax)
 ; AVX2-NEXT:    vpextrb $8, %xmm1, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX2-NEXT:    andl $15, %ecx
 ; AVX2-NEXT:    vpextrb $8, %xmm0, -24(%rsp,%rcx)
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    andl $15, %ecx
+; AVX2-NEXT:    vpextrb $9, %xmm0, -24(%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $9, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
-; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $9, %xmm0, -24(%rsp,%rax)
 ; AVX2-NEXT:    vpextrb $10, %xmm1, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX2-NEXT:    andl $15, %ecx
 ; AVX2-NEXT:    vpextrb $10, %xmm0, -24(%rsp,%rcx)
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    andl $15, %ecx
+; AVX2-NEXT:    vpextrb $11, %xmm0, -24(%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $11, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
-; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $11, %xmm0, -24(%rsp,%rax)
 ; AVX2-NEXT:    vpextrb $12, %xmm1, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
 ; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX2-NEXT:    andl $15, %ecx
 ; AVX2-NEXT:    vpextrb $12, %xmm0, -24(%rsp,%rcx)
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    andl $15, %ecx
+; AVX2-NEXT:    vpextrb $13, %xmm0, -24(%rsp,%rcx)
 ; AVX2-NEXT:    vpextrb $13, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
+; AVX2-NEXT:    vpextrb $14, %xmm1, %edx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
-; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $13, %xmm0, -24(%rsp,%rax)
-; AVX2-NEXT:    vpextrb $14, %xmm1, %eax
-; AVX2-NEXT:    andl $1, %eax
-; AVX2-NEXT:    addl %ecx, %eax
+; AVX2-NEXT:    andl $1, %edx
+; AVX2-NEXT:    addl %ecx, %edx
 ; AVX2-NEXT:    # kill: def $ecx killed $ecx killed $rcx def $rcx
 ; AVX2-NEXT:    andl $15, %ecx
 ; AVX2-NEXT:    vpextrb $14, %xmm0, -24(%rsp,%rcx)
-; AVX2-NEXT:    andl $15, %eax
-; AVX2-NEXT:    vpextrb $15, %xmm0, -24(%rsp,%rax)
+; AVX2-NEXT:    andl $15, %edx
+; AVX2-NEXT:    vpextrb $15, %xmm0, -24(%rsp,%rdx)
 ; AVX2-NEXT:    vmovaps -{{[0-9]+}}(%rsp), %xmm0
 ; AVX2-NEXT:    retq
 ;
@@ -4728,9 +4731,9 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; AVX2-NEXT:    shll $2, %eax
 ; AVX2-NEXT:    movl %edx, -24(%rsp,%rax)
 ; AVX2-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    vpextrb $4, %xmm0, %edx
 ; AVX2-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX2-NEXT:    # kill: def $dl killed $dl killed $edx
 ; AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -4753,16 +4756,16 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; AVX512F-NEXT:    korw %k1, %k0, %k0
 ; AVX512F-NEXT:    movb $7, %al
 ; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    kandw %k1, %k0, %k0
 ; AVX512F-NEXT:    vmovd %edi, %xmm0
 ; AVX512F-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; AVX512F-NEXT:    kandw %k1, %k0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vpcompressd %zmm0, %zmm0 {%k1} {z}
-; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    vpextrb $4, %xmm0, %edx
 ; AVX512F-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX512F-NEXT:    vmovd %xmm0, %eax
 ; AVX512F-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512F-NEXT:    # kill: def $dl killed $dl killed $edx
 ; AVX512F-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -4786,14 +4789,14 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; AVX512VL-NEXT:    korw %k1, %k0, %k0
 ; AVX512VL-NEXT:    movb $7, %al
 ; AVX512VL-NEXT:    kmovd %eax, %k1
-; AVX512VL-NEXT:    kandw %k1, %k0, %k1
 ; AVX512VL-NEXT:    vmovd %edi, %xmm0
 ; AVX512VL-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
+; AVX512VL-NEXT:    kandw %k1, %k0, %k1
 ; AVX512VL-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpcompressd %xmm0, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    vpextrb $4, %xmm0, %edx
 ; AVX512VL-NEXT:    vpextrb $8, %xmm0, %ecx
+; AVX512VL-NEXT:    vmovd %xmm0, %eax
 ; AVX512VL-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512VL-NEXT:    # kill: def $dl killed $dl killed $edx
 ; AVX512VL-NEXT:    # kill: def $cl killed $cl killed $ecx
@@ -4820,12 +4823,12 @@ define <4 x i32> @test_compress_v4i32_zero_passthru(<4 x i32> %vec, <4 x i1> %ma
 ; AVX2-NEXT:    vpextrd $2, %xmm1, %eax
 ; AVX2-NEXT:    andl $1, %eax
 ; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    movl %eax, %ecx
+; AVX2-NEXT:    andl $3, %ecx
+; AVX2-NEXT:    vextractps $3, %xmm0, -24(%rsp,%rcx,4)
 ; AVX2-NEXT:    vpextrd $3, %xmm1, %ecx
 ; AVX2-NEXT:    andl $1, %ecx
 ; AVX2-NEXT:    addq %rax, %rcx
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
-; AVX2-NEXT:    andl $3, %eax
-; AVX2-NEXT:    vextractps $3, %xmm0, -24(%rsp,%rax,4)
 ; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    cmpq $3, %rcx
 ; AVX2-NEXT:    movl $3, %edx

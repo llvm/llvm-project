@@ -463,14 +463,14 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; X86-POPCNT-LABEL: cnt128:
 ; X86-POPCNT:       # %bb.0:
 ; X86-POPCNT-NEXT:    pushl %esi
-; X86-POPCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %eax
 ; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %ecx
+; X86-POPCNT-NEXT:    addl %eax, %ecx
 ; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %edx
-; X86-POPCNT-NEXT:    addl %ecx, %edx
-; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %ecx
 ; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %esi
-; X86-POPCNT-NEXT:    addl %ecx, %esi
+; X86-POPCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-POPCNT-NEXT:    addl %edx, %esi
+; X86-POPCNT-NEXT:    addl %ecx, %esi
 ; X86-POPCNT-NEXT:    movl %esi, (%eax)
 ; X86-POPCNT-NEXT:    movl $0, 12(%eax)
 ; X86-POPCNT-NEXT:    movl $0, 8(%eax)
@@ -1058,8 +1058,8 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X86-POPCNT-LABEL: cnt128_optsize:
 ; X86-POPCNT:       # %bb.0:
 ; X86-POPCNT-NEXT:    pushl %esi
-; X86-POPCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %ecx
+; X86-POPCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %edx
 ; X86-POPCNT-NEXT:    addl %ecx, %edx
 ; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %ecx
@@ -1539,8 +1539,8 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X86-POPCNT-LABEL: cnt128_pgso:
 ; X86-POPCNT:       # %bb.0:
 ; X86-POPCNT-NEXT:    pushl %esi
-; X86-POPCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %ecx
+; X86-POPCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %edx
 ; X86-POPCNT-NEXT:    addl %ecx, %edx
 ; X86-POPCNT-NEXT:    popcntl {{[0-9]+}}(%esp), %ecx

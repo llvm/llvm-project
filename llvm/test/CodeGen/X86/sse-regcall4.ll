@@ -310,7 +310,7 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; LINUXOSX-NEXT:    movl %eax, %r9d
 ; LINUXOSX-NEXT:    subl %ecx, %r9d
 ; LINUXOSX-NEXT:    imull %r9d, %r8d
-; LINUXOSX-NEXT:    leal (%r13,%r14), %r9d
+; LINUXOSX-NEXT:    leal (%r14,%r13), %r9d
 ; LINUXOSX-NEXT:    movl %r13d, %r12d
 ; LINUXOSX-NEXT:    subl %r14d, %r12d
 ; LINUXOSX-NEXT:    imull %r11d, %r12d

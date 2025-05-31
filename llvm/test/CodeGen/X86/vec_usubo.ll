@@ -136,9 +136,9 @@ define <3 x i32> @usubo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    psubd %xmm1, %xmm2
 ; SSE41-NEXT:    pminud %xmm2, %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE41-NEXT:    pextrd $2, %xmm2, 8(%rdi)
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
-; SSE41-NEXT:    pextrd $2, %xmm2, 8(%rdi)
 ; SSE41-NEXT:    movq %xmm2, (%rdi)
 ; SSE41-NEXT:    retq
 ;
@@ -147,9 +147,9 @@ define <3 x i32> @usubo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vpminud %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpextrd $2, %xmm1, 8(%rdi)
 ; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpextrd $2, %xmm1, 8(%rdi)
 ; AVX-NEXT:    vmovq %xmm1, (%rdi)
 ; AVX-NEXT:    retq
 ;
@@ -157,9 +157,9 @@ define <3 x i32> @usubo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsubd %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpnleud %xmm0, %xmm1, %k1
+; AVX512-NEXT:    vpextrd $2, %xmm1, 8(%rdi)
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512-NEXT:    vpextrd $2, %xmm1, 8(%rdi)
 ; AVX512-NEXT:    vmovq %xmm1, (%rdi)
 ; AVX512-NEXT:    retq
   %t = call {<3 x i32>, <3 x i1>} @llvm.usub.with.overflow.v3i32(<3 x i32> %a0, <3 x i32> %a1)
@@ -317,7 +317,6 @@ define <6 x i32> @usubo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ;
 ; SSE41-LABEL: usubo_v6i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq %rdi, %rax
 ; SSE41-NEXT:    movd %esi, %xmm0
 ; SSE41-NEXT:    pinsrd $1, %edx, %xmm0
 ; SSE41-NEXT:    pinsrd $2, %ecx, %xmm0
@@ -329,6 +328,7 @@ define <6 x i32> @usubo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE41-NEXT:    pinsrd $1, {{[0-9]+}}(%rsp), %xmm3
 ; SSE41-NEXT:    pinsrd $2, {{[0-9]+}}(%rsp), %xmm3
+; SSE41-NEXT:    movq %rdi, %rax
 ; SSE41-NEXT:    pinsrd $3, {{[0-9]+}}(%rsp), %xmm3
 ; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; SSE41-NEXT:    movdqa %xmm0, %xmm4
@@ -910,7 +910,7 @@ define <2 x i32> @usubo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ;
 ; AVX2-LABEL: usubo_v2i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm3
 ; AVX2-NEXT:    vpsubq %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm0
@@ -1011,8 +1011,8 @@ define <4 x i32> @usubo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    pextrd $3, %xmm0, %eax
-; SSE41-NEXT:    movw %ax, 9(%rdi)
 ; SSE41-NEXT:    pextrd $2, %xmm0, %ecx
+; SSE41-NEXT:    movw %ax, 9(%rdi)
 ; SSE41-NEXT:    movw %cx, 6(%rdi)
 ; SSE41-NEXT:    pextrd $1, %xmm0, %edx
 ; SSE41-NEXT:    movw %dx, 3(%rdi)
@@ -1040,8 +1040,8 @@ define <4 x i32> @usubo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpextrd $3, %xmm1, %eax
-; AVX1-NEXT:    movw %ax, 9(%rdi)
 ; AVX1-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX1-NEXT:    movw %ax, 9(%rdi)
 ; AVX1-NEXT:    movw %cx, 6(%rdi)
 ; AVX1-NEXT:    vpextrd $1, %xmm1, %edx
 ; AVX1-NEXT:    movw %dx, 3(%rdi)
@@ -1068,8 +1068,8 @@ define <4 x i32> @usubo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpextrd $3, %xmm1, %eax
-; AVX2-NEXT:    movw %ax, 9(%rdi)
 ; AVX2-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX2-NEXT:    movw %ax, 9(%rdi)
 ; AVX2-NEXT:    movw %cx, 6(%rdi)
 ; AVX2-NEXT:    vpextrd $1, %xmm1, %edx
 ; AVX2-NEXT:    movw %dx, 3(%rdi)
@@ -1095,8 +1095,8 @@ define <4 x i32> @usubo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    vpextrd $3, %xmm1, %eax
-; AVX512-NEXT:    movw %ax, 9(%rdi)
 ; AVX512-NEXT:    vpextrd $2, %xmm1, %ecx
+; AVX512-NEXT:    movw %ax, 9(%rdi)
 ; AVX512-NEXT:    movw %cx, 6(%rdi)
 ; AVX512-NEXT:    vpextrd $1, %xmm1, %edx
 ; AVX512-NEXT:    movw %dx, 3(%rdi)
@@ -1165,80 +1165,80 @@ define <4 x i32> @usubo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 define <2 x i32> @usubo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind {
 ; SSE2-LABEL: usubo_v2i128:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE2-NEXT:    xorl %r10d, %r10d
+; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    subq {{[0-9]+}}(%rsp), %rdx
+; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; SSE2-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
 ; SSE2-NEXT:    movl $0, %r11d
 ; SSE2-NEXT:    sbbl %r11d, %r11d
 ; SSE2-NEXT:    subq %r8, %rdi
 ; SSE2-NEXT:    sbbq %r9, %rsi
+; SSE2-NEXT:    sbbl %eax, %eax
 ; SSE2-NEXT:    movd %r11d, %xmm1
-; SSE2-NEXT:    sbbl %r10d, %r10d
-; SSE2-NEXT:    movd %r10d, %xmm0
+; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    movq %rdx, 16(%rax)
-; SSE2-NEXT:    movq %rdi, (%rax)
-; SSE2-NEXT:    movq %rcx, 24(%rax)
-; SSE2-NEXT:    movq %rsi, 8(%rax)
+; SSE2-NEXT:    movq %rdx, 16(%r10)
+; SSE2-NEXT:    movq %rdi, (%r10)
+; SSE2-NEXT:    movq %rcx, 24(%r10)
+; SSE2-NEXT:    movq %rsi, 8(%r10)
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: usubo_v2i128:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSSE3-NEXT:    xorl %r10d, %r10d
+; SSSE3-NEXT:    xorl %eax, %eax
 ; SSSE3-NEXT:    subq {{[0-9]+}}(%rsp), %rdx
+; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; SSSE3-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
 ; SSSE3-NEXT:    movl $0, %r11d
 ; SSSE3-NEXT:    sbbl %r11d, %r11d
 ; SSSE3-NEXT:    subq %r8, %rdi
 ; SSSE3-NEXT:    sbbq %r9, %rsi
+; SSSE3-NEXT:    sbbl %eax, %eax
 ; SSSE3-NEXT:    movd %r11d, %xmm1
-; SSSE3-NEXT:    sbbl %r10d, %r10d
-; SSSE3-NEXT:    movd %r10d, %xmm0
+; SSSE3-NEXT:    movd %eax, %xmm0
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSSE3-NEXT:    movq %rdx, 16(%rax)
-; SSSE3-NEXT:    movq %rdi, (%rax)
-; SSSE3-NEXT:    movq %rcx, 24(%rax)
-; SSSE3-NEXT:    movq %rsi, 8(%rax)
+; SSSE3-NEXT:    movq %rdx, 16(%r10)
+; SSSE3-NEXT:    movq %rdi, (%r10)
+; SSSE3-NEXT:    movq %rcx, 24(%r10)
+; SSSE3-NEXT:    movq %rsi, 8(%r10)
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: usubo_v2i128:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE41-NEXT:    xorl %r10d, %r10d
+; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    subq {{[0-9]+}}(%rsp), %rdx
+; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; SSE41-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
 ; SSE41-NEXT:    movl $0, %r11d
 ; SSE41-NEXT:    sbbl %r11d, %r11d
 ; SSE41-NEXT:    subq %r8, %rdi
 ; SSE41-NEXT:    sbbq %r9, %rsi
-; SSE41-NEXT:    sbbl %r10d, %r10d
-; SSE41-NEXT:    movd %r10d, %xmm0
+; SSE41-NEXT:    sbbl %eax, %eax
+; SSE41-NEXT:    movd %eax, %xmm0
 ; SSE41-NEXT:    pinsrd $1, %r11d, %xmm0
-; SSE41-NEXT:    movq %rdx, 16(%rax)
-; SSE41-NEXT:    movq %rdi, (%rax)
-; SSE41-NEXT:    movq %rcx, 24(%rax)
-; SSE41-NEXT:    movq %rsi, 8(%rax)
+; SSE41-NEXT:    movq %rdx, 16(%r10)
+; SSE41-NEXT:    movq %rdi, (%r10)
+; SSE41-NEXT:    movq %rcx, 24(%r10)
+; SSE41-NEXT:    movq %rsi, 8(%r10)
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: usubo_v2i128:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX-NEXT:    xorl %r10d, %r10d
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    subq {{[0-9]+}}(%rsp), %rdx
+; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
 ; AVX-NEXT:    movl $0, %r11d
 ; AVX-NEXT:    sbbl %r11d, %r11d
 ; AVX-NEXT:    subq %r8, %rdi
 ; AVX-NEXT:    sbbq %r9, %rsi
-; AVX-NEXT:    sbbl %r10d, %r10d
-; AVX-NEXT:    vmovd %r10d, %xmm0
+; AVX-NEXT:    sbbl %eax, %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    vpinsrd $1, %r11d, %xmm0, %xmm0
-; AVX-NEXT:    movq %rdx, 16(%rax)
-; AVX-NEXT:    movq %rdi, (%rax)
-; AVX-NEXT:    movq %rcx, 24(%rax)
-; AVX-NEXT:    movq %rsi, 8(%rax)
+; AVX-NEXT:    movq %rdx, 16(%r10)
+; AVX-NEXT:    movq %rdi, (%r10)
+; AVX-NEXT:    movq %rcx, 24(%r10)
+; AVX-NEXT:    movq %rsi, 8(%r10)
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: usubo_v2i128:

@@ -185,14 +185,14 @@ define i1 @test_v16i64(ptr %ptr) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
 ; SSE2-NEXT:    movdqa 16(%rdi), %xmm1
-; SSE2-NEXT:    movdqa 32(%rdi), %xmm2
-; SSE2-NEXT:    movdqa 48(%rdi), %xmm3
-; SSE2-NEXT:    pand 112(%rdi), %xmm3
+; SSE2-NEXT:    movdqa 48(%rdi), %xmm2
+; SSE2-NEXT:    pand 112(%rdi), %xmm2
+; SSE2-NEXT:    movdqa 32(%rdi), %xmm3
 ; SSE2-NEXT:    pand 80(%rdi), %xmm1
-; SSE2-NEXT:    pand %xmm3, %xmm1
-; SSE2-NEXT:    pand 96(%rdi), %xmm2
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand 96(%rdi), %xmm3
 ; SSE2-NEXT:    pand 64(%rdi), %xmm0
-; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pand %xmm3, %xmm0
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
@@ -209,9 +209,9 @@ define i1 @test_v16i64(ptr %ptr) nounwind {
 ; SSE41-NEXT:    movdqa 48(%rdi), %xmm3
 ; SSE41-NEXT:    pand 112(%rdi), %xmm3
 ; SSE41-NEXT:    pand 80(%rdi), %xmm1
-; SSE41-NEXT:    pand %xmm3, %xmm1
 ; SSE41-NEXT:    pand 96(%rdi), %xmm2
 ; SSE41-NEXT:    pand 64(%rdi), %xmm0
+; SSE41-NEXT:    pand %xmm3, %xmm1
 ; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    pand %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1

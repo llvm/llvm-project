@@ -440,8 +440,8 @@ define <4 x double> @avx_vhadd_pd_test(<4 x double> %A, <4 x double> %B) {
 ; SSE-LABEL: avx_vhadd_pd_test:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddpd %xmm1, %xmm0
-; SSE-NEXT:    haddpd %xmm3, %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm1
+; SSE-NEXT:    haddpd %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: avx_vhadd_pd_test:
@@ -479,8 +479,8 @@ define <4 x double> @avx_vhsub_pd_test(<4 x double> %A, <4 x double> %B) {
 ; SSE-LABEL: avx_vhsub_pd_test:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    hsubpd %xmm1, %xmm0
-; SSE-NEXT:    hsubpd %xmm3, %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm1
+; SSE-NEXT:    hsubpd %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: avx_vhsub_pd_test:
@@ -572,8 +572,8 @@ define <8 x i32> @avx2_vphadd_d_test(<8 x i32> %A, <8 x i32> %B) {
 ; SSSE3-LABEL: avx2_vphadd_d_test:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    phaddd %xmm1, %xmm0
-; SSSE3-NEXT:    phaddd %xmm3, %xmm2
 ; SSSE3-NEXT:    movdqa %xmm2, %xmm1
+; SSSE3-NEXT:    phaddd %xmm3, %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: avx2_vphadd_d_test:
@@ -638,70 +638,70 @@ define <16 x i16> @avx2_vphadd_w_test(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; SSE3-NEXT:    pextrw $1, %xmm0, %eax
 ; SSE3-NEXT:    addl %ecx, %eax
 ; SSE3-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE3-NEXT:    pextrw $2, %xmm0, %edx
+; SSE3-NEXT:    pextrw $2, %xmm0, %esi
 ; SSE3-NEXT:    pextrw $3, %xmm0, %eax
-; SSE3-NEXT:    addl %edx, %eax
+; SSE3-NEXT:    pextrw $4, %xmm0, %edi
+; SSE3-NEXT:    pextrw $5, %xmm0, %edx
+; SSE3-NEXT:    addl %esi, %eax
 ; SSE3-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE3-NEXT:    pextrw $4, %xmm0, %edx
-; SSE3-NEXT:    pextrw $5, %xmm0, %esi
-; SSE3-NEXT:    addl %edx, %esi
-; SSE3-NEXT:    pextrw $6, %xmm0, %edx
-; SSE3-NEXT:    pextrw $7, %xmm0, %r8d
-; SSE3-NEXT:    addl %edx, %r8d
-; SSE3-NEXT:    movd %xmm1, %edx
-; SSE3-NEXT:    pextrw $1, %xmm1, %r10d
-; SSE3-NEXT:    addl %edx, %r10d
-; SSE3-NEXT:    pextrw $2, %xmm1, %edx
-; SSE3-NEXT:    pextrw $3, %xmm1, %ebx
-; SSE3-NEXT:    addl %edx, %ebx
-; SSE3-NEXT:    pextrw $4, %xmm1, %edx
-; SSE3-NEXT:    pextrw $5, %xmm1, %r14d
-; SSE3-NEXT:    addl %edx, %r14d
-; SSE3-NEXT:    pextrw $6, %xmm1, %edx
-; SSE3-NEXT:    pextrw $7, %xmm1, %r12d
-; SSE3-NEXT:    addl %edx, %r12d
-; SSE3-NEXT:    movd %xmm2, %edi
-; SSE3-NEXT:    pextrw $1, %xmm2, %edx
 ; SSE3-NEXT:    addl %edi, %edx
-; SSE3-NEXT:    pextrw $2, %xmm2, %r9d
-; SSE3-NEXT:    pextrw $3, %xmm2, %edi
-; SSE3-NEXT:    addl %r9d, %edi
+; SSE3-NEXT:    pextrw $6, %xmm0, %esi
+; SSE3-NEXT:    pextrw $7, %xmm0, %edi
+; SSE3-NEXT:    addl %esi, %edi
+; SSE3-NEXT:    movd %xmm1, %esi
+; SSE3-NEXT:    pextrw $1, %xmm1, %r9d
+; SSE3-NEXT:    pextrw $2, %xmm1, %r8d
+; SSE3-NEXT:    addl %esi, %r9d
+; SSE3-NEXT:    pextrw $3, %xmm1, %ebx
+; SSE3-NEXT:    addl %r8d, %ebx
+; SSE3-NEXT:    pextrw $4, %xmm1, %esi
+; SSE3-NEXT:    pextrw $5, %xmm1, %ebp
+; SSE3-NEXT:    pextrw $6, %xmm1, %r8d
+; SSE3-NEXT:    pextrw $7, %xmm1, %r15d
+; SSE3-NEXT:    addl %esi, %ebp
+; SSE3-NEXT:    addl %r8d, %r15d
+; SSE3-NEXT:    pextrw $1, %xmm2, %esi
+; SSE3-NEXT:    movd %xmm2, %r8d
+; SSE3-NEXT:    addl %r8d, %esi
+; SSE3-NEXT:    pextrw $2, %xmm2, %r10d
+; SSE3-NEXT:    pextrw $3, %xmm2, %r8d
 ; SSE3-NEXT:    pextrw $4, %xmm2, %r11d
-; SSE3-NEXT:    pextrw $5, %xmm2, %r9d
-; SSE3-NEXT:    addl %r11d, %r9d
-; SSE3-NEXT:    pextrw $6, %xmm2, %ebp
+; SSE3-NEXT:    addl %r10d, %r8d
+; SSE3-NEXT:    pextrw $5, %xmm2, %r10d
+; SSE3-NEXT:    addl %r11d, %r10d
+; SSE3-NEXT:    pextrw $6, %xmm2, %r14d
 ; SSE3-NEXT:    pextrw $7, %xmm2, %r11d
-; SSE3-NEXT:    addl %ebp, %r11d
-; SSE3-NEXT:    movd %xmm3, %r15d
-; SSE3-NEXT:    pextrw $1, %xmm3, %ebp
-; SSE3-NEXT:    addl %r15d, %ebp
-; SSE3-NEXT:    pextrw $2, %xmm3, %r13d
-; SSE3-NEXT:    pextrw $3, %xmm3, %r15d
-; SSE3-NEXT:    addl %r13d, %r15d
-; SSE3-NEXT:    pextrw $4, %xmm3, %r13d
-; SSE3-NEXT:    pextrw $5, %xmm3, %ecx
-; SSE3-NEXT:    addl %r13d, %ecx
-; SSE3-NEXT:    pextrw $6, %xmm3, %r13d
-; SSE3-NEXT:    pextrw $7, %xmm3, %eax
-; SSE3-NEXT:    addl %r13d, %eax
-; SSE3-NEXT:    movd %r12d, %xmm4
-; SSE3-NEXT:    movd %r14d, %xmm2
+; SSE3-NEXT:    addl %r14d, %r11d
+; SSE3-NEXT:    movd %xmm3, %r13d
+; SSE3-NEXT:    pextrw $1, %xmm3, %r14d
+; SSE3-NEXT:    pextrw $2, %xmm3, %eax
+; SSE3-NEXT:    pextrw $3, %xmm3, %r12d
+; SSE3-NEXT:    addl %r13d, %r14d
+; SSE3-NEXT:    addl %eax, %r12d
+; SSE3-NEXT:    pextrw $4, %xmm3, %ecx
+; SSE3-NEXT:    pextrw $5, %xmm3, %r13d
+; SSE3-NEXT:    pextrw $6, %xmm3, %eax
+; SSE3-NEXT:    addl %ecx, %r13d
+; SSE3-NEXT:    pextrw $7, %xmm3, %ecx
+; SSE3-NEXT:    addl %eax, %ecx
+; SSE3-NEXT:    movd %r15d, %xmm4
+; SSE3-NEXT:    movd %ebp, %xmm2
 ; SSE3-NEXT:    movd %ebx, %xmm5
-; SSE3-NEXT:    movd %r10d, %xmm3
-; SSE3-NEXT:    movd %r8d, %xmm6
-; SSE3-NEXT:    movd %esi, %xmm7
+; SSE3-NEXT:    movd %r9d, %xmm3
+; SSE3-NEXT:    movd %edi, %xmm6
+; SSE3-NEXT:    movd %edx, %xmm7
 ; SSE3-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 4-byte Folded Reload
 ; SSE3-NEXT:    # xmm8 = mem[0],zero,zero,zero
 ; SSE3-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; SSE3-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; SSE3-NEXT:    movd %eax, %xmm9
-; SSE3-NEXT:    movd %ecx, %xmm10
-; SSE3-NEXT:    movd %r15d, %xmm11
-; SSE3-NEXT:    movd %ebp, %xmm12
+; SSE3-NEXT:    movd %ecx, %xmm9
+; SSE3-NEXT:    movd %r13d, %xmm10
+; SSE3-NEXT:    movd %r12d, %xmm11
+; SSE3-NEXT:    movd %r14d, %xmm12
 ; SSE3-NEXT:    movd %r11d, %xmm13
-; SSE3-NEXT:    movd %r9d, %xmm14
-; SSE3-NEXT:    movd %edi, %xmm15
-; SSE3-NEXT:    movd %edx, %xmm1
+; SSE3-NEXT:    movd %r10d, %xmm14
+; SSE3-NEXT:    movd %r8d, %xmm15
+; SSE3-NEXT:    movd %esi, %xmm1
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3]
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
@@ -727,8 +727,8 @@ define <16 x i16> @avx2_vphadd_w_test(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; SSSE3-LABEL: avx2_vphadd_w_test:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    phaddw %xmm1, %xmm0
-; SSSE3-NEXT:    phaddw %xmm3, %xmm2
 ; SSSE3-NEXT:    movdqa %xmm2, %xmm1
+; SSSE3-NEXT:    phaddw %xmm3, %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: avx2_vphadd_w_test:
@@ -846,22 +846,22 @@ define <4 x i32> @not_a_hsub_1(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX-LABEL: not_a_hsub_1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    vpextrd $1, %xmm0, %ecx
-; AVX-NEXT:    subl %ecx, %eax
-; AVX-NEXT:    vpextrd $2, %xmm0, %ecx
+; AVX-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX-NEXT:    vmovd %xmm0, %ecx
+; AVX-NEXT:    subl %eax, %ecx
+; AVX-NEXT:    vpextrd $2, %xmm0, %eax
 ; AVX-NEXT:    vpextrd $3, %xmm0, %edx
-; AVX-NEXT:    subl %edx, %ecx
-; AVX-NEXT:    vpextrd $1, %xmm1, %edx
-; AVX-NEXT:    vmovd %xmm1, %esi
-; AVX-NEXT:    subl %esi, %edx
-; AVX-NEXT:    vpextrd $3, %xmm1, %esi
-; AVX-NEXT:    vpextrd $2, %xmm1, %edi
-; AVX-NEXT:    subl %edi, %esi
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrd $3, %esi, %xmm0, %xmm0
+; AVX-NEXT:    vpextrd $1, %xmm1, %esi
+; AVX-NEXT:    subl %edx, %eax
+; AVX-NEXT:    vmovd %xmm1, %edx
+; AVX-NEXT:    vpextrd $3, %xmm1, %edi
+; AVX-NEXT:    subl %edx, %esi
+; AVX-NEXT:    vpextrd $2, %xmm1, %edx
+; AVX-NEXT:    vmovd %ecx, %xmm0
+; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vpinsrd $2, %esi, %xmm0, %xmm0
+; AVX-NEXT:    subl %edx, %edi
+; AVX-NEXT:    vpinsrd $3, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %vecext = extractelement <4 x i32> %A, i32 0
   %vecext1 = extractelement <4 x i32> %A, i32 1
@@ -1247,71 +1247,71 @@ define <16 x i16> @avx2_hadd_w(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; SSE3-NEXT:    pushq %r12
 ; SSE3-NEXT:    pushq %rbx
 ; SSE3-NEXT:    movd %xmm0, %eax
-; SSE3-NEXT:    pextrw $1, %xmm0, %edx
-; SSE3-NEXT:    addl %eax, %edx
+; SSE3-NEXT:    pextrw $1, %xmm0, %ecx
+; SSE3-NEXT:    addl %eax, %ecx
+; SSE3-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SSE3-NEXT:    pextrw $2, %xmm0, %eax
 ; SSE3-NEXT:    pextrw $3, %xmm0, %esi
+; SSE3-NEXT:    pextrw $4, %xmm0, %edx
+; SSE3-NEXT:    pextrw $5, %xmm0, %r8d
 ; SSE3-NEXT:    addl %eax, %esi
-; SSE3-NEXT:    pextrw $4, %xmm0, %eax
-; SSE3-NEXT:    pextrw $5, %xmm0, %r9d
-; SSE3-NEXT:    addl %eax, %r9d
+; SSE3-NEXT:    addl %edx, %r8d
 ; SSE3-NEXT:    pextrw $6, %xmm0, %eax
 ; SSE3-NEXT:    pextrw $7, %xmm0, %r10d
 ; SSE3-NEXT:    addl %eax, %r10d
-; SSE3-NEXT:    movd %xmm1, %ecx
+; SSE3-NEXT:    movd %xmm1, %edx
 ; SSE3-NEXT:    pextrw $1, %xmm1, %eax
-; SSE3-NEXT:    addl %ecx, %eax
-; SSE3-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SSE3-NEXT:    pextrw $2, %xmm1, %edi
-; SSE3-NEXT:    pextrw $3, %xmm1, %eax
-; SSE3-NEXT:    addl %edi, %eax
+; SSE3-NEXT:    addl %edx, %eax
 ; SSE3-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE3-NEXT:    pextrw $4, %xmm1, %r8d
+; SSE3-NEXT:    pextrw $3, %xmm1, %edx
+; SSE3-NEXT:    addl %edi, %edx
+; SSE3-NEXT:    pextrw $4, %xmm1, %r11d
 ; SSE3-NEXT:    pextrw $5, %xmm1, %edi
-; SSE3-NEXT:    addl %r8d, %edi
-; SSE3-NEXT:    pextrw $6, %xmm1, %r11d
-; SSE3-NEXT:    pextrw $7, %xmm1, %r8d
-; SSE3-NEXT:    addl %r11d, %r8d
+; SSE3-NEXT:    pextrw $6, %xmm1, %ebx
+; SSE3-NEXT:    pextrw $7, %xmm1, %r9d
+; SSE3-NEXT:    addl %r11d, %edi
+; SSE3-NEXT:    addl %ebx, %r9d
+; SSE3-NEXT:    pextrw $1, %xmm2, %ebx
 ; SSE3-NEXT:    movd %xmm2, %r11d
-; SSE3-NEXT:    pextrw $1, %xmm2, %ebp
-; SSE3-NEXT:    addl %r11d, %ebp
+; SSE3-NEXT:    addl %r11d, %ebx
 ; SSE3-NEXT:    pextrw $2, %xmm2, %r11d
 ; SSE3-NEXT:    pextrw $3, %xmm2, %r14d
+; SSE3-NEXT:    pextrw $4, %xmm2, %ebp
 ; SSE3-NEXT:    addl %r11d, %r14d
-; SSE3-NEXT:    pextrw $4, %xmm2, %r11d
-; SSE3-NEXT:    pextrw $5, %xmm2, %r15d
-; SSE3-NEXT:    addl %r11d, %r15d
+; SSE3-NEXT:    pextrw $5, %xmm2, %r12d
+; SSE3-NEXT:    addl %ebp, %r12d
 ; SSE3-NEXT:    pextrw $6, %xmm2, %r11d
-; SSE3-NEXT:    pextrw $7, %xmm2, %r12d
-; SSE3-NEXT:    addl %r11d, %r12d
-; SSE3-NEXT:    movd %xmm3, %ebx
+; SSE3-NEXT:    pextrw $7, %xmm2, %r13d
+; SSE3-NEXT:    addl %r11d, %r13d
+; SSE3-NEXT:    movd %xmm3, %r15d
 ; SSE3-NEXT:    pextrw $1, %xmm3, %r11d
-; SSE3-NEXT:    addl %ebx, %r11d
-; SSE3-NEXT:    pextrw $2, %xmm3, %r13d
-; SSE3-NEXT:    pextrw $3, %xmm3, %ebx
-; SSE3-NEXT:    addl %r13d, %ebx
-; SSE3-NEXT:    pextrw $4, %xmm3, %r13d
-; SSE3-NEXT:    pextrw $5, %xmm3, %ecx
-; SSE3-NEXT:    addl %r13d, %ecx
-; SSE3-NEXT:    pextrw $6, %xmm3, %r13d
-; SSE3-NEXT:    pextrw $7, %xmm3, %eax
-; SSE3-NEXT:    addl %r13d, %eax
-; SSE3-NEXT:    movd %r12d, %xmm4
-; SSE3-NEXT:    movd %r15d, %xmm2
+; SSE3-NEXT:    pextrw $2, %xmm3, %eax
+; SSE3-NEXT:    pextrw $3, %xmm3, %ebp
+; SSE3-NEXT:    addl %r15d, %r11d
+; SSE3-NEXT:    addl %eax, %ebp
+; SSE3-NEXT:    pextrw $4, %xmm3, %ecx
+; SSE3-NEXT:    pextrw $5, %xmm3, %r15d
+; SSE3-NEXT:    pextrw $6, %xmm3, %eax
+; SSE3-NEXT:    addl %ecx, %r15d
+; SSE3-NEXT:    pextrw $7, %xmm3, %ecx
+; SSE3-NEXT:    addl %eax, %ecx
+; SSE3-NEXT:    movd %r13d, %xmm4
+; SSE3-NEXT:    movd %r12d, %xmm2
 ; SSE3-NEXT:    movd %r14d, %xmm5
-; SSE3-NEXT:    movd %ebp, %xmm3
+; SSE3-NEXT:    movd %ebx, %xmm3
 ; SSE3-NEXT:    movd %r10d, %xmm6
-; SSE3-NEXT:    movd %r9d, %xmm7
+; SSE3-NEXT:    movd %r8d, %xmm7
 ; SSE3-NEXT:    movd %esi, %xmm8
-; SSE3-NEXT:    movd %edx, %xmm0
-; SSE3-NEXT:    movd %eax, %xmm9
-; SSE3-NEXT:    movd %ecx, %xmm10
-; SSE3-NEXT:    movd %ebx, %xmm11
+; SSE3-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; SSE3-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; SSE3-NEXT:    movd %ecx, %xmm9
+; SSE3-NEXT:    movd %r15d, %xmm10
+; SSE3-NEXT:    movd %ebp, %xmm11
 ; SSE3-NEXT:    movd %r11d, %xmm12
-; SSE3-NEXT:    movd %r8d, %xmm13
+; SSE3-NEXT:    movd %r9d, %xmm13
 ; SSE3-NEXT:    movd %edi, %xmm14
-; SSE3-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 4-byte Folded Reload
-; SSE3-NEXT:    # xmm15 = mem[0],zero,zero,zero
+; SSE3-NEXT:    movd %edx, %xmm15
 ; SSE3-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Folded Reload
 ; SSE3-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]

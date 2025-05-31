@@ -53,13 +53,13 @@ define <8 x i16> @hadd_reverse2_v8i16(<8 x i16> %a0, <8 x i16> %a1) nounwind {
 define <8 x float> @hadd_reverse_v8f32(<8 x float> %a0, <8 x float> %a1) {
 ; SSE-LABEL: hadd_reverse_v8f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm4
 ; SSE-NEXT:    haddps %xmm3, %xmm1
+; SSE-NEXT:    movaps %xmm0, %xmm3
+; SSE-NEXT:    haddps %xmm2, %xmm3
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0,3,2]
-; SSE-NEXT:    haddps %xmm2, %xmm4
-; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,0,3,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0,3,2]
 ; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    movaps %xmm4, %xmm1
+; SSE-NEXT:    movaps %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: hadd_reverse_v8f32:
@@ -84,13 +84,13 @@ define <8 x float> @hadd_reverse_v8f32(<8 x float> %a0, <8 x float> %a1) {
 define <8 x float> @hadd_reverse2_v8f32(<8 x float> %a0, <8 x float> %a1) {
 ; SSE-LABEL: hadd_reverse2_v8f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm4
 ; SSE-NEXT:    haddps %xmm3, %xmm1
+; SSE-NEXT:    movaps %xmm0, %xmm3
+; SSE-NEXT:    haddps %xmm2, %xmm3
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0,3,2]
-; SSE-NEXT:    haddps %xmm2, %xmm4
-; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,0,3,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0,3,2]
 ; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    movaps %xmm4, %xmm1
+; SSE-NEXT:    movaps %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: hadd_reverse2_v8f32:
@@ -122,8 +122,8 @@ define <8 x float> @hadd_reverse3_v8f32(<8 x float> %a0, <8 x float> %a1) {
 ; SSE-LABEL: hadd_reverse3_v8f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0,3,2]
 ; SSE-NEXT:    haddps %xmm0, %xmm2
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0,3,2]
 ; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,0,3,2]
 ; SSE-NEXT:    movaps %xmm3, %xmm0
 ; SSE-NEXT:    movaps %xmm2, %xmm1
@@ -236,34 +236,32 @@ define <16 x i16> @hadd_reverse2_v16i16(<16 x i16> %a0, <16 x i16> %a1) nounwind
 define <8 x double> @hadd_reverse_v8f64(<8 x double> %a0, <8 x double> %a1) nounwind {
 ; SSE-LABEL: hadd_reverse_v8f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movapd %xmm1, %xmm8
-; SSE-NEXT:    movapd %xmm0, %xmm9
 ; SSE-NEXT:    haddpd %xmm7, %xmm3
 ; SSE-NEXT:    haddpd %xmm6, %xmm2
-; SSE-NEXT:    haddpd %xmm5, %xmm8
-; SSE-NEXT:    haddpd %xmm4, %xmm9
+; SSE-NEXT:    movapd %xmm1, %xmm6
+; SSE-NEXT:    haddpd %xmm5, %xmm6
+; SSE-NEXT:    movapd %xmm0, %xmm5
+; SSE-NEXT:    haddpd %xmm4, %xmm5
 ; SSE-NEXT:    movapd %xmm3, %xmm0
 ; SSE-NEXT:    movapd %xmm2, %xmm1
-; SSE-NEXT:    movapd %xmm8, %xmm2
-; SSE-NEXT:    movapd %xmm9, %xmm3
+; SSE-NEXT:    movapd %xmm6, %xmm2
+; SSE-NEXT:    movapd %xmm5, %xmm3
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: hadd_reverse_v8f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vhaddpd %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm1[2,3,0,1]
-; AVX1-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3,0,1]
-; AVX1-NEXT:    vmovapd %ymm3, %ymm0
+; AVX1-NEXT:    vhaddpd %ymm2, %ymm0, %ymm2
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3,0,1]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm2[2,3,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: hadd_reverse_v8f64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vhaddpd %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm1[2,3,0,1]
-; AVX2-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[2,3,0,1]
-; AVX2-NEXT:    vmovapd %ymm3, %ymm0
+; AVX2-NEXT:    vhaddpd %ymm2, %ymm0, %ymm2
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm1[2,3,0,1]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm2[2,3,0,1]
 ; AVX2-NEXT:    retq
   %lhs = shufflevector <8 x double> %a0, <8 x double> %a1, <8 x i32> <i32 7, i32 15, i32 5, i32 13, i32 3, i32 11, i32 1, i32 9>
   %rhs = shufflevector <8 x double> %a0, <8 x double> %a1, <8 x i32> <i32 6, i32 14, i32 4, i32 12, i32 2, i32 10, i32 0, i32 8>
@@ -274,34 +272,32 @@ define <8 x double> @hadd_reverse_v8f64(<8 x double> %a0, <8 x double> %a1) noun
 define <8 x double> @hadd_reverse2_v8f64(<8 x double> %a0, <8 x double> %a1) nounwind {
 ; SSE-LABEL: hadd_reverse2_v8f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movapd %xmm1, %xmm8
-; SSE-NEXT:    movapd %xmm0, %xmm9
 ; SSE-NEXT:    haddpd %xmm7, %xmm3
 ; SSE-NEXT:    haddpd %xmm6, %xmm2
-; SSE-NEXT:    haddpd %xmm5, %xmm8
-; SSE-NEXT:    haddpd %xmm4, %xmm9
+; SSE-NEXT:    movapd %xmm1, %xmm6
+; SSE-NEXT:    haddpd %xmm5, %xmm6
+; SSE-NEXT:    movapd %xmm0, %xmm5
+; SSE-NEXT:    haddpd %xmm4, %xmm5
 ; SSE-NEXT:    movapd %xmm3, %xmm0
 ; SSE-NEXT:    movapd %xmm2, %xmm1
-; SSE-NEXT:    movapd %xmm8, %xmm2
-; SSE-NEXT:    movapd %xmm9, %xmm3
+; SSE-NEXT:    movapd %xmm6, %xmm2
+; SSE-NEXT:    movapd %xmm5, %xmm3
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: hadd_reverse2_v8f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vhaddpd %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm1[2,3,0,1]
-; AVX1-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3,0,1]
-; AVX1-NEXT:    vmovapd %ymm3, %ymm0
+; AVX1-NEXT:    vhaddpd %ymm2, %ymm0, %ymm2
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3,0,1]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm2[2,3,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: hadd_reverse2_v8f64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vhaddpd %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm1[2,3,0,1]
-; AVX2-NEXT:    vhaddpd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[2,3,0,1]
-; AVX2-NEXT:    vmovapd %ymm3, %ymm0
+; AVX2-NEXT:    vhaddpd %ymm2, %ymm0, %ymm2
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm1[2,3,0,1]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm2[2,3,0,1]
 ; AVX2-NEXT:    retq
   %shuf0 = shufflevector <8 x double> %a0, <8 x double> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   %shuf1 = shufflevector <8 x double> %a1, <8 x double> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>

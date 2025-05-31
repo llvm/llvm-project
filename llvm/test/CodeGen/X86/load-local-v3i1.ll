@@ -22,8 +22,8 @@ define  <3 x i32> @masked_load_v3(ptr addrspace(1), <3 x i1>) {
 ; CHECK-NEXT:    andb $1, %cl
 ; CHECK-NEXT:    shlb $2, %cl
 ; CHECK-NEXT:    orb %dl, %cl
-; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    # implicit-def: $xmm0
+; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %else
 ; CHECK-NEXT:    testb $2, %cl

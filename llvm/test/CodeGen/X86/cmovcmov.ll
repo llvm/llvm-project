@@ -325,10 +325,10 @@ define dso_local void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) nounwi
 ;
 ; NOCMOV-LABEL: no_cascade_opt:
 ; NOCMOV:       # %bb.0: # %entry
-; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; NOCMOV-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; NOCMOV-NEXT:    movb $20, %al
 ; NOCMOV-NEXT:    movb $20, %cl
+; NOCMOV-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
 ; NOCMOV-NEXT:    jge .LBB7_1
 ; NOCMOV-NEXT:  # %bb.2: # %entry
 ; NOCMOV-NEXT:    jle .LBB7_3

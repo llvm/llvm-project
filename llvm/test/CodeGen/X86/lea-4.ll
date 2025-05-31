@@ -7,7 +7,7 @@ define zeroext i16 @t1(i32 %on_off) nounwind {
 ; CHECK-LABEL: t1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal -2(%rdi,%rdi), %eax
+; CHECK-NEXT:    leal -2(,%rdi,2), %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %t0 = sub i32 %on_off, 1
@@ -22,7 +22,7 @@ define i32 @t2(i32 %on_off) nounwind {
 ; CHECK-LABEL: t2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    leal -2(%rdi,%rdi), %eax
+; CHECK-NEXT:    leal -2(,%rdi,2), %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    retq
   %t0 = sub i32 %on_off, 1

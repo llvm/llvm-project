@@ -172,8 +172,8 @@ define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_oge_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovbl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -186,13 +186,6 @@ define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_oge_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovbl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_oge_q:
 ; X87:       # %bb.0:
@@ -318,8 +311,8 @@ define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_ole_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomiss %xmm0, %xmm1
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovbl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -332,13 +325,6 @@ define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_ole_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomiss %xmm0, %xmm1
-; AVX-64-NEXT:    cmovbl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_ole_q:
 ; X87:       # %bb.0:
@@ -391,8 +377,8 @@ define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_one_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovel %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -405,13 +391,6 @@ define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_one_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovel %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_one_q:
 ; X87:       # %bb.0:
@@ -464,8 +443,8 @@ define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_ord_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovpl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -478,13 +457,6 @@ define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovnpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_ord_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovpl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_ord_q:
 ; X87:       # %bb.0:
@@ -537,8 +509,8 @@ define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_ueq_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovnel %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -551,13 +523,6 @@ define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_ueq_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovnel %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_ueq_q:
 ; X87:       # %bb.0:
@@ -610,8 +575,8 @@ define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_ugt_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomiss %xmm0, %xmm1
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovael %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -624,13 +589,6 @@ define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_ugt_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomiss %xmm0, %xmm1
-; AVX-64-NEXT:    cmovael %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_ugt_q:
 ; X87:       # %bb.0:
@@ -756,8 +714,8 @@ define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_ult_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovael %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -770,13 +728,6 @@ define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_ult_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovael %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_ult_q:
 ; X87:       # %bb.0:
@@ -980,8 +931,8 @@ define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_uno_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovnpl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -994,13 +945,6 @@ define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_uno_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovnpl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_uno_q:
 ; X87:       # %bb.0:
@@ -1204,8 +1148,8 @@ define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_oge_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovbl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -1218,13 +1162,6 @@ define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_oge_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovbl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_oge_q:
 ; X87:       # %bb.0:
@@ -1350,8 +1287,8 @@ define i32 @test_f64_ole_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_ole_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomisd %xmm0, %xmm1
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovbl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -1364,13 +1301,6 @@ define i32 @test_f64_ole_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_ole_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomisd %xmm0, %xmm1
-; AVX-64-NEXT:    cmovbl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_ole_q:
 ; X87:       # %bb.0:
@@ -1423,8 +1353,8 @@ define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_one_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovel %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -1437,13 +1367,6 @@ define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_one_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovel %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_one_q:
 ; X87:       # %bb.0:
@@ -1496,8 +1419,8 @@ define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_ord_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovpl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -1510,13 +1433,6 @@ define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovnpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_ord_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovpl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_ord_q:
 ; X87:       # %bb.0:
@@ -1569,8 +1485,8 @@ define i32 @test_f64_ueq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_ueq_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovnel %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -1583,13 +1499,6 @@ define i32 @test_f64_ueq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_ueq_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovnel %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_ueq_q:
 ; X87:       # %bb.0:
@@ -1642,8 +1551,8 @@ define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_ugt_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomisd %xmm0, %xmm1
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovael %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -1656,13 +1565,6 @@ define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_ugt_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomisd %xmm0, %xmm1
-; AVX-64-NEXT:    cmovael %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_ugt_q:
 ; X87:       # %bb.0:
@@ -1788,8 +1690,8 @@ define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_ult_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovael %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -1802,13 +1704,6 @@ define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_ult_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovael %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_ult_q:
 ; X87:       # %bb.0:
@@ -2012,8 +1907,8 @@ define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_uno_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    ucomisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovnpl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -2026,13 +1921,6 @@ define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_uno_q:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vucomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovnpl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_uno_q:
 ; X87:       # %bb.0:
@@ -2236,8 +2124,8 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_oge_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovbl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -2250,13 +2138,6 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_oge_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovbl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_oge_s:
 ; X87:       # %bb.0:
@@ -2382,8 +2263,8 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_ole_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comiss %xmm0, %xmm1
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovbl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -2396,13 +2277,6 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_ole_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomiss %xmm0, %xmm1
-; AVX-64-NEXT:    cmovbl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_ole_s:
 ; X87:       # %bb.0:
@@ -2455,8 +2329,8 @@ define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_one_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovel %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -2469,13 +2343,6 @@ define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_one_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovel %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_one_s:
 ; X87:       # %bb.0:
@@ -2528,8 +2395,8 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_ord_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovpl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -2542,13 +2409,6 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovnpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_ord_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovpl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_ord_s:
 ; X87:       # %bb.0:
@@ -2601,8 +2461,8 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_ueq_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovnel %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -2615,13 +2475,6 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_ueq_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovnel %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_ueq_s:
 ; X87:       # %bb.0:
@@ -2674,8 +2527,8 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_ugt_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comiss %xmm0, %xmm1
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovael %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -2688,13 +2541,6 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_ugt_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomiss %xmm0, %xmm1
-; AVX-64-NEXT:    cmovael %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_ugt_s:
 ; X87:       # %bb.0:
@@ -2820,8 +2666,8 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_ult_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovael %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -2834,13 +2680,6 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_ult_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovael %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_ult_s:
 ; X87:       # %bb.0:
@@ -3044,8 +2883,8 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f32_uno_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comiss %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovnpl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -3058,13 +2897,6 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f32_uno_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomiss %xmm1, %xmm0
-; AVX-64-NEXT:    cmovnpl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f32_uno_s:
 ; X87:       # %bb.0:
@@ -3268,8 +3100,8 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_oge_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovbl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -3282,13 +3114,6 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_oge_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovbl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_oge_s:
 ; X87:       # %bb.0:
@@ -3414,8 +3239,8 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_ole_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comisd %xmm0, %xmm1
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovbl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -3428,13 +3253,6 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovael %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_ole_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomisd %xmm0, %xmm1
-; AVX-64-NEXT:    cmovbl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_ole_s:
 ; X87:       # %bb.0:
@@ -3487,8 +3305,8 @@ define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_one_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovel %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -3501,13 +3319,6 @@ define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovnel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_one_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovel %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_one_s:
 ; X87:       # %bb.0:
@@ -3560,8 +3371,8 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_ord_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovpl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -3574,13 +3385,6 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovnpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_ord_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovpl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_ord_s:
 ; X87:       # %bb.0:
@@ -3633,8 +3437,8 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_ueq_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovnel %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -3647,13 +3451,6 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovel %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_ueq_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovnel %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_ueq_s:
 ; X87:       # %bb.0:
@@ -3706,8 +3503,8 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_ugt_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comisd %xmm0, %xmm1
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovael %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -3720,13 +3517,6 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_ugt_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomisd %xmm0, %xmm1
-; AVX-64-NEXT:    cmovael %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_ugt_s:
 ; X87:       # %bb.0:
@@ -3852,8 +3642,8 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_ult_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovael %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -3866,13 +3656,6 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovbl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_ult_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovael %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_ult_s:
 ; X87:       # %bb.0:
@@ -4076,8 +3859,8 @@ define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ;
 ; SSE-64-LABEL: test_f64_uno_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    comisd %xmm1, %xmm0
+; SSE-64-NEXT:    movl %edi, %eax
 ; SSE-64-NEXT:    cmovnpl %esi, %eax
 ; SSE-64-NEXT:    retq
 ;
@@ -4090,13 +3873,6 @@ define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; AVX-32-NEXT:    cmovpl %eax, %ecx
 ; AVX-32-NEXT:    movl (%ecx), %eax
 ; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_f64_uno_s:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    movl %edi, %eax
-; AVX-64-NEXT:    vcomisd %xmm1, %xmm0
-; AVX-64-NEXT:    cmovnpl %esi, %eax
-; AVX-64-NEXT:    retq
 ;
 ; X87-LABEL: test_f64_uno_s:
 ; X87:       # %bb.0:

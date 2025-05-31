@@ -97,7 +97,7 @@ define <8 x i32> @cmp_sgt_fail_no_bounds(<8 x i32> %x, <8 x i32> %y) {
 define <8 x i32> @cmp_sgt_bitcast(<8 x i32> %xx, <8 x i32> %yy) {
 ; CHECK-LABEL: cmp_sgt_bitcast:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm2 = [2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040]
 ; CHECK-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2

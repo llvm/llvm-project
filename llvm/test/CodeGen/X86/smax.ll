@@ -154,28 +154,28 @@ define i128 @test_i128(i128 %a, i128 %b) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    cmpl %ebx, %edi
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    cmpl %ebx, %edx
 ; X86-NEXT:    movl %esi, %ebp
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    movl %edi, %ebp
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sbbl %ebp, %eax
-; X86-NEXT:    cmovll %ebx, %edx
+; X86-NEXT:    cmovll %ebx, %edi
+; X86-NEXT:    cmovll {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmovll {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    cmovll {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    cmovll %ebp, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
-; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -253,24 +253,20 @@ define <3 x i32> @test_v3i32(<3 x i32> %a, <3 x i32> %b) nounwind {
 ;
 ; X86-LABEL: test_v3i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    cmpl %eax, %ebx
-; X86-NEXT:    cmovgl %ebx, %eax
-; X86-NEXT:    cmpl %edx, %edi
-; X86-NEXT:    cmovgl %edi, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    cmpl %eax, %esi
+; X86-NEXT:    cmovgl %esi, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    cmpl %edx, %esi
+; X86-NEXT:    cmovgl %esi, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    cmpl %ecx, %esi
 ; X86-NEXT:    cmovgl %esi, %ecx
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
   %r = call <3 x i32> @llvm.smax.v3i32(<3 x i32> %a, <3 x i32> %b)
   ret <3 x i32> %r

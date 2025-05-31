@@ -1309,9 +1309,9 @@ define i32 @test_unsigned_i32_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvttsd2si %xmm0, %ecx
 ; X86-SSE-NEXT:    movl %ecx, %edx
-; X86-SSE-NEXT:    sarl $31, %edx
 ; X86-SSE-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvttsd2si %xmm0, %eax
+; X86-SSE-NEXT:    sarl $31, %edx
 ; X86-SSE-NEXT:    andl %edx, %eax
 ; X86-SSE-NEXT:    orl %ecx, %eax
 ; X86-SSE-NEXT:    retl

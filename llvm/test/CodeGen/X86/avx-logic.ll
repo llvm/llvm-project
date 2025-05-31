@@ -461,9 +461,9 @@ define <8 x i32> @or_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z)
 ;
 ; INT256-LABEL: or_disguised_i8_elts:
 ; INT256:       # %bb.0:
+; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255]
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255]
-; INT256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; INT256-NEXT:    vpor %ymm3, %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq
   %a = add <8 x i32> %x, %y
@@ -490,9 +490,9 @@ define <8 x i32> @xor_disguised_i8_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ;
 ; INT256-LABEL: xor_disguised_i8_elts:
 ; INT256:       # %bb.0:
+; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255]
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [255,255,255,255,255,255,255,255]
-; INT256-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; INT256-NEXT:    vpxor %ymm3, %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq
   %a = add <8 x i32> %x, %y
@@ -548,9 +548,9 @@ define <8 x i32> @or_disguised_i16_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z
 ;
 ; INT256-LABEL: or_disguised_i16_elts:
 ; INT256:       # %bb.0:
+; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [65535,65535,65535,65535,65535,65535,65535,65535]
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
-; INT256-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; INT256-NEXT:    vpor %ymm3, %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq
   %a = add <8 x i32> %x, %y
@@ -577,9 +577,9 @@ define <8 x i32> @xor_disguised_i16_elts(<8 x i32> %x, <8 x i32> %y, <8 x i32> %
 ;
 ; INT256-LABEL: xor_disguised_i16_elts:
 ; INT256:       # %bb.0:
+; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [65535,65535,65535,65535,65535,65535,65535,65535]
 ; INT256-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; INT256-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [65535,65535,65535,65535,65535,65535,65535,65535]
-; INT256-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; INT256-NEXT:    vpxor %ymm3, %ymm0, %ymm0
 ; INT256-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; INT256-NEXT:    retq
   %a = add <8 x i32> %x, %y

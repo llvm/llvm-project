@@ -71,8 +71,8 @@ define <8 x float> @funcE() nounwind {
 ; X86-LABEL: funcE:
 ; X86:       # %bb.0: # %allocas
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    # implicit-def: $ymm0
+; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    jne .LBB4_2
 ; X86-NEXT:  # %bb.1: # %load.i1247
 ; X86-NEXT:    pushl %ebp
@@ -88,8 +88,8 @@ define <8 x float> @funcE() nounwind {
 ; X64-LABEL: funcE:
 ; X64:       # %bb.0: # %allocas
 ; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    # implicit-def: $ymm0
+; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    jne .LBB4_2
 ; X64-NEXT:  # %bb.1: # %load.i1247
 ; X64-NEXT:    pushq %rbp

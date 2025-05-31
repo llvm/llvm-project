@@ -77,40 +77,39 @@ define i128 @fshl_i128(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    testb $64, %cl
-; X86-SSE2-NEXT:    movl %esi, %eax
-; X86-SSE2-NEXT:    cmovnel %ebx, %eax
-; X86-SSE2-NEXT:    movl %edx, %ebp
+; X86-SSE2-NEXT:    movl %eax, %ebp
 ; X86-SSE2-NEXT:    cmovnel %edi, %ebp
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    movl %edx, %ebx
+; X86-SSE2-NEXT:    cmovnel %esi, %ebx
+; X86-SSE2-NEXT:    cmovnel {{[0-9]+}}(%esp), %esi
 ; X86-SSE2-NEXT:    cmovnel {{[0-9]+}}(%esp), %edi
-; X86-SSE2-NEXT:    cmovnel {{[0-9]+}}(%esp), %ebx
 ; X86-SSE2-NEXT:    cmovel {{[0-9]+}}(%esp), %edx
-; X86-SSE2-NEXT:    cmovel {{[0-9]+}}(%esp), %esi
+; X86-SSE2-NEXT:    cmovel {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    testb $32, %cl
-; X86-SSE2-NEXT:    cmovnel %esi, %edx
-; X86-SSE2-NEXT:    cmovnel %ebp, %esi
-; X86-SSE2-NEXT:    cmovnel %eax, %ebp
-; X86-SSE2-NEXT:    cmovel %edi, %ebx
-; X86-SSE2-NEXT:    cmovel %eax, %edi
-; X86-SSE2-NEXT:    movl %edi, %eax
-; X86-SSE2-NEXT:    shldl %cl, %ebx, %eax
-; X86-SSE2-NEXT:    movl %ebp, %ebx
-; X86-SSE2-NEXT:    shldl %cl, %edi, %ebx
-; X86-SSE2-NEXT:    movl %esi, %edi
-; X86-SSE2-NEXT:    shldl %cl, %ebp, %edi
+; X86-SSE2-NEXT:    cmovnel %eax, %edx
+; X86-SSE2-NEXT:    cmovnel %ebx, %eax
+; X86-SSE2-NEXT:    cmovnel %ebp, %ebx
+; X86-SSE2-NEXT:    cmovel %esi, %edi
+; X86-SSE2-NEXT:    cmovel %ebp, %esi
+; X86-SSE2-NEXT:    movl %esi, %ebp
+; X86-SSE2-NEXT:    shldl %cl, %edi, %ebp
+; X86-SSE2-NEXT:    movl %ebx, %edi
+; X86-SSE2-NEXT:    shldl %cl, %esi, %edi
+; X86-SSE2-NEXT:    movl %eax, %esi
+; X86-SSE2-NEXT:    shldl %cl, %ebx, %esi
 ; X86-SSE2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-SSE2-NEXT:    shldl %cl, %esi, %edx
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl %edx, 12(%ecx)
-; X86-SSE2-NEXT:    movl %edi, 8(%ecx)
-; X86-SSE2-NEXT:    movl %ebx, 4(%ecx)
-; X86-SSE2-NEXT:    movl %eax, (%ecx)
-; X86-SSE2-NEXT:    movl %ecx, %eax
+; X86-SSE2-NEXT:    shldl %cl, %eax, %edx
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl %edx, 12(%eax)
+; X86-SSE2-NEXT:    movl %esi, 8(%eax)
+; X86-SSE2-NEXT:    movl %edi, 4(%eax)
+; X86-SSE2-NEXT:    movl %ebp, (%eax)
 ; X86-SSE2-NEXT:    popl %esi
 ; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    popl %ebx
@@ -561,8 +560,8 @@ define <4 x i32> @fshl_v4i32_undef1_cst(<4 x i32> %a0) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-SSE2-NEXT:    retl
@@ -733,8 +732,8 @@ define <4 x i32> @fshr_v4i32_undef1_cst(<4 x i32> %a0) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-SSE2-NEXT:    retl

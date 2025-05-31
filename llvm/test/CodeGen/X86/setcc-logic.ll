@@ -560,8 +560,8 @@ define i1 @or_icmps_const_1bit_diff_extra_use(i8 %x, ptr %p) {
 ; CHECK-NEXT:    cmpb $45, %dil
 ; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    cmpb $43, %dil
-; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    sete (%rsi)
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    orb %cl, %al
 ; CHECK-NEXT:    retq
   %a = icmp eq i8 %x, 43

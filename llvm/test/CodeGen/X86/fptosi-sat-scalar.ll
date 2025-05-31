@@ -4013,9 +4013,9 @@ define i50 @test_signed_i50_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    fucomi %st(1), %st
 ; X86-SSE-NEXT:    fstp %st(1)
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    cmovbl %ecx, %esi
 ; X86-SSE-NEXT:    movl $-131072, %eax # imm = 0xFFFE0000
 ; X86-SSE-NEXT:    cmovael {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cmovbl %ecx, %esi
 ; X86-SSE-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-SSE-NEXT:    fxch %st(1)
 ; X86-SSE-NEXT:    fucomi %st(1), %st
@@ -4152,9 +4152,9 @@ define i64 @test_signed_i64_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    fucomi %st(1), %st
 ; X86-SSE-NEXT:    fstp %st(1)
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    cmovbl %ecx, %esi
 ; X86-SSE-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
 ; X86-SSE-NEXT:    cmovael {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cmovbl %ecx, %esi
 ; X86-SSE-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-SSE-NEXT:    fxch %st(1)
 ; X86-SSE-NEXT:    fucomi %st(1), %st
@@ -4516,9 +4516,9 @@ define i128 @test_signed_i128_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    cmovbl %ecx, %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE-NEXT:    cmovbl %ecx, %edi
 ; X86-SSE-NEXT:    movl $-2147483648, %ebp # imm = 0x80000000
 ; X86-SSE-NEXT:    cmovael {{[0-9]+}}(%esp), %ebp
+; X86-SSE-NEXT:    cmovbl %ecx, %edi
 ; X86-SSE-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-SSE-NEXT:    fxch %st(1)
 ; X86-SSE-NEXT:    fucomi %st(1), %st

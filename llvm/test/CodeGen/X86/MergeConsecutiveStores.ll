@@ -17,13 +17,14 @@ define void @merge_const_store(i32 %count, ptr nocapture %p) nounwind uwtable no
 ; X86-NEXT:    jle .LBB0_3
 ; X86-NEXT:  # %bb.1: # %.lr.ph.preheader
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_2: # %.lr.ph
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
-; X86-NEXT:    movl $134678021, 4(%ecx) # imm = 0x8070605
-; X86-NEXT:    addl $8, %ecx
-; X86-NEXT:    decl %eax
+; X86-NEXT:    movl $67305985, (%ecx,%edx,8) # imm = 0x4030201
+; X86-NEXT:    movl $134678021, 4(%ecx,%edx,8) # imm = 0x8070605
+; X86-NEXT:    incl %edx
+; X86-NEXT:    cmpl %edx, %eax
 ; X86-NEXT:    jne .LBB0_2
 ; X86-NEXT:  .LBB0_3: # %._crit_edge
 ; X86-NEXT:    retl
@@ -33,13 +34,15 @@ define void @merge_const_store(i32 %count, ptr nocapture %p) nounwind uwtable no
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    jle .LBB0_3
 ; X64-NEXT:  # %bb.1: # %.lr.ph.preheader
-; X64-NEXT:    movabsq $578437695752307201, %rax # imm = 0x807060504030201
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    movabsq $578437695752307201, %rdx # imm = 0x807060504030201
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_2: # %.lr.ph
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movq %rax, (%rsi)
-; X64-NEXT:    addq $8, %rsi
-; X64-NEXT:    decl %edi
+; X64-NEXT:    movq %rdx, (%rsi,%rcx,8)
+; X64-NEXT:    incq %rcx
+; X64-NEXT:    cmpl %ecx, %eax
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  .LBB0_3: # %._crit_edge
 ; X64-NEXT:    retq
@@ -213,61 +216,76 @@ define void @merge_const_store_vec(i32 %count, ptr nocapture %p) nounwind uwtabl
 define void @merge_nonconst_store(i32 %count, i8 %zz, ptr nocapture %p) nounwind uwtable noinline ssp {
 ; X86-BWON-LABEL: merge_nonconst_store:
 ; X86-BWON:       # %bb.0:
+; X86-BWON-NEXT:    pushl %esi
+; X86-BWON-NEXT:    .cfi_def_cfa_offset 8
+; X86-BWON-NEXT:    .cfi_offset %esi, -8
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BWON-NEXT:    testl %eax, %eax
 ; X86-BWON-NEXT:    jle .LBB3_3
 ; X86-BWON-NEXT:  # %bb.1: # %.lr.ph.preheader
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BWON-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-BWON-NEXT:    xorl %esi, %esi
 ; X86-BWON-NEXT:    .p2align 4
 ; X86-BWON-NEXT:  .LBB3_2: # %.lr.ph
 ; X86-BWON-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-BWON-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
-; X86-BWON-NEXT:    movb %dl, 4(%ecx)
-; X86-BWON-NEXT:    movw $1798, 5(%ecx) # imm = 0x706
-; X86-BWON-NEXT:    movb $8, 7(%ecx)
-; X86-BWON-NEXT:    addl $8, %ecx
-; X86-BWON-NEXT:    decl %eax
+; X86-BWON-NEXT:    movl $67305985, (%ecx,%esi,8) # imm = 0x4030201
+; X86-BWON-NEXT:    movb %dl, 4(%ecx,%esi,8)
+; X86-BWON-NEXT:    movw $1798, 5(%ecx,%esi,8) # imm = 0x706
+; X86-BWON-NEXT:    movb $8, 7(%ecx,%esi,8)
+; X86-BWON-NEXT:    incl %esi
+; X86-BWON-NEXT:    cmpl %esi, %eax
 ; X86-BWON-NEXT:    jne .LBB3_2
 ; X86-BWON-NEXT:  .LBB3_3: # %._crit_edge
+; X86-BWON-NEXT:    popl %esi
+; X86-BWON-NEXT:    .cfi_def_cfa_offset 4
 ; X86-BWON-NEXT:    retl
 ;
 ; X86-BWOFF-LABEL: merge_nonconst_store:
 ; X86-BWOFF:       # %bb.0:
+; X86-BWOFF-NEXT:    pushl %esi
+; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 8
+; X86-BWOFF-NEXT:    .cfi_offset %esi, -8
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BWOFF-NEXT:    testl %eax, %eax
 ; X86-BWOFF-NEXT:    jle .LBB3_3
 ; X86-BWOFF-NEXT:  # %bb.1: # %.lr.ph.preheader
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BWOFF-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-BWOFF-NEXT:    xorl %esi, %esi
 ; X86-BWOFF-NEXT:    .p2align 4
 ; X86-BWOFF-NEXT:  .LBB3_2: # %.lr.ph
 ; X86-BWOFF-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-BWOFF-NEXT:    movl $67305985, (%ecx) # imm = 0x4030201
-; X86-BWOFF-NEXT:    movb %dl, 4(%ecx)
-; X86-BWOFF-NEXT:    movw $1798, 5(%ecx) # imm = 0x706
-; X86-BWOFF-NEXT:    movb $8, 7(%ecx)
-; X86-BWOFF-NEXT:    addl $8, %ecx
-; X86-BWOFF-NEXT:    decl %eax
+; X86-BWOFF-NEXT:    movl $67305985, (%ecx,%esi,8) # imm = 0x4030201
+; X86-BWOFF-NEXT:    movb %dl, 4(%ecx,%esi,8)
+; X86-BWOFF-NEXT:    movw $1798, 5(%ecx,%esi,8) # imm = 0x706
+; X86-BWOFF-NEXT:    movb $8, 7(%ecx,%esi,8)
+; X86-BWOFF-NEXT:    incl %esi
+; X86-BWOFF-NEXT:    cmpl %esi, %eax
 ; X86-BWOFF-NEXT:    jne .LBB3_2
 ; X86-BWOFF-NEXT:  .LBB3_3: # %._crit_edge
+; X86-BWOFF-NEXT:    popl %esi
+; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 4
 ; X86-BWOFF-NEXT:    retl
 ;
 ; X64-LABEL: merge_nonconst_store:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    jle .LBB3_2
+; X64-NEXT:    jle .LBB3_3
+; X64-NEXT:  # %bb.1: # %.lr.ph.preheader
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    .p2align 4
-; X64-NEXT:  .LBB3_1: # %.lr.ph
+; X64-NEXT:  .LBB3_2: # %.lr.ph
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movl $67305985, (%rdx) # imm = 0x4030201
-; X64-NEXT:    movb %sil, 4(%rdx)
-; X64-NEXT:    movw $1798, 5(%rdx) # imm = 0x706
-; X64-NEXT:    movb $8, 7(%rdx)
-; X64-NEXT:    addq $8, %rdx
-; X64-NEXT:    decl %edi
-; X64-NEXT:    jne .LBB3_1
-; X64-NEXT:  .LBB3_2: # %._crit_edge
+; X64-NEXT:    movl $67305985, (%rdx,%rcx,8) # imm = 0x4030201
+; X64-NEXT:    movb %sil, 4(%rdx,%rcx,8)
+; X64-NEXT:    movw $1798, 5(%rdx,%rcx,8) # imm = 0x706
+; X64-NEXT:    movb $8, 7(%rdx,%rcx,8)
+; X64-NEXT:    incq %rcx
+; X64-NEXT:    cmpl %ecx, %eax
+; X64-NEXT:    jne .LBB3_2
+; X64-NEXT:  .LBB3_3: # %._crit_edge
 ; X64-NEXT:    retq
   %1 = icmp sgt i32 %count, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
@@ -301,76 +319,94 @@ define void @merge_nonconst_store(i32 %count, i8 %zz, ptr nocapture %p) nounwind
 define void @merge_loads_i16(i32 %count, ptr noalias nocapture %q, ptr noalias nocapture %p) nounwind uwtable noinline ssp {
 ; X86-BWON-LABEL: merge_loads_i16:
 ; X86-BWON:       # %bb.0:
-; X86-BWON-NEXT:    pushl %esi
+; X86-BWON-NEXT:    pushl %edi
 ; X86-BWON-NEXT:    .cfi_def_cfa_offset 8
-; X86-BWON-NEXT:    .cfi_offset %esi, -8
+; X86-BWON-NEXT:    pushl %esi
+; X86-BWON-NEXT:    .cfi_def_cfa_offset 12
+; X86-BWON-NEXT:    .cfi_offset %esi, -12
+; X86-BWON-NEXT:    .cfi_offset %edi, -8
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BWON-NEXT:    testl %eax, %eax
 ; X86-BWON-NEXT:    jle .LBB4_3
 ; X86-BWON-NEXT:  # %bb.1: # %.lr.ph
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BWON-NEXT:    xorl %esi, %esi
 ; X86-BWON-NEXT:    .p2align 4
 ; X86-BWON-NEXT:  .LBB4_2: # =>This Inner Loop Header: Depth=1
-; X86-BWON-NEXT:    movzwl (%edx), %esi
-; X86-BWON-NEXT:    movw %si, (%ecx)
-; X86-BWON-NEXT:    addl $8, %ecx
-; X86-BWON-NEXT:    decl %eax
+; X86-BWON-NEXT:    movzwl (%edx), %edi
+; X86-BWON-NEXT:    movw %di, (%ecx,%esi,8)
+; X86-BWON-NEXT:    incl %esi
+; X86-BWON-NEXT:    cmpl %esi, %eax
 ; X86-BWON-NEXT:    jne .LBB4_2
 ; X86-BWON-NEXT:  .LBB4_3: # %._crit_edge
 ; X86-BWON-NEXT:    popl %esi
+; X86-BWON-NEXT:    .cfi_def_cfa_offset 8
+; X86-BWON-NEXT:    popl %edi
 ; X86-BWON-NEXT:    .cfi_def_cfa_offset 4
 ; X86-BWON-NEXT:    retl
 ;
 ; X86-BWOFF-LABEL: merge_loads_i16:
 ; X86-BWOFF:       # %bb.0:
-; X86-BWOFF-NEXT:    pushl %esi
+; X86-BWOFF-NEXT:    pushl %edi
 ; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 8
-; X86-BWOFF-NEXT:    .cfi_offset %esi, -8
+; X86-BWOFF-NEXT:    pushl %esi
+; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 12
+; X86-BWOFF-NEXT:    .cfi_offset %esi, -12
+; X86-BWOFF-NEXT:    .cfi_offset %edi, -8
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BWOFF-NEXT:    testl %eax, %eax
 ; X86-BWOFF-NEXT:    jle .LBB4_3
 ; X86-BWOFF-NEXT:  # %bb.1: # %.lr.ph
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BWOFF-NEXT:    xorl %esi, %esi
 ; X86-BWOFF-NEXT:    .p2align 4
 ; X86-BWOFF-NEXT:  .LBB4_2: # =>This Inner Loop Header: Depth=1
-; X86-BWOFF-NEXT:    movw (%edx), %si
-; X86-BWOFF-NEXT:    movw %si, (%ecx)
-; X86-BWOFF-NEXT:    addl $8, %ecx
-; X86-BWOFF-NEXT:    decl %eax
+; X86-BWOFF-NEXT:    movw (%edx), %di
+; X86-BWOFF-NEXT:    movw %di, (%ecx,%esi,8)
+; X86-BWOFF-NEXT:    incl %esi
+; X86-BWOFF-NEXT:    cmpl %esi, %eax
 ; X86-BWOFF-NEXT:    jne .LBB4_2
 ; X86-BWOFF-NEXT:  .LBB4_3: # %._crit_edge
 ; X86-BWOFF-NEXT:    popl %esi
+; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 8
+; X86-BWOFF-NEXT:    popl %edi
 ; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 4
 ; X86-BWOFF-NEXT:    retl
 ;
 ; X64-BWON-LABEL: merge_loads_i16:
 ; X64-BWON:       # %bb.0:
 ; X64-BWON-NEXT:    testl %edi, %edi
-; X64-BWON-NEXT:    jle .LBB4_2
+; X64-BWON-NEXT:    jle .LBB4_3
+; X64-BWON-NEXT:  # %bb.1: # %.lr.ph
+; X64-BWON-NEXT:    movl %edi, %eax
+; X64-BWON-NEXT:    xorl %ecx, %ecx
 ; X64-BWON-NEXT:    .p2align 4
-; X64-BWON-NEXT:  .LBB4_1: # =>This Inner Loop Header: Depth=1
-; X64-BWON-NEXT:    movzwl (%rsi), %eax
-; X64-BWON-NEXT:    movw %ax, (%rdx)
-; X64-BWON-NEXT:    addq $8, %rdx
-; X64-BWON-NEXT:    decl %edi
-; X64-BWON-NEXT:    jne .LBB4_1
-; X64-BWON-NEXT:  .LBB4_2: # %._crit_edge
+; X64-BWON-NEXT:  .LBB4_2: # =>This Inner Loop Header: Depth=1
+; X64-BWON-NEXT:    movzwl (%rsi), %edi
+; X64-BWON-NEXT:    movw %di, (%rdx,%rcx,8)
+; X64-BWON-NEXT:    incq %rcx
+; X64-BWON-NEXT:    cmpl %ecx, %eax
+; X64-BWON-NEXT:    jne .LBB4_2
+; X64-BWON-NEXT:  .LBB4_3: # %._crit_edge
 ; X64-BWON-NEXT:    retq
 ;
 ; X64-BWOFF-LABEL: merge_loads_i16:
 ; X64-BWOFF:       # %bb.0:
 ; X64-BWOFF-NEXT:    testl %edi, %edi
-; X64-BWOFF-NEXT:    jle .LBB4_2
+; X64-BWOFF-NEXT:    jle .LBB4_3
+; X64-BWOFF-NEXT:  # %bb.1: # %.lr.ph
+; X64-BWOFF-NEXT:    movl %edi, %eax
+; X64-BWOFF-NEXT:    xorl %ecx, %ecx
 ; X64-BWOFF-NEXT:    .p2align 4
-; X64-BWOFF-NEXT:  .LBB4_1: # =>This Inner Loop Header: Depth=1
-; X64-BWOFF-NEXT:    movw (%rsi), %ax
-; X64-BWOFF-NEXT:    movw %ax, (%rdx)
-; X64-BWOFF-NEXT:    addq $8, %rdx
-; X64-BWOFF-NEXT:    decl %edi
-; X64-BWOFF-NEXT:    jne .LBB4_1
-; X64-BWOFF-NEXT:  .LBB4_2: # %._crit_edge
+; X64-BWOFF-NEXT:  .LBB4_2: # =>This Inner Loop Header: Depth=1
+; X64-BWOFF-NEXT:    movw (%rsi), %di
+; X64-BWOFF-NEXT:    movw %di, (%rdx,%rcx,8)
+; X64-BWOFF-NEXT:    incq %rcx
+; X64-BWOFF-NEXT:    cmpl %ecx, %eax
+; X64-BWOFF-NEXT:    jne .LBB4_2
+; X64-BWOFF-NEXT:  .LBB4_3: # %._crit_edge
 ; X64-BWOFF-NEXT:    retq
   %1 = icmp sgt i32 %count, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
@@ -404,6 +440,9 @@ define void @no_merge_loads(i32 %count, ptr noalias nocapture %q, ptr noalias no
 ; X86-BWON:       # %bb.0:
 ; X86-BWON-NEXT:    pushl %ebx
 ; X86-BWON-NEXT:    .cfi_def_cfa_offset 8
+; X86-BWON-NEXT:    pushl %esi
+; X86-BWON-NEXT:    .cfi_def_cfa_offset 12
+; X86-BWON-NEXT:    .cfi_offset %esi, -12
 ; X86-BWON-NEXT:    .cfi_offset %ebx, -8
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BWON-NEXT:    testl %eax, %eax
@@ -411,17 +450,20 @@ define void @no_merge_loads(i32 %count, ptr noalias nocapture %q, ptr noalias no
 ; X86-BWON-NEXT:  # %bb.1: # %.lr.ph
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BWON-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BWON-NEXT:    xorl %esi, %esi
 ; X86-BWON-NEXT:    .p2align 4
 ; X86-BWON-NEXT:  .LBB5_2: # %a4
 ; X86-BWON-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-BWON-NEXT:    movzbl (%edx), %ebx
-; X86-BWON-NEXT:    movb %bl, (%ecx)
+; X86-BWON-NEXT:    movb %bl, (%ecx,%esi,8)
 ; X86-BWON-NEXT:    movzbl 1(%edx), %ebx
-; X86-BWON-NEXT:    movb %bl, 1(%ecx)
-; X86-BWON-NEXT:    addl $8, %ecx
-; X86-BWON-NEXT:    decl %eax
+; X86-BWON-NEXT:    movb %bl, 1(%ecx,%esi,8)
+; X86-BWON-NEXT:    incl %esi
+; X86-BWON-NEXT:    cmpl %esi, %eax
 ; X86-BWON-NEXT:    jne .LBB5_2
 ; X86-BWON-NEXT:  .LBB5_3: # %._crit_edge
+; X86-BWON-NEXT:    popl %esi
+; X86-BWON-NEXT:    .cfi_def_cfa_offset 8
 ; X86-BWON-NEXT:    popl %ebx
 ; X86-BWON-NEXT:    .cfi_def_cfa_offset 4
 ; X86-BWON-NEXT:    retl
@@ -430,6 +472,9 @@ define void @no_merge_loads(i32 %count, ptr noalias nocapture %q, ptr noalias no
 ; X86-BWOFF:       # %bb.0:
 ; X86-BWOFF-NEXT:    pushl %ebx
 ; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 8
+; X86-BWOFF-NEXT:    pushl %esi
+; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 12
+; X86-BWOFF-NEXT:    .cfi_offset %esi, -12
 ; X86-BWOFF-NEXT:    .cfi_offset %ebx, -8
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BWOFF-NEXT:    testl %eax, %eax
@@ -437,17 +482,20 @@ define void @no_merge_loads(i32 %count, ptr noalias nocapture %q, ptr noalias no
 ; X86-BWOFF-NEXT:  # %bb.1: # %.lr.ph
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BWOFF-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BWOFF-NEXT:    xorl %esi, %esi
 ; X86-BWOFF-NEXT:    .p2align 4
 ; X86-BWOFF-NEXT:  .LBB5_2: # %a4
 ; X86-BWOFF-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-BWOFF-NEXT:    movb (%edx), %bl
-; X86-BWOFF-NEXT:    movb %bl, (%ecx)
+; X86-BWOFF-NEXT:    movb %bl, (%ecx,%esi,8)
 ; X86-BWOFF-NEXT:    movb 1(%edx), %bl
-; X86-BWOFF-NEXT:    movb %bl, 1(%ecx)
-; X86-BWOFF-NEXT:    addl $8, %ecx
-; X86-BWOFF-NEXT:    decl %eax
+; X86-BWOFF-NEXT:    movb %bl, 1(%ecx,%esi,8)
+; X86-BWOFF-NEXT:    incl %esi
+; X86-BWOFF-NEXT:    cmpl %esi, %eax
 ; X86-BWOFF-NEXT:    jne .LBB5_2
 ; X86-BWOFF-NEXT:  .LBB5_3: # %._crit_edge
+; X86-BWOFF-NEXT:    popl %esi
+; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 8
 ; X86-BWOFF-NEXT:    popl %ebx
 ; X86-BWOFF-NEXT:    .cfi_def_cfa_offset 4
 ; X86-BWOFF-NEXT:    retl
@@ -455,35 +503,41 @@ define void @no_merge_loads(i32 %count, ptr noalias nocapture %q, ptr noalias no
 ; X64-BWON-LABEL: no_merge_loads:
 ; X64-BWON:       # %bb.0:
 ; X64-BWON-NEXT:    testl %edi, %edi
-; X64-BWON-NEXT:    jle .LBB5_2
+; X64-BWON-NEXT:    jle .LBB5_3
+; X64-BWON-NEXT:  # %bb.1: # %.lr.ph
+; X64-BWON-NEXT:    movl %edi, %eax
+; X64-BWON-NEXT:    xorl %ecx, %ecx
 ; X64-BWON-NEXT:    .p2align 4
-; X64-BWON-NEXT:  .LBB5_1: # %a4
+; X64-BWON-NEXT:  .LBB5_2: # %a4
 ; X64-BWON-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-BWON-NEXT:    movzbl (%rsi), %eax
-; X64-BWON-NEXT:    movb %al, (%rdx)
-; X64-BWON-NEXT:    movzbl 1(%rsi), %eax
-; X64-BWON-NEXT:    movb %al, 1(%rdx)
-; X64-BWON-NEXT:    addq $8, %rdx
-; X64-BWON-NEXT:    decl %edi
-; X64-BWON-NEXT:    jne .LBB5_1
-; X64-BWON-NEXT:  .LBB5_2: # %._crit_edge
+; X64-BWON-NEXT:    movzbl (%rsi), %edi
+; X64-BWON-NEXT:    movb %dil, (%rdx,%rcx,8)
+; X64-BWON-NEXT:    movzbl 1(%rsi), %edi
+; X64-BWON-NEXT:    movb %dil, 1(%rdx,%rcx,8)
+; X64-BWON-NEXT:    incq %rcx
+; X64-BWON-NEXT:    cmpl %ecx, %eax
+; X64-BWON-NEXT:    jne .LBB5_2
+; X64-BWON-NEXT:  .LBB5_3: # %._crit_edge
 ; X64-BWON-NEXT:    retq
 ;
 ; X64-BWOFF-LABEL: no_merge_loads:
 ; X64-BWOFF:       # %bb.0:
 ; X64-BWOFF-NEXT:    testl %edi, %edi
-; X64-BWOFF-NEXT:    jle .LBB5_2
+; X64-BWOFF-NEXT:    jle .LBB5_3
+; X64-BWOFF-NEXT:  # %bb.1: # %.lr.ph
+; X64-BWOFF-NEXT:    movl %edi, %eax
+; X64-BWOFF-NEXT:    xorl %ecx, %ecx
 ; X64-BWOFF-NEXT:    .p2align 4
-; X64-BWOFF-NEXT:  .LBB5_1: # %a4
+; X64-BWOFF-NEXT:  .LBB5_2: # %a4
 ; X64-BWOFF-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-BWOFF-NEXT:    movb (%rsi), %al
-; X64-BWOFF-NEXT:    movb %al, (%rdx)
-; X64-BWOFF-NEXT:    movb 1(%rsi), %al
-; X64-BWOFF-NEXT:    movb %al, 1(%rdx)
-; X64-BWOFF-NEXT:    addq $8, %rdx
-; X64-BWOFF-NEXT:    decl %edi
-; X64-BWOFF-NEXT:    jne .LBB5_1
-; X64-BWOFF-NEXT:  .LBB5_2: # %._crit_edge
+; X64-BWOFF-NEXT:    movb (%rsi), %dil
+; X64-BWOFF-NEXT:    movb %dil, (%rdx,%rcx,8)
+; X64-BWOFF-NEXT:    movb 1(%rsi), %dil
+; X64-BWOFF-NEXT:    movb %dil, 1(%rdx,%rcx,8)
+; X64-BWOFF-NEXT:    incq %rcx
+; X64-BWOFF-NEXT:    cmpl %ecx, %eax
+; X64-BWOFF-NEXT:    jne .LBB5_2
+; X64-BWOFF-NEXT:  .LBB5_3: # %._crit_edge
 ; X64-BWOFF-NEXT:    retq
   %1 = icmp sgt i32 %count, 0
   br i1 %1, label %.lr.ph, label %._crit_edge

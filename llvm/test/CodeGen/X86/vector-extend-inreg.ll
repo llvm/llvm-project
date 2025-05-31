@@ -34,7 +34,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X86-SSE-NEXT:    leal (%ecx,%ecx), %eax
 ; X86-SSE-NEXT:    andl $31, %eax
 ; X86-SSE-NEXT:    movl 128(%esp,%eax,4), %eax
-; X86-SSE-NEXT:    leal 1(%ecx,%ecx), %ecx
+; X86-SSE-NEXT:    leal 1(,%ecx,2), %ecx
 ; X86-SSE-NEXT:    andl $31, %ecx
 ; X86-SSE-NEXT:    movl (%esp,%ecx,4), %edx
 ; X86-SSE-NEXT:    movl %ebp, %esp
@@ -80,7 +80,7 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) noun
 ; X86-AVX-NEXT:    leal (%ecx,%ecx), %eax
 ; X86-AVX-NEXT:    andl $31, %eax
 ; X86-AVX-NEXT:    movl 128(%esp,%eax,4), %eax
-; X86-AVX-NEXT:    leal 1(%ecx,%ecx), %ecx
+; X86-AVX-NEXT:    leal 1(,%ecx,2), %ecx
 ; X86-AVX-NEXT:    andl $31, %ecx
 ; X86-AVX-NEXT:    movl (%esp,%ecx,4), %edx
 ; X86-AVX-NEXT:    movl %ebp, %esp

@@ -696,13 +696,13 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ;
 ; AVX-RECIP-LABEL: v8f32_no_estimate:
 ; AVX-RECIP:       # %bb.0:
-; AVX-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-RECIP-NEXT:    vmovaps {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX-RECIP-NEXT:    vdivps %ymm0, %ymm1, %ymm0
 ; AVX-RECIP-NEXT:    retq
 ;
 ; FMA-RECIP-LABEL: v8f32_no_estimate:
 ; FMA-RECIP:       # %bb.0:
-; FMA-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; FMA-RECIP-NEXT:    vmovaps {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; FMA-RECIP-NEXT:    vdivps %ymm0, %ymm1, %ymm0
 ; FMA-RECIP-NEXT:    retq
 ;
@@ -768,7 +768,7 @@ define <8 x float> @v8f32_one_step(<8 x float> %x) #1 {
 ; AVX-RECIP:       # %bb.0:
 ; AVX-RECIP-NEXT:    vrcpps %ymm0, %ymm1
 ; AVX-RECIP-NEXT:    vmulps %ymm1, %ymm0, %ymm0
-; AVX-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-RECIP-NEXT:    vmovaps {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX-RECIP-NEXT:    vsubps %ymm0, %ymm2, %ymm0
 ; AVX-RECIP-NEXT:    vmulps %ymm0, %ymm1, %ymm0
 ; AVX-RECIP-NEXT:    vaddps %ymm0, %ymm1, %ymm0
@@ -879,7 +879,7 @@ define <8 x float> @v8f32_two_step(<8 x float> %x) #2 {
 ; AVX-RECIP:       # %bb.0:
 ; AVX-RECIP-NEXT:    vrcpps %ymm0, %ymm1
 ; AVX-RECIP-NEXT:    vmulps %ymm1, %ymm0, %ymm2
-; AVX-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-RECIP-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX-RECIP-NEXT:    vsubps %ymm2, %ymm3, %ymm2
 ; AVX-RECIP-NEXT:    vmulps %ymm2, %ymm1, %ymm2
 ; AVX-RECIP-NEXT:    vaddps %ymm2, %ymm1, %ymm1
@@ -892,7 +892,7 @@ define <8 x float> @v8f32_two_step(<8 x float> %x) #2 {
 ; FMA-RECIP-LABEL: v8f32_two_step:
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpps %ymm0, %ymm1
-; FMA-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; FMA-RECIP-NEXT:    vmovaps {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; FMA-RECIP-NEXT:    vmovaps %ymm1, %ymm3
 ; FMA-RECIP-NEXT:    vfmsub213ps {{.*#+}} ymm3 = (ymm0 * ymm3) - ymm2
 ; FMA-RECIP-NEXT:    vfnmadd132ps {{.*#+}} ymm3 = -(ymm3 * ymm1) + ymm1
@@ -996,14 +996,14 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 ;
 ; AVX-RECIP-LABEL: v16f32_no_estimate:
 ; AVX-RECIP:       # %bb.0:
-; AVX-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-RECIP-NEXT:    vmovaps {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX-RECIP-NEXT:    vdivps %ymm0, %ymm2, %ymm0
 ; AVX-RECIP-NEXT:    vdivps %ymm1, %ymm2, %ymm1
 ; AVX-RECIP-NEXT:    retq
 ;
 ; FMA-RECIP-LABEL: v16f32_no_estimate:
 ; FMA-RECIP:       # %bb.0:
-; FMA-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; FMA-RECIP-NEXT:    vmovaps {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; FMA-RECIP-NEXT:    vdivps %ymm0, %ymm2, %ymm0
 ; FMA-RECIP-NEXT:    vdivps %ymm1, %ymm2, %ymm1
 ; FMA-RECIP-NEXT:    retq
@@ -1089,21 +1089,21 @@ define <16 x float> @v16f32_one_step(<16 x float> %x) #1 {
 ; AVX-RECIP:       # %bb.0:
 ; AVX-RECIP-NEXT:    vrcpps %ymm0, %ymm2
 ; AVX-RECIP-NEXT:    vmulps %ymm2, %ymm0, %ymm0
-; AVX-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-RECIP-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX-RECIP-NEXT:    vsubps %ymm0, %ymm3, %ymm0
+; AVX-RECIP-NEXT:    vrcpps %ymm1, %ymm4
 ; AVX-RECIP-NEXT:    vmulps %ymm0, %ymm2, %ymm0
 ; AVX-RECIP-NEXT:    vaddps %ymm0, %ymm2, %ymm0
-; AVX-RECIP-NEXT:    vrcpps %ymm1, %ymm2
-; AVX-RECIP-NEXT:    vmulps %ymm2, %ymm1, %ymm1
+; AVX-RECIP-NEXT:    vmulps %ymm4, %ymm1, %ymm1
 ; AVX-RECIP-NEXT:    vsubps %ymm1, %ymm3, %ymm1
-; AVX-RECIP-NEXT:    vmulps %ymm1, %ymm2, %ymm1
-; AVX-RECIP-NEXT:    vaddps %ymm1, %ymm2, %ymm1
+; AVX-RECIP-NEXT:    vmulps %ymm1, %ymm4, %ymm1
+; AVX-RECIP-NEXT:    vaddps %ymm1, %ymm4, %ymm1
 ; AVX-RECIP-NEXT:    retq
 ;
 ; FMA-RECIP-LABEL: v16f32_one_step:
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpps %ymm0, %ymm2
-; FMA-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; FMA-RECIP-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; FMA-RECIP-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm2 * ymm0) - ymm3
 ; FMA-RECIP-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm2
 ; FMA-RECIP-NEXT:    vrcpps %ymm1, %ymm2
@@ -1249,19 +1249,19 @@ define <16 x float> @v16f32_two_step(<16 x float> %x) #2 {
 ; AVX-RECIP:       # %bb.0:
 ; AVX-RECIP-NEXT:    vrcpps %ymm0, %ymm2
 ; AVX-RECIP-NEXT:    vmulps %ymm2, %ymm0, %ymm3
-; AVX-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX-RECIP-NEXT:    vmovaps {{.*#+}} ymm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX-RECIP-NEXT:    vsubps %ymm3, %ymm4, %ymm3
 ; AVX-RECIP-NEXT:    vmulps %ymm3, %ymm2, %ymm3
 ; AVX-RECIP-NEXT:    vaddps %ymm3, %ymm2, %ymm2
 ; AVX-RECIP-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX-RECIP-NEXT:    vsubps %ymm0, %ymm4, %ymm0
+; AVX-RECIP-NEXT:    vrcpps %ymm1, %ymm3
 ; AVX-RECIP-NEXT:    vmulps %ymm0, %ymm2, %ymm0
 ; AVX-RECIP-NEXT:    vaddps %ymm0, %ymm2, %ymm0
-; AVX-RECIP-NEXT:    vrcpps %ymm1, %ymm2
-; AVX-RECIP-NEXT:    vmulps %ymm2, %ymm1, %ymm3
-; AVX-RECIP-NEXT:    vsubps %ymm3, %ymm4, %ymm3
-; AVX-RECIP-NEXT:    vmulps %ymm3, %ymm2, %ymm3
-; AVX-RECIP-NEXT:    vaddps %ymm3, %ymm2, %ymm2
+; AVX-RECIP-NEXT:    vmulps %ymm3, %ymm1, %ymm2
+; AVX-RECIP-NEXT:    vsubps %ymm2, %ymm4, %ymm2
+; AVX-RECIP-NEXT:    vmulps %ymm2, %ymm3, %ymm2
+; AVX-RECIP-NEXT:    vaddps %ymm2, %ymm3, %ymm2
 ; AVX-RECIP-NEXT:    vmulps %ymm2, %ymm1, %ymm1
 ; AVX-RECIP-NEXT:    vsubps %ymm1, %ymm4, %ymm1
 ; AVX-RECIP-NEXT:    vmulps %ymm1, %ymm2, %ymm1
@@ -1271,13 +1271,13 @@ define <16 x float> @v16f32_two_step(<16 x float> %x) #2 {
 ; FMA-RECIP-LABEL: v16f32_two_step:
 ; FMA-RECIP:       # %bb.0:
 ; FMA-RECIP-NEXT:    vrcpps %ymm0, %ymm2
-; FMA-RECIP-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; FMA-RECIP-NEXT:    vmovaps {{.*#+}} ymm3 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; FMA-RECIP-NEXT:    vmovaps %ymm2, %ymm4
 ; FMA-RECIP-NEXT:    vfmsub213ps {{.*#+}} ymm4 = (ymm0 * ymm4) - ymm3
 ; FMA-RECIP-NEXT:    vfnmadd132ps {{.*#+}} ymm4 = -(ymm4 * ymm2) + ymm2
 ; FMA-RECIP-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm4 * ymm0) - ymm3
-; FMA-RECIP-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm4) + ymm4
 ; FMA-RECIP-NEXT:    vrcpps %ymm1, %ymm2
+; FMA-RECIP-NEXT:    vfnmadd132ps {{.*#+}} ymm0 = -(ymm0 * ymm4) + ymm4
 ; FMA-RECIP-NEXT:    vmovaps %ymm2, %ymm4
 ; FMA-RECIP-NEXT:    vfmsub213ps {{.*#+}} ymm4 = (ymm1 * ymm4) - ymm3
 ; FMA-RECIP-NEXT:    vfnmadd132ps {{.*#+}} ymm4 = -(ymm4 * ymm2) + ymm2

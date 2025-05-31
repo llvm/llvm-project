@@ -106,27 +106,27 @@ define <5 x i16> @test_short_div(<5 x i16> %num, <5 x i16> %div) {
 ; CHECK-NEXT:    pextrw $3, %xmm1, %esi
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
+; CHECK-NEXT:    pextrw $2, %xmm0, %edi
 ; CHECK-NEXT:    idivw %si
 ; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    pextrw $2, %xmm0, %eax
-; CHECK-NEXT:    pextrw $2, %xmm1, %edi
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %di
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movd %xmm1, %r8d
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    pextrw $2, %xmm1, %r8d
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %r8w
-; CHECK-NEXT:    movl %eax, %r8d
-; CHECK-NEXT:    pextrw $1, %xmm0, %eax
-; CHECK-NEXT:    pextrw $1, %xmm1, %r9d
+; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    movd %xmm1, %r9d
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
+; CHECK-NEXT:    pextrw $1, %xmm0, %r8d
 ; CHECK-NEXT:    idivw %r9w
+; CHECK-NEXT:    movl %eax, %r9d
+; CHECK-NEXT:    pextrw $1, %xmm1, %r10d
+; CHECK-NEXT:    movl %r8d, %eax
+; CHECK-NEXT:    cwtd
+; CHECK-NEXT:    idivw %r10w
 ; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    movd %r8d, %xmm0
+; CHECK-NEXT:    movd %r9d, %xmm0
 ; CHECK-NEXT:    pinsrw $1, %eax, %xmm0
 ; CHECK-NEXT:    pinsrw $2, %edi, %xmm0
 ; CHECK-NEXT:    pinsrw $3, %esi, %xmm0
@@ -292,27 +292,27 @@ define <5 x i16> @test_short_rem(<5 x i16> %num, <5 x i16> %rem) {
 ; CHECK-NEXT:    pextrw $3, %xmm1, %esi
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
+; CHECK-NEXT:    pextrw $2, %xmm0, %edi
 ; CHECK-NEXT:    idivw %si
 ; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    pextrw $2, %xmm0, %eax
-; CHECK-NEXT:    pextrw $2, %xmm1, %edi
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %di
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movd %xmm1, %r8d
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    pextrw $2, %xmm1, %r8d
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cwtd
 ; CHECK-NEXT:    idivw %r8w
-; CHECK-NEXT:    movl %edx, %r8d
-; CHECK-NEXT:    pextrw $1, %xmm0, %eax
-; CHECK-NEXT:    pextrw $1, %xmm1, %r9d
+; CHECK-NEXT:    movl %edx, %edi
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    movd %xmm1, %r9d
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    cwtd
+; CHECK-NEXT:    pextrw $1, %xmm0, %r8d
 ; CHECK-NEXT:    idivw %r9w
+; CHECK-NEXT:    movl %edx, %r9d
+; CHECK-NEXT:    pextrw $1, %xmm1, %r10d
+; CHECK-NEXT:    movl %r8d, %eax
+; CHECK-NEXT:    cwtd
+; CHECK-NEXT:    idivw %r10w
 ; CHECK-NEXT:    # kill: def $dx killed $dx def $edx
-; CHECK-NEXT:    movd %r8d, %xmm0
+; CHECK-NEXT:    movd %r9d, %xmm0
 ; CHECK-NEXT:    pinsrw $1, %edx, %xmm0
 ; CHECK-NEXT:    pinsrw $2, %edi, %xmm0
 ; CHECK-NEXT:    pinsrw $3, %esi, %xmm0

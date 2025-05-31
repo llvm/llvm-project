@@ -123,7 +123,7 @@ define i64 @test_reduce_v2i64(<2 x i64> %a0) {
 ; X64-AVX2-LABEL: test_reduce_v2i64:
 ; X64-AVX2:       ## %bb.0:
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; X64-AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm3
 ; X64-AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm2
 ; X64-AVX2-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
@@ -321,7 +321,7 @@ define i16 @test_reduce_v8i16(<8 x i16> %a0) {
 ;
 ; X64-AVX512-LABEL: test_reduce_v8i16:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    notl %eax
@@ -437,7 +437,7 @@ define i8 @test_reduce_v16i8(<16 x i8> %a0) {
 ;
 ; X64-AVX512-LABEL: test_reduce_v16i8:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; X64-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
@@ -938,7 +938,7 @@ define i16 @test_reduce_v16i16(<16 x i16> %a0) {
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX512-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    notl %eax
@@ -1088,7 +1088,7 @@ define i8 @test_reduce_v32i8(<32 x i8> %a0) {
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX512-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; X64-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
@@ -1779,7 +1779,7 @@ define i16 @test_reduce_v32i16(<32 x i16> %a0) {
 ; X64-AVX512-NEXT:    vpmaxuw %ymm1, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX512-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    notl %eax
@@ -1950,7 +1950,7 @@ define i8 @test_reduce_v64i8(<64 x i8> %a0) {
 ; X64-AVX512-NEXT:    vpmaxub %ymm1, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-AVX512-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
-; X64-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; X64-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
@@ -2073,7 +2073,7 @@ define i16 @test_reduce_v16i16_v8i16(<16 x i16> %a0) {
 ;
 ; X64-AVX512-LABEL: test_reduce_v16i16_v8i16:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    notl %eax
@@ -2181,7 +2181,7 @@ define i16 @test_reduce_v32i16_v8i16(<32 x i16> %a0) {
 ;
 ; X64-AVX512-LABEL: test_reduce_v32i16_v8i16:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX512-NEXT:    notl %eax
@@ -2301,7 +2301,7 @@ define i8 @test_reduce_v32i8_v16i8(<32 x i8> %a0) {
 ;
 ; X64-AVX512-LABEL: test_reduce_v32i8_v16i8:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; X64-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0
@@ -2426,7 +2426,7 @@ define i8 @test_reduce_v64i8_v16i8(<64 x i8> %a0) {
 ;
 ; X64-AVX512-LABEL: test_reduce_v64i8_v16i8:
 ; X64-AVX512:       ## %bb.0:
-; X64-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; X64-AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; X64-AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vphminposuw %xmm0, %xmm0

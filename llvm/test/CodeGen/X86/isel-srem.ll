@@ -79,9 +79,9 @@ define i16 @test_srem_i16(i16 %arg1, i16 %arg2) nounwind {
 ; GISEL-X86-LABEL: test_srem_i16:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GISEL-X86-NEXT:    cwtd
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    idivw %cx
 ; GISEL-X86-NEXT:    movl %edx, %eax
 ; GISEL-X86-NEXT:    retl
@@ -110,13 +110,67 @@ define i32 @test_srem_i32(i32 %arg1, i32 %arg2) nounwind {
 }
 
 define i64 @test_srem_i64(i64 %arg1, i64 %arg2) nounwind {
-; X64-LABEL: test_srem_i64:
-; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    cqto
-; X64-NEXT:    idivq %rsi
-; X64-NEXT:    movq %rdx, %rax
-; X64-NEXT:    retq
+; SDAG-X64-LABEL: test_srem_i64:
+; SDAG-X64:       # %bb.0:
+; SDAG-X64-NEXT:    movq %rdi, %rax
+; SDAG-X64-NEXT:    movq %rdi, %rcx
+; SDAG-X64-NEXT:    orq %rsi, %rcx
+; SDAG-X64-NEXT:    shrq $32, %rcx
+; SDAG-X64-NEXT:    je .LBB3_1
+; SDAG-X64-NEXT:  # %bb.2:
+; SDAG-X64-NEXT:    cqto
+; SDAG-X64-NEXT:    idivq %rsi
+; SDAG-X64-NEXT:    movq %rdx, %rax
+; SDAG-X64-NEXT:    retq
+; SDAG-X64-NEXT:  .LBB3_1:
+; SDAG-X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; SDAG-X64-NEXT:    xorl %edx, %edx
+; SDAG-X64-NEXT:    divl %esi
+; SDAG-X64-NEXT:    movl %edx, %eax
+; SDAG-X64-NEXT:    retq
+;
+; FAST-X64-LABEL: test_srem_i64:
+; FAST-X64:       # %bb.0:
+; FAST-X64-NEXT:    movq %rdi, %rax
+; FAST-X64-NEXT:    movq %rdi, %rcx
+; FAST-X64-NEXT:    orq %rsi, %rcx
+; FAST-X64-NEXT:    movabsq $-4294967296, %rdx # imm = 0xFFFFFFFF00000000
+; FAST-X64-NEXT:    andq %rcx, %rdx
+; FAST-X64-NEXT:    je .LBB3_1
+; FAST-X64-NEXT:  # %bb.2:
+; FAST-X64-NEXT:    cqto
+; FAST-X64-NEXT:    idivq %rsi
+; FAST-X64-NEXT:    movq %rdx, %rax
+; FAST-X64-NEXT:    retq
+; FAST-X64-NEXT:  .LBB3_1:
+; FAST-X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; FAST-X64-NEXT:    xorl %edx, %edx
+; FAST-X64-NEXT:    divl %esi
+; FAST-X64-NEXT:    movl %edx, %eax
+; FAST-X64-NEXT:    retq
+;
+; GISEL-X64-LABEL: test_srem_i64:
+; GISEL-X64:       # %bb.0:
+; GISEL-X64-NEXT:    movq %rdi, %rax
+; GISEL-X64-NEXT:    movabsq $-4294967296, %rcx # imm = 0xFFFFFFFF00000000
+; GISEL-X64-NEXT:    movq %rdi, %rdx
+; GISEL-X64-NEXT:    orq %rsi, %rdx
+; GISEL-X64-NEXT:    andq %rcx, %rdx
+; GISEL-X64-NEXT:    cmpq $0, %rdx
+; GISEL-X64-NEXT:    sete %cl
+; GISEL-X64-NEXT:    testb $1, %cl
+; GISEL-X64-NEXT:    jne .LBB3_1
+; GISEL-X64-NEXT:  # %bb.2:
+; GISEL-X64-NEXT:    cqto
+; GISEL-X64-NEXT:    idivq %rsi
+; GISEL-X64-NEXT:    movq %rdx, %rax
+; GISEL-X64-NEXT:    retq
+; GISEL-X64-NEXT:  .LBB3_1:
+; GISEL-X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; GISEL-X64-NEXT:    xorl %edx, %edx
+; GISEL-X64-NEXT:    divl %esi
+; GISEL-X64-NEXT:    movl %edx, %eax
+; GISEL-X64-NEXT:    retq
 ;
 ; DAG-X86-LABEL: test_srem_i64:
 ; DAG-X86:       # %bb.0:

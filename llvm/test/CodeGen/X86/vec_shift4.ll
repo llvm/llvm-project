@@ -29,10 +29,10 @@ define <2 x i64> @shl2(<16 x i8> %r, <16 x i8> %a) nounwind readnone ssp {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movdqa %xmm1, %xmm2
 ; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    psllw $5, %xmm2
 ; X86-NEXT:    movdqa %xmm0, %xmm3
 ; X86-NEXT:    psllw $4, %xmm3
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3
+; X86-NEXT:    psllw $5, %xmm2
 ; X86-NEXT:    movdqa %xmm2, %xmm0
 ; X86-NEXT:    pblendvb %xmm0, %xmm3, %xmm1
 ; X86-NEXT:    movdqa %xmm1, %xmm3
@@ -52,10 +52,10 @@ define <2 x i64> @shl2(<16 x i8> %r, <16 x i8> %a) nounwind readnone ssp {
 ; X64-LABEL: shl2:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movdqa %xmm0, %xmm2
-; X64-NEXT:    psllw $5, %xmm1
 ; X64-NEXT:    movdqa %xmm0, %xmm3
 ; X64-NEXT:    psllw $4, %xmm3
 ; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; X64-NEXT:    psllw $5, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
 ; X64-NEXT:    movdqa %xmm2, %xmm3

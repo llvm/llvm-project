@@ -100,8 +100,8 @@ entry:
 define <4 x i64> @test_mm512_mask_cvtneps2bf16_512(<4 x i64> %C, i16 %U, <16 x float> %A) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm512_mask_cvtneps2bf16_512:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X86-NEXT:    vcvtneps2bf16 %zmm1, %ymm1 # encoding: [0x62,0xf2,0x7e,0x48,0x72,0xc9]
+; X86-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf1,0xff,0x49,0x6f,0xc1]
 ; X86-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -109,8 +109,8 @@ define <4 x i64> @test_mm512_mask_cvtneps2bf16_512(<4 x i64> %C, i16 %U, <16 x f
 ;
 ; X64-LABEL: test_mm512_mask_cvtneps2bf16_512:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X64-NEXT:    vcvtneps2bf16 %zmm1, %ymm1 # encoding: [0x62,0xf2,0x7e,0x48,0x72,0xc9]
+; X64-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vmovdqu16 %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf1,0xff,0x49,0x6f,0xc1]
 ; X64-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0

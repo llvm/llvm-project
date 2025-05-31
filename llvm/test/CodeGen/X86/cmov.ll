@@ -176,7 +176,8 @@ define i32 @test6(ptr nocapture %P) nounwind readonly {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $42, (%rdi)
 ; CHECK-NEXT:    setl %al
-; CHECK-NEXT:    leal 4(%rax,%rax,8), %eax
+; CHECK-NEXT:    leal (%rax,%rax,8), %eax
+; CHECK-NEXT:    addl $4, %eax
 ; CHECK-NEXT:    retq
 entry:
 	%0 = load i32, ptr %P, align 4

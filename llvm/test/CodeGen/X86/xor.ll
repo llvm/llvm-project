@@ -131,8 +131,8 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ; X86-NEXT:    notl %edx
 ; X86-NEXT:    andl %ecx, %edx
 ; X86-NEXT:    addl %edx, %edx
-; X86-NEXT:    testw %dx, %dx
 ; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    testw %dx, %dx
 ; X86-NEXT:    jne .LBB4_1
 ; X86-NEXT:  # %bb.2: # %bb12
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -149,8 +149,8 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ; X64-LIN-NEXT:    notl %ecx
 ; X64-LIN-NEXT:    andl %esi, %ecx
 ; X64-LIN-NEXT:    addl %ecx, %ecx
-; X64-LIN-NEXT:    testw %cx, %cx
 ; X64-LIN-NEXT:    movl %ecx, %esi
+; X64-LIN-NEXT:    testw %cx, %cx
 ; X64-LIN-NEXT:    jne .LBB4_1
 ; X64-LIN-NEXT:  # %bb.2: # %bb12
 ; X64-LIN-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -168,8 +168,8 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ; X64-WIN-NEXT:    notl %ecx
 ; X64-WIN-NEXT:    andl %edx, %ecx
 ; X64-WIN-NEXT:    addl %ecx, %ecx
-; X64-WIN-NEXT:    testw %cx, %cx
 ; X64-WIN-NEXT:    movl %ecx, %edx
+; X64-WIN-NEXT:    testw %cx, %cx
 ; X64-WIN-NEXT:    jne .LBB4_1
 ; X64-WIN-NEXT:  # %bb.2: # %bb12
 ; X64-WIN-NEXT:    # kill: def $ax killed $ax killed $eax

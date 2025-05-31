@@ -26,8 +26,8 @@ define i32 @test2(i32 %x, i32 %y, i32 %res) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    sbbl $0, %eax
 ; CHECK-NEXT:    retl
   %cmp = icmp ugt i32 %x, %y

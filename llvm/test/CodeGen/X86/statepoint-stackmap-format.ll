@@ -78,18 +78,18 @@ declare void @many_arg(i64, i64, i64, i64, i64, i64, i64, i64)
 
 define i32 @test_spadj(ptr addrspace(1) %p) gc "statepoint-example" {
   ; CHECK-LABEL: test_spadj
-  ; CHECK: movq %rdi, (%rsp)
+  ; CHECK: subq	$24, %rsp
+  ; CHECK: movq %rdi, 16(%rsp)
+  ; CHECK: xorps	%xmm0, %xmm0
+  ; CHECK: movups	%xmm0, (%rsp)
   ; CHECK: xorl %edi, %edi
   ; CHECK: xorl %esi, %esi
   ; CHECK: xorl %edx, %edx
   ; CHECK: xorl %ecx, %ecx
   ; CHECK: xorl %r8d, %r8d
   ; CHECK: xorl %r9d, %r9d
-  ; CHECK: pushq $0
-  ; CHECK: pushq $0
   ; CHECK: callq many_arg
-  ; CHECK: addq $16, %rsp
-  ; CHECK: movq (%rsp)
+  ; CHECK: movq 16(%rsp)
   %statepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (i64, i64, i64, i64, i64, i64, i64, i64)) @many_arg, i32 8, i32 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0, i32 0) ["gc-live"(ptr addrspace(1) %p)]
   %p.relocated = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %statepoint_token, i32 0, i32 0) ; (%p, %p)
   %ld = load i32, ptr addrspace(1) %p.relocated
@@ -148,7 +148,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .quad 8
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad test_spadj
-; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 24
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad test_fixed_arg
 ; CHECK-NEXT:   .quad 8

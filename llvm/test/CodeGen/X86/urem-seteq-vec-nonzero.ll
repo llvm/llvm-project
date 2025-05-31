@@ -98,9 +98,9 @@ define <4 x i1> @t32_5(<4 x i32> %X) nounwind {
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3435973837,3435973837,3435973837,3435973837]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [858993458,858993458,858993458,858993458]
 ; CHECK-AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [858993458,858993458,858993458,858993458]
-; CHECK-AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
+; CHECK-AVX2-NEXT:    vpminud %xmm2, %xmm0, %xmm1
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
@@ -168,9 +168,9 @@ define <4 x i1> @t32_6_part0(<4 x i32> %X) nounwind {
 ; CHECK-AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpsrld $1, %xmm0, %xmm1
 ; CHECK-AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [715827882,715827882,715827882,715827882]
 ; CHECK-AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [715827882,715827882,715827882,715827882]
-; CHECK-AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
+; CHECK-AVX2-NEXT:    vpminud %xmm2, %xmm0, %xmm1
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;

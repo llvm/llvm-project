@@ -267,20 +267,20 @@ define void @add_2i64_mem(ptr %p0, ptr %p1, ptr %p2) nounwind {
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl 12(%edx), %esi
-; X32-NEXT:    movl 8(%edx), %edi
-; X32-NEXT:    movl (%edx), %ebx
-; X32-NEXT:    movl 4(%edx), %edx
-; X32-NEXT:    addl (%ecx), %ebx
-; X32-NEXT:    adcl 4(%ecx), %edx
-; X32-NEXT:    addl 8(%ecx), %edi
-; X32-NEXT:    adcl 12(%ecx), %esi
-; X32-NEXT:    movl %edi, 8(%eax)
-; X32-NEXT:    movl %ebx, (%eax)
-; X32-NEXT:    movl %esi, 12(%eax)
-; X32-NEXT:    movl %edx, 4(%eax)
+; X32-NEXT:    movl (%edx), %ecx
+; X32-NEXT:    addl (%eax), %ecx
+; X32-NEXT:    movl 4(%edx), %esi
+; X32-NEXT:    adcl 4(%eax), %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl 8(%edx), %ebx
+; X32-NEXT:    addl 8(%eax), %ebx
+; X32-NEXT:    movl 12(%edx), %edx
+; X32-NEXT:    adcl 12(%eax), %edx
+; X32-NEXT:    movl %ebx, 8(%edi)
+; X32-NEXT:    movl %ecx, (%edi)
+; X32-NEXT:    movl %edx, 12(%edi)
+; X32-NEXT:    movl %esi, 4(%edi)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx

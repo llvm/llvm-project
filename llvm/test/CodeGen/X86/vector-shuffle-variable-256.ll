@@ -196,13 +196,13 @@ define <8 x float> @var_shuffle_v8f32_v8f32_xxxxxxxx_i32(<8 x float> %x, i32 %i0
 ; ALL-NEXT:    andl $7, %edi
 ; ALL-NEXT:    andl $7, %esi
 ; ALL-NEXT:    andl $7, %edx
-; ALL-NEXT:    andl $7, %ecx
 ; ALL-NEXT:    andl $7, %r8d
 ; ALL-NEXT:    vmovaps %ymm0, (%rsp)
 ; ALL-NEXT:    andl $7, %r9d
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; ALL-NEXT:    andl $7, %ecx
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; ALL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
@@ -247,13 +247,13 @@ define <8 x float> @var_shuffle_v8f32_v4f32_xxxxxxxx_i32(<4 x float> %x, i32 %i0
 ; ALL-NEXT:    andl $3, %edi
 ; ALL-NEXT:    andl $3, %esi
 ; ALL-NEXT:    andl $3, %edx
-; ALL-NEXT:    andl $3, %ecx
 ; ALL-NEXT:    andl $3, %r8d
 ; ALL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; ALL-NEXT:    andl $3, %r9d
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; ALL-NEXT:    andl $3, %ecx
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; ALL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
@@ -289,8 +289,6 @@ define <16 x i16> @var_shuffle_v16i16_v16i16_xxxxxxxxxxxxxxxx_i16(<16 x i16> %x,
 ; AVX1-NEXT:    subq $64, %rsp
 ; AVX1-NEXT:    # kill: def $r9d killed $r9d def $r9
 ; AVX1-NEXT:    # kill: def $r8d killed $r8d def $r8
-; AVX1-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX1-NEXT:    # kill: def $edx killed $edx def $rdx
 ; AVX1-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX1-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX1-NEXT:    movl 32(%rbp), %eax
@@ -324,8 +322,10 @@ define <16 x i16> @var_shuffle_v16i16_v16i16_xxxxxxxxxxxxxxxx_i16(<16 x i16> %x,
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    andl $15, %esi
 ; AVX1-NEXT:    vpinsrw $1, (%rsp,%rsi,2), %xmm1, %xmm1
+; AVX1-NEXT:    # kill: def $edx killed $edx def $rdx
 ; AVX1-NEXT:    andl $15, %edx
 ; AVX1-NEXT:    vpinsrw $2, (%rsp,%rdx,2), %xmm1, %xmm1
+; AVX1-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; AVX1-NEXT:    andl $15, %ecx
 ; AVX1-NEXT:    vpinsrw $3, (%rsp,%rcx,2), %xmm1, %xmm1
 ; AVX1-NEXT:    andl $15, %r8d
@@ -351,8 +351,6 @@ define <16 x i16> @var_shuffle_v16i16_v16i16_xxxxxxxxxxxxxxxx_i16(<16 x i16> %x,
 ; AVX2-NEXT:    subq $64, %rsp
 ; AVX2-NEXT:    # kill: def $r9d killed $r9d def $r9
 ; AVX2-NEXT:    # kill: def $r8d killed $r8d def $r8
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
 ; AVX2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX2-NEXT:    movl 32(%rbp), %eax
@@ -386,8 +384,10 @@ define <16 x i16> @var_shuffle_v16i16_v16i16_xxxxxxxxxxxxxxxx_i16(<16 x i16> %x,
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    andl $15, %esi
 ; AVX2-NEXT:    vpinsrw $1, (%rsp,%rsi,2), %xmm1, %xmm1
+; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
 ; AVX2-NEXT:    andl $15, %edx
 ; AVX2-NEXT:    vpinsrw $2, (%rsp,%rdx,2), %xmm1, %xmm1
+; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; AVX2-NEXT:    andl $15, %ecx
 ; AVX2-NEXT:    vpinsrw $3, (%rsp,%rcx,2), %xmm1, %xmm1
 ; AVX2-NEXT:    andl $15, %r8d
@@ -444,8 +444,6 @@ define <16 x i16> @var_shuffle_v16i16_v8i16_xxxxxxxxxxxxxxxx_i16(<8 x i16> %x, i
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    # kill: def $r9d killed $r9d def $r9
 ; AVX1-NEXT:    # kill: def $r8d killed $r8d def $r8
-; AVX1-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX1-NEXT:    # kill: def $edx killed $edx def $rdx
 ; AVX1-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX1-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX1-NEXT:    movl {{[0-9]+}}(%rsp), %eax
@@ -479,8 +477,10 @@ define <16 x i16> @var_shuffle_v16i16_v8i16_xxxxxxxxxxxxxxxx_i16(<8 x i16> %x, i
 ; AVX1-NEXT:    vmovd %eax, %xmm1
 ; AVX1-NEXT:    andl $7, %esi
 ; AVX1-NEXT:    vpinsrw $1, -24(%rsp,%rsi,2), %xmm1, %xmm1
+; AVX1-NEXT:    # kill: def $edx killed $edx def $rdx
 ; AVX1-NEXT:    andl $7, %edx
 ; AVX1-NEXT:    vpinsrw $2, -24(%rsp,%rdx,2), %xmm1, %xmm1
+; AVX1-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; AVX1-NEXT:    andl $7, %ecx
 ; AVX1-NEXT:    vpinsrw $3, -24(%rsp,%rcx,2), %xmm1, %xmm1
 ; AVX1-NEXT:    andl $7, %r8d
@@ -500,8 +500,6 @@ define <16 x i16> @var_shuffle_v16i16_v8i16_xxxxxxxxxxxxxxxx_i16(<8 x i16> %x, i
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: def $r9d killed $r9d def $r9
 ; AVX2-NEXT:    # kill: def $r8d killed $r8d def $r8
-; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
 ; AVX2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; AVX2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX2-NEXT:    movl {{[0-9]+}}(%rsp), %eax
@@ -535,8 +533,10 @@ define <16 x i16> @var_shuffle_v16i16_v8i16_xxxxxxxxxxxxxxxx_i16(<8 x i16> %x, i
 ; AVX2-NEXT:    vmovd %eax, %xmm1
 ; AVX2-NEXT:    andl $7, %esi
 ; AVX2-NEXT:    vpinsrw $1, -24(%rsp,%rsi,2), %xmm1, %xmm1
+; AVX2-NEXT:    # kill: def $edx killed $edx def $rdx
 ; AVX2-NEXT:    andl $7, %edx
 ; AVX2-NEXT:    vpinsrw $2, -24(%rsp,%rdx,2), %xmm1, %xmm1
+; AVX2-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; AVX2-NEXT:    andl $7, %ecx
 ; AVX2-NEXT:    vpinsrw $3, -24(%rsp,%rcx,2), %xmm1, %xmm1
 ; AVX2-NEXT:    andl $7, %r8d

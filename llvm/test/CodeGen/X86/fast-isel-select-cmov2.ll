@@ -71,17 +71,10 @@ define i64 @select_fcmp_ogt_cmov(double %a, double %b, i64 %c, i64 %d) {
 define i64 @select_fcmp_oge_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; NOAVX-LABEL: select_fcmp_oge_cmov:
 ; NOAVX:       ## %bb.0:
-; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    ucomisd %xmm1, %xmm0
+; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    cmovbq %rsi, %rax
 ; NOAVX-NEXT:    retq
-;
-; FAST_AVX-LABEL: select_fcmp_oge_cmov:
-; FAST_AVX:       ## %bb.0:
-; FAST_AVX-NEXT:    movq %rdi, %rax
-; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
-; FAST_AVX-NEXT:    cmovbq %rsi, %rax
-; FAST_AVX-NEXT:    retq
   %1 = fcmp oge double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -109,17 +102,10 @@ define i64 @select_fcmp_olt_cmov(double %a, double %b, i64 %c, i64 %d) {
 define i64 @select_fcmp_ole_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; NOAVX-LABEL: select_fcmp_ole_cmov:
 ; NOAVX:       ## %bb.0:
-; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    ucomisd %xmm0, %xmm1
+; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    cmovbq %rsi, %rax
 ; NOAVX-NEXT:    retq
-;
-; FAST_AVX-LABEL: select_fcmp_ole_cmov:
-; FAST_AVX:       ## %bb.0:
-; FAST_AVX-NEXT:    movq %rdi, %rax
-; FAST_AVX-NEXT:    vucomisd %xmm0, %xmm1
-; FAST_AVX-NEXT:    cmovbq %rsi, %rax
-; FAST_AVX-NEXT:    retq
   %1 = fcmp ole double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -128,17 +114,10 @@ define i64 @select_fcmp_ole_cmov(double %a, double %b, i64 %c, i64 %d) {
 define i64 @select_fcmp_one_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; NOAVX-LABEL: select_fcmp_one_cmov:
 ; NOAVX:       ## %bb.0:
-; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    ucomisd %xmm1, %xmm0
+; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    cmoveq %rsi, %rax
 ; NOAVX-NEXT:    retq
-;
-; FAST_AVX-LABEL: select_fcmp_one_cmov:
-; FAST_AVX:       ## %bb.0:
-; FAST_AVX-NEXT:    movq %rdi, %rax
-; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
-; FAST_AVX-NEXT:    cmoveq %rsi, %rax
-; FAST_AVX-NEXT:    retq
   %1 = fcmp one double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -147,17 +126,10 @@ define i64 @select_fcmp_one_cmov(double %a, double %b, i64 %c, i64 %d) {
 define i64 @select_fcmp_ord_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; NOAVX-LABEL: select_fcmp_ord_cmov:
 ; NOAVX:       ## %bb.0:
-; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    ucomisd %xmm1, %xmm0
+; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    cmovpq %rsi, %rax
 ; NOAVX-NEXT:    retq
-;
-; FAST_AVX-LABEL: select_fcmp_ord_cmov:
-; FAST_AVX:       ## %bb.0:
-; FAST_AVX-NEXT:    movq %rdi, %rax
-; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
-; FAST_AVX-NEXT:    cmovpq %rsi, %rax
-; FAST_AVX-NEXT:    retq
   %1 = fcmp ord double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -166,17 +138,10 @@ define i64 @select_fcmp_ord_cmov(double %a, double %b, i64 %c, i64 %d) {
 define i64 @select_fcmp_uno_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; NOAVX-LABEL: select_fcmp_uno_cmov:
 ; NOAVX:       ## %bb.0:
-; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    ucomisd %xmm1, %xmm0
+; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    cmovnpq %rsi, %rax
 ; NOAVX-NEXT:    retq
-;
-; FAST_AVX-LABEL: select_fcmp_uno_cmov:
-; FAST_AVX:       ## %bb.0:
-; FAST_AVX-NEXT:    movq %rdi, %rax
-; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
-; FAST_AVX-NEXT:    cmovnpq %rsi, %rax
-; FAST_AVX-NEXT:    retq
   %1 = fcmp uno double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -185,17 +150,10 @@ define i64 @select_fcmp_uno_cmov(double %a, double %b, i64 %c, i64 %d) {
 define i64 @select_fcmp_ueq_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; NOAVX-LABEL: select_fcmp_ueq_cmov:
 ; NOAVX:       ## %bb.0:
-; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    ucomisd %xmm1, %xmm0
+; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    cmovneq %rsi, %rax
 ; NOAVX-NEXT:    retq
-;
-; FAST_AVX-LABEL: select_fcmp_ueq_cmov:
-; FAST_AVX:       ## %bb.0:
-; FAST_AVX-NEXT:    movq %rdi, %rax
-; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
-; FAST_AVX-NEXT:    cmovneq %rsi, %rax
-; FAST_AVX-NEXT:    retq
   %1 = fcmp ueq double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -204,17 +162,10 @@ define i64 @select_fcmp_ueq_cmov(double %a, double %b, i64 %c, i64 %d) {
 define i64 @select_fcmp_ugt_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; NOAVX-LABEL: select_fcmp_ugt_cmov:
 ; NOAVX:       ## %bb.0:
-; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    ucomisd %xmm0, %xmm1
+; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    cmovaeq %rsi, %rax
 ; NOAVX-NEXT:    retq
-;
-; FAST_AVX-LABEL: select_fcmp_ugt_cmov:
-; FAST_AVX:       ## %bb.0:
-; FAST_AVX-NEXT:    movq %rdi, %rax
-; FAST_AVX-NEXT:    vucomisd %xmm0, %xmm1
-; FAST_AVX-NEXT:    cmovaeq %rsi, %rax
-; FAST_AVX-NEXT:    retq
   %1 = fcmp ugt double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -242,17 +193,10 @@ define i64 @select_fcmp_uge_cmov(double %a, double %b, i64 %c, i64 %d) {
 define i64 @select_fcmp_ult_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; NOAVX-LABEL: select_fcmp_ult_cmov:
 ; NOAVX:       ## %bb.0:
-; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    ucomisd %xmm1, %xmm0
+; NOAVX-NEXT:    movq %rdi, %rax
 ; NOAVX-NEXT:    cmovaeq %rsi, %rax
 ; NOAVX-NEXT:    retq
-;
-; FAST_AVX-LABEL: select_fcmp_ult_cmov:
-; FAST_AVX:       ## %bb.0:
-; FAST_AVX-NEXT:    movq %rdi, %rax
-; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
-; FAST_AVX-NEXT:    cmovaeq %rsi, %rax
-; FAST_AVX-NEXT:    retq
   %1 = fcmp ult double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2

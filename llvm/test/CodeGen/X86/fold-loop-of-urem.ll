@@ -462,8 +462,8 @@ define void @simple_urem_to_sel_vec(<2 x i64> %rem_amt) nounwind {
 ; CHECK-NEXT:    psubq %xmm1, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    callq get.i1@PLT
-; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
+; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB6_1
 ; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
 ; CHECK-NEXT:    addq $56, %rsp
@@ -974,8 +974,8 @@ define void @simple_urem_fail_bad_loop(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    callq get.i32@PLT
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    # implicit-def: $r14d
+; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    jne .LBB16_4
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xorl %r14d, %r14d
@@ -1046,11 +1046,12 @@ define void @simple_urem_fail_intermediate_inc(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
-; CHECK-NEXT:    leal 1(%r14,%r15), %eax
+; CHECK-NEXT:    leal (%r14,%r15), %eax
+; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    movl %r15d, %ecx
 ; CHECK-NEXT:    incl %ecx
-; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    movl %ecx, %r15d
+; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    jne .LBB17_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    popq %rbx
@@ -1215,11 +1216,12 @@ define void @simple_urem_to_sel_non_zero_start_through_add(i32 %N, i32 %rem_amt_
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
-; CHECK-NEXT:    leal 1(%r14,%r15), %eax
+; CHECK-NEXT:    leal (%r14,%r15), %eax
+; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    movl %r15d, %ecx
 ; CHECK-NEXT:    incl %ecx
-; CHECK-NEXT:    cmpl $5, %eax
 ; CHECK-NEXT:    movl %ecx, %r15d
+; CHECK-NEXT:    cmpl $5, %eax
 ; CHECK-NEXT:    jne .LBB21_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    popq %rbx
@@ -1267,11 +1269,12 @@ define void @simple_urem_to_sel_non_zero_start_through_add_fail_missing_nuw(i32 
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
-; CHECK-NEXT:    leal 1(%r14,%r15), %eax
+; CHECK-NEXT:    leal (%r14,%r15), %eax
+; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    movl %r15d, %ecx
 ; CHECK-NEXT:    incl %ecx
-; CHECK-NEXT:    cmpl $5, %eax
 ; CHECK-NEXT:    movl %ecx, %r15d
+; CHECK-NEXT:    cmpl $5, %eax
 ; CHECK-NEXT:    jne .LBB22_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    popq %rbx
@@ -1318,11 +1321,12 @@ define void @simple_urem_to_sel_non_zero_start_through_add_fail_no_simplify_rem(
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
-; CHECK-NEXT:    leal 1(%r14,%r15), %eax
+; CHECK-NEXT:    leal (%r14,%r15), %eax
+; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    movl %r15d, %ecx
 ; CHECK-NEXT:    incl %ecx
-; CHECK-NEXT:    cmpl $5, %eax
 ; CHECK-NEXT:    movl %ecx, %r15d
+; CHECK-NEXT:    cmpl $5, %eax
 ; CHECK-NEXT:    jne .LBB23_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    popq %rbx
@@ -1420,11 +1424,12 @@ define void @simple_urem_to_sel_non_zero_start_through_sub_no_simplfy(i32 %N, i3
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
-; CHECK-NEXT:    leal 1(%r14,%r15), %eax
+; CHECK-NEXT:    leal (%r14,%r15), %eax
+; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    movl %r15d, %ecx
 ; CHECK-NEXT:    incl %ecx
-; CHECK-NEXT:    cmpl $-2, %eax
 ; CHECK-NEXT:    movl %ecx, %r15d
+; CHECK-NEXT:    cmpl $-2, %eax
 ; CHECK-NEXT:    jne .LBB25_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    popq %rbx

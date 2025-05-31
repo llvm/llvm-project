@@ -1749,7 +1749,7 @@ define <16 x i1> @is_positive_mask_v16i16_v16i1(<16 x i16> %x, <16 x i1> %y) {
 ; AVX512F-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1 {%k1}
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -1851,7 +1851,6 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ;
 ; SSE42-LABEL: is_positive_mask_v32i8_v32i1:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movq %rdi, %rax
 ; SSE42-NEXT:    movd %esi, %xmm2
 ; SSE42-NEXT:    pinsrb $1, %edx, %xmm2
 ; SSE42-NEXT:    pinsrb $2, %ecx, %xmm2
@@ -1883,6 +1882,7 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE42-NEXT:    pinsrb $12, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $13, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $14, {{[0-9]+}}(%rsp), %xmm3
+; SSE42-NEXT:    movq %rdi, %rax
 ; SSE42-NEXT:    pinsrb $15, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE42-NEXT:    pcmpgtb %xmm4, %xmm1

@@ -91,9 +91,9 @@ define <16 x half> @test_uitofp_v16i32_v16f16(<16 x i32> %a) {
 ; AVX1-NEXT:    vpsrld $16, %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vcvtdq2ps %ymm2, %ymm2
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm3 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm3 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
 ; AVX1-NEXT:    vmulps %ymm3, %ymm2, %ymm2
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm4 = [65535,65535,65535,65535,65535,65535,65535,65535]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm4 = [65535,65535,65535,65535,65535,65535,65535,65535]
 ; AVX1-NEXT:    vandps %ymm4, %ymm0, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX1-NEXT:    vaddps %ymm0, %ymm2, %ymm0
@@ -148,9 +148,9 @@ define <16 x half> @test_strict_uitofp_v16i32_v16f16(<16 x i32> %a) {
 ; AVX1-NEXT:    vpsrld $16, %xmm3, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vcvtdq2ps %ymm2, %ymm2
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm3 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm3 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
 ; AVX1-NEXT:    vmulps %ymm3, %ymm2, %ymm2
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm4 = [65535,65535,65535,65535,65535,65535,65535,65535]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm4 = [65535,65535,65535,65535,65535,65535,65535,65535]
 ; AVX1-NEXT:    vandps %ymm4, %ymm0, %ymm0
 ; AVX1-NEXT:    vcvtdq2ps %ymm0, %ymm0
 ; AVX1-NEXT:    vaddps %ymm0, %ymm2, %ymm0

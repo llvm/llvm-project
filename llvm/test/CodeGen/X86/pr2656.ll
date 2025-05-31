@@ -19,9 +19,9 @@ define void @foo(ptr byval(%struct.anon) %p) nounwind {
 ; CHECK-NEXT:    subl $28, %esp
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    xorps %xmm0, %xmm1
 ; CHECK-NEXT:    cvtss2sd %xmm1, %xmm1
+; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    xorps %xmm0, %xmm2
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtss2sd %xmm2, %xmm0

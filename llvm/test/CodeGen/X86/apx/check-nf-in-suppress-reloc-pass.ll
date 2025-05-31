@@ -39,10 +39,10 @@ define fastcc void @foo(i32 %0, i1 %or.cond) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %if.then37
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movq %r15, %rax
+; CHECK-NEXT:    movq 0, %rcx
+; CHECK-NEXT:    {nf} addq %r15, %rcx
+; CHECK-NEXT:    movb $0, (%rbp,%rcx)
 ; CHECK-NEXT:    addq %rbp, %rax
-; CHECK-NEXT:    movq 0, %rax
-; CHECK-NEXT:    {nf} addq %r15, %rax
-; CHECK-NEXT:    movb $0, (%rbp,%rax)
 ; CHECK-NEXT:    jmp .LBB0_3
 entry:
   %1 = sext i32 %0 to i64

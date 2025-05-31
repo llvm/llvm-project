@@ -137,10 +137,10 @@ define i64 @mul3_64(i64 %A) {
 ;
 ; X86-LABEL: mul3_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax,%eax,2), %ecx
 ; X86-NEXT:    movl $3, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx,2), %ecx
 ; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    retl
     %mul = mul i64 %A, 3
@@ -174,10 +174,10 @@ define i64 @mul40_64(i64 %A) {
 ;
 ; X86-LABEL: mul40_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax,%eax,4), %ecx
 ; X86-NEXT:    movl $40, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal (%ecx,%ecx,4), %ecx
 ; X86-NEXT:    leal (%edx,%ecx,8), %edx
 ; X86-NEXT:    retl
     %mul = mul i64 %A, 40
@@ -394,13 +394,18 @@ define i64 @test4(i64 %a) {
 ;
 ; X86-LABEL: test4:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $5, %ecx
-; X86-NEXT:    subl %eax, %ecx
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $31, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    shll $5, %esi
+; X86-NEXT:    subl %ecx, %esi
+; X86-NEXT:    addl %esi, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
 	%tmp3 = mul i64 %a, 31
@@ -418,20 +423,25 @@ define i64 @test5(i64 %a) {
 ;
 ; X86-LABEL: test5:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    shll $5, %eax
-; X86-NEXT:    subl %eax, %esi
+; X86-NEXT:    movl %esi, %edi
 ; X86-NEXT:    movl $-31, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
+; X86-NEXT:    shll $5, %edi
+; X86-NEXT:    subl %edi, %esi
 ; X86-NEXT:    subl %ecx, %edx
 ; X86-NEXT:    addl %esi, %edx
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %edi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
@@ -450,13 +460,18 @@ define i64 @test6(i64 %a) {
 ;
 ; X86-LABEL: test6:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shll $5, %ecx
-; X86-NEXT:    addl %eax, %ecx
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $33, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
-; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    shll $5, %esi
+; X86-NEXT:    addl %ecx, %esi
+; X86-NEXT:    addl %esi, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:
 	%tmp3 = mul i64 %a, 33
@@ -474,20 +489,25 @@ define i64 @test7(i64 %a) {
 ;
 ; X86-LABEL: test7:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %edi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    .cfi_offset %esi, -12
+; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    shll $5, %esi
-; X86-NEXT:    addl %eax, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl %edi, %esi
 ; X86-NEXT:    movl $-33, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %edx
+; X86-NEXT:    shll $5, %esi
+; X86-NEXT:    addl %edi, %esi
 ; X86-NEXT:    subl %ecx, %edx
 ; X86-NEXT:    subl %esi, %edx
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %edi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:

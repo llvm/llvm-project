@@ -820,7 +820,7 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    movq %rsp, %rax
 ; ENABLE-NEXT:    addq $-16, %rax
 ; ENABLE-NEXT:    movq %rax, %rsp
-; ENABLE-NEXT:    xorl    %ecx, %ecx
+; ENABLE-NEXT:    xorl %ecx, %ecx
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  LBB10_2: ## %for.body
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -851,8 +851,8 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:  ## %bb.1: ## %if.then
 ; DISABLE-NEXT:    movq %rsp, %rax
 ; DISABLE-NEXT:    addq $-16, %rax
-; DISABLE-NEXT:    %rax, %rsp
-; DISABLE-NEXT:    xorl    %ecx, %ecx
+; DISABLE-NEXT:    movq %rax, %rsp
+; DISABLE-NEXT:    xorl %ecx, %ecx
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  LBB10_2: ## %for.body
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -1028,8 +1028,8 @@ define void @infiniteloop3() {
 ; ENABLE-NEXT:  LBB12_4: ## %loop1
 ; ENABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    movq %rcx, %rdx
-; ENABLE-NEXT:    testq %rax, %rax
 ; ENABLE-NEXT:    movq (%rax), %rcx
+; ENABLE-NEXT:    testq %rax, %rax
 ; ENABLE-NEXT:    jne LBB12_3
 ; ENABLE-NEXT:  ## %bb.5: ## in Loop: Header=BB12_4 Depth=1
 ; ENABLE-NEXT:    movq %rdx, %rax
@@ -1058,8 +1058,8 @@ define void @infiniteloop3() {
 ; DISABLE-NEXT:  LBB12_4: ## %loop1
 ; DISABLE-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    movq %rcx, %rdx
-; DISABLE-NEXT:    testq %rax, %rax
 ; DISABLE-NEXT:    movq (%rax), %rcx
+; DISABLE-NEXT:    testq %rax, %rax
 ; DISABLE-NEXT:    jne LBB12_3
 ; DISABLE-NEXT:  ## %bb.5: ## in Loop: Header=BB12_4 Depth=1
 ; DISABLE-NEXT:    movq %rdx, %rax

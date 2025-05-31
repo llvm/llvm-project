@@ -198,10 +198,10 @@ define void @fpext_frommem8(ptr %in, ptr %out) {
 ;
 ; X86-AVX-LABEL: fpext_frommem8:
 ; X86-AVX:       # %bb.0: # %entry
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX-NEXT:    vcvtps2pd (%eax), %ymm0 # encoding: [0xc5,0xfc,0x5a,0x00]
+; X86-AVX-NEXT:    vcvtps2pd 16(%eax), %ymm1 # encoding: [0xc5,0xfc,0x5a,0x48,0x10]
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
-; X86-AVX-NEXT:    vcvtps2pd (%ecx), %ymm0 # encoding: [0xc5,0xfc,0x5a,0x01]
-; X86-AVX-NEXT:    vcvtps2pd 16(%ecx), %ymm1 # encoding: [0xc5,0xfc,0x5a,0x49,0x10]
 ; X86-AVX-NEXT:    vmovups %ymm1, 32(%eax) # encoding: [0xc5,0xfc,0x11,0x48,0x20]
 ; X86-AVX-NEXT:    vmovups %ymm0, (%eax) # encoding: [0xc5,0xfc,0x11,0x00]
 ; X86-AVX-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]

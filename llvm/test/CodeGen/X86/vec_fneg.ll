@@ -153,15 +153,15 @@ define <8 x half> @fneg_v8f16(ptr %p) nounwind {
 ;
 ; X86-AVX2-LABEL: fneg_v8f16:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vpxor (%eax), %xmm0, %xmm0
 ; X86-AVX2-NEXT:    retl
 ;
 ; X86-AVX512-LABEL: fneg_v8f16:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpxor (%eax), %xmm0, %xmm0
 ; X86-AVX512-NEXT:    retl
 ;
@@ -356,15 +356,15 @@ define <16 x half> @fneg_v16f16(ptr %p) nounwind {
 ;
 ; X86-AVX2-LABEL: fneg_v16f16:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    vpxor (%eax), %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
 ;
 ; X86-AVX512-LABEL: fneg_v16f16:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vpxor (%eax), %ymm0, %ymm0
 ; X86-AVX512-NEXT:    retl
 ;
@@ -418,12 +418,19 @@ define <8 x double> @fneg_v8f64(<8 x double> %p) nounwind {
 ; X86-SSE-NEXT:    popl %ebp
 ; X86-SSE-NEXT:    retl
 ;
-; X86-AVX-LABEL: fneg_v8f64:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; X86-AVX-NEXT:    vxorps %ymm2, %ymm0, %ymm0
-; X86-AVX-NEXT:    vxorps %ymm2, %ymm1, %ymm1
-; X86-AVX-NEXT:    retl
+; X86-AVX1-LABEL: fneg_v8f64:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX1-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX2-LABEL: fneg_v8f64:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX2-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X86-AVX2-NEXT:    retl
 ;
 ; X86-AVX512VL-LABEL: fneg_v8f64:
 ; X86-AVX512VL:       # %bb.0:
@@ -449,12 +456,19 @@ define <8 x double> @fneg_v8f64(<8 x double> %p) nounwind {
 ; X64-SSE-NEXT:    xorps %xmm4, %xmm3
 ; X64-SSE-NEXT:    retq
 ;
-; X64-AVX-LABEL: fneg_v8f64:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; X64-AVX-NEXT:    vxorps %ymm2, %ymm0, %ymm0
-; X64-AVX-NEXT:    vxorps %ymm2, %ymm1, %ymm1
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: fneg_v8f64:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-AVX1-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: fneg_v8f64:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-AVX2-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512VL-LABEL: fneg_v8f64:
 ; X64-AVX512VL:       # %bb.0:
@@ -490,12 +504,19 @@ define <16 x float> @fneg_v16f32(<16 x float> %p) nounwind {
 ; X86-SSE-NEXT:    popl %ebp
 ; X86-SSE-NEXT:    retl
 ;
-; X86-AVX-LABEL: fneg_v16f32:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; X86-AVX-NEXT:    vxorps %ymm2, %ymm0, %ymm0
-; X86-AVX-NEXT:    vxorps %ymm2, %ymm1, %ymm1
-; X86-AVX-NEXT:    retl
+; X86-AVX1-LABEL: fneg_v16f32:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX1-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; X86-AVX1-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX2-LABEL: fneg_v16f32:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX2-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X86-AVX2-NEXT:    retl
 ;
 ; X86-AVX512VL-LABEL: fneg_v16f32:
 ; X86-AVX512VL:       # %bb.0:
@@ -521,12 +542,19 @@ define <16 x float> @fneg_v16f32(<16 x float> %p) nounwind {
 ; X64-SSE-NEXT:    xorps %xmm4, %xmm3
 ; X64-SSE-NEXT:    retq
 ;
-; X64-AVX-LABEL: fneg_v16f32:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; X64-AVX-NEXT:    vxorps %ymm2, %ymm0, %ymm0
-; X64-AVX-NEXT:    vxorps %ymm2, %ymm1, %ymm1
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: fneg_v16f32:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-AVX1-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX2-LABEL: fneg_v16f32:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-AVX2-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512VL-LABEL: fneg_v16f32:
 ; X64-AVX512VL:       # %bb.0:
@@ -563,7 +591,7 @@ define <32 x half> @fneg_v32f16(ptr %p) nounwind {
 ; X86-AVX1-LABEL: fneg_v32f16:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-AVX1-NEXT:    vxorps (%eax), %ymm1, %ymm0
 ; X86-AVX1-NEXT:    vxorps 32(%eax), %ymm1, %ymm1
 ; X86-AVX1-NEXT:    retl
@@ -586,8 +614,8 @@ define <32 x half> @fneg_v32f16(ptr %p) nounwind {
 ;
 ; X86-AVX512FP16-LABEL: fneg_v32f16:
 ; X86-AVX512FP16:       # %bb.0:
-; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} zmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512FP16-NEXT:    vpxorq (%eax), %zmm0, %zmm0
 ; X86-AVX512FP16-NEXT:    retl
 ;
@@ -613,7 +641,7 @@ define <32 x half> @fneg_v32f16(ptr %p) nounwind {
 ;
 ; X64-AVX1-LABEL: fneg_v32f16:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X64-AVX1-NEXT:    vxorps (%rdi), %ymm1, %ymm0
 ; X64-AVX1-NEXT:    vxorps 32(%rdi), %ymm1, %ymm1
 ; X64-AVX1-NEXT:    retq

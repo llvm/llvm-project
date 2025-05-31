@@ -952,9 +952,9 @@ define float @copysign_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; X64-LABEL: copysign_v4f32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
 ; X64-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
-; X64-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vandps %xmm3, %xmm0, %xmm0
 ; X64-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
 ;

@@ -26,8 +26,8 @@ declare <2 x i128> @llvm.ssub.sat.v2i128(<2 x i128>, <2 x i128>)
 define <2 x i128> @flag_copy_2(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK-LABEL: flag_copy_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    subq {{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %r8
 ; CHECK-NEXT:    movq %r8, %rdi
 ; CHECK-NEXT:    {nf} sarq $63, %rdi

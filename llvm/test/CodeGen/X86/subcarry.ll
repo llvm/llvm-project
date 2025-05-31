@@ -20,9 +20,9 @@ entry:
 define i256 @sub256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: sub256:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    subq %r9, %rsi
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %r8
 ; CHECK-NEXT:    movq %rcx, 16(%rdi)
@@ -92,29 +92,29 @@ entry:
 define %S @sub(ptr nocapture readonly %this, %S %arg.b) {
 ; CHECK-LABEL: sub:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq (%rsi), %rdi
-; CHECK-NEXT:    movq 8(%rsi), %r10
-; CHECK-NEXT:    subq %rdx, %rdi
+; CHECK-NEXT:    movq (%rsi), %r10
+; CHECK-NEXT:    movq 8(%rsi), %rax
+; CHECK-NEXT:    subq %rdx, %r10
 ; CHECK-NEXT:    setae %dl
 ; CHECK-NEXT:    addb $-1, %dl
-; CHECK-NEXT:    adcq $0, %r10
+; CHECK-NEXT:    adcq $0, %rax
 ; CHECK-NEXT:    setb %dl
 ; CHECK-NEXT:    movzbl %dl, %edx
 ; CHECK-NEXT:    notq %rcx
-; CHECK-NEXT:    addq %r10, %rcx
+; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    adcq 16(%rsi), %rdx
-; CHECK-NEXT:    setb %r10b
-; CHECK-NEXT:    movzbl %r10b, %r10d
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    movzbl %al, %r11d
 ; CHECK-NEXT:    notq %r8
 ; CHECK-NEXT:    addq %rdx, %r8
-; CHECK-NEXT:    adcq 24(%rsi), %r10
+; CHECK-NEXT:    adcq 24(%rsi), %r11
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    notq %r9
-; CHECK-NEXT:    addq %r10, %r9
-; CHECK-NEXT:    movq %rdi, (%rax)
-; CHECK-NEXT:    movq %rcx, 8(%rax)
-; CHECK-NEXT:    movq %r8, 16(%rax)
-; CHECK-NEXT:    movq %r9, 24(%rax)
+; CHECK-NEXT:    addq %r11, %r9
+; CHECK-NEXT:    movq %r10, (%rdi)
+; CHECK-NEXT:    movq %rcx, 8(%rdi)
+; CHECK-NEXT:    movq %r8, 16(%rdi)
+; CHECK-NEXT:    movq %r9, 24(%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractvalue %S %arg.b, 0
@@ -586,23 +586,23 @@ define void @PR39464(ptr noalias nocapture sret(%struct.U192) %0, ptr nocapture 
 define void @sub_U256_without_i128_or_recursive(ptr sret(%uint256) %0, ptr %1, ptr %2) nounwind {
 ; CHECK-LABEL: sub_U256_without_i128_or_recursive:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movq (%rsi), %rcx
-; CHECK-NEXT:    movq 8(%rsi), %rdi
 ; CHECK-NEXT:    movq 16(%rsi), %r8
-; CHECK-NEXT:    movq 24(%rsi), %rsi
-; CHECK-NEXT:    xorl %r9d, %r9d
+; CHECK-NEXT:    movq 24(%rsi), %r9
+; CHECK-NEXT:    xorl %r10d, %r10d
 ; CHECK-NEXT:    subq 16(%rdx), %r8
-; CHECK-NEXT:    setb %r9b
-; CHECK-NEXT:    subq 24(%rdx), %rsi
+; CHECK-NEXT:    setb %r10b
+; CHECK-NEXT:    subq 24(%rdx), %r9
 ; CHECK-NEXT:    subq (%rdx), %rcx
-; CHECK-NEXT:    sbbq 8(%rdx), %rdi
+; CHECK-NEXT:    movq 8(%rsi), %rsi
+; CHECK-NEXT:    sbbq 8(%rdx), %rsi
 ; CHECK-NEXT:    sbbq $0, %r8
-; CHECK-NEXT:    sbbq %r9, %rsi
-; CHECK-NEXT:    movq %rcx, (%rax)
-; CHECK-NEXT:    movq %rdi, 8(%rax)
-; CHECK-NEXT:    movq %r8, 16(%rax)
-; CHECK-NEXT:    movq %rsi, 24(%rax)
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    sbbq %r10, %r9
+; CHECK-NEXT:    movq %rcx, (%rdi)
+; CHECK-NEXT:    movq %rsi, 8(%rdi)
+; CHECK-NEXT:    movq %r8, 16(%rdi)
+; CHECK-NEXT:    movq %r9, 24(%rdi)
 ; CHECK-NEXT:    retq
   %4 = load i64, ptr %1, align 8
   %5 = getelementptr inbounds %uint256, ptr %1, i64 0, i32 0, i32 1

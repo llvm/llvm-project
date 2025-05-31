@@ -14,10 +14,15 @@ entry:
 define void @small_memset_to_rep_stos(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: small_memset_to_rep_stos:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq $32
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movups %xmm0, 112(%rdi)
+; CHECK-NEXT:    movups %xmm0, 96(%rdi)
+; CHECK-NEXT:    movups %xmm0, 80(%rdi)
+; CHECK-NEXT:    movups %xmm0, 64(%rdi)
+; CHECK-NEXT:    movups %xmm0, 48(%rdi)
+; CHECK-NEXT:    movups %xmm0, 32(%rdi)
+; CHECK-NEXT:    movups %xmm0, 16(%rdi)
+; CHECK-NEXT:    movups %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr align 4 %ptr, i8 0, i32 128, i1 false)
@@ -127,10 +132,15 @@ entry:
 define void @small_memset_to_rep_stos_64(ptr %ptr) minsize nounwind {
 ; CHECK-LABEL: small_memset_to_rep_stos_64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq $32
-; CHECK-NEXT:    popq %rcx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    rep;stosl %eax, %es:(%rdi)
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movups %xmm0, 112(%rdi)
+; CHECK-NEXT:    movups %xmm0, 96(%rdi)
+; CHECK-NEXT:    movups %xmm0, 80(%rdi)
+; CHECK-NEXT:    movups %xmm0, 64(%rdi)
+; CHECK-NEXT:    movups %xmm0, 48(%rdi)
+; CHECK-NEXT:    movups %xmm0, 32(%rdi)
+; CHECK-NEXT:    movups %xmm0, 16(%rdi)
+; CHECK-NEXT:    movups %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i64(ptr align 8 %ptr, i8 0, i64 128, i1 false)

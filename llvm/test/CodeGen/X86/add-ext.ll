@@ -26,7 +26,8 @@ define i64 @add_nsw_sext_add(i32 %i, i64 %x) {
 ; CHECK-LABEL: add_nsw_sext_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    leaq 5(%rax,%rsi), %rax
+; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    addq $5, %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, 5
@@ -42,7 +43,8 @@ define i64 @add_nsw_sext_lsh_add(i32 %i, i64 %x) {
 ; CHECK-LABEL: add_nsw_sext_lsh_add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    leaq -40(%rsi,%rax,8), %rax
+; CHECK-NEXT:    leaq (%rsi,%rax,8), %rax
+; CHECK-NEXT:    addq $-40, %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, -5
@@ -73,7 +75,8 @@ define ptr @gep8(i32 %i, ptr %x) {
 ; CHECK-LABEL: gep8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    leaq 5(%rax,%rsi), %rax
+; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    addq $5, %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, 5
@@ -86,7 +89,8 @@ define ptr @gep16(i32 %i, ptr %x) {
 ; CHECK-LABEL: gep16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    leaq -10(%rsi,%rax,2), %rax
+; CHECK-NEXT:    leaq (%rsi,%rax,2), %rax
+; CHECK-NEXT:    addq $-10, %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, -5
@@ -99,7 +103,8 @@ define ptr @gep32(i32 %i, ptr %x) {
 ; CHECK-LABEL: gep32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    leaq 20(%rsi,%rax,4), %rax
+; CHECK-NEXT:    leaq (%rsi,%rax,4), %rax
+; CHECK-NEXT:    addq $20, %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, 5
@@ -112,7 +117,8 @@ define ptr @gep64(i32 %i, ptr %x) {
 ; CHECK-LABEL: gep64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    leaq -40(%rsi,%rax,8), %rax
+; CHECK-NEXT:    leaq (%rsi,%rax,8), %rax
+; CHECK-NEXT:    addq $-40, %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, -5
@@ -128,7 +134,8 @@ define ptr @gep128(i32 %i, ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movslq %edi, %rax
 ; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    leaq 80(%rax,%rsi), %rax
+; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    addq $80, %rax
 ; CHECK-NEXT:    retq
 
   %add = add nsw i32 %i, 5

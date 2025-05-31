@@ -32,9 +32,9 @@ define void @convert_v7i16_v7f32(ptr %dst.addr, <7 x i16> %src) nounwind {
 ; X86-SSE42-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X86-SSE42-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; X86-SSE42-NEXT:    cvtdq2ps %xmm0, %xmm0
-; X86-SSE42-NEXT:    cvtdq2ps %xmm2, %xmm1
 ; X86-SSE42-NEXT:    extractps $2, %xmm0, 24(%eax)
 ; X86-SSE42-NEXT:    extractps $1, %xmm0, 20(%eax)
+; X86-SSE42-NEXT:    cvtdq2ps %xmm2, %xmm1
 ; X86-SSE42-NEXT:    movups %xmm1, (%eax)
 ; X86-SSE42-NEXT:    movss %xmm0, 16(%eax)
 ; X86-SSE42-NEXT:    retl
@@ -59,8 +59,8 @@ define void @convert_v7i16_v7f32(ptr %dst.addr, <7 x i16> %src) nounwind {
 ; X64-SSE42-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; X64-SSE42-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
 ; X64-SSE42-NEXT:    cvtdq2ps %xmm0, %xmm0
-; X64-SSE42-NEXT:    cvtdq2ps %xmm2, %xmm1
 ; X64-SSE42-NEXT:    extractps $2, %xmm0, 24(%rdi)
+; X64-SSE42-NEXT:    cvtdq2ps %xmm2, %xmm1
 ; X64-SSE42-NEXT:    movlps %xmm0, 16(%rdi)
 ; X64-SSE42-NEXT:    movups %xmm1, (%rdi)
 ; X64-SSE42-NEXT:    retq

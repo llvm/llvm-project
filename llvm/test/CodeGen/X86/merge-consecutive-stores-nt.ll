@@ -365,9 +365,9 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE41-NEXT:    pextrq $1, %xmm0, %rax
 ; X64-SSE41-NEXT:    movntiq %rax, 8(%rsi)
 ; X64-SSE41-NEXT:    movq %xmm0, %rax
+; X64-SSE41-NEXT:    pextrq $1, %xmm1, %rcx
 ; X64-SSE41-NEXT:    movntiq %rax, (%rsi)
-; X64-SSE41-NEXT:    pextrq $1, %xmm1, %rax
-; X64-SSE41-NEXT:    movntiq %rax, 24(%rsi)
+; X64-SSE41-NEXT:    movntiq %rcx, 24(%rsi)
 ; X64-SSE41-NEXT:    movq %xmm1, %rax
 ; X64-SSE41-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-SSE41-NEXT:    retq
@@ -379,9 +379,9 @@ define void @merge_2_v4f32_align1_ntstore(ptr %a0, ptr %a1) nounwind {
 ; X64-AVX-NEXT:    vpextrq $1, %xmm0, %rax
 ; X64-AVX-NEXT:    movntiq %rax, 8(%rsi)
 ; X64-AVX-NEXT:    vmovq %xmm0, %rax
+; X64-AVX-NEXT:    vpextrq $1, %xmm1, %rcx
 ; X64-AVX-NEXT:    movntiq %rax, (%rsi)
-; X64-AVX-NEXT:    vpextrq $1, %xmm1, %rax
-; X64-AVX-NEXT:    movntiq %rax, 24(%rsi)
+; X64-AVX-NEXT:    movntiq %rcx, 24(%rsi)
 ; X64-AVX-NEXT:    vmovq %xmm1, %rax
 ; X64-AVX-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-AVX-NEXT:    retq
@@ -476,9 +476,9 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X64-SSE41-NEXT:    pextrq $1, %xmm0, %rax
 ; X64-SSE41-NEXT:    movntiq %rax, 8(%rsi)
 ; X64-SSE41-NEXT:    movq %xmm0, %rax
+; X64-SSE41-NEXT:    pextrq $1, %xmm1, %rcx
 ; X64-SSE41-NEXT:    movntiq %rax, (%rsi)
-; X64-SSE41-NEXT:    pextrq $1, %xmm1, %rax
-; X64-SSE41-NEXT:    movntiq %rax, 24(%rsi)
+; X64-SSE41-NEXT:    movntiq %rcx, 24(%rsi)
 ; X64-SSE41-NEXT:    movq %xmm1, %rax
 ; X64-SSE41-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-SSE41-NEXT:    retq
@@ -490,9 +490,9 @@ define void @merge_2_v4f32_align1(ptr %a0, ptr %a1) nounwind {
 ; X64-AVX-NEXT:    vpextrq $1, %xmm0, %rax
 ; X64-AVX-NEXT:    movntiq %rax, 8(%rsi)
 ; X64-AVX-NEXT:    vmovq %xmm0, %rax
+; X64-AVX-NEXT:    vpextrq $1, %xmm1, %rcx
 ; X64-AVX-NEXT:    movntiq %rax, (%rsi)
-; X64-AVX-NEXT:    vpextrq $1, %xmm1, %rax
-; X64-AVX-NEXT:    movntiq %rax, 24(%rsi)
+; X64-AVX-NEXT:    movntiq %rcx, 24(%rsi)
 ; X64-AVX-NEXT:    vmovq %xmm1, %rax
 ; X64-AVX-NEXT:    movntiq %rax, 16(%rsi)
 ; X64-AVX-NEXT:    retq

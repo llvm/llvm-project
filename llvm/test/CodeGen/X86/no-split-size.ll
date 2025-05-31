@@ -30,8 +30,8 @@ define i64 @foo(ptr %ptr, i64 %p2, i64 %p3, i64 %p4, i64 %p5, i64 %p6) optsize {
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %if.else
-; CHECK-NEXT:    testq %r13, %r13
 ; CHECK-NEXT:    movq %r15, %rax
+; CHECK-NEXT:    testq %r13, %r13
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  .LBB0_4: # %if.end
 ; CHECK-NEXT:    addq %r13, %rax

@@ -5,15 +5,15 @@
 define i32 @test_add_1_cmov_slt(ptr %p, i32 %a0, i32 %a1) #0 {
 ; FASTINCDEC-LABEL: test_add_1_cmov_slt:
 ; FASTINCDEC:       # %bb.0: # %entry
-; FASTINCDEC-NEXT:    movl %esi, %eax
 ; FASTINCDEC-NEXT:    lock incq (%rdi)
+; FASTINCDEC-NEXT:    movl %esi, %eax
 ; FASTINCDEC-NEXT:    cmovgl %edx, %eax
 ; FASTINCDEC-NEXT:    retq
 ;
 ; SLOWINCDEC-LABEL: test_add_1_cmov_slt:
 ; SLOWINCDEC:       # %bb.0: # %entry
-; SLOWINCDEC-NEXT:    movl %esi, %eax
 ; SLOWINCDEC-NEXT:    lock addq $1, (%rdi)
+; SLOWINCDEC-NEXT:    movl %esi, %eax
 ; SLOWINCDEC-NEXT:    cmovgl %edx, %eax
 ; SLOWINCDEC-NEXT:    retq
 entry:
@@ -26,15 +26,15 @@ entry:
 define i32 @test_add_1_cmov_sge(ptr %p, i32 %a0, i32 %a1) #0 {
 ; FASTINCDEC-LABEL: test_add_1_cmov_sge:
 ; FASTINCDEC:       # %bb.0: # %entry
-; FASTINCDEC-NEXT:    movl %esi, %eax
 ; FASTINCDEC-NEXT:    lock incq (%rdi)
+; FASTINCDEC-NEXT:    movl %esi, %eax
 ; FASTINCDEC-NEXT:    cmovlel %edx, %eax
 ; FASTINCDEC-NEXT:    retq
 ;
 ; SLOWINCDEC-LABEL: test_add_1_cmov_sge:
 ; SLOWINCDEC:       # %bb.0: # %entry
-; SLOWINCDEC-NEXT:    movl %esi, %eax
 ; SLOWINCDEC-NEXT:    lock addq $1, (%rdi)
+; SLOWINCDEC-NEXT:    movl %esi, %eax
 ; SLOWINCDEC-NEXT:    cmovlel %edx, %eax
 ; SLOWINCDEC-NEXT:    retq
 entry:
@@ -47,15 +47,15 @@ entry:
 define i32 @test_sub_1_cmov_sle(ptr %p, i32 %a0, i32 %a1) #0 {
 ; FASTINCDEC-LABEL: test_sub_1_cmov_sle:
 ; FASTINCDEC:       # %bb.0: # %entry
-; FASTINCDEC-NEXT:    movl %esi, %eax
 ; FASTINCDEC-NEXT:    lock decq (%rdi)
+; FASTINCDEC-NEXT:    movl %esi, %eax
 ; FASTINCDEC-NEXT:    cmovgel %edx, %eax
 ; FASTINCDEC-NEXT:    retq
 ;
 ; SLOWINCDEC-LABEL: test_sub_1_cmov_sle:
 ; SLOWINCDEC:       # %bb.0: # %entry
-; SLOWINCDEC-NEXT:    movl %esi, %eax
 ; SLOWINCDEC-NEXT:    lock subq $1, (%rdi)
+; SLOWINCDEC-NEXT:    movl %esi, %eax
 ; SLOWINCDEC-NEXT:    cmovgel %edx, %eax
 ; SLOWINCDEC-NEXT:    retq
 entry:
@@ -68,15 +68,15 @@ entry:
 define i32 @test_sub_1_cmov_sgt(ptr %p, i32 %a0, i32 %a1) #0 {
 ; FASTINCDEC-LABEL: test_sub_1_cmov_sgt:
 ; FASTINCDEC:       # %bb.0: # %entry
-; FASTINCDEC-NEXT:    movl %esi, %eax
 ; FASTINCDEC-NEXT:    lock decq (%rdi)
+; FASTINCDEC-NEXT:    movl %esi, %eax
 ; FASTINCDEC-NEXT:    cmovll %edx, %eax
 ; FASTINCDEC-NEXT:    retq
 ;
 ; SLOWINCDEC-LABEL: test_sub_1_cmov_sgt:
 ; SLOWINCDEC:       # %bb.0: # %entry
-; SLOWINCDEC-NEXT:    movl %esi, %eax
 ; SLOWINCDEC-NEXT:    lock addq $-1, (%rdi)
+; SLOWINCDEC-NEXT:    movl %esi, %eax
 ; SLOWINCDEC-NEXT:    cmovll %edx, %eax
 ; SLOWINCDEC-NEXT:    retq
 entry:

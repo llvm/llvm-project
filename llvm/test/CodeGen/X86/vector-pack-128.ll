@@ -25,8 +25,8 @@ define <8 x i16> @trunc_concat_packssdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ;
 ; AVX2-LABEL: trunc_concat_packssdw_128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrad $17, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [15,15,15,15]
+; AVX2-NEXT:    vpsrad $17, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -68,8 +68,8 @@ define <8 x i16> @trunc_concat_packusdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ;
 ; AVX2-LABEL: trunc_concat_packusdw_128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrld $17, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [15,15,15,15]
+; AVX2-NEXT:    vpsrld $17, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -185,8 +185,8 @@ define <8 x i16> @concat_trunc_packssdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ;
 ; AVX2-LABEL: concat_trunc_packssdw_128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrad $17, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [15,15,15,15]
+; AVX2-NEXT:    vpsrad $17, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
@@ -231,8 +231,8 @@ define <8 x i16> @concat_trunc_packusdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ;
 ; AVX2-LABEL: concat_trunc_packusdw_128:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrld $17, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [15,15,15,15]
+; AVX2-NEXT:    vpsrld $17, %xmm0, %xmm0
 ; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq

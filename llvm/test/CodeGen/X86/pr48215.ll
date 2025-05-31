@@ -12,11 +12,11 @@ define i32 @PR48215(i32 %a0, i32 %a1)  {
 ; AVX1-NEXT:    idivl %esi
 ; AVX1-NEXT:    vmovd %edx, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [4,5,6,7]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,5,6,7]
 ; AVX1-NEXT:    vmovd %eax, %xmm2
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
 ; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm3
-; AVX1-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [0,1,2,3]
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [0,1,2,3]
 ; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm4, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX1-NEXT:    vmovmskps %ymm2, %ecx
@@ -51,9 +51,9 @@ define i32 @PR48215(i32 %a0, i32 %a1)  {
 ; AVX512-NEXT:    cltd
 ; AVX512-NEXT:    idivl %esi
 ; AVX512-NEXT:    vpbroadcastd %eax, %ymm0
-; AVX512-NEXT:    vpbroadcastd %edx, %xmm1
 ; AVX512-NEXT:    vpcmpltd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
-; AVX512-NEXT:    vpcmpltd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
+; AVX512-NEXT:    vpbroadcastd %edx, %xmm0
+; AVX512-NEXT:    vpcmpltd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    movzbl %al, %ecx
 ; AVX512-NEXT:    kmovw %k1, %eax

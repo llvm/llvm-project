@@ -33,11 +33,11 @@ define <3 x i32> @f_29(<12 x i16> %a, <12 x i16> %b) {
 ; CHECK-NEXT:    movd %edi, %xmm1
 ; CHECK-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1],xmm1[2],xmm4[2],xmm1[3],xmm4[3]
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; CHECK-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    pinsrw $1, {{[0-9]+}}(%rsp), %xmm4
 ; CHECK-NEXT:    pinsrw $2, {{[0-9]+}}(%rsp), %xmm4
 ; CHECK-NEXT:    pinsrw $3, {{[0-9]+}}(%rsp), %xmm4
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; CHECK-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    pinsrw $1, {{[0-9]+}}(%rsp), %xmm2
 ; CHECK-NEXT:    pinsrw $2, {{[0-9]+}}(%rsp), %xmm2

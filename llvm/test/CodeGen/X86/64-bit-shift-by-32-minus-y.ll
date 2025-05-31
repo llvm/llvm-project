@@ -307,19 +307,19 @@ define i64 @t5_cse(i64 %val, i64 %shamt, ptr%dst) nounwind {
 ; X86-NOBMI2-NEXT:    pushl %esi
 ; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NOBMI2-NEXT:    movl %eax, %ebx
 ; X86-NOBMI2-NEXT:    addl $32, %ebx
 ; X86-NOBMI2-NEXT:    adcl $0, %edi
-; X86-NOBMI2-NEXT:    movl %ebx, (%ecx)
-; X86-NOBMI2-NEXT:    movl %edi, 4(%ecx)
 ; X86-NOBMI2-NEXT:    movb $32, %cl
 ; X86-NOBMI2-NEXT:    subb %al, %cl
 ; X86-NOBMI2-NEXT:    movl %esi, %eax
 ; X86-NOBMI2-NEXT:    shll %cl, %eax
 ; X86-NOBMI2-NEXT:    shldl %cl, %esi, %edx
+; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NOBMI2-NEXT:    movl %ebx, (%esi)
+; X86-NOBMI2-NEXT:    movl %edi, 4(%esi)
 ; X86-NOBMI2-NEXT:    testb $32, %cl
 ; X86-NOBMI2-NEXT:    je .LBB5_2
 ; X86-NOBMI2-NEXT:  # %bb.1:
@@ -338,17 +338,17 @@ define i64 @t5_cse(i64 %val, i64 %shamt, ptr%dst) nounwind {
 ; X86-BMI2-NEXT:    pushl %esi
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-BMI2-NEXT:    movl %ebx, %edi
 ; X86-BMI2-NEXT:    addl $32, %edi
 ; X86-BMI2-NEXT:    adcl $0, %esi
-; X86-BMI2-NEXT:    movl %edi, (%ecx)
-; X86-BMI2-NEXT:    movl %esi, 4(%ecx)
 ; X86-BMI2-NEXT:    movb $32, %cl
 ; X86-BMI2-NEXT:    subb %bl, %cl
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-BMI2-NEXT:    shldl %cl, %eax, %edx
+; X86-BMI2-NEXT:    movl %edi, (%ebx)
+; X86-BMI2-NEXT:    movl %esi, 4(%ebx)
 ; X86-BMI2-NEXT:    shlxl %ecx, %eax, %eax
 ; X86-BMI2-NEXT:    testb $32, %cl
 ; X86-BMI2-NEXT:    je .LBB5_2
@@ -390,18 +390,18 @@ define i64 @t6_cse2(i64 %val, i64 %shamt, ptr%dst) nounwind {
 ; X86-NOBMI2:       # %bb.0:
 ; X86-NOBMI2-NEXT:    pushl %edi
 ; X86-NOBMI2-NEXT:    pushl %esi
-; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOBMI2-NEXT:    xorl %edi, %edi
+; X86-NOBMI2-NEXT:    xorl %esi, %esi
 ; X86-NOBMI2-NEXT:    movl $32, %ecx
 ; X86-NOBMI2-NEXT:    subl {{[0-9]+}}(%esp), %ecx
-; X86-NOBMI2-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
-; X86-NOBMI2-NEXT:    movl %ecx, (%eax)
-; X86-NOBMI2-NEXT:    movl %edi, 4(%eax)
-; X86-NOBMI2-NEXT:    movl %esi, %eax
+; X86-NOBMI2-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
+; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NOBMI2-NEXT:    movl %edi, %eax
 ; X86-NOBMI2-NEXT:    shll %cl, %eax
-; X86-NOBMI2-NEXT:    shldl %cl, %esi, %edx
+; X86-NOBMI2-NEXT:    shldl %cl, %edi, %edx
+; X86-NOBMI2-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NOBMI2-NEXT:    movl %ecx, (%edi)
+; X86-NOBMI2-NEXT:    movl %esi, 4(%edi)
 ; X86-NOBMI2-NEXT:    testb $32, %cl
 ; X86-NOBMI2-NEXT:    je .LBB6_2
 ; X86-NOBMI2-NEXT:  # %bb.1:
@@ -423,9 +423,9 @@ define i64 @t6_cse2(i64 %val, i64 %shamt, ptr%dst) nounwind {
 ; X86-BMI2-NEXT:    movl $32, %ecx
 ; X86-BMI2-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI2-NEXT:    sbbl {{[0-9]+}}(%esp), %edi
+; X86-BMI2-NEXT:    shldl %cl, %eax, %edx
 ; X86-BMI2-NEXT:    movl %ecx, (%esi)
 ; X86-BMI2-NEXT:    movl %edi, 4(%esi)
-; X86-BMI2-NEXT:    shldl %cl, %eax, %edx
 ; X86-BMI2-NEXT:    shlxl %ecx, %eax, %eax
 ; X86-BMI2-NEXT:    testb $32, %cl
 ; X86-BMI2-NEXT:    je .LBB6_2

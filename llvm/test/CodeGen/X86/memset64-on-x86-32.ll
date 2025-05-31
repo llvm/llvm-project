@@ -19,30 +19,21 @@ define void @bork(ptr nocapture align 4 %dst) nounwind {
 ; SLOW_32:       # %bb.0:
 ; SLOW_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SLOW_32-NEXT:    xorps %xmm0, %xmm0
-; SLOW_32-NEXT:    movsd %xmm0, 72(%eax)
-; SLOW_32-NEXT:    movsd %xmm0, 64(%eax)
-; SLOW_32-NEXT:    movsd %xmm0, 56(%eax)
-; SLOW_32-NEXT:    movsd %xmm0, 48(%eax)
-; SLOW_32-NEXT:    movsd %xmm0, 40(%eax)
-; SLOW_32-NEXT:    movsd %xmm0, 32(%eax)
-; SLOW_32-NEXT:    movsd %xmm0, 24(%eax)
-; SLOW_32-NEXT:    movsd %xmm0, 16(%eax)
-; SLOW_32-NEXT:    movsd %xmm0, 8(%eax)
-; SLOW_32-NEXT:    movsd %xmm0, (%eax)
+; SLOW_32-NEXT:    movups %xmm0, 64(%eax)
+; SLOW_32-NEXT:    movups %xmm0, 48(%eax)
+; SLOW_32-NEXT:    movups %xmm0, 32(%eax)
+; SLOW_32-NEXT:    movups %xmm0, 16(%eax)
+; SLOW_32-NEXT:    movups %xmm0, (%eax)
 ; SLOW_32-NEXT:    retl
 ;
 ; SLOW_64-LABEL: bork:
 ; SLOW_64:       # %bb.0:
-; SLOW_64-NEXT:    movq $0, 72(%rdi)
-; SLOW_64-NEXT:    movq $0, 64(%rdi)
-; SLOW_64-NEXT:    movq $0, 56(%rdi)
-; SLOW_64-NEXT:    movq $0, 48(%rdi)
-; SLOW_64-NEXT:    movq $0, 40(%rdi)
-; SLOW_64-NEXT:    movq $0, 32(%rdi)
-; SLOW_64-NEXT:    movq $0, 24(%rdi)
-; SLOW_64-NEXT:    movq $0, 16(%rdi)
-; SLOW_64-NEXT:    movq $0, 8(%rdi)
-; SLOW_64-NEXT:    movq $0, (%rdi)
+; SLOW_64-NEXT:    xorps %xmm0, %xmm0
+; SLOW_64-NEXT:    movups %xmm0, 64(%rdi)
+; SLOW_64-NEXT:    movups %xmm0, 48(%rdi)
+; SLOW_64-NEXT:    movups %xmm0, 32(%rdi)
+; SLOW_64-NEXT:    movups %xmm0, 16(%rdi)
+; SLOW_64-NEXT:    movups %xmm0, (%rdi)
 ; SLOW_64-NEXT:    retq
   call void @llvm.memset.p0.i64(ptr align 4 %dst, i8 0, i64 80, i1 false)
   ret void

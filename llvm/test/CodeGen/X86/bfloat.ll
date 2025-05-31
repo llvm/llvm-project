@@ -10,15 +10,15 @@ define void @add(ptr %pa, ptr %pb, ptr %pc) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzwl (%edx), %edx
-; X86-NEXT:    shll $16, %edx
-; X86-NEXT:    vmovd %edx, %xmm0
 ; X86-NEXT:    movzwl (%ecx), %ecx
 ; X86-NEXT:    shll $16, %ecx
-; X86-NEXT:    vmovd %ecx, %xmm1
+; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm1
 ; X86-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; X86-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpextrw $0, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -370,12 +370,12 @@ define void @add_constant(ptr %pa, ptr %pc) nounwind {
 ; X86-LABEL: add_constant:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl (%ecx), %ecx
-; X86-NEXT:    shll $16, %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    movzwl (%eax), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpextrw $0, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
@@ -1085,7 +1085,7 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ;
 ; AVXNC-LABEL: pr63017_2:
 ; AVXNC:       # %bb.0:
-; AVXNC-NEXT:    vbroadcastss {{.*#+}} ymm0 = [49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024]
+; AVXNC-NEXT:    vmovaps {{.*#+}} ymm0 = [49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024,49024]
 ; AVXNC-NEXT:    testb %al, %al
 ; AVXNC-NEXT:    jne .LBB16_2
 ; AVXNC-NEXT:  # %bb.1: # %cond.load
@@ -1235,10 +1235,10 @@ define <8 x double> @pr64460_4(<8 x bfloat> %a) {
 ;
 ; SSE2-LABEL: pr64460_4:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; SSE2-NEXT:    cvtps2pd %xmm1, %xmm4
+; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
 ; SSE2-NEXT:    cvtps2pd %xmm3, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
@@ -1983,11 +1983,11 @@ define void @PR92471(ptr %0, ptr %1) nounwind {
 ; X86-LABEL: PR92471:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vpinsrd $1, 4(%ecx), %xmm0, %xmm0
-; X86-NEXT:    vpinsrd $2, 8(%ecx), %xmm0, %xmm0
-; X86-NEXT:    vpinsrw $6, 12(%ecx), %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $1, 4(%eax), %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $2, 8(%eax), %xmm0, %xmm0
+; X86-NEXT:    vpinsrw $6, 12(%eax), %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; X86-NEXT:    vpslld $16, %ymm0, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm1

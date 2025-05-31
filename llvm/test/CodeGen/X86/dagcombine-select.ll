@@ -44,8 +44,8 @@ define i32 @select_and3(i32 %x, i32 %y) {
 define <4 x i32> @select_and_v4(i32 %x, <4 x i32> %y) {
 ; CHECK-LABEL: select_and_v4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpl $11, %edi
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    cmpl $11, %edi
 ; CHECK-NEXT:    jl .LBB3_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    movaps %xmm0, %xmm1

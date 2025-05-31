@@ -6,32 +6,32 @@
 define void @PR47857(ptr noalias nocapture writeonly sret(%"struct.std::array") align 8 %0, ptr nocapture noundef nonnull readonly align 8 dereferenceable(32) %1, ptr nocapture noundef nonnull readonly align 8 dereferenceable(32) %2) {
 ; CHECK-LABEL: PR47857:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq (%rdx), %r9
-; CHECK-NEXT:    movq 8(%rdx), %rcx
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    addq (%rsi), %r9
-; CHECK-NEXT:    adcq 8(%rsi), %rcx
-; CHECK-NEXT:    movq 16(%rdx), %r8
-; CHECK-NEXT:    adcq 16(%rsi), %r8
+; CHECK-NEXT:    movq (%rdx), %rax
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    addq (%rsi), %rax
+; CHECK-NEXT:    movq 8(%rdx), %r8
+; CHECK-NEXT:    adcq 8(%rsi), %r8
+; CHECK-NEXT:    movq 16(%rdx), %r9
+; CHECK-NEXT:    adcq 16(%rsi), %r9
 ; CHECK-NEXT:    movq 24(%rdx), %rdx
 ; CHECK-NEXT:    adcq 24(%rsi), %rdx
-; CHECK-NEXT:    sbbq %rdi, %rdi
-; CHECK-NEXT:    andl $38, %edi
-; CHECK-NEXT:    addq %rdi, %r9
-; CHECK-NEXT:    adcq $0, %rcx
+; CHECK-NEXT:    sbbq %rcx, %rcx
+; CHECK-NEXT:    andl $38, %ecx
+; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    adcq $0, %r8
+; CHECK-NEXT:    adcq $0, %r9
 ; CHECK-NEXT:    adcq $0, %rdx
-; CHECK-NEXT:    sbbq %rdi, %rdi
-; CHECK-NEXT:    andl $38, %edi
-; CHECK-NEXT:    addq %r9, %rdi
-; CHECK-NEXT:    adcq $0, %rcx
+; CHECK-NEXT:    sbbq %rcx, %rcx
+; CHECK-NEXT:    andl $38, %ecx
+; CHECK-NEXT:    addq %rax, %rcx
 ; CHECK-NEXT:    adcq $0, %r8
+; CHECK-NEXT:    adcq $0, %r9
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    adcq $0, %rdx
-; CHECK-NEXT:    movq %rdi, (%rax)
-; CHECK-NEXT:    movq %rcx, 8(%rax)
-; CHECK-NEXT:    movq %r8, 16(%rax)
-; CHECK-NEXT:    movq %rdx, 24(%rax)
+; CHECK-NEXT:    movq %rcx, (%rdi)
+; CHECK-NEXT:    movq %r8, 8(%rdi)
+; CHECK-NEXT:    movq %r9, 16(%rdi)
+; CHECK-NEXT:    movq %rdx, 24(%rdi)
 ; CHECK-NEXT:    retq
   %4 = load i64, ptr %1, align 8
   %5 = getelementptr inbounds %"struct.std::array", ptr %1, i64 0, i32 0, i64 1

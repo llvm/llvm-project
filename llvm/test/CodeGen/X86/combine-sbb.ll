@@ -7,26 +7,24 @@
 define void @PR25858_i32(ptr sret(%WideUInt32), ptr, ptr) nounwind {
 ; X86-LABEL: PR25858_i32:
 ; X86:       # %bb.0: # %top
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl (%edx), %esi
-; X86-NEXT:    movl 4(%edx), %edx
-; X86-NEXT:    subl (%ecx), %esi
-; X86-NEXT:    sbbl 4(%ecx), %edx
-; X86-NEXT:    movl %edx, 4(%eax)
-; X86-NEXT:    movl %esi, (%eax)
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl (%ecx), %edx
+; X86-NEXT:    subl (%eax), %edx
+; X86-NEXT:    movl 4(%ecx), %ecx
+; X86-NEXT:    sbbl 4(%eax), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: PR25858_i32:
 ; X64:       # %bb.0: # %top
-; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    movl (%rsi), %ecx
-; X64-NEXT:    movl 4(%rsi), %esi
 ; X64-NEXT:    subl (%rdx), %ecx
+; X64-NEXT:    movl 4(%rsi), %esi
 ; X64-NEXT:    sbbl 4(%rdx), %esi
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    movl %esi, 4(%rdi)
 ; X64-NEXT:    movl %ecx, (%rdi)
 ; X64-NEXT:    retq
@@ -56,38 +54,36 @@ declare  { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
 define void @PR25858_i64(ptr sret(%WideUInt64), ptr, ptr) nounwind {
 ; X86-LABEL: PR25858_i64:
 ; X86:       # %bb.0: # %top
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl (%edi), %edx
-; X86-NEXT:    movl 4(%edi), %esi
-; X86-NEXT:    movl 12(%edi), %ecx
-; X86-NEXT:    movl 8(%edi), %edi
-; X86-NEXT:    subl 8(%ebx), %edi
-; X86-NEXT:    sbbl 12(%ebx), %ecx
-; X86-NEXT:    subl (%ebx), %edx
-; X86-NEXT:    sbbl 4(%ebx), %esi
-; X86-NEXT:    sbbl $0, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl 8(%esi), %ecx
+; X86-NEXT:    subl 8(%eax), %ecx
+; X86-NEXT:    movl 12(%esi), %edx
+; X86-NEXT:    sbbl 12(%eax), %edx
+; X86-NEXT:    movl (%esi), %edi
+; X86-NEXT:    subl (%eax), %edi
+; X86-NEXT:    movl 4(%esi), %esi
+; X86-NEXT:    sbbl 4(%eax), %esi
 ; X86-NEXT:    sbbl $0, %ecx
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sbbl $0, %edx
+; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
-; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    movl %ecx, 8(%eax)
+; X86-NEXT:    movl %edx, 12(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: PR25858_i64:
 ; X64:       # %bb.0: # %top
-; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    movq (%rsi), %rcx
-; X64-NEXT:    movq 8(%rsi), %rsi
 ; X64-NEXT:    subq (%rdx), %rcx
+; X64-NEXT:    movq 8(%rsi), %rsi
 ; X64-NEXT:    sbbq 8(%rdx), %rsi
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    movq %rsi, 8(%rdi)
 ; X64-NEXT:    movq %rcx, (%rdi)
 ; X64-NEXT:    retq
@@ -118,9 +114,9 @@ define i8 @PR24545(i32, i32, ptr nocapture readonly) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    cmpl (%ecx), %edx
-; X86-NEXT:    sbbl 4(%ecx), %eax
+; X86-NEXT:    cmpl (%eax), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    sbbl 4(%eax), %ecx
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;

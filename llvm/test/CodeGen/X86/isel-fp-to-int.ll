@@ -9,9 +9,9 @@ define i64 @test_double_to_ui64(double %x) {
 ; SDAG-X64:       # %bb.0: # %entry
 ; SDAG-X64-NEXT:    cvttsd2si %xmm0, %rcx
 ; SDAG-X64-NEXT:    movq %rcx, %rdx
-; SDAG-X64-NEXT:    sarq $63, %rdx
 ; SDAG-X64-NEXT:    subsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SDAG-X64-NEXT:    cvttsd2si %xmm0, %rax
+; SDAG-X64-NEXT:    sarq $63, %rdx
 ; SDAG-X64-NEXT:    andq %rdx, %rax
 ; SDAG-X64-NEXT:    orq %rcx, %rax
 ; SDAG-X64-NEXT:    retq
@@ -108,9 +108,9 @@ define i64 @test_float_to_ui64(float %x) {
 ; SDAG-X64:       # %bb.0: # %entry
 ; SDAG-X64-NEXT:    cvttss2si %xmm0, %rcx
 ; SDAG-X64-NEXT:    movq %rcx, %rdx
-; SDAG-X64-NEXT:    sarq $63, %rdx
 ; SDAG-X64-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SDAG-X64-NEXT:    cvttss2si %xmm0, %rax
+; SDAG-X64-NEXT:    sarq $63, %rdx
 ; SDAG-X64-NEXT:    andq %rdx, %rax
 ; SDAG-X64-NEXT:    orq %rcx, %rax
 ; SDAG-X64-NEXT:    retq

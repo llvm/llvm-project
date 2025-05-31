@@ -547,8 +547,8 @@ define void @ti64(double %a, double %b) nounwind {
 ; X86-LABEL: ti64:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %eax, 0
 ; X86-NEXT:    movl %ecx, 4

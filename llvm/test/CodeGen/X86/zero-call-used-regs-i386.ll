@@ -22,9 +22,9 @@ define dso_local zeroext i1 @test1(ptr nocapture noundef readonly %0) local_unna
 ; I386-NEXT:    movl (%eax), %eax
 ; I386-NEXT:    movzbl (%eax), %ebx
 ; I386-NEXT:    calll bar
+; I386-NEXT:    # implicit-def: $cl
+; I386-NEXT:    # kill: killed $cl
 ; I386-NEXT:    testb %al, %al
-; I386-NEXT:    # implicit-def: $al
-; I386-NEXT:    # kill: killed $al
 ; I386-NEXT:    je .LBB0_6
 ; I386-NEXT:  # %bb.1:
 ; I386-NEXT:    cmpl $0, mas_data_end_type

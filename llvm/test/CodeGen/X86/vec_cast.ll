@@ -95,11 +95,11 @@ define <3 x i32> @e(<3 x i16> %a) nounwind {
 ;
 ; CHECK-WIN-LABEL: e:
 ; CHECK-WIN:       # %bb.0:
-; CHECK-WIN-NEXT:    # kill: def $r8w killed $r8w def $r8d
 ; CHECK-WIN-NEXT:    # kill: def $dx killed $dx def $edx
 ; CHECK-WIN-NEXT:    movzwl %cx, %eax
 ; CHECK-WIN-NEXT:    movd %eax, %xmm0
 ; CHECK-WIN-NEXT:    pinsrw $2, %edx, %xmm0
+; CHECK-WIN-NEXT:    # kill: def $r8w killed $r8w def $r8d
 ; CHECK-WIN-NEXT:    pinsrw $4, %r8d, %xmm0
 ; CHECK-WIN-NEXT:    retq
   %c = zext <3 x i16> %a to <3 x i32>
@@ -145,9 +145,9 @@ define <8 x i16> @g(<8 x i32> %a) nounwind {
 define <3 x i16> @h(<3 x i32> %a) nounwind {
 ; CHECK-LIN-LABEL: h:
 ; CHECK-LIN:       # %bb.0:
-; CHECK-LIN-NEXT:    movd %xmm0, %eax
 ; CHECK-LIN-NEXT:    pextrw $2, %xmm0, %edx
 ; CHECK-LIN-NEXT:    pextrw $4, %xmm0, %ecx
+; CHECK-LIN-NEXT:    movd %xmm0, %eax
 ; CHECK-LIN-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-LIN-NEXT:    # kill: def $dx killed $dx killed $edx
 ; CHECK-LIN-NEXT:    # kill: def $cx killed $cx killed $ecx
@@ -156,12 +156,12 @@ define <3 x i16> @h(<3 x i32> %a) nounwind {
 ; CHECK-WIN-LABEL: h:
 ; CHECK-WIN:       # %bb.0:
 ; CHECK-WIN-NEXT:    movdqa (%rcx), %xmm0
-; CHECK-WIN-NEXT:    movl (%rcx), %eax
 ; CHECK-WIN-NEXT:    pextrw $2, %xmm0, %edx
-; CHECK-WIN-NEXT:    pextrw $4, %xmm0, %ecx
+; CHECK-WIN-NEXT:    pextrw $4, %xmm0, %r8d
+; CHECK-WIN-NEXT:    movl (%rcx), %eax
 ; CHECK-WIN-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-WIN-NEXT:    # kill: def $dx killed $dx killed $edx
-; CHECK-WIN-NEXT:    # kill: def $cx killed $cx killed $ecx
+; CHECK-WIN-NEXT:    movl %r8d, %ecx
 ; CHECK-WIN-NEXT:    retq
   %c = trunc <3 x i32> %a to <3 x i16>
   ret <3 x i16> %c

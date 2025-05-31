@@ -1013,20 +1013,18 @@ define <16 x i16> @test_x86_vcvtps2ph_256(<16 x float> %a0, <16 x i16> %src, i16
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vcvtps2ph $3, {sae}, %zmm0, %ymm2 {%k1} {z}
 ; X64-NEXT:    vcvtps2ph $4, {sae}, %zmm0, %ymm1 {%k1}
-; X64-NEXT:    vpaddw %ymm1, %ymm2, %ymm1
 ; X64-NEXT:    vcvtps2ph $2, %zmm0, (%rsi)
-; X64-NEXT:    vmovdqa %ymm1, %ymm0
+; X64-NEXT:    vpaddw %ymm1, %ymm2, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_x86_vcvtps2ph_256:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vcvtps2ph $3, {sae}, %zmm0, %ymm2 {%k1} {z}
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vcvtps2ph $4, {sae}, %zmm0, %ymm1 {%k1}
-; X86-NEXT:    vpaddw %ymm1, %ymm2, %ymm1
 ; X86-NEXT:    vcvtps2ph $2, %zmm0, (%eax)
-; X86-NEXT:    vmovdqa %ymm1, %ymm0
+; X86-NEXT:    vpaddw %ymm1, %ymm2, %ymm0
 ; X86-NEXT:    retl
   %res1 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 2, <16 x i16> zeroinitializer, i16 -1)
   %res2 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 11, <16 x i16> zeroinitializer, i16 %mask)
@@ -6093,14 +6091,14 @@ define void @fmadd_ss_maskz_memfold(ptr %a, ptr %b, i8 %c) {
 ;
 ; X86-LABEL: fmadd_ss_maskz_memfold:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    vfmadd231ss {{.*#+}} xmm0 = (xmm0 * mem) + xmm0
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovss %xmm0, %xmm0, %xmm0 {%k1} {z}
-; X86-NEXT:    vmovss %xmm0, (%edx)
+; X86-NEXT:    vmovss %xmm0, (%ecx)
 ; X86-NEXT:    retl
   %a.val = load float, ptr %a
   %av0 = insertelement <4 x float> undef, float %a.val, i32 0
@@ -6181,14 +6179,14 @@ define void @fmadd_sd_maskz_memfold(ptr %a, ptr %b, i8 %c) {
 ;
 ; X86-LABEL: fmadd_sd_maskz_memfold:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vfmadd231sd {{.*#+}} xmm0 = (xmm0 * mem) + xmm0
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovsd %xmm0, %xmm0, %xmm0 {%k1} {z}
-; X86-NEXT:    vmovsd %xmm0, (%edx)
+; X86-NEXT:    vmovsd %xmm0, (%ecx)
 ; X86-NEXT:    retl
   %a.val = load double, ptr %a
   %av0 = insertelement <2 x double> undef, double %a.val, i32 0
@@ -7107,18 +7105,18 @@ define <16 x i32> @test_x86_avx512_psllv_d_512(<16 x i32> %a0, <16 x i32> %a1) {
 define <16 x i32> @test_x86_avx512_psllv_d_512_const() {
 ; X64-LABEL: test_x86_avx512_psllv_d_512_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovsxbd {{.*#+}} zmm0 = [2,9,0,4294967295,3,7,4294967295,0,4,5,4294967294,0,5,3,4294967293,0]
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,9,0,4294967295,3,7,4294967295,0,4,5,4294967294,0,5,3,4294967293,0]
 ; X64-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; X64-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4294967295]
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4294967295]
 ; X64-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
 ; X64-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_x86_avx512_psllv_d_512_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovsxbd {{.*#+}} zmm0 = [2,9,0,4294967295,3,7,4294967295,0,4,5,4294967294,0,5,3,4294967293,0]
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,9,0,4294967295,3,7,4294967295,0,4,5,4294967294,0,5,3,4294967293,0]
 ; X86-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
-; X86-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4294967295]
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4294967295]
 ; X86-NEXT:    vpsllvd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm1
 ; X86-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
@@ -7180,18 +7178,18 @@ define <8 x i64> @test_x86_avx512_psllv_q_512(<8 x i64> %a0, <8 x i64> %a1) {
 define <8 x i64> @test_x86_avx512_psllv_q_512_const() {
 ; X64-LABEL: test_x86_avx512_psllv_q_512_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [2,9,0,18446744073709551615,3,7,18446744073709551615,0]
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,9,0,18446744073709551615,3,7,18446744073709551615,0]
 ; X64-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; X64-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [4,4,4,4,4,4,4,18446744073709551615]
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4,4,4,4,4,4,4,18446744073709551615]
 ; X64-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
 ; X64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_x86_avx512_psllv_q_512_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [2,9,0,18446744073709551615,3,7,18446744073709551615,0]
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,0,9,0,0,0,4294967295,4294967295,3,0,7,0,4294967295,4294967295,0,0]
 ; X86-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
-; X86-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [4,4,4,4,4,4,4,18446744073709551615]
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4,0,4,0,4,0,4,0,4,0,4,0,4,0,4294967295,4294967295]
 ; X86-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm1
 ; X86-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
@@ -7355,18 +7353,18 @@ define <16 x i32> @test_x86_avx512_psrlv_d_512(<16 x i32> %a0, <16 x i32> %a1) {
 define <16 x i32> @test_x86_avx512_psrlv_d_512_const() {
 ; X64-LABEL: test_x86_avx512_psrlv_d_512_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovsxbd {{.*#+}} zmm0 = [2,9,0,4294967295,3,7,4294967295,0,4,5,4294967294,0,5,3,4294967293,0]
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,9,0,4294967295,3,7,4294967295,0,4,5,4294967294,0,5,3,4294967293,0]
 ; X64-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; X64-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4294967295]
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4294967295]
 ; X64-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
 ; X64-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_x86_avx512_psrlv_d_512_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovsxbd {{.*#+}} zmm0 = [2,9,0,4294967295,3,7,4294967295,0,4,5,4294967294,0,5,3,4294967293,0]
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,9,0,4294967295,3,7,4294967295,0,4,5,4294967294,0,5,3,4294967293,0]
 ; X86-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
-; X86-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4294967295]
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4294967295]
 ; X86-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm1
 ; X86-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
@@ -7428,18 +7426,18 @@ define <8 x i64> @test_x86_avx512_psrlv_q_512(<8 x i64> %a0, <8 x i64> %a1) {
 define <8 x i64> @test_x86_avx512_psrlv_q_512_const() {
 ; X64-LABEL: test_x86_avx512_psrlv_q_512_const:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [2,9,0,18446744073709551615,3,7,18446744073709551615,0]
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,9,0,18446744073709551615,3,7,18446744073709551615,0]
 ; X64-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
-; X64-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [4,4,4,4,4,4,4,18446744073709551615]
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4,4,4,4,4,4,4,18446744073709551615]
 ; X64-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
 ; X64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_x86_avx512_psrlv_q_512_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [2,9,0,18446744073709551615,3,7,18446744073709551615,0]
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm0 = [2,0,9,0,0,0,4294967295,4294967295,3,0,7,0,4294967295,4294967295,0,0]
 ; X86-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
-; X86-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [4,4,4,4,4,4,4,18446744073709551615]
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [4,0,4,0,4,0,4,0,4,0,4,0,4,0,4294967295,4294967295]
 ; X86-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm1
 ; X86-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
@@ -7577,9 +7575,9 @@ define <16 x float> @bad_mask_transition(<8 x double> %a, <8 x double> %b, <8 x 
 ; X86-NEXT:    andl $-64, %esp
 ; X86-NEXT:    subl $64, %esp
 ; X86-NEXT:    vmovaps 72(%ebp), %zmm3
-; X86-NEXT:    vcmplt_oqpd %zmm1, %zmm0, %k0
-; X86-NEXT:    vcmplt_oqpd 8(%ebp), %zmm2, %k1
-; X86-NEXT:    kunpckbw %k0, %k1, %k1
+; X86-NEXT:    vcmplt_oqpd 8(%ebp), %zmm2, %k0
+; X86-NEXT:    vcmplt_oqpd %zmm1, %zmm0, %k1
+; X86-NEXT:    kunpckbw %k1, %k0, %k1
 ; X86-NEXT:    vmovaps 136(%ebp), %zmm3 {%k1}
 ; X86-NEXT:    vmovaps %zmm3, %zmm0
 ; X86-NEXT:    movl %ebp, %esp

@@ -4,10 +4,8 @@
 define void @multiple_stores_on_chain(ptr %A) {
 ; CHECK-LABEL: multiple_stores_on_chain:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movabsq $844433520132096, %rax # imm = 0x3000200010000
-; CHECK-NEXT:    movq %rax, (%rdi)
-; CHECK-NEXT:    movabsq $1970350607106052, %rax # imm = 0x7000600050004
-; CHECK-NEXT:    movq %rax, 8(%rdi)
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    movups %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
   %a1 = getelementptr inbounds i16, ptr %A, i64 1

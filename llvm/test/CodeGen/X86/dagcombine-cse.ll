@@ -51,7 +51,6 @@ define i96 @square_high(i96 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl %edi, %eax
@@ -64,6 +63,7 @@ define i96 @square_high(i96 %x) nounwind {
 ; X86-NEXT:    adcl $0, %ebp
 ; X86-NEXT:    addl %eax, %ecx
 ; X86-NEXT:    adcl %edx, %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    movzbl %al, %ecx
 ; X86-NEXT:    movl %ebx, %eax
@@ -88,8 +88,8 @@ define i96 @square_high(i96 %x) nounwind {
 ; X86-NEXT:    setb %dl
 ; X86-NEXT:    addl %ebp, %ebx
 ; X86-NEXT:    adcl %ecx, %edi
-; X86-NEXT:    movzbl %dl, %ecx
 ; X86-NEXT:    adcl %eax, %esi
+; X86-NEXT:    movzbl %dl, %ecx
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    mull %eax

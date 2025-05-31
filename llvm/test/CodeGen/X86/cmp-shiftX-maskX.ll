@@ -377,7 +377,7 @@ define <4 x i1> @shr_to_ror_eq_4xi32_s4(<4 x i32> %x) {
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vprold $4, %xmm0, %xmm1
 ; CHECK-AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; CHECK-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; CHECK-AVX512-NEXT:    retq
   %shr = lshr <4 x i32> %x, <i32 4, i32 4, i32 4, i32 4>
   %and = and <4 x i32> %x, <i32 268435455, i32 268435455, i32 268435455, i32 268435455>
@@ -419,7 +419,7 @@ define <4 x i1> @shl_to_ror_eq_4xi32_s8(<4 x i32> %x) {
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vprold $8, %xmm0, %xmm1
 ; CHECK-AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; CHECK-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; CHECK-AVX512-NEXT:    retq
   %shr = shl <4 x i32> %x, <i32 8, i32 8, i32 8, i32 8>
   %and = and <4 x i32> %x, <i32 4294967040, i32 4294967040, i32 4294967040, i32 4294967040>
@@ -469,10 +469,10 @@ define <4 x i1> @shl_to_ror_eq_4xi32_s7_fail_no_p2(<4 x i32> %x) {
 ;
 ; CHECK-AVX512-LABEL: shl_to_ror_eq_4xi32_s7_fail_no_p2:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpslld $7, %xmm0, %xmm1
-; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
-; CHECK-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
+; CHECK-AVX512-NEXT:    vpslld $7, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; CHECK-AVX512-NEXT:    retq
   %shr = shl <4 x i32> %x, <i32 7, i32 7, i32 7, i32 7>
   %and = and <4 x i32> %x, <i32 4294967168, i32 4294967168, i32 4294967168, i32 4294967168>
@@ -535,7 +535,7 @@ define <4 x i1> @shr_to_ror_eq_4xi32_s4_fail_no_splat(<4 x i32> %x) {
 ; CHECK-AVX512-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vpcmpeqd %xmm0, %xmm1, %xmm0
-; CHECK-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; CHECK-AVX512-NEXT:    retq
   %shr = lshr <4 x i32> %x, <i32 4, i32 4, i32 4, i32 8>
   %and = and <4 x i32> %x, <i32 268435455, i32 268435455, i32 268435455, i32 268435455>
@@ -580,8 +580,8 @@ define <16 x i1> @shl_to_ror_eq_16xi16_s8_fail_preserve_i16(<16 x i16> %x) {
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpsllw $8, %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; CHECK-AVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
 ; CHECK-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; CHECK-AVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
 ; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; CHECK-AVX1-NEXT:    vpcmpeqw %xmm3, %xmm2, %xmm2
 ; CHECK-AVX1-NEXT:    vpcmpeqw %xmm0, %xmm1, %xmm0
@@ -610,7 +610,7 @@ define <16 x i1> @shl_to_ror_eq_16xi16_s8_fail_preserve_i16(<16 x i16> %x) {
 ; CHECK-AVX512-NEXT:    vpcmpeqw %ymm0, %ymm1, %ymm0
 ; CHECK-AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK-AVX512-NEXT:    vpmovdb %zmm0, %xmm0
-; CHECK-AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; CHECK-AVX512-NEXT:    vzeroupper
 ; CHECK-AVX512-NEXT:    retq
   %shr = shl <16 x i16> %x, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>

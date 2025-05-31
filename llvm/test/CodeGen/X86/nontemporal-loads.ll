@@ -1787,21 +1787,21 @@ define <16 x i32> @test_masked_v16i32(ptr %addr, <16 x i32> %old, <16 x i32> %ma
 ; SSE41-NEXT:    pcmpeqd %xmm0, %xmm6
 ; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE41-NEXT:    pcmpeqd %xmm4, %xmm0
-; SSE41-NEXT:    movntdqa 48(%rdi), %xmm4
-; SSE41-NEXT:    movntdqa 32(%rdi), %xmm9
-; SSE41-NEXT:    movntdqa 16(%rdi), %xmm10
-; SSE41-NEXT:    movntdqa (%rdi), %xmm11
-; SSE41-NEXT:    blendvps %xmm0, %xmm8, %xmm11
+; SSE41-NEXT:    movntdqa (%rdi), %xmm4
+; SSE41-NEXT:    blendvps %xmm0, %xmm8, %xmm4
+; SSE41-NEXT:    movntdqa 16(%rdi), %xmm8
 ; SSE41-NEXT:    movdqa %xmm5, %xmm0
-; SSE41-NEXT:    blendvps %xmm0, %xmm1, %xmm10
+; SSE41-NEXT:    blendvps %xmm0, %xmm1, %xmm8
+; SSE41-NEXT:    movntdqa 32(%rdi), %xmm5
 ; SSE41-NEXT:    movdqa %xmm6, %xmm0
-; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm9
+; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm5
+; SSE41-NEXT:    movntdqa 48(%rdi), %xmm6
 ; SSE41-NEXT:    movdqa %xmm7, %xmm0
-; SSE41-NEXT:    blendvps %xmm0, %xmm3, %xmm4
-; SSE41-NEXT:    movaps %xmm11, %xmm0
-; SSE41-NEXT:    movaps %xmm10, %xmm1
-; SSE41-NEXT:    movaps %xmm9, %xmm2
-; SSE41-NEXT:    movaps %xmm4, %xmm3
+; SSE41-NEXT:    blendvps %xmm0, %xmm3, %xmm6
+; SSE41-NEXT:    movaps %xmm4, %xmm0
+; SSE41-NEXT:    movaps %xmm8, %xmm1
+; SSE41-NEXT:    movaps %xmm5, %xmm2
+; SSE41-NEXT:    movaps %xmm6, %xmm3
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_masked_v16i32:
@@ -1814,11 +1814,11 @@ define <16 x i32> @test_masked_v16i32(ptr %addr, <16 x i32> %old, <16 x i32> %ma
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
 ; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm5
+; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm6
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
+; AVX1-NEXT:    vblendvps %ymm3, %ymm1, %ymm5, %ymm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
-; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm4
-; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm4
-; AVX1-NEXT:    vblendvps %ymm3, %ymm1, %ymm4, %ymm1
 ; AVX1-NEXT:    vmovntdqa (%rdi), %xmm3
 ; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm4
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3

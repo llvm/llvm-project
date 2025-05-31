@@ -613,12 +613,10 @@ define double @fma_f64(double %a, double %b, double %c) nounwind strictfp {
 ; SSE-X86-LABEL: fma_f64:
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    subl $24, %esp
-; SSE-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-X86-NEXT:    movups {{[0-9]+}}(%esp), %xmm0
 ; SSE-X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-X86-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-X86-NEXT:    movsd %xmm2, {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    movsd %xmm1, {{[0-9]+}}(%esp)
-; SSE-X86-NEXT:    movsd %xmm0, (%esp)
+; SSE-X86-NEXT:    movups %xmm0, (%esp)
 ; SSE-X86-NEXT:    calll fma
 ; SSE-X86-NEXT:    addl $24, %esp
 ; SSE-X86-NEXT:    retl

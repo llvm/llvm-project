@@ -810,11 +810,11 @@ define dso_local i32 @sad_nonloop_32i8(ptr nocapture readonly %p, i64, ptr nocap
 ;
 ; AVX1-LABEL: sad_nonloop_32i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; AVX1-NEXT:    vpsadbw 16(%rdx), %xmm1, %xmm1
-; AVX1-NEXT:    vpsadbw (%rdx), %xmm0, %xmm0
-; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqu 16(%rdi), %xmm0
+; AVX1-NEXT:    vpsadbw 16(%rdx), %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqu (%rdi), %xmm1
+; AVX1-NEXT:    vpsadbw (%rdx), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
@@ -892,12 +892,12 @@ define dso_local i32 @sad_nonloop_64i8(ptr nocapture readonly %p, i64, ptr nocap
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
-; AVX1-NEXT:    vmovdqu 32(%rdi), %xmm2
-; AVX1-NEXT:    vmovdqu 48(%rdi), %xmm3
-; AVX1-NEXT:    vpsadbw 48(%rdx), %xmm3, %xmm3
+; AVX1-NEXT:    vmovdqu 48(%rdi), %xmm2
+; AVX1-NEXT:    vpsadbw 48(%rdx), %xmm2, %xmm2
 ; AVX1-NEXT:    vpsadbw 16(%rdx), %xmm1, %xmm1
-; AVX1-NEXT:    vpaddq %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpsadbw 32(%rdx), %xmm2, %xmm2
+; AVX1-NEXT:    vmovdqu 32(%rdi), %xmm3
+; AVX1-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpsadbw 32(%rdx), %xmm3, %xmm2
 ; AVX1-NEXT:    vpsadbw (%rdx), %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0

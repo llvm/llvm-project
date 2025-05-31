@@ -23,8 +23,8 @@ define void @update(ptr %dst_i, ptr %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:    leal (,%eax,8), %edx
 ; WIDE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIDE-NEXT:    addl %edx, %ecx
-; WIDE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; WIDE-NEXT:    addl {{[0-9]+}}(%esp), %edx
+; WIDE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; WIDE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; WIDE-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
 ; WIDE-NEXT:    psubb %xmm0, %xmm3

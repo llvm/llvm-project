@@ -84,14 +84,11 @@ entry:
 define void @tryset(ptr nocapture %x) {
 ; X64SSE-LABEL: tryset:
 ; X64SSE:       # %bb.0:
-; X64SSE-NEXT:    movq $0, 56(%rdi)
-; X64SSE-NEXT:    movq $0, 48(%rdi)
-; X64SSE-NEXT:    movq $0, 40(%rdi)
-; X64SSE-NEXT:    movq $0, 32(%rdi)
-; X64SSE-NEXT:    movq $0, 24(%rdi)
-; X64SSE-NEXT:    movq $0, 16(%rdi)
-; X64SSE-NEXT:    movq $0, 8(%rdi)
-; X64SSE-NEXT:    movq $0, (%rdi)
+; X64SSE-NEXT:    xorps %xmm0, %xmm0
+; X64SSE-NEXT:    movups %xmm0, 48(%rdi)
+; X64SSE-NEXT:    movups %xmm0, 32(%rdi)
+; X64SSE-NEXT:    movups %xmm0, 16(%rdi)
+; X64SSE-NEXT:    movups %xmm0, (%rdi)
 ; X64SSE-NEXT:    retq
 ;
 ; X86SSE-LABEL: tryset:
@@ -117,28 +114,21 @@ define void @tryset(ptr nocapture %x) {
 ;
 ; X64SSE2-LABEL: tryset:
 ; X64SSE2:       # %bb.0:
-; X64SSE2-NEXT:    movq $0, 56(%rdi)
-; X64SSE2-NEXT:    movq $0, 48(%rdi)
-; X64SSE2-NEXT:    movq $0, 40(%rdi)
-; X64SSE2-NEXT:    movq $0, 32(%rdi)
-; X64SSE2-NEXT:    movq $0, 24(%rdi)
-; X64SSE2-NEXT:    movq $0, 16(%rdi)
-; X64SSE2-NEXT:    movq $0, 8(%rdi)
-; X64SSE2-NEXT:    movq $0, (%rdi)
+; X64SSE2-NEXT:    xorps %xmm0, %xmm0
+; X64SSE2-NEXT:    movups %xmm0, 48(%rdi)
+; X64SSE2-NEXT:    movups %xmm0, 32(%rdi)
+; X64SSE2-NEXT:    movups %xmm0, 16(%rdi)
+; X64SSE2-NEXT:    movups %xmm0, (%rdi)
 ; X64SSE2-NEXT:    retq
 ;
 ; X86SSE2-LABEL: tryset:
 ; X86SSE2:       # %bb.0:
 ; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86SSE2-NEXT:    xorps %xmm0, %xmm0
-; X86SSE2-NEXT:    movsd %xmm0, 56(%eax)
-; X86SSE2-NEXT:    movsd %xmm0, 48(%eax)
-; X86SSE2-NEXT:    movsd %xmm0, 40(%eax)
-; X86SSE2-NEXT:    movsd %xmm0, 32(%eax)
-; X86SSE2-NEXT:    movsd %xmm0, 24(%eax)
-; X86SSE2-NEXT:    movsd %xmm0, 16(%eax)
-; X86SSE2-NEXT:    movsd %xmm0, 8(%eax)
-; X86SSE2-NEXT:    movsd %xmm0, (%eax)
+; X86SSE2-NEXT:    movups %xmm0, 48(%eax)
+; X86SSE2-NEXT:    movups %xmm0, 32(%eax)
+; X86SSE2-NEXT:    movups %xmm0, 16(%eax)
+; X86SSE2-NEXT:    movups %xmm0, (%eax)
 ; X86SSE2-NEXT:    retl
 ;
 ; X64AVX-LABEL: tryset:
@@ -164,14 +154,10 @@ define void @tryset(ptr nocapture %x) {
 define void @trycpy(ptr nocapture %x, ptr nocapture readonly %y) {
 ; X64SSE-LABEL: trycpy:
 ; X64SSE:       # %bb.0:
-; X64SSE-NEXT:    movq 24(%rsi), %rax
-; X64SSE-NEXT:    movq %rax, 24(%rdi)
-; X64SSE-NEXT:    movq 16(%rsi), %rax
-; X64SSE-NEXT:    movq %rax, 16(%rdi)
-; X64SSE-NEXT:    movq (%rsi), %rax
-; X64SSE-NEXT:    movq 8(%rsi), %rcx
-; X64SSE-NEXT:    movq %rcx, 8(%rdi)
-; X64SSE-NEXT:    movq %rax, (%rdi)
+; X64SSE-NEXT:    movups (%rsi), %xmm0
+; X64SSE-NEXT:    movups 16(%rsi), %xmm1
+; X64SSE-NEXT:    movups %xmm1, 16(%rdi)
+; X64SSE-NEXT:    movups %xmm0, (%rdi)
 ; X64SSE-NEXT:    retq
 ;
 ; X86SSE-LABEL: trycpy:
@@ -198,28 +184,20 @@ define void @trycpy(ptr nocapture %x, ptr nocapture readonly %y) {
 ;
 ; X64SSE2-LABEL: trycpy:
 ; X64SSE2:       # %bb.0:
-; X64SSE2-NEXT:    movq 24(%rsi), %rax
-; X64SSE2-NEXT:    movq %rax, 24(%rdi)
-; X64SSE2-NEXT:    movq 16(%rsi), %rax
-; X64SSE2-NEXT:    movq %rax, 16(%rdi)
-; X64SSE2-NEXT:    movq (%rsi), %rax
-; X64SSE2-NEXT:    movq 8(%rsi), %rcx
-; X64SSE2-NEXT:    movq %rcx, 8(%rdi)
-; X64SSE2-NEXT:    movq %rax, (%rdi)
+; X64SSE2-NEXT:    movups (%rsi), %xmm0
+; X64SSE2-NEXT:    movups 16(%rsi), %xmm1
+; X64SSE2-NEXT:    movups %xmm1, 16(%rdi)
+; X64SSE2-NEXT:    movups %xmm0, (%rdi)
 ; X64SSE2-NEXT:    retq
 ;
 ; X86SSE2-LABEL: trycpy:
 ; X86SSE2:       # %bb.0:
 ; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86SSE2-NEXT:    movsd %xmm0, 24(%eax)
-; X86SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86SSE2-NEXT:    movsd %xmm0, 16(%eax)
-; X86SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86SSE2-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X86SSE2-NEXT:    movsd %xmm1, 8(%eax)
-; X86SSE2-NEXT:    movsd %xmm0, (%eax)
+; X86SSE2-NEXT:    movups (%ecx), %xmm0
+; X86SSE2-NEXT:    movups 16(%ecx), %xmm1
+; X86SSE2-NEXT:    movups %xmm1, 16(%eax)
+; X86SSE2-NEXT:    movups %xmm0, (%eax)
 ; X86SSE2-NEXT:    retl
 ;
 ; X64AVX-LABEL: trycpy:
