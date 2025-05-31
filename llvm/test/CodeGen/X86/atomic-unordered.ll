@@ -64,30 +64,18 @@ define void @store_i16(ptr %ptr, i16 %v) {
 define i16 @load_i16_unaligned(ptr %ptr) {
 ; CHECK-O0-LABEL: load_i16_unaligned:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    pushq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    movq %rdi, %rsi
-; CHECK-O0-NEXT:    movl $2, %edi
-; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O0-NEXT:    xorl %ecx, %ecx
-; CHECK-O0-NEXT:    callq __atomic_load@PLT
-; CHECK-O0-NEXT:    movw {{[0-9]+}}(%rsp), %ax
-; CHECK-O0-NEXT:    popq %rcx
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    xorl %eax, %eax
+; CHECK-O0-NEXT:    movw %ax, %cx
+; CHECK-O0-NEXT:    movw %cx, %ax
+; CHECK-O0-NEXT:    lock cmpxchgw %cx, (%rdi)
+; CHECK-O0-NEXT:    sete %cl
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_i16_unaligned:
 ; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    pushq %rax
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O3-NEXT:    movq %rdi, %rsi
-; CHECK-O3-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O3-NEXT:    movl $2, %edi
 ; CHECK-O3-NEXT:    xorl %ecx, %ecx
-; CHECK-O3-NEXT:    callq __atomic_load@PLT
-; CHECK-O3-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
-; CHECK-O3-NEXT:    popq %rcx
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O3-NEXT:    xorl %eax, %eax
+; CHECK-O3-NEXT:    lock cmpxchgw %cx, (%rdi)
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i16, ptr %ptr unordered, align 1
   ret i16 %v
@@ -97,33 +85,13 @@ define i16 @load_i16_unaligned(ptr %ptr) {
 define void @store_i16_unaligned(ptr %ptr, i16 %v) {
 ; CHECK-O0-LABEL: store_i16_unaligned:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    pushq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    movl %esi, %eax
-; CHECK-O0-NEXT:    movq %rdi, %rsi
-; CHECK-O0-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-O0-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
-; CHECK-O0-NEXT:    movl $2, %edi
-; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O0-NEXT:    xorl %ecx, %ecx
-; CHECK-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-O0-NEXT:    popq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    movw %si, %ax
+; CHECK-O0-NEXT:    xchgw %ax, (%rdi)
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: store_i16_unaligned:
 ; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    pushq %rax
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O3-NEXT:    movq %rdi, %rax
-; CHECK-O3-NEXT:    movw %si, {{[0-9]+}}(%rsp)
-; CHECK-O3-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O3-NEXT:    movl $2, %edi
-; CHECK-O3-NEXT:    movq %rax, %rsi
-; CHECK-O3-NEXT:    xorl %ecx, %ecx
-; CHECK-O3-NEXT:    callq __atomic_store@PLT
-; CHECK-O3-NEXT:    popq %rax
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O3-NEXT:    xchgw %si, (%rdi)
 ; CHECK-O3-NEXT:    retq
   store atomic i16 %v, ptr %ptr unordered, align 1
   ret void
@@ -150,65 +118,27 @@ define void @store_i32(ptr %ptr, i32 %v) {
 define i32 @load_i32_unaligned(ptr %ptr) {
 ; CHECK-O0-LABEL: load_i32_unaligned:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    pushq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    movq %rdi, %rsi
-; CHECK-O0-NEXT:    movl $4, %edi
-; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-O0-NEXT:    xorl %ecx, %ecx
-; CHECK-O0-NEXT:    callq __atomic_load@PLT
-; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-O0-NEXT:    popq %rcx
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    movl %ecx, %eax
+; CHECK-O0-NEXT:    lock cmpxchgl %ecx, (%rdi)
+; CHECK-O0-NEXT:    sete %cl
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_i32_unaligned:
 ; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    pushq %rax
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O3-NEXT:    movq %rdi, %rsi
-; CHECK-O3-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O3-NEXT:    movl $4, %edi
 ; CHECK-O3-NEXT:    xorl %ecx, %ecx
-; CHECK-O3-NEXT:    callq __atomic_load@PLT
-; CHECK-O3-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-O3-NEXT:    popq %rcx
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O3-NEXT:    xorl %eax, %eax
+; CHECK-O3-NEXT:    lock cmpxchgl %ecx, (%rdi)
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i32, ptr %ptr unordered, align 1
   ret i32 %v
 }
 
 define void @store_i32_unaligned(ptr %ptr, i32 %v) {
-; CHECK-O0-LABEL: store_i32_unaligned:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    pushq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    movl %esi, %eax
-; CHECK-O0-NEXT:    movq %rdi, %rsi
-; CHECK-O0-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; CHECK-O0-NEXT:    movl $4, %edi
-; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O0-NEXT:    xorl %ecx, %ecx
-; CHECK-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-O0-NEXT:    popq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-O0-NEXT:    retq
-;
-; CHECK-O3-LABEL: store_i32_unaligned:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    pushq %rax
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O3-NEXT:    movq %rdi, %rax
-; CHECK-O3-NEXT:    movl %esi, {{[0-9]+}}(%rsp)
-; CHECK-O3-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O3-NEXT:    movl $4, %edi
-; CHECK-O3-NEXT:    movq %rax, %rsi
-; CHECK-O3-NEXT:    xorl %ecx, %ecx
-; CHECK-O3-NEXT:    callq __atomic_store@PLT
-; CHECK-O3-NEXT:    popq %rax
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-O3-NEXT:    retq
+; CHECK-LABEL: store_i32_unaligned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xchgl %esi, (%rdi)
+; CHECK-NEXT:    retq
   store atomic i32 %v, ptr %ptr unordered, align 1
   ret void
 }
@@ -234,65 +164,28 @@ define void @store_i64(ptr %ptr, i64 %v) {
 define i64 @load_i64_unaligned(ptr %ptr) {
 ; CHECK-O0-LABEL: load_i64_unaligned:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    pushq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    movq %rdi, %rsi
-; CHECK-O0-NEXT:    movl $8, %edi
-; CHECK-O0-NEXT:    movq %rsp, %rdx
-; CHECK-O0-NEXT:    xorl %ecx, %ecx
-; CHECK-O0-NEXT:    callq __atomic_load@PLT
-; CHECK-O0-NEXT:    movq (%rsp), %rax
-; CHECK-O0-NEXT:    popq %rcx
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    xorl %eax, %eax
+; CHECK-O0-NEXT:    movl %eax, %ecx
+; CHECK-O0-NEXT:    movq %rcx, %rax
+; CHECK-O0-NEXT:    lock cmpxchgq %rcx, (%rdi)
+; CHECK-O0-NEXT:    sete %cl
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_i64_unaligned:
 ; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    pushq %rax
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O3-NEXT:    movq %rdi, %rsi
-; CHECK-O3-NEXT:    movq %rsp, %rdx
-; CHECK-O3-NEXT:    movl $8, %edi
 ; CHECK-O3-NEXT:    xorl %ecx, %ecx
-; CHECK-O3-NEXT:    callq __atomic_load@PLT
-; CHECK-O3-NEXT:    movq (%rsp), %rax
-; CHECK-O3-NEXT:    popq %rcx
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O3-NEXT:    xorl %eax, %eax
+; CHECK-O3-NEXT:    lock cmpxchgq %rcx, (%rdi)
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, ptr %ptr unordered, align 1
   ret i64 %v
 }
 
 define void @store_i64_unaligned(ptr %ptr, i64 %v) {
-; CHECK-O0-LABEL: store_i64_unaligned:
-; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    pushq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    movq %rsi, %rax
-; CHECK-O0-NEXT:    movq %rdi, %rsi
-; CHECK-O0-NEXT:    movq %rax, (%rsp)
-; CHECK-O0-NEXT:    movl $8, %edi
-; CHECK-O0-NEXT:    movq %rsp, %rdx
-; CHECK-O0-NEXT:    xorl %ecx, %ecx
-; CHECK-O0-NEXT:    callq __atomic_store@PLT
-; CHECK-O0-NEXT:    popq %rax
-; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-O0-NEXT:    retq
-;
-; CHECK-O3-LABEL: store_i64_unaligned:
-; CHECK-O3:       # %bb.0:
-; CHECK-O3-NEXT:    pushq %rax
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O3-NEXT:    movq %rdi, %rax
-; CHECK-O3-NEXT:    movq %rsi, (%rsp)
-; CHECK-O3-NEXT:    movq %rsp, %rdx
-; CHECK-O3-NEXT:    movl $8, %edi
-; CHECK-O3-NEXT:    movq %rax, %rsi
-; CHECK-O3-NEXT:    xorl %ecx, %ecx
-; CHECK-O3-NEXT:    callq __atomic_store@PLT
-; CHECK-O3-NEXT:    popq %rax
-; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-O3-NEXT:    retq
+; CHECK-LABEL: store_i64_unaligned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xchgq %rsi, (%rdi)
+; CHECK-NEXT:    retq
   store atomic i64 %v, ptr %ptr unordered, align 1
   ret void
 }

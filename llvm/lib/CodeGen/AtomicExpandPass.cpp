@@ -232,8 +232,22 @@ template <typename Inst>
 static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
   unsigned Size = getAtomicOpSize(I);
   Align Alignment = I->getAlign();
-  return Alignment >= Size &&
-         Size <= TLI->getMaxAtomicSizeInBitsSupported() / 8;
+
+  // X86 we can do unaligned loads
+  return Size <= TLI->getMaxAtomicSizeInBitsSupported() / 8 &&
+         (Alignment >= Size || TLI->supportsUnalignedAtomics());
+}
+
+template <typename Inst>
+static bool canLowerAtomicAsUnaligned(const TargetLowering *TLI, Inst *I) {
+  if (!TLI->supportsUnalignedAtomics())
+    return false;
+  unsigned Size = getAtomicOpSize(I);
+  Align Alignment = I->getAlign();
+
+  // X86 we can do unaligned loads
+  return Size <= TLI->getMaxAtomicSizeInBitsSupported() / 8 &&
+         (Alignment < Size);
 }
 
 bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
@@ -510,6 +524,10 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
 }
 
 bool AtomicExpandImpl::tryExpandAtomicLoad(LoadInst *LI) {
+
+  if (canLowerAtomicAsUnaligned(TLI, LI))
+    return expandAtomicLoadToCmpXchg(LI);
+
   switch (TLI->shouldExpandAtomicLoadInIR(LI)) {
   case TargetLoweringBase::AtomicExpansionKind::None:
     return false;
@@ -532,6 +550,11 @@ bool AtomicExpandImpl::tryExpandAtomicLoad(LoadInst *LI) {
 }
 
 bool AtomicExpandImpl::tryExpandAtomicStore(StoreInst *SI) {
+  if (canLowerAtomicAsUnaligned(TLI, SI)) {
+    expandAtomicStore(SI);
+    return true;
+  }
+
   switch (TLI->shouldExpandAtomicStoreInIR(SI)) {
   case TargetLoweringBase::AtomicExpansionKind::None:
     return false;
