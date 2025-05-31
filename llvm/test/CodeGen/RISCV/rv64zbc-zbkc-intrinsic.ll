@@ -18,7 +18,7 @@ define i64 @clmul64(i64 %a, i64 %b) nounwind {
 declare i64 @llvm.clmul.i64(i64 %a, i64 %b)
 
 define i64 @generic_clmul64(i64 %a, i64 %b) nounwind {
-; RV64ZBC-ZBKC-LABEL: clmul64:
+; RV64ZBC-ZBKC-LABEL: generic_clmul64:
 ; RV64ZBC-ZBKC:       # %bb.0:
 ; RV64ZBC-ZBKC-NEXT:    clmul a0, a0, a1
 ; RV64ZBC-ZBKC-NEXT:    ret
@@ -51,7 +51,7 @@ define signext i32 @clmul32(i32 signext %a, i32 signext %b) nounwind {
 declare i32 @llvm.clmul.i32(i32 %a, i32 %b)
 
 define signext i32 @generic_clmul32(i32 signext %a, i32 signext %b) nounwind {
-; RV64ZBC-ZBKC-LABEL: clmul32:
+; RV64ZBC-ZBKC-LABEL: generic_clmul32:
 ; RV64ZBC-ZBKC:       # %bb.0:
 ; RV64ZBC-ZBKC-NEXT:    clmul a0, a0, a1
 ; RV64ZBC-ZBKC-NEXT:    sext.w a0, a0
