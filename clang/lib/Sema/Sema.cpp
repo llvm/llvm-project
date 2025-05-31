@@ -84,6 +84,21 @@ SourceLocation Sema::getLocForEndOfToken(SourceLocation Loc, unsigned Offset) {
   return Lexer::getLocForEndOfToken(Loc, Offset, SourceMgr, LangOpts);
 }
 
+SourceRange Sema::getRangeForNextToken(SourceLocation Loc,
+                                       bool IncludeComments) {
+  if (!Loc.isValid())
+    return SourceRange();
+  std::optional<Token> NextToken =
+      Lexer::findNextToken(Loc, SourceMgr, LangOpts, IncludeComments);
+  if (!NextToken)
+    return SourceRange();
+  SourceLocation TokenStart = NextToken->getLocation();
+  SourceLocation TokenEnd = NextToken->getLastLoc();
+  if (!TokenStart.isValid() || !TokenEnd.isValid())
+    return SourceRange();
+  return SourceRange(TokenStart, TokenEnd);
+}
+
 ModuleLoader &Sema::getModuleLoader() const { return PP.getModuleLoader(); }
 
 DarwinSDKInfo *

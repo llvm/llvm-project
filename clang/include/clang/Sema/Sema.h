@@ -972,6 +972,12 @@ public:
   /// Calls \c Lexer::getLocForEndOfToken()
   SourceLocation getLocForEndOfToken(SourceLocation Loc, unsigned Offset = 0);
 
+  /// Calls \c Lexer::findNextToken() to find the next token, and if the
+  /// locations of both ends of the token can be resolved it return that
+  /// range; Otherwise it returns an invalid SourceRange.
+  SourceRange getRangeForNextToken(SourceLocation Loc,
+                                   bool IncludeComments = false);
+
   /// Retrieve the module loader associated with the preprocessor.
   ModuleLoader &getModuleLoader() const;
 
