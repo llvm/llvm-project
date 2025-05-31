@@ -1,9 +1,5 @@
 # RUN: llvm-mc -triple=i686-linux -filetype=obj %s -o - | \
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn -r - | FileCheck %s
-# RUN: llvm-mc -triple=i686-nacl -filetype=obj %s -o - | \
-# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn -r - | FileCheck %s
-# RUN: llvm-mc -triple=i686-nacl -filetype=obj -mc-relax-all %s -o - | \
-# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn -r - | FileCheck %s
 
         .bundle_align_mode 5
         .text
