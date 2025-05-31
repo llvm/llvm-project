@@ -41,6 +41,27 @@ void f_using(SharedPtr ptr)
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: could be std::move() [performance-lost-std-move]
 }
 
+void f_thread_local()
+{
+  thread_local std::shared_ptr<int> ptr;
+  if (*ptr)
+    f(ptr);
+}
+
+void f_static()
+{
+  static std::shared_ptr<int> ptr;
+  if (*ptr)
+    f(ptr);
+}
+
+void f_extern()
+{
+  extern std::shared_ptr<int> ptr;
+  if (*ptr)
+    f(ptr);
+}
+
 void f_local()
 {
   std::shared_ptr<int> ptr;
@@ -111,4 +132,11 @@ int f_multiple_usages()
 {
   std::shared_ptr<int> ptr;
   return f(ptr) + f(ptr);
+}
+
+#define FUN(x) f((x))
+int f_macro()
+{
+  std::shared_ptr<int> ptr;
+  return FUN(ptr);
 }

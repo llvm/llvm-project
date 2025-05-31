@@ -117,6 +117,8 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
   const auto* MatchedLeafStatement =
       Result.Nodes.getNodeAs<Stmt>("leaf_statement");
 
+  if (!MatchedDecl->hasLocalStorage()) return;
+
   if (MatchedUseCall) {
     return;
   }
