@@ -1,0 +1,105 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Centered Continued Fractions</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../internals.html" title="Internal tools">
+<link rel="prev" href="simple_continued_fraction.html" title="Simple Continued Fractions">
+<link rel="next" href="luroth_expansion.html" title="Luroth Expansions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="simple_continued_fraction.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../internals.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="luroth_expansion.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.internals.centered_continued_fraction"></a><a class="link" href="centered_continued_fraction.html" title="Centered Continued Fractions">Centered
+      Continued Fractions</a>
+</h3></div></div></div>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">tools</span><span class="special">/</span><span class="identifier">centered_continued_fraction</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span> <span class="special">{</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Z</span> <span class="special">=</span> <span class="identifier">int64_t</span><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">centered_continued_fraction</span> <span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+    <span class="identifier">centered_continued_fraction</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+    <span class="identifier">Real</span> <span class="identifier">khinchin_geometric_mean</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">T</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Z_</span><span class="special">&gt;</span>
+    <span class="keyword">friend</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">ostream</span><span class="special">&amp;</span> <span class="keyword">operator</span><span class="special">&lt;&lt;(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">ostream</span><span class="special">&amp;</span> <span class="identifier">out</span><span class="special">,</span> <span class="identifier">centered_continued_fraction</span><span class="special">&lt;</span><span class="identifier">T</span><span class="special">,</span> <span class="identifier">Z_</span><span class="special">&gt;&amp;</span> <span class="identifier">ccf</span><span class="special">);</span>
+<span class="special">};</span>
+<span class="special">}</span>
+</pre>
+<p>
+        The <code class="computeroutput"><span class="identifier">centered_continued_fraction</span></code>
+        class provided by Boost affords the ability to convert a floating point number
+        into a centered continued fraction. Unlike the simple continued fraction,
+        a centered continued fraction allows partial denominators to be negative.
+      </p>
+<p>
+        Here's a minimal working example:
+      </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">pi</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">::</span><span class="identifier">centered_continued_fraction</span><span class="special">;</span>
+<span class="keyword">auto</span> <span class="identifier">cfrac</span> <span class="special">=</span> <span class="identifier">centered_continued_fraction</span><span class="special">(</span><span class="identifier">pi</span><span class="special">&lt;</span><span class="keyword">long</span> <span class="keyword">double</span><span class="special">&gt;());</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"π ≈ "</span> <span class="special">&lt;&lt;</span> <span class="identifier">cfrac</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="special">;</span>
+<span class="comment">// Prints:</span>
+<span class="comment">// π ≈ [3; 7, 16, -294, 3, -4, 5, -15, -3, 2, 2]</span>
+</pre>
+<p>
+        This function achieves the same end as the Maple syntax
+      </p>
+<p>
+        <span class="inlinemediaobject"><img src="../../../images/maple_cfrac.png"></span>
+      </p>
+<p>
+        You should convince yourself that the Maple output and the notation we use
+        are in fact the same thing.
+      </p>
+<p>
+        The class computes partial denominators which simultaneously computing convergents
+        with the modified Lentz's algorithm. Once a convergent is within a few ulps
+        of the input value, the computation stops.
+      </p>
+<p>
+        Just like simple continued fractions, centered continued fractions admit
+        a "Khinchin constant". The value of this constant is ~5.454517
+        (see <a href="http://jeremiebourdon.free.fr/data/Khintchine.pdf" target="_top">here</a>).
+        We can evaluate the "empirical Khinchin constant" for a particular
+        number via
+      </p>
+<pre class="programlisting"><span class="identifier">cfrac</span><span class="special">.</span><span class="identifier">khinchin_geometric_mean</span><span class="special">();</span>
+</pre>
+<p>
+        If this is close to 5.454517, then the number is probably uninteresting with
+        respect to its characterization as a centered continued fraction.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="simple_continued_fraction.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../internals.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="luroth_expansion.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

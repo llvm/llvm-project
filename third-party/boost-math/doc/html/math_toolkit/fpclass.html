@@ -1,0 +1,251 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Floating-Point Classification: Infinities and NaNs</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../utils.html" title="Chapter 2. Floating Point Utilities">
+<link rel="prev" href="rounding/modf.html" title="Integer and Fractional Part Splitting (modf)">
+<link rel="next" href="sign_functions.html" title="Sign Manipulation Functions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="rounding/modf.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../utils.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="sign_functions.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.fpclass"></a><a class="link" href="fpclass.html" title="Floating-Point Classification: Infinities and NaNs">Floating-Point Classification: Infinities
+    and NaNs</a>
+</h2></div></div></div>
+<h5>
+<a name="math_toolkit.fpclass.h0"></a>
+      <span class="phrase"><a name="math_toolkit.fpclass.synopsis"></a></span><a class="link" href="fpclass.html#math_toolkit.fpclass.synopsis">Synopsis</a>
+    </h5>
+<pre class="programlisting"><span class="preprocessor">#define</span> <span class="identifier">FP_ZERO</span>        <span class="comment">/* implementation specific value */</span>
+<span class="preprocessor">#define</span> <span class="identifier">FP_NORMAL</span>      <span class="comment">/* implementation specific value */</span>
+<span class="preprocessor">#define</span> <span class="identifier">FP_INFINITE</span>    <span class="comment">/* implementation specific value */</span>
+<span class="preprocessor">#define</span> <span class="identifier">FP_NAN</span>         <span class="comment">/* implementation specific value */</span>
+<span class="preprocessor">#define</span> <span class="identifier">FP_SUBNORMAL</span>   <span class="comment">/* implementation specific value */</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">int</span> <span class="identifier">fpclassify</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">t</span><span class="special">);</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">isfinite</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">);</span> <span class="comment">// Neither infinity nor NaN.</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">isinf</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">t</span><span class="special">);</span> <span class="comment">// Infinity (+ or -).</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">isnan</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">t</span><span class="special">);</span> <span class="comment">// NaN.</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">isnormal</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">t</span><span class="special">);</span> <span class="comment">// isfinite and not denormalised.</span>
+
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">\</span><span class="identifier">math</span><span class="special">\</span><span class="identifier">special_functions</span><span class="special">\</span><span class="identifier">fpclassify</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<p>
+      to use these functions.
+    </p>
+<h5>
+<a name="math_toolkit.fpclass.h1"></a>
+      <span class="phrase"><a name="math_toolkit.fpclass.description"></a></span><a class="link" href="fpclass.html#math_toolkit.fpclass.description">Description</a>
+    </h5>
+<p>
+      These functions provide the same functionality as the macros with the same
+      name in C99, indeed if the C99 macros are available, then these functions are
+      implemented in terms of them, otherwise they rely on <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;&gt;</span></code> to function.
+    </p>
+<p>
+      Note that the definition of these functions <span class="emphasis"><em>does not suppress the
+      definition of these names as macros by math.h</em></span> on those platforms
+      that already provide these as macros. That mean that the following have differing
+      meanings:
+    </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">;</span>
+
+<span class="comment">// This might call a global macro if defined,</span>
+<span class="comment">// but might not work if the type of z is unsupported</span>
+<span class="comment">// by the std lib macro:</span>
+<span class="identifier">isnan</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="comment">//</span>
+<span class="comment">// This calls the Boost version</span>
+<span class="comment">// (found via the "using namespace boost::math" declaration)</span>
+<span class="comment">// it works for any type that has numeric_limits support for type z:</span>
+<span class="special">(</span><span class="identifier">isnan</span><span class="special">)(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="comment">//</span>
+<span class="comment">// As above but with explicit namespace qualification.</span>
+<span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">isnan</span><span class="special">)(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="comment">//</span>
+<span class="comment">// This will cause a compiler error if isnan is a native macro:</span>
+<span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">isnan</span><span class="special">(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="comment">// So always use instead:</span>
+<span class="special">(</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">isnan</span><span class="special">)(</span><span class="identifier">z</span><span class="special">);</span>
+<span class="comment">//</span>
+<span class="comment">// You can also add a using statement,</span>
+<span class="comment">// globally to a .cpp file, or to a local function in a .hpp file.</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">isnan</span><span class="special">;</span>
+<span class="comment">// so you can write the shorter and less cluttered</span>
+<span class="special">(</span><span class="identifier">isnan</span><span class="special">)(</span><span class="identifier">z</span><span class="special">)</span>
+<span class="comment">// But, as above, if isnan is a native macro, this causes a compiler error,</span>
+<span class="comment">// because the macro always 'gets' the name first, unless enclosed in () brackets.</span>
+</pre>
+<p>
+      Detailed descriptions for each of these functions follows:
+    </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">int</span> <span class="identifier">fpclassify</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">t</span><span class="special">);</span>
+</pre>
+<p>
+      Returns an integer value that classifies the value <span class="emphasis"><em>t</em></span>:
+    </p>
+<div class="informaltable"><table class="table">
+<colgroup>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+              <p>
+                fpclassify value
+              </p>
+            </th>
+<th>
+              <p>
+                class of t.
+              </p>
+            </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+              <p>
+                FP_ZERO
+              </p>
+            </td>
+<td>
+              <p>
+                If <span class="emphasis"><em>t</em></span> is zero.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                FP_NORMAL
+              </p>
+            </td>
+<td>
+              <p>
+                If <span class="emphasis"><em>t</em></span> is a non-zero, non-denormalised finite
+                value.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                FP_INFINITE
+              </p>
+            </td>
+<td>
+              <p>
+                If <span class="emphasis"><em>t</em></span> is plus or minus infinity.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                FP_NAN
+              </p>
+            </td>
+<td>
+              <p>
+                If <span class="emphasis"><em>t</em></span> is a NaN.
+              </p>
+            </td>
+</tr>
+<tr>
+<td>
+              <p>
+                FP_SUBNORMAL
+              </p>
+            </td>
+<td>
+              <p>
+                If <span class="emphasis"><em>t</em></span> is a denormalised number.
+              </p>
+            </td>
+</tr>
+</tbody>
+</table></div>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">isfinite</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">z</span><span class="special">);</span>
+</pre>
+<p>
+      Returns true only if <span class="emphasis"><em>z</em></span> is not an infinity or a NaN.
+    </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">isinf</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">t</span><span class="special">);</span>
+</pre>
+<p>
+      Returns true only if <span class="emphasis"><em>z</em></span> is plus or minus infinity.
+    </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">isnan</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">t</span><span class="special">);</span>
+</pre>
+<p>
+      Returns true only if <span class="emphasis"><em>z</em></span> is a <a href="http://en.wikipedia.org/wiki/NaN" target="_top">NaN</a>.
+    </p>
+<pre class="programlisting"><span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">T</span><span class="special">&gt;</span>
+<span class="keyword">bool</span> <span class="identifier">isnormal</span><span class="special">(</span><span class="identifier">T</span> <span class="identifier">t</span><span class="special">);</span>
+</pre>
+<p>
+      Returns true only if <span class="emphasis"><em>z</em></span> is a normal number (not zero, infinite,
+      NaN, or denormalised).
+    </p>
+<h6>
+<a name="math_toolkit.fpclass.h2"></a>
+      <span class="phrase"><a name="math_toolkit.fpclass.floating_point_format"></a></span><a class="link" href="fpclass.html#math_toolkit.fpclass.floating_point_format">Floating-point
+      format</a>
+    </h6>
+<p>
+      If you wish to find details of the floating-point format for any particular
+      processor, there is a program
+    </p>
+<p>
+      <a href="../../../example/inspect_fp.cpp" target="_top">inspect_fp.cpp</a>
+    </p>
+<p>
+      by Johan Rade which can be used to print out the processor type, endianness,
+      and detailed bit layout of a selection of floating-point values, including
+      infinity and NaNs.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="rounding/modf.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../utils.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="sign_functions.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

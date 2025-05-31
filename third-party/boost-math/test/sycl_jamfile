@@ -1,0 +1,95 @@
+# Copyright 2024 Matt Borland
+# Distributed under the Boost Software License, Version 1.0.
+# https://www.boost.org/LICENSE_1_0.txt
+
+import testing ;
+import ../../config/checks/config : requires ;
+
+project : requirements
+    [ requires cxx14_decltype_auto cxx14_generic_lambdas cxx14_return_type_deduction cxx14_variable_templates cxx14_constexpr ]
+    ;
+
+# Distributions
+run test_arcsine.cpp ;
+run test_bernoulli.cpp ;
+run test_beta_dist.cpp ;
+run test_cauchy.cpp ;
+run test_chi_squared.cpp ;
+run test_exponential_dist.cpp ;
+run test_extreme_value.cpp ;
+run test_fisher_f.cpp ;
+run test_gamma_dist.cpp ;
+run test_geometric.cpp ;
+run test_holtsmark.cpp ;
+run test_inverse_chi_squared_distribution.cpp ;
+run test_inverse_gamma_distribution.cpp ;
+run test_inverse_gaussian.cpp ;
+run test_landau.cpp ;
+run test_laplace.cpp ;
+run test_logistic_dist.cpp ;
+run test_lognormal.cpp ;
+run test_mapairy.cpp ;
+run test_nc_beta.cpp ;
+run test_nc_chi_squared.cpp ;
+run test_nc_f.cpp ;
+run test_negative_binomial.cpp ;
+run test_normal.cpp ; 
+run test_pareto.cpp ;
+run test_poisson.cpp ;
+run test_rayleigh.cpp ;
+run test_saspoint5.cpp ;
+run test_students_t.cpp ;
+run test_triangular.cpp ;
+run test_uniform.cpp ;
+run test_weibull.cpp ;
+
+# Special Functions
+run pow_test.cpp ;
+
+run test_airy.cpp ;
+
+run test_beta_simple.cpp ;
+run test_beta.cpp ;
+run test_ibeta.cpp ;
+run test_ibeta_inv.cpp ;
+run test_ibeta_inv_ab.cpp ;
+
+run test_bessel_i.cpp ;
+run test_bessel_j.cpp ;
+run test_bessel_k.cpp ;
+run test_bessel_y.cpp ;
+
+run test_cbrt.cpp ;
+
+run test_ellint_1.cpp ;
+run test_ellint_2.cpp ;
+run test_ellint_d.cpp ;
+run test_jacobi_zeta.cpp ;
+run test_heuman_lambda.cpp ;
+
+run test_sign.cpp ;
+
+run test_round.cpp ;
+
+run test_expint.cpp ;
+
+run test_expm1_simple.cpp ;
+
+run gegenbauer_test.cpp ;
+
+run test_hankel.cpp ;
+
+run test_log1p_simple.cpp ;
+
+run test_digamma_simple.cpp ;
+
+run test_trigamma.cpp ;
+
+run test_erf.cpp ;
+
+run test_gamma.cpp ;
+run test_igamma.cpp ;
+run test_igamma_inv.cpp ;
+run test_igamma_inva.cpp ;
+
+run test_hermite.cpp ;

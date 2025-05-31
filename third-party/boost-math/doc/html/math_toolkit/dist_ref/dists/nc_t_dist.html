@@ -1,0 +1,575 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Noncentral T Distribution</title>
+<link rel="stylesheet" href="../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../dists.html" title="Distributions">
+<link rel="prev" href="nc_f_dist.html" title="Noncentral F Distribution">
+<link rel="next" href="normal_dist.html" title="Normal (Gaussian) Distribution">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="nc_f_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="normal_dist.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h4 class="title">
+<a name="math_toolkit.dist_ref.dists.nc_t_dist"></a><a class="link" href="nc_t_dist.html" title="Noncentral T Distribution">Noncentral T
+        Distribution</a>
+</h4></div></div></div>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">non_central_t</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span> <span class="special">=</span> <span class="keyword">double</span><span class="special">,</span>
+          <span class="keyword">class</span> <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a>   <span class="special">=</span> <a class="link" href="../../pol_ref/pol_ref_ref.html" title="Policy Class Reference">policies::policy&lt;&gt;</a> <span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">non_central_t_distribution</span><span class="special">;</span>
+
+<span class="keyword">typedef</span> <span class="identifier">non_central_t_distribution</span><span class="special">&lt;&gt;</span> <span class="identifier">non_central_t</span><span class="special">;</span>
+
+<span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RealType</span><span class="special">,</span> <span class="keyword">class</span> <a class="link" href="../../../policy.html" title="Chapter 22. Policies: Controlling Precision, Error Handling etc">Policy</a><span class="special">&gt;</span>
+<span class="keyword">class</span> <span class="identifier">non_central_t_distribution</span>
+<span class="special">{</span>
+<span class="keyword">public</span><span class="special">:</span>
+   <span class="keyword">typedef</span> <span class="identifier">RealType</span>  <span class="identifier">value_type</span><span class="special">;</span>
+   <span class="keyword">typedef</span> <span class="identifier">Policy</span>    <span class="identifier">policy_type</span><span class="special">;</span>
+
+   <span class="comment">// Constructor:</span>
+   <span class="identifier">non_central_t_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">delta</span><span class="special">);</span>
+
+   <span class="comment">// Accessor to degrees_of_freedom parameter v:</span>
+   <span class="identifier">RealType</span> <span class="identifier">degrees_of_freedom</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+
+   <span class="comment">// Accessor to non-centrality parameter delta:</span>
+   <span class="identifier">RealType</span> <span class="identifier">non_centrality</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+<span class="special">};</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+          The noncentral T distribution is a generalization of the <a class="link" href="students_t_dist.html" title="Students t Distribution">Students
+          t Distribution</a>. Let X have a normal distribution with mean δ and variance
+          1, and let <span class="emphasis"><em>ν S<sup>2</sup></em></span> have a chi-squared distribution with
+          degrees of freedom ν. Assume that X and S<sup>2</sup> are independent. The distribution
+          of <span class="serif_italic">t<sub>ν</sub>(δ)=X/S</span> is called a noncentral
+          t distribution with degrees of freedom ν and noncentrality parameter δ.
+        </p>
+<p>
+          This gives the following PDF:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_t_ref1.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          where <span class="serif_italic"><sub>1</sub>F<sub>1</sub>(a;b;x)</span> is a confluent hypergeometric
+          function.
+        </p>
+<p>
+          The following graph illustrates how the distribution changes for different
+          values of ν and δ:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../graphs/nc_t_pdf.svg" align="middle"></span>
+
+          </p></blockquote></div>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../graphs/nc_t_cdf.svg" align="middle"></span>
+
+          </p></blockquote></div>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_t_dist.h0"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_t_dist.member_functions"></a></span><a class="link" href="nc_t_dist.html#math_toolkit.dist_ref.dists.nc_t_dist.member_functions">Member
+          Functions</a>
+        </h5>
+<pre class="programlisting"><span class="identifier">non_central_t_distribution</span><span class="special">(</span><span class="identifier">RealType</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">RealType</span> <span class="identifier">delta</span><span class="special">);</span>
+</pre>
+<p>
+          Constructs a non-central t distribution with degrees of freedom parameter
+          <span class="emphasis"><em>v</em></span> and non-centrality parameter <span class="emphasis"><em>delta</em></span>.
+        </p>
+<p>
+          Requires <span class="emphasis"><em>v</em></span> &gt; 0 (including positive infinity) and
+          finite <span class="emphasis"><em>delta</em></span>, otherwise calls <a class="link" href="../../error_handling.html#math_toolkit.error_handling.domain_error">domain_error</a>.
+        </p>
+<pre class="programlisting"><span class="identifier">RealType</span> <span class="identifier">degrees_of_freedom</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+</pre>
+<p>
+          Returns the parameter <span class="emphasis"><em>v</em></span> from which this object was
+          constructed.
+        </p>
+<pre class="programlisting"><span class="identifier">RealType</span> <span class="identifier">non_centrality</span><span class="special">()</span><span class="keyword">const</span><span class="special">;</span>
+</pre>
+<p>
+          Returns the non-centrality parameter <span class="emphasis"><em>delta</em></span> from which
+          this object was constructed.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_t_dist.h1"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_t_dist.non_member_accessors"></a></span><a class="link" href="nc_t_dist.html#math_toolkit.dist_ref.dists.nc_t_dist.non_member_accessors">Non-member
+          Accessors</a>
+        </h5>
+<p>
+          All the <a class="link" href="../nmp.html" title="Non-Member Properties">usual non-member accessor
+          functions</a> that are generic to all distributions are supported:
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.cdf">Cumulative Distribution Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.pdf">Probability Density Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.quantile">Quantile</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.hazard">Hazard Function</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.chf">Cumulative Hazard Function</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.mean">mean</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.median">median</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.mode">mode</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.variance">variance</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.sd">standard deviation</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.skewness">skewness</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.kurtosis">kurtosis</a>, <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.kurtosis_excess">kurtosis_excess</a>,
+          <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.range">range</a> and <a class="link" href="../nmp.html#math_toolkit.dist_ref.nmp.support">support</a>.
+        </p>
+<p>
+          The domain of the random variable is [-∞, +∞].
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_t_dist.h2"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_t_dist.accuracy"></a></span><a class="link" href="nc_t_dist.html#math_toolkit.dist_ref.dists.nc_t_dist.accuracy">Accuracy</a>
+        </h5>
+<p>
+          The following table shows the peak errors (in units of <a href="http://en.wikipedia.org/wiki/Machine_epsilon" target="_top">epsilon</a>)
+          found on various platforms with various floating-point types. Unless otherwise
+          specified, any floating-point type that is narrower than the one shown
+          will have <a class="link" href="../../relative_error.html#math_toolkit.relative_error.zero_error">effectively
+          zero error</a>.
+        </p>
+<div class="table">
+<a name="math_toolkit.dist_ref.dists.nc_t_dist.table_non_central_t_CDF"></a><p class="title"><b>Table 5.8. Error rates for non central t CDF</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for non central t CDF">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Microsoft Visual C++ version 14.1<br> Win32<br> double
+                  </p>
+                </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                  <p>
+                    Non Central T
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 0.796ε (Mean = 0.0691ε)</span><br>
+                    <br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span> <span class="red">Max
+                    = 5.28e+15ε (Mean = 8.49e+14ε) <a class="link" href="../../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_non_central_t_CDF_Rmath_3_2_3_Non_Central_T">And
+                    other failures.</a>)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 139ε (Mean = 31ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 145ε (Mean = 30.9ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 135ε (Mean = 32.1ε)</span>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    Non Central T (small non-centrality)
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>Rmath
+                    3.2.3:</em></span> Max = 2.09e+03ε (Mean = 244ε))
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 3.86ε (Mean = 1.4ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 9.15ε (Mean = 2.13ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 6.17ε (Mean = 1.45ε)</span>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    Non Central T (large parameters)
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 257ε (Mean = 72.1ε)</span><br> <br>
+                    (<span class="emphasis"><em>Rmath 3.2.3:</em></span> Max = 2.46ε (Mean = 0.657ε))
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 5.26e+05ε (Mean = 1.48e+05ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 5.24e+05ε (Mean = 1.47e+05ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 286ε (Mean = 62.8ε)</span>
+                  </p>
+                </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="table">
+<a name="math_toolkit.dist_ref.dists.nc_t_dist.table_non_central_t_CDF_complement"></a><p class="title"><b>Table 5.9. Error rates for non central t CDF complement</b></p>
+<div class="table-contents"><table class="table" summary="Error rates for non central t CDF complement">
+<colgroup>
+<col>
+<col>
+<col>
+<col>
+<col>
+</colgroup>
+<thead><tr>
+<th>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    GNU C++ version 7.1.0<br> linux<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Sun compiler version 0x5150<br> Sun Solaris<br> long double
+                  </p>
+                </th>
+<th>
+                  <p>
+                    Microsoft Visual C++ version 14.1<br> Win32<br> double
+                  </p>
+                </th>
+</tr></thead>
+<tbody>
+<tr>
+<td>
+                  <p>
+                    Non Central T
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 0.707ε (Mean = 0.0497ε)</span><br>
+                    <br> (<span class="emphasis"><em>Rmath 3.2.3:</em></span> <span class="red">Max
+                    = 6.19e+15ε (Mean = 6.72e+14ε) <a class="link" href="../../logs_and_tables/logs.html#errors_GNU_C_version_7_1_0_linux_double_non_central_t_CDF_complement_Rmath_3_2_3_Non_Central_T">And
+                    other failures.</a>)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 201ε (Mean = 31.7ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 340ε (Mean = 43.2ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 154ε (Mean = 32.1ε)</span>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    Non Central T (small non-centrality)
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 0ε (Mean = 0ε)</span><br> <br> (<span class="emphasis"><em>Rmath
+                    3.2.3:</em></span> Max = 1.87e+03ε (Mean = 263ε))
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 10.5ε (Mean = 2.13ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 10.5ε (Mean = 2.39ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 4.6ε (Mean = 1.63ε)</span>
+                  </p>
+                </td>
+</tr>
+<tr>
+<td>
+                  <p>
+                    Non Central T (large parameters)
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 478ε (Mean = 96.3ε)</span><br> <br>
+                    (<span class="emphasis"><em>Rmath 3.2.3:</em></span> Max = 2.24ε (Mean = 0.945ε))
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 9.79e+05ε (Mean = 1.97e+05ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 9.79e+05ε (Mean = 1.97e+05ε)</span>
+                  </p>
+                </td>
+<td>
+                  <p>
+                    <span class="blue">Max = 227ε (Mean = 50.4ε)</span>
+                  </p>
+                </td>
+</tr>
+</tbody>
+</table></div>
+</div>
+<br class="table-break"><div class="caution"><table border="0" summary="Caution">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Caution]" src="../../../../../../../doc/src/images/caution.png"></td>
+<th align="left">Caution</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+            The complexity of the current algorithm is dependent upon δ<sup>2</sup>: consequently
+            the time taken to evaluate the CDF increases rapidly for δ &gt; 500, likewise
+            the accuracy decreases rapidly for very large δ.
+          </p></td></tr>
+</table></div>
+<p>
+          Accuracy for the quantile and PDF functions should be broadly similar.
+          The <span class="emphasis"><em>mode</em></span> is determined numerically and cannot in principal
+          be more accurate than the square root of floating-point type FPT epsilon,
+          accessed using <code class="computeroutput"><span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">tools</span><span class="special">::</span><span class="identifier">epsilon</span><span class="special">&lt;</span><span class="identifier">FPT</span><span class="special">&gt;()</span></code>.
+          For 64-bit <code class="computeroutput"><span class="keyword">double</span></code>, epsilon
+          is about 1e-16, so the fractional accuracy is limited to 1e-8.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_t_dist.h3"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_t_dist.tests"></a></span><a class="link" href="nc_t_dist.html#math_toolkit.dist_ref.dists.nc_t_dist.tests">Tests</a>
+        </h5>
+<p>
+          There are two sets of tests of this distribution:
+        </p>
+<p>
+          Basic sanity checks compare this implementation to the test values given
+          in "Computing discrete mixtures of continuous distributions: noncentral
+          chisquare, noncentral t and the distribution of the square of the sample
+          multiple correlation coefficient." Denise Benton, K. Krishnamoorthy,
+          Computational Statistics &amp; Data Analysis 43 (2003) 249-267.
+        </p>
+<p>
+          Accuracy checks use test data computed with this implementation and arbitrary
+          precision interval arithmetic: this test data is believed to be accurate
+          to at least 50 decimal places.
+        </p>
+<p>
+          The cases of large (or infinite) ν and/or large δ has received special treatment
+          to avoid catastrophic loss of accuracy. New tests have been added to confirm
+          the improvement achieved.
+        </p>
+<p>
+          From Boost 1.52, degrees of freedom ν can be +∞
+when the normal distribution
+          located at δ
+(equivalent to the central Student's t distribution) is used
+          in place for accuracy and speed.
+        </p>
+<h5>
+<a name="math_toolkit.dist_ref.dists.nc_t_dist.h4"></a>
+          <span class="phrase"><a name="math_toolkit.dist_ref.dists.nc_t_dist.implementation"></a></span><a class="link" href="nc_t_dist.html#math_toolkit.dist_ref.dists.nc_t_dist.implementation">Implementation</a>
+        </h5>
+<p>
+          The CDF is computed using a modification of the method described in "Computing
+          discrete mixtures of continuous distributions: noncentral chisquare, noncentral
+          t and the distribution of the square of the sample multiple correlation
+          coefficient." Denise Benton, K. Krishnamoorthy, Computational Statistics
+          &amp; Data Analysis 43 (2003) 249-267.
+        </p>
+<p>
+          This uses the following formula for the CDF:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_t_ref2.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          Where I<sub>x</sub>(a,b) is the incomplete beta function, and Φ(x) is the normal CDF
+          at x.
+        </p>
+<p>
+          Iteration starts at the largest of the Poisson weighting terms (at i =
+          δ<sup>2</sup> / 2) and then proceeds in both directions as per Benton and Krishnamoorthy's
+          paper.
+        </p>
+<p>
+          Alternatively, by considering what happens when t = ∞, we have x = 1, and
+          therefore I<sub>x</sub>(a,b) = 1 and:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_t_ref3.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          From this we can easily show that:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_t_ref4.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          and therefore we have a means to compute either the probability or its
+          complement directly without the risk of cancellation error. The crossover
+          criterion for choosing whether to calculate the CDF or its complement is
+          the same as for the <a class="link" href="nc_beta_dist.html" title="Noncentral Beta Distribution">Noncentral
+          Beta Distribution</a>.
+        </p>
+<p>
+          The PDF can be computed by a very similar method using:
+        </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+            <span class="inlinemediaobject"><img src="../../../../equations/nc_t_ref5.svg"></span>
+
+          </p></blockquote></div>
+<p>
+          Where I<sub>x</sub><sup>'</sup>(a,b) is the derivative of the incomplete beta function.
+        </p>
+<p>
+          For both the PDF and CDF we switch to approximating the distribution by
+          a Student's t distribution centred on δ when ν is very large. The crossover
+          location appears to be when δ/(4ν) &lt; ε, this location was estimated by
+          inspection of equation 2.6 in "A Comparison of Approximations To Percentiles
+          of the Noncentral t-Distribution". H. Sahai and M. M. Ojeda, Revista
+          Investigacion Operacional Vol 21, No 2, 2000, page 123.
+        </p>
+<p>
+          Equation 2.6 is a Fisher-Cornish expansion by Eeden and Johnson. The second
+          term includes the ratio δ/(4ν), so when this term become negligible, this
+          and following terms can be ignored, leaving just Student's t distribution
+          centred on δ.
+        </p>
+<p>
+          This was also confirmed by experimental testing.
+        </p>
+<p>
+          See also
+        </p>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+              "Some Approximations to the Percentage Points of the Noncentral
+              t-Distribution". C. van Eeden. International Statistical Review,
+              29, 4-31.
+            </li>
+<li class="listitem">
+              "Continuous Univariate Distributions". N.L. Johnson, S. Kotz
+              and N. Balkrishnan. 1995. John Wiley and Sons New York.
+            </li>
+</ul></div>
+<p>
+          The quantile is calculated via the usual <a class="link" href="../../roots_noderiv.html" title="Root Finding Without Derivatives">root-finding
+          without derivatives</a> method with the initial guess taken as the quantile
+          of a normal approximation to the noncentral T.
+        </p>
+<p>
+          There is no closed form for the mode, so this is computed via functional
+          maximisation of the PDF.
+        </p>
+<p>
+          The remaining functions (mean, variance etc) are implemented using the
+          formulas given in Weisstein, Eric W. "Noncentral Student's t-Distribution."
+          From MathWorld--A Wolfram Web Resource. <a href="http://mathworld.wolfram.com/NoncentralStudentst-Distribution.html" target="_top">http://mathworld.wolfram.com/NoncentralStudentst-Distribution.html</a>
+          and in the <a href="http://reference.wolfram.com/mathematica/ref/NoncentralStudentTDistribution.html" target="_top">Mathematica
+          documentation</a>.
+        </p>
+<p>
+          Some analytic properties of noncentral distributions (particularly unimodality,
+          and monotonicity of their modes) are surveyed and summarized by:
+        </p>
+<p>
+          Andrea van Aubel &amp; Wolfgang Gawronski, Applied Mathematics and Computation,
+          141 (2003) 3-12.
+        </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="nc_f_dist.html"><img src="../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../dists.html"><img src="../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../index.html"><img src="../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="normal_dist.html"><img src="../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

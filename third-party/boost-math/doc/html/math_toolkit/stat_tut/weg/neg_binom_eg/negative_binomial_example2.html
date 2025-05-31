@@ -1,0 +1,135 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Negative Binomial Table Printing Example.</title>
+<link rel="stylesheet" href="../../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../neg_binom_eg.html" title="Negative Binomial Distribution Examples">
+<link rel="prev" href="negative_binomial_example1.html" title="Negative Binomial Sales Quota Example.">
+<link rel="next" href="../normal_example.html" title="Normal Distribution Examples">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="negative_binomial_example1.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../neg_binom_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../normal_example.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="math_toolkit.stat_tut.weg.neg_binom_eg.negative_binomial_example2"></a><a class="link" href="negative_binomial_example2.html" title="Negative Binomial Table Printing Example.">Negative
+          Binomial Table Printing Example.</a>
+</h5></div></div></div>
+<p>
+            Example program showing output of a table of values of cdf and pdf for
+            various k failures.
+          </p>
+<pre class="programlisting"><span class="comment">// Print a table of values that can be used to plot</span>
+<span class="comment">// using Excel, or some other superior graphical display tool.</span>
+
+<span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="number">17</span><span class="special">);</span> <span class="comment">// Use max_digits10 precision, the maximum available for a reference table.</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">showpoint</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span> <span class="comment">// include trailing zeros.</span>
+<span class="comment">// This is a maximum possible precision for the type (here double) to suit a reference table.</span>
+<span class="keyword">int</span> <span class="identifier">maxk</span> <span class="special">=</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;(</span><span class="number">2.</span> <span class="special">*</span> <span class="identifier">mynbdist</span><span class="special">.</span><span class="identifier">successes</span><span class="special">()</span> <span class="special">/</span>  <span class="identifier">mynbdist</span><span class="special">.</span><span class="identifier">success_fraction</span><span class="special">());</span>
+<span class="comment">// This maxk shows most of the range of interest, probability about 0.0001 to 0.999.</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"\n"</span><span class="string">" k            pdf                      cdf"</span><span class="string">"\n"</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="keyword">for</span> <span class="special">(</span><span class="keyword">int</span> <span class="identifier">k</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">k</span> <span class="special">&lt;</span> <span class="identifier">maxk</span><span class="special">;</span> <span class="identifier">k</span><span class="special">++)</span>
+<span class="special">{</span>
+  <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">17</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">showpoint</span>
+    <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">k</span>  <span class="special">&lt;&lt;</span> <span class="string">", "</span>
+    <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">25</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">pdf</span><span class="special">(</span><span class="identifier">mynbdist</span><span class="special">,</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(</span><span class="identifier">k</span><span class="special">))</span>
+    <span class="special">&lt;&lt;</span> <span class="identifier">left</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">25</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">cdf</span><span class="special">(</span><span class="identifier">mynbdist</span><span class="special">,</span> <span class="keyword">static_cast</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;(</span><span class="identifier">k</span><span class="special">))</span>
+    <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+<span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+</pre>
+<pre class="programlisting"><span class="identifier">k</span>            <span class="identifier">pdf</span>                      <span class="identifier">cdf</span>
+ <span class="number">0</span><span class="special">,</span> <span class="number">1.5258789062500000e-005</span>  <span class="number">1.5258789062500003e-005</span>
+ <span class="number">1</span><span class="special">,</span> <span class="number">9.1552734375000000e-005</span>  <span class="number">0.00010681152343750000</span>
+ <span class="number">2</span><span class="special">,</span> <span class="number">0.00030899047851562522</span>   <span class="number">0.00041580200195312500</span>
+ <span class="number">3</span><span class="special">,</span> <span class="number">0.00077247619628906272</span>   <span class="number">0.0011882781982421875</span>
+ <span class="number">4</span><span class="special">,</span> <span class="number">0.0015932321548461918</span>    <span class="number">0.0027815103530883789</span>
+ <span class="number">5</span><span class="special">,</span> <span class="number">0.0028678178787231476</span>    <span class="number">0.0056493282318115234</span>
+ <span class="number">6</span><span class="special">,</span> <span class="number">0.0046602040529251142</span>    <span class="number">0.010309532284736633</span>
+ <span class="number">7</span><span class="special">,</span> <span class="number">0.0069903060793876605</span>    <span class="number">0.017299838364124298</span>
+ <span class="number">8</span><span class="special">,</span> <span class="number">0.0098301179241389001</span>    <span class="number">0.027129956288263202</span>
+ <span class="number">9</span><span class="special">,</span> <span class="number">0.013106823898851871</span>     <span class="number">0.040236780187115073</span>
+<span class="number">10</span><span class="special">,</span> <span class="number">0.016711200471036140</span>     <span class="number">0.056947980658151209</span>
+<span class="number">11</span><span class="special">,</span> <span class="number">0.020509200578089786</span>     <span class="number">0.077457181236241013</span>
+<span class="number">12</span><span class="special">,</span> <span class="number">0.024354675686481652</span>     <span class="number">0.10181185692272265</span>
+<span class="number">13</span><span class="special">,</span> <span class="number">0.028101548869017230</span>     <span class="number">0.12991340579173993</span>
+<span class="number">14</span><span class="special">,</span> <span class="number">0.031614242477644432</span>     <span class="number">0.16152764826938440</span>
+<span class="number">15</span><span class="special">,</span> <span class="number">0.034775666725408917</span>     <span class="number">0.19630331499479325</span>
+<span class="number">16</span><span class="special">,</span> <span class="number">0.037492515688331451</span>     <span class="number">0.23379583068312471</span>
+<span class="number">17</span><span class="special">,</span> <span class="number">0.039697957787645101</span>     <span class="number">0.27349378847076977</span>
+<span class="number">18</span><span class="special">,</span> <span class="number">0.041352039362130305</span>     <span class="number">0.31484582783290005</span>
+<span class="number">19</span><span class="special">,</span> <span class="number">0.042440250924291580</span>     <span class="number">0.35728607875719176</span>
+<span class="number">20</span><span class="special">,</span> <span class="number">0.042970754060845245</span>     <span class="number">0.40025683281803687</span>
+<span class="number">21</span><span class="special">,</span> <span class="number">0.042970754060845225</span>     <span class="number">0.44322758687888220</span>
+<span class="number">22</span><span class="special">,</span> <span class="number">0.042482450037426581</span>     <span class="number">0.48571003691630876</span>
+<span class="number">23</span><span class="special">,</span> <span class="number">0.041558918514873783</span>     <span class="number">0.52726895543118257</span>
+<span class="number">24</span><span class="special">,</span> <span class="number">0.040260202311284021</span>     <span class="number">0.56752915774246648</span>
+<span class="number">25</span><span class="special">,</span> <span class="number">0.038649794218832620</span>     <span class="number">0.60617895196129912</span>
+<span class="number">26</span><span class="special">,</span> <span class="number">0.036791631035234917</span>     <span class="number">0.64297058299653398</span>
+<span class="number">27</span><span class="special">,</span> <span class="number">0.034747651533277427</span>     <span class="number">0.67771823452981139</span>
+<span class="number">28</span><span class="special">,</span> <span class="number">0.032575923312447595</span>     <span class="number">0.71029415784225891</span>
+<span class="number">29</span><span class="special">,</span> <span class="number">0.030329307911589130</span>     <span class="number">0.74062346575384819</span>
+<span class="number">30</span><span class="special">,</span> <span class="number">0.028054609818219924</span>     <span class="number">0.76867807557206813</span>
+<span class="number">31</span><span class="special">,</span> <span class="number">0.025792141284492545</span>     <span class="number">0.79447021685656061</span>
+<span class="number">32</span><span class="special">,</span> <span class="number">0.023575629142856460</span>     <span class="number">0.81804584599941710</span>
+<span class="number">33</span><span class="special">,</span> <span class="number">0.021432390129869489</span>     <span class="number">0.83947823612928651</span>
+<span class="number">34</span><span class="special">,</span> <span class="number">0.019383705779220189</span>     <span class="number">0.85886194190850684</span>
+<span class="number">35</span><span class="special">,</span> <span class="number">0.017445335201298231</span>     <span class="number">0.87630727710980494</span>
+<span class="number">36</span><span class="special">,</span> <span class="number">0.015628112784496322</span>     <span class="number">0.89193538989430121</span>
+<span class="number">37</span><span class="special">,</span> <span class="number">0.013938587078064250</span>     <span class="number">0.90587397697236549</span>
+<span class="number">38</span><span class="special">,</span> <span class="number">0.012379666154859701</span>     <span class="number">0.91825364312722524</span>
+<span class="number">39</span><span class="special">,</span> <span class="number">0.010951243136991251</span>     <span class="number">0.92920488626421649</span>
+<span class="number">40</span><span class="special">,</span> <span class="number">0.0096507830144735539</span>    <span class="number">0.93885566927869002</span>
+<span class="number">41</span><span class="special">,</span> <span class="number">0.0084738582566109364</span>    <span class="number">0.94732952753530097</span>
+<span class="number">42</span><span class="special">,</span> <span class="number">0.0074146259745345548</span>    <span class="number">0.95474415350983555</span>
+<span class="number">43</span><span class="special">,</span> <span class="number">0.0064662435824429246</span>    <span class="number">0.96121039709227851</span>
+<span class="number">44</span><span class="special">,</span> <span class="number">0.0056212231142827853</span>    <span class="number">0.96683162020656122</span>
+<span class="number">45</span><span class="special">,</span> <span class="number">0.0048717266990450708</span>    <span class="number">0.97170334690560634</span>
+<span class="number">46</span><span class="special">,</span> <span class="number">0.0042098073105878630</span>    <span class="number">0.97591315421619418</span>
+<span class="number">47</span><span class="special">,</span> <span class="number">0.0036275999165703964</span>    <span class="number">0.97954075413276465</span>
+<span class="number">48</span><span class="special">,</span> <span class="number">0.0031174686783026818</span>    <span class="number">0.98265822281106729</span>
+<span class="number">49</span><span class="special">,</span> <span class="number">0.0026721160099737302</span>    <span class="number">0.98533033882104104</span>
+<span class="number">50</span><span class="special">,</span> <span class="number">0.0022846591885275322</span>    <span class="number">0.98761499800956853</span>
+<span class="number">51</span><span class="special">,</span> <span class="number">0.0019486798960970148</span>    <span class="number">0.98956367790566557</span>
+<span class="number">52</span><span class="special">,</span> <span class="number">0.0016582516423517923</span>    <span class="number">0.99122192954801736</span>
+<span class="number">53</span><span class="special">,</span> <span class="number">0.0014079495076571762</span>    <span class="number">0.99262987905567457</span>
+<span class="number">54</span><span class="special">,</span> <span class="number">0.0011928461106539983</span>    <span class="number">0.99382272516632852</span>
+<span class="number">55</span><span class="special">,</span> <span class="number">0.0010084971662802015</span>    <span class="number">0.99483122233260868</span>
+<span class="number">56</span><span class="special">,</span> <span class="number">0.00085091948404891532</span>   <span class="number">0.99568214181665760</span>
+<span class="number">57</span><span class="special">,</span> <span class="number">0.00071656377604119542</span>   <span class="number">0.99639870559269883</span>
+<span class="number">58</span><span class="special">,</span> <span class="number">0.00060228420831048650</span>   <span class="number">0.99700098980100937</span>
+<span class="number">59</span><span class="special">,</span> <span class="number">0.00050530624256557675</span>   <span class="number">0.99750629604357488</span>
+<span class="number">60</span><span class="special">,</span> <span class="number">0.00042319397814867202</span>   <span class="number">0.99792949002172360</span>
+<span class="number">61</span><span class="special">,</span> <span class="number">0.00035381791615708398</span>   <span class="number">0.99828330793788067</span>
+<span class="number">62</span><span class="special">,</span> <span class="number">0.00029532382517950324</span>   <span class="number">0.99857863176306016</span>
+<span class="number">63</span><span class="special">,</span> <span class="number">0.00024610318764958566</span>   <span class="number">0.99882473495070978</span>
+</pre>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="negative_binomial_example1.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../neg_binom_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../normal_example.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

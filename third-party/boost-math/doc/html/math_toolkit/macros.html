@@ -1,0 +1,87 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Floating-Point Constant Macros</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../cstdfloat.html" title="Chapter 3. Specified-width floating-point typedefs">
+<link rel="prev" href="greatest_typdefs.html" title="Greatest-width floating-point typedef">
+<link rel="next" href="examples.html" title="Examples">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="greatest_typdefs.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../cstdfloat.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="examples.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.macros"></a><a class="link" href="macros.html" title="Floating-Point Constant Macros">Floating-Point Constant Macros</a>
+</h2></div></div></div>
+<p>
+      All macros of the type <code class="computeroutput"><span class="identifier">BOOST_FLOAT16_C</span><span class="special">,</span> <span class="identifier">BOOST_FLOAT32_C</span><span class="special">,</span> <span class="identifier">BOOST_FLOAT64_C</span><span class="special">,</span> <span class="identifier">BOOST_FLOAT80_C</span><span class="special">,</span> <span class="identifier">BOOST_FLOAT128_C</span><span class="special">,</span> </code> and <code class="computeroutput"><span class="identifier">BOOST_FLOATMAX_C</span></code>
+      are always defined after inclusion of <code class="computeroutput"><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">cstdfloat</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span></code>.
+    </p>
+<p>
+      These allow floating-point <span class="bold"><strong>constants of at least the
+      specified width</strong></span> to be declared:
+    </p>
+<pre class="programlisting"><span class="comment">// Declare Archimedes' constant using float32_t with approximately 7 decimal digits of precision.</span>
+<span class="keyword">static</span> <span class="keyword">const</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">float32_t</span> <span class="identifier">pi</span> <span class="special">=</span> <span class="identifier">BOOST_FLOAT32_C</span><span class="special">(</span><span class="number">3.1415926536</span><span class="special">);</span>
+
+<span class="comment">// Declare the Euler-gamma constant with approximately 15 decimal digits of precision.</span>
+<span class="keyword">static</span> <span class="keyword">const</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">float64_t</span> <span class="identifier">euler</span> <span class="special">=</span>
+   <span class="identifier">BOOST_FLOAT64_C</span><span class="special">(</span><span class="number">0.57721566490153286060651209008240243104216</span><span class="special">);</span>
+
+<span class="comment">// Declare the Golden Ratio constant with the maximum decimal digits of precision that the platform supports.</span>
+<span class="keyword">static</span> <span class="keyword">const</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">floatmax_t</span> <span class="identifier">golden_ratio</span> <span class="special">=</span>
+   <span class="identifier">BOOST_FLOATMAX_C</span><span class="special">(</span><span class="number">1.61803398874989484820458683436563811772</span><span class="special">);</span>
+</pre>
+<div class="tip"><table border="0" summary="Tip">
+<tr>
+<td rowspan="2" align="center" valign="top" width="25"><img alt="[Tip]" src="../../../../../doc/src/images/tip.png"></td>
+<th align="left">Tip</th>
+</tr>
+<tr><td align="left" valign="top"><p>
+        Boost.Math provides many constants 'built-in', so always use Boost.Math constants
+        if available, for example:
+      </p></td></tr>
+</table></div>
+<pre class="programlisting"><span class="comment">// Display the constant pi to the maximum available precision.</span>
+  <span class="identifier">boost</span><span class="special">::</span><span class="identifier">floatmax_t</span> <span class="identifier">pi_max</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">constants</span><span class="special">::</span><span class="identifier">pi</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">floatmax_t</span><span class="special">&gt;();</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span><span class="special">.</span><span class="identifier">precision</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">numeric_limits</span><span class="special">&lt;</span><span class="identifier">boost</span><span class="special">::</span><span class="identifier">floatmax_t</span><span class="special">&gt;::</span><span class="identifier">digits10</span><span class="special">);</span>
+  <span class="identifier">std</span><span class="special">::</span><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"Most precise pi = "</span>  <span class="special">&lt;&lt;</span> <span class="identifier">pi_max</span> <span class="special">&lt;&lt;</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">endl</span><span class="special">;</span>
+<span class="comment">// If floatmax_t is float_128_t, then</span>
+<span class="comment">// Most precise pi = 3.141592653589793238462643383279503</span>
+</pre>
+<p>
+      from <a href="../../../example/cstdfloat_example.cpp" target="_top">cstdfloat_example.cpp</a>.
+    </p>
+<p>
+      See the complete list of <a class="link" href="constants.html" title="The Mathematical Constants">constants</a>.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="greatest_typdefs.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../cstdfloat.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="examples.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>
