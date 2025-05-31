@@ -18,7 +18,7 @@ define i32 @clmul32(i32 %a, i32 %b) nounwind {
 declare i32 @llvm.clmul.i32(i32 %a, i32 %b)
 
 define i32 @generic_clmul32(i32 %a, i32 %b) nounwind {
-; RV32ZBC-ZBKC-LABEL: clmul32:
+; RV32ZBC-ZBKC-LABEL: generic_clmul32:
 ; RV32ZBC-ZBKC:       # %bb.0:
 ; RV32ZBC-ZBKC-NEXT:    clmul a0, a0, a1
 ; RV32ZBC-ZBKC-NEXT:    ret
