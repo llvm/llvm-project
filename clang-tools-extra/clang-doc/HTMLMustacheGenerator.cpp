@@ -208,21 +208,23 @@ static json::Value extractValue(const TypedefInfo &I) {
 }
 
 static json::Value extractValue(const CommentInfo &I) {
-  assert((I.Kind == "BlockCommandComment" || I.Kind == "FullComment" ||
-          I.Kind == "ParagraphComment" || I.Kind == "TextComment") &&
+  assert((I.Kind == CommentKind::CK_BlockCommandComment ||
+          I.Kind == CommentKind::CK_FullComment ||
+          I.Kind == CommentKind::CK_ParagraphComment ||
+          I.Kind == CommentKind::CK_TextComment) &&
          "Unknown Comment type in CommentInfo.");
 
   Object Obj = Object();
   json::Value Child = Object();
 
   // TextComment has no children, so return it.
-  if (I.Kind == "TextComment") {
+  if (I.Kind == CommentKind::CK_TextComment) {
     Obj.insert({"TextComment", I.Text});
     return Obj;
   }
 
   // BlockCommandComment needs to generate a Command key.
-  if (I.Kind == "BlockCommandComment")
+  if (I.Kind == CommentKind::CK_BlockCommandComment)
     Child.getAsObject()->insert({"Command", I.Name});
 
   // Use the same handling for everything else.
@@ -236,7 +238,7 @@ static json::Value extractValue(const CommentInfo &I) {
   for (const auto &C : I.Children)
     CARef.emplace_back(extractValue(*C));
   Child.getAsObject()->insert({"Children", ChildArr});
-  Obj.insert({I.Kind, Child});
+  Obj.insert({commentKindToString(I.Kind), Child});
 
   return Obj;
 }

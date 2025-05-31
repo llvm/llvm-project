@@ -26,6 +26,66 @@
 namespace clang {
 namespace doc {
 
+CommentKind stringToCommentKind(llvm::StringRef KindStr) {
+  if (KindStr == "FullComment")
+    return CommentKind::CK_FullComment;
+  if (KindStr == "ParagraphComment")
+    return CommentKind::CK_ParagraphComment;
+  if (KindStr == "TextComment")
+    return CommentKind::CK_TextComment;
+  if (KindStr == "InlineCommandComment")
+    return CommentKind::CK_InlineCommandComment;
+  if (KindStr == "HTMLStartTagComment")
+    return CommentKind::CK_HTMLStartTagComment;
+  if (KindStr == "HTMLEndTagComment")
+    return CommentKind::CK_HTMLEndTagComment;
+  if (KindStr == "BlockCommandComment")
+    return CommentKind::CK_BlockCommandComment;
+  if (KindStr == "ParamCommandComment")
+    return CommentKind::CK_ParamCommandComment;
+  if (KindStr == "TParamCommandComment")
+    return CommentKind::CK_TParamCommandComment;
+  if (KindStr == "VerbatimBlockComment")
+    return CommentKind::CK_VerbatimBlockComment;
+  if (KindStr == "VerbatimBlockLineComment")
+    return CommentKind::CK_VerbatimBlockLineComment;
+  if (KindStr == "VerbatimLineComment")
+    return CommentKind::CK_VerbatimLineComment;
+  return CommentKind::CK_Unknown;
+}
+
+llvm::StringRef commentKindToString(CommentKind Kind) {
+  switch (Kind) {
+  case CommentKind::CK_FullComment:
+    return "FullComment";
+  case CommentKind::CK_ParagraphComment:
+    return "ParagraphComment";
+  case CommentKind::CK_TextComment:
+    return "TextComment";
+  case CommentKind::CK_InlineCommandComment:
+    return "InlineCommandComment";
+  case CommentKind::CK_HTMLStartTagComment:
+    return "HTMLStartTagComment";
+  case CommentKind::CK_HTMLEndTagComment:
+    return "HTMLEndTagComment";
+  case CommentKind::CK_BlockCommandComment:
+    return "BlockCommandComment";
+  case CommentKind::CK_ParamCommandComment:
+    return "ParamCommandComment";
+  case CommentKind::CK_TParamCommandComment:
+    return "TParamCommandComment";
+  case CommentKind::CK_VerbatimBlockComment:
+    return "VerbatimBlockComment";
+  case CommentKind::CK_VerbatimBlockLineComment:
+    return "VerbatimBlockLineComment";
+  case CommentKind::CK_VerbatimLineComment:
+    return "VerbatimLineComment";
+  case CommentKind::CK_Unknown:
+    return "Unknown";
+  }
+  llvm_unreachable("Unhandled CommentKind");
+}
+
 namespace {
 
 const SymbolID EmptySID = SymbolID();
