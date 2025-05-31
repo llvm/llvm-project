@@ -838,6 +838,12 @@ olLaunchKernel_val(ol_queue_handle_t Queue, ol_device_handle_t Device,
           "validation failure: Queue == NULL && EventOut != NULL");
     }
 
+    if (ArgumentsSize > 0 && ArgumentsData == NULL) {
+      return createOffloadError(
+          error::ErrorCode::INVALID_ARGUMENT,
+          "validation failure: ArgumentsSize > 0 && ArgumentsData == NULL");
+    }
+
     if (NULL == Device) {
       return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
                                 "validation failure: NULL == Device");
@@ -846,11 +852,6 @@ olLaunchKernel_val(ol_queue_handle_t Queue, ol_device_handle_t Device,
     if (NULL == Kernel) {
       return createOffloadError(error::ErrorCode::INVALID_NULL_HANDLE,
                                 "validation failure: NULL == Kernel");
-    }
-
-    if (NULL == ArgumentsData) {
-      return createOffloadError(error::ErrorCode::INVALID_NULL_POINTER,
-                                "validation failure: NULL == ArgumentsData");
     }
 
     if (NULL == LaunchSizeArgs) {
