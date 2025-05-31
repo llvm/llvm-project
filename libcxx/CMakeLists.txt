@@ -318,6 +318,8 @@ endif()
 option(LIBCXX_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." ${LIBCXX_HERMETIC_STATIC_LIBRARY_DEFAULT})
 
+option(LIBCXX_EXECUTE_ONLY_CODE "Compile libc++ as execute-only." OFF)
+
 #===============================================================================
 # Check option configurations
 #===============================================================================
@@ -537,6 +539,17 @@ function(cxx_add_basic_build_flags target)
   # it easier to upgrade the library to a newer language standard without build
   # errors.
   target_compile_definitions(${target} PRIVATE -D_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
+
+  if (LIBCXX_EXECUTE_ONLY_CODE)
+    target_add_compile_flags_if_supported(${target} PRIVATE -mexecute-only)
+    if (NOT CXX_SUPPORTS_MEXECUTE_ONLY_FLAG)
+      target_add_compile_flags_if_supported(${target} PRIVATE -mpure-code)
+      if (NOT CXX_SUPPORTS_MPURE_CODE_FLAG)
+        message(SEND_ERROR "Compiler doesn't support -mexecute-only or "
+                           "-mpure-code option for target ${target}!")
+      endif()
+    endif()
+  endif()
 
   if (C_SUPPORTS_COMMENT_LIB_PRAGMA)
     if (LIBCXX_HAS_PTHREAD_LIB)
