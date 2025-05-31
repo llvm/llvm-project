@@ -266,7 +266,7 @@ struct MaybeConstCommonSimpleView : std::ranges::view_base {
 };
 
 using UnSimpleNoConstCommonView    = MaybeConstCommonSimpleView<false, false, true>;
-using UnsimpleConstView            = MaybeConstCommonSimpleView<false, true, true>;
+using UnSimpleConstView            = MaybeConstCommonSimpleView<false, true, true>;
 using UnsimpleUnCommonConstView    = MaybeConstCommonSimpleView<false, true, false>;
 using SimpleUnCommonConstView      = MaybeConstCommonSimpleView<true, true, false>;
 using SimpleCommonConstView        = MaybeConstCommonSimpleView<true, true, true>;
