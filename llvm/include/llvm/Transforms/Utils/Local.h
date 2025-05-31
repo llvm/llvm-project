@@ -49,6 +49,11 @@ class StoreInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 
+template <typename T> class GenericSSAContext;
+using SSAContext = GenericSSAContext<Function>;
+template <typename T> class GenericUniformityInfo;
+using UniformityInfo = GenericUniformityInfo<SSAContext>;
+
 //===----------------------------------------------------------------------===//
 //  Local constant propagation.
 //
@@ -183,7 +188,7 @@ bool EliminateDuplicatePHINodes(BasicBlock *BB,
 /// providing the set of loop headers that SimplifyCFG should not eliminate.
 extern cl::opt<bool> RequireAndPreserveDomTree;
 bool simplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
-                 DomTreeUpdater *DTU = nullptr,
+                 DomTreeUpdater *DTU = nullptr, UniformityInfo *UI = nullptr,
                  const SimplifyCFGOptions &Options = {},
                  ArrayRef<WeakVH> LoopHeaders = {});
 
