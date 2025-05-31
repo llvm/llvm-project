@@ -126,6 +126,7 @@ if (LLVM_ENABLE_SPHINX)
 
     if (${SPHINX_OUTPUT_HTML})
       add_sphinx_target(html flang SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Source")
+      add_dependencies(docs-flang-html copy-flang-src-docs)
     endif()
     if (${SPHINX_OUTPUT_MAN})
       add_sphinx_target(man flang SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Source")
