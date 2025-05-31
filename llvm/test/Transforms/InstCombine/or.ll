@@ -2035,3 +2035,15 @@ define i32 @or_xor_and_commuted3(i32 %x, i32 %y, i32 %z) {
   %or1 = or i32 %xor, %yy
   ret i32 %or1
 }
+
+define i1 @or_truncs(i8 %x) {
+; CHECK-LABEL: @or_truncs(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR1:%.*]] = call i1 @llvm.bitreverse.i1(i1 [[TRUNC]])
+; CHECK-NEXT:    ret i1 [[OR1]]
+;
+  %trunc1 = trunc i8 %x to i1
+  %trunc2 = trunc i8 %x to i1
+  %or1 = or i1 %trunc1, %trunc2
+  ret i1 %or1
+}
