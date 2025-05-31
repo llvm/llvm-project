@@ -21,6 +21,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
 #include <mlir/Dialect/OpenMP/OpenMPDialect.h>
 #include <optional>
 
@@ -932,7 +933,8 @@ mlir::Value hlfir::inlineElementalOp(
 hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
                                    fir::FirOpBuilder &builder,
                                    mlir::ValueRange extents, bool isUnordered,
-                                   bool emitWorkshareLoop) {
+                                   bool emitWorkshareLoop,
+                                   bool couldVectorize) {
   emitWorkshareLoop = emitWorkshareLoop && isUnordered;
   hlfir::LoopNest loopNest;
   assert(!extents.empty() && "must have at least one extent");
@@ -967,6 +969,15 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
       auto ub = builder.createConvert(loc, indexType, extent);
       auto doLoop =
           builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered);
+      if (!couldVectorize) {
+        mlir::LLVM::LoopVectorizeAttr va{mlir::LLVM::LoopVectorizeAttr::get(
+            builder.getContext(),
+            /*disable=*/builder.getBoolAttr(true), {}, {}, {}, {}, {}, {})};
+        mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
+            builder.getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ {},
+            /*unroll_and_jam*/ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+        doLoop.setLoopAnnotationAttr(la);
+      }
       loopNest.body = doLoop.getBody();
       builder.setInsertionPointToStart(loopNest.body);
       // Reverse the indices so they are in column-major order.
