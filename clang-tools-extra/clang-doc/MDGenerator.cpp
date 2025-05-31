@@ -139,7 +139,6 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
     break;
 
   case CommentKind::CK_Unknown:
-  default:
     OS << "Unknown comment kind: " << static_cast<int>(I.Kind) << ".\n\n";
     break;
   }
