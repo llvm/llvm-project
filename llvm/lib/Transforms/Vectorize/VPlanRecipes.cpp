@@ -413,7 +413,61 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
       Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
+  assert((getNumOperandsForOpcode() == -1u ||
+          getNumOperandsForOpcode() == getNumOperands()) &&
+         "number of operands does not match opcode");
 }
+
+#ifndef NDEBUG
+unsigned VPInstruction::getNumOperandsForOpcode() const {
+  if (Instruction::isUnaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
+    return 1;
+
+  if (Instruction::isBinaryOp(getOpcode()))
+    return 2;
+
+  switch (getOpcode()) {
+  case VPInstruction::StepVector:
+    return 0;
+  case Instruction::Alloca:
+  case Instruction::ExtractValue:
+  case Instruction::Freeze:
+  case Instruction::Load:
+  case VPInstruction::AnyOf:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::FirstActiveLane:
+  case VPInstruction::Not:
+    return 1;
+
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::Store:
+  case VPInstruction::ActiveLaneMask:
+  case VPInstruction::BranchOnCount:
+  case VPInstruction::ComputeReductionResult:
+  case VPInstruction::FirstOrderRecurrenceSplice:
+  case VPInstruction::LogicalAnd:
+  case VPInstruction::WideIVStep:
+  case VPInstruction::PtrAdd:
+    return 2;
+  case Instruction::Select:
+  case VPInstruction::ComputeFindLastIVResult:
+    return 3;
+  case Instruction::Call:
+  case Instruction::PHI:
+  case Instruction::GetElementPtr:
+  case Instruction::Switch:
+    // Cannot determine the number of operands from the opcode.
+    return -1u;
+  }
+  llvm_unreachable("all cases should be handled above");
+}
+#endif
 
 bool VPInstruction::doesGeneratePerAllLanes() const {
   return Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this);
@@ -2706,7 +2760,10 @@ static void scalarizeInstruction(const Instruction *Instr,
 
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
-  for (const auto &I : enumerate(RepRecipe->operands())) {
+  auto OpRange = RepRecipe->operands();
+  if (isa<CallBase>(Cloned))
+    OpRange = drop_end(OpRange);
+  for (const auto &I : enumerate(OpRange)) {
     auto InputLane = Lane;
     VPValue *Operand = I.value();
     if (vputils::isSingleScalar(Operand))
