@@ -978,8 +978,9 @@ static void addVPMetadata(Module &M, Instruction &I,
 
   if (I.getMetadata(LLVMContext::MD_prof)) {
     uint64_t Unused;
-    auto ExistingVD =
-        getValueProfDataFromInst(I, IPVK_IndirectCallTarget, ~0U, Unused);
+    // ~0U means get all available value profile data without any count limit
+    auto ExistingVD = getValueProfDataFromInst(I, IPVK_IndirectCallTarget,
+                                               /*MaxNumValueData=*/~0U, Unused);
     // We don't know how to merge value profile data yet.
     if (!ExistingVD.empty()) {
       return;
@@ -994,6 +995,8 @@ static void addVPMetadata(Module &M, Instruction &I,
     VD.Value = CalleeGUID;
     // For MemProf, we don't have actual call counts, so we assign
     // a weight of 1 to each potential target.
+    // TODO: Consider making this weight configurable or increasing it to
+    // improve effectiveness for ICP.
     VD.Count = 1;
     VDs.push_back(VD);
     TotalCount += VD.Count;
@@ -1083,6 +1086,9 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
     ArrayRef<GlobalValue::GUID> CalleeGuids;
 
     // Only compare Frame contents.
+    // Use pointer-based equality instead of ArrayRef's operator== which does
+    // element-wise comparison. We want to check if it's the same slice of the
+    // underlying array, not just equivalent content.
     bool operator==(const CallSiteEntry &Other) const {
       return Frames.data() == Other.Frames.data() &&
              Frames.size() == Other.Frames.size();
@@ -1271,9 +1277,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
           addCallsiteMetadata(I, InlinedCallStack, Ctx);
 
           // Try to attach indirect call metadata if possible.
-          if (!CalledFunction) {
+          if (!CalledFunction)
             addVPMetadata(M, I, CallSiteEntry.CalleeGuids);
-          }
 
           // Only need to find one with a matching call stack and add a single
           // callsite metadata.

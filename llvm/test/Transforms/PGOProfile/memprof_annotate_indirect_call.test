@@ -1,11 +1,11 @@
 ; RUN: split-file %s %t
 
-; COM: Basic functionality with flag toggle
+;; Basic functionality with flag toggle
 ; RUN: llvm-profdata merge --memprof-version=4 %t/basic.yaml -o %t/basic.memprofdata
 ; RUN: opt < %t/basic.ll -passes='memprof-use<profile-filename=%t/basic.memprofdata>' -memprof-attach-calleeguids=false -S 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLE
 ; RUN: opt < %t/basic.ll -passes='memprof-use<profile-filename=%t/basic.memprofdata>' -memprof-attach-calleeguids=true -S 2>&1 | FileCheck %s --check-prefix=CHECK-ENABLE
 
-; COM: FDO conflict handling
+;; FDO conflict handling
 ; RUN: llvm-profdata merge --memprof-version=4 %t/fdo_conflict.yaml -o %t/fdo_conflict.memprofdata
 ; RUN: opt < %t/fdo_conflict.ll -passes='memprof-use<profile-filename=%t/fdo_conflict.memprofdata>' -memprof-attach-calleeguids=true -S 2>&1 | FileCheck %s --check-prefix=CHECK-FDO
 
@@ -63,7 +63,6 @@ entry:
   %0 = load ptr, ptr %fp, align 8
   ; This call already has FDO value profile metadata - should NOT be modified
   ; CHECK-FDO: call void %0(), {{.*}} !prof !6
-  ; CHECK-FDO-NOT: call void %0(), {{.*}} !prof !9
   call void %0(), !dbg !15, !prof !16
 
   %1 = load ptr, ptr %fp, align 8
