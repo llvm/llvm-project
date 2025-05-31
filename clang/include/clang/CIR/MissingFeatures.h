@@ -99,7 +99,6 @@ struct MissingFeatures {
   static bool opCallAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
   static bool opCallASTAttr() { return false; }
-  static bool opCallVariadic() { return false; }
   static bool opCallObjCMethod() { return false; }
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }

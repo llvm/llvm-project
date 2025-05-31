@@ -106,6 +106,7 @@ public:
 
   CIRGenTypes &getTypes() const { return cgm.getTypes(); }
 
+  const TargetInfo &getTarget() const { return cgm.getTarget(); }
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
 
 private:
@@ -791,6 +792,9 @@ public:
 
   void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
   void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
+
+private:
+  QualType getVarArgType(const Expr *arg);
 };
 
 } // namespace clang::CIRGen
