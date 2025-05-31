@@ -798,6 +798,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
 
     return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
+                                  cast<VectorType>(VectorTy),
                                   cast<VectorType>(VectorTy), Mask,
                                   Ctx.CostKind, VF.getKnownMinValue() - 1);
   }
@@ -2970,9 +2971,9 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
   if (!Reverse)
     return Cost;
 
-  return Cost +=
-         Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
+  return Cost += Ctx.TTI.getShuffleCost(
+             TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
+             cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
@@ -3088,9 +3089,9 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   if (!Reverse)
     return Cost;
 
-  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                       cast<VectorType>(Ty), {}, Ctx.CostKind,
-                                       0);
+  return Cost + Ctx.TTI.getShuffleCost(
+                    TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
+                    cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3203,9 +3204,9 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   if (!Reverse)
     return Cost;
 
-  return Cost + Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                       cast<VectorType>(Ty), {}, Ctx.CostKind,
-                                       0);
+  return Cost + Ctx.TTI.getShuffleCost(
+                    TargetTransformInfo::SK_Reverse, cast<VectorType>(Ty),
+                    cast<VectorType>(Ty), {}, Ctx.CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3616,8 +3617,8 @@ InstructionCost VPInterleaveRecipe::computeCost(ElementCount VF,
 
   return Cost + IG->getNumMembers() *
                     Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse,
-                                           VectorTy, std::nullopt, Ctx.CostKind,
-                                           0);
+                                           VectorTy, VectorTy, std::nullopt,
+                                           Ctx.CostKind, 0);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
