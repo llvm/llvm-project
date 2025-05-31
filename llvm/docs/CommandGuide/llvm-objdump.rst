@@ -153,10 +153,16 @@ OPTIONS
   alongside disassembly. ``format`` may be ``unicode`` or ``ascii``, defaulting
   to ``unicode`` if omitted.
 
-.. option:: --debug-vars-indent=<width>
+.. option:: --debug-indent=<width>
 
-  Distance to indent the source-level variable display, relative to the start
-  of the disassembly. Defaults to 52 characters.
+  Distance to indent the source-level variable or inlined function display,
+  relative to the start of the disassembly. Defaults to 52 characters.
+
+.. option:: --debug-inlined-funcs=<format>
+
+  Print the locations of inlined functions alongside disassembly.
+  ``format`` may be ``unicode``, ``ascii`` or ``line`` defaulting to
+  ``unicode`` if omitted.
 
 .. option:: -j, --section=<section1[,section2,...]>
 
