@@ -1185,6 +1185,14 @@ void VPIRPhi::execute(VPTransformState &State) {
   State.Builder.SetInsertPoint(Phi->getParent(), std::next(Phi->getIterator()));
 }
 
+void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
+  VPRecipeBase *R = const_cast<VPRecipeBase *>(getAsRecipe());
+  assert(R->getNumOperands() == R->getParent()->getNumPredecessors() &&
+         "Number of phi operands must match number of predecessors");
+  unsigned Position = R->getParent()->getIndexForPredecessor(IncomingBlock);
+  R->removeOperand(Position);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPhiAccessors::printPhiOperands(raw_ostream &O,
                                       VPSlotTracker &SlotTracker) const {
