@@ -1227,7 +1227,7 @@ def Arith_ScalingExtFOp
           OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
       Results<(outs FloatLike:$out)> {
   let summary =
-      "cast from floating-point to larger floating-point using provided scales";
+      "Upcasts quantized floats using provided scales values following OCP MXFP Spec";
   let description = [{
   This operation upcasts quantized floating-point values using provided scale 
   values. It expects both scales and the input operand to be of the same shape, 
@@ -1348,7 +1348,7 @@ def Arith_ScalingTruncFOp
           OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
       Results<(outs FloatLike:$out)> {
   let summary =
-      "cast from floating-point to narrower floating-point with scales";
+      "Downcasts input floating point values using provided scales values following OCP MXFP Spec";
   let description = [{
     This operation quantizes input using the provided scale values. It expects 
     both scales and the input operand to be of the same shape and, therefore, 
