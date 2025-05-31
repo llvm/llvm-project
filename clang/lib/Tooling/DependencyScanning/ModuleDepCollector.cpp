@@ -14,7 +14,6 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/BLAKE3.h"
-#include "llvm/Support/StringSaver.h"
 #include <optional>
 
 using namespace clang;
