@@ -33,17 +33,48 @@ class FeaturePTX<int version>:
    SubtargetFeature<"ptx"# version, "PTXVersion",
                     "" # version,
                     "Use PTX version " # version>;
-
+//
+// NVPTX Architecture Hierarchy and Ordering:
+// 
+// Family: 2/3/5/6/7/8/9/10/12 (Follows Onion model, older family is compatible with newer family)
+// Arch: 2*/3*/5*/6*/7*/8*/9*/10*/12*
+//
+// Family-specific: F*f : F*f > F* =>
+// + The plain base architecture is compatible with the family-specific architecture
+//   (e.g. sm_100 compatible with >= sm_100*f*)
+// + The family-specific architecture is compatible with future family-specific
+//   architectures within the same family (e.g. sm_100f compatible with >= sm_10X*f*
+//   but not with sm_12X*f*)
+//
+//    Family and SM Target Definition:
+//    +----------------+--------------------------------------------------------+
+//    | Family         | Target SM architectures included                       |
+//    +----------------+--------------------------------------------------------+
+//    | sm_10x family  | sm_100f, sm_103f, future targets in sm_10x family      |
+//    | sm_101 family  | sm_101f (exception)                                    |
+//    | sm_12x family  | sm_120f, sm_121f, future targets in sm_12x family      |
+//    +----------------+--------------------------------------------------------+
+//
+// Architecture-specific: F*a : F*a > F*f > F* =>
+// + The plain base architecture is compatible with the architecture-specific architecture
+//   (e.g. sm_100 compatible with >= sm_100*a*)
+// + The family-specific architecture is compatible with the architecture-specific architecture
+//   (e.g. sm_100f compatible with >= sm_100*a*)
+// + The architecture-specific architecture is incompatible with any other architecture
+//   (e.g. sm_100a is only compatible with sm_100*a*)
+//
+// Encoding: Arch * 1000 + 'f' * 10 + 'a' * 1 (where 'a' ⇒ 'f')
+// 
+// This encoding allows simple implementation of the partial ordering of the architectures.
+//  + Compare Family and Arch by dividing FullSMVersion by 1000 and 100 respectively before the comparison.
+//  + Compare within the family by comparing FullSMVersion, given both belongs to the same family.
+//  + Detect 'a' variants by checking FullSMVersion % 10.
+//
 foreach sm = [20, 21, 30, 32, 35, 37, 50, 52, 53,
               60, 61, 62, 70, 72, 75, 80, 86, 87,
               89, 90, 100, 101, 103, 120, 121] in {
   // Base SM version (e.g. FullSMVersion for sm_100 is 10000)
   def SM#sm : FeatureSM<""#sm, !mul(sm, 100)>;
-
-  // Note: Subset of the architecture-specific features, normally
-  // available in "a" variants that will be compatible with subsequent targets
-  // in the same family. I.e they are only ordered within the major architecture,
-  // but are not comparable with other major architectures
 
   // Family-specific targets which are compatible within same family
   // (e.g. FullSMVersion for sm_100f is 10010)

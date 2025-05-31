@@ -137,7 +137,7 @@ public:
   bool hasArchAccelFeatures() const { return getFullSmVersion() % 10; }
   // GPUs with 'f' suffix have architecture-accelerated features which are
   // portable across all future architectures under same SM major. For example,
-  // sm_100f features will work for sm_10X future architectures.
+  // sm_100f features will work for sm_10X*f*/sm_10X*a* future architectures.
   // - false represents non-family-specific architecture.
   // - true represents family-specific variant.
   bool hasFamilySpecificFeatures() const {
