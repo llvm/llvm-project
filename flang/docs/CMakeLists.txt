@@ -82,7 +82,7 @@ if (LLVM_ENABLE_DOXYGEN)
 endif()
 endif()
 
-function (gen_rst_file_from_td output_file td_option source docs_target)
+function (gen_rst_file_from_td output_file td_option source)
   if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${source}")
     message(FATAL_ERROR "Cannot find source file: ${source} in ${CMAKE_CURRENT_SOURCE_DIR}")
   endif()
@@ -90,8 +90,6 @@ function (gen_rst_file_from_td output_file td_option source docs_target)
   list(APPEND LLVM_TABLEGEN_FLAGS "-I${TABLEGEN_INCLUDE_DIR}")
   list(APPEND LLVM_TABLEGEN_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/../../clang/include/clang/Driver/")
   clang_tablegen(Source/${output_file} ${td_option} SOURCE ${source} TARGET "gen-${output_file}")
-  add_dependencies(${docs_target} "gen-${output_file}")
-
   # clang_tablegen() does not create the output directory automatically,
   # so we have to create it explicitly. Note that copy-flang-src-docs below
   # does create the output directory, but it is not necessarily run
@@ -105,32 +103,34 @@ endfunction()
 if (LLVM_ENABLE_SPHINX)
   include(AddSphinxTarget)
   if (SPHINX_FOUND)
+
+    # CLANG_TABLEGEN_EXE variable needs to be set for clang_tablegen to run without error
+    find_program(CLANG_TABLEGEN_EXE "clang-tblgen" ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+
+    # Generate the RST file from TableGen (shared by both HTML and MAN builds)
+    gen_rst_file_from_td(FlangCommandLineReference.rst -gen-opt-docs FlangOptionsDocs.td)
+
+    # Copy the flang/docs directory and the generated FIRLangRef.md file to a place in the binary directory.
+    # Having all the files in a single directory makes it possible for Sphinx to process them together.
+    # Add a dependency to the flang-doc target to ensure that the FIRLangRef.md file is generated before the copying happens.
+    add_custom_target(copy-flang-src-docs
+      COMMAND "${CMAKE_COMMAND}" -E copy_directory
+      "${CMAKE_CURRENT_SOURCE_DIR}"
+      "${CMAKE_CURRENT_BINARY_DIR}/Source"
+      DEPENDS flang-doc gen-FlangCommandLineReference.rst) 
+
+    # Run Python preprocessing to prepend header to FIRLangRef.md
+    add_custom_command(TARGET copy-flang-src-docs
+      COMMAND "${Python3_EXECUTABLE}"
+      ARGS ${CMAKE_CURRENT_BINARY_DIR}/Source/FIR/CreateFIRLangRef.py)
+
     if (${SPHINX_OUTPUT_HTML})
       add_sphinx_target(html flang SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Source")
-
-      add_dependencies(docs-flang-html copy-flang-src-docs)
-
-      # Copy the flang/docs directory and the generated FIRLangRef.md file to a place in the binary directory.
-      # Having all the files in a single directory makes it possible for Sphinx to process them together.
-      # Add a dependency to the flang-doc target to ensure that the FIRLangRef.md file is generated before the copying happens.
-      add_custom_target(copy-flang-src-docs
-        COMMAND "${CMAKE_COMMAND}" -E copy_directory
-        "${CMAKE_CURRENT_SOURCE_DIR}"
-        "${CMAKE_CURRENT_BINARY_DIR}/Source"
-        DEPENDS flang-doc)
-
-      # Runs a python script prior to HTML generation to prepend a header to FIRLangRef,
-      # Without the header, the page is incorrectly formatted, as it assumes the first entry is the page title.
-      add_custom_command(TARGET copy-flang-src-docs
-        COMMAND "${Python3_EXECUTABLE}"
-        ARGS ${CMAKE_CURRENT_BINARY_DIR}/Source/FIR/CreateFIRLangRef.py)
-
-      # CLANG_TABLEGEN_EXE variable needs to be set for clang_tablegen to run without error
-      find_program(CLANG_TABLEGEN_EXE "clang-tblgen" ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
-      gen_rst_file_from_td(FlangCommandLineReference.rst -gen-opt-docs FlangOptionsDocs.td docs-flang-html)
     endif()
     if (${SPHINX_OUTPUT_MAN})
-      add_sphinx_target(man flang)
+      add_sphinx_target(man flang SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Source")
+      add_dependencies(docs-flang-man gen-FlangCommandLineReference.rst)
+      add_dependencies(docs-flang-man copy-flang-src-docs)
     endif()
   endif()
 endif()
