@@ -16,9 +16,9 @@
 
 // If n == 0, return 0, else return the lowest prime greater than or equal to n
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__hash_table>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__hash_table)
 #include <cassert>
 #include <cstddef>
 

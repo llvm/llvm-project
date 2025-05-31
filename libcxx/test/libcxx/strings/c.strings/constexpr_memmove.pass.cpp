@@ -19,14 +19,12 @@
 // and is_trivially_XXX_assignable), so we use some funky types to test these
 // corner cases.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__string/constexpr_c_functions.h>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__string/constexpr_c_functions.h)
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
-
-#include "test_macros.h"
 
 // The following types are all TriviallyCopyable, but they are not all
 // trivially_{copy,move}_{constructible,assignable}. TriviallyCopyable

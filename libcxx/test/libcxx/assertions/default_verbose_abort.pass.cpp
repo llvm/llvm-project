@@ -9,9 +9,9 @@
 // Test that the default verbose termination function aborts the program.
 // XFAIL: availability-verbose_abort-missing
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+#include "test_macros.h"
 
-#include <__verbose_abort>
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__verbose_abort)
 #include <csignal>
 #include <cstdlib>
 

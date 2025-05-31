@@ -9,14 +9,12 @@
 // Test the __XXXX routines in the <bit> header.
 // These are not supposed to be exhaustive tests, just sanity checks.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
-#include <__bit/bit_log2.h>
-#include <__bit/countl.h>
-#include <__bit/rotate.h>
-#include <cassert>
-
 #include "test_macros.h"
+
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__bit/bit_log2.h)
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__bit/countl.h)
+#include TEST_LIBCPP_INTERNAL_POSSIBLY_FROZEN_INCLUDE(__bit/rotate.h)
+#include <cassert>
 
 TEST_CONSTEXPR_CXX14 bool test() {
   const unsigned v = 0x12345678;
