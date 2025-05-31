@@ -28998,6 +28998,35 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
   assert(Subtarget.hasSSSE3() && "Expected SSSE3 support for PSHUFB");
   return LowerVectorCTLZInRegLUT(Op, DL, Subtarget, DAG);
 }
+static SDValue LowerVectorCTLZ_GFNI(SDValue Op, SelectionDAG &DAG,
+                                    const X86Subtarget &Subtarget) {
+  SDLoc dl(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue Input = Op.getOperand(0);
+
+  if (!VT.isVector() || VT.getVectorElementType() != MVT::i8)
+    return SDValue();
+  SmallVector<SDValue, 16> MatrixVals;
+  for (unsigned i = 0; i < VT.getVectorNumElements(); ++i) {
+    uint8_t mask = 1 << (7 - (i % 8));
+    MatrixVals.push_back(DAG.getConstant(mask, dl, MVT::i8));
+  }
+
+  SDValue Matrix = DAG.getBuildVector(VT, dl, MatrixVals);
+  SDValue Reversed = DAG.getNode(X86ISD::GF2P8AFFINEQB, dl, VT, Input, Matrix,
+                                 DAG.getTargetConstant(0, dl, MVT::i8));
+  SDValue AddMask = DAG.getConstant(0xFF, dl, MVT::i8);
+
+  SDValue AddVec = DAG.getSplatBuildVector(VT, dl, AddMask);
+  SDValue Summed = DAG.getNode(ISD::ADD, dl, VT, Reversed, AddVec);
+  SDValue NotSummed = DAG.getNode(ISD::XOR, dl, VT, Summed, AddVec);
+  SDValue Filtered = DAG.getNode(ISD::AND, dl, VT, NotSummed, Reversed);
+  SDValue FinalMatrix = DAG.getBuildVector(VT, dl, MatrixVals);
+  SDValue LZCNT =
+      DAG.getNode(X86ISD::GF2P8AFFINEQB, dl, VT, Filtered, FinalMatrix,
+                  DAG.getTargetConstant(8, dl, MVT::i8));
+  return LZCNT;
+}
 
 static SDValue LowerCTLZ(SDValue Op, const X86Subtarget &Subtarget,
                          SelectionDAG &DAG) {
@@ -29006,6 +29035,9 @@ static SDValue LowerCTLZ(SDValue Op, const X86Subtarget &Subtarget,
   unsigned NumBits = VT.getSizeInBits();
   SDLoc dl(Op);
   unsigned Opc = Op.getOpcode();
+
+  if (VT.isVector() && VT.getScalarType() == MVT::i8 && Subtarget.hasGFNI())
+    return LowerVectorCTLZ_GFNI(Op, DAG, Subtarget);
 
   if (VT.isVector())
     return LowerVectorCTLZ(Op, dl, Subtarget, DAG);
