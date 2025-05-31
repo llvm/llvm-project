@@ -4076,6 +4076,14 @@ TEST_F(TokenAnnotatorTest, EnumColonInTypedef) {
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_Unknown); // Not TT_InheritanceColon.
 }
 
+TEST_F(TokenAnnotatorTest, BitFieldColon) {
+  auto Tokens = annotate("class C {\n"
+                         "  int f : SIZE;\n"
+                         "};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_BitFieldColon);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
