@@ -972,8 +972,16 @@ func.func @rec_to_rec(%arg0: !fir.type<t1{i:i32, f:f32}>) -> !fir.type<t2{f:f32,
 // -----
 
 func.func @bad_box_offset(%not_a_box : !fir.ref<i32>) {
-  // expected-error@+1{{'fir.box_offset' op box_ref operand must have !fir.ref<!fir.box<T>> type}}
+  // expected-error@+1{{'fir.box_offset' op box_ref operand must have !fir.ref<!fir.box<T>> or !fir.ref<!fir.boxchar<k>> type}}
   %addr1 = fir.box_offset %not_a_box base_addr : (!fir.ref<i32>) -> !fir.llvm_ptr<!fir.ref<i32>>
+  return
+}
+
+// -----
+
+func.func @bad_box_offset(%boxchar : !fir.ref<!fir.boxchar<1>>) {
+  // expected-error@+1{{'fir.box_offset' op cannot address derived_type field of a fir.boxchar}}
+  %addr1 = fir.box_offset %boxchar derived_type : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
   return
 }
 
