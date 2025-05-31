@@ -1151,6 +1151,22 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     R.setOperand(0, Y);
     return;
   }
+
+  auto *Plan = R.getParent()->getPlan();
+  if (!Plan->isUnrolled())
+    return;
+  /// Simplify redundant ReductionStartVector recipes after unrolling.
+  VPValue *StartV;
+  if (match(&R, m_VPInstruction<VPInstruction::ReductionStartVector>(
+                    m_VPValue(StartV), m_VPValue(), m_VPValue()))) {
+    R.getVPSingleValue()->replaceUsesWithIf(
+        StartV, [&R](const VPUser &U, unsigned Idx) {
+          auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&U);
+          return PhiR && R.getVPSingleValue() == PhiR->getOperand(Idx) &&
+                 PhiR->isInLoop();
+        });
+    return;
+  }
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
