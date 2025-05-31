@@ -607,6 +607,11 @@ Improvements to Clang's time-trace
 Improvements to Coverage Mapping
 --------------------------------
 
+- [MC/DC] Unary logical not `!` among binary operators is recognized
+  as a part of the expression. (#GH124563)
+
+- [MC/DC] Nested expressions are handled as individual MC/DC expressions.
+
 Bug Fixes in This Version
 -------------------------
 
