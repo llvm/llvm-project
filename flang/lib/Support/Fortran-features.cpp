@@ -8,6 +8,7 @@
 
 #include "flang/Support/Fortran-features.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/optional.h"
 #include "flang/Support/Fortran.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -99,11 +100,48 @@ LanguageFeatureControl::LanguageFeatureControl() {
 // used instead of static so that there can be unit tests for these
 // functions.
 namespace FortranFeaturesHelpers {
+
+// Ignore case and any inserted punctuation (like '-'/'_')
+static std::optional<char> GetWarningChar(char ch) {
+  if (ch >= 'a' && ch <= 'z') {
+    return ch;
+  } else if (ch >= 'A' && ch <= 'Z') {
+    return ch - 'A' + 'a';
+  } else if (ch >= '0' && ch <= '9') {
+    return ch;
+  } else {
+    return std::nullopt;
+  }
+}
+
+// Check for case and punctuation insensitive string equality.
+// NB, b is probably not null terminated, so don't treat is like a C string.
+static bool InsensitiveWarningNameMatch(
+    std::string_view a, std::string_view b) {
+  size_t j{0}, aSize{a.size()}, k{0}, bSize{b.size()};
+  while (true) {
+    optional<char> ach{nullopt};
+    while (!ach && j < aSize) {
+      ach = GetWarningChar(a[j++]);
+    }
+    optional<char> bch{};
+    while (!bch && k < bSize) {
+      bch = GetWarningChar(b[k++]);
+    }
+    if (!ach && !bch) {
+      return true;
+    } else if (!ach || !bch || *ach != *bch) {
+      return false;
+    }
+    ach = bch = nullopt;
+  }
+}
+
 // Check if lower case hyphenated words are equal to camel case words.
 // Because of out use case we know that 'r' the camel case string is
 // well formed in the sense that it is a sequence [a-zA-Z]+[a-zA-Z0-9]*.
 // This is checked in the enum-class.h file.
-static bool LowerHyphEqualCamelCase(llvm::StringRef l, llvm::StringRef r) {
+static bool SensitiveWarningNameMatch(llvm::StringRef l, llvm::StringRef r) {
   size_t ls{l.size()}, rs{r.size()};
   if (ls < rs) {
     return false;
@@ -154,42 +192,56 @@ static bool LowerHyphEqualCamelCase(llvm::StringRef l, llvm::StringRef r) {
 // Parse a CLI enum option return the enum index and whether it should be
 // enabled (true) or disabled (false).
 template <typename T>
-optional<std::pair<bool, T>> ParseCLIEnum(
-    llvm::StringRef input, EnumClass::FindIndexType findIndex) {
+optional<std::pair<bool, T>> ParseCLIEnum(llvm::StringRef input,
+    EnumClass::FindIndexType findIndex, bool insensitive) {
   bool negated{false};
-  if (input.starts_with("no-")) {
-    negated = true;
-    input = input.drop_front(3);
+  EnumClass::Predicate predicate;
+  if (insensitive) {
+    if (input.starts_with_insensitive("no")) {
+      negated = true;
+      input = input.drop_front(2);
+    }
+    predicate = [input](std::string_view r) {
+      return InsensitiveWarningNameMatch(input, r);
+    };
+  } else {
+    if (input.starts_with("no-")) {
+      negated = true;
+      input = input.drop_front(3);
+    }
+    predicate = [input](std::string_view r) {
+      return SensitiveWarningNameMatch(input, r);
+    };
   }
-  EnumClass::Predicate predicate{[input](std::string_view r) {
-    return LowerHyphEqualCamelCase(input, r);
-  }};
   optional<T> x = EnumClass::Find<T>(predicate, findIndex);
   return MapOption<T, std::pair<bool, T>>(
       x, [negated](T x) { return std::pair{!negated, x}; });
 }
 
 optional<std::pair<bool, UsageWarning>> parseCLIUsageWarning(
-    llvm::StringRef input) {
-  return ParseCLIEnum<UsageWarning>(input, FindUsageWarningIndex);
+    llvm::StringRef input, bool insensitive) {
+  return ParseCLIEnum<UsageWarning>(input, FindUsageWarningIndex, insensitive);
 }
 
 optional<std::pair<bool, LanguageFeature>> parseCLILanguageFeature(
-    llvm::StringRef input) {
-  return ParseCLIEnum<LanguageFeature>(input, FindLanguageFeatureIndex);
+    llvm::StringRef input, bool insensitive) {
+  return ParseCLIEnum<LanguageFeature>(
+      input, FindLanguageFeatureIndex, insensitive);
 }
 
 } // namespace FortranFeaturesHelpers
 
 // Take a string from the CLI and apply it to the LanguageFeatureControl.
 // Return true if the option was applied recognized.
-bool LanguageFeatureControl::applyCLIOption(std::string_view input) {
+bool LanguageFeatureControl::applyCLIOption(
+    std::string_view input, bool insensitive) {
   llvm::StringRef inputRef{input};
-  if (auto result = FortranFeaturesHelpers::parseCLILanguageFeature(inputRef)) {
+  if (auto result = FortranFeaturesHelpers::parseCLILanguageFeature(
+          inputRef, insensitive)) {
     EnableWarning(result->second, result->first);
     return true;
-  } else if (auto result =
-                 FortranFeaturesHelpers::parseCLIUsageWarning(inputRef)) {
+  } else if (auto result = FortranFeaturesHelpers::parseCLIUsageWarning(
+                 inputRef, insensitive)) {
     EnableWarning(result->second, result->first);
     return true;
   }

@@ -113,7 +113,7 @@ public:
     DisableAllNonstandardWarnings();
     DisableAllUsageWarnings();
   }
-  bool applyCLIOption(std::string_view input);
+  bool applyCLIOption(std::string_view input, bool insensitive = false);
   bool AreWarningsDisabled() const { return disableAllWarnings_; }
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
   bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }
