@@ -601,6 +601,9 @@ Improvements to Clang's diagnostics
   trigger a ``'Blue' is deprecated`` warning, which can be turned off with
   ``-Wno-deprecated-declarations-switch-case``.
 
+- Clang now diagnoses missing format attributes for non-template functions
+  and class/struct/union members. (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
