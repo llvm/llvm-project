@@ -978,9 +978,11 @@ static void addVPMetadata(Module &M, Instruction &I,
 
   if (I.getMetadata(LLVMContext::MD_prof)) {
     uint64_t Unused;
-    // ~0U means get all available value profile data without any count limit
+    // TODO: When merging is implemented, increase this to a typical ICP value
+    // (e.g., 3-6) For now, we only need to check if existing data exists, so 1
+    // is sufficient
     auto ExistingVD = getValueProfDataFromInst(I, IPVK_IndirectCallTarget,
-                                               /*MaxNumValueData=*/~0U, Unused);
+                                               /*MaxNumValueData=*/1, Unused);
     // We don't know how to merge value profile data yet.
     if (!ExistingVD.empty()) {
       return;
