@@ -605,6 +605,7 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
   // Add target ID features to -target-feature options. No diagnostics should
   // be emitted here since invalid target ID is diagnosed at other places.
   StringRef TargetID;
+  StringRef GpuArch;
   if (Args.hasArg(options::OPT_mcpu_EQ))
     TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
   else if (Args.hasArg(options::OPT_march_EQ))
@@ -613,7 +614,7 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
     llvm::StringMap<bool> FeatureMap;
     auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);
     if (OptionalGpuArch) {
-      StringRef GpuArch = *OptionalGpuArch;
+      GpuArch = *OptionalGpuArch;
       // Iterate through all possible target ID features for the given GPU.
       // If it is mapped to true, add +feature.
       // If it is mapped to false, add -feature.
@@ -627,9 +628,10 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
       }
     }
   }
-
-  if (Args.hasFlag(options::OPT_mwavefrontsize64,
-                   options::OPT_mno_wavefrontsize64, false))
+  if (toolchains::AMDGPUToolChain::isWave64(
+          D, Args, llvm::AMDGPU::parseArchAMDGCN(GpuArch),
+          /*DiagInvalid=*/false,
+          /*Explicit=*/true))
     Features.push_back("+wavefrontsize64");
 
   if (Args.hasFlag(options::OPT_mamdgpu_precise_memory_op,
@@ -766,15 +768,27 @@ llvm::DenormalMode AMDGPUToolChain::getDefaultDenormalModeForType(
                llvm::DenormalMode::getIEEE();
 }
 
-bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
-                               llvm::AMDGPU::GPUKind Kind) {
+bool AMDGPUToolChain::isWave64(const Driver &D,
+                               const llvm::opt::ArgList &DriverArgs,
+                               llvm::AMDGPU::GPUKind Kind, bool DiagInvalid,
+                               bool Explicit) {
   const unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(Kind);
   bool HasWave32 = (ArchAttr & llvm::AMDGPU::FEATURE_WAVE32);
 
-  return !HasWave32 || DriverArgs.hasFlag(
-    options::OPT_mwavefrontsize64, options::OPT_mno_wavefrontsize64, false);
-}
+  bool EnableWave64 = DriverArgs.hasFlag(
+      options::OPT_mwavefrontsize64, options::OPT_mno_wavefrontsize64, false);
+  bool ForceUnsafeWave64 =
+      DriverArgs.hasFlag(options::OPT_mforce_unsafe_wavefrontsize64,
+                         options::OPT_mno_force_unsafe_wavefrontsize64, false);
 
+  if (DiagInvalid && HasWave32 && EnableWave64 && !ForceUnsafeWave64)
+    D.Diag(diag::err_drv_wave64_requires_force_unsafe);
+
+  if (Explicit)
+    return EnableWave64 || ForceUnsafeWave64;
+
+  return !HasWave32 || EnableWave64 || ForceUnsafeWave64;
+}
 
 /// ROCM Toolchain
 ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
@@ -883,7 +897,7 @@ void ROCMToolChain::addClangTargetOptions(
                                                 ABIVer))
     return;
 
-  bool Wave64 = isWave64(DriverArgs, Kind);
+  bool Wave64 = isWave64(getDriver(), DriverArgs, Kind);
   // TODO: There are way too many flags that change this. Do we need to check
   // them all?
   bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
@@ -1011,7 +1025,7 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
   bool CorrectSqrt = DriverArgs.hasFlag(
       options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
       options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, true);
-  bool Wave64 = isWave64(DriverArgs, Kind);
+  bool Wave64 = isWave64(getDriver(), DriverArgs, Kind);
 
   // GPU Sanitizer currently only supports ASan and is enabled through host
   // ASan.
