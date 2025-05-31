@@ -423,3 +423,53 @@ define i64 @smear_set_bit_different_dest_type_wider_dst(i32 %x) {
   %s = sext i8 %a to i64
   ret i64 %s
 }
+
+define i32 @sext_trunc_nsw(i16 %x) {
+; CHECK-LABEL: @sext_trunc_nsw(
+; CHECK-NEXT:    [[E:%.*]] = sext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %c = trunc nsw i16 %x to i8
+  %e = sext i8 %c to i32
+  ret i32 %e
+}
+
+define i16 @sext_trunc_nsw_2(i32 %x) {
+; CHECK-LABEL: @sext_trunc_nsw_2(
+; CHECK-NEXT:    [[E:%.*]] = trunc nsw i32 [[X:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[E]]
+;
+  %c = trunc nsw i32 %x to i8
+  %e = sext i8 %c to i16
+  ret i16 %e
+}
+
+define i16 @sext_trunc_nsw_3(i16 %x) {
+; CHECK-LABEL: @sext_trunc_nsw_3(
+; CHECK-NEXT:    ret i16 [[E:%.*]]
+;
+  %c = trunc nsw i16 %x to i8
+  %e = sext i8 %c to i16
+  ret i16 %e
+}
+
+define <2 x i32> @sext_trunc_nsw_vec(<2 x i16> %x) {
+; CHECK-LABEL: @sext_trunc_nsw_vec(
+; CHECK-NEXT:    [[E:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[E]]
+;
+  %c = trunc nsw <2 x i16> %x to <2 x i8>
+  %e = sext <2 x i8> %c to <2 x i32>
+  ret <2 x i32> %e
+}
+
+define i32 @sext_trunc(i16 %x) {
+; CHECK-LABEL: @sext_trunc(
+; CHECK-NEXT:    [[C:%.*]] = trunc i16 [[X:%.*]] to i8
+; CHECK-NEXT:    [[E:%.*]] = sext i8 [[C]] to i32
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %c = trunc i16 %x to i8
+  %e = sext i8 %c to i32
+  ret i32 %e
+}
