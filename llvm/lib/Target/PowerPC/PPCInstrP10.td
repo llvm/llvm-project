@@ -2159,8 +2159,133 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, HasVSX] in {
                                (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
 }
 
-class xxevalPattern <dag pattern, bits<8> imm> :
-  Pat<(v4i32 pattern), (XXEVAL $vA, $vB, $vC, imm)> {}
+class XXEvalPattern <ValueType vt, dag pattern, bits<8> imm> :
+  Pat<(vt pattern), (XXEVAL $vA, $vB, $vC, imm)> {}
+
+class DagUnaryVNot<ValueType vt, string opstr>{
+  // Defines a class that returns the UnaryVNot dag for an operand string based on a value type.
+  dag res = !cond(
+          !eq(vt, v4i32) : !dag(vnot, [v4i32], [opstr]),
+          !eq(vt, v2i64) : (v2i64 (bitconvert (vnot (v4i32 !dag(bitconvert, [v2i64], [opstr])))))
+          );
+}
+
+class DagCondVNot<dag d, bit negate> {
+  // Defines a class that generates a vnot around the dag.
+  dag res = !if(!ne(negate, 0),
+               (vnot d),
+               d);
+}
+
+class XXEvalUnaryNot<ValueType vt> {
+  // Defines a wrapper class for unary NOT operations for v4i32 and v2i64 vector types.
+  // Unary NOT on operand B or C based on value type.
+  dag opB = DagUnaryVNot<vt, "vB">.res;
+  dag opC = DagUnaryVNot<vt, "vC">.res;
+}
+
+class XXEvalBinaryPattern<ValueType vt, SDPatternOperator op, bit notResult = 0> {
+  // Defines a wrapper class for binary patterns with optional NOT on result.
+  // Generate op pattern with optional NOT wrapping for result depending on "notResult".
+      dag opPat = !cond(
+                !eq(vt, v4i32) : DagCondVNot<(op v4i32:$vB, v4i32:$vC), notResult>.res,
+                !eq(vt, v2i64) : (v2i64 (bitconvert DagCondVNot<(op
+                                      (v4i32 (bitconvert v2i64:$vB)),
+                                      (v4i32 (bitconvert v2i64:$vC))), notResult>.res))
+                );
+}
+
+multiclass XXEvalVSelectWithXAnd<ValueType vt, bits<8> baseImm> {
+  // Multiclass for Ternary(A, X, and(B, C)) style patterns.
+  // Ternary(A, xor(B,C), and(B,C)) => imm: baseImm
+  def : XXEvalPattern<vt, 
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, xor>.opPat, XXEvalBinaryPattern<vt, and>.opPat), 
+        baseImm>;
+  // Ternary(A, nor(B,C), and(B,C)) => imm: baseImm + 2
+  def : XXEvalPattern<vt, 
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, or, 1>.opPat, XXEvalBinaryPattern<vt, and>.opPat), 
+        !add(baseImm, 2)>;
+  // Ternary(A, eqv(B,C), and(B,C)) => imm: baseImm + 3
+  def : XXEvalPattern<vt, 
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, xor, 1>.opPat, XXEvalBinaryPattern<vt, and>.opPat), 
+        !add(baseImm, 3)>;
+  // Ternary(A, not(C), and(B,C)) => imm: baseImm + 4
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalUnaryNot<vt>.opC, XXEvalBinaryPattern<vt, and>.opPat), 
+        !add(baseImm, 4)>;
+  // Ternary(A, not(B), and(B,C)) => imm: baseImm + 6
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalUnaryNot<vt>.opB, XXEvalBinaryPattern<vt, and>.opPat), 
+        !add(baseImm, 6)>;
+}
+
+multiclass XXEvalVSelectWithXB<ValueType vt, bits<8> baseImm>{
+  // Multiclass for Ternary(A, X, B) style patterns
+  // Ternary(A, and(B,C), B) => imm: baseImm
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, and>.opPat, vt:$vB), 
+        baseImm>;
+  // Ternary(A, nor(B,C), B) => imm: baseImm + 7
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, or, 1>.opPat, vt:$vB), 
+        !add(baseImm, 7)>;
+  // Ternary(A, eqv(B,C), B) => imm: baseImm + 8
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, xor, 1>.opPat, vt:$vB), 
+        !add(baseImm, 8)>;
+  // Ternary(A, not(C), B) => imm: baseImm + 9
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalUnaryNot<vt>.opC, vt:$vB), 
+        !add(baseImm, 9)>;
+  // Ternary(A, nand(B,C), B) => imm: baseImm + 13
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, and, 1>.opPat, vt:$vB), 
+        !add(baseImm, 13)>;
+}
+
+multiclass XXEvalVSelectWithXC<ValueType vt, bits<8> baseImm>{
+  // Multiclass for Ternary(A, X, C) style patterns
+  // Ternary(A, and(B,C), C) => imm: baseImm
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, and>.opPat, vt:$vC), 
+        baseImm>;
+  // Ternary(A, nor(B,C), C) => imm: baseImm + 7
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, or, 1>.opPat, vt:$vC), 
+        !add(baseImm, 7)>;
+  // Ternary(A, eqv(B,C), C) => imm: baseImm + 8
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, xor, 1>.opPat, vt:$vC), 
+        !add(baseImm, 8)>;
+  // Ternary(A, nand(B,C), C) => imm: baseImm + 13
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, and, 1>.opPat, vt:$vC), 
+        !add(baseImm, 13)>;
+}
+
+multiclass XXEvalVSelectWithXXor<ValueType vt, bits<8> baseImm>{
+  // Multiclass for Ternary(A, X, xor(B,C)) style patterns
+  // Ternary(A, and(B,C), xor(B,C)) => imm: baseImm
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, and>.opPat, XXEvalBinaryPattern<vt, xor>.opPat), 
+        baseImm>;
+  // Ternary(A, B, xor(B,C)) => imm: baseImm + 2
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, vt:$vB, XXEvalBinaryPattern<vt, xor>.opPat), 
+        !add(baseImm, 2)>;
+  // Ternary(A, C, xor(B,C)) => imm: baseImm + 4
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, vt:$vC, XXEvalBinaryPattern<vt, xor>.opPat), 
+        !add(baseImm, 4)>;
+  // Ternary(A, or(B,C), xor(B,C)) => imm: baseImm + 6
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, or>.opPat, XXEvalBinaryPattern<vt, xor>.opPat), 
+        !add(baseImm, 6)>;
+  // Ternary(A, nor(B,C), xor(B,C)) => imm: baseImm + 7
+  def : XXEvalPattern<vt,
+        (vselect vt:$vA, XXEvalBinaryPattern<vt, or, 1>.opPat, XXEvalBinaryPattern<vt, xor>.opPat), 
+        !add(baseImm, 7)>; 
+}
 
 let Predicates = [PrefixInstrs, HasP10Vector] in {
   let AddedComplexity = 400 in {
@@ -2192,83 +2317,96 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     // Anonymous patterns for XXEVAL
     // AND
     // and(A, B, C)
-    def : xxevalPattern<(and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 1>;
+    def : XXEvalPattern<v4i32, (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 1>;
     // and(A, xor(B, C))
-    def : xxevalPattern<(and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 6>;
+    def : XXEvalPattern<v4i32, (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 6>;
     // and(A, or(B, C))
-    def : xxevalPattern<(and v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 7>;
+    def : XXEvalPattern<v4i32, (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 7>;
     // and(A, nor(B, C))
-    def : xxevalPattern<(and v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 8>;
+    def : XXEvalPattern<v4i32, (and v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 8>;
     // and(A, eqv(B, C))
-    def : xxevalPattern<(and v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 9>;
+    def : XXEvalPattern<v4i32, (and v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 9>;
     // and(A, nand(B, C))
-    def : xxevalPattern<(and v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 14>;
+    def : XXEvalPattern<v4i32, (and v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 14>;
 
     // NAND
     // nand(A, B, C)
-    def : xxevalPattern<(vnot (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
+    def : XXEvalPattern<v4i32, (vnot (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC))),
                          !sub(255, 1)>;
     // nand(A, xor(B, C))
-    def : xxevalPattern<(vnot (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
+    def : XXEvalPattern<v4i32, (vnot (and v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))),
                          !sub(255, 6)>;
     // nand(A, or(B, C))
-    def : xxevalPattern<(vnot (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
+    def : XXEvalPattern<v4i32, (vnot (and v4i32:$vA, (or v4i32:$vB, v4i32:$vC))),
                          !sub(255, 7)>;
     // nand(A, nor(B, C))
-    def : xxevalPattern<(or (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
+    def : XXEvalPattern<v4i32, (or (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)),
                          !sub(255, 8)>;
     // nand(A, eqv(B, C))
-    def : xxevalPattern<(or (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
+    def : XXEvalPattern<v4i32, (or (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)),
                          !sub(255, 9)>;
     // nand(A, nand(B, C))
-    def : xxevalPattern<(or (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
+    def : XXEvalPattern<v4i32, (or (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
                          !sub(255, 14)>;
 
     // EQV
     // (eqv A, B, C)
-    def : xxevalPattern<(or (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)),
+    def : XXEvalPattern<v4i32, (or (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)),
                             (vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)))),
                          150>;
     // (eqv A, (and B, C))
-    def : xxevalPattern<(vnot (xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 225>;
+    def : XXEvalPattern<v4i32, (vnot (xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 225>;
     // (eqv A, (or B, C))
-    def : xxevalPattern<(vnot (xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 135>;
+    def : XXEvalPattern<v4i32, (vnot (xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 135>;
 
     // NOR
     // (nor A, B, C)
-    def : xxevalPattern<(vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 128>;
+    def : XXEvalPattern<v4i32, (vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 128>;
     // (nor A, (and B, C))
-    def : xxevalPattern<(vnot (or v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 224>;
+    def : XXEvalPattern<v4i32, (vnot (or v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 224>;
     // (nor A, (eqv B, C))
-    def : xxevalPattern<(and (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)), 96>;
+    def : XXEvalPattern<v4i32, (and (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)), 96>;
     // (nor A, (nand B, C))
-    def : xxevalPattern<(and (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)), 16>;
+    def : XXEvalPattern<v4i32, (and (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)), 16>;
     // (nor A, (nor B, C))
-    def : xxevalPattern<(and (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)), 112>;
+    def : XXEvalPattern<v4i32, (and (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)), 112>;
     // (nor A, (xor B, C))
-    def : xxevalPattern<(vnot (or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))), 144>;
+    def : XXEvalPattern<v4i32, (vnot (or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))), 144>;
 
     // OR
     // (or A, B, C)
-    def : xxevalPattern<(or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 127>;
+    def : XXEvalPattern<v4i32, (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 127>;
     // (or A, (and B, C))
-    def : xxevalPattern<(or v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 31>;
+    def : XXEvalPattern<v4i32, (or v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 31>;
     // (or A, (eqv B, C))
-    def : xxevalPattern<(or v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 159>;
+    def : XXEvalPattern<v4i32, (or v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 159>;
     // (or A, (nand B, C))
-    def : xxevalPattern<(or v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 239>;
+    def : XXEvalPattern<v4i32, (or v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 239>;
     // (or A, (nor B, C))
-    def : xxevalPattern<(or v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 143>;
+    def : XXEvalPattern<v4i32, (or v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 143>;
     // (or A, (xor B, C))
-    def : xxevalPattern<(or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 111>;
+    def : XXEvalPattern<v4i32, (or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 111>;
 
     // XOR
     // (xor A, B, C)
-    def : xxevalPattern<(xor v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 105>;
+    def : XXEvalPattern<v4i32, (xor v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 105>;
     // (xor A, (and B, C))
-    def : xxevalPattern<(xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 30>;
+    def : XXEvalPattern<v4i32, (xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 30>;
     // (xor A, (or B, C))
-    def : xxevalPattern<(xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 120>;
+    def : XXEvalPattern<v4i32, (xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 120>;
+
+    // Ternary operation support with the xxeval instruction.
+    defm : XXEvalVSelectWithXAnd<v4i32, 22>;
+    defm : XXEvalVSelectWithXAnd<v2i64, 22>;
+
+    defm : XXEvalVSelectWithXB<v4i32, 49>;
+    defm : XXEvalVSelectWithXB<v2i64, 49>;
+
+    defm : XXEvalVSelectWithXC<v4i32, 81>;
+    defm : XXEvalVSelectWithXC<v2i64, 81>;
+
+    defm : XXEvalVSelectWithXXor<v4i32, 97>;
+    defm : XXEvalVSelectWithXXor<v2i64, 97>;
 
     // Anonymous patterns to select prefixed VSX loads and stores.
     // Load / Store f128
