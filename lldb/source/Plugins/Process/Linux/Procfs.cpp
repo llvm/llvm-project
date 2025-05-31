@@ -74,8 +74,11 @@ lldb_private::process_linux::GetAvailableLogicalCoreIDs() {
 llvm::Expected<int> lldb_private::process_linux::GetPtraceScope() {
   ErrorOr<std::unique_ptr<MemoryBuffer>> ptrace_scope_file =
       getProcFile("sys/kernel/yama/ptrace_scope");
-  if (!*ptrace_scope_file)
+  if (!ptrace_scope_file)
     return errorCodeToError(ptrace_scope_file.getError());
+  if (!*ptrace_scope_file)
+    return createStringError(inconvertibleErrorCode(),
+                             "ptrace_scope buffer is nullptr");
   // The contents should be something like "1\n". Trim it so we get "1".
   StringRef buffer = (*ptrace_scope_file)->getBuffer().trim();
   int ptrace_scope_value;
