@@ -1011,14 +1011,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
           .Default([](auto *) { return false; }))
     return;
 
-  // Fold PredPHI constant -> constant.
+  // Fold PredPHI LiveIn -> LiveIn.
   if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&R)) {
-    VPlan *Plan = R.getParent()->getPlan();
     VPValue *Op = PredPHI->getOperand(0);
     if (!Op->isLiveIn() || !Op->getLiveInIRValue())
       return;
-    if (auto *C = dyn_cast<Constant>(Op->getLiveInIRValue()))
-      PredPHI->replaceAllUsesWith(Plan->getOrAddLiveIn(C));
+    PredPHI->replaceAllUsesWith(Op);
   }
 
   // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
