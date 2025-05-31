@@ -11001,9 +11001,48 @@ SDValue AArch64TargetLowering::LowerSETCCCARRY(SDValue Op,
                      Cmp.getValue(1));
 }
 
+/// Emit vector comparison for floating-point values, producing a mask.
+static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
+                                    AArch64CC::CondCode CC, bool NoNans, EVT VT,
+                                    const SDLoc &dl, SelectionDAG &DAG) {
+  EVT SrcVT = LHS.getValueType();
+  assert(VT.getSizeInBits() == SrcVT.getSizeInBits() &&
+         "function only supposed to emit natural comparisons");
+
+  switch (CC) {
+  default:
+    return SDValue();
+  case AArch64CC::NE: {
+    SDValue Fcmeq = DAG.getNode(AArch64ISD::FCMEQ, dl, VT, LHS, RHS);
+    return DAG.getNOT(dl, Fcmeq, VT);
+  }
+  case AArch64CC::EQ:
+    return DAG.getNode(AArch64ISD::FCMEQ, dl, VT, LHS, RHS);
+  case AArch64CC::GE:
+    return DAG.getNode(AArch64ISD::FCMGE, dl, VT, LHS, RHS);
+  case AArch64CC::GT:
+    return DAG.getNode(AArch64ISD::FCMGT, dl, VT, LHS, RHS);
+  case AArch64CC::LE:
+    if (!NoNans)
+      return SDValue();
+    // If we ignore NaNs then we can use to the LS implementation.
+    [[fallthrough]];
+  case AArch64CC::LS:
+    return DAG.getNode(AArch64ISD::FCMGE, dl, VT, RHS, LHS);
+  case AArch64CC::LT:
+    if (!NoNans)
+      return SDValue();
+    // If we ignore NaNs then we can use to the MI implementation.
+    [[fallthrough]];
+  case AArch64CC::MI:
+    return DAG.getNode(AArch64ISD::FCMGT, dl, VT, RHS, LHS);
+  }
+}
+
 SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
                                               SDValue RHS, SDValue TVal,
-                                              SDValue FVal, const SDLoc &dl,
+                                              SDValue FVal, bool HasNoNaNs,
+                                              const SDLoc &dl,
                                               SelectionDAG &DAG) const {
   // Handle f128 first, because it will result in a comparison of some RTLIB
   // call result against zero.
@@ -11187,6 +11226,28 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
          LHS.getValueType() == MVT::f64);
   assert(LHS.getValueType() == RHS.getValueType());
   EVT VT = TVal.getValueType();
+
+  // If the purpose of the comparison is to select between all ones
+  // or all zeros, use a vector comparison because the operands are already
+  // stored in SIMD registers.
+  auto *CTVal = dyn_cast<ConstantSDNode>(TVal);
+  auto *CFVal = dyn_cast<ConstantSDNode>(FVal);
+  if (Subtarget->isNeonAvailable() && CTVal && CFVal &&
+      VT.getSizeInBits() == LHS.getValueType().getSizeInBits() &&
+      ((CTVal->isAllOnes() && CFVal->isZero()) ||
+       (CTVal->isZero() && CFVal->isAllOnes()))) {
+    AArch64CC::CondCode CC1;
+    AArch64CC::CondCode CC2;
+    bool ShouldInvert = false;
+    changeVectorFPCCToAArch64CC(CC, CC1, CC2, ShouldInvert);
+    if (CTVal->isZero() ^ ShouldInvert)
+      std::swap(TVal, FVal);
+    bool NoNaNs = getTargetMachine().Options.NoNaNsFPMath || HasNoNaNs;
+    SDValue Res = EmitVectorComparison(LHS, RHS, CC1, NoNaNs, VT, dl, DAG);
+    if (Res)
+      return Res;
+  }
+
   SDValue Cmp = emitComparison(LHS, RHS, CC, dl, DAG);
 
   // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't totally
@@ -11273,8 +11334,9 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(SDValue Op,
   SDValue RHS = Op.getOperand(1);
   SDValue TVal = Op.getOperand(2);
   SDValue FVal = Op.getOperand(3);
+  bool HasNoNans = Op->getFlags().hasNoNaNs();
   SDLoc DL(Op);
-  return LowerSELECT_CC(CC, LHS, RHS, TVal, FVal, DL, DAG);
+  return LowerSELECT_CC(CC, LHS, RHS, TVal, FVal, HasNoNans, DL, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
@@ -11282,6 +11344,7 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
   SDValue CCVal = Op->getOperand(0);
   SDValue TVal = Op->getOperand(1);
   SDValue FVal = Op->getOperand(2);
+  bool HasNoNans = Op->getFlags().hasNoNaNs();
   SDLoc DL(Op);
 
   EVT Ty = Op.getValueType();
@@ -11348,7 +11411,7 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
                                      DAG.getUNDEF(MVT::f32), FVal);
   }
 
-  SDValue Res = LowerSELECT_CC(CC, LHS, RHS, TVal, FVal, DL, DAG);
+  SDValue Res = LowerSELECT_CC(CC, LHS, RHS, TVal, FVal, HasNoNans, DL, DAG);
 
   if ((Ty == MVT::f16 || Ty == MVT::bf16) && !Subtarget->hasFullFP16()) {
     return DAG.getTargetExtractSubreg(AArch64::hsub, DL, Ty, Res);
@@ -15599,47 +15662,6 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
   }
 
   llvm_unreachable("unexpected shift opcode");
-}
-
-static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
-                                    AArch64CC::CondCode CC, bool NoNans, EVT VT,
-                                    const SDLoc &dl, SelectionDAG &DAG) {
-  EVT SrcVT = LHS.getValueType();
-  assert(VT.getSizeInBits() == SrcVT.getSizeInBits() &&
-         "function only supposed to emit natural comparisons");
-
-  if (SrcVT.getVectorElementType().isFloatingPoint()) {
-    switch (CC) {
-    default:
-      return SDValue();
-    case AArch64CC::NE: {
-      SDValue Fcmeq = DAG.getNode(AArch64ISD::FCMEQ, dl, VT, LHS, RHS);
-      return DAG.getNOT(dl, Fcmeq, VT);
-    }
-    case AArch64CC::EQ:
-      return DAG.getNode(AArch64ISD::FCMEQ, dl, VT, LHS, RHS);
-    case AArch64CC::GE:
-      return DAG.getNode(AArch64ISD::FCMGE, dl, VT, LHS, RHS);
-    case AArch64CC::GT:
-      return DAG.getNode(AArch64ISD::FCMGT, dl, VT, LHS, RHS);
-    case AArch64CC::LE:
-      if (!NoNans)
-        return SDValue();
-      // If we ignore NaNs then we can use to the LS implementation.
-      [[fallthrough]];
-    case AArch64CC::LS:
-      return DAG.getNode(AArch64ISD::FCMGE, dl, VT, RHS, LHS);
-    case AArch64CC::LT:
-      if (!NoNans)
-        return SDValue();
-      // If we ignore NaNs then we can use to the MI implementation.
-      [[fallthrough]];
-    case AArch64CC::MI:
-      return DAG.getNode(AArch64ISD::FCMGT, dl, VT, RHS, LHS);
-    }
-  }
-
-  return SDValue();
 }
 
 SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
@@ -25455,6 +25477,28 @@ static SDValue performDUPCombine(SDNode *N,
   }
 
   if (N->getOpcode() == AArch64ISD::DUP) {
+    // If the instruction is known to produce a scalar in SIMD registers, we can
+    // can duplicate it across the vector lanes using DUPLANE instead of moving
+    // it to a GPR first. For example, this allows us to handle:
+    //   v4i32 = DUP (i32 (FCMGT (f32, f32)))
+    SDValue Op = N->getOperand(0);
+    // FIXME: Ideally, we should be able to handle all instructions that
+    // produce a scalar value in FPRs.
+    if (Op.getOpcode() == AArch64ISD::FCMEQ ||
+        Op.getOpcode() == AArch64ISD::FCMGE ||
+        Op.getOpcode() == AArch64ISD::FCMGT) {
+      EVT ElemVT = VT.getVectorElementType();
+      EVT ExpandedVT = VT;
+      // Insert into a 128-bit vector to match DUPLANE's pattern.
+      if (VT.getSizeInBits() != 128)
+        ExpandedVT = EVT::getVectorVT(*DCI.DAG.getContext(), ElemVT,
+                                      128 / ElemVT.getSizeInBits());
+      SDValue Zero = DCI.DAG.getConstant(0, DL, MVT::i64);
+      SDValue Vec = DCI.DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ExpandedVT,
+                                    DCI.DAG.getUNDEF(ExpandedVT), Op, Zero);
+      return DCI.DAG.getNode(getDUPLANEOp(ElemVT), DL, VT, Vec, Zero);
+    }
+
     if (DCI.isAfterLegalizeDAG()) {
       // If scalar dup's operand is extract_vector_elt, try to combine them into
       // duplane. For example,

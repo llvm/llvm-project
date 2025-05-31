@@ -646,8 +646,8 @@ private:
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(ISD::CondCode CC, SDValue LHS, SDValue RHS,
-                         SDValue TVal, SDValue FVal, const SDLoc &dl,
-                         SelectionDAG &DAG) const;
+                         SDValue TVal, SDValue FVal, bool HasNoNans,
+                         const SDLoc &dl, SelectionDAG &DAG) const;
   SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
