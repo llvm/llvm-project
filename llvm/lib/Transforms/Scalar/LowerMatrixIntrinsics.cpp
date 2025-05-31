@@ -234,6 +234,7 @@ static bool isUniformShape(Value *V) {
     return true;
 
   switch (I->getOpcode()) {
+  case Instruction::PHI:
   case Instruction::FNeg:
     return true;
   default:
