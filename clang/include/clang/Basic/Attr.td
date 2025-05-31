@@ -140,6 +140,11 @@ def SharedVar : SubsetSubject<Var,
                               [{S->hasGlobalStorage() && !S->getTLSKind()}],
                               "global variables">;
 
+def HLSLInputBuiltin : SubsetSubject<Var, [{S->hasGlobalStorage() &&
+                    S->getStorageClass()==StorageClass::SC_Static &&
+                    S->getType().isConstQualified()}],
+                                     "static const globals">;
+
 def GlobalVar : SubsetSubject<Var,
                              [{S->hasGlobalStorage()}], "global variables">;
 
@@ -4843,6 +4848,13 @@ def HLSLResourceBinding: InheritableAttr {
   }];
 }
 
+def HLSLSV_Position : HLSLAnnotationAttr {
+  let Spellings = [HLSLAnnotation<"sv_position">];
+  let Subjects = SubjectList<[ParmVar, Field]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLSV_PositionDocs];
+}
+
 def HLSLPackOffset: HLSLAnnotationAttr {
   let Spellings = [HLSLAnnotation<"packoffset">];
   let LangOpts = [HLSL];
@@ -4947,6 +4959,14 @@ def HLSLWaveSize: InheritableAttr {
       int getSpelledArgsCount() const { return SpelledArgsCount; }
   }];
   let Documentation = [WaveSizeDocs];
+}
+
+def HLSLVkExtBuiltinInput : InheritableAttr {
+  let Spellings = [CXX11<"vk", "ext_builtin_input">];
+  let Args = [UnsignedArgument<"BuiltIn">];
+  let Subjects = SubjectList<[HLSLInputBuiltin], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLVkExtBuiltinInputDocs];
 }
 
 def RandomizeLayout : InheritableAttr {
