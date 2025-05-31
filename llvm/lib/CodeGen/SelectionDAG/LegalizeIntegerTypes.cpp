@@ -5444,7 +5444,7 @@ void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N, SDValue &Lo,
 }
 
 void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo,
-                                                SDValue &Hi) {
+                                          SDValue &Hi) {
   // Values numbered from least significant to most significant.
   SDValue LL, LH, RL, RH;
   GetExpandedInteger(N->getOperand(0), LL, LH);
@@ -5452,9 +5452,10 @@ void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo,
   EVT HalfVT = LL.getValueType();
   SDLoc DL(N);
   
-  // CLMUL is carryless so Lo is computed from the low half
+  // Lo is computed from the low half
   Lo = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RL);
-  // the high bits not included in CLMUL(A,B) can be computed by
+  // CLMUL is carryless so the high bits not included in CLMUL(A,B)
+  // can be computed by
   // BITREVERSE(CLMUL(BITREVERSE(A), BITREVERSE(B))) >> 1
   // Therefore we can compute the 2 hi/lo cross products
   // and the the overflow of the low product
@@ -5467,10 +5468,10 @@ void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo,
   SDValue One = DAG.getShiftAmountConstant(1, HalfVT, DL);
   Hi = DAG.getNode(ISD::SRL, DL, HalfVT, LoHi, One);
   
-  SDValue HITMP = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RH);
-  Hi = DAG.getNode(ISD::XOR, DL, HalfVT, Hi, HITMP);
-  HITMP = DAG.getNode(ISD::CLMUL, DL, HalfVT, LH, RL);
-  Hi = DAG.getNode(ISD::XOR, DL, HalfVT, Hi, HITMP);
+  SDValue HiTmp = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RH);
+  Hi = DAG.getNode(ISD::XOR, DL, HalfVT, Hi, HiTmp);
+  HiTmp = DAG.getNode(ISD::CLMUL, DL, HalfVT, LH, RL);
+  Hi = DAG.getNode(ISD::XOR, DL, HalfVT, Hi, HiTmp);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,
