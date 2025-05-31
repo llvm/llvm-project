@@ -363,6 +363,8 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
                            : "\01mcount";
 
   SoftFloatABI = llvm::is_contained(Opts.FeaturesAsWritten, "+soft-float-abi");
+  if (!SoftFloatABI)
+    HasStrictFP = true;
 }
 
 StringRef ARMTargetInfo::getABI() const { return ABI; }
