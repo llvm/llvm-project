@@ -41,4 +41,5 @@ add_clang_library(clangCIR
   CIROpenACCSupport
   MLIRCIR
   MLIRCIRInterfaces
+  MLIRTargetLLVMIRImport
 )
