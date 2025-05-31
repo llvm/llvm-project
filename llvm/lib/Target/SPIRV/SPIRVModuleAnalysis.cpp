@@ -1848,6 +1848,11 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::TernaryBitwiseFunctionINTEL);
     break;
   }
+  case SPIRV::OpGetKernelNDrangeMaxSubGroupSize:
+  case SPIRV::OpGetKernelNDrangeSubGroupCount: {
+    Reqs.addCapability(SPIRV::Capability::DeviceEnqueue);
+    break;
+  }
 
   default:
     break;

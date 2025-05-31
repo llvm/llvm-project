@@ -488,6 +488,16 @@ bool isEntryPoint(const Function &F) {
   return false;
 }
 
+Register stripAddrspaceCast(Register Reg, const MachineRegisterInfo &MRI) {
+  while (true) {
+    MachineInstr *Def = MRI.getVRegDef(Reg);
+    if (!Def || Def->getOpcode() != TargetOpcode::G_ADDRSPACE_CAST)
+      break;
+    Reg = Def->getOperand(1).getReg(); // Unwrap the cast
+  }
+  return Reg;
+}
+
 Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   TypeName.consume_front("atomic_");
   if (TypeName.consume_front("void"))
