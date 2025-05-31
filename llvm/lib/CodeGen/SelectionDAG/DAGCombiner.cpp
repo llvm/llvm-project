@@ -16736,6 +16736,28 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
     }
   }
 
+  // fold (fadd (freeze (fmul x, y)), z) -> (fma x, y, z).
+  if ((Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
+      N0.getOpcode() == ISD::FREEZE) {
+    SDValue FrozenMul = N0.getOperand(0);
+    if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
+      SDValue X = FrozenMul.getOperand(0);
+      SDValue Y = FrozenMul.getOperand(1);
+      return matcher.getNode(PreferredFusedOpcode, SL, VT, X, Y, N1);
+    }
+  }
+
+  // fold (fadd x, (freeze (fmul y, z))) -> (fma y, z, x)
+  if ((Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
+      N1.getOpcode() == ISD::FREEZE) {
+    SDValue FrozenMul = N1.getOperand(0);
+    if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
+      SDValue X = FrozenMul.getOperand(0);
+      SDValue Y = FrozenMul.getOperand(1);
+      return matcher.getNode(PreferredFusedOpcode, SL, VT, X, Y, N0);
+    }
+  }
+
   // More folding opportunities when target permits.
   if (Aggressive) {
     // fold (fadd (fma x, y, (fpext (fmul u, v))), z)
@@ -17010,6 +17032,30 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
                 matcher.getNode(ISD::FP_EXTEND, SL, VT, N000.getOperand(1)),
                 N1));
       }
+    }
+  }
+
+  // fold (fsub (freeze (fmul x, y)), z) -> (fma x, y, (fneg z))
+  if ((Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
+      N0.getOpcode() == ISD::FREEZE) {
+    SDValue FrozenMul = N0.getOperand(0);
+    if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
+      SDValue X = FrozenMul.getOperand(0);
+      SDValue Y = FrozenMul.getOperand(1);
+      SDValue NegZ = matcher.getNode(ISD::FNEG, SL, VT, N1);
+      return matcher.getNode(PreferredFusedOpcode, SL, VT, X, Y, NegZ);
+    }
+  }
+
+  // fold (fsub z, (freeze(fmul x, y))) -> (fma (fneg x), y, z)
+  if ((Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
+      N1.getOpcode() == ISD::FREEZE) {
+    SDValue FrozenMul = N1.getOperand(0);
+    if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
+      SDValue X = FrozenMul.getOperand(0);
+      SDValue Y = FrozenMul.getOperand(1);
+      SDValue NegX = matcher.getNode(ISD::FNEG, SL, VT, X);
+      return matcher.getNode(PreferredFusedOpcode, SL, VT, NegX, Y, N0);
     }
   }
 
