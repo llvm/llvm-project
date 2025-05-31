@@ -52,7 +52,6 @@ TEST(EnumClassTest, ParseCLIUsageWarning) {
       (std::optional{std::pair{true, UsageWarning::Portability}}));
   EXPECT_EQ(parseCLIUsageWarning("no-portability", true),
       (std::optional{std::pair{false, UsageWarning::Portability}}));
-
   EXPECT_EQ((parseCLIUsageWarning("portability", true)),
       (std::optional{std::pair{true, UsageWarning::Portability}}));
   EXPECT_EQ((parseCLIUsageWarning("no-pointer-to-undefinable", true)),
@@ -67,6 +66,10 @@ TEST(EnumClassTest, ParseCLIUsageWarning) {
       (std::optional{std::pair{true, UsageWarning::PointerToUndefinable}}));
   EXPECT_EQ(parseCLIUsageWarning("nopointertoundefinable", true),
       (std::optional{std::pair{false, UsageWarning::PointerToUndefinable}}));
+
+  EXPECT_EQ(parseCLIUsageWarning("f202x-allocatable-breaking-change", false),
+      (std::optional{
+          std::pair{true, UsageWarning::F202xAllocatableBreakingChange}}));
 }
 
 } // namespace Fortran::common::FortranFeaturesHelpers

@@ -1672,7 +1672,7 @@ std::forward_list<std::string> GetAllNames(
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &context,
     const SomeExpr *expr, parser::CharBlock at, const char *what) {
   if (context.languageFeatures().ShouldWarn(
-          common::UsageWarning::F202XAllocatableBreakingChange)) {
+          common::UsageWarning::F202xAllocatableBreakingChange)) {
     if (const Symbol *
         symbol{evaluate::UnwrapWholeSymbolOrComponentDataRef(expr)}) {
       const Symbol &ultimate{ResolveAssociations(*symbol)};
