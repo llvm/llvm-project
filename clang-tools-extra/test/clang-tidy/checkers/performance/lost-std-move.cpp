@@ -62,6 +62,12 @@ void f_extern()
     f(ptr);
 }
 
+std::shared_ptr<int> global;
+void f_global()
+{
+  f(global);
+}
+
 void f_local()
 {
   std::shared_ptr<int> ptr;
@@ -139,4 +145,37 @@ int f_macro()
 {
   std::shared_ptr<int> ptr;
   return FUN(ptr);
+}
+
+void f_lambda_ref()
+{
+  std::shared_ptr<int> ptr;
+  auto Lambda = [&ptr]() mutable {
+    f(ptr);
+    };
+  Lambda();
+}
+
+void f_lambda()
+{
+  std::shared_ptr<int> ptr;
+  auto Lambda = [ptr]() mutable {
+    // CHECK-MESSAGES: [[@LINE-1]]:18: warning: Parameter 'Mov' is copied on last use, consider moving it instead. [performance-unnecessary-copy-on-last-use]
+    // CHECK-FIXES: auto Lambda = [Mov]() mutable {
+    // Note: No fix, because a fix requires c++14.
+    f(ptr);
+    };
+  Lambda();
+}
+
+void f_lambda_assign()
+{
+  std::shared_ptr<int> ptr;
+  auto Lambda = [ptr = ptr]() mutable {
+    // CHECK-MESSAGES: [[@LINE-1]]:18: warning: Parameter 'Mov' is copied on last use, consider moving it instead. [performance-unnecessary-copy-on-last-use]
+    // CHECK-FIXES: auto Lambda = [Mov]() mutable {
+    // Note: No fix, because a fix requires c++14.
+    f(ptr);
+    };
+  Lambda();
 }
