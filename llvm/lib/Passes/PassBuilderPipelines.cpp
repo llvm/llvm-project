@@ -1295,6 +1295,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   MPM.addPass(GlobalOptPass());
   MPM.addPass(GlobalDCEPass());
 
+  if (Phase == ThinOrFullLTOPhase::None && Level != OptimizationLevel::O0)
+    MPM.addPass(WholeProgramDevirtPass(nullptr, nullptr));
+
   return MPM;
 }
 

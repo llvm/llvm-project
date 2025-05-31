@@ -60,7 +60,9 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -209,7 +211,8 @@ static cl::opt<WPDCheckMode> DevirtCheckMode(
     cl::values(clEnumValN(WPDCheckMode::None, "none", "No checking"),
                clEnumValN(WPDCheckMode::Trap, "trap", "Trap when incorrect"),
                clEnumValN(WPDCheckMode::Fallback, "fallback",
-                          "Fallback to indirect when incorrect")));
+                          "Fallback to indirect when incorrect")),
+    cl::init(WPDCheckMode::Fallback));
 
 namespace {
 struct PatternList {
@@ -804,6 +807,12 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
   }
+  if (!ExportSummary) {
+    ProfileSummaryInfo PSI(M);
+    std::optional<ModuleSummaryIndex> Index;
+    Index.emplace(buildModuleSummaryIndex(M, nullptr, &PSI));
+    ExportSummary = Index.has_value() ? &Index.value() : nullptr;
+  }
   if (!DevirtModule(M, AARGetter, OREGetter, LookupDomTree, ExportSummary,
                     ImportSummary)
            .run())
@@ -814,8 +823,10 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
 // Enable whole program visibility if enabled by client (e.g. linker) or
 // internal option, and not force disabled.
 bool llvm::hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO) {
-  return (WholeProgramVisibilityEnabledInLTO || WholeProgramVisibility) &&
-         !DisableWholeProgramVisibility;
+  if (WholeProgramVisibilityEnabledInLTO)
+    return (WholeProgramVisibilityEnabledInLTO || WholeProgramVisibility) &&
+           !DisableWholeProgramVisibility;
+  return true;
 }
 
 static bool
@@ -1099,9 +1110,9 @@ bool DevirtModule::tryFindVirtualCallTargets(
 
     // We cannot perform whole program devirtualization analysis on a vtable
     // with public LTO visibility.
-    if (TM.Bits->GV->getVCallVisibility() ==
-        GlobalObject::VCallVisibilityPublic)
-      return false;
+    // if (TM.Bits->GV->getVCallVisibility() ==
+    //     GlobalObject::VCallVisibilityPublic)
+    //   return false;
 
     Function *Fn = nullptr;
     Constant *C = nullptr;
@@ -1342,26 +1353,28 @@ bool DevirtModule::trySingleImplDevirt(
   // If the only implementation has local linkage, we must promote to external
   // to make it visible to thin LTO objects. We can only get here during the
   // ThinLTO export phase.
-  if (TheFn->hasLocalLinkage()) {
-    std::string NewName = (TheFn->getName() + ".llvm.merged").str();
+  // if (TheFn->hasLocalLinkage()) {
+  //   std::string NewName = (TheFn->getName() + ".llvm.merged").str();
 
-    // Since we are renaming the function, any comdats with the same name must
-    // also be renamed. This is required when targeting COFF, as the comdat name
-    // must match one of the names of the symbols in the comdat.
-    if (Comdat *C = TheFn->getComdat()) {
-      if (C->getName() == TheFn->getName()) {
-        Comdat *NewC = M.getOrInsertComdat(NewName);
-        NewC->setSelectionKind(C->getSelectionKind());
-        for (GlobalObject &GO : M.global_objects())
-          if (GO.getComdat() == C)
-            GO.setComdat(NewC);
-      }
-    }
+  //   // Since we are renaming the function, any comdats with the same name
+  //   must
+  //   // also be renamed. This is required when targeting COFF, as the comdat
+  //   name
+  //   // must match one of the names of the symbols in the comdat.
+  //   if (Comdat *C = TheFn->getComdat()) {
+  //     if (C->getName() == TheFn->getName()) {
+  //       Comdat *NewC = M.getOrInsertComdat(NewName);
+  //       NewC->setSelectionKind(C->getSelectionKind());
+  //       for (GlobalObject &GO : M.global_objects())
+  //         if (GO.getComdat() == C)
+  //           GO.setComdat(NewC);
+  //     }
+  //   }
 
-    TheFn->setLinkage(GlobalValue::ExternalLinkage);
-    TheFn->setVisibility(GlobalValue::HiddenVisibility);
-    TheFn->setName(NewName);
-  }
+  //   TheFn->setLinkage(GlobalValue::ExternalLinkage);
+  //   TheFn->setVisibility(GlobalValue::HiddenVisibility);
+  //   TheFn->setName(NewName);
+  // }
   if (ValueInfo TheFnVI = ExportSummary->getValueInfo(TheFn->getGUID()))
     // Any needed promotion of 'TheFn' has already been done during
     // LTO unit split, so we can ignore return value of AddCalls.
@@ -2321,6 +2334,9 @@ bool DevirtModule::run() {
 
   Function *TypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
+  if (!TypeTestFunc)
+    TypeTestFunc =
+        Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   Function *TypeCheckedLoadFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
   Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
@@ -2443,13 +2459,14 @@ bool DevirtModule::run() {
                  .WPDRes[S.first.ByteOffset];
     if (tryFindVirtualCallTargets(TargetsForSlot, TypeMemberInfos,
                                   S.first.ByteOffset, ExportSummary)) {
+      trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res);
+      // Following features are not needed for the case of enabling WPD without
+      // lto. if (!trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second,
+      // Res)) { DidVirtualConstProp |=
+      //     tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
 
-      if (!trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res)) {
-        DidVirtualConstProp |=
-            tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
-
-        tryICallBranchFunnel(TargetsForSlot, S.second, Res, S.first);
-      }
+      //   tryICallBranchFunnel(TargetsForSlot, S.second, Res, S.first);
+      // }
 
       // Collect functions devirtualized at least for one call site for stats.
       if (RemarksEnabled || AreStatisticsEnabled())
