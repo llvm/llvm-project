@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Support/Mustache.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sstream>
@@ -21,6 +22,13 @@ using Accessor = SmallVector<std::string>;
 static bool isFalsey(const json::Value &V) {
   return V.getAsNull() || (V.getAsBoolean() && !V.getAsBoolean().value()) ||
          (V.getAsArray() && V.getAsArray()->empty());
+}
+
+static bool isContextFalsey(const json::Value *V) {
+  // A missing context (represented by a nullptr) is defined as falsey.
+  if (!V)
+    return true;
+  return isFalsey(*V);
 }
 
 static Accessor splitMustacheString(StringRef Str) {
@@ -560,14 +568,15 @@ void toMustacheString(const json::Value &Data, raw_ostream &OS) {
   }
 }
 
-void ASTNode::render(const json::Value &Data, raw_ostream &OS) {
-  ParentContext = &Data;
+void ASTNode::render(const json::Value &CurrentCtx, raw_ostream &OS) {
+  // Set the parent context to the incoming context so that we
+  // can walk up the context tree correctly in findContext().
+  ParentContext = &CurrentCtx;
   const json::Value *ContextPtr = Ty == Root ? ParentContext : findContext();
-  const json::Value &Context = ContextPtr ? *ContextPtr : nullptr;
 
   switch (Ty) {
   case Root:
-    renderChild(Data, OS);
+    renderChild(CurrentCtx, OS);
     return;
   case Text:
     OS << Body;
@@ -575,53 +584,55 @@ void ASTNode::render(const json::Value &Data, raw_ostream &OS) {
   case Partial: {
     auto Partial = Partials.find(AccessorValue[0]);
     if (Partial != Partials.end())
-      renderPartial(Data, OS, Partial->getValue().get());
+      renderPartial(CurrentCtx, OS, Partial->getValue().get());
     return;
   }
   case Variable: {
     auto Lambda = Lambdas.find(AccessorValue[0]);
-    if (Lambda != Lambdas.end())
-      renderLambdas(Data, OS, Lambda->getValue());
-    else {
+    if (Lambda != Lambdas.end()) {
+      renderLambdas(CurrentCtx, OS, Lambda->getValue());
+    } else if (ContextPtr) {
       EscapeStringStream ES(OS, Escapes);
-      toMustacheString(Context, ES);
+      toMustacheString(*ContextPtr, ES);
     }
     return;
   }
   case UnescapeVariable: {
     auto Lambda = Lambdas.find(AccessorValue[0]);
-    if (Lambda != Lambdas.end())
-      renderLambdas(Data, OS, Lambda->getValue());
-    else
-      toMustacheString(Context, OS);
+    if (Lambda != Lambdas.end()) {
+      renderLambdas(CurrentCtx, OS, Lambda->getValue());
+    } else if (ContextPtr) {
+      toMustacheString(*ContextPtr, OS);
+    }
     return;
   }
   case Section: {
-    // Sections are not rendered if the context is falsey.
     auto SectionLambda = SectionLambdas.find(AccessorValue[0]);
     bool IsLambda = SectionLambda != SectionLambdas.end();
-    if (isFalsey(Context) && !IsLambda)
+
+    if (isContextFalsey(ContextPtr) && !IsLambda)
       return;
 
     if (IsLambda) {
-      renderSectionLambdas(Data, OS, SectionLambda->getValue());
+      renderSectionLambdas(CurrentCtx, OS, SectionLambda->getValue());
       return;
     }
 
-    if (Context.getAsArray()) {
-      const json::Array *Arr = Context.getAsArray();
+    if (const json::Array *Arr = ContextPtr->getAsArray()) {
       for (const json::Value &V : *Arr)
         renderChild(V, OS);
       return;
     }
-    renderChild(Context, OS);
+    renderChild(*ContextPtr, OS);
     return;
   }
   case InvertSection: {
     bool IsLambda = SectionLambdas.contains(AccessorValue[0]);
-    if (!isFalsey(Context) || IsLambda)
-      return;
-    renderChild(Context, OS);
+    if (isContextFalsey(ContextPtr) && !IsLambda) {
+      // The context for the children remains UNCHANGED from the parent's.
+      // We pass 'Data', which is this node's original incoming context.
+      renderChild(CurrentCtx, OS);
+    }
     return;
   }
   }
