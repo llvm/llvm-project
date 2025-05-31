@@ -90,6 +90,7 @@ Developer Tools
    llvm-pdbutil
    llvm-profgen
    llvm-tli-checker
+   llvm-mustachespec
 
 Remarks Tools
 ~~~~~~~~~~~~~~
