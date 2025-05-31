@@ -21,6 +21,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
+
 #include <numeric>
 
 using namespace mlir;
@@ -1573,6 +1574,29 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
     return {};
 
   return elements[index];
+}
+
+//===----------------------------------------------------------------------===//
+// VecShuffle
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::VecShuffleOp::verify() {
+  // The number of elements in the indices array must match the number of
+  // elements in the result type.
+  if (getIndices().size() != getResult().getType().getSize()) {
+    return emitOpError() << ": the number of elements in " << getIndices()
+                         << " and " << getResult().getType() << " don't match";
+  }
+
+  // The element types of the two input vectors and of the result type must
+  // match.
+  if (getVec1().getType().getElementType() !=
+      getResult().getType().getElementType()) {
+    return emitOpError() << ": element types of " << getVec1().getType()
+                         << " and " << getResult().getType() << " don't match";
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
