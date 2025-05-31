@@ -1010,6 +1010,7 @@ public:
   static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
     switch (Opcode) {
     case AMDGPU::S_WAITCNT_soft:
+    case AMDGPU::S_WAITCNT_DIRECT_LDS_LOAD_soft:
       return AMDGPU::S_WAITCNT;
     case AMDGPU::S_WAITCNT_VSCNT_soft:
       return AMDGPU::S_WAITCNT_VSCNT;
