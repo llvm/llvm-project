@@ -65,20 +65,31 @@ template <> struct ScalarEnumerationTraits<InfoType> {
   }
 };
 
-template <> struct llvm::yaml::ScalarEnumerationTraits<clang::doc::CommentKind> {
+template <>
+struct llvm::yaml::ScalarEnumerationTraits<clang::doc::CommentKind> {
   static void enumeration(IO &IO, clang::doc::CommentKind &Value) {
     IO.enumCase(Value, "FullComment", clang::doc::CommentKind::CK_FullComment);
-    IO.enumCase(Value, "ParagraphComment", clang::doc::CommentKind::CK_ParagraphComment);
+    IO.enumCase(Value, "ParagraphComment",
+                clang::doc::CommentKind::CK_ParagraphComment);
     IO.enumCase(Value, "TextComment", clang::doc::CommentKind::CK_TextComment);
-    IO.enumCase(Value, "InlineCommandComment", clang::doc::CommentKind::CK_InlineCommandComment);
-    IO.enumCase(Value, "HTMLStartTagComment", clang::doc::CommentKind::CK_HTMLStartTagComment);
-    IO.enumCase(Value, "HTMLEndTagComment", clang::doc::CommentKind::CK_HTMLEndTagComment);
-    IO.enumCase(Value, "BlockCommandComment", clang::doc::CommentKind::CK_BlockCommandComment);
-    IO.enumCase(Value, "ParamCommandComment", clang::doc::CommentKind::CK_ParamCommandComment);
-    IO.enumCase(Value, "TParamCommandComment", clang::doc::CommentKind::CK_TParamCommandComment);
-    IO.enumCase(Value, "VerbatimBlockComment", clang::doc::CommentKind::CK_VerbatimBlockComment);
-    IO.enumCase(Value, "VerbatimBlockLineComment", clang::doc::CommentKind::CK_VerbatimBlockLineComment);
-    IO.enumCase(Value, "VerbatimLineComment", clang::doc::CommentKind::CK_VerbatimLineComment);
+    IO.enumCase(Value, "InlineCommandComment",
+                clang::doc::CommentKind::CK_InlineCommandComment);
+    IO.enumCase(Value, "HTMLStartTagComment",
+                clang::doc::CommentKind::CK_HTMLStartTagComment);
+    IO.enumCase(Value, "HTMLEndTagComment",
+                clang::doc::CommentKind::CK_HTMLEndTagComment);
+    IO.enumCase(Value, "BlockCommandComment",
+                clang::doc::CommentKind::CK_BlockCommandComment);
+    IO.enumCase(Value, "ParamCommandComment",
+                clang::doc::CommentKind::CK_ParamCommandComment);
+    IO.enumCase(Value, "TParamCommandComment",
+                clang::doc::CommentKind::CK_TParamCommandComment);
+    IO.enumCase(Value, "VerbatimBlockComment",
+                clang::doc::CommentKind::CK_VerbatimBlockComment);
+    IO.enumCase(Value, "VerbatimBlockLineComment",
+                clang::doc::CommentKind::CK_VerbatimBlockLineComment);
+    IO.enumCase(Value, "VerbatimLineComment",
+                clang::doc::CommentKind::CK_VerbatimLineComment);
     IO.enumCase(Value, "Unknown", clang::doc::CommentKind::CK_Unknown);
   }
 };
