@@ -18,11 +18,32 @@ func.func @ext_packed_fp8_v(%v: vector<4xf8E4M3FNUZ>) -> vector<2xf32> {
   func.return %ret : vector<2xf32>
 }
 
+// CHECK-LABEL: func @scaled_ext_packed_fp8_s
+// CHECK: amdgpu.scaled_ext_packed_fp8 {{.*}} vector<4xf8E5M2> to f32
+func.func @scaled_ext_packed_fp8_s(%v: vector<4xf8E5M2>, %scale: f32) -> f32 {
+  %ret = amdgpu.scaled_ext_packed_fp8 %v[0], %scale : vector<4xf8E5M2> to f32
+  func.return %ret : f32
+}
+
+// CHECK-LABEL: func @scaled_ext_packed_fp8_v
+// CHECK: amdgpu.scaled_ext_packed_fp8 {{.*}} vector<4xf8E5M2> to vector<2xf32>
+func.func @scaled_ext_packed_fp8_v(%v: vector<4xf8E5M2>, %scale: f32) -> vector<2xf32> {
+  %ret = amdgpu.scaled_ext_packed_fp8 %v[0], %scale : vector<4xf8E5M2> to vector<2xf32>
+  func.return %ret : vector<2xf32>
+}
+
 // CHECK-LABEL: func @packed_trunc_2xfp8
 // CHECK: amdgpu.packed_trunc_2xfp8
 func.func @packed_trunc_2xfp8(%v1: f32, %v2: f32, %others: vector<4xf8E5M2FNUZ>, %stoch: i32) -> vector<4xf8E5M2FNUZ> {
   %ret = amdgpu.packed_trunc_2xfp8 %v1, %v2 into %others[word 1] : f32 to vector<4xf8E5M2FNUZ> into vector<4xf8E5M2FNUZ>
   func.return %ret : vector<4xf8E5M2FNUZ>
+}
+
+// CHECK-LABEL: func @scaled_packed_trunc_2xfp8
+// CHECK: amdgpu.packed_scaled_trunc_2xfp8
+func.func @scaled_packed_trunc_2xfp8(%v1: f32, %v2: f32, %others: vector<4xf8E5M2>, %scale: f32) -> vector<4xf8E5M2> {
+  %ret = amdgpu.packed_scaled_trunc_2xfp8 %v1, %v2 into %others[word 1], %scale : f32 to vector<4xf8E5M2> into vector<4xf8E5M2>
+  func.return %ret : vector<4xf8E5M2>
 }
 
 // CHECK-LABEL: func @packed_stoch_round_fp8
