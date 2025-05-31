@@ -10,6 +10,7 @@
 #include "BreakpointBase.h"
 #include "DAP.h"
 #include "JSONUtils.h"
+#include "ProtocolUtils.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBFrame.h"
@@ -44,7 +45,7 @@ llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Invalid line number.");
 
-  if (source.sourceReference) {
+  if (IsAssemblySource(source)) {
     // Breakpoint set by assembly source.
     std::optional<lldb::addr_t> raw_addr =
         m_dap.GetSourceReferenceAddress(*source.sourceReference);

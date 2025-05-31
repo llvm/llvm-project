@@ -50,6 +50,9 @@ public:
   uint32_t GetColumn() const { return m_column; }
 
 protected:
+  llvm::Error SetAssemblyBreakpoint(const protocol::Source &source);
+  llvm::Error SetPathBreakpoint(const protocol::Source &source);
+
   // logMessage part can be either a raw text or an expression.
   struct LogMessagePart {
     LogMessagePart(llvm::StringRef text, bool is_expr)
