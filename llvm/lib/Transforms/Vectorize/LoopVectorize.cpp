@@ -7517,9 +7517,11 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
     bool IsExpectedPattern =
-        match(MainResumeValue, m_Select(m_OneUse(m_Value(Cmp)),
-                                        m_Specific(RdxDesc.getSentinelValue()),
-                                        m_Value(OrigResumeV))) &&
+        match(MainResumeValue,
+              m_Select(
+                  m_OneUse(m_Value(Cmp)),
+                  m_Specific(EpiRedResult->getOperand(2)->getLiveInIRValue()),
+                  m_Value(OrigResumeV))) &&
         (match(Cmp, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(OrigResumeV),
                                    m_Value(CmpOp))) &&
          (match(CmpOp,
@@ -9509,9 +9511,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
       VPValue *Start = PhiR->getStartValue();
-      FinalReductionResult =
-          Builder.createNaryOp(VPInstruction::ComputeFindLastIVResult,
-                               {PhiR, Start, NewExitingVPV}, ExitDL);
+      FinalReductionResult = Builder.createNaryOp(
+          VPInstruction::ComputeFindLastIVResult,
+          {PhiR, Start, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()),
+           NewExitingVPV},
+          ExitDL);
     } else {
       VPIRFlags Flags = RecurrenceDescriptor::isFloatingPointRecurrenceKind(
                             RdxDesc.getRecurrenceKind())
@@ -10040,6 +10044,14 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
+      auto *RdxResult =
+          cast<VPInstruction>(*find_if(ReductionPhi->users(), [](VPUser *U) {
+            auto *VPI = dyn_cast<VPInstruction>(U);
+            return VPI &&
+                   (VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
+                    VPI->getOpcode() == VPInstruction::ComputeFindLastIVResult);
+          }));
+
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
       const RecurrenceDescriptor &RdxDesc =
@@ -10068,8 +10080,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
         Value *Cmp = Builder.CreateICmpEQ(
             ResumeV, ToFrozen[RdxDesc.getRecurrenceStartValue()]);
-        ResumeV =
-            Builder.CreateSelect(Cmp, RdxDesc.getSentinelValue(), ResumeV);
+        ResumeV = Builder.CreateSelect(
+            Cmp, RdxResult->getOperand(2)->getLiveInIRValue(), ResumeV);
       }
     } else {
       // Retrieve the induction resume values for wide inductions from
