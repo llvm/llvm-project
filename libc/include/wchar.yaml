@@ -42,6 +42,20 @@ functions:
     arguments: 
       - type: const wchar_t *
       - type: wchar_t
+  - name: wcspbrk
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+  - name: wcsspn
+    standards:
+      - stdc
+    return_type: size_t
+    arguments: 
+      - type: const wchar_t *
+      - type: const wchar_t *
   - name: wmemcmp
     standards:
       - stdc
@@ -49,4 +63,12 @@ functions:
     arguments: 
       - type: const wchar_t *
       - type: const wchar_t *
+      - type: size_t
+  - name: wmemcpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments: 
+      - type: __restricted wchar_t *
+      - type: const __ restricted wchar_t *
       - type: size_t
