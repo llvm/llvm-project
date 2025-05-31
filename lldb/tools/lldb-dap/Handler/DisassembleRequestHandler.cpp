@@ -9,11 +9,14 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBInstruction.h"
+#include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringExtras.h"
@@ -139,15 +142,16 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
 
   disassembled_inst.instruction = std::move(instruction);
 
-  auto line_entry = addr.GetLineEntry();
+  protocol::Source source = CreateSource(addr, target);
+  lldb::SBLineEntry line_entry = GetLineEntryForAddress(target, addr);
+
   // If the line number is 0 then the entry represents a compiler generated
   // location.
+  if (!IsAssemblySource(source) && line_entry.GetStartAddress() == addr &&
+      line_entry.IsValid() && line_entry.GetFileSpec().IsValid() &&
+      line_entry.GetLine() != 0) {
 
-  if (line_entry.GetStartAddress() == addr && line_entry.IsValid() &&
-      line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0) {
-    auto source = CreateSource(line_entry);
     disassembled_inst.location = std::move(source);
-
     const auto line = line_entry.GetLine();
     if (line != 0 && line != LLDB_INVALID_LINE_NUMBER)
       disassembled_inst.line = line;
@@ -156,7 +160,8 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
     if (column != 0 && column != LLDB_INVALID_COLUMN_NUMBER)
       disassembled_inst.column = column;
 
-    auto end_line_entry = line_entry.GetEndAddress().GetLineEntry();
+    lldb::SBAddress end_addr = line_entry.GetEndAddress();
+    auto end_line_entry = GetLineEntryForAddress(target, end_addr);
     if (end_line_entry.IsValid() &&
         end_line_entry.GetFileSpec() == line_entry.GetFileSpec()) {
       const auto end_line = end_line_entry.GetLine();
