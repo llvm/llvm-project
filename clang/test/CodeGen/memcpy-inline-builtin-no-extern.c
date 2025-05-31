@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64 -S -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 //
 // Verifies that clang-generated *.inline are flagged as internal.
 

@@ -7,7 +7,7 @@ module attributes { transform.with_named_sequence } {
   // CHECK-SAME: %{{.*}}: !transform.param<i32> {transform.readonly}
   transform.named_sequence @infer(%op: !transform.any_op, %other: !transform.any_op, %param: !transform.param<i32>) {
     transform.test_consume_operand %op : !transform.any_op
-    transform.test_print_remark_at_operand %other, "" : !transform.any_op
+    transform.debug.emit_remark_at %other, "" : !transform.any_op
     transform.yield
   }
 }

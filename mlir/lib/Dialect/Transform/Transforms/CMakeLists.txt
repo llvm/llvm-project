@@ -3,7 +3,6 @@ add_mlir_dialect_library(MLIRTransformDialectTransforms
   InferEffects.cpp
   InterpreterPass.cpp
   PreloadLibraryPass.cpp
-  TransformInterpreterPassBase.cpp
   TransformInterpreterUtils.cpp
 
   DEPENDS

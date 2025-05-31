@@ -1,0 +1,2 @@
+## Tests glob pattern expansion by listing matching files.
+# RUN: echo %S/example_file*.input

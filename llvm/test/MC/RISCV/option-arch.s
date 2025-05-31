@@ -1,7 +1,7 @@
-# RUN: llvm-mc -triple riscv32 -show-encoding < %s \
+# RUN: llvm-mc -triple riscv32 -mattr=+experimental -show-encoding < %s \
 # RUN:   | FileCheck -check-prefixes=CHECK %s
-# RUN: llvm-mc -triple riscv32 -filetype=obj < %s \
-# RUN:   | llvm-objdump  --triple=riscv32 --mattr=+c,+m,+a,+f,+zba -d -M no-aliases - \
+# RUN: llvm-mc -triple riscv32 -mattr=+experimental -filetype=obj < %s \
+# RUN:   | llvm-objdump  --triple=riscv32 --mattr=+c,+m,+a,+f,+zba,+experimental-zicfiss -d -M no-aliases - \
 # RUN:   | FileCheck -check-prefixes=CHECK-INST %s
 
 # Test '.option arch, +' and '.option arch, -' directive
@@ -25,8 +25,8 @@ addi a0, a1, 0
 # CHECK: # encoding:  [0xe0,0x1f]
 addi s0, sp, 1020
 
-# CHECK: .option arch, -c
-.option arch, -c
+# CHECK: .option arch, -c, -zca
+.option arch, -c, -zca
 # CHECK-INST: addi a0, a1, 0x0
 # CHECK: # encoding:  [0x13,0x85,0x05,0x00]
 addi a0, a1, 0
@@ -45,8 +45,8 @@ addi a0, a1, 0
 # CHECK: # encoding:  [0xe0,0x1f]
 addi s0, sp, 1020
 
-# CHECK: .option arch, -c
-.option arch, -c
+# CHECK: .option arch, -c, -zca
+.option arch, -c, -zca
 # CHECK-INST: addi a0, a1, 0x0
 # CHECK: # encoding:  [0x13,0x85,0x05,0x00]
 addi a0, a1, 0
@@ -78,6 +78,13 @@ lr.w t0, (t1)
 # CHECK: encoding: [0xb3,0x22,0x73,0x20]
 sh1add t0, t1, t2
 
+# Test experimental extension
+# CHECK: .option arch, +zicfiss
+.option arch, +zicfiss
+# CHECK-INST: sspopchk ra
+# CHECK: encoding: [0x73,0xc0,0xc0,0xcd]
+sspopchk ra
+
 # Test '.option arch, <arch-string>' directive
 # CHECK: .option arch, rv32i2p1_m2p0_a2p1_c2p0
 .option arch, rv32i2p1_m2p0_a2p1_c2p0
@@ -100,12 +107,12 @@ mul a4, ra, s0
 lr.w t0, (t1)
 
 # Test +c, -c and vice-versa
-.option arch, +c, -c
+.option arch, +c, -c, -zca
 # CHECK-INST: addi a0, a1, 0x0
 # CHECK: # encoding:  [0x13,0x85,0x05,0x00]
 addi a0, a1, 0
 
-.option arch, -c, +c
+.option arch, -c, -zca, +c
 # CHECK-INST: c.mv a0, a1
 # CHECK: # encoding:  [0x2e,0x85]
 addi a0, a1, 0

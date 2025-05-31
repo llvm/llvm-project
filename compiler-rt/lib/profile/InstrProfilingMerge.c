@@ -41,6 +41,9 @@ uint64_t lprofGetLoadModuleSignature(void) {
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-qual"
 #endif
 
 /* Returns 1 if profile is not structurally compatible.  */
@@ -104,6 +107,26 @@ static uintptr_t signextIfWin64(void *V) {
 #endif
 }
 
+// Skip names section, vtable profile data section and vtable names section
+// for runtime profile merge. To merge runtime addresses from multiple
+// profiles collected from the same instrumented binary, the binary should be
+// loaded at fixed base address (e.g., build with -no-pie, or run with ASLR
+// disabled). In this set-up these three sections remain unchanged.
+static uint64_t
+getDistanceFromCounterToValueProf(const __llvm_profile_header *const Header) {
+  const uint64_t VTableSectionSize =
+      Header->NumVTables * sizeof(VTableProfData);
+  const uint64_t PaddingBytesAfterVTableSection =
+      __llvm_profile_get_num_padding_bytes(VTableSectionSize);
+  const uint64_t VNamesSize = Header->VNamesSize;
+  const uint64_t PaddingBytesAfterVNamesSize =
+      __llvm_profile_get_num_padding_bytes(VNamesSize);
+  return Header->NamesSize +
+         __llvm_profile_get_num_padding_bytes(Header->NamesSize) +
+         VTableSectionSize + PaddingBytesAfterVTableSection + VNamesSize +
+         PaddingBytesAfterVNamesSize;
+}
+
 COMPILER_RT_VISIBILITY
 int __llvm_profile_merge_from_buffer(const char *ProfileData,
                                      uint64_t ProfileSize) {
@@ -114,41 +137,37 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     return 1;
   }
 
-  __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
-  char *SrcCountersStart, *DstCounter;
-  const char *SrcCountersEnd, *SrcCounter;
-  const char *SrcBitmapStart;
-  const char *SrcNameStart;
-  const char *SrcValueProfDataStart, *SrcValueProfData;
   uintptr_t CountersDelta = Header->CountersDelta;
   uintptr_t BitmapDelta = Header->BitmapDelta;
 
-  SrcDataStart =
+  __llvm_profile_data *SrcDataStart =
       (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header) +
                               Header->BinaryIdsSize);
-  SrcDataEnd = SrcDataStart + Header->NumData;
-  SrcCountersStart = (char *)SrcDataEnd;
-  SrcCountersEnd = SrcCountersStart +
-                   Header->NumCounters * __llvm_profile_counter_entry_size();
-  SrcBitmapStart = SrcCountersEnd;
-  SrcNameStart = SrcBitmapStart + Header->NumBitmapBytes;
-  SrcValueProfDataStart =
-      SrcNameStart + Header->NamesSize +
-      __llvm_profile_get_num_padding_bytes(Header->NamesSize);
+  __llvm_profile_data *SrcDataEnd = SrcDataStart + Header->NumData;
+  uintptr_t SrcCountersStart = (uintptr_t)SrcDataEnd;
+  uintptr_t SrcCountersEnd =
+      SrcCountersStart +
+      Header->NumCounters * __llvm_profile_counter_entry_size();
+  uintptr_t SrcBitmapStart =
+      SrcCountersEnd +
+      __llvm_profile_get_num_padding_bytes(SrcCountersEnd - SrcCountersStart);
+  uintptr_t SrcNameStart = SrcBitmapStart + Header->NumBitmapBytes;
+  uintptr_t SrcValueProfDataStart =
+      SrcNameStart + getDistanceFromCounterToValueProf(Header);
   if (SrcNameStart < SrcCountersStart || SrcNameStart < SrcBitmapStart)
     return 1;
 
   // Merge counters by iterating the entire counter section when data section is
   // empty due to correlation.
   if (Header->NumData == 0) {
-    for (SrcCounter = SrcCountersStart,
-        DstCounter = __llvm_profile_begin_counters();
+    for (uintptr_t SrcCounter = SrcCountersStart,
+                   DstCounter = (uintptr_t)__llvm_profile_begin_counters();
          SrcCounter < SrcCountersEnd;) {
       if (__llvm_profile_get_version() & VARIANT_MASK_BYTE_COVERAGE) {
-        *DstCounter &= *SrcCounter;
+        *(char *)DstCounter &= *(const char *)SrcCounter;
       } else {
-        *(uint64_t *)DstCounter += *(uint64_t *)SrcCounter;
+        *(uint64_t *)DstCounter += *(const uint64_t *)SrcCounter;
       }
       SrcCounter += __llvm_profile_counter_entry_size();
       DstCounter += __llvm_profile_counter_entry_size();
@@ -156,6 +175,8 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     return 0;
   }
 
+  __llvm_profile_data *SrcData, *DstData;
+  uintptr_t SrcValueProfData;
   for (SrcData = SrcDataStart,
       DstData = (__llvm_profile_data *)__llvm_profile_begin_data(),
       SrcValueProfData = SrcValueProfDataStart;
@@ -164,10 +185,10 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     // address of the data to the start address of the counter. On WIN64,
     // CounterPtr is a truncated 32-bit value due to COFF limitation. Sign
     // extend CounterPtr to get the original value.
-    char *DstCounters =
-        (char *)((uintptr_t)DstData + signextIfWin64(DstData->CounterPtr));
-    char *DstBitmap =
-        (char *)((uintptr_t)DstData + signextIfWin64(DstData->BitmapPtr));
+    uintptr_t DstCounters =
+        (uintptr_t)DstData + signextIfWin64(DstData->CounterPtr);
+    uintptr_t DstBitmap =
+        (uintptr_t)DstData + signextIfWin64(DstData->BitmapPtr);
     unsigned NVK = 0;
 
     // SrcData is a serialized representation of the memory image. We need to
@@ -177,7 +198,7 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     // CountersDelta computes the offset into the in-buffer counter section.
     //
     // On WIN64, CountersDelta is truncated as well, so no need for signext.
-    char *SrcCounters =
+    uintptr_t SrcCounters =
         SrcCountersStart + ((uintptr_t)SrcData->CounterPtr - CountersDelta);
     // CountersDelta needs to be decreased as we advance to the next data
     // record.
@@ -191,13 +212,13 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     for (unsigned I = 0; I < NC; I++) {
       if (__llvm_profile_get_version() & VARIANT_MASK_BYTE_COVERAGE) {
         // A value of zero signifies the function is covered.
-        DstCounters[I] &= SrcCounters[I];
+        ((char *)DstCounters)[I] &= ((const char *)SrcCounters)[I];
       } else {
-        ((uint64_t *)DstCounters)[I] += ((uint64_t *)SrcCounters)[I];
+        ((uint64_t *)DstCounters)[I] += ((const uint64_t *)SrcCounters)[I];
       }
     }
 
-    const char *SrcBitmap =
+    uintptr_t SrcBitmap =
         SrcBitmapStart + ((uintptr_t)SrcData->BitmapPtr - BitmapDelta);
     // BitmapDelta also needs to be decreased as we advance to the next data
     // record.
@@ -209,7 +230,7 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
         return 1;
       // Merge Src and Dst Bitmap bytes by simply ORing them together.
       for (unsigned I = 0; I < NB; I++)
-        DstBitmap[I] |= SrcBitmap[I];
+        ((char *)DstBitmap)[I] |= ((const char *)SrcBitmap)[I];
     }
 
     /* Now merge value profile data. */
@@ -222,7 +243,7 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     if (!NVK)
       continue;
 
-    if (SrcValueProfData >= ProfileData + ProfileSize)
+    if (SrcValueProfData >= (uintptr_t)ProfileData + ProfileSize)
       return 1;
     VPMergeHook((ValueProfData *)SrcValueProfData, DstData);
     SrcValueProfData =
@@ -234,4 +255,6 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
 #endif

@@ -55,15 +55,17 @@ public:
 /// This type is intended to be small and suitable for passing by value.
 /// It is very frequently copied.
 struct PrintingPolicy {
+  enum SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
+
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
         SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
-        SuppressInlineNamespace(true), SuppressElaboration(false),
-        SuppressInitializers(false), ConstantArraySizeAsWritten(false),
-        AnonymousTagLocations(true), SuppressStrongLifetime(false),
-        SuppressLifetimeQualifiers(false),
+        SuppressInlineNamespace(SuppressInlineNamespaceMode::Redundant),
+        SuppressElaboration(false), SuppressInitializers(false),
+        ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
+        SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
         SuppressTemplateArgsInCXXConstructors(false),
         SuppressDefaultTemplateArgs(true), Bool(LO.Bool),
         Nullptr(LO.CPlusPlus11 || LO.C23), NullptrTypeInNamespace(LO.CPlusPlus),
@@ -74,10 +76,10 @@ struct PrintingPolicy {
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
         MSVCFormatting(false), ConstantsAsWritten(false),
         SuppressImplicitBase(false), FullyQualifiedName(false),
-        PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
+        PrintAsCanonical(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
-        UseEnumerators(true) {}
+        UseEnumerators(true), UseHLSLTypes(LO.HLSL) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -141,10 +143,12 @@ struct PrintingPolicy {
   unsigned SuppressUnwrittenScope : 1;
 
   /// Suppress printing parts of scope specifiers that correspond
-  /// to inline namespaces, where the name is unambiguous with the specifier
+  /// to inline namespaces.
+  /// If Redundant, where the name is unambiguous with the specifier removed.
+  /// If All, even if the name is ambiguous with the specifier
   /// removed.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned SuppressInlineNamespace : 1;
+  LLVM_PREFERRED_TYPE(SuppressInlineNamespaceMode)
+  unsigned SuppressInlineNamespace : 2;
 
   /// Ignore qualifiers and tag keywords as specified by elaborated type sugar,
   /// instead letting the underlying type print as normal.
@@ -306,9 +310,9 @@ struct PrintingPolicy {
   LLVM_PREFERRED_TYPE(bool)
   unsigned FullyQualifiedName : 1;
 
-  /// Whether to print types as written or canonically.
+  /// Whether to print entities as written or canonically.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned PrintCanonicalTypes : 1;
+  unsigned PrintAsCanonical : 1;
 
   /// Whether to print an InjectedClassNameType with template arguments or as
   /// written. When a template argument is unnamed, printing it results in
@@ -341,6 +345,11 @@ struct PrintingPolicy {
   /// enumerator name or via cast of an integer.
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseEnumerators : 1;
+
+  /// Whether or not we're printing known HLSL code and should print HLSL
+  /// sugared types when possible.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned UseHLSLTypes : 1;
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;

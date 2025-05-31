@@ -23,6 +23,7 @@
 #include "llvm/Analysis/Utils/TFUtils.h"
 #include "llvm/Analysis/Utils/TrainingLogger.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 
@@ -253,7 +254,6 @@ private:
 };
 
 static const std::vector<TensorSpec> TrainingOnlyFeatures{
-    TensorSpec::createSpec<int64_t>(TFFeedPrefix + "inlining_default", {1}),
     TensorSpec::createSpec<float>(TFFeedPrefix + "discount", {1}),
     TensorSpec::createSpec<float>(TFFeedPrefix + "reward", {1}),
     TensorSpec::createSpec<int32_t>(TFFeedPrefix + "step_type", {1})};
@@ -261,8 +261,8 @@ static const std::vector<TensorSpec> TrainingOnlyFeatures{
 static const std::vector<TensorSpec> getInputFeatures() {
   std::vector<TensorSpec> InputSpecs;
   for (size_t I = 0; I < NumberOfFeatures; ++I)
-    InputSpecs.push_back(TensorSpec::createSpec<int64_t>(
-        TFFeedPrefix + FeatureMap[I].name(), FeatureMap[I].shape()));
+    InputSpecs.push_back(
+        TensorSpec(TFFeedPrefix + FeatureMap[I].name(), FeatureMap[I]));
   append_range(InputSpecs, TrainingOnlyFeatures);
   return InputSpecs;
 }

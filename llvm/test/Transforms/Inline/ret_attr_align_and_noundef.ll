@@ -5,10 +5,12 @@
 
 declare ptr @foo()
 declare void @use.ptr(ptr) willreturn nounwind
+declare void @use.val(i8) willreturn nounwind
 declare void @bar()
 declare void @baz()
 declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
 declare i1 @val()
+declare i8 @val8()
 
 define ptr @callee0123() {
 ; CHECK-LABEL: define ptr @callee0123() {
@@ -335,5 +337,127 @@ define ptr @caller12_todo() {
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call nonnull ptr @callee12()
+  ret ptr %r
+}
+
+define i8 @callee13() {
+; CHECK-LABEL: define i8 @callee13() {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @val8()
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call i8 @val8()
+  ret i8 %r
+}
+
+define i8 @caller13_okay_use_after_poison_anyways() {
+; CHECK-LABEL: define i8 @caller13_okay_use_after_poison_anyways() {
+; CHECK-NEXT:    [[R_I:%.*]] = call range(i8 0, 10) i8 @val8()
+; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call range(i8 0, 10) i8 @callee13()
+  call void @use.val(i8 %r)
+  ret i8 %r
+}
+
+define i8 @callee14() {
+; CHECK-LABEL: define i8 @callee14() {
+; CHECK-NEXT:    [[R:%.*]] = call noundef i8 @val8()
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call noundef i8 @val8()
+  ret i8 %r
+}
+
+define i8 @caller14_fail_creates_ub() {
+; CHECK-LABEL: define i8 @caller14_fail_creates_ub() {
+; CHECK-NEXT:    [[R_I:%.*]] = call noundef i8 @val8()
+; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call range(i8 0, 10) i8 @callee14()
+  call void @use.val(i8 %r)
+  ret i8 %r
+}
+
+define i8 @caller14_okay_is_ub_anyways() {
+; CHECK-LABEL: define i8 @caller14_okay_is_ub_anyways() {
+; CHECK-NEXT:    [[R_I:%.*]] = call noundef range(i8 0, 10) i8 @val8()
+; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call noundef range(i8 0, 10) i8 @callee14()
+  call void @use.val(i8 %r)
+  ret i8 %r
+}
+
+define i8 @callee15() {
+; CHECK-LABEL: define i8 @callee15() {
+; CHECK-NEXT:    [[R:%.*]] = call range(i8 5, 10) i8 @val8()
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %r = call range(i8 5, 10) i8 @val8()
+  ret i8 %r
+}
+
+define i8 @caller15_okay_intersect_ranges() {
+; CHECK-LABEL: define i8 @caller15_okay_intersect_ranges() {
+; CHECK-NEXT:    [[R_I:%.*]] = call range(i8 5, 7) i8 @val8()
+; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call range(i8 0, 7) i8 @callee15()
+  call void @use.val(i8 %r)
+  ret i8 %r
+}
+
+define i8 @caller16_not_intersecting_ranges() {
+; CHECK-LABEL: define i8 @caller16_not_intersecting_ranges() {
+; CHECK-NEXT:    [[R_I:%.*]] = call range(i8 0, 0) i8 @val8()
+; CHECK-NEXT:    call void @use.val(i8 [[R_I]])
+; CHECK-NEXT:    ret i8 [[R_I]]
+;
+  %r = call range(i8 0, 5) i8 @callee15()
+  call void @use.val(i8 %r)
+  ret i8 %r
+}
+
+
+define ptr @caller_bad_ret_prop(ptr %p1, ptr %p2, i64 %x, ptr %other) {
+; CHECK-LABEL: define ptr @caller_bad_ret_prop
+; CHECK-SAME: (ptr [[P1:%.*]], ptr [[P2:%.*]], i64 [[X:%.*]], ptr [[OTHER:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call noundef ptr [[P1]](i64 [[X]], ptr [[P2]])
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[TMP1]], null
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[T_I:%.*]], label [[F_I:%.*]]
+; CHECK:       T.i:
+; CHECK-NEXT:    br label [[CALLEE_BAD_RET_PROP_EXIT:%.*]]
+; CHECK:       F.i:
+; CHECK-NEXT:    br label [[CALLEE_BAD_RET_PROP_EXIT]]
+; CHECK:       callee_bad_ret_prop.exit:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[OTHER]], [[T_I]] ], [ [[TMP1]], [[F_I]] ]
+; CHECK-NEXT:    ret ptr [[TMP2]]
+;
+  %1 = call noundef ptr %p1(i64 %x, ptr %p2)
+  %2 = call nonnull ptr @callee_bad_ret_prop(ptr %1, ptr %other)
+  ret ptr %2
+}
+
+define ptr @callee_bad_ret_prop(ptr %x, ptr %other) {
+; CHECK-LABEL: define ptr @callee_bad_ret_prop
+; CHECK-SAME: (ptr [[X:%.*]], ptr [[OTHER:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], null
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret ptr [[OTHER]]
+; CHECK:       F:
+; CHECK-NEXT:    [[R:%.*]] = tail call ptr @llvm.ptrmask.p0.i64(ptr [[X]], i64 -1)
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %cmp = icmp eq ptr %x, null
+  br i1 %cmp, label %T, label %F
+T:
+  ret ptr %other
+F:
+  %r = tail call ptr @llvm.ptrmask(ptr %x, i64 -1)
   ret ptr %r
 }

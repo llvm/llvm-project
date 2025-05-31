@@ -201,7 +201,7 @@
 ; CHECK-INVALIDATE-ALL-CG-NOT: Running analysis: NoOpModuleAnalysis
 
 ; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager %s 2>&1 \
-; RUN:     -passes='require<targetlibinfo>,invalidate<all>,require<targetlibinfo>' \
+; RUN:     -passes='require<target-lib-info>,invalidate<all>,require<target-lib-info>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-TLI
 ; CHECK-TLI: Running pass: RequireAnalysisPass
 ; CHECK-TLI: Running analysis: TargetLibraryAnalysis
@@ -211,7 +211,7 @@
 ; CHECK-TLI-NOT: Running analysis: TargetLibraryAnalysis
 
 ; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager %s 2>&1 \
-; RUN:     -passes='require<targetir>,invalidate<all>,require<targetir>' \
+; RUN:     -passes='require<target-ir>,invalidate<all>,require<target-ir>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-TIRA
 ; CHECK-TIRA: Running pass: RequireAnalysisPass
 ; CHECK-TIRA: Running analysis: TargetIRAnalysis
@@ -290,67 +290,14 @@
 ; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
 ; RUN:     -passes='default<O0>' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O0 --check-prefix=%llvmcheckext
-; CHECK-O0: Running pass: AlwaysInlinerPass
-; CHECK-O0-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
+; CHECK-O0: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
+; CHECK-O0-NEXT: Running pass: EntryExitInstrumenterPass
+; CHECK-O0-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-O0-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-EXT-NEXT: Running pass: {{.*}}Bye
 ; We don't have checks for CHECK-NOEXT here, but this simplifies the test, while
 ; avoiding FileCheck complaining about the unused prefix.
 ; CHECK-NOEXT: {{.*}}
-
-; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
-; RUN:     -passes='repeat<3>(no-op-module)' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-MODULE-PASS
-; CHECK-REPEAT-MODULE-PASS: Running pass: RepeatedPass
-; CHECK-REPEAT-MODULE-PASS-NEXT: Running pass: NoOpModulePass
-; CHECK-REPEAT-MODULE-PASS-NEXT: Running pass: NoOpModulePass
-; CHECK-REPEAT-MODULE-PASS-NEXT: Running pass: NoOpModulePass
-
-; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
-; RUN:     -passes='cgscc(repeat<3>(no-op-cgscc))' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-CGSCC-PASS
-; CHECK-REPEAT-CGSCC-PASS: Running analysis: InnerAnalysisManagerProxy<{{.*(CGSCCAnalysisManager|AnalysisManager<.*LazyCallGraph::SCC.*>).*}},{{.*}}Module>
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*(FunctionAnalysisManager|AnalysisManager<.*Function.*>).*}},{{.*}}Module>
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: TargetLibraryAnalysis
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running analysis: OuterAnalysisManagerProxy<{{.*}}LazyCallGraph::SCC{{.*}}>
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running pass: RepeatedPass
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running pass: NoOpCGSCCPass
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running pass: NoOpCGSCCPass
-; CHECK-REPEAT-CGSCC-PASS-NEXT: Running pass: NoOpCGSCCPass
-
-; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
-; RUN:     -passes='function(repeat<3>(no-op-function))' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-FUNCTION-PASS
-; CHECK-REPEAT-FUNCTION-PASS: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
-; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running pass: RepeatedPass
-; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running pass: NoOpFunctionPass
-; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running pass: NoOpFunctionPass
-; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running pass: NoOpFunctionPass
-
-; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
-; RUN:     -passes='loop(repeat<3>(no-op-loop))' %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-LOOP-PASS
-; CHECK-REPEAT-LOOP-PASS: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: LoopSimplify
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: LoopAnalysis
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: DominatorTreeAnalysis
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AssumptionAnalysis
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: TargetIRAnalysis
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: LCSSAPass
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AAManager
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: TargetLibraryAnalysis
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: BasicAA
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: ScopedNoAliasAA
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: TypeBasedAA
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: OuterAnalysisManagerProxy
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: ScalarEvolutionAnalysis
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: RepeatedPass
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: NoOpLoopPass
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: NoOpLoopPass
-; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: NoOpLoopPass
 
 define void @foo(i1 %x, ptr %p1, ptr %p2) {
 entry:

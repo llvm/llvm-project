@@ -9,8 +9,9 @@
 #ifndef LLVM_SUPPORT_FORMATVARIADICDETAILS_H
 #define LLVM_SUPPORT_FORMATVARIADICDETAILS_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <type_traits>
@@ -19,8 +20,9 @@ namespace llvm {
 template <typename T, typename Enable = void> struct format_provider {};
 class Error;
 
+namespace support {
 namespace detail {
-class format_adapter {
+class LLVM_ABI format_adapter {
   virtual void anchor();
 
 protected:
@@ -156,7 +158,8 @@ std::enable_if_t<uses_missing_provider<T>::value, missing_format_adapter<T>>
 build_format_adapter(T &&) {
   return missing_format_adapter<T>();
 }
-}
-}
+} // namespace detail
+} // namespace support
+} // namespace llvm
 
 #endif

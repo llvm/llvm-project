@@ -28,6 +28,7 @@ from dex.debugger.lldb.LLDB import LLDB
 from dex.debugger.visualstudio.VisualStudio2015 import VisualStudio2015
 from dex.debugger.visualstudio.VisualStudio2017 import VisualStudio2017
 from dex.debugger.visualstudio.VisualStudio2019 import VisualStudio2019
+from dex.debugger.visualstudio.VisualStudio2022 import VisualStudio2022
 
 
 def _get_potential_debuggers():  # noqa
@@ -41,6 +42,7 @@ def _get_potential_debuggers():  # noqa
         VisualStudio2015.get_option_name(): VisualStudio2015,
         VisualStudio2017.get_option_name(): VisualStudio2017,
         VisualStudio2019.get_option_name(): VisualStudio2019,
+        VisualStudio2022.get_option_name(): VisualStudio2022,
     }
 
 
@@ -181,7 +183,7 @@ def handle_debugger_tool_options(context, defaults):  # noqa
         if options.debugger == "lldb":
             _warn_meaningless_option(context, "--show-debugger")
 
-    if options.source_root_dir != None:
+    if options.source_root_dir is not None:
         if not os.path.isabs(options.source_root_dir):
             raise ToolArgumentError(
                 f'<d>--source-root-dir: expected absolute path, got</> <r>"{options.source_root_dir}"</>'

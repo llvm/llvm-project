@@ -1,0 +1,15 @@
+// RUN: rm -rf %t.dir && mkdir -p %t.dir
+// RUN: echo '[{"directory": "%/t.dir", "command": "clang --target=x86_64-pc-windows-msvc -x c GH75115.test", "file": "GH75115.test"}]' > %t.dir/compile_commands.json
+// RUN: clangd -enable-config=0 --compile-commands-dir=%t.dir -check=%s 2>&1 | FileCheck -strict-whitespace %s
+
+// CHECK: Building preamble...
+// CHECK-NEXT: Built preamble
+// CHECK-NEXT: Indexing headers...
+// CHECK-NEXT: Building AST...
+// CHECK-NEXT: Indexing AST...
+// CHECK-NEXT: Building inlay hints
+// CHECK-NEXT: semantic highlighting
+// CHECK-NEXT: Testing features at each token
+// CHECK-NEXT: All checks completed, 0 errors
+
+#define assert

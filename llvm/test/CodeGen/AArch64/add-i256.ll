@@ -2,7 +2,7 @@
 ; RUN: llc -mcpu=neoverse-n1 < %s | FileCheck %s
 target triple = "aarch64-linux-unknown"
 
-define void @add_i256(i64 %x0, i64 %x1, i64 %x2, i64 %x3, i64 %y1, i64 %y2, i64 %y3, i8* %store_addr_ptr) {
+define void @add_i256(i64 %x0, i64 %x1, i64 %x2, i64 %x3, i64 %y1, i64 %y2, i64 %y3, ptr %store_addr_ptr) {
 ; CHECK-LABEL: add_i256:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adds x8, x0, #1
@@ -50,16 +50,16 @@ entry:
   %split_64bits78 = lshr i256 %z_256, 192
   %z3 = trunc i256 %split_64bits78 to i64
 
-  %outptr0 = bitcast i8* %store_addr_ptr to i64*
-  store i64 %z0, i64* %outptr0, align 4
-  %gep = getelementptr i8, i8* %store_addr_ptr, i64 8
-  %outptr1 = bitcast i8* %gep to i64*
-  store i64 %z1, i64* %outptr1, align 4
-  %store_addr_ofs = getelementptr i8, i8* %store_addr_ptr, i64 16
-  %outptr081 = bitcast i8* %store_addr_ofs to i64*
-  store i64 %z2, i64* %outptr081, align 4
-  %gep82 = getelementptr i8, i8* %store_addr_ofs, i64 8
-  %outptr183 = bitcast i8* %gep82 to i64*
-  store i64 %z3, i64* %outptr183, align 4
+  %outptr0 = bitcast ptr %store_addr_ptr to ptr
+  store i64 %z0, ptr %outptr0, align 4
+  %gep = getelementptr i8, ptr %store_addr_ptr, i64 8
+  %outptr1 = bitcast ptr %gep to ptr
+  store i64 %z1, ptr %outptr1, align 4
+  %store_addr_ofs = getelementptr i8, ptr %store_addr_ptr, i64 16
+  %outptr081 = bitcast ptr %store_addr_ofs to ptr
+  store i64 %z2, ptr %outptr081, align 4
+  %gep82 = getelementptr i8, ptr %store_addr_ofs, i64 8
+  %outptr183 = bitcast ptr %gep82 to ptr
+  store i64 %z3, ptr %outptr183, align 4
   ret void
 }

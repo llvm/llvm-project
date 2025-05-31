@@ -40,7 +40,7 @@ struct Options {
   bool Verbose = false;
   int NumThreads = 0;
   bool Verify = false;
-  bool UseLLVMDWARFLinker = false;
+  bool UseDWARFLinkerParallel = false;
   DwarfUtilAccelKind AccelTableKind = DwarfUtilAccelKind::None;
 
   std::string getSeparateDebugFileName() const {

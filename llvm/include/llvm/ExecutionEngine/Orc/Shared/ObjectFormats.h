@@ -14,41 +14,10 @@
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_OBJECTFORMATS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
 
 namespace llvm {
 namespace orc {
-
-// MachO section names.
-
-extern StringRef MachODataCommonSectionName;
-extern StringRef MachODataDataSectionName;
-extern StringRef MachOEHFrameSectionName;
-extern StringRef MachOCompactUnwindInfoSectionName;
-extern StringRef MachOCStringSectionName;
-extern StringRef MachOModInitFuncSectionName;
-extern StringRef MachOObjCCatListSectionName;
-extern StringRef MachOObjCCatList2SectionName;
-extern StringRef MachOObjCClassListSectionName;
-extern StringRef MachOObjCClassNameSectionName;
-extern StringRef MachOObjCClassRefsSectionName;
-extern StringRef MachOObjCConstSectionName;
-extern StringRef MachOObjCDataSectionName;
-extern StringRef MachOObjCImageInfoSectionName;
-extern StringRef MachOObjCMethNameSectionName;
-extern StringRef MachOObjCMethTypeSectionName;
-extern StringRef MachOObjCNLCatListSectionName;
-extern StringRef MachOObjCSelRefsSectionName;
-extern StringRef MachOSwift5ProtoSectionName;
-extern StringRef MachOSwift5ProtosSectionName;
-extern StringRef MachOSwift5TypesSectionName;
-extern StringRef MachOSwift5TypeRefSectionName;
-extern StringRef MachOSwift5FieldMetadataSectionName;
-extern StringRef MachOSwift5EntrySectionName;
-extern StringRef MachOThreadBSSSectionName;
-extern StringRef MachOThreadDataSectionName;
-extern StringRef MachOThreadVarsSectionName;
-
-extern StringRef MachOInitSectionNames[19];
 
 // ELF section names.
 extern StringRef ELFEHFrameSectionName;
@@ -65,9 +34,6 @@ extern StringRef ELFInitSectionNames[3];
 extern StringRef ELFThreadBSSSectionName;
 extern StringRef ELFThreadDataSectionName;
 
-bool isMachOInitializerSection(StringRef SegName, StringRef SecName);
-bool isMachOInitializerSection(StringRef QualifiedName);
-
 bool isELFInitializerSection(StringRef SecName);
 
 bool isCOFFInitializerSection(StringRef Name);
@@ -75,4 +41,4 @@ bool isCOFFInitializerSection(StringRef Name);
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_MEMORYFLAGS_H
+#endif // LLVM_EXECUTIONENGINE_ORC_SHARED_OBJECTFORMATS_H

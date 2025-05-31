@@ -19,7 +19,7 @@ define i32 @test_gep_and_bitcast(i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i32 [[RES_PHI]], i32 1
@@ -57,7 +57,7 @@ define i32 @test_gep_and_bitcast_arg(ptr %obj, i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ:%.*]], i64 16
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ:%.*]], i64 16
 ; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i32 [[RES_PHI]], i32 1
@@ -105,7 +105,7 @@ define i32 @test_gep_and_bitcast_phi(i1 %cond, i1 %cond2, i1 %cond3) {
 ; ALL:       bb4:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND3:%.*]], i32 [[RES_PHI]], i32 1
@@ -157,7 +157,7 @@ define i32 @test_gep_i32ptr(i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i32, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 64
 ; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i32 [[RES_PHI]], i32 1
@@ -196,7 +196,7 @@ define i32 @test_gep_and_bitcast_gep_base_ptr(i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ0]], i64 32
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ0]], i64 32
 ; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i32 [[RES_PHI]], i32 1
@@ -234,7 +234,7 @@ define i32 @test_gep_and_bitcast_same_bb(i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; ALL-NEXT:    [[RES_PHI:%.*]] = load i32, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    store i32 1, ptr [[PTR_TYPED]], align 4
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i32 [[RES_PHI]], i32 1
@@ -264,11 +264,11 @@ define i32 @test_gep_and_bitcast_same_bb_and_extra_use(i1 %cond, i1 %cond2) {
 ; INSTCOMBINE-LABEL: @test_gep_and_bitcast_same_bb_and_extra_use(
 ; INSTCOMBINE-NEXT:  entry:
 ; INSTCOMBINE-NEXT:    [[OBJ:%.*]] = call ptr @get_ptr.i8()
-; INSTCOMBINE-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; INSTCOMBINE-NEXT:    [[PTR1:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; INSTCOMBINE-NEXT:    call void @foo.i32(ptr nonnull [[PTR1]])
 ; INSTCOMBINE-NEXT:    br i1 [[COND:%.*]], label [[EXIT:%.*]], label [[BB2:%.*]]
 ; INSTCOMBINE:       bb2:
-; INSTCOMBINE-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; INSTCOMBINE-NEXT:    [[PTR2:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; INSTCOMBINE-NEXT:    br label [[EXIT]]
 ; INSTCOMBINE:       exit:
 ; INSTCOMBINE-NEXT:    [[PTR_TYPED:%.*]] = phi ptr [ [[PTR1]], [[ENTRY:%.*]] ], [ [[PTR2]], [[BB2]] ]
@@ -280,7 +280,7 @@ define i32 @test_gep_and_bitcast_same_bb_and_extra_use(i1 %cond, i1 %cond2) {
 ; INSTCOMBINEGVN-LABEL: @test_gep_and_bitcast_same_bb_and_extra_use(
 ; INSTCOMBINEGVN-NEXT:  entry:
 ; INSTCOMBINEGVN-NEXT:    [[OBJ:%.*]] = call ptr @get_ptr.i8()
-; INSTCOMBINEGVN-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; INSTCOMBINEGVN-NEXT:    [[PTR1:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; INSTCOMBINEGVN-NEXT:    call void @foo.i32(ptr nonnull [[PTR1]])
 ; INSTCOMBINEGVN-NEXT:    br i1 [[COND:%.*]], label [[EXIT:%.*]], label [[BB2:%.*]]
 ; INSTCOMBINEGVN:       bb2:
@@ -322,7 +322,7 @@ define i8 @test_gep(i1 %cond, i1 %cond2) {
 ; ALL:       bb2:
 ; ALL-NEXT:    br label [[EXIT]]
 ; ALL:       exit:
-; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR_TYPED:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; ALL-NEXT:    [[RES_PHI:%.*]] = load i8, ptr [[PTR_TYPED]], align 1
 ; ALL-NEXT:    store i8 1, ptr [[PTR_TYPED]], align 1
 ; ALL-NEXT:    [[RES:%.*]] = select i1 [[COND2:%.*]], i8 [[RES_PHI]], i8 1
@@ -357,12 +357,12 @@ define i32 @test_extra_uses(i1 %cond, i1 %cond2) {
 ; ALL-NEXT:    [[OBJ:%.*]] = call ptr @get_ptr.i8()
 ; ALL-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; ALL:       bb1:
-; ALL-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR1:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; ALL-NEXT:    [[RES1:%.*]] = load i32, ptr [[PTR1]], align 4
 ; ALL-NEXT:    call void @foo.i32(ptr nonnull [[PTR1]])
 ; ALL-NEXT:    br label [[EXIT:%.*]]
 ; ALL:       bb2:
-; ALL-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR2:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; ALL-NEXT:    [[RES2:%.*]] = load i32, ptr [[PTR2]], align 4
 ; ALL-NEXT:    call void @foo.i32(ptr nonnull [[PTR2]])
 ; ALL-NEXT:    br label [[EXIT]]
@@ -451,7 +451,7 @@ define i32 @test_extra_uses_multiple_geps(i1 %cond, i1 %cond2) {
 ; ALL-NEXT:    [[OBJ:%.*]] = call ptr @get_ptr.i8()
 ; ALL-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; ALL:       bb1:
-; ALL-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR1:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; ALL-NEXT:    [[RES1:%.*]] = load i32, ptr [[PTR1]], align 4
 ; ALL-NEXT:    call void @foo.i32(ptr nonnull [[PTR1]])
 ; ALL-NEXT:    br label [[EXIT:%.*]]
@@ -499,12 +499,12 @@ define i8 @test_gep_extra_uses(i1 %cond, i1 %cond2) {
 ; ALL-NEXT:    [[OBJ:%.*]] = call ptr @get_ptr.i8()
 ; ALL-NEXT:    br i1 [[COND:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; ALL:       bb1:
-; ALL-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR1:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; ALL-NEXT:    [[RES1:%.*]] = load i8, ptr [[PTR1]], align 1
 ; ALL-NEXT:    call void @foo.i8(ptr nonnull [[PTR1]])
 ; ALL-NEXT:    br label [[EXIT:%.*]]
 ; ALL:       bb2:
-; ALL-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 16
+; ALL-NEXT:    [[PTR2:%.*]] = getelementptr inbounds nuw i8, ptr [[OBJ]], i64 16
 ; ALL-NEXT:    [[RES2:%.*]] = load i8, ptr [[PTR2]], align 1
 ; ALL-NEXT:    call void @foo.i8(ptr nonnull [[PTR2]])
 ; ALL-NEXT:    br label [[EXIT]]

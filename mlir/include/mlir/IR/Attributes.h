@@ -47,19 +47,6 @@ public:
 
   bool operator!() const { return impl == nullptr; }
 
-  /// Casting utility functions. These are deprecated and will be removed,
-  /// please prefer using the `llvm` namespace variants instead.
-  template <typename... Tys>
-  bool isa() const;
-  template <typename... Tys>
-  bool isa_and_nonnull() const;
-  template <typename U>
-  U dyn_cast() const;
-  template <typename U>
-  U dyn_cast_or_null() const;
-  template <typename U>
-  U cast() const;
-
   /// Return a unique identifier for the concrete attribute type. This is used
   /// to support dynamic type casting.
   TypeID getTypeID() { return impl->getAbstractAttribute().getTypeID(); }
@@ -77,6 +64,10 @@ public:
   void print(raw_ostream &os, bool elideType = false) const;
   void print(raw_ostream &os, AsmState &state, bool elideType = false) const;
   void dump() const;
+
+  /// Print the attribute without dialect wrapping.
+  void printStripped(raw_ostream &os) const;
+  void printStripped(raw_ostream &os, AsmState &state) const;
 
   /// Get an opaque pointer to the attribute.
   const void *getAsOpaquePointer() const { return impl; }
@@ -161,31 +152,6 @@ inline raw_ostream &operator<<(raw_ostream &os, Attribute attr) {
   return os;
 }
 
-template <typename... Tys>
-bool Attribute::isa() const {
-  return llvm::isa<Tys...>(*this);
-}
-
-template <typename... Tys>
-bool Attribute::isa_and_nonnull() const {
-  return llvm::isa_and_present<Tys...>(*this);
-}
-
-template <typename U>
-U Attribute::dyn_cast() const {
-  return llvm::dyn_cast<U>(*this);
-}
-
-template <typename U>
-U Attribute::dyn_cast_or_null() const {
-  return llvm::dyn_cast_if_present<U>(*this);
-}
-
-template <typename U>
-U Attribute::cast() const {
-  return llvm::cast<U>(*this);
-}
-
 inline ::llvm::hash_code hash_value(Attribute arg) {
   return DenseMapInfo<const Attribute::ImplType *>::getHashValue(arg.impl);
 }
@@ -198,6 +164,7 @@ inline ::llvm::hash_code hash_value(Attribute arg) {
 class NamedAttribute {
 public:
   NamedAttribute(StringAttr name, Attribute value);
+  NamedAttribute(StringRef name, Attribute value);
 
   /// Return the name of the attribute.
   StringAttr getName() const;
@@ -313,12 +280,19 @@ protected:
 // Core AttributeTrait
 //===----------------------------------------------------------------------===//
 
-/// This trait is used to determine if an attribute is mutable or not. It is
-/// attached on an attribute if the corresponding ImplType defines a `mutate`
-/// function with proper signature.
 namespace AttributeTrait {
+/// This trait is used to determine if an attribute is mutable or not. It is
+/// attached on an attribute if the corresponding ConcreteType defines a
+/// `mutate` function with proper signature.
 template <typename ConcreteType>
 using IsMutable = detail::StorageUserTrait::IsMutable<ConcreteType>;
+
+/// This trait is used to determine if an attribute is a location or not. It is
+/// attached to an attribute by the user if they intend the attribute to be used
+/// as a location.
+template <typename ConcreteType>
+struct IsLocation : public AttributeTrait::TraitBase<ConcreteType, IsLocation> {
+};
 } // namespace AttributeTrait
 
 } // namespace mlir.

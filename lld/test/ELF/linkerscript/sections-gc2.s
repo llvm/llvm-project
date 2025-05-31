@@ -11,6 +11,7 @@
 # CHECK: Idx Name          Size      VMA          Type
 # CHECK-NEXT:  0
 # CHECK-NEXT:    used_in_reloc
+# CHECK-NEXT:    used_in_script
 # CHECK-NEXT:    .text
 # CHECK-NEXT:    .comment
 # CHECK-NEXT:    .symtab

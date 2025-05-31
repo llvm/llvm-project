@@ -3,11 +3,11 @@
 define dso_local void @foo() !dbg !7 {
 entry:
   %a = alloca i32, align 4
-  store i32 0, i32* %a, align 4, !dbg !9
-  %0 = bitcast i32* %a to i8*, !dbg !10
-  call void @llvm.memset.p0i8.i64(i8* align 4 %0, i8 -86, i64 4, i1 false), !dbg !10
-  %1 = bitcast i32* %a to i8*, !dbg !11
-  call void @other(i8* %1), !dbg !12
+  store i32 0, ptr %a, align 4, !dbg !9
+  %0 = bitcast ptr %a to ptr, !dbg !10
+  call void @llvm.memset.p0.i64(ptr align 4 %0, i8 -86, i64 4, i1 false), !dbg !10
+  %1 = bitcast ptr %a to ptr, !dbg !11
+  call void @other(ptr %1), !dbg !12
   ret void, !dbg !13
 }
 ; CHECK:      callq memset
@@ -16,9 +16,9 @@ entry:
 ; CHECK-NEXT: .loc 1 9 3
 ; CHECK-NEXT: callq other
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
-declare dso_local void @other(i8*)
+declare dso_local void @other(ptr)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

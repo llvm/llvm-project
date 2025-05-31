@@ -34,16 +34,17 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __stable_partition {
-
-struct __fn {
+struct __stable_partition {
   template <class _Iter, class _Sent, class _Proj, class _Pred>
-  _LIBCPP_HIDE_FROM_ABI static subrange<__remove_cvref_t<_Iter>>
+  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX26 subrange<__remove_cvref_t<_Iter>>
   __stable_partition_fn_impl(_Iter&& __first, _Sent&& __last, _Pred&& __pred, _Proj&& __proj) {
     auto __last_iter = ranges::next(__first, __last);
 
@@ -59,7 +60,8 @@ struct __fn {
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
     requires permutable<_Iter>
-  _LIBCPP_HIDE_FROM_ABI subrange<_Iter> operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 subrange<_Iter>
+  operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) const {
     return __stable_partition_fn_impl(__first, __last, __pred, __proj);
   }
 
@@ -67,21 +69,21 @@ struct __fn {
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
     requires permutable<iterator_t<_Range>>
-  _LIBCPP_HIDE_FROM_ABI borrowed_subrange_t<_Range>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 borrowed_subrange_t<_Range>
   operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
     return __stable_partition_fn_impl(ranges::begin(__range), ranges::end(__range), __pred, __proj);
   }
 };
 
-} // namespace __stable_partition
-
 inline namespace __cpo {
-inline constexpr auto stable_partition = __stable_partition::__fn{};
+inline constexpr auto stable_partition = __stable_partition{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_STABLE_PARTITION_H

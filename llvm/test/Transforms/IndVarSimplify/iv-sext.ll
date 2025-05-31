@@ -26,7 +26,7 @@ define void @t(ptr %pval1, ptr %peakWeight, ptr %nrgReducePeakrate, i32 %bandEdg
 ; CHECK-NEXT:    [[HIPART_119:%.*]] = phi i32 [ [[HIPART_0_LCSSA:%.*]], [[BB8]] ], [ 0, [[BB_NPH22]] ]
 ; CHECK-NEXT:    [[LOPART_118:%.*]] = phi i32 [ [[LOPART_0_LCSSA:%.*]], [[BB8]] ], [ 0, [[BB_NPH22]] ]
 ; CHECK-NEXT:    [[PEAKCOUNT_117:%.*]] = phi float [ [[PEAKCOUNT_2_LCSSA:%.*]], [[BB8]] ], [ [[VAL]], [[BB_NPH22]] ]
-; CHECK-NEXT:    [[VAL4:%.*]] = icmp ugt i64 [[INDVARS_IV1]], 0
+; CHECK-NEXT:    [[VAL4:%.*]] = icmp samesign ugt i64 [[INDVARS_IV1]], 0
 ; CHECK-NEXT:    br i1 [[VAL4]], label [[BB1:%.*]], label [[BB3_PREHEADER:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV1]], -1
@@ -99,7 +99,7 @@ define void @t(ptr %pval1, ptr %peakWeight, ptr %nrgReducePeakrate, i32 %bandEdg
 ; CHECK-NEXT:    [[VAL35_LCSSA:%.*]] = phi float [ [[VAL35]], [[BB5]] ]
 ; CHECK-NEXT:    [[VAL31_LCSSA_WIDE:%.*]] = phi i64 [ [[INDVARS_IV_NEXT]], [[BB5]] ]
 ; CHECK-NEXT:    [[VAL30_LCSSA:%.*]] = phi float [ [[VAL30]], [[BB5]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[VAL31_LCSSA_WIDE]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc nsw i64 [[VAL31_LCSSA_WIDE]] to i32
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    [[DISTERBHI_2_LCSSA]] = phi float [ [[VAL30_LCSSA]], [[BB5_BB7_CRIT_EDGE]] ], [ [[DISTERBHI_0_PH]], [[BB5_PREHEADER]] ]

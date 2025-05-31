@@ -43,42 +43,42 @@
     call void @llvm.dbg.value(metadata i32 %arg1, metadata !18, metadata !DIExpression()), !dbg !22
     call void @llvm.dbg.value(metadata i32 %arg2, metadata !19, metadata !DIExpression()), !dbg !22
     call void @llvm.dbg.value(metadata i32 %arg3, metadata !20, metadata !DIExpression()), !dbg !22
-    store i32 %arg3, i32* %arg3.addr, align 4
-    %0 = bitcast i32* %a to i8*, !dbg !22
-    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0), !dbg !22
+    store i32 %arg3, ptr %arg3.addr, align 4
+    %0 = bitcast ptr %a to ptr, !dbg !22
+    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0), !dbg !22
     %add = add nsw i32 %arg1, 2, !dbg !22
     %sub = add nsw i32 %arg2, -4, !dbg !22
-    call void @llvm.dbg.value(metadata i32* %arg3.addr, metadata !20, metadata !DIExpression(DW_OP_deref)), !dbg !22
-    %call = call arm_aapcscc i32 @func2(i32 %add, i32 %sub, i32* nonnull %arg3.addr), !dbg !22
+    call void @llvm.dbg.value(metadata ptr %arg3.addr, metadata !20, metadata !DIExpression(DW_OP_deref)), !dbg !22
+    %call = call arm_aapcscc i32 @func2(i32 %add, i32 %sub, ptr nonnull %arg3.addr), !dbg !22
     call void @llvm.dbg.value(metadata i32 %call, metadata !21, metadata !DIExpression()), !dbg !22
-    store i32 %call, i32* %a, align 4, !dbg !22
-    %1 = load i32, i32* %arg3.addr, align 4, !dbg !22
+    store i32 %call, ptr %a, align 4, !dbg !22
+    %1 = load i32, ptr %arg3.addr, align 4, !dbg !22
     call void @llvm.dbg.value(metadata i32 %1, metadata !20, metadata !DIExpression()), !dbg !22
     %sub1 = add nsw i32 %1, -16, !dbg !22
     %add2 = add nsw i32 %arg1, 8, !dbg !22
-    call void @llvm.dbg.value(metadata i32* %a, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !22
-    %call3 = call arm_aapcscc i32 @func2(i32 %sub1, i32 %add2, i32* nonnull %a), !dbg !22
-    %2 = load i32, i32* %a, align 4, !dbg !22
+    call void @llvm.dbg.value(metadata ptr %a, metadata !21, metadata !DIExpression(DW_OP_deref)), !dbg !22
+    %call3 = call arm_aapcscc i32 @func2(i32 %sub1, i32 %add2, ptr nonnull %a), !dbg !22
+    %2 = load i32, ptr %a, align 4, !dbg !22
     call void @llvm.dbg.value(metadata i32 %2, metadata !21, metadata !DIExpression()), !dbg !22
     %add4 = add nsw i32 %2, %call3, !dbg !22
     call void @llvm.dbg.value(metadata i32 %add4, metadata !21, metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)), !dbg !22
-    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0), !dbg !22
+    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %0), !dbg !22
     ret i32 %add4, !dbg !22
   }
   
   ; Function Attrs: argmemonly nounwind willreturn
-  declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+  declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
   
-  declare !dbg !4 dso_local arm_aapcscc i32 @func2(i32, i32, i32*) local_unnamed_addr
+  declare !dbg !4 dso_local arm_aapcscc i32 @func2(i32, i32, ptr) local_unnamed_addr
   
   ; Function Attrs: argmemonly nounwind willreturn
-  declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+  declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
   
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**)
+  declare void @llvm.stackprotector(ptr, ptr)
   
   attributes #0 = { "frame-pointer"="all" "target-features"="+armv7-a" }
   

@@ -8,6 +8,10 @@
 ; CHECK: adds x3, x4, #1024, lsl #12 ; encoding: [0x83,0x00,0x50,0xb1]
 adds x3, x4, 1024, lsl 12
 
+; CHECK-COUNT-2: mov x3, #327680 ; encoding: [0xa3,0x00,0xa0,0xd2]
+movz x3, (0x54321) >> 16, lsl 16
+movz x3, (0x54321 >> 16), lsl 16
+
 ; Optional extend
 ; CHECK: add sp, x2, x3              ; encoding: [0x5f,0x60,0x23,0x8b]
 add sp, x2, x3, uxtx 0

@@ -11,7 +11,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/Sema/DeclSpec.h"
+#include "clang/AST/Type.h"
 #include <optional>
 
 namespace clang::tidy::utils::fixit {
@@ -41,12 +41,17 @@ enum class QualifierTarget {
 /// Requires that `Var` is isolated in written code like in `int foo = 42;`.
 std::optional<FixItHint>
 addQualifierToVarDecl(const VarDecl &Var, const ASTContext &Context,
-                      DeclSpec::TQ Qualifier,
+                      Qualifiers::TQ Qualifier,
                       QualifierTarget QualTarget = QualifierTarget::Pointee,
                       QualifierPolicy QualPolicy = QualifierPolicy::Left);
 
 // \brief Format a pointer to an expression
 std::string formatDereference(const Expr &ExprNode, const ASTContext &Context);
+
+// \brief Checks whatever a expression require extra () to be always used in
+// safe way in any other expression.
+bool areParensNeededForStatement(const Stmt &Node);
+
 } // namespace clang::tidy::utils::fixit
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FIXITHINTUTILS_H

@@ -23,6 +23,11 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-insert-read-write-csr"
 #define RISCV_INSERT_READ_WRITE_CSR_NAME "RISC-V Insert Read/Write CSR Pass"
 
+static cl::opt<bool>
+    DisableFRMInsertOpt("riscv-disable-frm-insert-opt", cl::init(false),
+                        cl::Hidden,
+                        cl::desc("Disable optimized frm insertion."));
+
 namespace {
 
 class RISCVInsertReadWriteCSR : public MachineFunctionPass {
@@ -46,6 +51,7 @@ public:
 
 private:
   bool emitWriteRoundingMode(MachineBasicBlock &MBB);
+  bool emitWriteRoundingModeOpt(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
@@ -54,6 +60,83 @@ char RISCVInsertReadWriteCSR::ID = 0;
 
 INITIALIZE_PASS(RISCVInsertReadWriteCSR, DEBUG_TYPE,
                 RISCV_INSERT_READ_WRITE_CSR_NAME, false, false)
+
+// TODO: Use more accurate rounding mode at the start of MBB.
+bool RISCVInsertReadWriteCSR::emitWriteRoundingModeOpt(MachineBasicBlock &MBB) {
+  bool Changed = false;
+  MachineInstr *LastFRMChanger = nullptr;
+  unsigned CurrentRM = RISCVFPRndMode::DYN;
+  Register SavedFRM;
+
+  for (MachineInstr &MI : MBB) {
+    if (MI.getOpcode() == RISCV::SwapFRMImm ||
+        MI.getOpcode() == RISCV::WriteFRMImm) {
+      CurrentRM = MI.getOperand(0).getImm();
+      SavedFRM = Register();
+      continue;
+    }
+
+    if (MI.getOpcode() == RISCV::WriteFRM) {
+      CurrentRM = RISCVFPRndMode::DYN;
+      SavedFRM = Register();
+      continue;
+    }
+
+    if (MI.isCall() || MI.isInlineAsm() ||
+        MI.readsRegister(RISCV::FRM, /*TRI=*/nullptr)) {
+      // Restore FRM before unknown operations.
+      if (SavedFRM.isValid())
+        BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::WriteFRM))
+            .addReg(SavedFRM);
+      CurrentRM = RISCVFPRndMode::DYN;
+      SavedFRM = Register();
+      continue;
+    }
+
+    assert(!MI.modifiesRegister(RISCV::FRM, /*TRI=*/nullptr) &&
+           "Expected that MI could not modify FRM.");
+
+    int FRMIdx = RISCVII::getFRMOpNum(MI.getDesc());
+    if (FRMIdx < 0)
+      continue;
+    unsigned InstrRM = MI.getOperand(FRMIdx).getImm();
+
+    LastFRMChanger = &MI;
+
+    // Make MI implicit use FRM.
+    MI.addOperand(MachineOperand::CreateReg(RISCV::FRM, /*IsDef*/ false,
+                                            /*IsImp*/ true));
+    Changed = true;
+
+    // Skip if MI uses same rounding mode as FRM.
+    if (InstrRM == CurrentRM)
+      continue;
+
+    if (!SavedFRM.isValid()) {
+      // Save current FRM value to SavedFRM.
+      MachineRegisterInfo *MRI = &MBB.getParent()->getRegInfo();
+      SavedFRM = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::SwapFRMImm), SavedFRM)
+          .addImm(InstrRM);
+    } else {
+      // Don't need to save current FRM when SavedFRM having value.
+      BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::WriteFRMImm))
+          .addImm(InstrRM);
+    }
+    CurrentRM = InstrRM;
+  }
+
+  // Restore FRM if needed.
+  if (SavedFRM.isValid()) {
+    assert(LastFRMChanger && "Expected valid pointer.");
+    MachineInstrBuilder MIB =
+        BuildMI(*MBB.getParent(), {}, TII->get(RISCV::WriteFRM))
+            .addReg(SavedFRM);
+    MBB.insertAfter(LastFRMChanger, MIB);
+  }
+
+  return Changed;
+}
 
 // This function also swaps frm and restores it when encountering an RVV
 // floating point instruction with a static rounding mode.
@@ -99,8 +182,12 @@ bool RISCVInsertReadWriteCSR::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
 
-  for (MachineBasicBlock &MBB : MF)
-    Changed |= emitWriteRoundingMode(MBB);
+  for (MachineBasicBlock &MBB : MF) {
+    if (DisableFRMInsertOpt)
+      Changed |= emitWriteRoundingMode(MBB);
+    else
+      Changed |= emitWriteRoundingModeOpt(MBB);
+  }
 
   return Changed;
 }

@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../lib/ExecutionEngine/IntelJITEvents/IntelJITEventsWrapper.h"
+#include "../../lib/ExecutionEngine/IntelJITProfiling/IntelJITEventsWrapper.h"
 #include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -168,7 +168,7 @@ protected:
 
     if (Tuple.isOSWindows() && !Tuple.isOSBinFormatELF()) {
       Tuple.setObjectFormat(Triple::ELF);
-      TheModule->setTargetTriple(Tuple.getTriple());
+      TheModule->setTargetTriple(Tuple);
     }
 
     // Compile the IR

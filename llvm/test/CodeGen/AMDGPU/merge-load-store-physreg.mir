@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-load-store-opt -o - %s | FileCheck %s
 
 # Check that SILoadStoreOptimizer honors physregs defs/uses between moved
 # instructions.
@@ -50,7 +50,7 @@ body:             |
 
     $m0 = S_MOV_B32 -1
     %2:vgpr_32 = DS_READ_B32 %1, 0, 0, implicit $m0, implicit $exec :: (load (s32))
-    %20:sgpr_32 = V_READFIRSTLANE_B32 %2, implicit $exec
+    %20:sreg_32_xm0 = V_READFIRSTLANE_B32 %2, implicit $exec
 
     %21:sgpr_32 = S_ADD_U32 %20, 4, implicit-def $scc
     ; The S_ADDC_U32 depends on the first DS_READ_B32 only via SCC

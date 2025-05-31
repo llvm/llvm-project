@@ -51,8 +51,11 @@ inline Visibility minVisibility(Visibility L, Visibility R) {
 }
 
 class LinkageInfo {
+  LLVM_PREFERRED_TYPE(Linkage)
   uint8_t linkage_    : 3;
+  LLVM_PREFERRED_TYPE(Visibility)
   uint8_t visibility_ : 2;
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t explicit_   : 1;
 
   void setVisibility(Visibility V, bool E) { visibility_ = V; explicit_ = E; }

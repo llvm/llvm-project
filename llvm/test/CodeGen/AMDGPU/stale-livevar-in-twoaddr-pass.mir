@@ -1,4 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=livevars,phi-node-elimination,twoaddressinstruction -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=livevars,phi-node-elimination,twoaddressinstruction -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 --passes='require<live-vars>,phi-node-elimination,two-address-instruction' -verify-each -o - %s | FileCheck %s
 # This used to fail under ASAN enabled build because we didn't update LiveVariables in SIInstrInfo::convertToThreeAddress()
 # CHECK: _amdgpu_ps_main
 

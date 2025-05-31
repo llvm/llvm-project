@@ -610,29 +610,28 @@ functions returns null.
 Getting Record Superclasses
 ===========================
 
-The ``Record`` class provides a function to obtain the superclasses of a
-record. It is named ``getSuperClasses`` and returns an ``ArrayRef`` of an
-array of ``std::pair`` pairs. The superclasses are in post-order: the order
-in which the superclasses were visited while copying their fields into the
-record. Each pair consists of a pointer to the ``Record`` instance for a
-superclass record and an instance of the ``SMRange`` class. The range
-indicates the source file locations of the beginning and end of the class
-definition.
+The ``Record`` class provides a function to obtain the direct superclasses
+of a record. It is named ``getDirectSuperClasses`` and returns an
+``ArrayRef`` of an array of ``std::pair`` pairs. Each pair consists of a
+pointer to the ``Record`` instance for a superclass record and an instance
+of the ``SMRange`` class. The range indicates the source file locations of
+the beginning and end of the class definition.
 
-This example obtains the superclasses of the ``Prototype`` record and then
-iterates over the pairs in the returned array.
+This example obtains the direct superclasses of the ``Prototype`` record and
+then iterates over the pairs in the returned array.
 
 .. code-block:: text
 
-  ArrayRef<std::pair<Record *, SMRange>>
-      Superclasses = Prototype->getSuperClasses();
-  for (const auto &SuperPair : Superclasses) {
+  ArrayRef<std::pair<const Record *, SMRange>>
+      Superclasses = Prototype->getDirectSuperClasses();
+  for (const auto &[Super, Range] : Superclasses) {
     ...
   }
 
-The ``Record`` class also provides a function, ``getDirectSuperClasses``, to
-append the *direct* superclasses of a record to a given vector of type
-``SmallVectorImpl<Record *>``.
+The ``Record`` class also provides a function, ``getSuperClasses``, to
+return a vector of *all* superclasses of a record. The superclasses are in
+post-order: the order in which the superclasses were visited while copying
+their fields into the record.
 
 Emitting Text to the Output Stream
 ==================================
@@ -761,7 +760,7 @@ over time. The output looks like this.
 
   -------------------- Global Variables (5) --------------------
 
-  AMDGPUBufferIntrinsics = [int_amdgcn_buffer_load_format, ...
+  AMDGPUBufferIntrinsics = [int_amdgcn_s_buffer_load, ...
   AMDGPUImageDimAtomicIntrinsics = [int_amdgcn_image_atomic_swap_1d, ...
   ...
   -------------------- Classes (758) --------------------

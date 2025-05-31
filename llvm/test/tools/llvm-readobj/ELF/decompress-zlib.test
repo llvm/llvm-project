@@ -1,0 +1,78 @@
+# REQUIRES: zlib
+## Test --decompress/-z.
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: llvm-readelf -z -x .strings -x .not_null_terminated %t | FileCheck %s --check-prefix=HEX
+# RUN: llvm-readobj --decompress -p .strings -p .not_null_terminated %t | FileCheck %s --check-prefix=STR
+
+# HEX:      Hex dump of section '.strings':
+# HEX-NEXT: 0x00000000 68657265 00617265 00736f6d 65007374 here.are.some.st
+# HEX-NEXT: 0x00000010 72696e67 7300                       rings.
+# HEX:      Hex dump of section '.not_null_terminated':
+# HEX-NEXT: 0x00000000 6e6f006e 756c6c                     no.null
+
+# STR:      String dump of section '.strings':
+# STR-NEXT: [ 0] here
+# STR-NEXT: [ 5] are
+# STR-NEXT: [ 9] some
+# STR-NEXT: [ e] strings
+# STR-EMPTY:
+# STR-NEXT: String dump of section '.not_null_terminated':
+# STR-NEXT: [ 0] no
+# STR-NEXT: [ 3] null{{$}}
+# STR-NOT:  {{.}}
+
+# RUN: llvm-readobj -x .strings -p .not_null_terminated %t | FileCheck %s --check-prefix=COMPRESSED
+
+# COMPRESSED:      String dump of section '.not_null_terminated':
+# COMPRESSED-NEXT: [     0] no
+# COMPRESSED-NEXT: [     3] null
+# COMPRESSED-EMPTY:
+# COMPRESSED-NEXT: Hex dump of section '.strings':
+# COMPRESSED-NEXT: 0x00000000 01000000 00000000 16000000 00000000 ................
+# COMPRESSED-NEXT: 0x00000010 00000000 00000000 789ccb48 2d4a6548 ........x..H-JeH
+# COMPRESSED-NEXT: 0x00000020 04e2e2fc 5c205152 9499975e cc000058 ....\ QR...^...X
+# COMPRESSED-NEXT: 0x00000030 2e079b                              ...
+
+# RUN: llvm-readelf -z -p .invalid1 -x .invalid2 -x .invalid3 %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=INVALID
+
+# INVALID:      String dump of section '.invalid1':
+# INVALID-NEXT: warning: '[[FILE]]': corrupted compressed section header
+# INVALID-NEXT: [     0] .
+# INVALID-EMPTY:
+# INVALID-NEXT: Hex dump of section '.invalid2':
+# INVALID-NEXT: warning: '[[FILE]]': zlib error: Z_DATA_ERROR
+# INVALID-NEXT: 0x00000000 01000000 00000000 16000000 00000000 ................
+# INVALID-NEXT: 0x00000010 00000000 00000000 78                ........x
+# INVALID-EMPTY:
+# INVALID-NEXT: Hex dump of section '.invalid3':
+# INVALID-NEXT: warning: '[[FILE]]': unsupported compression type (3)
+# INVALID-NEXT: 0x00000000 03000000 00000000 04000000 00000000 ................
+# INVALID-NEXT: 0x00000010 00000000 00000000 789c6360          ........x.c`
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .strings
+    Type: SHT_PROGBITS
+    Flags: [SHF_COMPRESSED]
+    Content: 010000000000000016000000000000000000000000000000789ccb482d4a654804e2e2fc5c2051529499975ecc0000582e079b
+  - Name: .not_null_terminated
+    Type: SHT_PROGBITS
+    Content: 6e6f006e756c6c
+  - Name: .invalid1
+    Type: SHT_PROGBITS
+    Flags: [SHF_COMPRESSED]
+    Content: 01
+  - Name: .invalid2
+    Type: SHT_PROGBITS
+    Flags: [SHF_COMPRESSED]
+    Content: 01000000000000001600000000000000000000000000000078
+  - Name: .invalid3
+    Type: SHT_PROGBITS
+    Flags: [SHF_COMPRESSED]
+    Content: 030000000000000004000000000000000000000000000000789c6360

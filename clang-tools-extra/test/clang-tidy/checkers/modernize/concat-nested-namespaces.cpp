@@ -1,9 +1,9 @@
 // RUN: cp %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %T/modernize-concat-nested-namespaces.h
-// RUN: %check_clang_tidy -std=c++17 -check-suffix=NORMAL %s modernize-concat-nested-namespaces %t -- -header-filter=".*" -- -I %T
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++17 -check-suffix=NORMAL %s modernize-concat-nested-namespaces %t -- -header-filter=".*" -- -I %T
 // RUN: FileCheck -input-file=%T/modernize-concat-nested-namespaces.h %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h -check-prefix=CHECK-FIXES
 // Restore header file and re-run with c++20:
 // RUN: cp %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %T/modernize-concat-nested-namespaces.h
-// RUN: %check_clang_tidy -std=c++20 -check-suffixes=NORMAL,CPP20 %s modernize-concat-nested-namespaces %t -- -header-filter=".*" -- -I %T
+// RUN: %check_clang_tidy --match-partial-fixes -std=c++20 -check-suffixes=NORMAL,CPP20 %s modernize-concat-nested-namespaces %t -- -header-filter=".*" -- -I %T
 // RUN: FileCheck -input-file=%T/modernize-concat-nested-namespaces.h %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h -check-prefix=CHECK-FIXES
 
 #include "modernize-concat-nested-namespaces.h"
@@ -178,9 +178,9 @@ namespace n47 {
 void foo() {}
 } // namespace n47
 #pragma clang diagnostic pop
-} //namespace n46
+} // namespace n46
 #undef N45_INNER
-} //namespace n45
+} // namespace n45
 // CHECK-FIXES-NORMAL: #define N45_INNER
 // CHECK-FIXES-NORMAL: #pragma clang diagnostic push
 // CHECK-FIXES-NORMAL: namespace n45::n46::n47 {

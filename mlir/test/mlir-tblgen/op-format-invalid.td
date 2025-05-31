@@ -19,6 +19,7 @@ class TestFormat_Op<string fmt, list<Trait> traits = []>
 
 //===----------------------------------------------------------------------===//
 // attr-dict
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'attr-dict' directive not found
 def DirectiveAttrDictInvalidA : TestFormat_Op<[{
@@ -38,6 +39,7 @@ def DirectiveAttrDictInvalidD : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // custom
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: expected '<' before custom directive name
 def DirectiveCustomInvalidA : TestFormat_Op<[{
@@ -70,6 +72,7 @@ def DirectiveCustomInvalidH : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // functional-type
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'functional-type' is only valid as a top-level directive
 def DirectiveFunctionalTypeInvalidA : TestFormat_Op<[{
@@ -98,6 +101,7 @@ def DirectiveFunctionalTypeInvalidF : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // operands
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'operands' directive creates overlap in format
 def DirectiveOperandsInvalidA : TestFormat_Op<[{
@@ -110,6 +114,7 @@ def DirectiveOperandsInvalidB : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // ref
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'ref' is only valid within a `custom` directive
 def DirectiveRefInvalidA : TestFormat_Op<[{
@@ -193,6 +198,7 @@ def DirectiveRefInvalidO : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // regions
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'regions' directive creates overlap in format
 def DirectiveRegionsInvalidA : TestFormat_Op<[{
@@ -218,6 +224,7 @@ def DirectiveRegionsInvalidD : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // results
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'results' directive can can only be used as a child to a 'type' directive
 def DirectiveResultsInvalidA : TestFormat_Op<[{
@@ -226,6 +233,7 @@ def DirectiveResultsInvalidA : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // successors
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: 'successors' is only valid as a top-level directive
 def DirectiveSuccessorsInvalidA : TestFormat_Op<[{
@@ -234,6 +242,7 @@ def DirectiveSuccessorsInvalidA : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // type
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: expected '(' before argument list
 def DirectiveTypeInvalidA : TestFormat_Op<[{
@@ -250,6 +259,7 @@ def DirectiveTypeInvalidC : TestFormat_Op<[{
 
 //===----------------------------------------------------------------------===//
 // functional-type/type operands
+//===----------------------------------------------------------------------===//
 
 // CHECK: error: literals may only be used in the top-level section of the format
 def DirectiveTypeZOperandInvalidA : TestFormat_Op<[{
@@ -481,12 +491,12 @@ def VariableInvalidN : TestFormat_Op<[{
 // CHECK: error: property 'prop' is already bound
 def VariableInvalidO : TestFormat_Op<[{
   custom<Test>($prop, $prop) attr-dict
-}]>, Arguments<(ins IntProperty<"int64_t">:$prop)>;
+}]>, Arguments<(ins IntProp<"int64_t">:$prop)>;
 
 // CHECK: error: property 'prop' must be bound before it is referenced
 def VariableInvalidP : TestFormat_Op<[{
   custom<Test>(ref($prop)) attr-dict
-}]>, Arguments<(ins IntProperty<"int64_t">:$prop)>;
+}]>, Arguments<(ins IntProp<"int64_t">:$prop)>;
 
 //===----------------------------------------------------------------------===//
 // Coverage Checks

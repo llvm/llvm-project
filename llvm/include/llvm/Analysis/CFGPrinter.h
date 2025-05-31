@@ -27,32 +27,35 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
+class ModuleSlotTracker;
+
 template <class GraphType> struct GraphTraits;
 class CFGViewerPass : public PassInfoMixin<CFGViewerPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
 class CFGOnlyViewerPass : public PassInfoMixin<CFGOnlyViewerPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
 class CFGPrinterPass : public PassInfoMixin<CFGPrinterPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
 class CFGOnlyPrinterPass : public PassInfoMixin<CFGOnlyPrinterPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
@@ -61,6 +64,7 @@ private:
   const Function *F;
   const BlockFrequencyInfo *BFI;
   const BranchProbabilityInfo *BPI;
+  std::unique_ptr<ModuleSlotTracker> MSTStorage;
   uint64_t MaxFreq;
   bool ShowHeat;
   bool EdgeWeights;
@@ -68,20 +72,18 @@ private:
 
 public:
   DOTFuncInfo(const Function *F) : DOTFuncInfo(F, nullptr, nullptr, 0) {}
+  LLVM_ABI ~DOTFuncInfo();
 
-  DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
-              const BranchProbabilityInfo *BPI, uint64_t MaxFreq)
-      : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq) {
-    ShowHeat = false;
-    EdgeWeights = !!BPI; // Print EdgeWeights when BPI is available.
-    RawWeights = !!BFI;  // Print RawWeights when BFI is available.
-  }
+  LLVM_ABI DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
+                       const BranchProbabilityInfo *BPI, uint64_t MaxFreq);
 
   const BlockFrequencyInfo *getBFI() const { return BFI; }
 
   const BranchProbabilityInfo *getBPI() const { return BPI; }
 
   const Function *getFunction() const { return this->F; }
+
+  LLVM_ABI ModuleSlotTracker *getModuleSlotTracker();
 
   uint64_t getMaxFreq() const { return MaxFreq; }
 
@@ -133,7 +135,7 @@ std::string SimpleNodeLabelString(const BasicBlockT *Node) {
   raw_string_ostream OS(Str);
 
   Node->printAsOperand(OS, false);
-  return OS.str();
+  return Str;
 }
 
 template <typename BasicBlockT>
@@ -145,10 +147,9 @@ std::string CompleteNodeLabelString(
         HandleComment) {
 
   enum { MaxColumns = 80 };
-  std::string Str;
-  raw_string_ostream OS(Str);
+  std::string OutStr;
+  raw_string_ostream OS(OutStr);
   HandleBasicBlock(OS, *Node);
-  std::string OutStr = OS.str();
   // Remove "%" from BB name
   if (OutStr[0] == '%') {
     OutStr.erase(OutStr.begin());
@@ -204,24 +205,12 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     return SimpleNodeLabelString(Node);
   }
 
-  static void printBasicBlock(raw_string_ostream &OS, const BasicBlock &Node) {
-    // Prepend label name
-    Node.printAsOperand(OS, false);
-    OS << ":\n";
-    for (auto J = Node.begin(), JE = Node.end(); J != JE; ++J) {
-      const Instruction *Inst = &*J;
-      OS << *Inst << "\n";
-    }
-  }
-
-  static std::string getCompleteNodeLabel(
+  LLVM_ABI static std::string getCompleteNodeLabel(
       const BasicBlock *Node, DOTFuncInfo *,
       function_ref<void(raw_string_ostream &, const BasicBlock &)>
-          HandleBasicBlock = printBasicBlock,
-      function_ref<void(std::string &, unsigned &, unsigned)>
-          HandleComment = eraseComment) {
-    return CompleteNodeLabelString(Node, HandleBasicBlock, HandleComment);
-  }
+          HandleBasicBlock = {},
+      function_ref<void(std::string &, unsigned &, unsigned)> HandleComment =
+          eraseComment);
 
   std::string getNodeLabel(const BasicBlock *Node, DOTFuncInfo *CFGInfo) {
 
@@ -249,7 +238,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
       raw_string_ostream OS(Str);
       auto Case = *SwitchInst::ConstCaseIt::fromSuccessorIndex(SI, SuccNo);
       OS << Case.getCaseValue()->getValue();
-      return OS.str();
+      return Str;
     }
     return "";
   }
@@ -259,7 +248,6 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     if (NodeName.empty()) {
       raw_string_ostream NodeOS(NodeName);
       Node->printAsOperand(NodeOS, false);
-      NodeName = NodeOS.str();
       // Removing %
       NodeName.erase(NodeName.begin());
     }
@@ -269,18 +257,19 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
   /// Display the raw branch weights from PGO.
   std::string getEdgeAttributes(const BasicBlock *Node, const_succ_iterator I,
                                 DOTFuncInfo *CFGInfo) {
+    // If BPI is not provided do not display any edge attributes
+    if (!CFGInfo->showEdgeWeights())
+      return "";
+
     unsigned OpNo = I.getSuccessorIndex();
     const Instruction *TI = Node->getTerminator();
     BasicBlock *SuccBB = TI->getSuccessor(OpNo);
     auto BranchProb = CFGInfo->getBPI()->getEdgeProbability(Node, SuccBB);
     double WeightPercent = ((double)BranchProb.getNumerator()) /
                            ((double)BranchProb.getDenominator());
-
     std::string TTAttr =
         formatv("tooltip=\"{0} -> {1}\\nProbability {2:P}\" ", getBBName(Node),
                 getBBName(SuccBB), WeightPercent);
-    if (!CFGInfo->showEdgeWeights())
-      return TTAttr;
 
     if (TI->getNumSuccessors() == 1)
       return TTAttr + "penwidth=2";
@@ -337,9 +326,10 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
                         " fontname=\"Courier\"";
     return Attrs;
   }
-  bool isNodeHidden(const BasicBlock *Node, const DOTFuncInfo *CFGInfo);
-  void computeDeoptOrUnreachablePaths(const Function *F);
+  LLVM_ABI bool isNodeHidden(const BasicBlock *Node,
+                             const DOTFuncInfo *CFGInfo);
+  LLVM_ABI void computeDeoptOrUnreachablePaths(const Function *F);
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif

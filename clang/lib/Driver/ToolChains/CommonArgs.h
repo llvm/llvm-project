@@ -76,7 +76,7 @@ void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
 
 void addLTOOptions(const ToolChain &ToolChain, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs, const InputInfo &Output,
-                   const InputInfo &Input, bool IsThinLTO);
+                   const InputInfoList &Inputs, bool IsThinLTO);
 
 const char *RelocationModelName(llvm::Reloc::Model Model);
 
@@ -111,19 +111,15 @@ void addOpenMPRuntimeLibraryPath(const ToolChain &TC,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
 /// Returns true, if an OpenMP runtime has been added.
-bool addOpenMPRuntime(llvm::opt::ArgStringList &CmdArgs, const ToolChain &TC,
-                      const llvm::opt::ArgList &Args,
+bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
+                      const ToolChain &TC, const llvm::opt::ArgList &Args,
                       bool ForceStaticHostRuntime = false,
                       bool IsOffloadingHost = false, bool GompNeedsRT = false);
 
-/// Adds Fortran runtime libraries to \p CmdArgs.
-void addFortranRuntimeLibs(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs);
-
-/// Adds the path for the Fortran runtime libraries to \p CmdArgs.
-void addFortranRuntimeLibraryPath(const ToolChain &TC,
-                                  const llvm::opt::ArgList &Args,
-                                  llvm::opt::ArgStringList &CmdArgs);
+/// Adds offloading options for OpenMP host compilation to \p CmdArgs.
+void addOpenMPHostOffloadingArgs(const Compilation &C, const JobAction &JA,
+                                 const llvm::opt::ArgList &Args,
+                                 llvm::opt::ArgStringList &CmdArgs);
 
 void addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                           const llvm::opt::ArgList &Args,
@@ -144,6 +140,9 @@ llvm::StringRef getLTOParallelism(const llvm::opt::ArgList &Args,
 bool areOptimizationsEnabled(const llvm::opt::ArgList &Args);
 
 bool isUseSeparateSections(const llvm::Triple &Triple);
+// Parse -mtls-dialect=. Return true if the target supports both general-dynamic
+// and TLSDESC, and TLSDESC is requested.
+bool isTLSDESCEnabled(const ToolChain &TC, const llvm::opt::ArgList &Args);
 
 /// \p EnvVar is split by system delimiter for environment variables.
 /// If \p ArgName is "-I", "-L", or an empty string, each entry from \p EnvVar
@@ -211,7 +210,66 @@ void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
 
 void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
-                        StringRef BitcodeSuffix, const llvm::Triple &Triple);
+                        StringRef BitcodeSuffix, const llvm::Triple &Triple,
+                        const ToolChain &HostTC);
+
+void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
+                           const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs,
+                           const llvm::Triple &Triple);
+void addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
+                            llvm::opt::ArgStringList &CmdArgs);
+void addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
+                const llvm::Triple &Triple,
+                const llvm::Reloc::Model &RelocationModel,
+                llvm::opt::ArgStringList &CmdArgs);
+
+/// Handle the -f{no}-color-diagnostics and -f{no}-diagnostics-colors options.
+void handleColorDiagnosticsArgs(const Driver &D, const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs);
+
+/// Add backslashes to escape spaces and other backslashes.
+/// This is used for the space-separated argument list specified with
+/// the -dwarf-debug-flags option.
+void escapeSpacesAndBackslashes(const char *Arg,
+                                llvm::SmallVectorImpl<char> &Res);
+
+/// Join the args in the given ArgList, escape spaces and backslashes and
+/// return the joined string. This is used when saving the command line as a
+/// result of using either the -frecord-command-line or -grecord-command-line
+/// options. The lifetime of the returned c-string will match that of the Args
+/// argument.
+const char *renderEscapedCommandLine(const ToolChain &TC,
+                                     const llvm::opt::ArgList &Args);
+
+/// Check if the command line should be recorded in the object file. This is
+/// done if either -frecord-command-line or -grecord-command-line options have
+/// been passed. This also does some error checking since -frecord-command-line
+/// is currently only supported on ELF platforms. The last two boolean
+/// arguments are out parameters and will be set depending on the command
+/// line options that were passed.
+bool shouldRecordCommandLine(const ToolChain &TC,
+                             const llvm::opt::ArgList &Args,
+                             bool &FRecordCommandLine,
+                             bool &GRecordCommandLine);
+
+void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
+                                        llvm::opt::ArgStringList &CmdArgs);
+
+bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
+                                    bool isSlpVec);
+
+/// Enable -floop-interchange based on the optimization level selected.
+void handleInterchangeLoopsArgs(const llvm::opt::ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs);
+
+/// Enable -fvectorize based on the optimization level selected.
+void handleVectorizeLoopsArgs(const llvm::opt::ArgList &Args,
+                              llvm::opt::ArgStringList &CmdArgs);
+
+/// Enable -fslp-vectorize based on the optimization level selected.
+void handleVectorizeSLPArgs(const llvm::opt::ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs);
 } // end namespace tools
 } // end namespace driver
 } // end namespace clang

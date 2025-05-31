@@ -1,11 +1,11 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses pcsections metadata correctly.
 
 --- |
 
-  define i8 @test(i8* %a) {
+  define i8 @test(ptr %a) {
   entry:
-    %0 = load i8, i8* %a, align 1, !pcsections !0
+    %0 = load i8, ptr %a, align 1, !pcsections !0
     ret i8 %0
   }
 

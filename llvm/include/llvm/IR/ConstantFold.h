@@ -52,8 +52,8 @@ namespace llvm {
                                           Constant *V2);
   Constant *ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
                                            Constant *C1, Constant *C2);
-  Constant *ConstantFoldGetElementPtr(Type *Ty, Constant *C, bool InBounds,
-                                      std::optional<unsigned> InRangeIndex,
+  Constant *ConstantFoldGetElementPtr(Type *Ty, Constant *C,
+                                      std::optional<ConstantRange> InRange,
                                       ArrayRef<Value *> Idxs);
 } // End llvm namespace
 

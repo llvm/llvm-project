@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// decltype(auto) operator->() const
+// auto operator->() const
 //   requires see below;
 
 #include <iterator>
@@ -28,11 +28,11 @@ void test() {
       using Common = std::common_iterator<Iterator, sentinel_wrapper<Iterator>>;
 
       Common common(iter);
-      std::same_as<Iterator> auto result = common.operator->();
+      std::same_as<Iterator> decltype(auto) result = common.operator->();
       assert(base(result) == buffer);
 
       Common const ccommon(iter);
-      std::same_as<Iterator> auto cresult = ccommon.operator->();
+      std::same_as<Iterator> decltype(auto) cresult = ccommon.operator->();
       assert(base(cresult) == buffer);
     };
 
@@ -48,11 +48,11 @@ void test() {
       using Common = std::common_iterator<Iterator, sentinel_type<int*>>;
 
       Common common(iter);
-      std::same_as<int*> auto result = common.operator->();
+      std::same_as<int*> decltype(auto) result = common.operator->();
       assert(result == buffer);
 
       Common const ccommon(iter);
-      std::same_as<int*> auto cresult = ccommon.operator->();
+      std::same_as<int*> decltype(auto) cresult = ccommon.operator->();
       assert(cresult == buffer);
     };
 
@@ -72,14 +72,14 @@ void test() {
       using Common = std::common_iterator<Iterator, sentinel_type<int*>>;
 
       Common common(iter);
-      auto proxy = common.operator->();
-      std::same_as<int const*> auto result = proxy.operator->();
+      auto proxy                                     = common.operator->();
+      std::same_as<int const*> decltype(auto) result = proxy.operator->();
       assert(result != buffer); // we copied to a temporary proxy
       assert(*result == *buffer);
 
       Common const ccommon(iter);
-      auto cproxy = ccommon.operator->();
-      std::same_as<int const*> auto cresult = cproxy.operator->();
+      auto cproxy                                     = ccommon.operator->();
+      std::same_as<int const*> decltype(auto) cresult = cproxy.operator->();
       assert(cresult != buffer); // we copied to a temporary proxy
       assert(*cresult == *buffer);
     };

@@ -1,5 +1,5 @@
-# Checks that jump table footprint reduction optimization is reducing entry
-# sizes.
+## Checks that jump table footprint reduction optimization is reducing entry
+## sizes.
 
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 RUN:   %S/Inputs/jump_table_footprint_reduction.s -o %t.o

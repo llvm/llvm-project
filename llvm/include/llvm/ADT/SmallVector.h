@@ -14,11 +14,12 @@
 #ifndef LLVM_ADT_SMALLVECTOR_H
 #define LLVM_ADT_SMALLVECTOR_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/type_traits.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <functional>
@@ -61,31 +62,18 @@ protected:
 
   SmallVectorBase() = delete;
   SmallVectorBase(void *FirstEl, size_t TotalCapacity)
-      : BeginX(FirstEl), Capacity(TotalCapacity) {}
+      : BeginX(FirstEl), Capacity(static_cast<Size_T>(TotalCapacity)) {}
 
   /// This is a helper for \a grow() that's out of line to reduce code
   /// duplication.  This function will report a fatal error if it can't grow at
   /// least to \p MinSize.
-  void *mallocForGrow(void *FirstEl, size_t MinSize, size_t TSize,
-                      size_t &NewCapacity);
+  LLVM_ABI void *mallocForGrow(void *FirstEl, size_t MinSize, size_t TSize,
+                               size_t &NewCapacity);
 
   /// This is an implementation of the grow() method which only works
   /// on POD-like data types and is out of line to reduce code duplication.
   /// This function will report a fatal error if it cannot increase capacity.
-  void grow_pod(void *FirstEl, size_t MinSize, size_t TSize);
-
-  /// If vector was first created with capacity 0, getFirstEl() points to the
-  /// memory right after, an area unallocated. If a subsequent allocation,
-  /// that grows the vector, happens to return the same pointer as getFirstEl(),
-  /// get a new allocation, otherwise isSmall() will falsely return that no
-  /// allocation was done (true) and the memory will not be freed in the
-  /// destructor. If a VSize is given (vector size), also copy that many
-  /// elements to the new allocation - used if realloca fails to increase
-  /// space, and happens to allocate precisely at BeginX.
-  /// This is unlikely to be called often, but resolves a memory leak when the
-  /// situation does occur.
-  void *replaceAllocation(void *NewElts, size_t TSize, size_t NewCapacity,
-                          size_t VSize = 0);
+  LLVM_ABI void grow_pod(void *FirstEl, size_t MinSize, size_t TSize);
 
 public:
   size_t size() const { return Size; }
@@ -99,8 +87,18 @@ protected:
   ///
   /// This does not construct or destroy any elements in the vector.
   void set_size(size_t N) {
-    assert(N <= capacity());
-    Size = N;
+    assert(N <= capacity()); // implies no overflow in assignment
+    Size = static_cast<Size_T>(N);
+  }
+
+  /// Set the array data pointer to \p Begin and capacity to \p N.
+  ///
+  /// This does not construct or destroy any elements in the vector.
+  //  This does not clean up any existing allocation.
+  void set_allocation_range(void *Begin, size_t N) {
+    assert(N <= SizeTypeMax());
+    BeginX = Begin;
+    Capacity = static_cast<Size_T>(N);
   }
 };
 
@@ -467,8 +465,7 @@ void SmallVectorTemplateBase<T, TriviallyCopyable>::takeAllocationForGrow(
   if (!this->isSmall())
     free(this->begin());
 
-  this->BeginX = NewElts;
-  this->Capacity = NewCapacity;
+  this->set_allocation_range(NewElts, NewCapacity);
 }
 
 /// SmallVectorTemplateBase<TriviallyCopyable = true> - This is where we put
@@ -1322,6 +1319,26 @@ extern template class llvm::SmallVectorBase<uint32_t>;
 #if SIZE_MAX > UINT32_MAX
 extern template class llvm::SmallVectorBase<uint64_t>;
 #endif
+
+// Provide DenseMapInfo for SmallVector of a type which has info.
+template <typename T, unsigned N> struct DenseMapInfo<llvm::SmallVector<T, N>> {
+  static SmallVector<T, N> getEmptyKey() {
+    return {DenseMapInfo<T>::getEmptyKey()};
+  }
+
+  static SmallVector<T, N> getTombstoneKey() {
+    return {DenseMapInfo<T>::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const SmallVector<T, N> &V) {
+    return static_cast<unsigned>(hash_combine_range(V));
+  }
+
+  static bool isEqual(const SmallVector<T, N> &LHS,
+                      const SmallVector<T, N> &RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // end namespace llvm
 

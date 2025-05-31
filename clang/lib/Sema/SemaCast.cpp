@@ -23,7 +23,9 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
-#include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include <set>
@@ -70,8 +72,11 @@ namespace {
       //   Preceding an expression by a parenthesized type name converts the
       //   value of the expression to the unqualified, non-atomic version of
       //   the named type.
+      // Don't drop __ptrauth qualifiers. We want to treat casting to a
+      // __ptrauth-qualified type as an error instead of implicitly ignoring
+      // the qualifier.
       if (!S.Context.getLangOpts().ObjC && !DestType->isRecordType() &&
-          !DestType->isArrayType()) {
+          !DestType->isArrayType() && !DestType.getPointerAuth()) {
         DestType = DestType.getAtomicUnqualifiedType();
       }
 
@@ -102,6 +107,7 @@ namespace {
     void CheckStaticCast();
     void CheckDynamicCast();
     void CheckCXXCStyleCast(bool FunctionalCast, bool ListInitialization);
+    bool CheckHLSLCStyleCast(CheckedConversionKind CCK);
     void CheckCStyleCast();
     void CheckBuiltinBitCast();
     void CheckAddrspaceCast();
@@ -155,14 +161,22 @@ namespace {
       Self.CheckCastAlign(SrcExpr.get(), DestType, OpRange);
     }
 
-    void checkObjCConversion(Sema::CheckedConversionKind CCK) {
+    void checkObjCConversion(CheckedConversionKind CCK) {
       assert(Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers());
 
       Expr *src = SrcExpr.get();
-      if (Self.CheckObjCConversion(OpRange, DestType, src, CCK) ==
-          Sema::ACR_unbridged)
+      if (Self.ObjC().CheckObjCConversion(OpRange, DestType, src, CCK) ==
+          SemaObjC::ACR_unbridged)
         IsARCUnbridgedCast = true;
       SrcExpr = src;
+    }
+
+    void checkQualifiedDestType() {
+      // Destination type may not be qualified with __ptrauth.
+      if (DestType.getPointerAuth()) {
+        Self.Diag(DestRange.getBegin(), diag::err_ptrauth_qualifier_cast)
+            << DestType << DestRange;
+      }
     }
 
     /// Check for and handle non-overload placeholder expressions.
@@ -248,18 +262,14 @@ static TryCastResult TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExp
                                                CastKind &Kind,
                                                CXXCastPath &BasePath);
 
-static TryCastResult TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr,
-                                           QualType DestType,
-                                           Sema::CheckedConversionKind CCK,
-                                           SourceRange OpRange,
-                                           unsigned &msg, CastKind &Kind,
-                                           bool ListInitialization);
+static TryCastResult
+TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
+                      CheckedConversionKind CCK, SourceRange OpRange,
+                      unsigned &msg, CastKind &Kind, bool ListInitialization);
 static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
-                                   QualType DestType,
-                                   Sema::CheckedConversionKind CCK,
-                                   SourceRange OpRange,
-                                   unsigned &msg, CastKind &Kind,
-                                   CXXCastPath &BasePath,
+                                   QualType DestType, CheckedConversionKind CCK,
+                                   SourceRange OpRange, unsigned &msg,
+                                   CastKind &Kind, CXXCastPath &BasePath,
                                    bool ListInitialization);
 static TryCastResult TryConstCast(Sema &Self, ExprResult &SrcExpr,
                                   QualType DestType, bool CStyle,
@@ -272,8 +282,6 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
                                          QualType DestType, bool CStyle,
                                          unsigned &msg, CastKind &Kind);
 
-/// ActOnCXXNamedCast - Parse
-/// {dynamic,static,reinterpret,const,addrspace}_cast's.
 ExprResult
 Sema::ActOnCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
                         SourceLocation LAngleBracketLoc, Declarator &D,
@@ -311,6 +319,8 @@ Sema::BuildCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
   CastOperation Op(*this, DestType, E);
   Op.OpRange = SourceRange(OpLoc, Parens.getEnd());
   Op.DestRange = AngleBrackets;
+
+  Op.checkQualifiedDestType();
 
   switch (Kind) {
   default: llvm_unreachable("Unknown C++ cast!");
@@ -450,7 +460,12 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
     : InitializationKind::CreateCast(/*type range?*/ range);
   InitializationSequence sequence(S, entity, initKind, src);
 
-  assert(sequence.Failed() && "initialization succeeded on second try?");
+  // It could happen that a constructor failed to be used because
+  // it requires a temporary of a broken type. Still, it will be found when
+  // looking for a match.
+  if (!sequence.Failed())
+    return false;
+
   switch (sequence.getFailureKind()) {
   default: return false;
 
@@ -498,10 +513,22 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
     howManyCandidates = OCD_AmbiguousCandidates;
     break;
 
-  case OR_Deleted:
-    msg = diag::err_ovl_deleted_conversion_in_cast;
-    howManyCandidates = OCD_ViableCandidates;
-    break;
+  case OR_Deleted: {
+    OverloadCandidateSet::iterator Best;
+    [[maybe_unused]] OverloadingResult Res =
+        candidates.BestViableFunction(S, range.getBegin(), Best);
+    assert(Res == OR_Deleted && "Inconsistent overload resolution");
+
+    StringLiteral *Msg = Best->Function->getDeletedMessage();
+    candidates.NoteCandidates(
+        PartialDiagnosticAt(range.getBegin(),
+                            S.PDiag(diag::err_ovl_deleted_conversion_in_cast)
+                                << CT << srcType << destType << (Msg != nullptr)
+                                << (Msg ? Msg->getString() : StringRef())
+                                << range << src->getSourceRange()),
+        S, OCD_ViableCandidates, src);
+    return true;
+  }
   }
 
   candidates.NoteCandidates(
@@ -718,7 +745,8 @@ CastsAwayConstness(Sema &Self, QualType SrcType, QualType DestType,
           *CastAwayQualifiers = SrcCvrQuals - DestCvrQuals;
 
         // If we removed a cvr-qualifier, this is casting away 'constness'.
-        if (!DestCvrQuals.compatiblyIncludes(SrcCvrQuals)) {
+        if (!DestCvrQuals.compatiblyIncludes(SrcCvrQuals,
+                                             Self.getASTContext())) {
           if (TheOffendingSrcType)
             *TheOffendingSrcType = PrevUnwrappedSrcType;
           if (TheOffendingDestType)
@@ -876,7 +904,7 @@ void CastOperation::CheckDynamicCast() {
   assert(SrcRecord && "Bad source pointee slipped through.");
 
   // C++ 5.2.7p1: The dynamic_cast operator shall not cast away constness.
-  if (!DestPointee.isAtLeastAsQualifiedAs(SrcPointee)) {
+  if (!DestPointee.isAtLeastAsQualifiedAs(SrcPointee, Self.getASTContext())) {
     Self.Diag(OpRange.getBegin(), diag::err_bad_cxx_cast_qualifiers_away)
       << CT_Dynamic << OrigSrcType << this->DestType << OpRange;
     SrcExpr = ExprError();
@@ -1083,9 +1111,10 @@ static bool argTypeIsABIEquivalent(QualType SrcType, QualType DestType,
     return true;
 
   // Allow integral type mismatch if their size are equal.
-  if (SrcType->isIntegralType(Context) && DestType->isIntegralType(Context))
-    if (Context.getTypeInfoInChars(SrcType).Width ==
-        Context.getTypeInfoInChars(DestType).Width)
+  if ((SrcType->isIntegralType(Context) || SrcType->isEnumeralType()) &&
+      (DestType->isIntegralType(Context) || DestType->isEnumeralType()))
+    if (Context.getTypeSizeInChars(SrcType) ==
+        Context.getTypeSizeInChars(DestType))
       return true;
 
   return Context.hasSameUnqualifiedType(SrcType, DestType);
@@ -1137,8 +1166,31 @@ static unsigned int checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
     return false;
   };
 
+  auto IsFarProc = [](const FunctionType *T) {
+    // The definition of FARPROC depends on the platform in terms of its return
+    // type, which could be int, or long long, etc. We'll look for a source
+    // signature for: <integer type> (*)() and call that "close enough" to
+    // FARPROC to be sufficient to silence the diagnostic. This is similar to
+    // how we allow casts between function pointers and void * for supporting
+    // dlsym.
+    // Note: we could check for __stdcall on the function pointer as well, but
+    // that seems like splitting hairs.
+    if (!T->getReturnType()->isIntegerType())
+      return false;
+    if (const auto *PT = T->getAs<FunctionProtoType>())
+      return !PT->isVariadic() && PT->getNumParams() == 0;
+    return true;
+  };
+
   // Skip if either function type is void(*)(void)
   if (IsVoidVoid(SrcFTy) || IsVoidVoid(DstFTy))
+    return 0;
+
+  // On Windows, GetProcAddress() returns a FARPROC, which is a typedef for a
+  // function pointer type (with no prototype, in C). We don't want to diagnose
+  // this case so we don't diagnose idiomatic code on Windows.
+  if (Self.getASTContext().getTargetInfo().getTriple().isOSWindows() &&
+      IsFarProc(SrcFTy))
     return 0;
 
   // Check return type.
@@ -1211,7 +1263,7 @@ void CastOperation::CheckReinterpretCast() {
 
   if (isValidCast(tcr)) {
     if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
-      checkObjCConversion(Sema::CCK_OtherCast);
+      checkObjCConversion(CheckedConversionKind::OtherCast);
     DiagnoseReinterpretUpDownCast(Self, SrcExpr.get(), DestType, OpRange);
 
     if (unsigned DiagID = checkCastFunctionType(Self, SrcExpr, DestType))
@@ -1262,9 +1314,9 @@ void CastOperation::CheckStaticCast() {
   }
 
   unsigned msg = diag::err_bad_cxx_cast_generic;
-  TryCastResult tcr
-    = TryStaticCast(Self, SrcExpr, DestType, Sema::CCK_OtherCast, OpRange, msg,
-                    Kind, BasePath, /*ListInitialization=*/false);
+  TryCastResult tcr =
+      TryStaticCast(Self, SrcExpr, DestType, CheckedConversionKind::OtherCast,
+                    OpRange, msg, Kind, BasePath, /*ListInitialization=*/false);
   if (tcr != TC_Success && msg != 0) {
     if (SrcExpr.isInvalid())
       return;
@@ -1284,7 +1336,7 @@ void CastOperation::CheckStaticCast() {
     if (Kind == CK_BitCast)
       checkCastAlign();
     if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
-      checkObjCConversion(Sema::CCK_OtherCast);
+      checkObjCConversion(CheckedConversionKind::OtherCast);
   } else {
     SrcExpr = ExprError();
   }
@@ -1305,14 +1357,13 @@ static bool IsAddressSpaceConversion(QualType SrcType, QualType DestType) {
 /// possible. If @p CStyle, ignore access restrictions on hierarchy casting
 /// and casting away constness.
 static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
-                                   QualType DestType,
-                                   Sema::CheckedConversionKind CCK,
+                                   QualType DestType, CheckedConversionKind CCK,
                                    SourceRange OpRange, unsigned &msg,
                                    CastKind &Kind, CXXCastPath &BasePath,
                                    bool ListInitialization) {
   // Determine whether we have the semantics of a C-style cast.
-  bool CStyle
-    = (CCK == Sema::CCK_CStyleCast || CCK == Sema::CCK_FunctionalCast);
+  bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
+                 CCK == CheckedConversionKind::FunctionalCast);
 
   // The order the tests is not entirely arbitrary. There is one conversion
   // that can be handled in two different ways. Given:
@@ -1450,7 +1501,8 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
             SrcPointeeQuals.removeObjCGCAttr();
             SrcPointeeQuals.removeObjCLifetime();
             if (DestPointeeQuals != SrcPointeeQuals &&
-                !DestPointeeQuals.compatiblyIncludes(SrcPointeeQuals)) {
+                !DestPointeeQuals.compatiblyIncludes(SrcPointeeQuals,
+                                                     Self.getASTContext())) {
               msg = diag::err_bad_cxx_cast_qualifiers_away;
               return TC_Failed;
             }
@@ -1492,7 +1544,7 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
   // Allow ns-pointer to cf-pointer conversion in either direction
   // with static casts.
   if (!CStyle &&
-      Self.CheckTollFreeBridgeStaticCast(DestType, SrcExpr.get(), Kind))
+      Self.ObjC().CheckTollFreeBridgeStaticCast(DestType, SrcExpr.get(), Kind))
     return TC_Success;
 
   // See if it looks like the user is trying to convert between
@@ -1682,7 +1734,8 @@ TryStaticDowncast(Sema &Self, CanQualType SrcType, CanQualType DestType,
   // FIXME: Being 100% compliant here would be nice to have.
 
   // Must preserve cv, as always, unless we're in C-style mode.
-  if (!CStyle && !DestType.isAtLeastAsQualifiedAs(SrcType)) {
+  if (!CStyle &&
+      !DestType.isAtLeastAsQualifiedAs(SrcType, Self.getASTContext())) {
     msg = diag::err_bad_cxx_cast_qualifiers_away;
     return TC_Failed;
   }
@@ -1771,76 +1824,29 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
           = Self.ResolveAddressOfOverloadedFunction(SrcExpr.get(), DestType, false,
                                                     FoundOverload)) {
       CXXMethodDecl *M = cast<CXXMethodDecl>(Fn);
-      SrcType = Self.Context.getMemberPointerType(Fn->getType(),
-                      Self.Context.getTypeDeclType(M->getParent()).getTypePtr());
+      SrcType = Self.Context.getMemberPointerType(
+          Fn->getType(), /*Qualifier=*/nullptr, M->getParent());
       WasOverloadedFunction = true;
     }
   }
 
-  const MemberPointerType *SrcMemPtr = SrcType->getAs<MemberPointerType>();
-  if (!SrcMemPtr) {
-    msg = diag::err_bad_static_cast_member_pointer_nonmp;
-    return TC_NotApplicable;
-  }
-
-  // Lock down the inheritance model right now in MS ABI, whether or not the
-  // pointee types are the same.
-  if (Self.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-    (void)Self.isCompleteType(OpRange.getBegin(), SrcType);
-    (void)Self.isCompleteType(OpRange.getBegin(), DestType);
-  }
-
-  // T == T, modulo cv
-  if (!Self.Context.hasSameUnqualifiedType(SrcMemPtr->getPointeeType(),
-                                           DestMemPtr->getPointeeType()))
-    return TC_NotApplicable;
-
-  // B base of D
-  QualType SrcClass(SrcMemPtr->getClass(), 0);
-  QualType DestClass(DestMemPtr->getClass(), 0);
-  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                  /*DetectVirtual=*/true);
-  if (!Self.IsDerivedFrom(OpRange.getBegin(), SrcClass, DestClass, Paths))
-    return TC_NotApplicable;
-
-  // B is a base of D. But is it an allowed base? If not, it's a hard error.
-  if (Paths.isAmbiguous(Self.Context.getCanonicalType(DestClass))) {
-    Paths.clear();
-    Paths.setRecordingPaths(true);
-    bool StillOkay =
-        Self.IsDerivedFrom(OpRange.getBegin(), SrcClass, DestClass, Paths);
-    assert(StillOkay);
-    (void)StillOkay;
-    std::string PathDisplayStr = Self.getAmbiguousPathsDisplayString(Paths);
-    Self.Diag(OpRange.getBegin(), diag::err_ambiguous_memptr_conv)
-      << 1 << SrcClass << DestClass << PathDisplayStr << OpRange;
-    msg = 0;
-    return TC_Failed;
-  }
-
-  if (const RecordType *VBase = Paths.getDetectedVirtual()) {
-    Self.Diag(OpRange.getBegin(), diag::err_memptr_conv_via_virtual)
-      << SrcClass << DestClass << QualType(VBase, 0) << OpRange;
-    msg = 0;
-    return TC_Failed;
-  }
-
-  if (!CStyle) {
-    switch (Self.CheckBaseClassAccess(OpRange.getBegin(),
-                                      DestClass, SrcClass,
-                                      Paths.front(),
-                                      diag::err_upcast_to_inaccessible_base)) {
-    case Sema::AR_accessible:
-    case Sema::AR_delayed:
-    case Sema::AR_dependent:
-      // Optimistically assume that the delayed and dependent cases
-      // will work out.
-      break;
-
-    case Sema::AR_inaccessible:
-      msg = 0;
-      return TC_Failed;
+  switch (Self.CheckMemberPointerConversion(
+      SrcType, DestMemPtr, Kind, BasePath, OpRange.getBegin(), OpRange, CStyle,
+      Sema::MemberPointerConversionDirection::Upcast)) {
+  case Sema::MemberPointerConversionResult::Success:
+    if (Kind == CK_NullToMemberPointer) {
+      msg = diag::err_bad_static_cast_member_pointer_nonmp;
+      return TC_NotApplicable;
     }
+    break;
+  case Sema::MemberPointerConversionResult::DifferentPointee:
+  case Sema::MemberPointerConversionResult::NotDerived:
+    return TC_NotApplicable;
+  case Sema::MemberPointerConversionResult::Ambiguous:
+  case Sema::MemberPointerConversionResult::Virtual:
+  case Sema::MemberPointerConversionResult::Inaccessible:
+    msg = 0;
+    return TC_Failed;
   }
 
   if (WasOverloadedFunction) {
@@ -1861,9 +1867,6 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
       return TC_Failed;
     }
   }
-
-  Self.BuildBasePathArray(Paths, BasePath);
-  Kind = CK_DerivedToBaseMemberPointer;
   return TC_Success;
 }
 
@@ -1872,11 +1875,11 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
 ///
 ///   An expression e can be explicitly converted to a type T using a
 ///   @c static_cast if the declaration "T t(e);" is well-formed [...].
-TryCastResult
-TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
-                      Sema::CheckedConversionKind CCK,
-                      SourceRange OpRange, unsigned &msg,
-                      CastKind &Kind, bool ListInitialization) {
+TryCastResult TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr,
+                                    QualType DestType,
+                                    CheckedConversionKind CCK,
+                                    SourceRange OpRange, unsigned &msg,
+                                    CastKind &Kind, bool ListInitialization) {
   if (DestType->isRecordType()) {
     if (Self.RequireCompleteType(OpRange.getBegin(), DestType,
                                  diag::err_bad_cast_incomplete) ||
@@ -1888,13 +1891,14 @@ TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
   }
 
   InitializedEntity Entity = InitializedEntity::InitializeTemporary(DestType);
-  InitializationKind InitKind
-    = (CCK == Sema::CCK_CStyleCast)
-        ? InitializationKind::CreateCStyleCast(OpRange.getBegin(), OpRange,
-                                               ListInitialization)
-    : (CCK == Sema::CCK_FunctionalCast)
-        ? InitializationKind::CreateFunctionalCast(OpRange, ListInitialization)
-    : InitializationKind::CreateCast(OpRange);
+  InitializationKind InitKind =
+      (CCK == CheckedConversionKind::CStyleCast)
+          ? InitializationKind::CreateCStyleCast(OpRange.getBegin(), OpRange,
+                                                 ListInitialization)
+      : (CCK == CheckedConversionKind::FunctionalCast)
+          ? InitializationKind::CreateFunctionalCast(OpRange,
+                                                     ListInitialization)
+          : InitializationKind::CreateCast(OpRange);
   Expr *SrcExprRaw = SrcExpr.get();
   // FIXME: Per DR242, we should check for an implicit conversion sequence
   // or for a constructor that could be invoked by direct-initialization
@@ -1906,8 +1910,8 @@ TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
   // There is no other way that works.
   // On the other hand, if we're checking a C-style cast, we've still got
   // the reinterpret_cast way.
-  bool CStyle
-    = (CCK == Sema::CCK_CStyleCast || CCK == Sema::CCK_FunctionalCast);
+  bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
+                 CCK == CheckedConversionKind::FunctionalCast);
   if (InitSeq.Failed() && (CStyle || !DestType->isReferenceType()))
     return TC_NotApplicable;
 
@@ -2076,6 +2080,10 @@ void Sema::CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
     if (Context.getTypeSize(DestTy) == Context.getTypeSize(SrcTy)) {
       return;
     }
+  }
+
+  if (SrcTy->isDependentType() || DestTy->isDependentType()) {
+    return;
   }
 
   Diag(Range.getBegin(), DiagID) << SrcType << DestType << Range;
@@ -2382,7 +2390,7 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     }
 
     // Allow bitcasting between SVE VLATs and VLSTs, and vice-versa.
-    if (Self.isValidRVVBitcast(SrcType, DestType)) {
+    if (Self.RISCV().isValidRVVBitcast(SrcType, DestType)) {
       Kind = CK_BitCast;
       return TC_Success;
     }
@@ -2510,13 +2518,13 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     assert(SrcType->isPointerType() && DestType->isPointerType());
     if (!CStyle &&
         !DestType->getPointeeType().getQualifiers().isAddressSpaceSupersetOf(
-            SrcType->getPointeeType().getQualifiers())) {
+            SrcType->getPointeeType().getQualifiers(), Self.getASTContext())) {
       SuccessResult = TC_Failed;
     }
   } else if (IsLValueCast) {
     Kind = CK_LValueBitCast;
   } else if (DestType->isObjCObjectPointerType()) {
-    Kind = Self.PrepareCastToObjCObjectPointer(SrcExpr);
+    Kind = Self.ObjC().PrepareCastToObjCObjectPointer(SrcExpr);
   } else if (DestType->isBlockPointerType()) {
     if (!SrcType->isBlockPointerType()) {
       Kind = CK_AnyPointerToBlockPointerCast;
@@ -2617,7 +2625,8 @@ static TryCastResult TryAddressSpaceCast(Sema &Self, ExprResult &SrcExpr,
     return TC_NotApplicable;
   auto SrcPointeeType = SrcPtrType->getPointeeType();
   auto DestPointeeType = DestPtrType->getPointeeType();
-  if (!DestPointeeType.isAddressSpaceOverlapping(SrcPointeeType)) {
+  if (!DestPointeeType.isAddressSpaceOverlapping(SrcPointeeType,
+                                                 Self.getASTContext())) {
     msg = diag::err_bad_cxx_cast_addr_space_mismatch;
     return TC_Failed;
   }
@@ -2662,9 +2671,10 @@ void CastOperation::checkAddressSpaceCast(QualType SrcType, QualType DestType) {
       QualType SrcPPointee = SrcPPtr->getPointeeType();
       if (Nested
               ? DestPPointee.getAddressSpace() != SrcPPointee.getAddressSpace()
-              : !DestPPointee.isAddressSpaceOverlapping(SrcPPointee)) {
+              : !DestPPointee.isAddressSpaceOverlapping(SrcPPointee,
+                                                        Self.getASTContext())) {
         Self.Diag(OpRange.getBegin(), DiagID)
-            << SrcType << DestType << Sema::AA_Casting
+            << SrcType << DestType << AssignmentAction::Casting
             << SrcExpr.get()->getSourceRange();
         if (!Nested)
           SrcExpr = ExprError();
@@ -2750,6 +2760,14 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     return;
   }
 
+  CheckedConversionKind CCK = FunctionalStyle
+                                  ? CheckedConversionKind::FunctionalCast
+                                  : CheckedConversionKind::CStyleCast;
+  if (Self.getLangOpts().HLSL) {
+    if (CheckHLSLCStyleCast(CCK))
+      return;
+  }
+
   if (ValueKind == VK_PRValue && !DestType->isRecordType() &&
       !isPlaceholder(BuiltinType::Overload)) {
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
@@ -2802,8 +2820,6 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   if (isValidCast(tcr))
     Kind = CK_NoOp;
 
-  Sema::CheckedConversionKind CCK =
-      FunctionalStyle ? Sema::CCK_FunctionalCast : Sema::CCK_CStyleCast;
   if (tcr == TC_NotApplicable) {
     tcr = TryAddressSpaceCast(Self, SrcExpr, DestType, /*CStyle*/ true, msg,
                               Kind);
@@ -2866,6 +2882,56 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   } else {
     SrcExpr = ExprError();
   }
+}
+
+// CheckHLSLCStyleCast - Returns `true` ihe cast is handled or errored as an
+// HLSL-specific cast. Returns false if the cast should be checked as a CXX
+// C-Style cast.
+bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
+  assert(Self.getLangOpts().HLSL && "Must be HLSL!");
+  QualType SrcTy = SrcExpr.get()->getType();
+  // HLSL has several unique forms of C-style casts which support aggregate to
+  // aggregate casting.
+  // This case should not trigger on regular vector cast, vector truncation
+  if (Self.HLSL().CanPerformElementwiseCast(SrcExpr.get(), DestType)) {
+    if (SrcTy->isConstantArrayType())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
+          CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
+    Kind = CK_HLSLElementwiseCast;
+    return true;
+  }
+
+  // This case should not trigger on regular vector splat
+  // If the relative order of this and the HLSLElementWise cast checks
+  // are changed, it might change which cast handles what in a few cases
+  if (Self.HLSL().CanPerformAggregateSplatCast(SrcExpr.get(), DestType)) {
+    const VectorType *VT = SrcTy->getAs<VectorType>();
+    // change splat from vec1 case to splat from scalar
+    if (VT && VT->getNumElements() == 1)
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    // Inserting a scalar cast here allows for a simplified codegen in
+    // the case the destTy is a vector
+    if (const VectorType *DVT = DestType->getAs<VectorType>())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), DVT->getElementType(),
+          Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    Kind = CK_HLSLAggregateSplatCast;
+    return true;
+  }
+
+  // If the destination is an array, we've exhausted the valid HLSL casts, so we
+  // should emit a dignostic and stop processing.
+  if (DestType->isArrayType()) {
+    Self.Diag(OpRange.getBegin(), diag::err_bad_cxx_cast_generic)
+        << 4 << SrcTy << DestType;
+    SrcExpr = ExprError();
+    return true;
+  }
+  return false;
 }
 
 /// DiagnoseBadFunctionCast - Warn whenever a function call is cast to a
@@ -2992,7 +3058,7 @@ void CastOperation::CheckCStyleCast() {
 
   // Allow bitcasting between compatible RVV vector types.
   if ((SrcType->isVectorType() || DestType->isVectorType()) &&
-      Self.isValidRVVBitcast(SrcType, DestType)) {
+      Self.RISCV().isValidRVVBitcast(SrcType, DestType)) {
     Kind = CK_BitCast;
     return;
   }
@@ -3061,10 +3127,10 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
-  // C23 6.5.4p4:
-  //   The type nullptr_t shall not be converted to any type other than void,
-  //   bool, or a pointer type. No type other than nullptr_t shall be converted
-  //   to nullptr_t.
+  // C23 6.5.5p4:
+  //   ... The type nullptr_t shall not be converted to any type other than
+  //   void, bool or a pointer type.If the target type is nullptr_t, the cast
+  //   expression shall be a null pointer constant or have type nullptr_t.
   if (SrcType->isNullPtrType()) {
     // FIXME: 6.3.2.4p2 says that nullptr_t can be converted to itself, but
     // 6.5.4p4 is a constraint check and nullptr_t is not void, bool, or a
@@ -3085,11 +3151,20 @@ void CastOperation::CheckCStyleCast() {
                                          Self.CurFPFeatureOverrides());
     }
   }
+
   if (DestType->isNullPtrType() && !SrcType->isNullPtrType()) {
-    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_nullptr_cast)
-        << /*type to nullptr*/ 1 << SrcType;
-    SrcExpr = ExprError();
-    return;
+    if (!SrcExpr.get()->isNullPointerConstant(Self.Context,
+                                              Expr::NPC_NeverValueDependent)) {
+      Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_nullptr_cast)
+          << /*type to nullptr*/ 1 << SrcType;
+      SrcExpr = ExprError();
+      return;
+    }
+    // Need to convert the source from whatever its type is to a null pointer
+    // type first.
+    SrcExpr = ImplicitCastExpr::Create(Self.Context, DestType, CK_NullToPointer,
+                                       SrcExpr.get(), nullptr, VK_PRValue,
+                                       Self.CurFPFeatureOverrides());
   }
 
   if (DestType->isExtVectorType()) {
@@ -3189,7 +3264,7 @@ void CastOperation::CheckCStyleCast() {
 
   // ARC imposes extra restrictions on casts.
   if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers()) {
-    checkObjCConversion(Sema::CCK_CStyleCast);
+    checkObjCConversion(CheckedConversionKind::CStyleCast);
     if (SrcExpr.isInvalid())
       return;
 
@@ -3203,13 +3278,13 @@ void CastOperation::CheckCStyleCast() {
             !CastQuals.compatiblyIncludesObjCLifetime(ExprQuals)) {
           Self.Diag(SrcExpr.get()->getBeginLoc(),
                     diag::err_typecheck_incompatible_ownership)
-              << SrcType << DestType << Sema::AA_Casting
+              << SrcType << DestType << AssignmentAction::Casting
               << SrcExpr.get()->getSourceRange();
           return;
         }
       }
-    }
-    else if (!Self.CheckObjCARCUnavailableWeakConversion(DestType, SrcType)) {
+    } else if (!Self.ObjC().CheckObjCARCUnavailableWeakConversion(DestType,
+                                                                  SrcType)) {
       Self.Diag(SrcExpr.get()->getBeginLoc(),
                 diag::err_arc_convesion_of_weak_unavailable)
           << 1 << SrcType << DestType << SrcExpr.get()->getSourceRange();
@@ -3268,7 +3343,8 @@ void CastOperation::CheckBuiltinBitCast() {
   CharUnits SourceSize = Self.Context.getTypeSizeInChars(SrcType);
   if (DestSize != SourceSize) {
     Self.Diag(OpRange.getBegin(), diag::err_bit_cast_type_size_mismatch)
-        << (int)SourceSize.getQuantity() << (int)DestSize.getQuantity();
+        << SrcType << DestType << (int)SourceSize.getQuantity()
+        << (int)DestSize.getQuantity();
     SrcExpr = ExprError();
     return;
   }
@@ -3349,6 +3425,8 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
   // -Wcast-qual
   DiagnoseCastQual(Op.Self, Op.SrcExpr, Op.DestType);
 
+  Op.checkQualifiedDestType();
+
   return Op.complete(CStyleCastExpr::Create(
       Context, Op.ResultType, Op.ValueKind, Op.Kind, Op.SrcExpr.get(),
       &Op.BasePath, CurFPFeatureOverrides(), CastTypeInfo, LPLoc, RPLoc));
@@ -3367,6 +3445,8 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
   Op.CheckCXXCStyleCast(/*FunctionalCast=*/true, /*ListInit=*/false);
   if (Op.SrcExpr.isInvalid())
     return ExprError();
+
+  Op.checkQualifiedDestType();
 
   auto *SubExpr = Op.SrcExpr.get();
   if (auto *BindExpr = dyn_cast<CXXBindTemporaryExpr>(SubExpr))

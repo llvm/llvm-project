@@ -357,8 +357,6 @@ __attribute__((constructor(0))) void __hwasan_init() {
   hwasan_init_is_running = 1;
   SanitizerToolName = "HWAddressSanitizer";
 
-  InitTlsSize();
-
   CacheBinaryName();
   InitializeFlags();
 
@@ -366,6 +364,8 @@ __attribute__((constructor(0))) void __hwasan_init() {
   SetCheckUnwindCallback(CheckUnwind);
 
   __sanitizer_set_report_path(common_flags()->log_path);
+
+  InitializePlatformEarly();
 
   AndroidTestTlsSlot();
 
@@ -692,7 +692,7 @@ void __hwasan_handle_longjmp(const void *sp_dst) {
         "WARNING: HWASan is ignoring requested __hwasan_handle_longjmp: "
         "stack top: %p; target %p; distance: %p (%zd)\n"
         "False positive error reports may follow\n",
-        (void *)sp, (void *)dst, dst - sp);
+        (void *)sp, (void *)dst, dst - sp, dst - sp);
     return;
   }
   TagMemory(sp, dst - sp, 0);

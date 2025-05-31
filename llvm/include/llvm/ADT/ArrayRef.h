@@ -70,15 +70,16 @@ namespace llvm {
     /*implicit*/ ArrayRef(std::nullopt_t) {}
 
     /// Construct an ArrayRef from a single element.
-    /*implicit*/ ArrayRef(const T &OneElt)
-      : Data(&OneElt), Length(1) {}
+    /*implicit*/ ArrayRef(const T &OneElt LLVM_LIFETIME_BOUND)
+        : Data(&OneElt), Length(1) {}
 
     /// Construct an ArrayRef from a pointer and length.
-    constexpr /*implicit*/ ArrayRef(const T *data, size_t length)
+    constexpr /*implicit*/ ArrayRef(const T *data LLVM_LIFETIME_BOUND,
+                                    size_t length)
         : Data(data), Length(length) {}
 
     /// Construct an ArrayRef from a range.
-    constexpr ArrayRef(const T *begin, const T *end)
+    constexpr ArrayRef(const T *begin LLVM_LIFETIME_BOUND, const T *end)
         : Data(begin), Length(end - begin) {
       assert(begin <= end);
     }
@@ -103,7 +104,8 @@ namespace llvm {
 
     /// Construct an ArrayRef from a C array.
     template <size_t N>
-    /*implicit*/ constexpr ArrayRef(const T (&Arr)[N]) : Data(Arr), Length(N) {}
+    /*implicit*/ constexpr ArrayRef(const T (&Arr LLVM_LIFETIME_BOUND)[N])
+        : Data(Arr), Length(N) {}
 
     /// Construct an ArrayRef from a std::initializer_list.
 #if LLVM_GNUC_PREREQ(9, 0, 0)
@@ -113,7 +115,8 @@ namespace llvm {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winit-list-lifetime"
 #endif
-    constexpr /*implicit*/ ArrayRef(const std::initializer_list<T> &Vec)
+    constexpr /*implicit*/ ArrayRef(
+        std::initializer_list<T> Vec LLVM_LIFETIME_BOUND)
         : Data(Vec.begin() == Vec.end() ? (T *)nullptr : Vec.begin()),
           Length(Vec.size()) {}
 #if LLVM_GNUC_PREREQ(9, 0, 0)
@@ -145,6 +148,14 @@ namespace llvm {
              std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
                  * = nullptr)
         : Data(Vec.data()), Length(Vec.size()) {}
+
+    /// Construct an ArrayRef<T> from iterator_range<U*>. This uses SFINAE
+    /// to ensure that this is only used for iterator ranges over plain pointer
+    /// iterators.
+    template <typename U, typename = std::enable_if_t<
+                              std::is_convertible_v<U *const *, T *const *>>>
+    ArrayRef(const iterator_range<U *> &Range)
+        : Data(Range.begin()), Length(llvm::size(Range)) {}
 
     /// @}
     /// @name Simple Operations
@@ -179,7 +190,7 @@ namespace llvm {
     // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
     template <typename Allocator> MutableArrayRef<T> copy(Allocator &A) {
       T *Buff = A.template Allocate<T>(Length);
-      std::uninitialized_copy(begin(), end(), Buff);
+      llvm::uninitialized_copy(*this, Buff);
       return MutableArrayRef<T>(Buff, Length);
     }
 
@@ -198,7 +209,7 @@ namespace llvm {
     }
 
     /// slice(n) - Chop off the first N elements of the array.
-    ArrayRef<T> slice(size_t N) const { return slice(N, size() - N); }
+    ArrayRef<T> slice(size_t N) const { return drop_front(N); }
 
     /// Drop the first \p N elements of the array.
     ArrayRef<T> drop_front(size_t N = 1) const {
@@ -504,78 +515,6 @@ namespace llvm {
 
   /// @}
 
-  /// @name ArrayRef Convenience constructors
-  /// @{
-  /// Construct an ArrayRef from a single element.
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
-  ArrayRef<T> makeArrayRef(const T &OneElt) {
-    return OneElt;
-  }
-
-  /// Construct an ArrayRef from a pointer and length.
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
-  ArrayRef<T> makeArrayRef(const T *data, size_t length) {
-    return ArrayRef<T>(data, length);
-  }
-
-  /// Construct an ArrayRef from a range.
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
-  ArrayRef<T> makeArrayRef(const T *begin, const T *end) {
-    return ArrayRef<T>(begin, end);
-  }
-
-  /// Construct an ArrayRef from a SmallVector.
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
-  ArrayRef<T> makeArrayRef(const SmallVectorImpl<T> &Vec) {
-    return Vec;
-  }
-
-  /// Construct an ArrayRef from a SmallVector.
-  template <typename T, unsigned N>
-  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
-  ArrayRef<T> makeArrayRef(const SmallVector<T, N> &Vec) {
-    return Vec;
-  }
-
-  /// Construct an ArrayRef from a std::vector.
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
-  ArrayRef<T> makeArrayRef(const std::vector<T> &Vec) {
-    return Vec;
-  }
-
-  /// Construct an ArrayRef from a std::array.
-  template <typename T, std::size_t N>
-  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
-  ArrayRef<T> makeArrayRef(const std::array<T, N> &Arr) {
-    return Arr;
-  }
-
-  /// Construct an ArrayRef from an ArrayRef (no-op) (const)
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
-  ArrayRef<T> makeArrayRef(const ArrayRef<T> &Vec) {
-    return Vec;
-  }
-
-  /// Construct an ArrayRef from an ArrayRef (no-op)
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
-  ArrayRef<T> &makeArrayRef(ArrayRef<T> &Vec) {
-    return Vec;
-  }
-
-  /// Construct an ArrayRef from a C array.
-  template <typename T, size_t N>
-  LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
-  ArrayRef<T> makeArrayRef(const T (&Arr)[N]) {
-    return ArrayRef<T>(Arr);
-  }
-
   /// @name MutableArrayRef Deduction guides
   /// @{
   /// Deduction guide to construct a `MutableArrayRef` from a single element
@@ -605,64 +544,6 @@ namespace llvm {
   MutableArrayRef(T (&Arr)[N]) -> MutableArrayRef<T>;
 
   /// @}
-
-  /// Construct a MutableArrayRef from a single element.
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
-  MutableArrayRef<T> makeMutableArrayRef(T &OneElt) {
-    return OneElt;
-  }
-
-  /// Construct a MutableArrayRef from a pointer and length.
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
-  MutableArrayRef<T> makeMutableArrayRef(T *data, size_t length) {
-    return MutableArrayRef<T>(data, length);
-  }
-
-  /// Construct a MutableArrayRef from a SmallVector.
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
-  MutableArrayRef<T> makeMutableArrayRef(SmallVectorImpl<T> &Vec) {
-    return Vec;
-  }
-
-  /// Construct a MutableArrayRef from a SmallVector.
-  template <typename T, unsigned N>
-  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
-  MutableArrayRef<T> makeMutableArrayRef(SmallVector<T, N> &Vec) {
-    return Vec;
-  }
-
-  /// Construct a MutableArrayRef from a std::vector.
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
-  MutableArrayRef<T> makeMutableArrayRef(std::vector<T> &Vec) {
-    return Vec;
-  }
-
-  /// Construct a MutableArrayRef from a std::array.
-  template <typename T, std::size_t N>
-  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
-  MutableArrayRef<T> makeMutableArrayRef(std::array<T, N> &Arr) {
-    return Arr;
-  }
-
-  /// Construct a MutableArrayRef from a MutableArrayRef (no-op) (const)
-  template <typename T>
-  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
-  MutableArrayRef<T> makeMutableArrayRef(const MutableArrayRef<T> &Vec) {
-    return Vec;
-  }
-
-  /// Construct a MutableArrayRef from a C array.
-  template <typename T, size_t N>
-  LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
-  MutableArrayRef<T> makeMutableArrayRef(T (&Arr)[N]) {
-    return MutableArrayRef<T>(Arr);
-  }
-
-  /// @}
   /// @name ArrayRef Comparison Operators
   /// @{
 
@@ -689,7 +570,7 @@ namespace llvm {
   /// @}
 
   template <typename T> hash_code hash_value(ArrayRef<T> S) {
-    return hash_combine_range(S.begin(), S.end());
+    return hash_combine_range(S);
   }
 
   // Provide DenseMapInfo for ArrayRefs.

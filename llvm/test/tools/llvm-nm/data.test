@@ -2,7 +2,9 @@
 # RUN: llvm-nm --no-sort %t | FileCheck %s
 
 # CHECK:      b mybss_local
+# CHECK-NEXT: b mybss2_local
 # CHECK-NEXT: d mydata_local
+# CHECK-NEXT: d mydata2_local
 # CHECK-NEXT: d mytdata_local
 # CHECK-NEXT: B mybss_global
 # CHECK-NEXT: D mydata_global
@@ -18,8 +20,14 @@ Sections:
   - Name: mybss
     Type: SHT_NOBITS
     Flags: [ SHF_ALLOC, SHF_WRITE ]
+  - Name: mybss2
+    Type: SHT_NOBITS
+    Flags: [ SHF_ALLOC ]
   - Name: mydata
     Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+  - Name: mydata2
+    Type: 0x1000
     Flags: [ SHF_ALLOC, SHF_WRITE ]
   - Name: mytdata
     Type: SHT_PROGBITS
@@ -27,8 +35,12 @@ Sections:
 Symbols:
   - Name:    mybss_local
     Section: mybss
+  - Name:    mybss2_local
+    Section: mybss2
   - Name:    mydata_local
     Section: mydata
+  - Name:    mydata2_local
+    Section: mydata2
   - Name:    mytdata_local
     Section: mytdata
 

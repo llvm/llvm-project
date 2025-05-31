@@ -1,4 +1,4 @@
-// RUN:  %clang_cc1 -std=c++2a -frelaxed-template-template-args -verify %s
+// RUN:  %clang_cc1 -std=c++2a -verify %s
 
 template<typename T> concept C = T::f(); // #C
 template<typename T> concept D = C<T> && T::g();
@@ -59,3 +59,32 @@ struct Nothing {};
 
 // FIXME: Wait the standard to clarify the intent.
 template<> template<> Z<Nothing> S5<Z>::V<Nothing>;
+
+namespace GH57410 {
+
+template<typename T>
+concept True = true;
+
+template<typename T>
+concept False = false; // #False
+
+template <class> struct S {};
+
+template<template<True T> typename Wrapper>
+using Test = Wrapper<int>;
+
+template<template<False T> typename Wrapper> // #TTP-Wrapper
+using Test = Wrapper<int>; // expected-error {{constraints not satisfied for template template parameter 'Wrapper' [with T = int]}}
+
+// expected-note@#TTP-Wrapper {{'int' does not satisfy 'False'}}
+// expected-note@#False {{evaluated to false}}
+
+template <typename U, template<False> typename T>
+void foo(T<U>); // #foo
+
+void bar() {
+  foo<int>(S<int>{}); // expected-error {{no matching function for call to 'foo'}}
+  // expected-note@#foo {{substitution failure [with U = int]: constraints not satisfied for template template parameter 'T' [with $0 = int]}}
+}
+
+}

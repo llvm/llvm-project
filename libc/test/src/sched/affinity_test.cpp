@@ -17,7 +17,7 @@
 
 TEST(LlvmLibcSchedAffinityTest, SmokeTest) {
   cpu_set_t mask;
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   pid_t tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
   ASSERT_GT(tid, pid_t(0));
@@ -32,15 +32,15 @@ TEST(LlvmLibcSchedAffinityTest, BadMask) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   pid_t tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(
       LIBC_NAMESPACE::sched_getaffinity(tid, sizeof(cpu_set_t), nullptr),
       Fails(EFAULT));
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(
       LIBC_NAMESPACE::sched_setaffinity(tid, sizeof(cpu_set_t), nullptr),
       Fails(EFAULT));
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 }

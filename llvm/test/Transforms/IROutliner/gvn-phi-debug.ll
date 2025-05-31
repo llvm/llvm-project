@@ -171,7 +171,5 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; CHECK: [[DBG8]] = distinct !DISubprogram(name: "w", scope: [[META5]], file: [[META5]], line: 54, type: [[META9:![0-9]+]], scopeLine: 54, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META10:![0-9]+]])
 ; CHECK: [[META9]] = !DISubroutineType(types: [[META10]])
 ; CHECK: [[META10]] = !{}
-; CHECK: [[DBG11]] = !DILocation(line: 0, scope: [[META12:![0-9]+]])
-; CHECK: [[META12]] = distinct !DILexicalBlock(scope: [[META13:![0-9]+]], file: [[META5]], line: 56, column: 17)
-; CHECK: [[META13]] = distinct !DILexicalBlock(scope: [[DBG8]], file: [[META5]], line: 56, column: 11)
+; CHECK: [[DBG11]] = !DILocation(line: 0, scope: [[DBG8]])
 ;.

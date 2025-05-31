@@ -29,10 +29,10 @@ class TestDiagnosticReporting(TestBase):
 
         event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
         diagnostic_data = lldb.SBDebugger.GetDiagnosticFromEvent(event)
-        self.assertEquals(
+        self.assertEqual(
             diagnostic_data.GetValueForKey("type").GetStringValue(100), "warning"
         )
-        self.assertEquals(
+        self.assertEqual(
             diagnostic_data.GetValueForKey("message").GetStringValue(100),
             "unable to retrieve process ID from minidump file, setting process ID to 1",
         )

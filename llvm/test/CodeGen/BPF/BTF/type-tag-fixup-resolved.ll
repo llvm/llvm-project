@@ -1,5 +1,9 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfel -filetype=obj -o %t1 %s
+; RUN: llvm-objcopy --dump-section='.BTF'=%t2 %t1
+; RUN: %python %p/print_btf.py %t2 | FileCheck -check-prefixes=CHECK-BTF %s
+; RUN: llc -mtriple=bpfeb -filetype=obj -o %t1 %s
+; RUN: llvm-objcopy --dump-section='.BTF'=%t2 %t1
+; RUN: %python %p/print_btf.py %t2 | FileCheck -check-prefixes=CHECK-BTF %s
 ;
 ; Source:
 ;   #define __tag1 __attribute__((btf_type_tag("tag1")))
@@ -20,91 +24,50 @@
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
-%struct.map_value = type { %struct.foo* }
+%struct.map_value = type { ptr }
 %struct.foo = type { i32 }
 
 ; Function Attrs: nounwind
 define dso_local void @test() local_unnamed_addr #0 !dbg !7 {
 entry:
   %v = alloca %struct.map_value, align 8
-  %0 = bitcast %struct.map_value* %v to i8*, !dbg !23
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0) #4, !dbg !23
-  call void @llvm.dbg.declare(metadata %struct.map_value* %v, metadata !11, metadata !DIExpression()), !dbg !24
-  %1 = bitcast %struct.map_value* %v to i64*, !dbg !24
-  store i64 0, i64* %1, align 8, !dbg !24
-  call void @func(%struct.map_value* noundef nonnull %v, %struct.foo* noundef null) #4, !dbg !25
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0) #4, !dbg !26
+  %0 = bitcast ptr %v to ptr, !dbg !23
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %0) #4, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %v, metadata !11, metadata !DIExpression()), !dbg !24
+  %1 = bitcast ptr %v to ptr, !dbg !24
+  store i64 0, ptr %1, align 8, !dbg !24
+  call void @func(ptr noundef nonnull %v, ptr noundef null) #4, !dbg !25
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %0) #4, !dbg !26
   ret void, !dbg !26
 }
 
-; CHECK:             .long   0                               # BTF_KIND_FUNC_PROTO(id = 1)
-; CHECK-NEXT:        .long   218103808                       # 0xd000000
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   1                               # BTF_KIND_FUNC(id = 2)
-; CHECK-NEXT:        .long   201326593                       # 0xc000001
-; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   0                               # BTF_KIND_FUNC_PROTO(id = 3)
-; CHECK-NEXT:        .long   218103810                       # 0xd000002
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   7
-; CHECK-NEXT:        .long   0                               # BTF_KIND_PTR(id = 4)
-; CHECK-NEXT:        .long   33554432                        # 0x2000000
-; CHECK-NEXT:        .long   5
-; CHECK-NEXT:        .long   63                              # BTF_KIND_STRUCT(id = 5)
-; CHECK-NEXT:        .long   67108865                        # 0x4000001
-; CHECK-NEXT:        .long   8
-; CHECK-NEXT:        .long   73
-; CHECK-NEXT:        .long   6
-; CHECK-NEXT:        .long   0                               # 0x0
-; CHECK-NEXT:        .long   0                               # BTF_KIND_PTR(id = 6)
-; CHECK-NEXT:        .long   33554432                        # 0x2000000
-; CHECK-NEXT:        .long   12
-; CHECK-NEXT:        .long   0                               # BTF_KIND_PTR(id = 7)
-; CHECK-NEXT:        .long   33554432                        # 0x2000000
-; CHECK-NEXT:        .long   8
-; CHECK-NEXT:        .long   77                              # BTF_KIND_STRUCT(id = 8)
-; CHECK-NEXT:        .long   67108865                        # 0x4000001
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   81
-; CHECK-NEXT:        .long   9
-; CHECK-NEXT:        .long   0                               # 0x0
-; CHECK-NEXT:        .long   83                              # BTF_KIND_INT(id = 9)
-; CHECK-NEXT:        .long   16777216                        # 0x1000000
-; CHECK-NEXT:        .long   4
-; CHECK-NEXT:        .long   16777248                        # 0x1000020
-; CHECK-NEXT:        .long   87                              # BTF_KIND_FUNC(id = 10)
-; CHECK-NEXT:        .long   201326594                       # 0xc000002
-; CHECK-NEXT:        .long   3
-; CHECK-NEXT:        .long   92                              # BTF_KIND_TYPE_TAG(id = 11)
-; CHECK-NEXT:        .long   301989888                       # 0x12000000
-; CHECK-NEXT:        .long   8
-; CHECK-NEXT:        .long   97                              # BTF_KIND_TYPE_TAG(id = 12)
-; CHECK-NEXT:        .long   301989888                       # 0x12000000
-; CHECK-NEXT:        .long   11
-
-; CHECK:             .ascii  "test"                          # string offset=1
-; CHECK:             .ascii  "map_value"                     # string offset=63
-; CHECK:             .ascii  "ptr"                           # string offset=73
-; CHECK:             .ascii  "foo"                           # string offset=77
-; CHECK:             .byte   105                             # string offset=81
-; CHECK:             .ascii  "int"                           # string offset=83
-; CHECK:             .ascii  "func"                          # string offset=87
-; CHECK:             .ascii  "tag2"                          # string offset=92
-; CHECK:             .ascii  "tag1"                          # string offset=97
+; CHECK-BTF: [1] FUNC_PROTO '(anon)' ret_type_id=0 vlen=0
+; CHECK-BTF: [2] FUNC 'test' type_id=1 linkage=global
+; CHECK-BTF: [3] FUNC_PROTO '(anon)' ret_type_id=0 vlen=2
+; CHECK-BTF:     '(anon)' type_id=4
+; CHECK-BTF:     '(anon)' type_id=11
+; CHECK-BTF: [4] PTR '(anon)' type_id=5
+; CHECK-BTF: [5] STRUCT 'map_value' size=8 vlen=1
+; CHECK-BTF:     'ptr' type_id=8 bits_offset=0
+; CHECK-BTF: [6] TYPE_TAG 'tag2' type_id=9
+; CHECK-BTF: [7] TYPE_TAG 'tag1' type_id=6
+; CHECK-BTF: [8] PTR '(anon)' type_id=7
+; CHECK-BTF: [9] STRUCT 'foo' size=4 vlen=1
+; CHECK-BTF:     'i' type_id=10 bits_offset=0
+; CHECK-BTF: [10] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+; CHECK-BTF: [11] PTR '(anon)' type_id=9
+; CHECK-BTF: [12] FUNC 'func' type_id=3 linkage=extern
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: mustprogress nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
-declare !dbg !27 dso_local void @func(%struct.map_value* noundef, %struct.foo* noundef) local_unnamed_addr #3
+declare !dbg !27 dso_local void @func(ptr noundef, ptr noundef) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { argmemonly mustprogress nofree nosync nounwind willreturn }

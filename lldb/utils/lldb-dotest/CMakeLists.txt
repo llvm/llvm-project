@@ -1,7 +1,7 @@
 # Make lldb-dotest a custom target.
 add_custom_target(lldb-dotest)
 add_dependencies(lldb-dotest lldb-test-depends)
-set_target_properties(lldb-dotest PROPERTIES FOLDER "lldb utils")
+set_target_properties(lldb-dotest PROPERTIES FOLDER "LLDB/Utils")
 
 get_property(LLDB_TEST_USER_ARGS GLOBAL PROPERTY LLDB_TEST_USER_ARGS_PROPERTY)
 get_property(LLDB_TEST_COMMON_ARGS GLOBAL PROPERTY LLDB_TEST_COMMON_ARGS_PROPERTY)
@@ -34,6 +34,7 @@ set(vars
   LLDB_TEST_EXECUTABLE
   LLDB_TEST_COMPILER
   LLDB_TEST_DSYMUTIL
+  LLDB_TEST_MAKE
   LLDB_LIBS_DIR
   LLVM_TOOLS_DIR
   LIBCXX_LIBRARY_DIR

@@ -5,10 +5,6 @@
 ; RUN: echo '!!1' >> %t1
 ; RUN: not --crash llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t1 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR1
 ; CHECK-ERROR1: LLVM ERROR: invalid profile {{.*}} at line 3: duplicate basic block id found '1'
-; RUN: echo '!dummy1' > %t2
-; RUN: echo '!!4 0' >> %t2
-; RUN: not --crash llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t2 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR2
-; CHECK-ERROR2: LLVM ERROR: invalid profile {{.*}} at line 2: entry BB (0) does not begin a cluster
 ; RUN: echo '!dummy1' > %t3
 ; RUN: echo '!!-1' >> %t3
 ; RUN: not --crash llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t3 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR3
@@ -48,7 +44,7 @@
 ; RUN: echo 'f dummy1' >> %t11
 ; RUN: echo 'c 0 1.a' >> %t11
 ; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t11 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR11
-; CHECK-ERROR11: LLVM ERROR: invalid profile {{.*}} at line 3: unable to parse clone id: 'a' 
+; CHECK-ERROR11: LLVM ERROR: invalid profile {{.*}} at line 3: unable to parse clone id: 'a'
 ; RUN: echo 'v1' > %t12
 ; RUN: echo 'f dummy1' >> %t12
 ; RUN: echo 'c 0 1' >> %t12

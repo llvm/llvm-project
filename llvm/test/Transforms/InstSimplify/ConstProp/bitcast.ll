@@ -4,7 +4,7 @@
 
 define <1 x i64> @test1() {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    ret <1 x i64> <i64 63>
+; CHECK-NEXT:    ret <1 x i64> splat (i64 63)
 ;
   %A = bitcast i64 63 to <1 x i64>
   ret <1 x i64> %A
@@ -35,7 +35,8 @@ define i1 @bad_icmp_constexpr_bitcast() {
 
 define i1 @bad_fcmp_constexpr_bitcast() {
 ; CHECK-LABEL: @bad_fcmp_constexpr_bitcast(
-; CHECK-NEXT:    ret i1 fcmp oeq (float bitcast (i32 ptrtoint (ptr @c to i32) to float), float bitcast (i32 add (i32 ptrtoint (ptr @d to i32), i32 2) to float))
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float bitcast (i32 ptrtoint (ptr @c to i32) to float), bitcast (i32 add (i32 ptrtoint (ptr @d to i32), i32 2) to float)
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp oeq float bitcast (i32 ptrtoint (ptr @c to i32) to float), bitcast (i32 add (i32 ptrtoint (ptr @d to i32), i32 2) to float)
   ret i1 %cmp
@@ -45,7 +46,8 @@ define i1 @bad_fcmp_constexpr_bitcast() {
 
 define i1 @fcmp_constexpr_oeq(float %conv) {
 ; CHECK-LABEL: @fcmp_constexpr_oeq(
-; CHECK-NEXT:    ret i1 fcmp oeq (float bitcast (i32 ptrtoint (ptr @a to i32) to float), float bitcast (i32 ptrtoint (ptr @a to i32) to float))
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp oeq float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
   ret i1 %cmp
@@ -55,7 +57,8 @@ define i1 @fcmp_constexpr_oeq(float %conv) {
 
 define i1 @fcmp_constexpr_une(float %conv) {
 ; CHECK-LABEL: @fcmp_constexpr_une(
-; CHECK-NEXT:    ret i1 fcmp une (float bitcast (i32 ptrtoint (ptr @a to i32) to float), float bitcast (i32 ptrtoint (ptr @a to i32) to float))
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = fcmp une float bitcast (i32 ptrtoint (ptr @a to i32) to float), bitcast (i32 ptrtoint (ptr @a to i32) to float)
   ret i1 %cmp

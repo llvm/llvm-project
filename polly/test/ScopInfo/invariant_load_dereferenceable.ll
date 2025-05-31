@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-print-detect -polly-print-scops \
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' '-passes=print<polly-function-scops>' \
 ; RUN: -polly-invariant-load-hoisting=true \
-; RUN: -disable-output < %s | FileCheck %s
+; RUN: -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-NOT: Function: foo_undereferanceable
 

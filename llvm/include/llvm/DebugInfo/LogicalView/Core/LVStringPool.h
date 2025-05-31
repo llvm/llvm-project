@@ -60,7 +60,7 @@ public:
     if (isValidIndex(Index))
       return Index;
     size_t Value = Entries.size();
-    ValueType *Entry = ValueType::create(Key, Allocator, std::move(Value));
+    ValueType *Entry = ValueType::create(Key, Allocator, Value);
     StringTable.insert(Entry);
     Entries.push_back(Entry);
     return Value;

@@ -14,7 +14,7 @@ define void @foo() nounwind {
 ; CHECK-NEXT:    addi a0, a0, -2000
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    call baz@plt
+; CHECK-NEXT:    call baz
 ; CHECK-NEXT:    lui a0, 390625
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    addi a0, a0, -2000

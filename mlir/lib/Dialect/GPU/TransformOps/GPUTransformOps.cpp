@@ -11,6 +11,7 @@
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -22,7 +23,7 @@
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -40,6 +41,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <type_traits>
 
 using namespace mlir;
@@ -86,7 +88,9 @@ void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
   // TODO: We should have a single to_nvvm_type_converter.
   llvmTypeConverter.addConversion(
       [&](MMAMatrixType type) -> Type { return convertMMAToLLVMType(type); });
-  populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns);
+  // Set higher benefit, so patterns will run before generic LLVM lowering.
+  populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns,
+                                      getBenefit());
 }
 
 LogicalResult
@@ -131,6 +135,11 @@ LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
 
 void ApplyGPURewritePatternsOp::populatePatterns(RewritePatternSet &patterns) {
   populateGpuRewritePatterns(patterns);
+}
+
+void transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  populateGpuPromoteShuffleToAMDGPUPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -196,7 +205,7 @@ getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
       auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
       if (!extract)
         return std::nullopt;
-      auto vecType = extract.getResult().getType().cast<VectorType>();
+      auto vecType = cast<VectorType>(extract.getResult().getType());
       if (sliceType && sliceType != vecType)
         return std::nullopt;
       sliceType = vecType;
@@ -204,7 +213,7 @@ getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
     return llvm::to_vector(sliceType.getShape());
   }
   if ((OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)) {
-    if (auto vecType = op->getResultTypes()[0].dyn_cast<VectorType>()) {
+    if (auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0])) {
       // TODO: The condition for unrolling elementwise should be restricted
       // only to operations that need unrolling (connected to the contract).
       if (vecType.getRank() < 2)
@@ -219,7 +228,7 @@ getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
         auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
         if (!extract)
           return std::nullopt;
-        auto vecType = extract.getResult().getType().cast<VectorType>();
+        auto vecType = cast<VectorType>(extract.getResult().getType());
         if (sliceType && sliceType != vecType)
           return std::nullopt;
         sliceType = vecType;
@@ -296,22 +305,14 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
                                  "scf.forall op requires a mapping attribute");
   }
 
-  bool hasBlockMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUBlockMappingAttr>(attr);
-      });
-  bool hasWarpgroupMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUWarpgroupMappingAttr>(attr);
-      });
-  bool hasWarpMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUWarpMappingAttr>(attr);
-      });
-  bool hasThreadMapping =
-      llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUThreadMappingAttr>(attr);
-      });
+  bool hasBlockMapping = llvm::any_of(forallOp.getMapping().value(),
+                                      llvm::IsaPred<GPUBlockMappingAttr>);
+  bool hasWarpgroupMapping = llvm::any_of(
+      forallOp.getMapping().value(), llvm::IsaPred<GPUWarpgroupMappingAttr>);
+  bool hasWarpMapping = llvm::any_of(forallOp.getMapping().value(),
+                                     llvm::IsaPred<GPUWarpMappingAttr>);
+  bool hasThreadMapping = llvm::any_of(forallOp.getMapping().value(),
+                                       llvm::IsaPred<GPUThreadMappingAttr>);
   int64_t countMappingTypes = 0;
   countMappingTypes += hasBlockMapping ? 1 : 0;
   countMappingTypes += hasWarpgroupMapping ? 1 : 0;
@@ -432,8 +433,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
          "requires statically sized, normalized forall op");
   SmallVector<int64_t> tmpMappingSizes = numParallelIterations.value();
   SetVector<Attribute> forallMappingAttrs;
-  forallMappingAttrs.insert(forallOp.getMapping()->getValue().begin(),
-                            forallOp.getMapping()->getValue().end());
+  forallMappingAttrs.insert_range(forallOp.getMapping()->getValue());
   auto comparator = [](Attribute a, Attribute b) -> bool {
     return cast<DeviceMappingAttrInterface>(a).getMappingId() <
            cast<DeviceMappingAttrInterface>(b).getMappingId();
@@ -442,9 +442,8 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   // Step 1.b. In the linear case, compute the max mapping to avoid needlessly
   // mapping all dimensions. In the 3-D mapping case we need to map all
   // dimensions.
-  DeviceMappingAttrInterface maxMapping =
-      cast<DeviceMappingAttrInterface>(*std::max_element(
-          forallMappingAttrs.begin(), forallMappingAttrs.end(), comparator));
+  DeviceMappingAttrInterface maxMapping = cast<DeviceMappingAttrInterface>(
+      *llvm::max_element(forallMappingAttrs, comparator));
   DeviceMappingAttrInterface maxLinearMapping;
   if (maxMapping.isLinearMapping())
     maxLinearMapping = maxMapping;
@@ -458,20 +457,14 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
     // Otherwise, we have a new insertion without a size -> use size 1.
     tmpMappingSizes.push_back(1);
   }
-  LLVM_DEBUG(
-      llvm::interleaveComma(
-          tmpMappingSizes,
-          DBGS() << "----tmpMappingSizes extracted from scf.forall op: ");
-      llvm::dbgs() << "\n");
+  LDBG("----tmpMappingSizes extracted from scf.forall op: "
+       << llvm::interleaved(tmpMappingSizes));
 
   // Step 2. sort the values by the corresponding DeviceMappingAttrInterface.
   SmallVector<int64_t> forallMappingSizes = getValuesSortedByKey(
       forallMappingAttrs.getArrayRef(), tmpMappingSizes, comparator);
-  LLVM_DEBUG(llvm::interleaveComma(forallMappingSizes,
-                                   DBGS() << "----forallMappingSizes: ");
-             llvm::dbgs() << "\n"; llvm::interleaveComma(
-                 forallMappingAttrs, DBGS() << "----forallMappingAttrs: ");
-             llvm::dbgs() << "\n");
+  LDBG("----forallMappingSizes: " << llvm::interleaved(forallMappingSizes));
+  LDBG("----forallMappingAttrs: " << llvm::interleaved(forallMappingAttrs));
 
   // Step 3. Generate the mappingIdOps using the provided generator.
   Location loc = forallOp.getLoc();
@@ -509,17 +502,10 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
     SmallVector<int64_t> availableMappingSizes =
         builderResult.availableMappingSizes;
     SmallVector<Value> activeIdOps = builderResult.activeIdOps;
-    // clang-format off
-    LLVM_DEBUG(
-        llvm::interleaveComma(
-          activeMappingSizes, DBGS() << "----activeMappingSizes: ");
-        llvm::dbgs() << "\n";
-        llvm::interleaveComma(
-          availableMappingSizes, DBGS() << "----availableMappingSizes: ");
-        llvm::dbgs() << "\n";
-        llvm::interleaveComma(activeIdOps, DBGS() << "----activeIdOps: ");
-        llvm::dbgs() << "\n");
-    // clang-format on
+    LDBG("----activeMappingSizes: " << llvm::interleaved(activeMappingSizes));
+    LDBG("----availableMappingSizes: "
+         << llvm::interleaved(availableMappingSizes));
+    LDBG("----activeIdOps: " << llvm::interleaved(activeIdOps));
     for (auto [activeId, activeMappingSize, availableMappingSize] :
          llvm::zip_equal(activeIdOps, activeMappingSizes,
                          availableMappingSizes)) {
@@ -574,11 +560,9 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   // Step 8. Erase old op.
   rewriter.eraseOp(forallOp);
 
-  LLVM_DEBUG(llvm::interleaveComma(forallMappingSizes,
-                                   DBGS() << "----result forallMappingSizes: ");
-             llvm::dbgs() << "\n"; llvm::interleaveComma(
-                 mappingIdOps, DBGS() << "----result mappingIdOps: ");
-             llvm::dbgs() << "\n");
+  LDBG("----result forallMappingSizes: "
+       << llvm::interleaved(forallMappingSizes));
+  LDBG("----result mappingIdOps: " << llvm::interleaved(mappingIdOps));
 
   result = ForallRewriteResult{forallMappingSizes, mappingIdOps};
   return DiagnosedSilenceableFailure::success();
@@ -748,7 +732,7 @@ static DiagnosedSilenceableFailure checkMappingSpec(
     auto diag = definiteFailureHelper(
         transformOp, forallOp,
         Twine("3-D mapping: size of threadIdx.x must be a multiple of ") +
-            std::to_string(factor));
+            Twine(factor));
     return diag;
   }
   if (computeProduct(numParallelIterations) * factor >
@@ -757,9 +741,9 @@ static DiagnosedSilenceableFailure checkMappingSpec(
         transformOp, forallOp,
         Twine("the number of required parallel resources (blocks or "
               "threads) ") +
-            std::to_string(computeProduct(numParallelIterations) * factor) +
-            std::string(" overflows the number of available resources ") +
-            std::to_string(computeProduct(blockOrGridSizes)));
+            Twine(computeProduct(numParallelIterations) * factor) +
+            " overflows the number of available resources " +
+            Twine(computeProduct(blockOrGridSizes)));
     return diag;
   }
   return DiagnosedSilenceableFailure::success();
@@ -933,10 +917,13 @@ class GPUTransformDialectExtension
     : public transform::TransformDialectExtension<
           GPUTransformDialectExtension> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(GPUTransformDialectExtension)
+
   GPUTransformDialectExtension() {
-    declareGeneratedDialect<scf::SCFDialect>();
-    declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<GPUDialect>();
+    declareGeneratedDialect<amdgpu::AMDGPUDialect>();
+    declareGeneratedDialect<arith::ArithDialect>();
+    declareGeneratedDialect<scf::SCFDialect>();
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.cpp.inc"

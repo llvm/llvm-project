@@ -7,7 +7,7 @@
 
 --- |
 
-  define void @f1() {
+  define void @f1(i1 %arg) {
   entry:
     %arrayidx = getelementptr inbounds [2 x i16], ptr undef, i16 0, i16 2
     br label %for.cond
@@ -24,7 +24,7 @@
     %2 = phi ptr [ %1, %for.cond ], [ %12, %cleanup ]
     %3 = phi ptr [ %0, %for.cond ], [ %11, %cleanup ]
     %4 = phi ptr [ %0, %for.cond ], [ %10, %cleanup ]
-    br i1 undef, label %for.cond2.preheader, label %if.then
+    br i1 %arg, label %for.cond2.preheader, label %if.then
 
   for.cond2.preheader:
     br label %for.cond2
@@ -37,10 +37,10 @@
     %5 = phi ptr [ %8, %for.inc ], [ %4, %for.cond2.preheader ]
     %6 = phi ptr [ %9, %for.inc ], [ %3, %for.cond2.preheader ]
     %7 = phi ptr [ %9, %for.inc ], [ %2, %for.cond2.preheader ]
-    br i1 undef, label %for.inc, label %if.then5
+    br i1 %arg, label %for.inc, label %if.then5
 
   if.then5:
-    br i1 icmp ne (i16 2, i16 0), label %cleanup.loopexit, label %if.end
+    br i1 true, label %cleanup.loopexit, label %if.end
 
   if.end:
     br label %for.inc

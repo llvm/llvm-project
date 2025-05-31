@@ -92,6 +92,10 @@ public:
   /// unsigned domain.
   static ConstantRange fromKnownBits(const KnownBits &Known, bool IsSigned);
 
+  /// Split the ConstantRange into positive and negative components, ignoring
+  /// zero values.
+  std::pair<ConstantRange, ConstantRange> splitPosNeg() const;
+
   /// Produce the smallest range such that all values that may satisfy the given
   /// predicate with any value contained within Other is contained in the
   /// returned range.  Formally, this returns a superset of
@@ -175,6 +179,11 @@ public:
   static ConstantRange makeExactNoWrapRegion(Instruction::BinaryOps BinOp,
                                              const APInt &Other,
                                              unsigned NoWrapKind);
+
+  /// Initialize a range containing all values X that satisfy `(X & Mask)
+  /// != C`. Note that the range returned may contain values where `(X & Mask)
+  /// == C` holds, making it less precise, but still conservative.
+  static ConstantRange makeMaskNotEqualRange(const APInt &Mask, const APInt &C);
 
   /// Returns true if ConstantRange calculations are supported for intrinsic
   /// with \p IntrinsicID.
@@ -271,6 +280,9 @@ public:
 
   /// Return true if all values in this range are non-negative.
   bool isAllNonNegative() const;
+
+  /// Return true if all values in this range are positive.
+  bool isAllPositive() const;
 
   /// Return the largest unsigned value contained in the ConstantRange.
   APInt getUnsignedMax() const;
@@ -419,6 +431,15 @@ public:
   /// treating both this and \p Other as unsigned ranges.
   ConstantRange multiply(const ConstantRange &Other) const;
 
+  /// Return a new range representing the possible values resulting
+  /// from a multiplication with wrap type \p NoWrapKind of a value in this
+  /// range and a value in \p Other.
+  /// If the result range is disjoint, the preferred range is determined by the
+  /// \p PreferredRangeType.
+  ConstantRange
+  multiplyWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
+                     PreferredRangeType RangeType = Smallest) const;
+
   /// Return range of possible values for a signed multiplication of this and
   /// \p Other. However, if overflow is possible always return a full range
   /// rather than trying to determine a more precise result.
@@ -483,6 +504,14 @@ public:
   /// from a left shift of a value in this range by a value in \p Other.
   /// TODO: This isn't fully implemented yet.
   ConstantRange shl(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from a left shift with wrap type \p NoWrapKind of a value in this
+  /// range and a value in \p Other.
+  /// If the result range is disjoint, the preferred range is determined by the
+  /// \p PreferredRangeType.
+  ConstantRange shlWithNoWrap(const ConstantRange &Other, unsigned NoWrapKind,
+                              PreferredRangeType RangeType = Smallest) const;
 
   /// Return a new range representing the possible values resulting from a
   /// logical right shift of a value in this range and a value in \p Other.

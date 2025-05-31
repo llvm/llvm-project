@@ -11,7 +11,6 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
@@ -25,6 +24,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,9 +32,9 @@ using namespace lldb_private;
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
                                        const Address &addr, lldb::tid_t tid,
                                        bool hardware, bool check_for_resolver)
-    : m_being_created(true), m_should_resolve_indirect_functions(false),
-      m_is_reexported(false), m_is_indirect(false), m_address(addr),
-      m_owner(owner), m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
+    : m_should_resolve_indirect_functions(false), m_is_reexported(false),
+      m_is_indirect(false), m_address(addr), m_owner(owner),
+      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
   if (check_for_resolver) {
     Symbol *symbol = m_address.CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
@@ -42,8 +42,7 @@ BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
     }
   }
 
-  SetThreadID(tid);
-  m_being_created = false;
+  SetThreadIDInternal(tid);
 }
 
 BreakpointLocation::~BreakpointLocation() { ClearBreakpointSite(); }
@@ -100,14 +99,7 @@ void BreakpointLocation::SetAutoContinue(bool auto_continue) {
 }
 
 void BreakpointLocation::SetThreadID(lldb::tid_t thread_id) {
-  if (thread_id != LLDB_INVALID_THREAD_ID)
-    GetLocationOptions().SetThreadID(thread_id);
-  else {
-    // If we're resetting this to an invalid thread id, then don't make an
-    // options pointer just to do that.
-    if (m_options_up != nullptr)
-      m_options_up->SetThreadID(thread_id);
-  }
+  SetThreadIDInternal(thread_id);
   SendBreakpointLocationChangedEvent(eBreakpointEventTypeThreadChanged);
 }
 
@@ -272,9 +264,10 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
     if (!m_user_expression_sp->Parse(diagnostics, exe_ctx,
                                      eExecutionPolicyOnlyWhenNeeded, true,
                                      false)) {
-      error.SetErrorStringWithFormat(
-          "Couldn't parse conditional expression:\n%s",
-          diagnostics.GetString().c_str());
+      error = Status::FromError(
+          diagnostics.GetAsError(lldb::eExpressionParseError,
+                                 "Couldn't parse conditional expression:"));
+
       m_user_expression_sp.reset();
       return true;
     }
@@ -307,7 +300,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
 
   if (result_code == eExpressionCompleted) {
     if (!result_variable_sp) {
-      error.SetErrorString("Expression did not return a result");
+      error = Status::FromErrorString("Expression did not return a result");
       return false;
     }
 
@@ -320,19 +313,20 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
           LLDB_LOGF(log, "Condition successfully evaluated, result is %s.\n",
                     ret ? "true" : "false");
         } else {
-          error.SetErrorString(
+          error = Status::FromErrorString(
               "Failed to get an integer result from the expression");
           ret = false;
         }
       }
     } else {
       ret = false;
-      error.SetErrorString("Failed to get any result from the expression");
+      error = Status::FromErrorString(
+          "Failed to get any result from the expression");
     }
   } else {
     ret = false;
-    error.SetErrorStringWithFormat("Couldn't execute expression:\n%s",
-                                   diagnostics.GetString().c_str());
+    error = Status::FromError(diagnostics.GetAsError(
+        lldb::eExpressionParseError, "Couldn't execute expression:"));
   }
 
   return ret;
@@ -514,8 +508,20 @@ void BreakpointLocation::GetDescription(Stream *s,
         s->PutCString("re-exported target = ");
       else
         s->PutCString("where = ");
+
+      // If there's a preferred line entry for printing, use that.
+      bool show_function_info = true;
+      if (auto preferred = GetPreferredLineEntry()) {
+        sc.line_entry = *preferred;
+        // FIXME: We're going to get the function name wrong when the preferred
+        // line entry is not the lowest one.  For now, just leave the function
+        // out in this case, but we really should also figure out how to easily
+        // fake the function name here.
+        show_function_info = false;
+      }
       sc.DumpStopContext(s, m_owner.GetTarget().GetProcessSP().get(), m_address,
-                         false, true, false, true, true);
+                         false, true, false, show_function_info,
+                         show_function_info, show_function_info);
     } else {
       if (sc.module_sp) {
         s->EOL();
@@ -532,12 +538,21 @@ void BreakpointLocation::GetDescription(Stream *s,
           s->EOL();
           s->Indent("function = ");
           s->PutCString(sc.function->GetName().AsCString("<unknown>"));
+          if (ConstString mangled_name =
+                  sc.function->GetMangled().GetMangledName()) {
+            s->EOL();
+            s->Indent("mangled function = ");
+            s->PutCString(mangled_name.AsCString());
+          }
         }
 
         if (sc.line_entry.line > 0) {
           s->EOL();
           s->Indent("location = ");
-          sc.line_entry.DumpStopContext(s, true);
+          if (auto preferred = GetPreferredLineEntry())
+            preferred->DumpStopContext(s, true);
+          else
+            sc.line_entry.DumpStopContext(s, true);
         }
 
       } else {
@@ -646,15 +661,58 @@ void BreakpointLocation::Dump(Stream *s) const {
 
 void BreakpointLocation::SendBreakpointLocationChangedEvent(
     lldb::BreakpointEventType eventKind) {
-  if (!m_being_created && !m_owner.IsInternal() &&
-      m_owner.GetTarget().EventTypeHasListeners(
-          Target::eBroadcastBitBreakpointChanged)) {
-    Breakpoint::BreakpointEventData *data = new Breakpoint::BreakpointEventData(
+  if (!m_owner.IsInternal() && m_owner.GetTarget().EventTypeHasListeners(
+                                   Target::eBroadcastBitBreakpointChanged)) {
+    auto data_sp = std::make_shared<Breakpoint::BreakpointEventData>(
         eventKind, m_owner.shared_from_this());
-    data->GetBreakpointLocationCollection().Add(shared_from_this());
+    data_sp->GetBreakpointLocationCollection().Add(shared_from_this());
     m_owner.GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                                       data);
+                                       data_sp);
   }
+}
+
+std::optional<uint32_t> BreakpointLocation::GetSuggestedStackFrameIndex() {
+  auto preferred_opt = GetPreferredLineEntry();
+  if (!preferred_opt)
+    return {};
+  LineEntry preferred = *preferred_opt;
+  SymbolContext sc;
+  if (!m_address.CalculateSymbolContext(&sc))
+    return {};
+  // Don't return anything special if frame 0 is the preferred line entry.
+  // We not really telling the stack frame list to do anything special in that
+  // case.
+  if (!LineEntry::Compare(sc.line_entry, preferred))
+    return {};
+
+  if (!sc.block)
+    return {};
+
+  // Blocks have their line info in Declaration form, so make one here:
+  Declaration preferred_decl(preferred.GetFile(), preferred.line,
+                             preferred.column);
+
+  uint32_t depth = 0;
+  Block *inlined_block = sc.block->GetContainingInlinedBlock();
+  while (inlined_block) {
+    // If we've moved to a block that this isn't the start of, that's not
+    // our inlining info or call site, so we can stop here.
+    Address start_address;
+    if (!inlined_block->GetStartAddress(start_address) ||
+        start_address != m_address)
+      return {};
+
+    const InlineFunctionInfo *info = inlined_block->GetInlinedFunctionInfo();
+    if (info) {
+      if (preferred_decl == info->GetDeclaration())
+        return depth;
+      if (preferred_decl == info->GetCallSite())
+        return depth + 1;
+    }
+    inlined_block = inlined_block->GetInlinedParent();
+    depth++;
+  }
+  return {};
 }
 
 void BreakpointLocation::SwapLocation(BreakpointLocationSP swap_from) {
@@ -664,4 +722,15 @@ void BreakpointLocation::SwapLocation(BreakpointLocationSP swap_from) {
   m_is_reexported = swap_from->m_is_reexported;
   m_is_indirect = swap_from->m_is_indirect;
   m_user_expression_sp.reset();
+}
+
+void BreakpointLocation::SetThreadIDInternal(lldb::tid_t thread_id) {
+  if (thread_id != LLDB_INVALID_THREAD_ID)
+    GetLocationOptions().SetThreadID(thread_id);
+  else {
+    // If we're resetting this to an invalid thread id, then don't make an
+    // options pointer just to do that.
+    if (m_options_up != nullptr)
+      m_options_up->SetThreadID(thread_id);
+  }
 }

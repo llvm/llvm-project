@@ -75,11 +75,16 @@ public:
   /// Sets the DiagnosticsEngine that diag() will emit diagnostics to.
   // FIXME: this is required initialization, and should be a constructor param.
   // Fix the context -> diag engine -> consumer -> context initialization cycle.
-  void setDiagnosticsEngine(DiagnosticsEngine *DiagEngine) {
+  void setDiagnosticsEngine(std::unique_ptr<DiagnosticOptions> DiagOpts,
+                            DiagnosticsEngine *DiagEngine) {
+    this->DiagOpts = std::move(DiagOpts);
     this->DiagEngine = DiagEngine;
   }
 
   ~ClangTidyContext();
+
+  ClangTidyContext(const ClangTidyContext &) = delete;
+  ClangTidyContext &operator=(const ClangTidyContext &) = delete;
 
   /// Report any errors detected using this method.
   ///
@@ -228,6 +233,7 @@ private:
   // Writes to Stats.
   friend class ClangTidyDiagnosticConsumer;
 
+  std::unique_ptr<DiagnosticOptions> DiagOpts = nullptr;
   DiagnosticsEngine *DiagEngine = nullptr;
   std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider;
 
@@ -299,6 +305,10 @@ private:
   /// context.
   llvm::Regex *getHeaderFilter();
 
+  /// Returns the \c ExcludeHeaderFilter constructed for the options set in the
+  /// context.
+  llvm::Regex *getExcludeHeaderFilter();
+
   /// Updates \c LastErrorRelatesToUserCode and LastErrorPassesLineFilter
   /// according to the diagnostic \p Location.
   void checkFilters(SourceLocation Location, const SourceManager &Sources);
@@ -313,6 +323,7 @@ private:
   bool EnableNolintBlocks;
   std::vector<ClangTidyError> Errors;
   std::unique_ptr<llvm::Regex> HeaderFilter;
+  std::unique_ptr<llvm::Regex> ExcludeHeaderFilter;
   bool LastErrorRelatesToUserCode = false;
   bool LastErrorPassesLineFilter = false;
   bool LastErrorWasIgnored = false;

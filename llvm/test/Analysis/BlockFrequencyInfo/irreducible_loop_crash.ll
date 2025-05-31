@@ -3,13 +3,13 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @fn1(i32* %f) {
+define void @fn1(ptr %f, i1 %arg) {
 entry:
   %tobool7 = icmp eq i32 undef, 0
-  br i1 undef, label %if.end.12, label %for.body.5
+  br i1 %arg, label %if.end.12, label %for.body.5
 
 for.inc:
-  store i32 undef, i32* %f, align 4
+  store i32 undef, ptr %f, align 4
   br label %for.body.5
 
 for.body.5:                                       ; preds = %for.cond.4.preheader
@@ -19,7 +19,7 @@ for.inc.9:                                        ; preds = %for.body.5
   br i1 %tobool7, label %for.inc.9.1, label %for.inc
 
 if.end.12:                                        ; preds = %if.end.12, %for.body
-  br i1 undef, label %for.end.17, label %for.inc
+  br i1 %arg, label %for.end.17, label %for.inc
 
 for.end.17:                                       ; preds = %entry
   ret void

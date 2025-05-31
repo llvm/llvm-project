@@ -22,7 +22,10 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             stopCommands=["?" + command_quiet, command_not_quiet],
             exitCommands=["?" + command_quiet, command_not_quiet],
         )
-        full_output = self.collect_console(duration=1.0)
+        full_output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=command_not_quiet,
+        )
         self.assertNotIn(command_quiet, full_output)
         self.assertIn(command_not_quiet, full_output)
 
@@ -47,7 +50,10 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             postRunCommands=commands if use_post_run_commands else None,
             expectFailure=True,
         )
-        full_output = self.collect_console(duration=1.0)
+        full_output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=command_abort_on_error,
+        )
         self.assertNotIn(command_quiet, full_output)
         self.assertIn(command_abort_on_error, full_output)
 
@@ -64,17 +70,20 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
         self.do_test_abort_on_error(use_post_run_commands=True)
 
     def test_command_directive_abort_on_error_attach_commands(self):
-        program = self.getBuildArtifact("a.out")
         command_quiet = (
             "settings set target.show-hex-variable-values-with-leading-zeroes false"
         )
         command_abort_on_error = "settings set foo bar"
-        self.build_and_create_debug_adaptor()
-        self.attach(
-            program,
+        program = self.build_and_create_debug_adapter_for_attach()
+        resp = self.attach(
+            program=program,
             attachCommands=["?!" + command_quiet, "!" + command_abort_on_error],
             expectFailure=True,
         )
-        full_output = self.collect_console(duration=1.0)
+        self.assertFalse(resp["success"], "expected 'attach' failure")
+        full_output = self.collect_console(
+            timeout_secs=1.0,
+            pattern=command_abort_on_error,
+        )
         self.assertNotIn(command_quiet, full_output)
         self.assertIn(command_abort_on_error, full_output)

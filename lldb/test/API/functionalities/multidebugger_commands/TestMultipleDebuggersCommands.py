@@ -20,8 +20,9 @@ class MultipleDebuggersCommandsTestCase(TestBase):
 
         retobj = lldb.SBCommandReturnObject()
         interpreter_1.HandleCommand("apropos env", retobj)
-        self.assertTrue(
-            magic_text in str(retobj),
+        self.assertIn(
+            magic_text,
+            str(retobj),
             "[interpreter_1]: the output does not contain the correct words",
         )
 
@@ -37,8 +38,9 @@ class MultipleDebuggersCommandsTestCase(TestBase):
 
         retobj = lldb.SBCommandReturnObject()
         interpreter_2.HandleCommand("apropos env", retobj)
-        self.assertTrue(
-            magic_text in str(retobj),
+        self.assertIn(
+            magic_text,
+            str(retobj),
             "[interpreter_2]: the output does not contain the correct words",
         )
 

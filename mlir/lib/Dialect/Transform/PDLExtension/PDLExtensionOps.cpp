@@ -158,8 +158,8 @@ transform::PDLMatchOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::PDLMatchOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getRoot(), effects);
-  producesHandle(getMatched(), effects);
+  onlyReadsHandle(getRootMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   onlyReadsPayload(effects);
 }
 

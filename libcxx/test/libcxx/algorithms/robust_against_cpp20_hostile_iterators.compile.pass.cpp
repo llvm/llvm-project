@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <iterator>
 #include <random>
 
 #include "test_macros.h"
@@ -72,9 +73,9 @@ struct Cpp20HostileIterator
 };
 
 struct Pred {
-  bool operator()(int, int) { return false; }
-  bool operator()(int) { return false; }
-  int operator()() { return 0; }
+  bool operator()(int, int) const { return false; }
+  bool operator()(int) const { return false; }
+  int operator()() const { return 0; }
 };
 
 void test() {

@@ -8,8 +8,6 @@
 
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,7 +25,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
@@ -171,6 +168,7 @@ void MCDwarfLineTable::emitOne(
     const MCLineSection::MCDwarfLineEntryCollection &LineEntries) {
 
   unsigned FileNum, LastLine, Column, Flags, Isa, Discriminator;
+  bool IsAtStartSeq;
   MCSymbol *LastLabel;
   auto init = [&]() {
     FileNum = 1;
@@ -180,6 +178,7 @@ void MCDwarfLineTable::emitOne(
     Isa = 0;
     Discriminator = 0;
     LastLabel = nullptr;
+    IsAtStartSeq = true;
   };
   init();
 
@@ -188,6 +187,17 @@ void MCDwarfLineTable::emitOne(
   for (const MCDwarfLineEntry &LineEntry : LineEntries) {
     MCSymbol *Label = LineEntry.getLabel();
     const MCAsmInfo *asmInfo = MCOS->getContext().getAsmInfo();
+
+    if (LineEntry.LineStreamLabel) {
+      if (!IsAtStartSeq) {
+        MCOS->emitDwarfLineEndEntry(Section, LastLabel,
+                                    /*EndLabel =*/LastLabel);
+        init();
+      }
+      MCOS->emitLabel(LineEntry.LineStreamLabel, LineEntry.StreamLabelDefLoc);
+      continue;
+    }
+
     if (LineEntry.IsEndEntry) {
       MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, Label,
                                      asmInfo->getCodePointerSize());
@@ -242,6 +252,7 @@ void MCDwarfLineTable::emitOne(
     Discriminator = 0;
     LastLine = LineEntry.getLine();
     LastLabel = Label;
+    IsAtStartSeq = false;
   }
 
   // Generate DWARF line end entry.
@@ -249,8 +260,24 @@ void MCDwarfLineTable::emitOne(
   // table using ranges whenever CU or section changes. However, the MC path
   // does not track ranges nor terminate the line table. In that case,
   // conservatively use the section end symbol to end the line table.
-  if (!EndEntryEmitted)
+  if (!EndEntryEmitted && !IsAtStartSeq)
     MCOS->emitDwarfLineEndEntry(Section, LastLabel);
+}
+
+void MCDwarfLineTable::endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS,
+                                                           SMLoc DefLoc,
+                                                           StringRef Name) {
+  auto &ctx = MCOS->getContext();
+  auto *LineStreamLabel = ctx.getOrCreateSymbol(Name);
+  auto *LineSym = ctx.createTempSymbol();
+  MCOS->emitLabel(LineSym);
+  const MCDwarfLoc &DwarfLoc = ctx.getCurrentDwarfLoc();
+
+  // Create a 'fake' line entry by having LineStreamLabel be non-null. This
+  // won't actually emit any line information, it will reset the line table
+  // sequence and emit a label at the start of the new line table sequence.
+  MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, LineStreamLabel, DefLoc);
+  getMCLineSections().addLineEntry(LineEntry, MCOS->getCurrentSectionOnly());
 }
 
 //
@@ -289,7 +316,7 @@ void MCDwarfDwoLineTable::Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
     return;
   std::optional<MCDwarfLineStr> NoLineStr(std::nullopt);
   MCOS.switchSection(Section);
-  MCOS.emitLabel(Header.Emit(&MCOS, Params, std::nullopt, NoLineStr).second);
+  MCOS.emitLabel(Header.Emit(&MCOS, Params, {}, NoLineStr).second);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
@@ -319,9 +346,10 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 static const MCExpr *forceExpAbs(MCStreamer &OS, const MCExpr* Expr) {
   MCContext &Context = OS.getContext();
   assert(!isa<MCSymbolRefExpr>(Expr));
-  if (Context.getAsmInfo()->hasAggressiveSymbolFolding())
+  if (!Context.getAsmInfo()->doesSetDirectiveSuppressReloc())
     return Expr;
 
+  // On Mach-O, try to avoid a relocation by using a set directive.
   MCSymbol *ABS = Context.createTempSymbol();
   OS.emitAssignment(ABS, Expr);
   return MCSymbolRefExpr::create(ABS, Context);
@@ -360,7 +388,12 @@ void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
   size_t Offset = addString(Path);
   if (UseRelocs) {
     MCContext &Ctx = MCOS->getContext();
-    MCOS->emitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset), RefSize);
+    if (Ctx.getAsmInfo()->needsDwarfSectionOffsetDirective()) {
+      MCOS->emitCOFFSecRel32(LineStrLabel, Offset);
+    } else {
+      MCOS->emitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset),
+                      RefSize);
+    }
   } else
     MCOS->emitIntValue(Offset, RefSize);
 }
@@ -883,8 +916,7 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
     assert(StartSymbol && "StartSymbol must not be NULL");
     assert(EndSymbol && "EndSymbol must not be NULL");
 
-    const MCExpr *Addr = MCSymbolRefExpr::create(
-      StartSymbol, MCSymbolRefExpr::VK_None, context);
+    const MCExpr *Addr = MCSymbolRefExpr::create(StartSymbol, context);
     const MCExpr *Size =
         makeEndMinusStartExpr(context, *StartSymbol, *EndSymbol, 0);
     MCOS->emitValue(Addr, AddrSize);
@@ -985,13 +1017,11 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     assert(EndSymbol && "EndSymbol must not be NULL");
 
     // AT_low_pc, the first address of the default .text section.
-    const MCExpr *Start = MCSymbolRefExpr::create(
-        StartSymbol, MCSymbolRefExpr::VK_None, context);
+    const MCExpr *Start = MCSymbolRefExpr::create(StartSymbol, context);
     MCOS->emitValue(Start, AddrSize);
 
     // AT_high_pc, the last address of the default .text section.
-    const MCExpr *End = MCSymbolRefExpr::create(
-      EndSymbol, MCSymbolRefExpr::VK_None, context);
+    const MCExpr *End = MCSymbolRefExpr::create(EndSymbol, context);
     MCOS->emitValue(End, AddrSize);
   }
 
@@ -1058,8 +1088,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     MCOS->emitInt32(Entry.getLineNumber());
 
     // AT_low_pc, start address of the label.
-    const MCExpr *AT_low_pc = MCSymbolRefExpr::create(Entry.getLabel(),
-                                             MCSymbolRefExpr::VK_None, context);
+    const auto *AT_low_pc = MCSymbolRefExpr::create(Entry.getLabel(), context);
     MCOS->emitValue(AT_low_pc, AddrSize);
   }
 
@@ -1091,8 +1120,8 @@ static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
     for (MCSection *Sec : Sections) {
       const MCSymbol *StartSymbol = Sec->getBeginSymbol();
       const MCSymbol *EndSymbol = Sec->getEndSymbol(context);
-      const MCExpr *SectionStartAddr = MCSymbolRefExpr::create(
-          StartSymbol, MCSymbolRefExpr::VK_None, context);
+      const MCExpr *SectionStartAddr =
+          MCSymbolRefExpr::create(StartSymbol, context);
       const MCExpr *SectionSize =
           makeEndMinusStartExpr(context, *StartSymbol, *EndSymbol, 0);
       MCOS->emitInt8(dwarf::DW_RLE_start_length);
@@ -1110,8 +1139,8 @@ static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
       const MCSymbol *EndSymbol = Sec->getEndSymbol(context);
 
       // Emit a base address selection entry for the section start.
-      const MCExpr *SectionStartAddr = MCSymbolRefExpr::create(
-          StartSymbol, MCSymbolRefExpr::VK_None, context);
+      const MCExpr *SectionStartAddr =
+          MCSymbolRefExpr::create(StartSymbol, context);
       MCOS->emitFill(AddrSize, 0xFF);
       MCOS->emitValue(SectionStartAddr, AddrSize);
 
@@ -1293,8 +1322,8 @@ static void EmitPersonality(MCStreamer &streamer, const MCSymbol &symbol,
 namespace {
 
 class FrameEmitterImpl {
-  int CFAOffset = 0;
-  int InitialCFAOffset = 0;
+  int64_t CFAOffset = 0;
+  int64_t InitialCFAOffset = 0;
   bool IsEH;
   MCObjectStreamer &Streamer;
 
@@ -1342,6 +1371,10 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
 
   case MCCFIInstruction::OpNegateRAState:
     Streamer.emitInt8(dwarf::DW_CFA_AARCH64_negate_ra_state);
+    return;
+
+  case MCCFIInstruction::OpNegateRAStateWithPC:
+    Streamer.emitInt8(dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc);
     return;
 
   case MCCFIInstruction::OpUndefined: {
@@ -1408,7 +1441,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
 
-    int Offset = Instr.getOffset();
+    int64_t Offset = Instr.getOffset();
     if (IsRelative)
       Offset -= CFAOffset;
     Offset = Offset / dataAlignmentFactor;
@@ -1459,6 +1492,28 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
   case MCCFIInstruction::OpEscape:
     Streamer.emitBytes(Instr.getValues());
     return;
+  case MCCFIInstruction::OpLabel:
+    Streamer.emitLabel(Instr.getCfiLabel(), Instr.getLoc());
+    return;
+  case MCCFIInstruction::OpValOffset: {
+    unsigned Reg = Instr.getRegister();
+    if (!IsEH)
+      Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
+
+    int Offset = Instr.getOffset();
+    Offset = Offset / dataAlignmentFactor;
+
+    if (Offset < 0) {
+      Streamer.emitInt8(dwarf::DW_CFA_val_offset_sf);
+      Streamer.emitULEB128IntValue(Reg);
+      Streamer.emitSLEB128IntValue(Offset);
+    } else {
+      Streamer.emitInt8(dwarf::DW_CFA_val_offset);
+      Streamer.emitULEB128IntValue(Reg);
+      Streamer.emitULEB128IntValue(Offset);
+    }
+    return;
+  }
   }
   llvm_unreachable("Unhandled case in switch");
 }
@@ -1771,23 +1826,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
 namespace {
 
 struct CIEKey {
-  static const CIEKey getEmptyKey() {
-    return CIEKey(nullptr, 0, -1, false, false, static_cast<unsigned>(INT_MAX),
-                  false, false);
-  }
-
-  static const CIEKey getTombstoneKey() {
-    return CIEKey(nullptr, -1, 0, false, false, static_cast<unsigned>(INT_MAX),
-                  false, false);
-  }
-
-  CIEKey(const MCSymbol *Personality, unsigned PersonalityEncoding,
-         unsigned LSDAEncoding, bool IsSignalFrame, bool IsSimple,
-         unsigned RAReg, bool IsBKeyFrame, bool IsMTETaggedFrame)
-      : Personality(Personality), PersonalityEncoding(PersonalityEncoding),
-        LsdaEncoding(LSDAEncoding), IsSignalFrame(IsSignalFrame),
-        IsSimple(IsSimple), RAReg(RAReg), IsBKeyFrame(IsBKeyFrame),
-        IsMTETaggedFrame(IsMTETaggedFrame) {}
+  CIEKey() = default;
 
   explicit CIEKey(const MCDwarfFrameInfo &Frame)
       : Personality(Frame.Personality),
@@ -1813,43 +1852,27 @@ struct CIEKey {
                            Other.IsMTETaggedFrame);
   }
 
-  const MCSymbol *Personality;
-  unsigned PersonalityEncoding;
-  unsigned LsdaEncoding;
-  bool IsSignalFrame;
-  bool IsSimple;
-  unsigned RAReg;
-  bool IsBKeyFrame;
-  bool IsMTETaggedFrame;
+  bool operator==(const CIEKey &Other) const {
+    return Personality == Other.Personality &&
+           PersonalityEncoding == Other.PersonalityEncoding &&
+           LsdaEncoding == Other.LsdaEncoding &&
+           IsSignalFrame == Other.IsSignalFrame && IsSimple == Other.IsSimple &&
+           RAReg == Other.RAReg && IsBKeyFrame == Other.IsBKeyFrame &&
+           IsMTETaggedFrame == Other.IsMTETaggedFrame;
+  }
+  bool operator!=(const CIEKey &Other) const { return !(*this == Other); }
+
+  const MCSymbol *Personality = nullptr;
+  unsigned PersonalityEncoding = 0;
+  unsigned LsdaEncoding = -1;
+  bool IsSignalFrame = false;
+  bool IsSimple = false;
+  unsigned RAReg = static_cast<unsigned>(UINT_MAX);
+  bool IsBKeyFrame = false;
+  bool IsMTETaggedFrame = false;
 };
 
 } // end anonymous namespace
-
-namespace llvm {
-
-template <> struct DenseMapInfo<CIEKey> {
-  static CIEKey getEmptyKey() { return CIEKey::getEmptyKey(); }
-  static CIEKey getTombstoneKey() { return CIEKey::getTombstoneKey(); }
-
-  static unsigned getHashValue(const CIEKey &Key) {
-    return static_cast<unsigned>(
-        hash_combine(Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
-                     Key.IsSignalFrame, Key.IsSimple, Key.RAReg,
-                     Key.IsBKeyFrame, Key.IsMTETaggedFrame));
-  }
-
-  static bool isEqual(const CIEKey &LHS, const CIEKey &RHS) {
-    return LHS.Personality == RHS.Personality &&
-           LHS.PersonalityEncoding == RHS.PersonalityEncoding &&
-           LHS.LsdaEncoding == RHS.LsdaEncoding &&
-           LHS.IsSignalFrame == RHS.IsSignalFrame &&
-           LHS.IsSimple == RHS.IsSimple && LHS.RAReg == RHS.RAReg &&
-           LHS.IsBKeyFrame == RHS.IsBKeyFrame &&
-           LHS.IsMTETaggedFrame == RHS.IsMTETaggedFrame;
-  }
-};
-
-} // end namespace llvm
 
 void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                                bool IsEH) {
@@ -1892,9 +1915,6 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   MCSymbol *SectionStart = Context.createTempSymbol();
   Streamer.emitLabel(SectionStart);
 
-  DenseMap<CIEKey, const MCSymbol *> CIEStarts;
-
-  const MCSymbol *DummyDebugKey = nullptr;
   bool CanOmitDwarf = MOFI->getOmitDwarfIfHaveCompactUnwind();
   // Sort the FDEs by their corresponding CIE before we emit them.
   // This isn't technically necessary according to the DWARF standard,
@@ -1905,6 +1925,8 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
                     [](const MCDwarfFrameInfo &X, const MCDwarfFrameInfo &Y) {
                       return CIEKey(X) < CIEKey(Y);
                     });
+  CIEKey LastKey;
+  const MCSymbol *LastCIEStart = nullptr;
   for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
     const MCDwarfFrameInfo &Frame = *I;
     ++I;
@@ -1919,11 +1941,12 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
       continue;
 
     CIEKey Key(Frame);
-    const MCSymbol *&CIEStart = IsEH ? CIEStarts[Key] : DummyDebugKey;
-    if (!CIEStart)
-      CIEStart = &Emitter.EmitCIE(Frame);
+    if (!LastCIEStart || (IsEH && Key != LastKey)) {
+      LastKey = Key;
+      LastCIEStart = &Emitter.EmitCIE(Frame);
+    }
 
-    Emitter.EmitFDE(*CIEStart, Frame, I == E, *SectionStart);
+    Emitter.EmitFDE(*LastCIEStart, Frame, I == E, *SectionStart);
   }
 }
 

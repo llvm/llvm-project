@@ -25,15 +25,12 @@ extern cl::opt<bool> AlignBlocks;
 extern cl::opt<bool> PreserveBlocksAlignment;
 extern cl::opt<unsigned> AlignFunctions;
 
-cl::opt<unsigned>
-AlignBlocksMinSize("align-blocks-min-size",
-  cl::desc("minimal size of the basic block that should be aligned"),
-  cl::init(0),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned> AlignBlocksMinSize(
+    "align-blocks-min-size",
+    cl::desc("minimal size of the basic block that should be aligned"),
+    cl::init(0), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
 
-cl::opt<unsigned> AlignBlocksThreshold(
+static cl::opt<unsigned> AlignBlocksThreshold(
     "align-blocks-threshold",
     cl::desc(
         "align only blocks with frequency larger than containing function "
@@ -42,19 +39,17 @@ cl::opt<unsigned> AlignBlocksThreshold(
         "containing function."),
     cl::init(800), cl::Hidden, cl::cat(BoltOptCategory));
 
-cl::opt<unsigned> AlignFunctionsMaxBytes(
+static cl::opt<unsigned> AlignFunctionsMaxBytes(
     "align-functions-max-bytes",
     cl::desc("maximum number of bytes to use to align functions"), cl::init(32),
     cl::cat(BoltOptCategory));
 
-cl::opt<unsigned>
-BlockAlignment("block-alignment",
-  cl::desc("boundary to use for alignment of basic blocks"),
-  cl::init(16),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
+static cl::opt<unsigned>
+    BlockAlignment("block-alignment",
+                   cl::desc("boundary to use for alignment of basic blocks"),
+                   cl::init(16), cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
-cl::opt<bool>
+static cl::opt<bool>
     UseCompactAligner("use-compact-aligner",
                       cl::desc("Use compact approach for aligning functions"),
                       cl::init(true), cl::cat(BoltOptCategory));
@@ -147,9 +142,9 @@ void AlignerPass::alignBlocks(BinaryFunction &Function,
   }
 }
 
-void AlignerPass::runOnFunctions(BinaryContext &BC) {
+Error AlignerPass::runOnFunctions(BinaryContext &BC) {
   if (!BC.HasRelocations)
-    return;
+    return Error::success();
 
   AlignHistogram.resize(opts::BlockAlignment);
 
@@ -179,6 +174,7 @@ void AlignerPass::runOnFunctions(BinaryContext &BC) {
     dbgs() << "BOLT-DEBUG: total execution count of aligned blocks: "
            << AlignedBlocksCount << '\n';
   );
+  return Error::success();
 }
 
 } // end namespace bolt

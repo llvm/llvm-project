@@ -8,64 +8,64 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-  using std::div_t;
-  using std::ldiv_t;
-  using std::lldiv_t;
-  using std::size_t;
+  using std::div_t _LIBCPP_USING_IF_EXISTS;
+  using std::ldiv_t _LIBCPP_USING_IF_EXISTS;
+  using std::lldiv_t _LIBCPP_USING_IF_EXISTS;
+  using std::size_t _LIBCPP_USING_IF_EXISTS;
 
   // [support.start.term], start and termination
-  using std::_Exit;
-  using std::abort;
-  using std::at_quick_exit;
-  using std::atexit;
-  using std::exit;
-  using std::quick_exit;
+  using std::_Exit _LIBCPP_USING_IF_EXISTS;
+  using std::abort _LIBCPP_USING_IF_EXISTS;
+  using std::at_quick_exit _LIBCPP_USING_IF_EXISTS;
+  using std::atexit _LIBCPP_USING_IF_EXISTS;
+  using std::exit _LIBCPP_USING_IF_EXISTS;
+  using std::quick_exit _LIBCPP_USING_IF_EXISTS;
 
-  using std::getenv;
-  using std::system;
+  using std::getenv _LIBCPP_USING_IF_EXISTS;
+  using std::system _LIBCPP_USING_IF_EXISTS;
 
   // [c.malloc], C library memory allocation
-  using std::aligned_alloc;
-  using std::calloc;
-  using std::free;
-  using std::malloc;
-  using std::realloc;
+  using std::aligned_alloc _LIBCPP_USING_IF_EXISTS;
+  using std::calloc _LIBCPP_USING_IF_EXISTS;
+  using std::free _LIBCPP_USING_IF_EXISTS;
+  using std::malloc _LIBCPP_USING_IF_EXISTS;
+  using std::realloc _LIBCPP_USING_IF_EXISTS;
 
-  using std::atof;
-  using std::atoi;
-  using std::atol;
-  using std::atoll;
-  using std::strtod;
-  using std::strtof;
-  using std::strtol;
-  using std::strtold;
-  using std::strtoll;
-  using std::strtoul;
-  using std::strtoull;
+  using std::atof _LIBCPP_USING_IF_EXISTS;
+  using std::atoi _LIBCPP_USING_IF_EXISTS;
+  using std::atol _LIBCPP_USING_IF_EXISTS;
+  using std::atoll _LIBCPP_USING_IF_EXISTS;
+  using std::strtod _LIBCPP_USING_IF_EXISTS;
+  using std::strtof _LIBCPP_USING_IF_EXISTS;
+  using std::strtol _LIBCPP_USING_IF_EXISTS;
+  using std::strtold _LIBCPP_USING_IF_EXISTS;
+  using std::strtoll _LIBCPP_USING_IF_EXISTS;
+  using std::strtoul _LIBCPP_USING_IF_EXISTS;
+  using std::strtoull _LIBCPP_USING_IF_EXISTS;
 
   // [c.mb.wcs], multibyte / wide string and character conversion functions
-  using std::mblen;
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-  using std::mbstowcs;
-  using std::mbtowc;
-  using std::wcstombs;
-  using std::wctomb;
+  using std::mblen _LIBCPP_USING_IF_EXISTS;
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  using std::mbstowcs _LIBCPP_USING_IF_EXISTS;
+  using std::mbtowc _LIBCPP_USING_IF_EXISTS;
+  using std::wcstombs _LIBCPP_USING_IF_EXISTS;
+  using std::wctomb _LIBCPP_USING_IF_EXISTS;
 #endif
   // [alg.c.library], C standard library algorithms
-  using std::bsearch;
-  using std::qsort;
+  using std::bsearch _LIBCPP_USING_IF_EXISTS;
+  using std::qsort _LIBCPP_USING_IF_EXISTS;
 
   // [c.math.rand], low-quality random number generation
-  using std::rand;
-  using std::srand;
+  using std::rand _LIBCPP_USING_IF_EXISTS;
+  using std::srand _LIBCPP_USING_IF_EXISTS;
 
   // [c.math.abs], absolute values
-  using std::abs;
+  using std::abs _LIBCPP_USING_IF_EXISTS;
 
-  using std::labs;
-  using std::llabs;
+  using std::labs _LIBCPP_USING_IF_EXISTS;
+  using std::llabs _LIBCPP_USING_IF_EXISTS;
 
-  using std::div;
-  using std::ldiv;
-  using std::lldiv;
+  using std::div _LIBCPP_USING_IF_EXISTS;
+  using std::ldiv _LIBCPP_USING_IF_EXISTS;
+  using std::lldiv _LIBCPP_USING_IF_EXISTS;
 } // namespace std

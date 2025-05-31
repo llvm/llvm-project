@@ -98,6 +98,7 @@ struct JmpBuf {
   uptr sp;
   int int_signal_send;
   bool in_blocking_func;
+  uptr oldset_stack_size;
   uptr in_signal_handler;
   uptr *shadow_stack_pos;
 };
@@ -136,7 +137,7 @@ struct TidEpoch {
   Epoch epoch;
 };
 
-struct TidSlot {
+struct alignas(SANITIZER_CACHE_LINE_SIZE) TidSlot {
   Mutex mtx;
   Sid sid;
   atomic_uint32_t raw_epoch;
@@ -153,10 +154,10 @@ struct TidSlot {
   }
 
   TidSlot();
-} ALIGNED(SANITIZER_CACHE_LINE_SIZE);
+};
 
 // This struct is stored in TLS.
-struct ThreadState {
+struct alignas(SANITIZER_CACHE_LINE_SIZE) ThreadState {
   FastState fast_state;
   int ignore_sync;
 #if !SANITIZER_GO
@@ -234,7 +235,7 @@ struct ThreadState {
   const ReportDesc *current_report;
 
   explicit ThreadState(Tid tid);
-} ALIGNED(SANITIZER_CACHE_LINE_SIZE);
+};
 
 #if !SANITIZER_GO
 #if SANITIZER_APPLE || SANITIZER_ANDROID
@@ -514,7 +515,7 @@ bool IsExpectedReport(uptr addr, uptr size);
 StackID CurrentStackId(ThreadState *thr, uptr pc);
 ReportStack *SymbolizeStackId(StackID stack_id);
 void PrintCurrentStack(ThreadState *thr, uptr pc);
-void PrintCurrentStackSlow(uptr pc);  // uses libunwind
+void PrintCurrentStack(uptr pc, bool fast);  // may uses libunwind
 MBlock *JavaHeapBlock(uptr addr, uptr *start);
 
 void Initialize(ThreadState *thr);

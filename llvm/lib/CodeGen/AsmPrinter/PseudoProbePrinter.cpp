@@ -20,8 +20,6 @@
 
 using namespace llvm;
 
-PseudoProbeHandler::~PseudoProbeHandler() = default;
-
 void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
                                          uint64_t Type, uint64_t Attr,
                                          const DILocation *DebugLoc) {
@@ -36,7 +34,7 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
     // Use caching to avoid redundant md5 computation for build speed.
     uint64_t &CallerGuid = NameGuidMap[Name];
     if (!CallerGuid)
-      CallerGuid = Function::getGUID(Name);
+      CallerGuid = Function::getGUIDAssumingExternalLinkage(Name);
     uint64_t CallerProbeId = PseudoProbeDwarfDiscriminator::extractProbeIndex(
         InlinedAt->getDiscriminator());
     ReversedInlineStack.emplace_back(CallerGuid, CallerProbeId);

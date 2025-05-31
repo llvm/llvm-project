@@ -19,7 +19,7 @@ int load_extern_global() {
 
 // CHECK-LABEL: define{{.*}} i32 @_Z22load_from_extern_array
 int load_from_extern_array(int I) {
-  // CHECK: [[I:%.*]] = getelementptr inbounds %struct.S, ptr {{.*}}, i32 0, i32 0
+  // CHECK: [[I:%.*]] = getelementptr inbounds nuw %struct.S, ptr {{.*}}, i32 0, i32 0
   // CHECK-NEXT: [[PTRTOINT:%.*]] = ptrtoint ptr [[I]] to i64, !nosanitize
   // CHECK-NEXT: [[AND:%.*]] = and i64 [[PTRTOINT]], 3, !nosanitize
   // CHECK-NEXT: [[ICMP:%.*]] = icmp eq i64 [[AND]], 0, !nosanitize

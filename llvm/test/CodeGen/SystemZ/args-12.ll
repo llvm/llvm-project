@@ -2,6 +2,7 @@
 ; Test the handling of i128 argument values
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z17 | FileCheck %s
 
 declare void @bar(i64, i64, i64, i64, i128,
                   i64, i64, i64, i64, i128)

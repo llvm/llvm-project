@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___RANDOM_NEGATIVE_BINOMIAL_DISTRIBUTION_H
 #define _LIBCPP___RANDOM_NEGATIVE_BINOMIAL_DISTRIBUTION_H
 
+#include <__assert>
 #include <__config>
 #include <__random/bernoulli_distribution.h>
 #include <__random/gamma_distribution.h>
@@ -27,14 +28,14 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _IntType = int>
-class _LIBCPP_TEMPLATE_VIS negative_binomial_distribution {
+class negative_binomial_distribution {
   static_assert(__libcpp_random_is_valid_inttype<_IntType>::value, "IntType must be a supported integer type");
 
 public:
   // types
   typedef _IntType result_type;
 
-  class _LIBCPP_TEMPLATE_VIS param_type {
+  class param_type {
     result_type __k_;
     double __p_;
 
@@ -113,10 +114,9 @@ _IntType negative_binomial_distribution<_IntType>::operator()(_URNG& __urng, con
       else
         ++__f;
     }
-    _LIBCPP_ASSERT_UNCATEGORIZED(
-        __f >= 0,
-        "std::negative_binomial_distribution should never produce negative values. "
-        "This is almost certainly a signed integer overflow issue on __f.");
+    _LIBCPP_ASSERT_INTERNAL(__f >= 0,
+                            "std::negative_binomial_distribution should never produce negative values. "
+                            "This is almost certainly a signed integer overflow issue on __f.");
     return __f;
   }
   return poisson_distribution<result_type>(gamma_distribution<double>(__k, (1 - __p) / __p)(__urng))(__urng);

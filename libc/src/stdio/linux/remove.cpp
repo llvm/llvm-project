@@ -11,11 +11,12 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "hdr/fcntl_macros.h" // For AT_* macros.
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
-#include <fcntl.h>       // For AT_* macros.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, remove, (const char *path)) {
   // We first try unlinking it as a file. If it is ia file, it will succeed. If
@@ -30,4 +31,4 @@ LLVM_LIBC_FUNCTION(int, remove, (const char *path)) {
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

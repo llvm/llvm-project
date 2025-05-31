@@ -5,6 +5,10 @@
 
 // Make sure TSan doesn't deadlock on a file stream lock at program shutdown.
 // See https://github.com/google/sanitizers/issues/454
+
+// https://github.com/google/sanitizers/issues/1733
+// UNSUPPORTED: glibc-2.38
+
 #ifdef __FreeBSD__
 #define _WITH_GETLINE  // to declare getline()
 #endif

@@ -101,8 +101,8 @@
 // CHECK-KMSAN-NEXT:    call void @__msan_warning(i32 [[TMP9]]) #[[ATTR3:[0-9]+]], !dbg [[DBG20]]
 // CHECK-KMSAN-NEXT:    br label [[TMP10]], !dbg [[DBG20]]
 // CHECK-KMSAN:       10:
-// CHECK-KMSAN-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i64 0, i32 6
-// CHECK-KMSAN-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i64 0, i32 1
+// CHECK-KMSAN-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4008
+// CHECK-KMSAN-NEXT:    [[RETVAL_SHADOW:%.*]] = getelementptr i8, ptr [[TMP0]], i64 800
 // CHECK-KMSAN-NEXT:    [[TMP11:%.*]] = load i32, ptr [[P_0_P_0_P_0_P_0_]], align 4, !dbg [[DBG20]], !tbaa [[TBAA11]]
 // CHECK-KMSAN-NEXT:    [[TMP12:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_4(ptr nonnull [[P_0_P_0_P_0_P_0_]]) #[[ATTR2]], !dbg [[DBG20]]
 // CHECK-KMSAN-NEXT:    [[TMP13:%.*]] = extractvalue { ptr, ptr } [[TMP12]], 0, !dbg [[DBG20]]

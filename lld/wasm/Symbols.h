@@ -60,6 +60,8 @@ public:
     UndefinedTableKind,
     UndefinedTagKind,
     LazyKind,
+    SharedFunctionKind,
+    SharedDataKind,
   };
 
   Kind kind() const { return symbolKind; }
@@ -74,6 +76,9 @@ public:
   }
 
   bool isLazy() const { return symbolKind == LazyKind; }
+  bool isShared() const {
+    return symbolKind == SharedFunctionKind || symbolKind == SharedDataKind;
+  }
 
   bool isLocal() const;
   bool isWeak() const;
@@ -134,7 +139,7 @@ public:
 
 protected:
   Symbol(StringRef name, Kind k, uint32_t flags, InputFile *f)
-      : name(name), file(f), symbolKind(k), referenced(!config->gcSections),
+      : name(name), file(f), symbolKind(k), referenced(!ctx.arg.gcSections),
         requiresGOT(false), isUsedInRegularObj(false), forceExport(false),
         forceImport(false), canInline(false), traced(false), isStub(false),
         flags(flags) {}
@@ -190,6 +195,7 @@ class FunctionSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
     return s->kind() == DefinedFunctionKind ||
+           s->kind() == SharedFunctionKind ||
            s->kind() == UndefinedFunctionKind;
   }
 
@@ -285,7 +291,8 @@ public:
 class DataSymbol : public Symbol {
 public:
   static bool classof(const Symbol *s) {
-    return s->kind() == DefinedDataKind || s->kind() == UndefinedDataKind;
+    return s->kind() == DefinedDataKind || s->kind() == UndefinedDataKind ||
+           s->kind() == SharedDataKind;
   }
 
 protected:
@@ -308,7 +315,9 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedDataKind; }
 
   // Returns the output virtual address of a defined data symbol.
-  uint64_t getVA() const;
+  // For TLS symbols, by default (unless absolute is set), this returns an
+  // address relative the `__tls_base`.
+  uint64_t getVA(bool absolute = false) const;
   void setVA(uint64_t va);
 
   // Returns the offset of a defined data symbol within its OutputSegment.
@@ -321,6 +330,12 @@ public:
 
 protected:
   uint64_t size = 0;
+};
+
+class SharedData : public DataSymbol {
+public:
+  SharedData(StringRef name, uint32_t flags, InputFile *f)
+      : DataSymbol(name, SharedDataKind, flags, f) {}
 };
 
 class UndefinedData : public DataSymbol {
@@ -486,9 +501,19 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == UndefinedTagKind; }
 };
 
-// LazySymbol represents a symbol that is not yet in the link, but we know where
-// to find it if needed. If the resolver finds both Undefined and Lazy for the
-// same name, it will ask the Lazy to load a file.
+class SharedFunctionSymbol : public FunctionSymbol {
+public:
+  SharedFunctionSymbol(StringRef name, uint32_t flags, InputFile *file,
+                       const WasmSignature *sig)
+      : FunctionSymbol(name, SharedFunctionKind, flags, file, sig) {}
+  static bool classof(const Symbol *s) {
+    return s->kind() == SharedFunctionKind;
+  }
+};
+
+// LazySymbol symbols represent symbols in object files between --start-lib and
+// --end-lib options. LLD also handles traditional archives as if all the files
+// in the archive are surrounded by --start-lib and --end-lib.
 //
 // A special complication is the handling of weak undefined symbols. They should
 // not load a file, but we have to remember we have seen both the weak undefined
@@ -497,14 +522,12 @@ public:
 // symbols into consideration.
 class LazySymbol : public Symbol {
 public:
-  LazySymbol(StringRef name, uint32_t flags, InputFile *file,
-             const llvm::object::Archive::Symbol &sym)
-      : Symbol(name, LazyKind, flags, file), archiveSymbol(sym) {}
+  LazySymbol(StringRef name, uint32_t flags, InputFile *file)
+      : Symbol(name, LazyKind, flags, file) {}
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
-  void fetch();
+  void extract();
   void setWeak();
-  MemoryBufferRef getMemberBuffer();
 
   // Lazy symbols can have a signature because they can replace an
   // UndefinedFunction in which case we need to be able to preserve the
@@ -512,117 +535,6 @@ public:
   // TODO(sbc): This repetition of the signature field is inelegant.  Revisit
   // the use of class hierarchy to represent symbol taxonomy.
   const WasmSignature *signature = nullptr;
-
-private:
-  llvm::object::Archive::Symbol archiveSymbol;
-};
-
-// linker-generated symbols
-struct WasmSym {
-  // __global_base
-  // Symbol marking the start of the global section.
-  static DefinedData *globalBase;
-
-  // __stack_pointer/__stack_low/__stack_high
-  // Global that holds current value of stack pointer and data symbols marking
-  // the start and end of the stack region.  stackPointer is initialized to
-  // stackHigh and grows downwards towards stackLow
-  static GlobalSymbol *stackPointer;
-  static DefinedData *stackLow;
-  static DefinedData *stackHigh;
-
-  // __tls_base
-  // Global that holds the address of the base of the current thread's
-  // TLS block.
-  static GlobalSymbol *tlsBase;
-
-  // __tls_size
-  // Symbol whose value is the size of the TLS block.
-  static GlobalSymbol *tlsSize;
-
-  // __tls_size
-  // Symbol whose value is the alignment of the TLS block.
-  static GlobalSymbol *tlsAlign;
-
-  // __data_end
-  // Symbol marking the end of the data and bss.
-  static DefinedData *dataEnd;
-
-  // __heap_base/__heap_end
-  // Symbols marking the beginning and end of the "heap". It starts at the end
-  // of the data, bss and explicit stack, and extends to the end of the linear
-  // memory allocated by wasm-ld. This region of memory is not used by the
-  // linked code, so it may be used as a backing store for `sbrk` or `malloc`
-  // implementations.
-  static DefinedData *heapBase;
-  static DefinedData *heapEnd;
-
-  // __wasm_init_memory_flag
-  // Symbol whose contents are nonzero iff memory has already been initialized.
-  static DefinedData *initMemoryFlag;
-
-  // __wasm_init_memory
-  // Function that initializes passive data segments during instantiation.
-  static DefinedFunction *initMemory;
-
-  // __wasm_call_ctors
-  // Function that directly calls all ctors in priority order.
-  static DefinedFunction *callCtors;
-
-  // __wasm_call_dtors
-  // Function that calls the libc/etc. cleanup function.
-  static DefinedFunction *callDtors;
-
-  // __wasm_apply_data_relocs
-  // Function that applies relocations to data segment post-instantiation.
-  static DefinedFunction *applyDataRelocs;
-
-  // __wasm_apply_global_relocs
-  // Function that applies relocations to wasm globals post-instantiation.
-  // Unlike __wasm_apply_data_relocs this needs to run on every thread.
-  static DefinedFunction *applyGlobalRelocs;
-
-  // __wasm_apply_tls_relocs
-  // Like applyDataRelocs but for TLS section.  These must be delayed until
-  // __wasm_init_tls.
-  static DefinedFunction *applyTLSRelocs;
-
-  // __wasm_apply_global_tls_relocs
-  // Like applyGlobalRelocs but for globals that hold TLS addresses.  These
-  // must be delayed until __wasm_init_tls.
-  static DefinedFunction *applyGlobalTLSRelocs;
-
-  // __wasm_init_tls
-  // Function that allocates thread-local storage and initializes it.
-  static DefinedFunction *initTLS;
-
-  // Pointer to the function that is to be used in the start section.
-  // (normally an alias of initMemory, or applyGlobalRelocs).
-  static DefinedFunction *startFunction;
-
-  // __dso_handle
-  // Symbol used in calls to __cxa_atexit to determine current DLL
-  static DefinedData *dsoHandle;
-
-  // __table_base
-  // Used in PIC code for offset of indirect function table
-  static UndefinedGlobal *tableBase;
-  static DefinedData *definedTableBase;
-  // 32-bit copy in wasm64 to work around init expr limitations.
-  // These can potentially be removed again once we have
-  // https://github.com/WebAssembly/extended-const 
-  static UndefinedGlobal *tableBase32;
-  static DefinedData *definedTableBase32;
-
-  // __memory_base
-  // Used in PIC code for offset of global data
-  static UndefinedGlobal *memoryBase;
-  static DefinedData *definedMemoryBase;
-
-  // __indirect_function_table
-  // Used as an address space for function pointers, with each function that is
-  // used as a function pointer being allocated a slot.
-  static TableSymbol *indirectFunctionTable;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived
@@ -640,6 +552,7 @@ union SymbolUnion {
   alignas(UndefinedGlobal) char i[sizeof(UndefinedGlobal)];
   alignas(UndefinedTable) char j[sizeof(UndefinedTable)];
   alignas(SectionSymbol) char k[sizeof(SectionSymbol)];
+  alignas(SharedFunctionSymbol) char l[sizeof(SharedFunctionSymbol)];
 };
 
 // It is important to keep the size of SymbolUnion small for performance and

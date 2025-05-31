@@ -156,6 +156,7 @@ private:
     bool CollectChildren = Collect;
     switch (A->getKind()) {
     case driver::Action::CompileJobClass:
+    case driver::Action::PrecompileJobClass:
       CollectChildren = true;
       break;
 
@@ -215,7 +216,7 @@ std::string GetClangToolCommand() {
   SmallString<128> ClangToolPath;
   ClangToolPath = llvm::sys::path::parent_path(ClangExecutable);
   llvm::sys::path::append(ClangToolPath, "clang-tool");
-  return std::string(ClangToolPath.str());
+  return std::string(ClangToolPath);
 }
 
 } // namespace
@@ -242,13 +243,13 @@ std::string GetClangToolCommand() {
 static bool stripPositionalArgs(std::vector<const char *> Args,
                                 std::vector<std::string> &Result,
                                 std::string &ErrorMsg) {
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   llvm::raw_string_ostream Output(ErrorMsg);
-  TextDiagnosticPrinter DiagnosticPrinter(Output, &*DiagOpts);
+  TextDiagnosticPrinter DiagnosticPrinter(Output, DiagOpts);
   UnusedInputDiagConsumer DiagClient(DiagnosticPrinter);
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()),
-      &*DiagOpts, &DiagClient, false);
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
+      &DiagClient, false);
 
   // The clang executable path isn't required since the jobs the driver builds
   // will not be executed.
@@ -293,7 +294,8 @@ static bool stripPositionalArgs(std::vector<const char *> Args,
     // -flto* flags make the BackendJobClass, which still needs analyzer.
     if (Cmd.getSource().getKind() == driver::Action::AssembleJobClass ||
         Cmd.getSource().getKind() == driver::Action::BackendJobClass ||
-        Cmd.getSource().getKind() == driver::Action::CompileJobClass) {
+        Cmd.getSource().getKind() == driver::Action::CompileJobClass ||
+        Cmd.getSource().getKind() == driver::Action::PrecompileJobClass) {
       CompileAnalyzer.run(&Cmd.getSource());
     }
   }

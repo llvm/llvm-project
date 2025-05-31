@@ -19,8 +19,7 @@ define void @extendhfxf(ptr %outptr, ptr %inptr) nounwind {
 ;
 ; CHECK-F16C-LABEL: extendhfxf:
 ; CHECK-F16C:       ## %bb.0:
-; CHECK-F16C-NEXT:    movzwl (%rsi), %eax
-; CHECK-F16C-NEXT:    vmovd %eax, %xmm0
+; CHECK-F16C-NEXT:    vpinsrw $0, (%rsi), %xmm0, %xmm0
 ; CHECK-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-F16C-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-F16C-NEXT:    flds -{{[0-9]+}}(%rsp)

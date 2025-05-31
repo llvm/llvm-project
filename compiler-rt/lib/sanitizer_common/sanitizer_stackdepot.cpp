@@ -216,7 +216,7 @@ StackTrace StackDepotGet(u32 id) {
 }
 
 void StackDepotLockBeforeFork() {
-  theDepot.LockAll();
+  theDepot.LockBeforeFork();
   compress_thread.LockAndStop();
   stackStore.LockAll();
 }
@@ -224,7 +224,7 @@ void StackDepotLockBeforeFork() {
 void StackDepotUnlockAfterFork(bool fork_child) {
   stackStore.UnlockAll();
   compress_thread.Unlock();
-  theDepot.UnlockAll();
+  theDepot.UnlockAfterFork(fork_child);
 }
 
 void StackDepotPrintAll() {

@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Dominance.h"
@@ -26,11 +27,12 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
-#include <set>
 #include <optional>
+#include <set>
 
 #define DEBUG_TYPE "linalg-fusion"
 
@@ -85,7 +87,6 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
                             << opOperand.getOperandNumber() << "\n");
     LLVM_DEBUG(llvm::dbgs()
                << "getShapeDefiningLoopRange map: " << map << "\n");
-    SmallVector<Value, 8> shapeRanges(map.getNumResults(), nullptr);
     for (const auto &en : llvm::enumerate(map.getResults())) {
       auto dimExpr = dyn_cast<AffineDimExpr>(en.value());
       if (!dimExpr)
@@ -149,7 +150,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   SmallVector<Type, 4> resultTypes;
   resultTypes.reserve(producer->getNumResults());
   int64_t firstInitOperandIdx =
-      static_cast<OperandRange>(producerDpsInits).getBeginOperandIndex();
+      producerDpsInits.getAsOperandRange().getBeginOperandIndex();
   for (int64_t i = 0, e = producer->getNumResults(); i < e; ++i) {
     resultTypes.push_back(clonedShapes[firstInitOperandIdx + i].getType());
   }
@@ -272,12 +273,20 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
            consumerOpOperand);
 
   // Replace use.
+  Value def = fusedProducer->getResult(producerOpResult.getResultNumber());
+  Type consumerType = consumerOpOperand.get().getType();
+  // Check if rank-reduction occurred as part of the extract_slice. If yes,
+  // collapse the dropped dimensions.
+  if (cast<ShapedType>(consumerType).getRank() !=
+      cast<ShapedType>(def.getType()).getRank()) {
+    llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
+    def =
+        tensor::dropGivenUnitDims(b, fusedProducer.getLoc(), def, droppedDims);
+  }
   // Canonicalizations are not guaranteed to have happened before constructing
   // `fusedProducer`. In the tensor case this can result in temporary type
   // mismatches. Insert a `tensor.cast` op to propagate the transformation
   // invariant that types are compatible.
-  Value def = fusedProducer->getResult(producerOpResult.getResultNumber());
-  Type consumerType = consumerOpOperand.get().getType();
   if (consumerType != def.getType())
     def = b.create<tensor::CastOp>(fusedProducer.getLoc(), consumerType, def);
   consumerOpOperand.set(def);

@@ -34,6 +34,7 @@ static_library("LLVMLoongArchCodeGen") {
   include_dirs = [ "." ]
   sources = [
     "LoongArchAsmPrinter.cpp",
+    "LoongArchDeadRegisterDefinitions.cpp",
     "LoongArchExpandAtomicPseudoInsts.cpp",
     "LoongArchExpandPseudoInsts.cpp",
     "LoongArchFrameLowering.cpp",
@@ -41,6 +42,8 @@ static_library("LLVMLoongArchCodeGen") {
     "LoongArchISelLowering.cpp",
     "LoongArchInstrInfo.cpp",
     "LoongArchMCInstLower.cpp",
+    "LoongArchMergeBaseOffset.cpp",
+    "LoongArchOptWInstrs.cpp",
     "LoongArchRegisterInfo.cpp",
     "LoongArchSubtarget.cpp",
     "LoongArchTargetMachine.cpp",

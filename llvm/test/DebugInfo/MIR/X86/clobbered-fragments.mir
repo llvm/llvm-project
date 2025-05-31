@@ -33,7 +33,7 @@
   ; Function Attrs: nounwind uwtable
   define i32 @test1() #0 !dbg !8 {
   entry:
-    %0 = load i32, i32* @global1, align 4, !dbg !16
+    %0 = load i32, ptr @global1, align 4, !dbg !16
     call void @llvm.dbg.value(metadata i32 %0, metadata !12, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)), !dbg !16
     call void @llvm.dbg.value(metadata i32 123, metadata !12, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32)), !dbg !16
     call void @llvm.dbg.value(metadata i32 456, metadata !12, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32)), !dbg !16
@@ -46,11 +46,11 @@
   ; Function Attrs: nounwind uwtable
   define i32 @test2() #0 !dbg !18 {
   entry:
-    %0 = load i32, i32* @global1, align 4, !dbg !20
+    %0 = load i32, ptr @global1, align 4, !dbg !20
     call void @llvm.dbg.value(metadata i32 %0, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)), !dbg !20
-    %1 = load i32, i32* @global2, align 4, !dbg !20
+    %1 = load i32, ptr @global2, align 4, !dbg !20
     call void @llvm.dbg.value(metadata i32 %1, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32)), !dbg !20
-    %2 = load i32, i32* @global3, align 4, !dbg !20
+    %2 = load i32, ptr @global3, align 4, !dbg !20
     call void @llvm.dbg.value(metadata i32 %2, metadata !19, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32)), !dbg !20
     tail call void @ext3(i32 %0, i32 %1, i32 %2) #3, !dbg !20
     ret i32 %0, !dbg !21

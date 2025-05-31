@@ -23,6 +23,7 @@
 
 #if LLVM_ENABLE_THREADS
 #include <condition_variable>
+#include <deque>
 #include <mutex>
 #include <thread>
 #endif
@@ -91,6 +92,16 @@ makeGenericNamedTask(FnT &&Fn, const char *Desc = nullptr) {
                                                      Desc);
 }
 
+/// IdleTask can be used as the basis for low-priority tasks, e.g. speculative
+/// lookup.
+class IdleTask : public RTTIExtends<IdleTask, Task> {
+public:
+  static char ID;
+
+private:
+  void anchor() override;
+};
+
 /// Abstract base for classes that dispatch ORC Tasks.
 class TaskDispatcher {
 public:
@@ -114,13 +125,25 @@ public:
 
 class DynamicThreadPoolTaskDispatcher : public TaskDispatcher {
 public:
+  DynamicThreadPoolTaskDispatcher(
+      std::optional<size_t> MaxMaterializationThreads)
+      : MaxMaterializationThreads(MaxMaterializationThreads) {}
+
   void dispatch(std::unique_ptr<Task> T) override;
   void shutdown() override;
 private:
+  bool canRunMaterializationTaskNow();
+  bool canRunIdleTaskNow();
+
   std::mutex DispatchMutex;
-  bool Running = true;
+  bool Shutdown = false;
   size_t Outstanding = 0;
   std::condition_variable OutstandingCV;
+
+  std::optional<size_t> MaxMaterializationThreads;
+  size_t NumMaterializationThreads = 0;
+  std::deque<std::unique_ptr<Task>> MaterializationTaskQueue;
+  std::deque<std::unique_ptr<Task>> IdleTaskQueue;
 };
 
 #endif // LLVM_ENABLE_THREADS

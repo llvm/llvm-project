@@ -297,14 +297,13 @@ public:
     }
 
     // Sort the operands.
-    std::stable_sort(commOperands.begin(), commOperands.end(),
-                     commutativeOperandComparator);
+    llvm::stable_sort(commOperands, commutativeOperandComparator);
     SmallVector<Value, 2> sortedOperands;
     for (const std::unique_ptr<CommutativeOperand> &commOperand : commOperands)
       sortedOperands.push_back(commOperand->operand);
     if (sortedOperands == operands)
       return failure();
-    rewriter.updateRootInPlace(op, [&] { op->setOperands(sortedOperands); });
+    rewriter.modifyOpInPlace(op, [&] { op->setOperands(sortedOperands); });
     return success();
   }
 };

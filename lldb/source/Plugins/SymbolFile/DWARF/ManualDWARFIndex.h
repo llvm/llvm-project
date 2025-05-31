@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_MANUALDWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
+#include "Plugins/SymbolFile/DWARF/ManualDWARFIndexSet.h"
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
 #include "llvm/ADT/DenseSet.h"
 
@@ -21,9 +22,11 @@ class SymbolFileDWARFDwo;
 class ManualDWARFIndex : public DWARFIndex {
 public:
   ManualDWARFIndex(Module &module, SymbolFileDWARF &dwarf,
-                   llvm::DenseSet<dw_offset_t> units_to_avoid = {})
+                   llvm::DenseSet<dw_offset_t> units_to_avoid = {},
+                   llvm::DenseSet<uint64_t> type_sigs_to_avoid = {})
       : DWARFIndex(module), m_dwarf(&dwarf),
-        m_units_to_avoid(std::move(units_to_avoid)) {}
+        m_units_to_avoid(std::move(units_to_avoid)),
+        m_type_sigs_to_avoid(std::move(type_sigs_to_avoid)) {}
 
   void Preload() override { Index(); }
 
@@ -55,29 +58,6 @@ public:
                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
 
   void Dump(Stream &s) override;
-
-  // Make IndexSet public so we can unit test the encoding and decoding logic.
-  struct IndexSet {
-    NameToDIE function_basenames;
-    NameToDIE function_fullnames;
-    NameToDIE function_methods;
-    NameToDIE function_selectors;
-    NameToDIE objc_class_selectors;
-    NameToDIE globals;
-    NameToDIE types;
-    NameToDIE namespaces;
-    bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr);
-    void Encode(DataEncoder &encoder) const;
-    bool operator==(const IndexSet &rhs) const {
-      return function_basenames == rhs.function_basenames &&
-             function_fullnames == rhs.function_fullnames &&
-             function_methods == rhs.function_methods &&
-             function_selectors == rhs.function_selectors &&
-             objc_class_selectors == rhs.objc_class_selectors &&
-             globals == rhs.globals && types == rhs.types &&
-             namespaces == rhs.namespaces;
-    }
-  };
 
 private:
   void Index();
@@ -160,18 +140,30 @@ private:
   ///   false if the symbol table wasn't cached or was out of date.
   bool LoadFromCache();
 
-  void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
+  void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
+                 IndexSet<NameToDIE> &set);
 
   static void IndexUnitImpl(DWARFUnit &unit,
                             const lldb::LanguageType cu_language,
-                            IndexSet &set);
+                            IndexSet<NameToDIE> &set);
+
+  /// Return true if this manual DWARF index is covering only part of the DWARF.
+  ///
+  /// An instance of this class will be used to index all of the DWARF, but also
+  /// when we have .debug_names we will use one to index any compile or type
+  /// units that are not covered by the .debug_names table.
+  ///
+  /// \return
+  ///   True if this index is a partial index, false otherwise.
+  bool IsPartial() const;
 
   /// The DWARF file which we are indexing.
   SymbolFileDWARF *m_dwarf;
   /// Which dwarf units should we skip while building the index.
   llvm::DenseSet<dw_offset_t> m_units_to_avoid;
+  llvm::DenseSet<uint64_t> m_type_sigs_to_avoid;
 
-  IndexSet m_set;
+  IndexSet<NameToDIE> m_set;
   bool m_indexed = false;
 };
 } // namespace dwarf

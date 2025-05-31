@@ -1,13 +1,11 @@
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=tahiti < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-SI -check-prefix=OPT-SICIVI %s
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=bonaire < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-CI -check-prefix=OPT-SICIVI %s
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-VI -check-prefix=OPT-SICIVI %s
-; RUN: opt -S -codegenprepare -mtriple=amdgcn-unknown-unknown -mcpu=gfx900 < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SICIVI %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=SICIVI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-scalarize-global-loads=false -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=SICIVI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
-
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=tahiti < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-SI -check-prefix=OPT-SICIVI %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=bonaire < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-CI -check-prefix=OPT-SICIVI %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-VI -check-prefix=OPT-SICIVI %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown -mcpu=gfx900 < %s | FileCheck -check-prefix=OPT -check-prefix=OPT-GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-scalarize-global-loads=false -mattr=-promote-alloca < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-promote-alloca -amdgpu-scalarize-global-loads=false < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; OPT-LABEL: @test_sink_global_small_offset_i32(
 ; OPT-CI-NOT: getelementptr i32, ptr addrspace(1) %in
@@ -136,8 +134,8 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32:
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092{{$}}
-; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092 glc{{$}}
+; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4088{{$}}
+; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4088 glc{{$}}
 ; GCN: {{^}}.LBB4_2:
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %arg) {
 entry:
@@ -166,7 +164,8 @@ done:
   ret void
 }
 
-; This ends up not fitting due to the reserved 4 bytes at offset 0
+; This used to be a special case when the scavenge slot was
+; fixed at offset 0.
 ; OPT-LABEL: @test_sink_scratch_small_offset_i32_reserved(
 ; OPT-NOT:  getelementptr [512 x i32]
 ; OPT: br i1
@@ -174,10 +173,8 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32_reserved:
 ; GCN: s_and_saveexec_b64
-; GCN: v_mov_b32_e32 [[BASE_FI0:v[0-9]+]], 4
-; GCN: buffer_store_dword {{v[0-9]+}}, [[BASE_FI0]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen offset:4092{{$}}
-; GCN: v_mov_b32_e32 [[BASE_FI1:v[0-9]+]], 4
-; GCN: buffer_load_dword {{v[0-9]+}}, [[BASE_FI1]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen offset:4092 glc{{$}}
+; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092{{$}}
+; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092 glc{{$}}
 ; GCN: {{^.LBB[0-9]+}}_2:
 
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32_reserved(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %arg) {
@@ -582,7 +579,7 @@ done:
 
 ; OPT-LABEL: @test_sink_local_small_offset_cmpxchg_i32(
 ; OPT: %sunkaddr = getelementptr i8, ptr addrspace(3) %in, i32 28
-; OPT: %tmp1.struct = cmpxchg ptr addrspace(3) %sunkaddr, i32 undef, i32 2 seq_cst monotonic
+; OPT: %tmp1.struct = cmpxchg ptr addrspace(3) %sunkaddr, i32 poison, i32 2 seq_cst monotonic
 define amdgpu_kernel void @test_sink_local_small_offset_cmpxchg_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) {
 entry:
   %out.gep = getelementptr i32, ptr addrspace(3) %out, i32 999999
@@ -592,7 +589,7 @@ entry:
   br i1 %tmp0, label %endif, label %if
 
 if:
-  %tmp1.struct = cmpxchg ptr addrspace(3) %in.gep, i32 undef, i32 2 seq_cst monotonic
+  %tmp1.struct = cmpxchg ptr addrspace(3) %in.gep, i32 poison, i32 2 seq_cst monotonic
   %tmp1 = extractvalue { i32, i1 } %tmp1.struct, 0
   br label %endif
 
@@ -608,7 +605,7 @@ done:
 ; OPT-LABEL: @test_wrong_operand_local_small_offset_cmpxchg_i32(
 ; OPT: %in.gep = getelementptr i32, ptr addrspace(3) %in, i32 7
 ; OPT: br i1
-; OPT: cmpxchg ptr addrspace(3) undef, ptr addrspace(3) %in.gep, ptr addrspace(3) undef seq_cst monotonic
+; OPT: cmpxchg ptr addrspace(3) poison, ptr addrspace(3) %in.gep, ptr addrspace(3) poison seq_cst monotonic
 define amdgpu_kernel void @test_wrong_operand_local_small_offset_cmpxchg_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) {
 entry:
   %out.gep = getelementptr ptr addrspace(3), ptr addrspace(3) %out, i32 999999
@@ -618,7 +615,7 @@ entry:
   br i1 %tmp0, label %endif, label %if
 
 if:
-  %tmp1.struct = cmpxchg ptr addrspace(3) undef, ptr addrspace(3) %in.gep, ptr addrspace(3) undef seq_cst monotonic
+  %tmp1.struct = cmpxchg ptr addrspace(3) poison, ptr addrspace(3) %in.gep, ptr addrspace(3) poison seq_cst monotonic
   %tmp1 = extractvalue { ptr addrspace(3), i1 } %tmp1.struct, 0
   br label %endif
 

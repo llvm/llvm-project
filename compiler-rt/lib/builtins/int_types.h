@@ -107,8 +107,8 @@ typedef union {
 
 static __inline ti_int make_ti(di_int h, di_int l) {
   twords r;
-  r.s.high = h;
-  r.s.low = l;
+  r.s.high = (du_int)h;
+  r.s.low = (du_int)l;
   return r.all;
 }
 
@@ -139,7 +139,6 @@ typedef union {
   udwords u;
   double f;
 } double_bits;
-#endif
 
 typedef struct {
 #if _YUGA_LITTLE_ENDIAN
@@ -190,12 +189,16 @@ typedef long double tf_float;
 #define CRT_LDBL_IEEE_F128
 #endif
 #define TF_C(x) x##L
-#elif __LDBL_MANT_DIG__ == 113
-// Use long double instead of __float128 if it matches the IEEE 128-bit format.
+#elif __LDBL_MANT_DIG__ == 113 ||                                              \
+    (__FLT_RADIX__ == 16 && __LDBL_MANT_DIG__ == 28)
+// Use long double instead of __float128 if it matches the IEEE 128-bit format
+// or the IBM hexadecimal format.
 #define CRT_LDBL_128BIT
 #define CRT_HAS_F128
+#if __LDBL_MANT_DIG__ == 113
 #define CRT_HAS_IEEE_TF
 #define CRT_LDBL_IEEE_F128
+#endif
 typedef long double tf_float;
 #define TF_C(x) x##L
 #elif defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
@@ -220,7 +223,6 @@ typedef union {
 #define CRT_HAS_TF_MODE
 #endif
 
-#if CRT_HAS_FLOATING_POINT
 #if __STDC_VERSION__ >= 199901L
 typedef float _Complex Fcomplex;
 typedef double _Complex Dcomplex;
@@ -270,5 +272,5 @@ typedef struct {
 #define COMPLEXTF_IMAGINARY(x) (x).imaginary
 #endif
 
-#endif
+#endif // CRT_HAS_FLOATING_POINT
 #endif // INT_TYPES_H

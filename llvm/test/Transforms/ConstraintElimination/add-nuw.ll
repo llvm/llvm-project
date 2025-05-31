@@ -235,8 +235,7 @@ define void @test.decompose.nonconst(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], [[A]]
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[A]], [[D:%.*]]
-; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 [[ADD_2]], [[C]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -278,14 +277,11 @@ define void @test.decompose.nonconst.no.null.check(i8 %a, i8 %b, i8 %c, i8 %d) {
 ; CHECK-NEXT:    br i1 [[AND_0]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[ADD_0:%.*]] = add nuw i8 [[A]], [[B]]
-; CHECK-NEXT:    [[T_0:%.*]] = icmp uge i8 [[ADD_0]], [[C]]
-; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], [[A]]
-; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[ADD_0]], [[C]]
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[A]], [[D:%.*]]
-; CHECK-NEXT:    [[C_4:%.*]] = icmp uge i8 [[ADD_2]], [[C]]
-; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -318,8 +314,7 @@ define i1 @test_n_must_ule_1_due_to_nuw(i8 %n, i8 %i) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB_N_1:%.*]] = add nuw i8 [[N:%.*]], -1
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[I:%.*]], [[SUB_N_1]]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[I]], [[ADD]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.end:
@@ -376,8 +371,7 @@ define i1 @test_n_must_ule_2_due_to_nuw(i8 %n, i8 %i) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUB_N_1:%.*]] = add nuw i8 [[N:%.*]], -2
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[I:%.*]], [[SUB_N_1]]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[I]], [[ADD]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.end:
@@ -435,10 +429,9 @@ define i1 @add_nuw_neg_pr54224_i16(i16 %a) {
 ; CHECK-LABEL: @add_nuw_neg_pr54224_i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NEG2:%.*]] = add nuw i16 [[A:%.*]], -305
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i16 0, [[NEG2]]
-; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit.2:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i16 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[C_3]]
@@ -464,8 +457,7 @@ define i1 @add_nuw_neg_pr54224_i64(i64 %a) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i64 0, [[NEG2]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT_1:%.*]], label [[EXIT_2:%.*]]
 ; CHECK:       exit.1:
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i64 [[A]], 0
-; CHECK-NEXT:    ret i1 [[C_2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit.2:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i64 [[A]], 0
 ; CHECK-NEXT:    ret i1 [[C_3]]

@@ -11,11 +11,12 @@
 
 #include "src/__support/CPP/bit.h"           // rotl
 #include "src/__support/CPP/limits.h"        // numeric_limits
-#include "src/__support/UInt128.h"           // UInt128
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include <stdint.h>                          // For uint64_t
+#include "src/__support/macros/config.h"
+#include "src/__support/uint128.h" // UInt128
+#include <stdint.h>                // For uint64_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 // Folded multiplication.
@@ -33,25 +34,23 @@ LIBC_INLINE uint64_t folded_multiply(uint64_t x, uint64_t y) {
 // Therefore, we use a union to read the value.
 template <typename T> LIBC_INLINE T read_little_endian(const void *ptr) {
   const uint8_t *bytes = static_cast<const uint8_t *>(ptr);
-  union {
-    T value;
-    uint8_t buffer[sizeof(T)];
-  } data;
+  uint8_t buffer[sizeof(T)];
 #if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
-  // Compiler should able to optimize this as a load followed by a byte swap.
-  // On aarch64 (-mbig-endian), this compiles to the following for int:
+  // Compiler should able to optimize this as a load followed by a byte
+  // swap. On aarch64 (-mbig-endian), this compiles to the following for
+  // int:
   //      ldr     w0, [x0]
   //      rev     w0, w0
   //      ret
   for (size_t i = 0; i < sizeof(T); ++i) {
-    data.buffer[i] = bytes[sizeof(T) - i - 1];
+    buffer[i] = bytes[sizeof(T) - i - 1];
   }
 #else
   for (size_t i = 0; i < sizeof(T); ++i) {
-    data.buffer[i] = bytes[i];
+    buffer[i] = bytes[i];
   }
 #endif
-  return data.value;
+  return cpp::bit_cast<T>(buffer);
 }
 
 // Specialized read functions for small values. size must be <= 8.
@@ -160,6 +159,6 @@ public:
 };
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_HASH_H

@@ -1,14 +1,14 @@
-# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 
 --- |
 
-  @addr = global i8* null
+  @addr = global ptr null
 
   define void @test() {
   entry:
-    store volatile i8* blockaddress(@test, %block), i8** @addr
-    %val = load volatile i8*, i8** @addr
-    indirectbr i8* %val, [label %block]
+    store volatile ptr blockaddress(@test, %block), ptr @addr
+    %val = load volatile ptr, ptr @addr
+    indirectbr ptr %val, [label %block]
 
   block:
     ret void

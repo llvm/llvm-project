@@ -12,7 +12,7 @@ define zeroext i1 @search(i32 %needle, ptr nocapture readonly %haystack, i32 %co
 ; CHECK-NEXT:  ## %bb.1: ## %for.body.preheader
 ; CHECK-NEXT:    movslq %edx, %rax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_2: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpl %edi, (%rsi,%rcx,4)

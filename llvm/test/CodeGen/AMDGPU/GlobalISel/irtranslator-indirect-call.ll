@@ -73,3 +73,4 @@ define amdgpu_gfx void @test_gfx_indirect_call_sgpr_ptr(ptr %fptr) {
   call amdgpu_gfx void %fptr()
   ret void
 }
+

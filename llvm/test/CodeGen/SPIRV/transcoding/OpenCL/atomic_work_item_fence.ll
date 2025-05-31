@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; This test checks that the backend is capable to correctly translate
 ;; atomic_work_item_fence OpenCL C 2.0 built-in function [1] into corresponding
@@ -36,15 +37,15 @@
 
 ;; Scopes [4]:
 ;; 4 Invocation
-; CHECK-SPIRV-DAG: %[[#SCOPE_INVOCATION:]] = OpConstant %[[#UINT]] 4
+; CHECK-SPIRV-DAG: %[[#SCOPE_INVOCATION:]] = OpConstant %[[#UINT]] 4{{$}}
 ;; 2 Workgroup
-; CHECK-SPIRV-DAG: %[[#SCOPE_WORK_GROUP:]] = OpConstant %[[#UINT]] 2
+; CHECK-SPIRV-DAG: %[[#SCOPE_WORK_GROUP:]] = OpConstant %[[#UINT]] 2{{$}}
 ;; 1 Device
-; CHECK-SPIRV-DAG: %[[#SCOPE_DEVICE:]] = OpConstant %[[#UINT]] 1
+; CHECK-SPIRV-DAG: %[[#SCOPE_DEVICE:]] = OpConstant %[[#UINT]] 1{{$}}
 ;; 0 CrossDevice
-; CHECK-SPIRV-DAG: %[[#SCOPE_CROSS_DEVICE:]] = OpConstant %[[#UINT]] 0
+; CHECK-SPIRV-DAG: %[[#SCOPE_CROSS_DEVICE:]] = OpConstantNull %[[#UINT]]
 ;; 3 Subgroup
-; CHECK-SPIRV-DAG: %[[#SCOPE_SUBGROUP:]] = OpConstant %[[#UINT]] 3
+; CHECK-SPIRV-DAG: %[[#SCOPE_SUBGROUP:]] = OpConstant %[[#UINT]] 3{{$}}
 
 ; CHECK-SPIRV: %[[#TEST_CONST_FLAGS]] = OpFunction %[[#]]
 ; CHECK-SPIRV: OpMemoryBarrier %[[#SCOPE_INVOCATION]] %[[#LOCAL_RELAXED]]

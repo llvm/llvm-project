@@ -48,6 +48,13 @@ def BPF_END  : BPFArithOp<0xd>;
 def BPF_XCHG    : BPFArithOp<0xe>;
 def BPF_CMPXCHG : BPFArithOp<0xf>;
 
+class BPFAtomicOp<bits<5> val> {
+  bits<5> Value = val;
+}
+
+def BPF_LOAD_ACQ : BPFAtomicOp<0x10>;
+def BPF_STORE_REL : BPFAtomicOp<0x11>;
+
 class BPFEndDir<bits<1> val> {
   bits<1> Value = val;
 }
@@ -73,6 +80,7 @@ def BPF_JLT  : BPFJumpOp<0xa>;
 def BPF_JLE  : BPFJumpOp<0xb>;
 def BPF_JSLT : BPFJumpOp<0xc>;
 def BPF_JSLE : BPFJumpOp<0xd>;
+def BPF_JCOND : BPFJumpOp<0xe>;
 
 class BPFWidthModifer<bits<2> val> {
   bits<2> Value = val;

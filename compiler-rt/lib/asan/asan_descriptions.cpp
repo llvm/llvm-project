@@ -20,24 +20,20 @@
 namespace __asan {
 
 AsanThreadIdAndName::AsanThreadIdAndName(AsanThreadContext *t) {
-  Init(t->tid, t->name);
-}
-
-AsanThreadIdAndName::AsanThreadIdAndName(u32 tid) {
-  if (tid == kInvalidTid) {
-    Init(tid, "");
-  } else {
-    asanThreadRegistry().CheckLocked();
-    AsanThreadContext *t = GetThreadContextByTidLocked(tid);
-    Init(tid, t->name);
+  if (!t) {
+    internal_snprintf(name, sizeof(name), "T-1");
+    return;
   }
+  int len = internal_snprintf(name, sizeof(name), "T%llu", t->unique_id);
+  CHECK(((unsigned int)len) < sizeof(name));
+  if (internal_strlen(t->name))
+    internal_snprintf(&name[len], sizeof(name) - len, " (%s)", t->name);
 }
 
-void AsanThreadIdAndName::Init(u32 tid, const char *tname) {
-  int len = internal_snprintf(name, sizeof(name), "T%d", tid);
-  CHECK(((unsigned int)len) < sizeof(name));
-  if (tname[0] != '\0')
-    internal_snprintf(&name[len], sizeof(name) - len, " (%s)", tname);
+AsanThreadIdAndName::AsanThreadIdAndName(u32 tid)
+    : AsanThreadIdAndName(
+          tid == kInvalidTid ? nullptr : GetThreadContextByTidLocked(tid)) {
+  asanThreadRegistry().CheckLocked();
 }
 
 void DescribeThread(AsanThreadContext *context) {
@@ -48,9 +44,18 @@ void DescribeThread(AsanThreadContext *context) {
     return;
   }
   context->announced = true;
+
   InternalScopedString str;
   str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
-  if (context->parent_tid == kInvalidTid) {
+
+  AsanThreadContext *parent_context =
+      context->parent_tid == kInvalidTid
+          ? nullptr
+          : GetThreadContextByTidLocked(context->parent_tid);
+
+  // `context->parent_tid` may point to reused slot. Check `unique_id` which
+  // is always smaller for the parent, always greater for a new user.
+  if (!parent_context || context->unique_id <= parent_context->unique_id) {
     str.Append(" created by unknown thread\n");
     Printf("%s", str.data());
     return;
@@ -60,11 +65,8 @@ void DescribeThread(AsanThreadContext *context) {
   Printf("%s", str.data());
   StackDepotGet(context->stack_id).Print();
   // Recursively described parent thread if needed.
-  if (flags()->print_full_thread_history) {
-    AsanThreadContext *parent_context =
-        GetThreadContextByTidLocked(context->parent_tid);
+  if (flags()->print_full_thread_history)
     DescribeThread(parent_context);
-  }
 }
 
 // Shadow descriptions
@@ -245,11 +247,11 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
   InternalScopedString str;
   str.AppendF("    [%zd, %zd)", var.beg, var_end);
   // Render variable name.
-  str.AppendF(" '");
+  str.Append(" '");
   for (uptr i = 0; i < var.name_len; ++i) {
     str.AppendF("%c", var.name_pos[i]);
   }
-  str.AppendF("'");
+  str.Append("'");
   if (var.line > 0) {
     str.AppendF(" (line %zd)", var.line);
   }
@@ -260,7 +262,7 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
     str.AppendF("%s <== Memory access at offset %zd %s this variable%s\n",
                 d.Location(), addr, pos_descr, d.Default());
   } else {
-    str.AppendF("\n");
+    str.Append("\n");
   }
   Printf("%s", str.data());
 }
@@ -292,7 +294,7 @@ static void DescribeAddressRelativeToGlobal(uptr addr, uptr access_size,
   str.AppendF(" global variable '%s' defined in '",
               MaybeDemangleGlobalName(g.name));
   PrintGlobalLocation(&str, g, /*print_module_name=*/false);
-  str.AppendF("' (0x%zx) of size %zu\n", g.beg, g.size);
+  str.AppendF("' (%p) of size %zu\n", (void *)g.beg, g.size);
   str.Append(d.Default());
   PrintGlobalNameIfASCII(&str, g);
   Printf("%s", str.data());

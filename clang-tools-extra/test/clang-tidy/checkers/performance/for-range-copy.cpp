@@ -47,6 +47,11 @@ struct S {
   S &operator=(const S &);
 };
 
+struct Point {
+  ~Point() {}
+  int x, y;
+};
+
 struct Convertible {
   operator S() const {
     return S();
@@ -74,7 +79,7 @@ template <typename T>
 void uninstantiated() {
   for (const S S1 : View<Iterator<S>>()) {}
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is not a reference type; this creates a copy in each iteration; consider making this a reference [performance-for-range-copy]
-  // CHECK-FIXES: {{^}}  for (const S& S1 : View<Iterator<S>>()) {}
+  // CHECK-FIXES: for (const S& S1 : View<Iterator<S>>()) {}
 
   // Don't warn on dependent types.
   for (const T t1 : View<Iterator<T>>()) {
@@ -85,11 +90,15 @@ template <typename T>
 void instantiated() {
   for (const S S2 : View<Iterator<S>>()) {}
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is {{.*}}
-  // CHECK-FIXES: {{^}}  for (const S& S2 : View<Iterator<S>>()) {}
+  // CHECK-FIXES: for (const S& S2 : View<Iterator<S>>()) {}
+
+  for (const auto [X, Y] : View<Iterator<Point>>()) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:19: warning: the loop variable's type is
+  // CHECK-FIXES: for (const auto& [X, Y] : View<Iterator<Point>>()) {}
 
   for (const T T2 : View<Iterator<T>>()) {}
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is {{.*}}
-  // CHECK-FIXES: {{^}}  for (const T& T2 : View<Iterator<T>>()) {}
+  // CHECK-FIXES: for (const T& T2 : View<Iterator<T>>()) {}
 }
 
 template <typename T>
@@ -123,11 +132,6 @@ struct Mutable {
   ~Mutable() {}
 };
 
-struct Point {
-  ~Point() {}
-  int x, y;
-};
-
 Mutable& operator<<(Mutable &Out, bool B) {
   Out.setBool(B);
   return Out;
@@ -144,6 +148,7 @@ void useByValue(Mutable M);
 void useByConstValue(const Mutable M);
 void mutate(Mutable *M);
 void mutate(Mutable &M);
+void mutate(int &);
 void onceConstOnceMutated(const Mutable &M1, Mutable &M2);
 
 void negativeVariableIsMutated() {
@@ -234,6 +239,22 @@ void positiveOnlyAccessedFieldAsConst() {
   }
 }
 
+void positiveOnlyUsedAsConstBinding() {
+  for (auto [X, Y] : View<Iterator<Point>>()) {
+    // CHECK-MESSAGES: [[@LINE-1]]:13: warning: loop variable is copied but
+    // CHECK-FIXES: for (const auto& [X, Y] : View<Iterator<Point>>()) {
+    use(X);
+    use(Y);
+  }
+}
+
+void negativeMutatedBinding() {
+  for (auto [X, Y] : View<Iterator<Point>>()) {
+    use(X);
+    mutate(Y);
+  }
+}
+
 void positiveOnlyUsedInCopyConstructor() {
   for (auto A : View<Iterator<Mutable>>()) {
     // CHECK-MESSAGES: [[@LINE-1]]:13: warning: loop variable is copied but only used as const reference; consider making it a const reference [performance-for-range-copy]
@@ -290,10 +311,8 @@ View<Iterator<S>> createView(S) { return View<Iterator<S>>(); }
 
 void positiveValueIteratorUsedElseWhere() {
   for (const S SS : createView(*ValueReturningIterator<S>())) {
-    // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is not
-    // a reference type; this creates a copy in each iteration; consider making
-    // this a reference [performance-for-range-copy] CHECK-FIXES: for (const S&
-    // SS : createView(*ValueReturningIterator<S>())) {
+    // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is not a reference type; this creates a copy in each iteration; consider making this a reference [performance-for-range-copy]
+    // CHECK-FIXES: for (const S& SS : createView(*ValueReturningIterator<S>())) {
   }
 }
 

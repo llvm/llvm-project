@@ -9,8 +9,8 @@ entry:
 ; CHECK: mov r7, sp
 ; CHECK: bl _foo
 ; CHECK: bl _foo
-; CHECK: bl _foo
-; CHECK: pop {r7, pc}
+; CHECK: pop
+; CHECK: b
 
   %0 = tail call ptr @foo(ptr %x) nounwind
   %1 = tail call ptr @foo(ptr %0) nounwind

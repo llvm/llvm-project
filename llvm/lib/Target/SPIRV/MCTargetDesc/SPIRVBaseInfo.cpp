@@ -76,54 +76,57 @@ getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
   const SPIRV::SymbolicOperand *EnumValueInCategory =
       SPIRV::lookupSymbolicOperandByCategory(Category);
 
+  auto TableEnd = ArrayRef(SPIRV::SymbolicOperands).end();
   while (EnumValueInCategory && EnumValueInCategory->Category == Category) {
     if ((EnumValueInCategory->Value != 0) &&
         (Value & EnumValueInCategory->Value)) {
       Name += Separator + EnumValueInCategory->Mnemonic.str();
       Separator = "|";
     }
-    ++EnumValueInCategory;
+    if (++EnumValueInCategory == TableEnd)
+      break;
   }
 
   return Name;
 }
 
-uint32_t
+VersionTuple
 getSymbolicOperandMinVersion(SPIRV::OperandCategory::OperandCategory Category,
                              uint32_t Value) {
   const SPIRV::SymbolicOperand *Lookup =
       SPIRV::lookupSymbolicOperandByCategoryAndValue(Category, Value);
 
   if (Lookup)
-    return Lookup->MinVersion;
+    return VersionTuple(Lookup->MinVersion / 10, Lookup->MinVersion % 10);
 
-  return 0;
+  return VersionTuple(0);
 }
 
-uint32_t
+VersionTuple
 getSymbolicOperandMaxVersion(SPIRV::OperandCategory::OperandCategory Category,
                              uint32_t Value) {
   const SPIRV::SymbolicOperand *Lookup =
       SPIRV::lookupSymbolicOperandByCategoryAndValue(Category, Value);
 
   if (Lookup)
-    return Lookup->MaxVersion;
+    return VersionTuple(Lookup->MaxVersion / 10, Lookup->MaxVersion % 10);
 
-  return 0;
+  return VersionTuple();
 }
 
 CapabilityList
 getSymbolicOperandCapabilities(SPIRV::OperandCategory::OperandCategory Category,
                                uint32_t Value) {
+  CapabilityList Capabilities;
   const SPIRV::CapabilityEntry *Capability =
       SPIRV::lookupCapabilityByCategoryAndValue(Category, Value);
-
-  CapabilityList Capabilities;
+  auto TableEnd = ArrayRef(SPIRV::CapabilityEntries).end();
   while (Capability && Capability->Category == Category &&
          Capability->Value == Value) {
     Capabilities.push_back(
         static_cast<SPIRV::Capability::Capability>(Capability->ReqCapability));
-    ++Capability;
+    if (++Capability == TableEnd)
+      break;
   }
 
   return Capabilities;
@@ -136,12 +139,15 @@ getCapabilitiesEnabledByExtension(SPIRV::Extension::Extension Extension) {
           Extension, SPIRV::OperandCategory::CapabilityOperand);
 
   CapabilityList Capabilities;
+  auto TableEnd = ArrayRef(SPIRV::ExtensionEntries).end();
   while (Entry &&
-         Entry->Category == SPIRV::OperandCategory::CapabilityOperand &&
-         Entry->ReqExtension == Extension) {
-    Capabilities.push_back(
-        static_cast<SPIRV::Capability::Capability>(Entry->Value));
-    ++Entry;
+         Entry->Category == SPIRV::OperandCategory::CapabilityOperand) {
+    // Some capabilities' codes might go not in order.
+    if (Entry->ReqExtension == Extension)
+      Capabilities.push_back(
+          static_cast<SPIRV::Capability::Capability>(Entry->Value));
+    if (++Entry == TableEnd)
+      break;
   }
 
   return Capabilities;
@@ -154,11 +160,13 @@ getSymbolicOperandExtensions(SPIRV::OperandCategory::OperandCategory Category,
       SPIRV::lookupExtensionByCategoryAndValue(Category, Value);
 
   ExtensionList Extensions;
+  auto TableEnd = ArrayRef(SPIRV::ExtensionEntries).end();
   while (Extension && Extension->Category == Category &&
          Extension->Value == Value) {
     Extensions.push_back(
         static_cast<SPIRV::Extension::Extension>(Extension->ReqExtension));
-    ++Extension;
+    if (++Extension == TableEnd)
+      break;
   }
 
   return Extensions;
@@ -198,6 +206,8 @@ std::string getExtInstSetName(SPIRV::InstructionSet::InstructionSet Set) {
     return "OpenCL.std";
   case SPIRV::InstructionSet::GLSL_std_450:
     return "GLSL.std.450";
+  case SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100:
+    return "NonSemantic.Shader.DebugInfo.100";
   case SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax:
     return "SPV_AMD_shader_trinary_minmax";
   }
@@ -206,8 +216,9 @@ std::string getExtInstSetName(SPIRV::InstructionSet::InstructionSet Set) {
 
 SPIRV::InstructionSet::InstructionSet
 getExtInstSetFromString(std::string SetName) {
-  for (auto Set : {SPIRV::InstructionSet::GLSL_std_450,
-                   SPIRV::InstructionSet::OpenCL_std}) {
+  for (auto Set :
+       {SPIRV::InstructionSet::GLSL_std_450, SPIRV::InstructionSet::OpenCL_std,
+        SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100}) {
     if (SetName == getExtInstSetName(Set))
       return Set;
   }

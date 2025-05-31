@@ -42,7 +42,7 @@ define i8 @basic_use_xor(i8 %x, i8 %y) {
 define i8 @basic_use_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: @basic_use_add(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[NOTX]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y:%.*]], [[NOTX]]
 ; CHECK-NEXT:    call void @use(i8 [[A]])
 ; CHECK-NEXT:    [[NOTA:%.*]] = sub i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
@@ -58,7 +58,7 @@ define i8 @basic_use_both(i8 %x, i8 %y) {
 ; CHECK-LABEL: @basic_use_both(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTX]])
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[NOTX]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y:%.*]], [[NOTX]]
 ; CHECK-NEXT:    call void @use(i8 [[A]])
 ; CHECK-NEXT:    [[NOTA:%.*]] = sub i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
@@ -115,26 +115,26 @@ define <4 x i32> @vector_test(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %nota
 }
 
-define <4 x i32> @vector_test_undef(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @vector_test_undef(
+define <4 x i32> @vector_test_poison(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @vector_test_poison(
 ; CHECK-NEXT:    [[NOTA:%.*]] = sub <4 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[NOTA]]
 ;
-  %notx = xor <4 x i32> %x, <i32 -1, i32 undef, i32 undef, i32 -1>
+  %notx = xor <4 x i32> %x, <i32 -1, i32 poison, i32 poison, i32 -1>
   %a = add <4 x i32> %notx, %y
-  %nota = xor <4 x i32> %a, <i32 -1, i32 -1, i32 undef, i32 undef>
+  %nota = xor <4 x i32> %a, <i32 -1, i32 -1, i32 poison, i32 poison>
   ret <4 x i32> %nota
 }
 
 
-define <4 x i32> @vector_test_undef_nsw_nuw(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @vector_test_undef_nsw_nuw(
+define <4 x i32> @vector_test_poison_nsw_nuw(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @vector_test_poison_nsw_nuw(
 ; CHECK-NEXT:    [[NOTA:%.*]] = sub nuw nsw <4 x i32> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[NOTA]]
 ;
-  %notx = xor <4 x i32> %x, <i32 -1, i32 undef, i32 undef, i32 -1>
+  %notx = xor <4 x i32> %x, <i32 -1, i32 poison, i32 poison, i32 -1>
   %a = add nsw nuw <4 x i32> %notx, %y
-  %nota = xor <4 x i32> %a, <i32 -1, i32 -1, i32 undef, i32 undef>
+  %nota = xor <4 x i32> %a, <i32 -1, i32 -1, i32 poison, i32 poison>
   ret <4 x i32> %nota
 }
 
@@ -143,8 +143,8 @@ define i32 @pr50308(i1 %c1, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[ADD_NOT:%.*]] = sub i32 -2, [[V1:%.*]]
-; CHECK-NEXT:    [[ADD1_NEG:%.*]] = xor i32 [[ADD_NOT]], [[V2:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -2, [[V1:%.*]]
+; CHECK-NEXT:    [[ADD1_NEG:%.*]] = xor i32 [[TMP0]], [[V2:%.*]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[COND_NEG:%.*]] = phi i32 [ [[ADD1_NEG]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
@@ -175,7 +175,8 @@ define void @pr50370(i32 %x) {
 ;
 entry:
   %xor = xor i32 %x, 1
-  %ext = zext i1 icmp eq (ptr @g, ptr null) to i32
+  %cmp = icmp eq ptr @g, null
+  %ext = zext i1 %cmp to i32
   %or = or i32 %ext, 1
   %or4 = or i32 %or, 65536
   %B6 = ashr i32 65536, %or4

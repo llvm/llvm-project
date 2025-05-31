@@ -137,7 +137,7 @@ public:
   }
 
   Value getAOSMemRef() const {
-    const Level cooStart = rType.getCOOStart();
+    const Level cooStart = rType.getAoSCOOStart();
     assert(cooStart < rType.getLvlRank());
     return getMemRefField(SparseTensorFieldKind::CrdMemRef, cooStart);
   }
@@ -228,11 +228,6 @@ public:
   }
 };
 
-/// Returns the "tuple" value of the adapted tensor.
-inline UnrealizedConversionCastOp getTuple(Value tensor) {
-  return llvm::cast<UnrealizedConversionCastOp>(tensor.getDefiningOp());
-}
-
 /// Packs the given values as a "tuple" value.
 inline Value genTuple(OpBuilder &builder, Location loc, Type tp,
                       ValueRange values) {
@@ -245,18 +240,17 @@ inline Value genTuple(OpBuilder &builder, Location loc,
   return genTuple(builder, loc, desc.getRankedTensorType(), desc.getFields());
 }
 
-inline SparseTensorDescriptor getDescriptorFromTensorTuple(Value tensor) {
-  auto tuple = getTuple(tensor);
-  SparseTensorType stt(cast<RankedTensorType>(tuple.getResultTypes()[0]));
-  return SparseTensorDescriptor(stt, tuple.getInputs());
+inline SparseTensorDescriptor
+getDescriptorFromTensorTuple(ValueRange adaptorValues, RankedTensorType type) {
+  return SparseTensorDescriptor(SparseTensorType(type), adaptorValues);
 }
 
 inline MutSparseTensorDescriptor
-getMutDescriptorFromTensorTuple(Value tensor, SmallVectorImpl<Value> &fields) {
-  auto tuple = getTuple(tensor);
-  fields.assign(tuple.getInputs().begin(), tuple.getInputs().end());
-  SparseTensorType stt(cast<RankedTensorType>(tuple.getResultTypes()[0]));
-  return MutSparseTensorDescriptor(stt, fields);
+getMutDescriptorFromTensorTuple(ValueRange adaptorValues,
+                                SmallVectorImpl<Value> &fields,
+                                RankedTensorType type) {
+  fields.assign(adaptorValues.begin(), adaptorValues.end());
+  return MutSparseTensorDescriptor(SparseTensorType(type), fields);
 }
 
 } // namespace sparse_tensor

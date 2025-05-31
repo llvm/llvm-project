@@ -8,8 +8,6 @@
 # These BLR/BTI bundles are produced when calling a returns_twice function
 # (like setjmp) indirectly.
 --- |
-  $__llvm_slsblr_thunk_x8 = comdat any
-
   define dso_local void @fn() #0 {
   entry:
     %fnptr = alloca ptr, align 8
@@ -22,15 +20,8 @@
   ; Function Attrs: returns_twice
   declare i32 @setjmp(ptr noundef) #1
 
-  ; Function Attrs: naked nounwind
-  define linkonce_odr hidden void @__llvm_slsblr_thunk_x8() #2 comdat {
-  entry:
-    ret void
-  }
-
   attributes #0 = { "target-features"="+harden-sls-blr" }
   attributes #1 = { returns_twice }
-  attributes #2 = { naked nounwind }
 
   !llvm.module.flags = !{!0}
   !0 = !{i32 8, !"branch-target-enforcement", i32 1}
@@ -74,15 +65,4 @@ body:             |
     ; CHECK-NEXT: }
     early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.1)
     RET undef $lr
-...
----
-name:            __llvm_slsblr_thunk_x8
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x8
-
-    $x16 = ORRXrs $xzr, $x8, 0
-    BR $x16
-    SpeculationBarrierISBDSBEndBB
 ...

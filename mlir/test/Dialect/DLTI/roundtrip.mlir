@@ -15,13 +15,21 @@
   test.unknown_attr_4 = #dlti.dl_entry<memref<?x?xf32>, ["string", 10]>,
   // CHECK: #dlti.dl_spec<>
   test.unknown_attr_5 = #dlti.dl_spec<>,
-  // CHECK: #dlti.dl_spec<#dlti.dl_entry<"test.id", 42 : i32>>
-  test.unknown_attr_6 = #dlti.dl_spec<#dlti.dl_entry<"test.id", 42 : i32>>,
+  // CHECK: #dlti.dl_spec<"test.id" = 42 : i32>
+  test.unknown_attr_6 = #dlti.dl_spec<"test.id" = 42 : i32>,
   // CHECK: #dlti.dl_spec<
-  // CHECK:   #dlti.dl_entry<"test.id1", 43 : index>
-  // CHECK:   #dlti.dl_entry<"test.id2", 44 : index>
-  // CHECK:   #dlti.dl_entry<"test.id3", 45 : index>>
+  // CHECK:   "test.id1" = 43 : index,
+  // CHECK:   "test.id2" = 44 : index,
+  // CHECK:   "test.id3" = 45 : index>
   test.unknown_attr_7 = #dlti.dl_spec<
+    "test.id1" = 43 : index,
+    "test.id2" = 44 : index,
+    "test.id3" = 45 : index>,
+  // CHECK: #dlti.dl_spec<
+  // CHECK:   "test.id1" = 43 : index,
+  // CHECK:   "test.id2" = 44 : index,
+  // CHECK:   "test.id3" = 45 : index>
+  test.unknown_attr_7_unsugared = #dlti.dl_spec<
     #dlti.dl_entry<"test.id1", 43 : index>,
     #dlti.dl_entry<"test.id2", 44 : index>,
     #dlti.dl_entry<"test.id3", 45 : index>>
@@ -40,16 +48,34 @@
 
 // Should not fail on nested compatible layouts.
 "test.op_with_data_layout"() ({
-  "test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>> } : () -> ()
+  "test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<"unknown.unknown" = 32> } : () -> ()
   "test.maybe_terminator_op"() : () -> ()
-}) { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>> } : () -> ()
+}) { dlti.dl_spec = #dlti.dl_spec<"unknown.unknown" = 32> } : () -> ()
 
 // Should not fail on deeper nested compatible layouts.
 "test.op_with_data_layout"() ({
   "test.op_with_data_layout"() ({
     "test.op_with_data_layout"()
-       { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>> } : () -> ()
+       { dlti.dl_spec = #dlti.dl_spec<"unknown.unknown" = 32> } : () -> ()
     "test.maybe_terminator_op"() : () -> ()
-  }) { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>> } : () -> ()
+  }) { dlti.dl_spec = #dlti.dl_spec<"unknown.unknown" = 32> } : () -> ()
   "test.maybe_terminator_op"() : () -> ()
-}) { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>> } : () -> ()
+}) { dlti.dl_spec = #dlti.dl_spec<"unknown.unknown" = 32> } : () -> ()
+
+// A valid target system description
+// CHECK: module attributes {
+// CHECK:   dlti.target_system_spec = #dlti.target_system_spec<
+// CHECK:     "CPU" = #dlti.target_device_spec<
+// CHECK:       "dlti.L1_cache_size_in_bytes" = 4096 : ui32>,
+// CHECK:    "GPU" = #dlti.target_device_spec<
+// CHECK:       "dlti.max_vector_op_width" = 128 : ui32>
+// CHECK:   >} {
+// CHECK: }
+module attributes {
+  dlti.target_system_spec = #dlti.target_system_spec<
+    "CPU" = #dlti.target_device_spec<
+      "dlti.L1_cache_size_in_bytes" = 4096 : ui32>,
+    "GPU" = #dlti.target_device_spec<
+      "dlti.max_vector_op_width" = 128 : ui32>
+  >} {}
+

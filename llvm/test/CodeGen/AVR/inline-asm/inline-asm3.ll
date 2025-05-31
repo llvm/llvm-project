@@ -184,7 +184,10 @@ define void @add_b_i8(i8 signext %0, i8 signext %1) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    mov r20, r22
 ; CHECK-NEXT:    mov r22, r24
-; CHECK-NEXT:    mov r30, r22
+; CHECK-NEXT:    mov r24, r22
+; CHECK-NEXT:    clr r25
+; CHECK-NEXT:    mov r30, r24
+; CHECK-NEXT:    mov r31, r25
 ; CHECK-NEXT:    ;APP
 ; CHECK-NEXT:    mov r30, r30
 ; CHECK-NEXT:    add r30, r20
@@ -224,14 +227,16 @@ define void @add_b_i16(i16 signext %0, i16 signext %1) {
 define void @add_e_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-LABEL: add_e_i8:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov r30, r22
+; CHECK-NEXT:    mov r20, r22
 ; CHECK-NEXT:    mov r22, r24
 ; CHECK-NEXT:    mov r26, r22
+; CHECK-NEXT:    clr r27
+; CHECK-NEXT:    mov r30, r20
+; CHECK-NEXT:    clr r31
 ; CHECK-NEXT:    ;APP
 ; CHECK-NEXT:    mov r26, r26
 ; CHECK-NEXT:    add r26, r30
 ; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    mov r20, r30
 ; CHECK-NEXT:    mov r24, r26
 ; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    ret
@@ -286,14 +291,16 @@ define void @add_t_i8(i8 signext %0, i8 signext %1) {
 define void @add_w_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-LABEL: add_w_i8:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov r26, r22
-; CHECK-NEXT:    mov r30, r24
+; CHECK-NEXT:    mov r20, r22
+; CHECK-NEXT:    mov r22, r24
+; CHECK-NEXT:    mov r24, r22
+; CHECK-NEXT:    clr r25
+; CHECK-NEXT:    mov r30, r20
+; CHECK-NEXT:    clr r31
 ; CHECK-NEXT:    ;APP
-; CHECK-NEXT:    mov r24, r30
-; CHECK-NEXT:    add r24, r26
+; CHECK-NEXT:    mov r24, r24
+; CHECK-NEXT:    add r24, r30
 ; CHECK-NEXT:    ;NO_APP
-; CHECK-NEXT:    mov r22, r30
-; CHECK-NEXT:    mov r20, r26
 ; CHECK-NEXT:    rcall foo8
 ; CHECK-NEXT:    ret
   %3 = tail call i8 asm sideeffect "mov $0, $1\0Aadd $0, $2", "=w,w,w"(i8 %0, i8 %1)
@@ -333,9 +340,9 @@ define void @add_xyz_i8(i8 signext %0, i8 signext %1) {
 ; CHECK-NEXT:    mov r20, r22
 ; CHECK-NEXT:    mov r22, r24
 ; CHECK-NEXT:    mov r28, r22
-; CHECK-NEXT:    mov r29, r23
+; CHECK-NEXT:    clr r29
 ; CHECK-NEXT:    mov r26, r20
-; CHECK-NEXT:    mov r27, r21
+; CHECK-NEXT:    clr r27
 ; CHECK-NEXT:    ;APP
 ; CHECK-NEXT:    mov r30, r28
 ; CHECK-NEXT:    add r30, r26
@@ -383,7 +390,7 @@ define void @add_xyz_i16(i16 signext %0, i16 signext %1) {
 
 @gvar = global i16 0
 
-define i16* @ldi_dreg_symbol() {
+define ptr @ldi_dreg_symbol() {
 ; CHECK-LABEL: ldi_dreg_symbol:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ;APP
@@ -391,11 +398,11 @@ define i16* @ldi_dreg_symbol() {
 ; CHECK-NEXT:    ldi r24, lo8(gvar)
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    ret
-  %1 = tail call i16* asm sideeffect "ldi ${0:B}, hi8($1)\0A\09ldi ${0:A}, lo8($1)", "=d,i"(i16* @gvar)
-  ret i16* %1
+  %1 = tail call ptr asm sideeffect "ldi ${0:B}, hi8($1)\0A\09ldi ${0:A}, lo8($1)", "=d,i"(ptr @gvar)
+  ret ptr %1
 }
 
-define i16* @ldi_dreg_imm() {
+define ptr @ldi_dreg_imm() {
 ; CHECK-LABEL: ldi_dreg_imm:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ;APP
@@ -403,6 +410,6 @@ define i16* @ldi_dreg_imm() {
 ; CHECK-NEXT:    ldi r24, lo8(2345)
 ; CHECK-NEXT:    ;NO_APP
 ; CHECK-NEXT:    ret
-  %1 = tail call i16* asm sideeffect "ldi ${0:B}, hi8($1)\0A\09ldi ${0:A}, lo8($1)", "=d,i"(i16 2345)
-  ret i16* %1
+  %1 = tail call ptr asm sideeffect "ldi ${0:B}, hi8($1)\0A\09ldi ${0:A}, lo8($1)", "=d,i"(i16 2345)
+  ret ptr %1
 }

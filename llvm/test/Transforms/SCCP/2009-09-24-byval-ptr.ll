@@ -31,7 +31,7 @@ return:                                           ; preds = %entry
 define internal i32 @vfu2(ptr byval(%struct.MYstr) align 4 %u) nounwind readonly {
 ; CHECK-LABEL: @vfu2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds ([[STRUCT_MYSTR:%.*]], ptr @mystr, i64 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @mystr, i64 4), align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr @mystr, align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], [[TMP0]]

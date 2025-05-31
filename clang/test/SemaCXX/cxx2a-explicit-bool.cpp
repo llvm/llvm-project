@@ -75,11 +75,11 @@ struct D {
 template <typename T> struct E {
   // expected-note@-1+ {{candidate constructor}}
   explicit((T{}, false))
-  // expected-error@-1 {{illegal initializer type 'void'}}
+  // expected-error@-1 {{cannot create object of function type 'void ()'}}
   E(int);
 };
 
-E<void> e = 1;
+E<void ()> e = 1;
 // expected-error@-1 {{no viable conversion}}
 // expected-note@-2 {{in instantiation of}}
 
@@ -394,9 +394,11 @@ using type = T;
 template<typename T1, typename T2, bool b>
 struct A {
   // expected-note@-1+ {{candidate function}}
+  // expected-note@-2+ {{implicit deduction guide}}
   explicit(false)
   A(typename nondeduced<T1>::type, typename nondeduced<T2>::type, typename nondeduced<B<b>>::type) {}
   // expected-note@-1+ {{candidate template ignored}}
+  // expected-note@-2+ {{implicit deduction guide}}
 };
 
 template<typename T1, typename T2, bool b>
@@ -678,10 +680,12 @@ namespace deduction_guide2 {
 template<typename T1 = int, typename T2 = int>
 struct A {
   // expected-note@-1+ {{candidate template ignored}}
+  // expected-note@-2+ {{implicit deduction guide}}
   explicit(!is_same<T1, T2>::value)
   A(T1 = 0, T2 = 0) {}
   // expected-note@-1 {{explicit constructor declared here}}
   // expected-note@-2 2{{explicit constructor is not a candidate}}
+  // expected-note@-3 2{{implicit deduction guide declared}}
 };
 
 A a0 = 0;

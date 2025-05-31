@@ -233,6 +233,25 @@ private:
     return globalVariableMap.lookup(id);
   }
 
+  /// Sets the function argument's attributes. |argID| is the function
+  /// argument's result <id>, and |argIndex| is its index in the function's
+  /// argument list.
+  LogicalResult setFunctionArgAttrs(uint32_t argID,
+                                    SmallVectorImpl<Attribute> &argAttrs,
+                                    size_t argIndex);
+
+  /// Gets the symbol name from the name of decoration.
+  StringAttr getSymbolDecoration(StringRef decorationName) {
+    auto attrName = llvm::convertToSnakeFromCamelCase(decorationName);
+    return opBuilder.getStringAttr(attrName);
+  }
+
+  /// Move a conditional branch into a separate basic block to avoid unnecessary
+  /// sinking of defs that may be required outside a selection region. This
+  /// function also ensures that a single block cannot be a header block of one
+  /// selection construct and the merge block of another.
+  LogicalResult splitConditionalBlocks();
+
   //===--------------------------------------------------------------------===//
   // Type
   //===--------------------------------------------------------------------===//
@@ -259,8 +278,6 @@ private:
   LogicalResult processCooperativeMatrixTypeNV(ArrayRef<uint32_t> operands);
 
   LogicalResult processFunctionType(ArrayRef<uint32_t> operands);
-
-  LogicalResult processJointMatrixType(ArrayRef<uint32_t> operands);
 
   LogicalResult processImageType(ArrayRef<uint32_t> operands);
 

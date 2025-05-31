@@ -21,9 +21,11 @@
 #include "asan_scariness_score.h"
 #include "asan_stack.h"
 #include "asan_thread.h"
+#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
+#include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
@@ -32,8 +34,11 @@ namespace __asan {
 
 // -------------------- User-specified callbacks ----------------- {{{1
 static void (*error_report_callback)(const char*);
-static char *error_message_buffer = nullptr;
-static uptr error_message_buffer_pos = 0;
+using ErrorMessageBuffer = InternalMmapVectorNoCtor<char, true>;
+alignas(
+    alignof(ErrorMessageBuffer)) static char error_message_buffer_placeholder
+    [sizeof(ErrorMessageBuffer)];
+static ErrorMessageBuffer *error_message_buffer = nullptr;
 static Mutex error_message_buf_mutex;
 static const unsigned kAsanBuggyPcPoolSize = 25;
 static __sanitizer::atomic_uintptr_t AsanBuggyPcPool[kAsanBuggyPcPoolSize];
@@ -42,17 +47,14 @@ void AppendToErrorMessageBuffer(const char *buffer) {
   Lock l(&error_message_buf_mutex);
   if (!error_message_buffer) {
     error_message_buffer =
-      (char*)MmapOrDieQuietly(kErrorMessageBufferSize, __func__);
-    error_message_buffer_pos = 0;
+        new (error_message_buffer_placeholder) ErrorMessageBuffer();
+    error_message_buffer->Initialize(kErrorMessageBufferSize);
   }
-  uptr length = internal_strlen(buffer);
-  RAW_CHECK(kErrorMessageBufferSize >= error_message_buffer_pos);
-  uptr remaining = kErrorMessageBufferSize - error_message_buffer_pos;
-  internal_strncpy(error_message_buffer + error_message_buffer_pos,
-                   buffer, remaining);
-  error_message_buffer[kErrorMessageBufferSize - 1] = '\0';
-  // FIXME: reallocate the buffer instead of truncating the message.
-  error_message_buffer_pos += Min(remaining, length);
+  uptr error_message_buffer_len = error_message_buffer->size();
+  uptr buffer_len = internal_strlen(buffer);
+  error_message_buffer->resize(error_message_buffer_len + buffer_len);
+  internal_memcpy(error_message_buffer->data() + error_message_buffer_len,
+                  buffer, buffer_len);
 }
 
 // ---------------------- Helper functions ----------------------- {{{1
@@ -125,6 +127,33 @@ class ScopedInErrorReport {
  public:
   explicit ScopedInErrorReport(bool fatal = false)
       : halt_on_error_(fatal || flags()->halt_on_error) {
+    // Deadlock Prevention Between ASan and LSan
+    //
+    // Background:
+    // - The `dl_iterate_phdr` function requires holding libdl's internal lock
+    //   (Lock A).
+    // - LSan acquires the ASan thread registry lock (Lock B) *after* calling
+    //   `dl_iterate_phdr`.
+    //
+    // Problem Scenario:
+    // When ASan attempts to call `dl_iterate_phdr` while holding Lock B (e.g.,
+    // during error reporting via `ErrorDescription::Print`), a circular lock
+    // dependency may occur:
+    //   1. Thread 1: Holds Lock B → Requests Lock A (via dl_iterate_phdr)
+    //   2. Thread 2: Holds Lock A → Requests Lock B (via LSan operations)
+    //
+    // Solution:
+    // Proactively load all required modules before acquiring Lock B.
+    // This ensures:
+    // 1. Any `dl_iterate_phdr` calls during module loading complete before
+    //    locking.
+    // 2. Subsequent error reporting avoids nested lock acquisition patterns.
+    // 3. Eliminates the lock order inversion risk between libdl and ASan's
+    //    thread registry.
+#if CAN_SANITIZE_LEAKS && (SANITIZER_LINUX || SANITIZER_NETBSD)
+    Symbolizer::GetOrInit()->GetRefreshedListOfModules();
+#endif
+
     // Make sure the registry and sanitizer report mutexes are locked while
     // we're printing an error report.
     // We can lock them only here to avoid self-deadlock in case of
@@ -158,14 +187,14 @@ class ScopedInErrorReport {
 
     // Copy the message buffer so that we could start logging without holding a
     // lock that gets acquired during printing.
-    InternalMmapVector<char> buffer_copy(kErrorMessageBufferSize);
+    InternalScopedString buffer_copy;
     {
       Lock l(&error_message_buf_mutex);
-      internal_memcpy(buffer_copy.data(),
-                      error_message_buffer, kErrorMessageBufferSize);
+      error_message_buffer->push_back('\0');
+      buffer_copy.Append(error_message_buffer->data());
       // Clear error_message_buffer so that if we find other errors
       // we don't re-log this error.
-      error_message_buffer_pos = 0;
+      error_message_buffer->clear();
     }
 
     LogFullErrorReport(buffer_copy.data());
@@ -363,6 +392,16 @@ void ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
       GetCurrentTidOrInvalid(), stack, storage_beg, storage_end,
       old_container_beg, old_container_end, new_container_beg,
       new_container_end);
+  in_report.ReportError(error);
+}
+
+void ReportBadParamsToCopyContiguousContainerAnnotations(
+    uptr old_storage_beg, uptr old_storage_end, uptr new_storage_beg,
+    uptr new_storage_end, BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report;
+  ErrorBadParamsToCopyContiguousContainerAnnotations error(
+      GetCurrentTidOrInvalid(), stack, old_storage_beg, old_storage_end,
+      new_storage_beg, new_storage_end);
   in_report.ReportError(error);
 }
 
@@ -581,5 +620,5 @@ void __sanitizer_ptr_cmp(void *a, void *b) {
 } // extern "C"
 
 // Provide default implementation of __asan_on_error that does nothing
-// and may be overriden by user.
+// and may be overridden by user.
 SANITIZER_INTERFACE_WEAK_DEF(void, __asan_on_error, void) {}

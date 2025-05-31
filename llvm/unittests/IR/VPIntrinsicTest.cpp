@@ -27,7 +27,8 @@ namespace {
 static const char *ReductionIntOpcodes[] = {
     "add", "mul", "and", "or", "xor", "smin", "smax", "umin", "umax"};
 
-static const char *ReductionFPOpcodes[] = {"fadd", "fmul", "fmin", "fmax"};
+static const char *ReductionFPOpcodes[] = {"fadd", "fmul",     "fmin",
+                                           "fmax", "fminimum", "fmaximum"};
 
 class VPIntrinsicTest : public testing::Test {
 protected:
@@ -48,8 +49,9 @@ protected:
       Str << " declare <8 x i32> @llvm.vp." << BinaryIntOpcode
           << ".v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) ";
 
-    const char *BinaryFPOpcodes[] = {"fadd", "fsub",   "fmul",   "fdiv",
-                                     "frem", "minnum", "maxnum", "copysign"};
+    const char *BinaryFPOpcodes[] = {"fadd",    "fsub",    "fmul",   "fdiv",
+                                     "frem",    "minnum",  "maxnum", "minimum",
+                                     "maximum", "copysign"};
     for (const char *BinaryFPOpcode : BinaryFPOpcodes)
       Str << " declare <8 x float> @llvm.vp." << BinaryFPOpcode
           << ".v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) ";
@@ -71,6 +73,10 @@ protected:
            "i32)";
     Str << " declare <8 x float> @llvm.vp.ceil.v8f32(<8 x float>, <8 x i1>, "
            "i32)";
+    Str << " declare <8 x i32> @llvm.vp.lrint.v8i32.v8f32(<8 x float>, "
+           "<8 x i1>, i32)";
+    Str << " declare <8 x i64> @llvm.vp.llrint.v8i64.v8f32(<8 x float>, "
+           "<8 x i1>, i32)";
     Str << " declare <8 x float> @llvm.vp.fneg.v8f32(<8 x float>, <8 x i1>, "
            "i32)";
     Str << " declare <8 x float> @llvm.vp.fabs.v8f32(<8 x float>, <8 x i1>, "
@@ -101,6 +107,8 @@ protected:
            "@llvm.experimental.vp.strided.load.v8i32.p1i32.i32(i32 "
            "addrspace(1)*, i32, <8 x i1>, i32) ";
     Str << " declare <8 x i32> @llvm.vp.gather.v8i32.v8p0i32(<8 x i32*>, <8 x "
+           "i1>, i32) ";
+    Str << " declare <8 x i32> @llvm.experimental.vp.splat.v8i32(i32, <8 x "
            "i1>, i32) ";
 
     for (const char *ReductionOpcode : ReductionIntOpcodes)
@@ -162,10 +170,20 @@ protected:
         << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.cttz.v8i16"
         << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.sadd.sat.v8i16"
+        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.uadd.sat.v8i16"
+        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.ssub.sat.v8i16"
+        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
+    Str << " declare <8 x i16> @llvm.vp.usub.sat.v8i16"
+        << "(<8 x i16>, <8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.fshl.v8i16"
         << "(<8 x i16>, <8 x i16>, <8 x i16>, <8 x i1>, i32) ";
     Str << " declare <8 x i16> @llvm.vp.fshr.v8i16"
         << "(<8 x i16>, <8 x i16>, <8 x i16>, <8 x i1>, i32) ";
+    Str << " declare i32 @llvm.vp.cttz.elts.i32.v8i16"
+        << "(<8 x i16>, i1 immarg, <8 x i1>, i32) ";
 
     return parseAssemblyString(Str.str(), Err, C);
   }
@@ -349,7 +367,60 @@ TEST_F(VPIntrinsicTest, IntrinsicIDRoundTrip) {
   ASSERT_NE(FullTripCounts, 0u);
 }
 
-/// Check that VPIntrinsic::getDeclarationForParams works.
+/// Check that going from intrinsic to VP intrinsic and back results in the same
+/// intrinsic.
+TEST_F(VPIntrinsicTest, IntrinsicToVPRoundTrip) {
+  bool IsFullTrip = false;
+  Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic + 1;
+  for (; IntrinsicID < Intrinsic::num_intrinsics; IntrinsicID++) {
+    Intrinsic::ID VPID = VPIntrinsic::getForIntrinsic(IntrinsicID);
+    // No equivalent VP intrinsic available.
+    if (VPID == Intrinsic::not_intrinsic)
+      continue;
+
+    // Return itself if passed intrinsic ID is VP intrinsic.
+    if (VPIntrinsic::isVPIntrinsic(IntrinsicID)) {
+      ASSERT_EQ(IntrinsicID, VPID);
+      continue;
+    }
+
+    std::optional<Intrinsic::ID> RoundTripIntrinsicID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(VPID);
+    // No equivalent non-predicated intrinsic available.
+    if (!RoundTripIntrinsicID)
+      continue;
+
+    ASSERT_EQ(*RoundTripIntrinsicID, IntrinsicID);
+    IsFullTrip = true;
+  }
+  ASSERT_TRUE(IsFullTrip);
+}
+
+/// Check that going from VP intrinsic to equivalent non-predicated intrinsic
+/// and back results in the same intrinsic.
+TEST_F(VPIntrinsicTest, VPToNonPredIntrinsicRoundTrip) {
+  std::unique_ptr<Module> M = createVPDeclarationModule();
+  assert(M);
+
+  bool IsFullTrip = false;
+  for (const auto &VPDecl : *M) {
+    auto VPID = VPDecl.getIntrinsicID();
+    std::optional<Intrinsic::ID> NonPredID =
+        VPIntrinsic::getFunctionalIntrinsicIDForVP(VPID);
+
+    // No equivalent non-predicated intrinsic available
+    if (!NonPredID)
+      continue;
+
+    Intrinsic::ID RoundTripVPID = VPIntrinsic::getForIntrinsic(*NonPredID);
+
+    ASSERT_EQ(RoundTripVPID, VPID);
+    IsFullTrip = true;
+  }
+  ASSERT_TRUE(IsFullTrip);
+}
+
+/// Check that VPIntrinsic::getOrInsertDeclarationForParams works.
 TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
   std::unique_ptr<Module> M = createVPDeclarationModule();
   assert(M);
@@ -365,7 +436,7 @@ TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
       Values.push_back(UndefValue::get(ParamTy));
 
     ASSERT_NE(F.getIntrinsicID(), Intrinsic::not_intrinsic);
-    auto *NewDecl = VPIntrinsic::getDeclarationForParams(
+    auto *NewDecl = VPIntrinsic::getOrInsertDeclarationForParams(
         OutM.get(), F.getIntrinsicID(), FuncTy->getReturnType(), Values);
     ASSERT_TRUE(NewDecl);
 
@@ -381,22 +452,6 @@ TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
       ++ItNewParams;
     }
   }
-}
-
-/// Check that the HANDLE_VP_TO_CONSTRAINEDFP maps to an existing intrinsic with
-/// the right amount of constrained-fp metadata args.
-TEST_F(VPIntrinsicTest, HandleToConstrainedFP) {
-#define VP_PROPERTY_CONSTRAINEDFP(HASROUND, HASEXCEPT, CFPID)                  \
-  {                                                                            \
-    SmallVector<Intrinsic::IITDescriptor, 5> T;                                \
-    Intrinsic::getIntrinsicInfoTableEntries(Intrinsic::CFPID, T);              \
-    unsigned NumMetadataArgs = 0;                                              \
-    for (auto TD : T)                                                          \
-      NumMetadataArgs += (TD.Kind == Intrinsic::IITDescriptor::Metadata);      \
-    bool IsCmp = Intrinsic::CFPID == Intrinsic::experimental_constrained_fcmp; \
-    ASSERT_EQ(NumMetadataArgs, (unsigned)(IsCmp + HASROUND + HASEXCEPT));      \
-  }
-#include "llvm/IR/VPIntrinsics.def"
 }
 
 } // end anonymous namespace

@@ -14,9 +14,9 @@
 
   define void @main() #0 {
   bb0:
-    %gep1 = bitcast [4 x i64]* @tst_ to [4 x i64]*
-    %lsr.iv1 = bitcast [4 x i64]* %gep1 to <4 x i64>*
-    store <4 x i64> zeroinitializer, <4 x i64>* %lsr.iv1, align 16
+    %gep1 = bitcast ptr @tst_ to ptr
+    %lsr.iv1 = bitcast ptr %gep1 to ptr
+    store <4 x i64> zeroinitializer, ptr %lsr.iv1, align 16
     ret void
   }
 

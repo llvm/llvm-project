@@ -1,8 +1,8 @@
-// FIXME: pthread_create() definition in Builtins.def doesn't match the real one, so it doesn't get recognized as a builtin and attributes aren't added.
+// FIXME: pthread_create() definition in Builtins.td doesn't match the real one, so it doesn't get recognized as a builtin and attributes aren't added.
 // RUN: false
 // XFAIL: *
 
-// RUN: %clang_cc1 %s -S -emit-llvm -o - -disable-llvm-optzns | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -disable-llvm-optzns | FileCheck %s
 
 // CHECK: declare !callback ![[cid:[0-9]+]] {{.*}}i32 @pthread_create
 // CHECK: ![[cid]] = !{![[cidb:[0-9]+]]}

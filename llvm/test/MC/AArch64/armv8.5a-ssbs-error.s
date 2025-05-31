@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=+ssbs  < %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=+v8.5a < %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=+v8.5a < %s 2>&1 | FileCheck %s --check-prefix=NOSPECID
 // RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=-ssbs  < %s 2>&1 | FileCheck %s --check-prefix=NOSPECID
 
 msr SSBS, #16

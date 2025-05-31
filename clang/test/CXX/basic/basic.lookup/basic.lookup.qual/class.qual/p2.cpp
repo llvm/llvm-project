@@ -141,11 +141,15 @@ namespace InhCtor {
   // ill-formed.
   template<typename T>
   struct S : T {
-    struct U : S { // expected-note 6{{candidate}}
-      using S::S;
-    };
+    struct U; // expected-note 6{{candidate}}
     using T::T;
   };
+
+  template<typename T>
+  struct S<T>::U : S {
+    using S::S;
+  };
+
   S<A>::U ua(0); // expected-error {{no match}}
   S<B>::U ub(0); // expected-error {{no match}}
 
@@ -186,7 +190,7 @@ namespace InhCtor {
   }
   struct DerivedFromNS : NS::NS {
     // No special case unless the NNS names a class.
-    using InhCtor::NS::NS; // expected-error {{using declaration in class refers into 'InhCtor::NS::', which is not a class}}
+    using InhCtor::NS::NS; // expected-error {{using declaration in class refers into 'InhCtor::NS', which is not a class}}
 
   };
 

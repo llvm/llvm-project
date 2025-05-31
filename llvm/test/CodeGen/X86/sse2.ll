@@ -6,6 +6,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,X64-AVX,AVX1,X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512dq,+avx512vl | FileCheck %s --check-prefixes=AVX,X64-AVX,AVX512,X64-AVX512
 
+; RUN: llc < %s -mtriple=i386-unknown-unknown -mattr=+sse2 -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s --check-prefixes=SSE,X86-SSE
+
 ; Tests for SSE2 and below, without SSE3+.
 
 define void @test1(ptr %r, ptr %A, double %B) nounwind  {
@@ -597,7 +599,7 @@ define  <2 x double> @test16(ptr nocapture %srcA, ptr nocapture %dst) {
 define fastcc void @test17() nounwind {
 ; X86-SSE-LABEL: test17:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = <u,u,32768,32768>
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm0 = [u,u,32768,32768]
 ; X86-SSE-NEXT:    movaps %xmm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
@@ -609,7 +611,7 @@ define fastcc void @test17() nounwind {
 ;
 ; X64-SSE-LABEL: test17:
 ; X64-SSE:       # %bb.0: # %entry
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = <u,u,32768,32768>
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm0 = [u,u,32768,32768]
 ; X64-SSE-NEXT:    movaps %xmm0, (%rax)
 ; X64-SSE-NEXT:    retq
 ;

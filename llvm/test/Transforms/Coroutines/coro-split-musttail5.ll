@@ -1,5 +1,4 @@
-; Tests that sinked lifetime markers wouldn't provent optimization
-; to convert a resuming call to a musttail call.
+; Tests that coro-split will convert coro.await.suspend.handle to a musttail call.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 ; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
@@ -22,7 +21,7 @@ entry:
   ]
 await.suspend:
   %save2 = call token @llvm.coro.save(ptr null)
-  call fastcc void @fakeresume1(ptr align 8 null)
+  call void @llvm.coro.await.suspend.handle(ptr null, ptr null, ptr @await_suspend_function)
   %suspend2 = call i8 @llvm.coro.suspend(token %save2, i1 false)
   switch i8 %suspend2, label %exit [
     i8 0, label %await.ready
@@ -39,7 +38,7 @@ exit:
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @g.resume(
-; CHECK:          musttail call fastcc void @fakeresume1(ptr align 8 null)
+; CHECK:          musttail call fastcc void
 ; CHECK-NEXT:     ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
@@ -56,6 +55,7 @@ declare ptr @malloc(i64)
 declare void @consume(ptr)
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
 
 attributes #0 = { presplitcoroutine }
 attributes #1 = { argmemonly nounwind readonly }

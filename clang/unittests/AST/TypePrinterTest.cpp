@@ -76,7 +76,7 @@ TEST(TypePrinter, TemplateId2) {
   ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher, "<int>",
                                  [](PrintingPolicy &Policy) {
                                    Policy.FullyQualifiedName = true;
-                                   Policy.PrintCanonicalTypes = true;
+                                   Policy.PrintAsCanonical = true;
                                  }));
 }
 
@@ -153,6 +153,22 @@ TEST(TypePrinter, TemplateIdWithNTTP) {
       [](PrintingPolicy &Policy) {
         Policy.EntireContentsOfLargeArray = true;
       }));
+}
+
+TEST(TypePrinter, TemplateArgumentsSubstitution) {
+  constexpr char Code[] = R"cpp(
+       template <typename Y> class X {};
+       typedef X<int> A;
+       int foo() {
+          return sizeof(A);
+       }
+  )cpp";
+  auto Matcher = typedefNameDecl(hasName("A"), hasType(qualType().bind("id")));
+  ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher, "X<int>",
+                                 [](PrintingPolicy &Policy) {
+                                   Policy.SuppressTagKeyword = false;
+                                   Policy.SuppressScope = true;
+                                 }));
 }
 
 TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
@@ -241,7 +257,7 @@ TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
     const int Result = 42;
     auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
     // Arg is instantiated with '40 + 2'
-    TemplateArgument Arg(ConstExpr);
+    TemplateArgument Arg(ConstExpr, /*IsCanonical=*/false);
 
     // Param has default expr of '42'
     auto const *Param = Params->getParam(1);
@@ -257,7 +273,7 @@ TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
     auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
 
     // Arg is instantiated with '40 + 1'
-    TemplateArgument Arg(ConstExpr);
+    TemplateArgument Arg(ConstExpr, /*IsCanonical=*/false);
 
     // Param has default expr of '42'
     auto const *Param = Params->getParam(1);
@@ -273,7 +289,7 @@ TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
     auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
 
     // Arg is instantiated with '4 + 0'
-    TemplateArgument Arg(ConstExpr);
+    TemplateArgument Arg(ConstExpr, /*IsCanonical=*/false);
 
     // Param has is value-dependent expression (i.e., sizeof(T))
     auto const *Param = Params->getParam(3);

@@ -1,37 +1,37 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -relocation-model=pic -frame-pointer=all -mcpu=cortex-a8 | FileCheck %s
 ; rdar://10676853
 
-%struct.Dict_node_struct = type { i8*, %struct.Word_file_struct*, %struct.Exp_struct*, %struct.Dict_node_struct*, %struct.Dict_node_struct* }
-%struct.Word_file_struct = type { [60 x i8], i32, %struct.Word_file_struct* }
+%struct.Dict_node_struct = type { ptr, ptr, ptr, ptr, ptr }
+%struct.Word_file_struct = type { [60 x i8], i32, ptr }
 %struct.Exp_struct = type { i8, i8, i8, i8, %union.anon }
-%union.anon = type { %struct.E_list_struct* }
-%struct.E_list_struct = type { %struct.E_list_struct*, %struct.Exp_struct* }
+%union.anon = type { ptr }
+%struct.E_list_struct = type { ptr, ptr }
 
-@lookup_list = external hidden unnamed_addr global %struct.Dict_node_struct*, align 4
+@lookup_list = external hidden unnamed_addr global ptr, align 4
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 
-define hidden fastcc void @rdictionary_lookup(%struct.Dict_node_struct* %dn, i8* nocapture %s) nounwind ssp {
+define hidden fastcc void @rdictionary_lookup(ptr %dn, ptr nocapture %s) nounwind ssp {
 ; CHECK-LABEL: rdictionary_lookup:
 entry:
   br label %tailrecurse
 
 tailrecurse:                                      ; preds = %if.then10, %entry
-  %dn.tr = phi %struct.Dict_node_struct* [ %dn, %entry ], [ %9, %if.then10 ]
-  %cmp = icmp eq %struct.Dict_node_struct* %dn.tr, null
+  %dn.tr = phi ptr [ %dn, %entry ], [ %9, %if.then10 ]
+  %cmp = icmp eq ptr %dn.tr, null
   br i1 %cmp, label %if.end11, label %if.end
 
 if.end:                                           ; preds = %tailrecurse
-  %string = getelementptr inbounds %struct.Dict_node_struct, %struct.Dict_node_struct* %dn.tr, i32 0, i32 0
-  %0 = load i8*, i8** %string, align 4
+  %string = getelementptr inbounds %struct.Dict_node_struct, ptr %dn.tr, i32 0, i32 0
+  %0 = load ptr, ptr %string, align 4
   br label %while.cond.i
 
 while.cond.i:                                     ; preds = %while.body.i, %if.end
-  %1 = phi i8* [ %s, %if.end ], [ %incdec.ptr.i, %while.body.i ]
-  %storemerge.i = phi i8* [ %0, %if.end ], [ %incdec.ptr6.i, %while.body.i ]
-  %2 = load i8, i8* %1, align 1
+  %1 = phi ptr [ %s, %if.end ], [ %incdec.ptr.i, %while.body.i ]
+  %storemerge.i = phi ptr [ %0, %if.end ], [ %incdec.ptr6.i, %while.body.i ]
+  %2 = load i8, ptr %1, align 1
   %cmp.i = icmp eq i8 %2, 0
-  %.pre.i = load i8, i8* %storemerge.i, align 1
+  %.pre.i = load i8, ptr %storemerge.i, align 1
   br i1 %cmp.i, label %lor.lhs.false.i, label %land.end.i
 
 land.end.i:                                       ; preds = %while.cond.i
@@ -39,8 +39,8 @@ land.end.i:                                       ; preds = %while.cond.i
   br i1 %cmp4.i, label %while.body.i, label %while.end.i
 
 while.body.i:                                     ; preds = %land.end.i
-  %incdec.ptr.i = getelementptr inbounds i8, i8* %1, i32 1
-  %incdec.ptr6.i = getelementptr inbounds i8, i8* %storemerge.i, i32 1
+  %incdec.ptr.i = getelementptr inbounds i8, ptr %1, i32 1
+  %incdec.ptr6.i = getelementptr inbounds i8, ptr %storemerge.i, i32 1
   br label %while.cond.i
 
 while.end.i:                                      ; preds = %land.end.i
@@ -68,22 +68,22 @@ if.end3:                                          ; preds = %dict_match.exit, %l
 ; CHECK: cmp
 ; CHECK-NOT: cbnz
   %storemerge1.i3 = phi i32 [ %sub.i, %dict_match.exit ], [ 0, %lor.lhs.false.i ], [ 0, %while.end.i ]
-  %right = getelementptr inbounds %struct.Dict_node_struct, %struct.Dict_node_struct* %dn.tr, i32 0, i32 4
-  %4 = load %struct.Dict_node_struct*, %struct.Dict_node_struct** %right, align 4
-  tail call fastcc void @rdictionary_lookup(%struct.Dict_node_struct* %4, i8* %s)
+  %right = getelementptr inbounds %struct.Dict_node_struct, ptr %dn.tr, i32 0, i32 4
+  %4 = load ptr, ptr %right, align 4
+  tail call fastcc void @rdictionary_lookup(ptr %4, ptr %s)
   %cmp4 = icmp eq i32 %storemerge1.i3, 0
   br i1 %cmp4, label %if.then5, label %if.end8
 
 if.then5:                                         ; preds = %if.end3
-  %call6 = tail call fastcc i8* @xalloc(i32 20)
-  %5 = bitcast i8* %call6 to %struct.Dict_node_struct*
-  %6 = bitcast %struct.Dict_node_struct* %dn.tr to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %call6, i8* align 4 %6, i32 16, i1 false)
-  %7 = load %struct.Dict_node_struct*, %struct.Dict_node_struct** @lookup_list, align 4
-  %right7 = getelementptr inbounds i8, i8* %call6, i32 16
-  %8 = bitcast i8* %right7 to %struct.Dict_node_struct**
-  store %struct.Dict_node_struct* %7, %struct.Dict_node_struct** %8, align 4
-  store %struct.Dict_node_struct* %5, %struct.Dict_node_struct** @lookup_list, align 4
+  %call6 = tail call fastcc ptr @xalloc(i32 20)
+  %5 = bitcast ptr %call6 to ptr
+  %6 = bitcast ptr %dn.tr to ptr
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %call6, ptr align 4 %6, i32 16, i1 false)
+  %7 = load ptr, ptr @lookup_list, align 4
+  %right7 = getelementptr inbounds i8, ptr %call6, i32 16
+  %8 = bitcast ptr %right7 to ptr
+  store ptr %7, ptr %8, align 4
+  store ptr %5, ptr @lookup_list, align 4
   br label %if.then10
 
 if.end8:                                          ; preds = %if.end3
@@ -91,8 +91,8 @@ if.end8:                                          ; preds = %if.end3
   br i1 %cmp9, label %if.then10, label %if.end11
 
 if.then10:                                        ; preds = %if.end8, %if.then5, %dict_match.exit
-  %left = getelementptr inbounds %struct.Dict_node_struct, %struct.Dict_node_struct* %dn.tr, i32 0, i32 3
-  %9 = load %struct.Dict_node_struct*, %struct.Dict_node_struct** %left, align 4
+  %left = getelementptr inbounds %struct.Dict_node_struct, ptr %dn.tr, i32 0, i32 3
+  %9 = load ptr, ptr %left, align 4
   br label %tailrecurse
 
 if.end11:                                         ; preds = %if.end8, %tailrecurse
@@ -100,4 +100,4 @@ if.end11:                                         ; preds = %if.end8, %tailrecur
 }
 
 ; Materializable
-declare hidden fastcc i8* @xalloc(i32) nounwind ssp
+declare hidden fastcc ptr @xalloc(i32) nounwind ssp

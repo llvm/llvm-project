@@ -24,8 +24,8 @@ def Bufferization_Dialect : Dialect {
 
     An overview of the bufferization infrastructure and important conceptual
     details related to using the MLIR dialect conversion infrastructure can be
-    found in [bufferization](/docs/Bufferization/) and [buffer
-    deallocation](/docs/BufferDeallocationInternals/).
+    found in [bufferization](/docs/Bufferization/) and [ownership-based buffer
+    deallocation](/docs/OwnershipBasedBufferDeallocation/).
   }];
   let dependentDialects = [
     "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect",

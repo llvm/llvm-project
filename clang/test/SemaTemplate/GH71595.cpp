@@ -18,17 +18,17 @@ void f() {
 template<class A>
 class temp {
     template<C<temp> T>
-    friend void g();
+    friend void g(); // expected-error {{friend declaration with a constraint that depends on an enclosing template parameter must be a definition}}
 
-    temp(); // expected-note {{implicitly declared private here}}
+    temp();
 };
 
 template<C<temp<int>> T>
 void g() {
-    auto v = temp<T>(); // expected-error {{calling a private constructor of class 'temp<int>'}}
+    auto v = temp<T>();
 }
 
 void h() {
     f<int>();
-    g<int>(); // expected-note {{in instantiation of function template specialization 'g<int>' requested here}}
+    g<int>();
 }

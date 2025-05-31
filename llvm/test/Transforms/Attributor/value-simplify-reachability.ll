@@ -14,12 +14,12 @@ declare void @free(ptr) allockind("free") "alloc-family"="malloc"
 declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1) "alloc-family"="malloc"
 
 ;.
-; CHECK: @[[GINT1:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[GINT2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
-; CHECK: @[[GINT3:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[GINT4:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0, align 4
-; CHECK: @[[GINT5:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 undef, align 4
-; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = global i32 0
+; CHECK: @GInt1 = internal global i32 undef, align 4
+; CHECK: @GInt2 = internal global i32 0, align 4
+; CHECK: @GInt3 = internal global i32 undef, align 4
+; CHECK: @GInt4 = internal global i32 0, align 4
+; CHECK: @GInt5 = internal global i32 undef, align 4
+; CHECK: @B = global i32 0
 ;.
 define internal void @write1ToGInt1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
@@ -692,7 +692,7 @@ declare void @usei32(i32) nocallback nosync
 define internal void @exclusion_set3_helper(i1 %c, ptr %p) {
 ; TUNIT: Function Attrs: nosync
 ; TUNIT-LABEL: define {{[^@]+}}@exclusion_set3_helper
-; TUNIT-SAME: (i1 noundef [[C:%.*]], ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR8:[0-9]+]] {
+; TUNIT-SAME: (i1 noundef [[C:%.*]], ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR8:[0-9]+]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    store i32 42, ptr [[P]], align 4
@@ -707,7 +707,7 @@ define internal void @exclusion_set3_helper(i1 %c, ptr %p) {
 ; TUNIT-NEXT:    [[USE1:%.*]] = load i32, ptr [[P]], align 4
 ; TUNIT-NEXT:    call void @usei32(i32 [[USE1]])
 ; TUNIT-NEXT:    store i32 77, ptr [[P]], align 4
-; TUNIT-NEXT:    call void @exclusion_set3_helper(i1 noundef true, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[P]]) #[[ATTR8]]
+; TUNIT-NEXT:    call void @exclusion_set3_helper(i1 noundef true, ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[P]]) #[[ATTR8]]
 ; TUNIT-NEXT:    [[USE2:%.*]] = load i32, ptr [[P]], align 4
 ; TUNIT-NEXT:    call void @usei32(i32 noundef [[USE2]])
 ; TUNIT-NEXT:    br label [[T]]
@@ -717,7 +717,7 @@ define internal void @exclusion_set3_helper(i1 %c, ptr %p) {
 ;
 ; CGSCC: Function Attrs: nosync
 ; CGSCC-LABEL: define {{[^@]+}}@exclusion_set3_helper
-; CGSCC-SAME: (i1 noundef [[C:%.*]], ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[P:%.*]]) #[[ATTR5]] {
+; CGSCC-SAME: (i1 noundef [[C:%.*]], ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR5]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    store i32 42, ptr [[P]], align 4
@@ -732,7 +732,7 @@ define internal void @exclusion_set3_helper(i1 %c, ptr %p) {
 ; CGSCC-NEXT:    [[USE1:%.*]] = load i32, ptr [[P]], align 4
 ; CGSCC-NEXT:    call void @usei32(i32 [[USE1]])
 ; CGSCC-NEXT:    store i32 77, ptr [[P]], align 4
-; CGSCC-NEXT:    call void @exclusion_set3_helper(i1 noundef true, ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[P]]) #[[ATTR5]]
+; CGSCC-NEXT:    call void @exclusion_set3_helper(i1 noundef true, ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[P]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[USE2:%.*]] = load i32, ptr [[P]], align 4
 ; CGSCC-NEXT:    call void @usei32(i32 [[USE2]])
 ; CGSCC-NEXT:    br label [[T]]
@@ -771,7 +771,7 @@ define i32 @exclusion_set3(i1 %c) {
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR5]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    store i32 3, ptr [[A]], align 4
-; TUNIT-NEXT:    call void @exclusion_set3_helper(i1 noundef [[C]], ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR8]]
+; TUNIT-NEXT:    call void @exclusion_set3_helper(i1 noundef [[C]], ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]]) #[[ATTR8]]
 ; TUNIT-NEXT:    [[FINAL:%.*]] = load i32, ptr [[A]], align 4
 ; TUNIT-NEXT:    ret i32 [[FINAL]]
 ;
@@ -780,7 +780,7 @@ define i32 @exclusion_set3(i1 %c) {
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR5]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 3, ptr [[A]], align 4
-; CGSCC-NEXT:    call void @exclusion_set3_helper(i1 noundef [[C]], ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]])
+; CGSCC-NEXT:    call void @exclusion_set3_helper(i1 noundef [[C]], ptr noalias nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[A]])
 ; CGSCC-NEXT:    [[FINAL:%.*]] = load i32, ptr [[A]], align 4
 ; CGSCC-NEXT:    ret i32 [[FINAL]]
 ;
@@ -805,7 +805,7 @@ define internal i32 @readI32(ptr %a) {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@readI32
-; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CGSCC-NEXT:    [[R:%.*]] = load i32, ptr [[A]], align 4
 ; CGSCC-NEXT:    store i32 1, ptr @B, align 4
 ; CGSCC-NEXT:    ret i32 [[R]]
@@ -830,7 +830,7 @@ define internal i32 @broker(ptr %a) {
 ; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CGSCC-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[A_PRIV]], align 4
-; CGSCC-NEXT:    [[R:%.*]] = call i32 @readI32(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_PRIV]]) #[[ATTR14:[0-9]+]]
+; CGSCC-NEXT:    [[R:%.*]] = call i32 @readI32(ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[A_PRIV]]) #[[ATTR14:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @readI32(ptr %a)

@@ -125,7 +125,7 @@ define amdgpu_gfx float @simple_stack_recurse(float %arg0) #0 {
   ret float %add
 }
 
-@lds = internal addrspace(3) global [64 x float] undef
+@lds = internal addrspace(3) global [64 x float] poison
 
 define amdgpu_gfx float @simple_lds(float %arg0) #0 {
   %val = load float, ptr addrspace(3) @lds
@@ -142,8 +142,9 @@ attributes #0 = { nounwind }
 
 ; GCN: amdpal.pipelines:
 ; GCN-NEXT:  - .registers:
-; GCN-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01ca{{$}}
-; GCN-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
+; SDAG-NEXT:     '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01ca{{$}}
+; GISEL-NEXT:    '0x2e12 (COMPUTE_PGM_RSRC1)': 0xaf01ca{{$}}
+; GCN-NEXT:      '0x2e13 (COMPUTE_PGM_RSRC2)': 0x8001{{$}}
 ; GCN-NEXT:    .shader_functions:
 ; GCN-NEXT:      dynamic_stack:
 ; GCN-NEXT:        .backend_stack_size: 0x10{{$}}

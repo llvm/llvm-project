@@ -1,7 +1,4 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
@@ -11,7 +8,7 @@
 // With `-emit-llvm`, the output should be the same as the aforementioned line
 // as `-fgpu-rdc` in HIP implies `-emit-llvm`.
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -c -emit-llvm -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
@@ -21,14 +18,14 @@
 // With `-fno-hip-emit-relocatable`, the output should be the same as the aforementioned line
 // as `-fgpu-rdc` in HIP implies `-fno-hip-emit-relocatable`.
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -c -fno-hip-emit-relocatable -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip --gpu-bundle-output \
 // RUN: 2>&1 | FileCheck -check-prefixes=COMMON,EMITBC %s
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
@@ -38,7 +35,7 @@
 // With `-emit-llvm`, the output should be the same as the aforementioned line
 // as `-fgpu-rdc` in HIP implies `-emit-llvm`.
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -emit-llvm -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
@@ -49,7 +46,7 @@
 // output, there should 3 steps (preprocessor, compile, and backend) per source
 // and per target, totally 12 steps.
 
-// RUN: %clang -### -save-temps --target=x86_64-linux-gnu \
+// RUN: %clang -### -save-temps --target=x86_64-linux-gnu --no-offload-new-driver \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
@@ -58,7 +55,7 @@
 
 // Check output one file without bundling cause error.
 
-// RUN: not %clang -### --target=x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu --no-offload-new-driver \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu -o %t.s --no-gpu-bundle-output \
@@ -69,7 +66,7 @@
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
 // COMMON-SAME: {{.*}} "-main-file-name" "a.cu"
-// COMMON-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// COMMON-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // COMMON-SAME: "-fapply-global-visibility-to-externs"
 // COMMON-SAME: "-target-cpu" "gfx803"
 // COMMON-SAME: "-fgpu-rdc"
@@ -82,7 +79,7 @@
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
 // COMMON-SAME: {{.*}} "-main-file-name" "a.cu"
-// COMMON-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// COMMON-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // COMMON-SAME: "-fapply-global-visibility-to-externs"
 // COMMON-SAME: "-target-cpu" "gfx900"
 // COMMON-SAME: "-fgpu-rdc"
@@ -91,7 +88,7 @@
 // COMMON-SAME: {{.*}} {{".*a.cu"}}
 
 // COMMON: "{{.*}}clang-offload-bundler" "-type={{(bc|ll)}}"
-// COMMON-SAME: "-targets=hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
+// COMMON-SAME: "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx803,hip-amdgcn-amd-amdhsa-unknown-gfx900"
 // COMMON-SAME: "-output=a-hip-amdgcn-amd-amdhsa.{{(bc|ll)}}"
 
 // COMMON: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
@@ -99,7 +96,7 @@
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
 // COMMON-SAME: {{.*}} "-main-file-name" "b.hip"
-// COMMON-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// COMMON-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // COMMON-SAME: "-fapply-global-visibility-to-externs"
 // COMMON-SAME: "-target-cpu" "gfx803"
 // COMMON-SAME: "-fgpu-rdc"
@@ -112,7 +109,7 @@
 // EMITBC-SAME: "-emit-llvm-bc"
 // EMITLL-SAME: "-emit-llvm"
 // COMMON-SAME: {{.*}} "-main-file-name" "b.hip"
-// COMMON-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
+// COMMON-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fcuda-allow-variadic-functions" "-fvisibility=hidden"
 // COMMON-SAME: "-fapply-global-visibility-to-externs"
 // COMMON-SAME: "-target-cpu" "gfx900"
 // COMMON-SAME: "-fgpu-rdc"
@@ -121,7 +118,7 @@
 // COMMON-SAME: {{.*}} {{".*b.hip"}}
 
 // COMMON: "{{.*}}clang-offload-bundler" "-type={{(bc|ll)}}"
-// COMMON-SAME: "-targets=hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
+// COMMON-SAME: "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx803,hip-amdgcn-amd-amdhsa-unknown-gfx900"
 // COMMON-SAME: "-output=b-hip-amdgcn-amd-amdhsa.{{(bc|ll)}}"
 
 // SAVETEMP: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
@@ -151,7 +148,7 @@
 // SAVETEMP-SAME: {{.*}} "-o" {{"a.*.ll"}} "-x" "ir" [[A_GFX900_TMP_BC]]
 
 // SAVETEMP: "{{.*}}clang-offload-bundler" "-type=ll"
-// SAVETEMP-SAME: "-targets=hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
+// SAVETEMP-SAME: "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx803,hip-amdgcn-amd-amdhsa-unknown-gfx900"
 // SAVETEMP-SAME: "-output=a-hip-amdgcn-amd-amdhsa.ll"
 
 // SAVETEMP: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"
@@ -181,7 +178,7 @@
 // SAVETEMP-SAME: {{.*}} "-o" {{"b.*.ll"}} "-x" "ir" [[B_GFX900_TMP_BC]]
 
 // SAVETEMP: "{{.*}}clang-offload-bundler" "-type=ll"
-// SAVETEMP-SAME: "-targets=hip-amdgcn-amd-amdhsa-gfx803,hip-amdgcn-amd-amdhsa-gfx900"
+// SAVETEMP-SAME: "-targets=hip-amdgcn-amd-amdhsa-unknown-gfx803,hip-amdgcn-amd-amdhsa-unknown-gfx900"
 // SAVETEMP-SAME: "-output=b-hip-amdgcn-amd-amdhsa.ll"
 
 // FAIL: error: cannot specify -o when generating multiple output files

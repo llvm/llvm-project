@@ -1,5 +1,5 @@
 ; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=IR %s
-; RUN: llc -march=amdgcn -mcpu=fiji -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=ASM %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=ASM %s
 
 ; IR-LABEL: define amdgpu_vs void @promote_alloca_shaders(ptr addrspace(1) inreg %out, ptr addrspace(1) inreg %in) #0 {
 ; IR: alloca [5 x i32]
@@ -40,7 +40,7 @@ entry:
   store i32 1, ptr addrspace(5) %tmp2
   %tmp3 = getelementptr [2 x i32], ptr addrspace(5) %tmp, i32 0, i32 %in
   %tmp4 = load i32, ptr addrspace(5) %tmp3
-  %tmp5 = load volatile i32, ptr addrspace(1) undef
+  %tmp5 = load volatile i32, ptr addrspace(1) poison
   %tmp6 = add i32 %tmp4, %tmp5
   store i32 %tmp6, ptr addrspace(1) %out
   ret void
@@ -77,7 +77,7 @@ declare i32 @foo(ptr addrspace(5)) #0
 ; ASM: buffer_store_dword
 ; ASM: buffer_store_dword
 ; ASM: s_swappc_b64
-; ASM: ScratchSize: 16400
+; ASM: ScratchSize: 16
 define amdgpu_kernel void @call_private(ptr addrspace(1) %out, i32 %in) #0 {
 entry:
   %tmp = alloca [2 x i32], addrspace(5)
@@ -94,3 +94,4 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
 attributes #1 = { nounwind readnone }
+

@@ -20,7 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTSHAPETOSTANDARD
+#define GEN_PASS_DEF_CONVERTSHAPETOSTANDARDPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -147,9 +147,7 @@ LogicalResult BroadcastOpConverter::matchAndRewrite(
   // Find the maximum rank
   Value maxRank = ranks.front();
   for (Value v : llvm::drop_begin(ranks, 1)) {
-    Value rankIsGreater =
-        lb.create<arith::CmpIOp>(arith::CmpIPredicate::ugt, v, maxRank);
-    maxRank = lb.create<arith::SelectOp>(rankIsGreater, v, maxRank);
+    maxRank = lb.create<arith::MaxUIOp>(v, maxRank);
   }
 
   // Calculate the difference of ranks and the maximum rank for later offsets.
@@ -262,9 +260,7 @@ LogicalResult IsBroadcastableOpConverter::matchAndRewrite(
   // Find the maximum rank
   Value maxRank = ranks.front();
   for (Value v : llvm::drop_begin(ranks, 1)) {
-    Value rankIsGreater =
-        lb.create<arith::CmpIOp>(arith::CmpIPredicate::ugt, v, maxRank);
-    maxRank = lb.create<arith::SelectOp>(rankIsGreater, v, maxRank);
+    maxRank = lb.create<arith::MaxUIOp>(v, maxRank);
   }
 
   // Calculate the difference of ranks and the maximum rank for later offsets.
@@ -685,7 +681,7 @@ namespace {
 namespace {
 /// Conversion pass.
 class ConvertShapeToStandardPass
-    : public impl::ConvertShapeToStandardBase<ConvertShapeToStandardPass> {
+    : public impl::ConvertShapeToStandardPassBase<ConvertShapeToStandardPass> {
 
   void runOnOperation() override;
 };
@@ -730,9 +726,4 @@ void mlir::populateShapeToStandardConversionPatterns(
       SplitAtOpConversion,
       ToExtentTensorOpConversion>(patterns.getContext());
   // clang-format on
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertShapeToStandardPass() {
-  return std::make_unique<ConvertShapeToStandardPass>();
 }

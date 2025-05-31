@@ -1,4 +1,5 @@
 ; RUN: opt -march=hexagon -hexagon-loop-idiom -S < %s | FileCheck %s
+; RUN: opt -mtriple=hexagon-- -p hexagon-loop-idiom -disable-memcpy-idiom -S < %s | FileCheck %s
 
 ; Make sure we don't convert load/store loops into memcpy if the access type
 ; is a vector. Using vector instructions is generally better in such cases.

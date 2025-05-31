@@ -11,10 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARM.h"
 #include "ARMCallingConv.h"
+#include "ARM.h"
 #include "ARMSubtarget.h"
-#include "ARMRegisterInfo.h"
 using namespace llvm;
 
 // APCS f64 is in register pairs, possibly split to stack
@@ -24,7 +23,7 @@ static bool f64AssignAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
   static const MCPhysReg RegList[] = { ARM::R0, ARM::R1, ARM::R2, ARM::R3 };
 
   // Try to get the first register.
-  if (unsigned Reg = State.AllocateReg(RegList))
+  if (MCRegister Reg = State.AllocateReg(RegList))
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
   else {
     // For the 2nd half of a v2f64, do not fail.
@@ -38,7 +37,7 @@ static bool f64AssignAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   // Try to get the second register.
-  if (unsigned Reg = State.AllocateReg(RegList))
+  if (MCRegister Reg = State.AllocateReg(RegList))
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
   else
     State.addLoc(CCValAssign::getCustomMem(
@@ -67,8 +66,8 @@ static bool f64AssignAAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
   static const MCPhysReg ShadowRegList[] = { ARM::R0, ARM::R1 };
   static const MCPhysReg GPRArgRegs[] = { ARM::R0, ARM::R1, ARM::R2, ARM::R3 };
 
-  unsigned Reg = State.AllocateReg(HiRegList, ShadowRegList);
-  if (Reg == 0) {
+  MCRegister Reg = State.AllocateReg(HiRegList, ShadowRegList);
+  if (!Reg) {
 
     // If we had R3 unallocated only, now we still must to waste it.
     Reg = State.AllocateReg(GPRArgRegs);
@@ -89,7 +88,7 @@ static bool f64AssignAAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
     if (HiRegList[i] == Reg)
       break;
 
-  unsigned T = State.AllocateReg(LoRegList[i]);
+  MCRegister T = State.AllocateReg(LoRegList[i]);
   (void)T;
   assert(T == LoRegList[i] && "Could not allocate register");
 
@@ -116,8 +115,8 @@ static bool f64RetAssign(unsigned ValNo, MVT ValVT, MVT LocVT,
   static const MCPhysReg HiRegList[] = { ARM::R0, ARM::R2 };
   static const MCPhysReg LoRegList[] = { ARM::R1, ARM::R3 };
 
-  unsigned Reg = State.AllocateReg(HiRegList, LoRegList);
-  if (Reg == 0)
+  MCRegister Reg = State.AllocateReg(HiRegList, LoRegList);
+  if (!Reg)
     return false; // we didn't handle it
 
   unsigned i;
@@ -190,9 +189,10 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
   // Try to allocate a contiguous block of registers, each of the correct
   // size to hold one member.
   auto &DL = State.getMachineFunction().getDataLayout();
-  const Align StackAlign = DL.getStackAlignment();
+  const MaybeAlign StackAlign = DL.getStackAlignment();
+  assert(StackAlign && "data layout string is missing stack alignment");
   const Align FirstMemberAlign(PendingMembers[0].getExtraInfo());
-  Align Alignment = std::min(FirstMemberAlign, StackAlign);
+  Align Alignment = std::min(FirstMemberAlign, *StackAlign);
 
   ArrayRef<MCPhysReg> RegList;
   switch (LocVT.SimpleTy) {
@@ -228,12 +228,12 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
     break;
   }
 
-  unsigned RegResult = State.AllocateRegBlock(RegList, PendingMembers.size());
-  if (RegResult) {
-    for (CCValAssign &PendingMember : PendingMembers) {
-      PendingMember.convertToReg(RegResult);
+  ArrayRef<MCPhysReg> RegResult =
+      State.AllocateRegBlock(RegList, PendingMembers.size());
+  if (!RegResult.empty()) {
+    for (const auto &[PendingMember, Reg] : zip(PendingMembers, RegResult)) {
+      PendingMember.convertToReg(Reg);
       State.addLoc(PendingMember);
-      ++RegResult;
     }
     PendingMembers.clear();
     return true;
@@ -287,7 +287,7 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
 static bool CustomAssignInRegList(unsigned ValNo, MVT ValVT, MVT LocVT,
                                   CCValAssign::LocInfo LocInfo, CCState &State,
                                   ArrayRef<MCPhysReg> RegList) {
-  unsigned Reg = State.AllocateReg(RegList);
+  MCRegister Reg = State.AllocateReg(RegList);
   if (Reg) {
     State.addLoc(CCValAssign::getCustomReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     return true;
@@ -298,7 +298,8 @@ static bool CustomAssignInRegList(unsigned ValNo, MVT ValVT, MVT LocVT,
 static bool CC_ARM_AAPCS_Custom_f16(unsigned ValNo, MVT ValVT, MVT LocVT,
                                     CCValAssign::LocInfo LocInfo,
                                     ISD::ArgFlagsTy ArgFlags, CCState &State) {
-  // f16 arguments are extended to i32 and assigned to a register in [r0, r3]
+  // f16 and bf16 arguments are extended to i32 and assigned to a register in
+  // [r0, r3].
   return CustomAssignInRegList(ValNo, ValVT, MVT::i32, LocInfo, State,
                                RRegList);
 }
@@ -307,9 +308,24 @@ static bool CC_ARM_AAPCS_VFP_Custom_f16(unsigned ValNo, MVT ValVT, MVT LocVT,
                                         CCValAssign::LocInfo LocInfo,
                                         ISD::ArgFlagsTy ArgFlags,
                                         CCState &State) {
-  // f16 arguments are extended to f32 and assigned to a register in [s0, s15]
+  // f16 and bf16 arguments are extended to f32 and assigned to a register in
+  // [s0, s15].
   return CustomAssignInRegList(ValNo, ValVT, MVT::f32, LocInfo, State,
                                SRegList);
+}
+
+static bool CC_ARM_AAPCS_Common_Custom_f16_Stack(unsigned ValNo, MVT ValVT,
+                                                 MVT LocVT,
+                                                 CCValAssign::LocInfo LocInfo,
+                                                 ISD::ArgFlagsTy ArgFlags,
+                                                 CCState &State) {
+  // f16 and bf16 (if not passed in a register) are assigned to a 32-bit stack
+  // slot, with the most-significant 16 bits unspecified. The 32-bit slot is
+  // important to make sure that the byte ordering is correct for big endian
+  // targets.
+  State.addLoc(CCValAssign::getCustomMem(
+      ValNo, ValVT, State.AllocateStack(4, Align(4)), MVT::i32, LocInfo));
+  return true;
 }
 
 // Include the table generated calling convention implementations.

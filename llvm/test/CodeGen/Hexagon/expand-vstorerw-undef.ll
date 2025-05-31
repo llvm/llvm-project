@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 
 ; After register allocation it is possible to have a spill of a register
 ; that is only partially defined. That in itself it fine, but creates a
@@ -69,6 +69,7 @@ b18:                                              ; preds = %b16, %b7
   br label %b22
 
 b21:                                              ; preds = %b22
+  store volatile <64 x i32> %v20, ptr null
   tail call void @sammy() #3
   br label %b7
 

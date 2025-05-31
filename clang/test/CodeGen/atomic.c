@@ -1,10 +1,14 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple=i686-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple=i686-apple-darwin9 | FileCheck %s --check-prefixes=CHECK,X86
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple=s390x-linux-gnu | FileCheck %s --check-prefixes=CHECK,SYSTEMZ
 
 // CHECK: @[[NONSTATIC_GLOB_POINTER_FROM_INT:.+]] = global ptr null
 // CHECK: @[[GLOB_POINTER:.+]] = internal global ptr null
 // CHECK: @[[GLOB_POINTER_FROM_INT:.+]] = internal global ptr null
 // CHECK: @[[GLOB_INT:.+]] = internal global i32 0
 // CHECK: @[[GLOB_FLT:.+]] = internal global float {{[0e\+-\.]+}}, align
+// CHECK: @[[GLOB_DBL:.+]] = internal global double {{[0e\+-\.]+}}, align
+// X86:   @[[GLOB_LONGDBL:.+]] = internal global x86_fp80 {{[0xK]+}}, align
+// SYSTEMZ: @[[GLOB_LONGDBL:.+]] = internal global fp128 {{[0xL]+}}, align
 
 int atomic(void) {
   // non-sensical test for sync functions
@@ -79,8 +83,10 @@ int atomic(void) {
   // CHECK: atomicrmw nand ptr %valc, i8 6 seq_cst, align 1
  
   __sync_val_compare_and_swap((void **)0, (void *)0, (void *)0);
-  // CHECK: [[PAIR:%[a-z0-9_.]+]] = cmpxchg ptr null, i32 0, i32 0 seq_cst seq_cst, align 4
-  // CHECK: extractvalue { i32, i1 } [[PAIR]], 0
+  // X86:      [[PAIR:%[a-z0-9_.]+]] = cmpxchg ptr null, i32 0, i32 0 seq_cst seq_cst, align 4
+  // X86-NEXT: extractvalue { i32, i1 } [[PAIR]], 0
+  // SYSTEMZ:      [[PAIR:%[a-z0-9_.]+]] = cmpxchg ptr null, i64 0, i64 0 seq_cst seq_cst, align 8
+  // SYSTEMZ-NEXT: extractvalue { i64, i1 } [[PAIR]], 0
 
   if ( __sync_val_compare_and_swap(&valb, 0, 1)) {
     // CHECK: [[PAIR:%[a-z0-9_.]+]] = cmpxchg ptr %valb, i8 0, i8 1 seq_cst seq_cst, align 1
@@ -90,13 +96,15 @@ int atomic(void) {
   }
   
   __sync_bool_compare_and_swap((void **)0, (void *)0, (void *)0);
-  // CHECK: cmpxchg ptr null, i32 0, i32 0 seq_cst seq_cst, align 4
+  // X86:     cmpxchg ptr null, i32 0, i32 0 seq_cst seq_cst, align 4
+  // SYSTEMZ: cmpxchg ptr null, i64 0, i64 0 seq_cst seq_cst, align 8
   
   __sync_lock_release(&val);
   // CHECK: store atomic i32 0, {{.*}} release, align 4
 
   __sync_lock_release(&ptrval);
-  // CHECK: store atomic i32 0, {{.*}} release, align 4
+  // X86:     store atomic i32 0, {{.*}} release, align 4
+  // SYSTEMZ: store atomic i64 0, {{.*}} release, align 8
 
   __sync_synchronize ();
   // CHECK: fence seq_cst
@@ -131,20 +139,25 @@ static _Atomic(int *) glob_pointer_from_int = 0;
 _Atomic(int *) nonstatic_glob_pointer_from_int = 0LL;
 static _Atomic int glob_int = 0;
 static _Atomic float glob_flt = 0.0f;
+static _Atomic double glob_dbl = 0.0f;
+static _Atomic long double glob_longdbl = 0.0f;
 
 void force_global_uses(void) {
+  // X86:   %atomic-temp = alloca x86_fp80, align 16
   (void)glob_pointer;
-  // CHECK: %[[LOCAL_INT:.+]] = load atomic i32, ptr @[[GLOB_POINTER]] seq_cst
-  // CHECK-NEXT: inttoptr i32 %[[LOCAL_INT]] to ptr
+  // CHECK: load atomic ptr, ptr @[[GLOB_POINTER]] seq_cst
   (void)glob_pointer_from_int;
-  // CHECK: %[[LOCAL_INT_2:.+]] = load atomic i32, ptr @[[GLOB_POINTER_FROM_INT]] seq_cst
-  // CHECK-NEXT: inttoptr i32 %[[LOCAL_INT_2]] to ptr
+  // CHECK-NEXT: load atomic ptr, ptr @[[GLOB_POINTER_FROM_INT]] seq_cst
   (void)nonstatic_glob_pointer_from_int;
-  // CHECK: %[[LOCAL_INT_3:.+]] = load atomic i32, ptr @[[NONSTATIC_GLOB_POINTER_FROM_INT]] seq_cst
-  // CHECK-NEXT: inttoptr i32 %[[LOCAL_INT_3]] to ptr
+  // CHECK-NEXT: load atomic ptr, ptr @[[NONSTATIC_GLOB_POINTER_FROM_INT]] seq_cst
   (void)glob_int;
-  // CHECK: load atomic i32, ptr @[[GLOB_INT]] seq_cst
+  // CHECK-NEXT: load atomic i32, ptr @[[GLOB_INT]] seq_cst
   (void)glob_flt;
-  // CHECK: %[[LOCAL_FLT:.+]] = load atomic i32, ptr @[[GLOB_FLT]] seq_cst
-  // CHECK-NEXT: bitcast i32 %[[LOCAL_FLT]] to float
+  // CHECK-NEXT: load atomic float, ptr @[[GLOB_FLT]] seq_cst
+  (void)glob_dbl;
+  // CHECK-NEXT: load atomic double, ptr @[[GLOB_DBL]] seq_cst
+  (void)glob_longdbl;
+  // X86:      call void @__atomic_load(i32 noundef 16, ptr noundef @glob_longdbl, ptr noundef %atomic-temp
+  // X86-NEXT: %0 = load x86_fp80, ptr %atomic-temp, align 16
+  // SYSTEMZ: load atomic fp128, ptr @[[GLOB_LONGDBL]] seq_cst
 }

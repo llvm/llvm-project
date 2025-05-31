@@ -1,4 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32v1.3-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.3-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; __kernel void testAtomicCompareExchangeExplicit_cl20(
 ;;     volatile global atomic_int* object,
@@ -28,11 +29,11 @@
 
 ; CHECK-SPIRV: %[[#int:]] = OpTypeInt 32 0
 ;; Constants below correspond to the SPIR-V spec
-; CHECK-SPIRV-DAG: %[[#DeviceScope:]] = OpConstant %[[#int]] 1
-; CHECK-SPIRV-DAG: %[[#WorkgroupScope:]] = OpConstant %[[#int]] 2
-; CHECK-SPIRV-DAG: %[[#ReleaseMemSem:]] = OpConstant %[[#int]] 4
-; CHECK-SPIRV-DAG: %[[#RelaxedMemSem:]] = OpConstant %[[#int]] 0
-; CHECK-SPIRV-DAG: %[[#AcqRelMemSem:]] = OpConstant %[[#int]] 8
+; CHECK-SPIRV-DAG: %[[#DeviceScope:]] = OpConstant %[[#int]] 1{{$}}
+; CHECK-SPIRV-DAG: %[[#WorkgroupScope:]] = OpConstant %[[#int]] 2{{$}}
+; CHECK-SPIRV-DAG: %[[#ReleaseMemSem:]] = OpConstant %[[#int]] 4{{$}}
+; CHECK-SPIRV-DAG: %[[#RelaxedMemSem:]] = OpConstantNull %[[#int]]
+; CHECK-SPIRV-DAG: %[[#AcqRelMemSem:]] = OpConstant %[[#int]] 8{{$}}
 
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#RelaxedMemSem]]
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#AcqRelMemSem]] %[[#RelaxedMemSem]]

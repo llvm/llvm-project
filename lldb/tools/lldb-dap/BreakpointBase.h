@@ -9,53 +9,51 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 
-#include "JSONUtils.h"
-#include "lldb/API/SBBreakpoint.h"
-#include "llvm/Support/JSON.h"
+#include "DAPForward.h"
+#include "Protocol/ProtocolTypes.h"
+#include <optional>
 #include <string>
-#include <vector>
 
 namespace lldb_dap {
 
-struct BreakpointBase {
-  // logMessage part can be either a raw text or an expression.
-  struct LogMessagePart {
-    LogMessagePart(llvm::StringRef text, bool is_expr)
-        : text(text), is_expr(is_expr) {}
-    std::string text;
-    bool is_expr;
-  };
-  // An optional expression for conditional breakpoints.
-  std::string condition;
-  // An optional expression that controls how many hits of the breakpoint are
-  // ignored. The backend is expected to interpret the expression as needed
-  std::string hitCondition;
-  // If this attribute exists and is non-empty, the backend must not 'break'
-  // (stop) but log the message instead. Expressions within {} are
-  // interpolated.
-  std::string logMessage;
-  std::vector<LogMessagePart> logMessageParts;
-  // The LLDB breakpoint associated wit this source breakpoint
-  lldb::SBBreakpoint bp;
+class BreakpointBase {
+public:
+  explicit BreakpointBase(DAP &d) : m_dap(d) {}
+  BreakpointBase(DAP &d, const std::optional<std::string> &condition,
+                 const std::optional<std::string> &hit_condition);
+  virtual ~BreakpointBase() = default;
 
-  BreakpointBase() = default;
-  BreakpointBase(const llvm::json::Object &obj);
+  virtual void SetCondition() = 0;
+  virtual void SetHitCondition() = 0;
+  virtual protocol::Breakpoint ToProtocolBreakpoint() = 0;
 
-  void SetCondition();
-  void SetHitCondition();
-  void SetLogMessage();
   void UpdateBreakpoint(const BreakpointBase &request_bp);
 
-  // Format \param text and return formatted text in \param formatted.
-  // \return any formatting failures.
-  lldb::SBError FormatLogText(llvm::StringRef text, std::string &formatted);
-  lldb::SBError AppendLogMessagePart(llvm::StringRef part, bool is_expr);
-  void NotifyLogMessageError(llvm::StringRef error);
+  /// Breakpoints in LLDB can have names added to them which are kind of like
+  /// labels or categories. All breakpoints that are set through DAP get sent
+  /// through the various DAP set*Breakpoint packets, and these breakpoints will
+  /// be labeled with this name so if breakpoint update events come in for
+  /// breakpoints that the client doesn't know about, like if a breakpoint is
+  /// set manually using the debugger console, we won't report any updates on
+  /// them and confused the client. This label gets added by all of the
+  /// breakpoint classes after they set breakpoints to mark a breakpoint as a
+  /// DAP breakpoint. We can later check a lldb::SBBreakpoint object that comes
+  /// in via LLDB breakpoint changed events and check the breakpoint by calling
+  /// "bool lldb::SBBreakpoint::MatchesName(const char *)" to check if a
+  /// breakpoint in one of the DAP breakpoints that we should report changes
+  /// for.
+  static constexpr const char *kDAPBreakpointLabel = "dap";
 
-  static const char *GetBreakpointLabel();
-  static bool BreakpointHitCallback(void *baton, lldb::SBProcess &process,
-                                    lldb::SBThread &thread,
-                                    lldb::SBBreakpointLocation &location);
+protected:
+  /// Associated DAP session.
+  DAP &m_dap;
+
+  /// An optional expression for conditional breakpoints.
+  std::string m_condition;
+
+  /// An optional expression that controls how many hits of the breakpoint are
+  /// ignored. The backend is expected to interpret the expression as needed
+  std::string m_hit_condition;
 };
 
 } // namespace lldb_dap

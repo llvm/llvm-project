@@ -20,9 +20,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -125,9 +123,8 @@ private:
     if (!BT)
       BT.reset(new BugType(OriginalName, desc));
   }
-  bool uninitRefOrPointer(CheckerContext &C, const SVal &V,
-                          SourceRange ArgRange, const Expr *ArgEx,
-                          std::unique_ptr<BugType> &BT,
+  bool uninitRefOrPointer(CheckerContext &C, SVal V, SourceRange ArgRange,
+                          const Expr *ArgEx, std::unique_ptr<BugType> &BT,
                           const ParmVarDecl *ParamDecl, const char *BD,
                           int ArgumentNumber) const;
 };
@@ -185,7 +182,7 @@ static void describeUninitializedArgumentInCall(const CallEvent &Call,
 }
 
 bool CallAndMessageChecker::uninitRefOrPointer(
-    CheckerContext &C, const SVal &V, SourceRange ArgRange, const Expr *ArgEx,
+    CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
     std::unique_ptr<BugType> &BT, const ParmVarDecl *ParamDecl, const char *BD,
     int ArgumentNumber) const {
 
@@ -263,7 +260,7 @@ public:
           if (Find(FR))
             return true;
         } else {
-          const SVal &V = StoreMgr.getBinding(store, loc::MemRegionVal(FR));
+          SVal V = StoreMgr.getBinding(store, loc::MemRegionVal(FR));
           if (V.isUndef())
             return true;
         }

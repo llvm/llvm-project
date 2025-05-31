@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "file.h"
 #include "src/stdio/putchar.h"
+#include "file.h"
+#include "src/__support/macros/config.h"
 
-#include <stdio.h>
+#include "hdr/stdio_macros.h" // for EOF and stdout.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
   unsigned char uc = static_cast<unsigned char>(c);
@@ -23,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

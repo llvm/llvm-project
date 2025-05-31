@@ -19,7 +19,7 @@ MyMatrix<T, C, R> transpose(const MyMatrix<T, R, C> &M) {
 
 void test_transpose_template1() {
   // CHECK-LABEL: define{{.*}} void @_Z24test_transpose_template1v()
-  // CHECK:         call void @_Z9transposeIiLj4ELj10EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr sret(%struct.MyMatrix.0) align 4 %M1_t, ptr noundef nonnull align 4 dereferenceable(160) %M1)
+  // CHECK:         call void @_Z9transposeIiLj4ELj10EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr dead_on_unwind writable sret(%struct.MyMatrix.0) align 4 %M1_t, ptr noundef nonnull align 4 dereferenceable(160) %M1)
 
   // CHECK-LABEL: define linkonce_odr void @_Z9transposeIiLj4ELj10EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(
   // CHECK:         [[M:%.*]] = load <40 x i32>, ptr {{.*}}, align 4
@@ -31,20 +31,20 @@ void test_transpose_template1() {
 
 void test_transpose_template2(MyMatrix<double, 7, 6> &M) {
   // CHECK-LABEL: define{{.*}} void @_Z24test_transpose_template2R8MyMatrixIdLj7ELj6EE(
-  // CHECK:         call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr sret(%struct.MyMatrix.1) align 8 %ref.tmp1, ptr noundef nonnull align 8 dereferenceable(336) %0)
-  // CHECK-NEXT:    call void @_Z9transposeIdLj6ELj7EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr sret(%struct.MyMatrix.2) align 8 %ref.tmp, ptr noundef nonnull align 8 dereferenceable(336) %ref.tmp1)
-  // CHECK-NEXT:    call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr sret(%struct.MyMatrix.1) align 8 %M2_t, ptr noundef nonnull align 8 dereferenceable(336) %ref.tmp)
+  // CHECK:         call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr dead_on_unwind writable sret(%struct.MyMatrix.1) align 8 %ref.tmp1, ptr noundef nonnull align 8 dereferenceable(336) %0)
+  // CHECK-NEXT:    call void @_Z9transposeIdLj6ELj7EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr dead_on_unwind writable sret(%struct.MyMatrix.2) align 8 %ref.tmp, ptr noundef nonnull align 8 dereferenceable(336) %ref.tmp1)
+  // CHECK-NEXT:    call void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(ptr dead_on_unwind writable sret(%struct.MyMatrix.1) align 8 %M2_t, ptr noundef nonnull align 8 dereferenceable(336) %ref.tmp)
 
   // CHECK-LABEL: define linkonce_odr void @_Z9transposeIdLj7ELj6EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(
   // CHECK:         [[M:%.*]] = load <42 x double>, ptr {{.*}}, align 8
   // CHECK-NEXT:    [[M_T:%.*]] = call <42 x double> @llvm.matrix.transpose.v42f64(<42 x double> [[M]], i32 7, i32 6)
-  // CHECK-NEXT:    [[RES_ADDR:%.*]] = getelementptr inbounds %struct.MyMatrix.1, ptr %agg.result, i32 0, i32 0
+  // CHECK-NEXT:    [[RES_ADDR:%.*]] = getelementptr inbounds nuw %struct.MyMatrix.1, ptr %agg.result, i32 0, i32 0
   // CHECK-NEXT:    store <42 x double> [[M_T]], ptr [[RES_ADDR]], align 8
 
   // CHECK-LABEL: define linkonce_odr void @_Z9transposeIdLj6ELj7EE8MyMatrixIT_XT1_EXT0_EERKS0_IS1_XT0_EXT1_EE(
   // CHECK:         [[M:%.*]] = load <42 x double>, ptr {{.*}}, align 8
   // CHECK-NEXT:    [[M_T:%.*]] = call <42 x double> @llvm.matrix.transpose.v42f64(<42 x double> [[M]], i32 6, i32 7)
-  // CHECK-NEXT:    [[RES_ADDR:%.*]] = getelementptr inbounds %struct.MyMatrix.2, ptr %agg.result, i32 0, i32 0
+  // CHECK-NEXT:    [[RES_ADDR:%.*]] = getelementptr inbounds nuw %struct.MyMatrix.2, ptr %agg.result, i32 0, i32 0
   // CHECK-NEXT:    store <42 x double> [[M_T]], ptr [[RES_ADDR]], align 8
 
   MyMatrix<double, 6, 7> M2_t = transpose(transpose(transpose(M)));
@@ -57,7 +57,7 @@ void test_transpose_rvalue() {
   // CHECK-NEXT:  entry:
   // CHECK-NEXT:    [[M_T_ADDR:%.*]] = alloca [9 x float], align 4
   // CHECK-NEXT:    [[CALL_RES:%.*]] = call noundef <9 x float> @_Z10get_matrixv()
-  // CHECK-NEXT:    [[ADD:%.*]] = fadd <9 x float> [[CALL_RES]], <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
+  // CHECK-NEXT:    [[ADD:%.*]] = fadd <9 x float> [[CALL_RES]], splat (float 2.000000e+00)
   // CHECK-NEXT:    [[M_T:%.*]] = call <9 x float> @llvm.matrix.transpose.v9f32(<9 x float> [[ADD]], i32 3, i32 3)
   // CHECK-NEXT:    store <9 x float> [[M_T]], ptr [[M_T_ADDR]], align 4
   matrix_t<float, 3, 3> m_t = __builtin_matrix_transpose(get_matrix() + 2.0);

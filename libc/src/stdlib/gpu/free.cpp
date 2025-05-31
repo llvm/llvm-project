@@ -7,17 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/free.h"
-#include "src/__support/RPC/rpc_client.h"
+
+#include "src/__support/GPU/allocator.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(void, free, (void *ptr)) {
-  rpc::Client::Port port = rpc::client.open<RPC_FREE>();
-  port.send([=](rpc::Buffer *buffer) {
-    buffer->data[0] = reinterpret_cast<uintptr_t>(ptr);
-  });
-  port.close();
-}
+// FIXME: For now we just default to the NVIDIA device allocator which is
+// always available on NVPTX targets. This will be implemented fully later.
+#ifndef LIBC_TARGET_ARCH_IS_NVPTX
+LLVM_LIBC_FUNCTION(void, free, (void *ptr)) { gpu::deallocate(ptr); }
+#endif
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

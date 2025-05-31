@@ -1,6 +1,5 @@
 add_mlir_dialect_library(MLIRShapeOpsTransforms
   BufferizableOpInterfaceImpl.cpp
-  Bufferize.cpp
   OutlineShapeComputation.cpp
   RemoveShapeConstraints.cpp
   ShapeToShapeLowering.cpp

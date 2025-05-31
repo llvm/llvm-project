@@ -9,15 +9,18 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 
+#include "hdr/stdio_macros.h"
+#include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/mutex.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 struct FileIOResult {
   size_t value;
@@ -45,7 +48,7 @@ public:
   using ReadFunc = FileIOResult(File *, void *, size_t);
   // The SeekFunc is expected to return the current offset of the external
   // file position indicator.
-  using SeekFunc = ErrorOr<long>(File *, long, int);
+  using SeekFunc = ErrorOr<off_t>(File *, off_t, int);
   using CloseFunc = int(File *);
 
   using ModeFlags = uint32_t;
@@ -76,7 +79,7 @@ public:
 private:
   enum class FileOp : uint8_t { NONE, READ, WRITE, SEEK };
 
-  // Platfrom specific functions which create new file objects should initialize
+  // Platform specific functions which create new file objects should initialize
   // these fields suitably via the constructor. Typically, they should be simple
   // syscall wrappers for the corresponding functionality.
   WriteFunc *platform_write;
@@ -154,10 +157,11 @@ public:
                  uint8_t *buffer, size_t buffer_size, int buffer_mode,
                  bool owned, ModeFlags modeflags)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
-        platform_close(cf), mutex(false, false, false), ungetc_buf(0),
-        buf(buffer), bufsize(buffer_size), bufmode(buffer_mode), own_buf(owned),
-        mode(modeflags), pos(0), prev_op(FileOp::NONE), read_limit(0),
-        eof(false), err(false) {
+        platform_close(cf), mutex(/*timed=*/false, /*recursive=*/false,
+                                  /*robust=*/false, /*pshared=*/false),
+        ungetc_buf(0), buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
+        own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
+        read_limit(0), eof(false), err(false) {
     adjust_buf();
   }
 
@@ -179,9 +183,9 @@ public:
     return read_unlocked(data, len);
   }
 
-  ErrorOr<int> seek(long offset, int whence);
+  ErrorOr<int> seek(off_t offset, int whence);
 
-  ErrorOr<long> tell();
+  ErrorOr<off_t> tell();
 
   // If buffer has data written to it, flush it out. Does nothing if the
   // buffer is currently being used as a read buffer.
@@ -276,6 +280,10 @@ private:
   FileIOResult write_unlocked_fbf(const uint8_t *data, size_t len);
   FileIOResult write_unlocked_nbf(const uint8_t *data, size_t len);
 
+  FileIOResult read_unlocked_fbf(uint8_t *data, size_t len);
+  FileIOResult read_unlocked_nbf(uint8_t *data, size_t len);
+  size_t copy_data_from_buf(uint8_t *data, size_t len);
+
   constexpr void adjust_buf() {
     if (read_allowed() && (buf == nullptr || bufsize == 0)) {
       // We should allow atleast one ungetc operation.
@@ -299,7 +307,7 @@ private:
   }
 };
 
-// The implementaiton of this function is provided by the platfrom_file
+// The implementaiton of this function is provided by the platform_file
 // library.
 ErrorOr<File *> openfile(const char *path, const char *mode);
 
@@ -311,6 +319,6 @@ extern File *stdin;
 extern File *stdout;
 extern File *stderr;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H

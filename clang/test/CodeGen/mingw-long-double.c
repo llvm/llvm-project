@@ -11,12 +11,9 @@ struct {
   char c;
   long double ldb;
 } agggregate_LD = {};
-// GNU32: %struct.anon = type { i8, x86_fp80 }
-// GNU32: @agggregate_LD = dso_local global %struct.anon zeroinitializer, align 4
-// GNU64: %struct.anon = type { i8, x86_fp80 }
-// GNU64: @agggregate_LD = dso_local global %struct.anon zeroinitializer, align 16
-// MSC64: %struct.anon = type { i8, double }
-// MSC64: @agggregate_LD = dso_local global %struct.anon zeroinitializer, align 8
+// GNU32: @agggregate_LD = dso_local global { i8, [3 x i8], x86_fp80 } zeroinitializer, align 4
+// GNU64: @agggregate_LD = dso_local global { i8, [15 x i8], x86_fp80 } zeroinitializer, align 16
+// MSC64: @agggregate_LD = dso_local global { i8, [7 x i8], double } zeroinitializer, align 8
 
 long double dataLD = 1.0L;
 // GNU32: @dataLD = dso_local global x86_fp80 0xK3FFF8000000000000000, align 4
@@ -32,15 +29,15 @@ long double TestLD(long double x) {
   return x * x;
 }
 // GNU32: define dso_local x86_fp80 @TestLD(x86_fp80 noundef %x)
-// GNU64: define dso_local void @TestLD(ptr noalias sret(x86_fp80) align 16 %agg.result, ptr noundef %0)
+// GNU64: define dso_local void @TestLD(ptr dead_on_unwind noalias writable sret(x86_fp80) align 16 %agg.result, ptr noundef %0)
 // MSC64: define dso_local double @TestLD(double noundef %x)
 
 long double _Complex TestLDC(long double _Complex x) {
   return x * x;
 }
-// GNU32: define dso_local void @TestLDC(ptr noalias sret({ x86_fp80, x86_fp80 }) align 4 %agg.result, ptr noundef byval({ x86_fp80, x86_fp80 }) align 4 %x)
-// GNU64: define dso_local void @TestLDC(ptr noalias sret({ x86_fp80, x86_fp80 }) align 16 %agg.result, ptr noundef %x)
-// MSC64: define dso_local void @TestLDC(ptr noalias sret({ double, double }) align 8 %agg.result, ptr noundef %x)
+// GNU32: define dso_local void @TestLDC(ptr dead_on_unwind noalias writable sret({ x86_fp80, x86_fp80 }) align 4 %agg.result, ptr noundef byval({ x86_fp80, x86_fp80 }) align 4 %x)
+// GNU64: define dso_local void @TestLDC(ptr dead_on_unwind noalias writable sret({ x86_fp80, x86_fp80 }) align 16 %agg.result, ptr noundef %x)
+// MSC64: define dso_local void @TestLDC(ptr dead_on_unwind noalias writable sret({ double, double }) align 8 %agg.result, ptr noundef %x)
 
 // GNU32: declare dso_local void @__mulxc3
 // GNU64: declare dso_local void @__mulxc3

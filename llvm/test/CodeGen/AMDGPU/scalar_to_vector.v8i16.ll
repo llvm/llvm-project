@@ -7,8 +7,10 @@
 define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, ptr %out) #0 {
 ; GFX900-LABEL: scalar_to_vector_v8i16:
 ; GFX900:       ; %bb.0: ; %entry
-; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
+; GFX900-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GFX900-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX900-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
@@ -22,8 +24,10 @@ define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, ptr %out) #0 {
 ;
 ; GFX906-LABEL: scalar_to_vector_v8i16:
 ; GFX906:       ; %bb.0: ; %entry
-; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
+; GFX906-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GFX906-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX906-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
@@ -37,8 +41,10 @@ define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, ptr %out) #0 {
 ;
 ; GFX908-LABEL: scalar_to_vector_v8i16:
 ; GFX908:       ; %bb.0: ; %entry
-; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
+; GFX908-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GFX908-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX908-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
@@ -52,8 +58,11 @@ define amdgpu_kernel void @scalar_to_vector_v8i16(<2 x i32> %in, ptr %out) #0 {
 ;
 ; GFX90A-LABEL: scalar_to_vector_v8i16:
 ; GFX90A:       ; %bb.0: ; %entry
-; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90A-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
+; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX90A-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX90A-NEXT:    v_lshlrev_b32_e32 v4, 4, v4
+; GFX90A-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GFX90A-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX90A-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
@@ -85,8 +94,10 @@ entry:
 define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, ptr %out) #0 {
 ; GFX900-LABEL: scalar_to_vector_v8f16:
 ; GFX900:       ; %bb.0: ; %entry
-; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX900-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX900-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
+; GFX900-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GFX900-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX900-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
@@ -100,8 +111,10 @@ define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, ptr %out) #0 
 ;
 ; GFX906-LABEL: scalar_to_vector_v8f16:
 ; GFX906:       ; %bb.0: ; %entry
-; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX906-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
+; GFX906-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GFX906-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX906-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX906-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
@@ -115,8 +128,10 @@ define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, ptr %out) #0 
 ;
 ; GFX908-LABEL: scalar_to_vector_v8f16:
 ; GFX908:       ; %bb.0: ; %entry
-; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GFX908-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX908-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
+; GFX908-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GFX908-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX908-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX908-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4
@@ -130,8 +145,11 @@ define amdgpu_kernel void @scalar_to_vector_v8f16(<2 x float> %in, ptr %out) #0 
 ;
 ; GFX90A-LABEL: scalar_to_vector_v8f16:
 ; GFX90A:       ; %bb.0: ; %entry
-; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX90A-NEXT:    v_lshlrev_b32_e32 v4, 4, v0
+; GFX90A-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX90A-NEXT:    v_and_b32_e32 v4, 0x3ff, v0
+; GFX90A-NEXT:    v_lshlrev_b32_e32 v4, 4, v4
+; GFX90A-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; GFX90A-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX90A-NEXT:    v_add_co_u32_e32 v4, vcc, s2, v4

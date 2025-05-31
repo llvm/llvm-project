@@ -26,7 +26,7 @@ define i32 @no_dpbusd(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; AVX512-NEXT:    vpmaddwd %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
@@ -379,7 +379,7 @@ define i32 @vpdpbusd_2xi32(ptr%a, ptr%b, i32 %c, i32 %n) {
 ; AVX512VNNI-LABEL: vpdpbusd_2xi32:
 ; AVX512VNNI:       # %bb.0: # %entry
 ; AVX512VNNI-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512VNNI-NEXT:    vmovdqa {{.*#+}} xmm1 = [65535,0,0,0]
+; AVX512VNNI-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
 ; AVX512VNNI-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512VNNI-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; AVX512VNNI-NEXT:    vpandq %zmm1, %zmm2, %zmm1

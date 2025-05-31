@@ -12,7 +12,7 @@ subroutine test(n)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest(
 ! CHECK-SAME:                       %[[VAL_0:.*]]: !fir.ref<i64> {fir.bindc_name = "n"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtestEn"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFtestEn"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           fir.call @_QPbefore_block() {{.*}}: () -> ()
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i64>
 ! CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (i64) -> index

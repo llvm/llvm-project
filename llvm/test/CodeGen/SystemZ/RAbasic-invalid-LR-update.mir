@@ -25,6 +25,8 @@
 name:            autogen_SD21418
 alignment:       4
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 registers:       
   - { id: 0, class: vr128bit }
   - { id: 1, class: vr128bit }
@@ -194,7 +196,7 @@ body:             |
     %36 = VLVGH %36, %20.subreg_l32, $noreg, 0
     %36 = VLVGH %36, %34.subreg_l32, $noreg, 1
     dead %36 = VLVGH %36, %40.subreg_l32, $noreg, 2
-    %4 = LG undef %42, 0, $noreg :: (load (s64) from `i64* undef`)
+    %4 = LG undef %42, 0, $noreg :: (load (s64) from `ptr undef`)
     undef %57.subreg_h64 = LLILL 0
     undef %66.subreg_h64 = LLILL 0
     undef %79.subreg_h64 = LLILL 0

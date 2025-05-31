@@ -1,6 +1,7 @@
 ## Unsupported on windows as marking files "unreadable"
 ## is non-trivial on windows.
 # UNSUPPORTED: system-windows
+# REQUIRES: non-root-user
 
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: echo file1 > %t/1.txt

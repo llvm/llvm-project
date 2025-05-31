@@ -1761,13 +1761,13 @@ g:
 ; CHECK-LABEL: define void @test39(
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: {{^}}}
-define void @test39(ptr %p) {
+define void @test39(ptr %p, i1 %arg) {
 entry:
   %0 = call ptr @llvm.objc.retain(ptr %p)
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 exit:                                             ; preds = %loop
   call void @llvm.objc.release(ptr %0), !clang.imprecise_release !0
@@ -1779,14 +1779,14 @@ exit:                                             ; preds = %loop
 ; CHECK-LABEL: define void @test39b(
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: {{^}}}
-define void @test39b(ptr %p) {
+define void @test39b(ptr %p, i1 %arg) {
 entry:
   %0 = call ptr @llvm.objc.retain(ptr %p)
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
   store i8 0, ptr %0
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 exit:                                             ; preds = %loop
   call void @llvm.objc.release(ptr %0), !clang.imprecise_release !0
@@ -1798,14 +1798,14 @@ exit:                                             ; preds = %loop
 ; CHECK-LABEL: define void @test39c(
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: {{^}}}
-define void @test39c(ptr %p) {
+define void @test39c(ptr %p, i1 %arg) {
 entry:
   %0 = call ptr @llvm.objc.retain(ptr %p)
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
   call void @use_pointer(ptr %0)
-  br i1 undef, label %loop, label %exit
+  br i1 %arg, label %loop, label %exit
 
 exit:                                             ; preds = %loop
   call void @llvm.objc.release(ptr %0), !clang.imprecise_release !0
@@ -1818,14 +1818,14 @@ exit:                                             ; preds = %loop
 ; CHECK-LABEL: define void @test40(
 ; CHECK-NOT: @llvm.objc.
 ; CHECK: {{^}}}
-define void @test40(ptr %p) {
+define void @test40(ptr %p, i1 %arg) {
 entry:
   %0 = call ptr @llvm.objc.retain(ptr %p)
   br label %loop
 
 loop:                                             ; preds = %loop, %entry
   call void @use_pointer(ptr %0)
-  br i1 undef, label %exit, label %loop
+  br i1 %arg, label %exit, label %loop
 
 exit:                                             ; preds = %loop
   call void @llvm.objc.release(ptr %0), !clang.imprecise_release !0
@@ -2607,17 +2607,17 @@ cond.end:                                         ; preds = %cond.true, %entry
 
 @.str4 = private unnamed_addr constant [33 x i8] c"-[A z] = { %f, %f, { %f, %f } }\0A\00"
 @"OBJC_IVAR_$_A.myZ" = global i64 20, section "__DATA, __objc_const", align 8
-declare i32 @printf(ptr nocapture, ...) nounwind
-declare i32 @puts(ptr nocapture) nounwind
+declare i32 @printf(ptr captures(none), ...) nounwind
+declare i32 @puts(ptr captures(none)) nounwind
 @str = internal constant [16 x i8] c"-[ Top0 _getX ]\00"
 
 ; FIXME: Should be able to eliminate the retain and release
-; CHECK-LABEL: define { <2 x float>, <2 x float> } @"\01-[A z]"(ptr %self, ptr nocapture %_cmd)
+; CHECK-LABEL: define { <2 x float>, <2 x float> } @"\01-[A z]"(ptr %self, ptr captures(none) %_cmd)
 ; CHECK: tail call ptr @llvm.objc.retain(ptr %self)
 ; CHECK-NEXT: %call = tail call i32 (ptr, ...) @printf(
 ; CHECK: tail call void @llvm.objc.release(ptr %self)
 ; CHECK: {{^}}}
-define { <2 x float>, <2 x float> } @"\01-[A z]"(ptr %self, ptr nocapture %_cmd) nounwind {
+define { <2 x float>, <2 x float> } @"\01-[A z]"(ptr %self, ptr captures(none) %_cmd) nounwind {
 invoke.cont:
   %i1 = tail call ptr @llvm.objc.retain(ptr %self) nounwind
   tail call void @llvm.dbg.value(metadata ptr %self, metadata !DILocalVariable(scope: !2), metadata !DIExpression()), !dbg !DILocation(scope: !2)
@@ -2654,11 +2654,11 @@ invoke.cont:
 }
 
 ; FIXME: Should be able to eliminate the retain and release
-; CHECK-LABEL: @"\01-[Top0 _getX]"(ptr %self, ptr nocapture %_cmd)
+; CHECK-LABEL: @"\01-[Top0 _getX]"(ptr %self, ptr captures(none) %_cmd)
 ; CHECK: tail call ptr @llvm.objc.retain(ptr %self)
 ; CHECK: %puts = tail call i32 @puts
 ; CHECK: tail call void @llvm.objc.release(ptr %self)
-define i32 @"\01-[Top0 _getX]"(ptr %self, ptr nocapture %_cmd) nounwind {
+define i32 @"\01-[Top0 _getX]"(ptr %self, ptr captures(none) %_cmd) nounwind {
 invoke.cont:
   %i1 = tail call ptr @llvm.objc.retain(ptr %self) nounwind
   %puts = tail call i32 @puts(ptr @str)
@@ -2953,5 +2953,4 @@ define void @test68(ptr %a, ptr %b) {
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 
 ; CHECK: attributes [[NUW]] = { nounwind }
-; CHECK: attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: ![[RELEASE]] = !{}

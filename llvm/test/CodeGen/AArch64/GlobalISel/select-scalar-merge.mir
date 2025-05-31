@@ -21,12 +21,14 @@ body:             |
     liveins: $w0, $w1
 
     ; CHECK-LABEL: name: gmerge_s64_s32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY $w1
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
-    ; CHECK: [[SUBREG_TO_REG1:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
-    ; CHECK: [[BFMXri:%[0-9]+]]:gpr64 = BFMXri [[SUBREG_TO_REG]], [[SUBREG_TO_REG1]], 32, 31
-    ; CHECK: $x0 = COPY [[BFMXri]]
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY $w1
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.sub_32
+    ; CHECK-NEXT: [[BFMXri:%[0-9]+]]:gpr64 = BFMXri [[SUBREG_TO_REG]], [[SUBREG_TO_REG1]], 32, 31
+    ; CHECK-NEXT: $x0 = COPY [[BFMXri]]
     %0(s32) = COPY $w0
     %1(s32) = COPY $w1
     %2(s64) = G_MERGE_VALUES %0(s32), %1(s32)

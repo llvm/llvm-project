@@ -59,8 +59,7 @@ find_package_handle_standard_args(LibEdit
 mark_as_advanced(LibEdit_INCLUDE_DIRS LibEdit_LIBRARIES)
 
 if (LibEdit_FOUND AND NOT TARGET LibEdit::LibEdit)
-  add_library(LibEdit::LibEdit UNKNOWN IMPORTED)
-  set_target_properties(LibEdit::LibEdit PROPERTIES
-                        IMPORTED_LOCATION ${LibEdit_LIBRARIES}
-                        INTERFACE_INCLUDE_DIRECTORIES ${LibEdit_INCLUDE_DIRS})
+  add_library(LibEdit::LibEdit INTERFACE IMPORTED)
+  target_link_libraries(LibEdit::LibEdit INTERFACE ${LibEdit_LIBRARIES})
+  target_include_directories(LibEdit::LibEdit INTERFACE ${LibEdit_INCLUDE_DIRS})
 endif()

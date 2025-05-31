@@ -1,4 +1,5 @@
 # RUN: llc -run-pass opt-phis -mtriple=x86_64-- -o - %s | FileCheck %s
+# RUN: llc -passes opt-phis -mtriple=x86_64-- -o - %s | FileCheck %s
 --- |
   define void @test() {
     ret void

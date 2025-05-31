@@ -217,7 +217,7 @@ define dso_local float @test_zext_fcmp_une(float %a, float %b) nounwind {
 ; CMOV-LABEL: test_zext_fcmp_une:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    cmpneqss %xmm1, %xmm0
-; CMOV-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CMOV-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CMOV-NEXT:    andps %xmm1, %xmm0
 ; CMOV-NEXT:    retq
 ;
@@ -255,7 +255,7 @@ define dso_local float @test_zext_fcmp_oeq(float %a, float %b) nounwind {
 ; CMOV-LABEL: test_zext_fcmp_oeq:
 ; CMOV:       # %bb.0: # %entry
 ; CMOV-NEXT:    cmpeqss %xmm1, %xmm0
-; CMOV-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CMOV-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CMOV-NEXT:    andps %xmm1, %xmm0
 ; CMOV-NEXT:    retq
 ;

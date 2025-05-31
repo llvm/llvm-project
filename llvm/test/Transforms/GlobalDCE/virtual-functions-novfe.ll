@@ -39,8 +39,8 @@ entry:
 define dso_local i32 @test_A() {
 entry:
   %call = tail call ptr @_Znwm(i64 8)
-  store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1A, i64 0, inrange i32 0, i64 2), ptr %call, align 8
-  %0 = tail call { ptr, i1 } @llvm.type.checked.load(ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1A, i64 0, inrange i32 0, i64 2), i32 0, metadata !"_ZTS1A"), !nosanitize !9
+  store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr] }, ptr @_ZTV1A, i64 0, i32 0, i64 2), ptr %call, align 8
+  %0 = tail call { ptr, i1 } @llvm.type.checked.load(ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr] }, ptr @_ZTV1A, i64 0, i32 0, i64 2), i32 0, metadata !"_ZTS1A"), !nosanitize !9
   %1 = extractvalue { ptr, i1 } %0, 0, !nosanitize !9
   %call1 = tail call i32 %1(ptr nonnull %call)
   ret i32 %call1

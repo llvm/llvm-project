@@ -146,7 +146,7 @@ define <4 x i16> @lshr_same_length_poison_basevec_be(i64 %x) {
 define <4 x i16> @lshr_same_length_poison_basevec_both_endian(i64 %x) {
 ; ALL-LABEL: @lshr_same_length_poison_basevec_both_endian(
 ; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 48
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; ALL-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i16
 ; ALL-NEXT:    [[R:%.*]] = insertelement <4 x i16> poison, i16 [[T]], i64 0
 ; ALL-NEXT:    ret <4 x i16> [[R]]
 ;
@@ -159,7 +159,7 @@ define <4 x i16> @lshr_same_length_poison_basevec_both_endian(i64 %x) {
 define <4 x i16> @lshr_wrong_index_same_length_poison_basevec(i64 %x) {
 ; ALL-LABEL: @lshr_wrong_index_same_length_poison_basevec(
 ; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 48
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; ALL-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i16
 ; ALL-NEXT:    [[R:%.*]] = insertelement <4 x i16> poison, i16 [[T]], i64 1
 ; ALL-NEXT:    ret <4 x i16> [[R]]
 ;
@@ -172,7 +172,7 @@ define <4 x i16> @lshr_wrong_index_same_length_poison_basevec(i64 %x) {
 define <8 x i16> @lshr_longer_length_poison_basevec_le(i64 %x) {
 ; ALL-LABEL: @lshr_longer_length_poison_basevec_le(
 ; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 48
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; ALL-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i16
 ; ALL-NEXT:    [[R:%.*]] = insertelement <8 x i16> poison, i16 [[T]], i64 3
 ; ALL-NEXT:    ret <8 x i16> [[R]]
 ;
@@ -250,7 +250,7 @@ define <4 x i8> @lshr_wrong_index_shorter_length_poison_basevec(i64 %x) {
 define <4 x i8> @lshr_wrong_shift_shorter_length_poison_basevec(i64 %x) {
 ; ALL-LABEL: @lshr_wrong_shift_shorter_length_poison_basevec(
 ; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 57
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i8
+; ALL-NEXT:    [[T:%.*]] = trunc nuw nsw i64 [[S]] to i8
 ; ALL-NEXT:    [[R:%.*]] = insertelement <4 x i8> poison, i8 [[T]], i64 0
 ; ALL-NEXT:    ret <4 x i8> [[R]]
 ;
@@ -392,7 +392,7 @@ define <4 x i16> @lshr_same_length_basevec_be(i64 %x, <4 x i16> %v) {
 define <4 x i16> @lshr_same_length_basevec_both_endian(i64 %x, <4 x i16> %v) {
 ; ALL-LABEL: @lshr_same_length_basevec_both_endian(
 ; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 48
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; ALL-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i16
 ; ALL-NEXT:    [[R:%.*]] = insertelement <4 x i16> [[V:%.*]], i16 [[T]], i64 3
 ; ALL-NEXT:    ret <4 x i16> [[R]]
 ;
@@ -405,7 +405,7 @@ define <4 x i16> @lshr_same_length_basevec_both_endian(i64 %x, <4 x i16> %v) {
 define <4 x i16> @lshr_wrong_index_same_length_basevec(i64 %x, <4 x i16> %v) {
 ; ALL-LABEL: @lshr_wrong_index_same_length_basevec(
 ; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 48
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; ALL-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i16
 ; ALL-NEXT:    [[R:%.*]] = insertelement <4 x i16> [[V:%.*]], i16 [[T]], i64 1
 ; ALL-NEXT:    ret <4 x i16> [[R]]
 ;
@@ -418,7 +418,7 @@ define <4 x i16> @lshr_wrong_index_same_length_basevec(i64 %x, <4 x i16> %v) {
 define <8 x i16> @lshr_longer_length_basevec_le(i64 %x, <8 x i16> %v) {
 ; ALL-LABEL: @lshr_longer_length_basevec_le(
 ; ALL-NEXT:    [[S:%.*]] = lshr i64 [[X:%.*]], 48
-; ALL-NEXT:    [[T:%.*]] = trunc i64 [[S]] to i16
+; ALL-NEXT:    [[T:%.*]] = trunc nuw i64 [[S]] to i16
 ; ALL-NEXT:    [[R:%.*]] = insertelement <8 x i16> [[V:%.*]], i16 [[T]], i64 3
 ; ALL-NEXT:    ret <8 x i16> [[R]]
 ;

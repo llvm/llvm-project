@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LINUX_SCHED_MACROS_H
-#define __LLVM_LIBC_MACROS_LINUX_SCHED_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LINUX_SCHED_MACROS_H
+#define LLVM_LIBC_MACROS_LINUX_SCHED_MACROS_H
 
 // Definitions of SCHED_* macros must match was linux as at:
 // https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/sched.h
@@ -23,7 +23,15 @@
 #define SCHED_IDLE 5
 #define SCHED_DEADLINE 6
 
+#define CPU_SETSIZE __CPU_SETSIZE
+#define NCPUBITS __NCPUBITS
 #define CPU_COUNT_S(setsize, set) __sched_getcpucount(setsize, set)
 #define CPU_COUNT(set) CPU_COUNT_S(sizeof(cpu_set_t), set)
+#define CPU_ZERO_S(setsize, set) __sched_setcpuzero(setsize, set)
+#define CPU_ZERO(set) CPU_ZERO_S(sizeof(cpu_set_t), set)
+#define CPU_SET_S(cpu, setsize, set) __sched_setcpuset(cpu, setsize, set)
+#define CPU_SET(cpu, setsize, set) CPU_SET_S(cpu, sizeof(cpt_set_t), set)
+#define CPU_ISSET_S(cpu, setsize, set) __sched_getcpuisset(cpu, setsize, set)
+#define CPU_ISSET(cpu, setsize, set) CPU_ISSET_S(cpu, sizeof(cpt_set_t), set)
 
-#endif // __LLVM_LIBC_MACROS_LINUX_SCHED_MACROS_H
+#endif // LLVM_LIBC_MACROS_LINUX_SCHED_MACROS_H

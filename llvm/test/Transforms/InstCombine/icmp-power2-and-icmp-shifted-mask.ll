@@ -373,7 +373,7 @@ define i1 @icmp_power2_and_icmp_shifted_mask_swapped_8_12_mask_overlap_fail(i32 
 ; Vector of 1 reduction
 define <1 x i1> @icmp_power2_and_icmp_shifted_mask_vector_2147483648_2147483647(<1 x i32> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_2147483648_2147483647(
-; CHECK-NEXT:    [[T4:%.*]] = icmp ult <1 x i32> [[X:%.*]], <i32 2147483647>
+; CHECK-NEXT:    [[T4:%.*]] = icmp ult <1 x i32> [[X:%.*]], splat (i32 2147483647)
 ; CHECK-NEXT:    ret <1 x i1> [[T4]]
 ;
   %t1 = icmp ult <1 x i32> %x, <i32 2147483648>
@@ -385,7 +385,7 @@ define <1 x i1> @icmp_power2_and_icmp_shifted_mask_vector_2147483648_2147483647(
 
 define <1 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_2147483648_2147483647(<1 x i32> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_swapped_2147483648_2147483647(
-; CHECK-NEXT:    [[T4:%.*]] = icmp ult <1 x i32> [[X:%.*]], <i32 2147483647>
+; CHECK-NEXT:    [[T4:%.*]] = icmp ult <1 x i32> [[X:%.*]], splat (i32 2147483647)
 ; CHECK-NEXT:    ret <1 x i1> [[T4]]
 ;
   %t1 = icmp ult <1 x i32> %x, <i32 2147483648>
@@ -448,7 +448,10 @@ define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_splat_poison_2
 ; Vector of 2 reduction with splat containing undef
 define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_splat_undef_2147483648_1610612736_2147483647(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_splat_undef_2147483648_1610612736_2147483647(
-; CHECK-NEXT:    [[T4:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T1:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 -2147483648, i32 undef>
+; CHECK-NEXT:    [[T2:%.*]] = and <2 x i32> [[X]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[T2]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T4:%.*]] = and <2 x i1> [[T1]], [[T3]]
 ; CHECK-NEXT:    ret <2 x i1> [[T4]]
 ;
   %t1 = icmp ult <2 x i32> %x, <i32 2147483648, i32 undef>
@@ -460,7 +463,10 @@ define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_splat_undef_2147483648
 
 define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_splat_undef_2147483648_1610612736_2147483647(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_swapped_splat_undef_2147483648_1610612736_2147483647(
-; CHECK-NEXT:    [[T4:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T1:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 -2147483648, i32 undef>
+; CHECK-NEXT:    [[T2:%.*]] = and <2 x i32> [[X]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[T2]], <i32 1610612736, i32 2147483647>
+; CHECK-NEXT:    [[T4:%.*]] = and <2 x i1> [[T3]], [[T1]]
 ; CHECK-NEXT:    ret <2 x i1> [[T4]]
 ;
   %t1 = icmp ult <2 x i32> %x, <i32 2147483648, i32 undef>
@@ -523,9 +529,9 @@ define <6 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_64_others(<6 x
 ; Vector of 0 of 1 compatible, no change
 define <1 x i1> @icmp_power2_and_icmp_shifted_mask_vector_2147483648_2147482647_gap_in_mask_fail(<1 x i32> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_2147483648_2147482647_gap_in_mask_fail(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <1 x i32> [[X:%.*]], <i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = and <1 x i32> [[X]], <i32 2147482647>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne <1 x i32> [[T2]], <i32 2147482647>
+; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <1 x i32> [[X:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[T2:%.*]] = and <1 x i32> [[X]], splat (i32 2147482647)
+; CHECK-NEXT:    [[T3:%.*]] = icmp ne <1 x i32> [[T2]], splat (i32 2147482647)
 ; CHECK-NEXT:    [[T4:%.*]] = and <1 x i1> [[T1]], [[T3]]
 ; CHECK-NEXT:    ret <1 x i1> [[T4]]
 ;
@@ -538,9 +544,9 @@ define <1 x i1> @icmp_power2_and_icmp_shifted_mask_vector_2147483648_2147482647_
 
 define <1 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_2147483648_2147482647_gap_in_mask_fail(<1 x i32> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_swapped_2147483648_2147482647_gap_in_mask_fail(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <1 x i32> [[X:%.*]], <i32 -1>
-; CHECK-NEXT:    [[T2:%.*]] = and <1 x i32> [[X]], <i32 2147482647>
-; CHECK-NEXT:    [[T3:%.*]] = icmp ne <1 x i32> [[T2]], <i32 2147482647>
+; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <1 x i32> [[X:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[T2:%.*]] = and <1 x i32> [[X]], splat (i32 2147482647)
+; CHECK-NEXT:    [[T3:%.*]] = icmp ne <1 x i32> [[T2]], splat (i32 2147482647)
 ; CHECK-NEXT:    [[T4:%.*]] = and <1 x i1> [[T3]], [[T1]]
 ; CHECK-NEXT:    ret <1 x i1> [[T4]]
 ;
@@ -554,7 +560,7 @@ define <1 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_2147483648_214
 ; Vector 1 of 2 compatible, no change
 define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_2147483648_1073741823_gap_between_masks_fail(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_2147483648_1073741823_gap_between_masks_fail(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[T2:%.*]] = and <2 x i32> [[X]], <i32 1610612736, i32 1073741823>
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[T2]], <i32 1610612736, i32 1073741823>
 ; CHECK-NEXT:    [[T4:%.*]] = and <2 x i1> [[T1]], [[T3]]
@@ -569,7 +575,7 @@ define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_2147483648_1073741823_
 
 define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_2147483648_1073741823_gap_between_masks_fail(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_swapped_2147483648_1073741823_gap_between_masks_fail(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[T2:%.*]] = and <2 x i32> [[X]], <i32 1610612736, i32 1073741823>
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[T2]], <i32 1610612736, i32 1073741823>
 ; CHECK-NEXT:    [[T4:%.*]] = and <2 x i1> [[T3]], [[T1]]
@@ -585,7 +591,7 @@ define <2 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_2147483648_107
 ; Vector 1 of 7 compatible, no change
 define <7 x i1> @icmp_power2_and_icmp_shifted_mask_vector_128_1_of_7_fail(<7 x i8> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_128_1_of_7_fail(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <7 x i8> [[X:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <7 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[T2:%.*]] = and <7 x i8> [[X]], <i8 125, i8 122, i8 116, i8 104, i8 80, i8 32, i8 64>
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <7 x i8> [[T2]], <i8 125, i8 122, i8 116, i8 104, i8 80, i8 32, i8 64>
 ; CHECK-NEXT:    [[T4:%.*]] = and <7 x i1> [[T1]], [[T3]]
@@ -600,7 +606,7 @@ define <7 x i1> @icmp_power2_and_icmp_shifted_mask_vector_128_1_of_7_fail(<7 x i
 
 define <7 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_128_1_of_7_fail(<7 x i8> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_swapped_128_1_of_7_fail(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <7 x i8> [[X:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <7 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[T2:%.*]] = and <7 x i8> [[X]], <i8 125, i8 122, i8 116, i8 104, i8 80, i8 32, i8 64>
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <7 x i8> [[T2]], <i8 125, i8 122, i8 116, i8 104, i8 80, i8 32, i8 64>
 ; CHECK-NEXT:    [[T4:%.*]] = and <7 x i1> [[T3]], [[T1]]
@@ -616,7 +622,7 @@ define <7 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_128_1_of_7_fai
 ; Vector 0 of 6 compatible, no change
 define <6 x i1> @icmp_power2_and_icmp_shifted_mask_vector_128_0_of_6_fail(<6 x i8> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_128_0_of_6_fail(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <6 x i8> [[X:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <6 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[T2:%.*]] = and <6 x i8> [[X]], <i8 125, i8 122, i8 116, i8 104, i8 80, i8 32>
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <6 x i8> [[T2]], <i8 125, i8 122, i8 116, i8 104, i8 80, i8 32>
 ; CHECK-NEXT:    [[T4:%.*]] = and <6 x i1> [[T1]], [[T3]]
@@ -631,7 +637,7 @@ define <6 x i1> @icmp_power2_and_icmp_shifted_mask_vector_128_0_of_6_fail(<6 x i
 
 define <6 x i1> @icmp_power2_and_icmp_shifted_mask_vector_swapped_128_0_of_6_fail(<6 x i8> %x) {
 ; CHECK-LABEL: @icmp_power2_and_icmp_shifted_mask_vector_swapped_128_0_of_6_fail(
-; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <6 x i8> [[X:%.*]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[T1:%.*]] = icmp sgt <6 x i8> [[X:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[T2:%.*]] = and <6 x i8> [[X]], <i8 125, i8 122, i8 116, i8 104, i8 80, i8 32>
 ; CHECK-NEXT:    [[T3:%.*]] = icmp ne <6 x i8> [[T2]], <i8 125, i8 122, i8 116, i8 104, i8 80, i8 32>
 ; CHECK-NEXT:    [[T4:%.*]] = and <6 x i1> [[T3]], [[T1]]

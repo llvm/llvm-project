@@ -6,4 +6,4 @@ add_lldb_executable(lit-cpuid
     TargetParser
   )
 
-set_target_properties(lit-cpuid PROPERTIES FOLDER "lldb utils")
+set_target_properties(lit-cpuid PROPERTIES FOLDER "LLDB/Utils")

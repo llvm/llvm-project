@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK,CHECK-O0
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,PATTERN,PATTERN-O1
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=PATTERN,PATTERN-O1
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,ZERO,ZERO-O0
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O1,ZERO,ZERO-O1
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown -fblocks -ftrivial-auto-var-init=zero %s -O1 -emit-llvm -o - | FileCheck %s -check-prefixes=ZERO,ZERO-O1
 // RUN: %clang_cc1 -std=c++14 -triple i386-unknown-unknown -fblocks -ftrivial-auto-var-init=pattern %s -emit-llvm -o - | FileCheck %s -check-prefixes=CHECK-O0,PATTERN,PATTERN-O0
 
 #pragma clang diagnostic ignored "-Winaccessible-base"
@@ -146,16 +146,8 @@ struct notlockfree { long long a[4]; };
 // PATTERN-O1-NOT: @__const.test_atomictailpad_uninit.uninit
 // PATTERN-O0: @__const.test_complexfloat_uninit.uninit = private unnamed_addr constant { float, float } { float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000 }, align 4
 // PATTERN-O1-NOT: @__const.test_complexfloat_uninit.uninit
-// PATTERN-O0: @__const.test_complexfloat_braces.braces = private unnamed_addr constant { float, float } { float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000 }, align 4
-// PATTERN-O1-NOT: @__const.test_complexfloat_braces.braces
-// PATTERN-O0: @__const.test_complexfloat_custom.custom = private unnamed_addr constant { float, float } { float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000 }, align 4
-// PATTERN-O1-NOT: @__const.test_complexfloat_custom.custom
 // PATTERN-O0: @__const.test_complexdouble_uninit.uninit = private unnamed_addr constant { double, double } { double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF }, align 8
 // PATTERN-O1-NOT: @__const.test_complexdouble_uninit.uninit
-// PATTERN-O0: @__const.test_complexdouble_braces.braces = private unnamed_addr constant { double, double } { double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF }, align 8
-// PATTERN-O1-NOT: @__const.test_complexdouble_braces.braces
-// PATTERN-O0: @__const.test_complexdouble_custom.custom = private unnamed_addr constant { double, double } { double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF }, align 8
-// PATTERN-O1-NOT: @__const.test_complexdouble_custom.custom
 // PATTERN-O0: @__const.test_semivolatile_uninit.uninit = private unnamed_addr constant %struct.semivolatile { i32 [[I32]], i32 [[I32]] }, align 4
 // PATTERN-O0: @__const.test_semivolatile_custom.custom = private unnamed_addr constant %struct.semivolatile { i32 1145324612, i32 1145324612 }, align 4
 // PATTERN-O1-NOT: @__const.test_semivolatile_custom.custom
@@ -626,7 +618,7 @@ TEST_UNINIT(smallinit, smallinit);
 TEST_BRACES(smallinit, smallinit);
 // CHECK-LABEL: @test_smallinit_braces()
 // CHECK:       %braces = alloca %struct.smallinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.smallinit, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.smallinit, ptr %braces, i32 0, i32 0
 // CHECK-NEXT:  store i8 42, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
@@ -634,7 +626,7 @@ TEST_BRACES(smallinit, smallinit);
 TEST_CUSTOM(smallinit, smallinit, { 100 });
 // CHECK-LABEL: @test_smallinit_custom()
 // CHECK:       %custom = alloca %struct.smallinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.smallinit, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.smallinit, ptr %custom, i32 0, i32 0
 // CHECK-NEXT:  store i8 100, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
@@ -655,10 +647,10 @@ TEST_UNINIT(smallpartinit, smallpartinit);
 TEST_BRACES(smallpartinit, smallpartinit);
 // CHECK-LABEL: @test_smallpartinit_braces()
 // CHECK:       %braces = alloca %struct.smallpartinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.smallpartinit, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.smallpartinit, ptr %braces, i32 0, i32 0
 // CHECK-NEXT:  store i8 42, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[D:[^ ]*]] = getelementptr inbounds %struct.smallpartinit, ptr %braces, i32 0, i32 1
+// CHECK-NEXT:  %[[D:[^ ]*]] = getelementptr inbounds nuw %struct.smallpartinit, ptr %braces, i32 0, i32 1
 // CHECK-NEXT:  store i8 0, ptr %[[D]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
@@ -666,10 +658,10 @@ TEST_BRACES(smallpartinit, smallpartinit);
 TEST_CUSTOM(smallpartinit, smallpartinit, { 100, 42 });
 // CHECK-LABEL: @test_smallpartinit_custom()
 // CHECK:       %custom = alloca %struct.smallpartinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.smallpartinit, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.smallpartinit, ptr %custom, i32 0, i32 0
 // CHECK-NEXT:  store i8 100, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[D:[^ ]*]] = getelementptr inbounds %struct.smallpartinit, ptr %custom, i32 0, i32 1
+// CHECK-NEXT:  %[[D:[^ ]*]] = getelementptr inbounds nuw %struct.smallpartinit, ptr %custom, i32 0, i32 1
 // CHECK-NEXT:  store i8 42, ptr %[[D]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
@@ -683,7 +675,7 @@ TEST_UNINIT(nullinit, nullinit);
 TEST_BRACES(nullinit, nullinit);
 // CHECK-LABEL: @test_nullinit_braces()
 // CHECK:       %braces = alloca %struct.nullinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[N:[^ ]*]] = getelementptr inbounds %struct.nullinit, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[N:[^ ]*]] = getelementptr inbounds nuw %struct.nullinit, ptr %braces, i32 0, i32 0
 // CHECK-NEXT:  store ptr null, ptr %[[N]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
@@ -691,7 +683,7 @@ TEST_BRACES(nullinit, nullinit);
 TEST_CUSTOM(nullinit, nullinit, { (char*)"derp" });
 // CHECK-LABEL: @test_nullinit_custom()
 // CHECK:       %custom = alloca %struct.nullinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[N:[^ ]*]] = getelementptr inbounds %struct.nullinit, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[N:[^ ]*]] = getelementptr inbounds nuw %struct.nullinit, ptr %custom, i32 0, i32 0
 // CHECK-NEXT:  store ptr {{.*}}, ptr %[[N]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
@@ -742,10 +734,10 @@ TEST_UNINIT(paddednullinit, paddednullinit);
 TEST_BRACES(paddednullinit, paddednullinit);
 // CHECK-LABEL: @test_paddednullinit_braces()
 // CHECK:       %braces = alloca %struct.paddednullinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.paddednullinit, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.paddednullinit, ptr %braces, i32 0, i32 0
 // CHECK-NEXT:  store i8 0, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds %struct.paddednullinit, ptr %braces, i32 0, i32 1
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw %struct.paddednullinit, ptr %braces, i32 0, i32 1
 // CHECK-NEXT:  store i32 0, ptr %[[I]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
@@ -753,10 +745,10 @@ TEST_BRACES(paddednullinit, paddednullinit);
 TEST_CUSTOM(paddednullinit, paddednullinit, { 42, 13371337 });
 // CHECK-LABEL: @test_paddednullinit_custom()
 // CHECK:       %custom = alloca %struct.paddednullinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds %struct.paddednullinit, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[C:[^ ]*]] = getelementptr inbounds nuw %struct.paddednullinit, ptr %custom, i32 0, i32 0
 // CHECK-NEXT:  store i8 42, ptr %[[C]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds %struct.paddednullinit, ptr %custom, i32 0, i32 1
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw %struct.paddednullinit, ptr %custom, i32 0, i32 1
 // CHECK-NEXT:  store i32 13371337, ptr %[[I]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
@@ -1214,8 +1206,8 @@ TEST_UNINIT(complexfloat, _Complex float);
 TEST_BRACES(complexfloat, _Complex float);
 // CHECK-LABEL: @test_complexfloat_braces()
 // CHECK:       %braces = alloca { float, float }, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds { float, float }, ptr %braces, i32 0, i32 0
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds { float, float }, ptr %braces, i32 0, i32 1
+// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds nuw { float, float }, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw { float, float }, ptr %braces, i32 0, i32 1
 // CHECK-NEXT:  store float 0.000000e+00, ptr %[[R]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  store float 0.000000e+00, ptr %[[I]], align [[ALIGN]]
@@ -1225,8 +1217,8 @@ TEST_BRACES(complexfloat, _Complex float);
 TEST_CUSTOM(complexfloat, _Complex float, { 3.1415926535897932384626433, 3.1415926535897932384626433 });
 // CHECK-LABEL: @test_complexfloat_custom()
 // CHECK:       %custom = alloca { float, float }, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds { float, float }, ptr %custom, i32 0, i32 0
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds { float, float }, ptr %custom, i32 0, i32 1
+// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds nuw { float, float }, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw { float, float }, ptr %custom, i32 0, i32 1
 // CHECK-NEXT:  store float 0x400921FB60000000, ptr %[[R]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  store float 0x400921FB60000000, ptr %[[I]], align [[ALIGN]]
@@ -1245,8 +1237,8 @@ TEST_UNINIT(complexdouble, _Complex double);
 TEST_BRACES(complexdouble, _Complex double);
 // CHECK-LABEL: @test_complexdouble_braces()
 // CHECK:       %braces = alloca { double, double }, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds { double, double }, ptr %braces, i32 0, i32 0
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds { double, double }, ptr %braces, i32 0, i32 1
+// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds nuw { double, double }, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw { double, double }, ptr %braces, i32 0, i32 1
 // CHECK-NEXT:  store double 0.000000e+00, ptr %[[R]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  store double 0.000000e+00, ptr %[[I]], align [[ALIGN]]
@@ -1256,8 +1248,8 @@ TEST_BRACES(complexdouble, _Complex double);
 TEST_CUSTOM(complexdouble, _Complex double, { 3.1415926535897932384626433, 3.1415926535897932384626433 });
 // CHECK-LABEL: @test_complexdouble_custom()
 // CHECK:       %custom = alloca { double, double }, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds { double, double }, ptr %custom, i32 0, i32 0
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds { double, double }, ptr %custom, i32 0, i32 1
+// CHECK-NEXT:  %[[R:[^ ]*]] = getelementptr inbounds nuw { double, double }, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw { double, double }, ptr %custom, i32 0, i32 1
 // CHECK-NEXT:  store double 0x400921FB54442D18, ptr %[[R]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  store double 0x400921FB54442D18, ptr %[[I]], align [[ALIGN]]
@@ -1303,9 +1295,10 @@ TEST_CUSTOM(semivolatile, semivolatile, { 0x44444444, 0x44444444 });
 // CHECK-O0:  call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:  call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:  store i32 1145324612, ptr %custom, align 4
-// CHECK-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 4
-// CHECK-O1-NEXT:  store i32 1145324612, ptr %[[I]], align 4
+// PATTERN-O1:       store i32 1145324612, ptr %custom, align 4
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw i8, ptr %custom, i64 4
+// PATTERN-O1-NEXT:  store i32 1145324612, ptr %[[I]], align 4
+// ZERO-O1:          store i64 4919131752989213764, ptr %custom, align 8
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(semivolatileinit, semivolatileinit);
@@ -1317,10 +1310,10 @@ TEST_UNINIT(semivolatileinit, semivolatileinit);
 TEST_BRACES(semivolatileinit, semivolatileinit);
 // CHECK-LABEL: @test_semivolatileinit_braces()
 // CHECK:       %braces = alloca %struct.semivolatileinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds %struct.semivolatileinit, ptr %braces, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw %struct.semivolatileinit, ptr %braces, i32 0, i32 0
 // CHECK-NEXT:  store i32 286331153, ptr %[[I]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[VI:[^ ]*]] = getelementptr inbounds %struct.semivolatileinit, ptr %braces, i32 0, i32 1
+// CHECK-NEXT:  %[[VI:[^ ]*]] = getelementptr inbounds nuw %struct.semivolatileinit, ptr %braces, i32 0, i32 1
 // CHECK-NEXT:  store volatile i32 286331153, ptr %[[VI]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%braces)
@@ -1328,10 +1321,10 @@ TEST_BRACES(semivolatileinit, semivolatileinit);
 TEST_CUSTOM(semivolatileinit, semivolatileinit, { 0x44444444, 0x44444444 });
 // CHECK-LABEL: @test_semivolatileinit_custom()
 // CHECK:       %custom = alloca %struct.semivolatileinit, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds %struct.semivolatileinit, ptr %custom, i32 0, i32 0
+// CHECK-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw %struct.semivolatileinit, ptr %custom, i32 0, i32 0
 // CHECK-NEXT:  store i32 1145324612, ptr %[[I]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
-// CHECK-NEXT:  %[[VI:[^ ]*]] = getelementptr inbounds %struct.semivolatileinit, ptr %custom, i32 0, i32 1
+// CHECK-NEXT:  %[[VI:[^ ]*]] = getelementptr inbounds nuw %struct.semivolatileinit, ptr %custom, i32 0, i32 1
 // CHECK-NEXT:  store volatile i32 1145324612, ptr %[[VI]], align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
@@ -1345,7 +1338,7 @@ TEST_UNINIT(base, base);
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_base_uninit.uninit{{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_base_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0,{{.+}}), !annotation [[AUTO_INIT]]
-// ZERO-O1: store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV4base, i64 0, inrange i32 0, i64 2), {{.*}}, align 8
+// ZERO-O1: store ptr getelementptr inbounds nuw inrange(-16, 16) (i8, ptr @_ZTV4base, i64 16), {{.*}}, align 8
 // ZERO-O1-NOT: !annotation
 
 TEST_BRACES(base, base);
@@ -1366,7 +1359,7 @@ TEST_UNINIT(derived, derived);
 // ZERO-LABEL: @test_derived_uninit()
 // ZERO-O0: call void @llvm.memset{{.*}}, i8 0, {{.+}}), !annotation [[AUTO_INIT]]
 // ZERO-O1: store i64 0, {{.*}} align 8, !annotation [[AUTO_INIT]]
-// ZERO-O1: store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV7derived, i64 0, inrange i32 0, i64 2), {{.*}} align 8
+// ZERO-O1: store ptr getelementptr inbounds nuw inrange(-16, 16) (i8, ptr @_ZTV7derived, i64 16), {{.*}} align 8
 
 TEST_BRACES(derived, derived);
 // CHECK-LABEL: @test_derived_braces()
@@ -1418,7 +1411,8 @@ TEST_CUSTOM(matching, matching, { .f = 0xf00f });
 // CHECK-O0:  call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:  call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:  store float 6.145500e+04, ptr {{.*}}, align 4
+// PATTERN-O1:  store float 6.145500e+04, ptr {{.*}}, align 4
+// ZERO-O1:     store i32 1198526208, ptr %custom, align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(matchingreverse, matchingreverse);
@@ -1445,7 +1439,8 @@ TEST_CUSTOM(matchingreverse, matchingreverse, { .i = 0xf00f });
 // CHECK-O0:    call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:    store i32 61455, ptr %custom, align 4
+// PATTERN-O1:  store i32 61455, ptr %custom, align 4
+// ZERO-O1:     store i32 61455, ptr %custom, align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(unmatched, unmatched);
@@ -1471,7 +1466,8 @@ TEST_CUSTOM(unmatched, unmatched, { .i = 0x3badbeef });
 // CHECK-O0:    call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:    store i32 1001242351, ptr {{.*}}, align 4
+// PATTERN-O1:  store i32 1001242351, ptr {{.*}}, align 4
+// ZERO-O1:     store i32 1001242351, ptr {{.*}}, align 4
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(unmatchedreverse, unmatchedreverse);
@@ -1498,15 +1494,13 @@ TEST_CUSTOM(unmatchedreverse, unmatchedreverse, { .c = 42  });
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
 // PATTERN-O1:  store i8 42, ptr {{.*}}, align 4
-// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 1
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw i8, ptr %custom, i64 1
 // PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
-// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 2
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw i8, ptr %custom, i64 2
 // PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
-// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 3
+// PATTERN-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds nuw i8, ptr %custom, i64 3
 // PATTERN-O1-NEXT:  store i8 -86, ptr %[[I]], align {{.*}}
-// ZERO-O1:     store i8 42, ptr {{.*}}, align 4
-// ZERO-O1-NEXT:  %[[I:[^ ]*]] = getelementptr inbounds i8, ptr %custom, i64 1
-// ZERO-O1-NEXT:  call void @llvm.memset.{{.*}}({{.*}}, i8 0, i64 3, {{.*}})
+// ZERO-O1:     store i32 42, ptr {{.*}}, align 4
 
 TEST_UNINIT(unmatchedfp, unmatchedfp);
 // CHECK-LABEL: @test_unmatchedfp_uninit()
@@ -1531,7 +1525,8 @@ TEST_CUSTOM(unmatchedfp, unmatchedfp, { .d = 3.1415926535897932384626433 });
 // CHECK-O0:    call void @llvm.memcpy
 // CHECK-NOT:   !annotation
 // CHECK-O0:    call void @{{.*}}used{{.*}}%custom)
-// CHECK-O1:    store double 0x400921FB54442D18, ptr %custom, align 8
+// PATTERN-O1:  store double 0x400921FB54442D18, ptr %custom, align 8
+// ZERO-O1:     store i64 4614256656552045848, ptr %custom, align 8
 // CHECK-NOT:   !annotation
 
 TEST_UNINIT(emptyenum, emptyenum);
@@ -1586,7 +1581,7 @@ TEST_UNINIT(intvec16, int  __attribute__((vector_size(16))));
 // CHECK:       %uninit = alloca <4 x i32>, align
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_intvec16_uninit()
-// PATTERN: store <4 x i32> <i32 [[I32]], i32 [[I32]], i32 [[I32]], i32 [[I32]]>, ptr %uninit, align 16, !annotation [[AUTO_INIT]]
+// PATTERN: store <4 x i32> splat (i32 [[I32]]), ptr %uninit, align 16, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_intvec16_uninit()
 // ZERO: store <4 x i32> zeroinitializer, ptr %uninit, align 16, !annotation [[AUTO_INIT]]
 
@@ -1600,7 +1595,7 @@ TEST_BRACES(intvec16, int  __attribute__((vector_size(16))));
 TEST_CUSTOM(intvec16, int  __attribute__((vector_size(16))), { 0x44444444, 0x44444444, 0x44444444, 0x44444444 });
 // CHECK-LABEL: @test_intvec16_custom()
 // CHECK:       %custom = alloca <4 x i32>, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  store <4 x i32> <i32 1145324612, i32 1145324612, i32 1145324612, i32 1145324612>, ptr %custom, align [[ALIGN]]
+// CHECK-NEXT:  store <4 x i32> splat (i32 1145324612), ptr %custom, align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
@@ -1609,7 +1604,7 @@ TEST_UNINIT(longlongvec32, long long  __attribute__((vector_size(32))));
 // CHECK:       %uninit = alloca <4 x i64>, align
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_longlongvec32_uninit()
-// PATTERN: store <4 x i64> <i64 [[I64]], i64 [[I64]], i64 [[I64]], i64 [[I64]]>, ptr %uninit, align 32, !annotation [[AUTO_INIT]]
+// PATTERN: store <4 x i64> splat (i64 [[I64]]), ptr %uninit, align 32, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_longlongvec32_uninit()
 // ZERO: store <4 x i64> zeroinitializer, ptr %uninit, align 32, !annotation [[AUTO_INIT]]
 
@@ -1623,7 +1618,7 @@ TEST_BRACES(longlongvec32, long long  __attribute__((vector_size(32))));
 TEST_CUSTOM(longlongvec32, long long  __attribute__((vector_size(32))), { 0x3333333333333333, 0x3333333333333333, 0x3333333333333333, 0x3333333333333333 });
 // CHECK-LABEL: @test_longlongvec32_custom()
 // CHECK:       %custom = alloca <4 x i64>, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  store <4 x i64> <i64 3689348814741910323, i64 3689348814741910323, i64 3689348814741910323, i64 3689348814741910323>, ptr %custom, align [[ALIGN]]
+// CHECK-NEXT:  store <4 x i64> splat (i64 3689348814741910323), ptr %custom, align [[ALIGN]]
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
 TEST_UNINIT(floatvec16, float  __attribute__((vector_size(16))));
@@ -1631,7 +1626,7 @@ TEST_UNINIT(floatvec16, float  __attribute__((vector_size(16))));
 // CHECK:       %uninit = alloca <4 x float>, align
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_floatvec16_uninit()
-// PATTERN: store <4 x float> <float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000>, ptr %uninit, align 16, !annotation [[AUTO_INIT]]
+// PATTERN: store <4 x float> splat (float 0xFFFFFFFFE0000000), ptr %uninit, align 16, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_floatvec16_uninit()
 // ZERO: store <4 x float> zeroinitializer, ptr %uninit, align 16, !annotation [[AUTO_INIT]]
 
@@ -1645,7 +1640,7 @@ TEST_BRACES(floatvec16, float  __attribute__((vector_size(16))));
 TEST_CUSTOM(floatvec16, float  __attribute__((vector_size(16))), { 3.1415926535897932384626433, 3.1415926535897932384626433, 3.1415926535897932384626433, 3.1415926535897932384626433 });
 // CHECK-LABEL: @test_floatvec16_custom()
 // CHECK:       %custom = alloca <4 x float>, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  store <4 x float> <float 0x400921FB60000000, float 0x400921FB60000000, float 0x400921FB60000000, float 0x400921FB60000000>, ptr %custom, align [[ALIGN]]
+// CHECK-NEXT:  store <4 x float> splat (float 0x400921FB60000000), ptr %custom, align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
@@ -1654,7 +1649,7 @@ TEST_UNINIT(doublevec32, double  __attribute__((vector_size(32))));
 // CHECK:       %uninit = alloca <4 x double>, align
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_doublevec32_uninit()
-// PATTERN: store <4 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>, ptr %uninit, align 32, !annotation [[AUTO_INIT]]
+// PATTERN: store <4 x double> splat (double 0xFFFFFFFFFFFFFFFF), ptr %uninit, align 32, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_doublevec32_uninit()
 // ZERO: store <4 x double> zeroinitializer, ptr %uninit, align 32, !annotation [[AUTO_INIT]]
 
@@ -1668,7 +1663,7 @@ TEST_BRACES(doublevec32, double  __attribute__((vector_size(32))));
 TEST_CUSTOM(doublevec32, double  __attribute__((vector_size(32))), { 3.1415926535897932384626433, 3.1415926535897932384626433, 3.1415926535897932384626433, 3.1415926535897932384626433 });
 // CHECK-LABEL: @test_doublevec32_custom()
 // CHECK:       %custom = alloca <4 x double>, align [[ALIGN:[0-9]*]]
-// CHECK-NEXT:  store <4 x double> <double 0x400921FB54442D18, double 0x400921FB54442D18, double 0x400921FB54442D18, double 0x400921FB54442D18>, ptr %custom, align [[ALIGN]]
+// CHECK-NEXT:  store <4 x double> splat (double 0x400921FB54442D18), ptr %custom, align [[ALIGN]]
 // CHECK-NOT:   !annotation
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
@@ -1678,7 +1673,7 @@ TEST_UNINIT(doublevec24, double  __attribute__((vector_size(24))));
 // CHECK:       %uninit = alloca <3 x double>, align
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_doublevec24_uninit()
-// PATTERN: store <3 x double> <double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF>, ptr %uninit, align 32, !annotation [[AUTO_INIT]]
+// PATTERN: store <3 x double> splat (double 0xFFFFFFFFFFFFFFFF), ptr %uninit, align 32, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_doublevec24_uninit()
 // ZERO: store <3 x double> zeroinitializer, ptr %uninit, align 32, !annotation [[AUTO_INIT]]
 
@@ -1688,7 +1683,7 @@ TEST_UNINIT(longdoublevec32, long double  __attribute__((vector_size(sizeof(long
 // CHECK:       %uninit = alloca <2 x x86_fp80>, align
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
 // PATTERN-LABEL: @test_longdoublevec32_uninit()
-// PATTERN: store <2 x x86_fp80> <x86_fp80 0xKFFFFFFFFFFFFFFFFFFFF, x86_fp80 0xKFFFFFFFFFFFFFFFFFFFF>, ptr %uninit, align 32, !annotation [[AUTO_INIT]]
+// PATTERN: store <2 x x86_fp80> splat (x86_fp80 0xKFFFFFFFFFFFFFFFFFFFF), ptr %uninit, align 32, !annotation [[AUTO_INIT]]
 // ZERO-LABEL: @test_longdoublevec32_uninit()
 // ZERO: store <2 x x86_fp80> zeroinitializer, ptr %uninit, align 32, !annotation [[AUTO_INIT]]
 

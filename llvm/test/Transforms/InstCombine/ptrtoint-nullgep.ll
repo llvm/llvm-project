@@ -3,13 +3,13 @@
 ; Note: the LLParser already does some constant folding, check that output first:
 ; RUN: opt -passes=verify -S < %s | FileCheck %s --check-prefixes=ALL,LLPARSER
 ; We should be able to fold almost everything in InstSimplify other than the final test which requries InstCombine
-; RUN: opt -S -passes=instsimplify < %s | FileCheck %s --allow-unused-prefixes --check-prefixes=ALL,CHECK,INTEGRAL,INSTSIMPLIFY,INTEGRAL-INSTSIMPLIFY
-; RUN: opt -S -passes=instcombine < %s | FileCheck %s --allow-unused-prefixes --check-prefixes=ALL,CHECK,INTEGRAL,INSTCOMBINE,INTEGRAL-INSTCOMBINE
+; RUN: opt -S -passes=instsimplify < %s | FileCheck %s --check-prefixes=ALL,CHECK,INSTSIMPLIFY
+; RUN: opt -S -passes=instcombine < %s | FileCheck %s --check-prefixes=ALL,CHECK,INSTCOMBINE
 ; Non-integral pointers limit certain transformations on pointers:
 ; RUN: sed -e 's/p:64:64:64:64/p:64:64:64:64-ni:1/g' %s | opt -S -passes=instsimplify | \
-; RUN:   FileCheck %s --allow-unused-prefixes --check-prefixes=ALL,CHECK,NONINTEGRAL,INSTSIMPLIFY,NONINTEGRAL-INSTSIMPLIFY
+; RUN:   FileCheck %s --check-prefixes=ALL,CHECK,INSTSIMPLIFY
 ; RUN: sed -e 's/p:64:64:64:64/p:64:64:64:64-ni:1/g' %s | opt -S -passes=instcombine | \
-; RUN:   FileCheck %s --allow-unused-prefixes --check-prefixes=ALL,CHECK,NONINTEGRAL,INSTCOMBINE,NONINTEGRAL-INSTCOMBINE
+; RUN:   FileCheck %s --check-prefixes=ALL,CHECK,INSTCOMBINE
 target datalayout = "p:64:64:64:64"
 
 declare void @use_i64(i64)
@@ -68,10 +68,10 @@ define void @constant_fold_ptrtoint_of_gep_of_nullgep() {
 ; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
 ; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
 ; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
-; LLPARSER-NEXT:    call void @use_i64(i64 0)
-; LLPARSER-NEXT:    call void @use_i64(i64 0)
-; LLPARSER-NEXT:    call void @use_i64(i64 0)
-; LLPARSER-NEXT:    call void @use_i64(i64 0)
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+; LLPARSER-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
 ; LLPARSER-NEXT:    ret void
 ;
 ; INSTSIMPLIFY-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {
@@ -83,10 +83,10 @@ define void @constant_fold_ptrtoint_of_gep_of_nullgep() {
 ; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 1234) to i64))
 ; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
 ; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 1234) to i64))
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
-; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 0)
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
+; INSTSIMPLIFY-NEXT:    call void @use_i64(i64 ptrtoint (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) getelementptr (i8, ptr addrspace(1) null, i64 -1), i64 1) to i64))
 ; INSTSIMPLIFY-NEXT:    ret void
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@constant_fold_ptrtoint_of_gep_of_nullgep() {

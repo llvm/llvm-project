@@ -1,4 +1,4 @@
-# Check that we don't accidentally strip addr32 prefix
+## Check that we don't accidentally strip addr32 prefix
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -nostdlib

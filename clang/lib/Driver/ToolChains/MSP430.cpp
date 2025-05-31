@@ -14,7 +14,6 @@
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang::driver;
@@ -142,7 +141,7 @@ std::string MSP430ToolChain::computeSysRoot() const {
   else
     llvm::sys::path::append(Dir, getDriver().Dir, "..");
 
-  return std::string(Dir.str());
+  return std::string(Dir);
 }
 
 void MSP430ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,

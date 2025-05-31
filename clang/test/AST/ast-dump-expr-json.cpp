@@ -2333,7 +2333,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "kind": "FunctionDecl",
 // CHECK-NEXT:         "name": "operator delete",
 // CHECK-NEXT:         "type": {
-// CHECK-NEXT:          "qualType": "void (void *) noexcept"
+// CHECK-NEXT:          "qualType": "void (void *, unsigned long) noexcept"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4261,9 +4261,9 @@ void TestNonADLCall3() {
 // CHECK-NEXT:                     }
 // CHECK-NEXT:                    },
 // CHECK-NEXT:                    "type": {
-// CHECK-NEXT:                     "qualType": "<dependent type>"
+// CHECK-NEXT:                     "qualType": "V"
 // CHECK-NEXT:                    },
-// CHECK-NEXT:                    "valueCategory": "prvalue",
+// CHECK-NEXT:                    "valueCategory": "lvalue",
 // CHECK-NEXT:                    "isPostfix": false,
 // CHECK-NEXT:                    "opcode": "*",
 // CHECK-NEXT:                    "canOverflow": false,

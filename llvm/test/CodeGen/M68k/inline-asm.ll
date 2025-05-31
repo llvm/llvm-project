@@ -114,11 +114,11 @@ define void @register_constraints() {
 entry:
   %out = alloca i32, align 4
   %0 = call i32 asm sideeffect "move.l #94, $0", "=r"()
-  store i32 %0, i32* %out, align 4
+  store i32 %0, ptr %out, align 4
   %1 = call i32 asm sideeffect "move.l #87, $0", "=d"()
-  store i32 %1, i32* %out, align 4
+  store i32 %1, ptr %out, align 4
   %2 = call i32 asm sideeffect "move.l #66, $0", "=a"()
-  store i32 %2, i32* %out, align 4
+  store i32 %2, ptr %out, align 4
   ret void
 }
 

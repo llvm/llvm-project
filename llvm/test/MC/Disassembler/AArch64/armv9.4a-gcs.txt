@@ -69,16 +69,16 @@
 // CHECK: gcsb    dsync
 
 [0x7a,0x0f,0x1f,0xd9]
-// CHECK: gcsstr   x26, x27
+// CHECK: gcsstr   x26, [x27]
 
 [0xfa,0x0f,0x1f,0xd9]
-// CHECK: gcsstr   x26, sp
+// CHECK: gcsstr   x26, [sp]
 
 [0x7a,0x1f,0x1f,0xd9]
-// CHECK: gcssttr  x26, x27
+// CHECK: gcssttr  x26, [x27]
 
 [0xfa,0x1f,0x1f,0xd9]
-// CHECK: gcssttr  x26, sp
+// CHECK: gcssttr  x26, [sp]
 
 [0x9f,0x77,0x08,0xd5]
 // CHECK: gcspushx

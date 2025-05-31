@@ -21,20 +21,26 @@ function(tablegen project ofn)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
   endif()
 
-  # Use depfile instead of globbing arbitrary *.td(s) for Ninja.
-  if(CMAKE_GENERATOR MATCHES "Ninja")
-    # Make output path relative to build.ninja, assuming located on
-    # ${CMAKE_BINARY_DIR}.
+  # Use depfile instead of globbing arbitrary *.td(s) for Ninja. We force
+  # CMake versions older than v3.30 on Windows to use the fallback behavior
+  # due to a depfile parsing bug on Windows paths in versions prior to 3.30.
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/25943
+  # CMake versions older than v3.23 on other platforms use the fallback
+  # behavior as v3.22 and earlier fail to parse some depfiles that get
+  # generated, and this behavior was fixed in CMake commit
+  # e04a352cca523eba2ac0d60063a3799f5bb1c69e.
+  cmake_policy(GET CMP0116 cmp0116_state)
+  if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW
+     AND NOT (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS 3.30)
+     AND NOT (CMAKE_VERSION VERSION_LESS 3.23))
     # CMake emits build targets as relative paths but Ninja doesn't identify
-    # absolute path (in *.d) as relative path (in build.ninja)
-    # Note that tblgen is executed on ${CMAKE_BINARY_DIR} as working directory.
-    file(RELATIVE_PATH ofn_rel
-      ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${ofn})
+    # absolute path (in *.d) as relative path (in build.ninja). Post CMP0116,
+    # CMake handles this discrepancy for us, otherwise we use the fallback
+    # logic.
     set(additional_cmdline
-      -o ${ofn_rel}
-      -d ${ofn_rel}.d
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      DEPFILE ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.d
+      -o ${ofn}
+      -d ${ofn}.d
+      DEPFILE ${ofn}.d
       )
     set(local_tds)
     set(global_tds)
@@ -68,7 +74,9 @@ function(tablegen project ofn)
   # char literals, instead. If we're cross-compiling, then conservatively assume
   # that the source might be consumed by MSVC.
   # [1] https://docs.microsoft.com/en-us/cpp/cpp/compiler-limits?view=vs-2017
-  if (MSVC AND project STREQUAL LLVM)
+  # Don't pass this flag to mlir-src-sharder, since it doesn't support the
+  # flag, and it doesn't need it.
+  if (MSVC AND NOT "${project}" STREQUAL "MLIR_SRC_SHARDER")
     list(APPEND LLVM_TABLEGEN_FLAGS "--long-string-literals=0")
   endif()
   if (CMAKE_GENERATOR MATCHES "Visual Studio")
@@ -125,6 +133,12 @@ function(tablegen project ofn)
   set(tablegen_exe ${${project}_TABLEGEN_EXE})
   set(tablegen_depends ${${project}_TABLEGEN_TARGET} ${tablegen_exe})
 
+  if(LLVM_PARALLEL_TABLEGEN_JOBS)
+    set(LLVM_TABLEGEN_JOB_POOL JOB_POOL tablegen_job_pool)
+  else()
+    set(LLVM_TABLEGEN_JOB_POOL "")
+  endif()
+
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
     COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS} -I ${CMAKE_CURRENT_SOURCE_DIR}
     ${tblgen_includes}
@@ -139,6 +153,7 @@ function(tablegen project ofn)
       ${local_tds} ${global_tds}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
     ${LLVM_TARGET_DEPENDS}
+    ${LLVM_TABLEGEN_JOB_POOL}
     COMMENT "Building ${ofn}..."
     )
 
@@ -160,7 +175,8 @@ function(add_public_tablegen_target target)
   if(LLVM_COMMON_DEPENDS)
     add_dependencies(${target} ${LLVM_COMMON_DEPENDS})
   endif()
-  set_target_properties(${target} PROPERTIES FOLDER "Tablegenning")
+  get_subproject_title(subproject_title)
+  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Tablegenning")
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} ${target} PARENT_SCOPE)
 endfunction()
 
@@ -210,6 +226,8 @@ macro(add_tablegen target project)
       set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN_EXE} PARENT_SCOPE)
 
       add_custom_target(${target}-host DEPENDS ${${project}_TABLEGEN_EXE})
+      get_subproject_title(subproject_title)
+      set_target_properties(${target}-host PROPERTIES FOLDER "${subproject_title}/Native")
       set(${project}_TABLEGEN_TARGET ${target}-host PARENT_SCOPE)
 
       # If we're using the host tablegen, and utils were not requested, we have no

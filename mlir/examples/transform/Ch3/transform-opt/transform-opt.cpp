@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This is the top-level file for the Transform dialect tutorial chapter 2.
+// This is the top-level file for the Transform dialect tutorial chapter 3.
 //
 //===----------------------------------------------------------------------===//
 
 #include "MyExtension.h"
 
+#include "mlir/Dialect/Transform/Transforms/Passes.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
@@ -20,18 +21,6 @@
 #include "mlir/Transforms/Passes.h"
 #include <cstdlib>
 
-// Forward declarations of test passes that used in this chapter for
-// illustrative purposes. Test passes are not directly exposed for use in
-// binaries other than mlir-opt, which is too big to serve as an example.
-namespace mlir::test {
-void registerTestTransformDialectEraseSchedulePass();
-void registerTestTransformDialectInterpreterPass();
-} // namespace mlir::test
-
-namespace test {
-void registerTestTransformDialectExtension(mlir::DialectRegistry &);
-} // namespace test
-
 int main(int argc, char **argv) {
   // Register all "core" dialects and our transform dialect extension.
   mlir::DialectRegistry registry;
@@ -39,21 +28,14 @@ int main(int argc, char **argv) {
   mlir::registerAllExtensions(registry);
   registerMyExtension(registry);
 
+  // Register the interpreter pass.
+  mlir::transform::registerInterpreterPass();
+
   // Register a handful of cleanup passes that we can run to make the output IR
   // look nicer.
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
   mlir::registerSymbolDCEPass();
-
-  // Register the test passes.
-#ifdef MLIR_INCLUDE_TESTS
-  mlir::test::registerTestTransformDialectEraseSchedulePass();
-  mlir::test::registerTestTransformDialectInterpreterPass();
-  test::registerTestTransformDialectExtension(registry);
-#else
-  llvm::errs() << "warning: MLIR built without test passes, interpreter "
-                  "testing will not be available\n";
-#endif // MLIR_INCLUDE_TESTS
 
   // Delegate to the MLIR utility for parsing and pass management.
   return mlir::MlirOptMain(argc, argv, "transform-opt-ch3", registry)

@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=carrizo -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=ALL %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefix=GCN -check-prefix=CI -check-prefix=ALL %s
+; RUN: llc -mtriple=amdgcn -mcpu=carrizo -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=ALL %s
 
 ; ALL-LABEL: {{^}}large_alloca_pixel_shader:
 ; GCN-DAG: s_mov_b32 s4, SCRATCH_RSRC_DWORD0
@@ -24,7 +24,7 @@ define amdgpu_ps void @large_alloca_pixel_shader(i32 %x, i32 %y) #0 {
   store volatile i32 %x, ptr addrspace(5) %gep
   %gep1 = getelementptr [8192 x i32], ptr addrspace(5) %large, i32 0, i32 %y
   %val = load volatile i32, ptr addrspace(5) %gep1
-  store volatile i32 %val, ptr addrspace(1) undef
+  store volatile i32 %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -50,7 +50,7 @@ define amdgpu_ps void @large_alloca_pixel_shader_inreg(i32 inreg %x, i32 inreg %
   store volatile i32 %x, ptr addrspace(5) %gep
   %gep1 = getelementptr [8192 x i32], ptr addrspace(5) %large, i32 0, i32 %y
   %val = load volatile i32, ptr addrspace(5) %gep1
-  store volatile i32 %val, ptr addrspace(1) undef
+  store volatile i32 %val, ptr addrspace(1) poison
   ret void
 }
 

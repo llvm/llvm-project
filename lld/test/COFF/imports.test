@@ -48,3 +48,8 @@ MERGE-NEXT:   Symbol: ExitProcess (0)
 MERGE-NEXT:   Symbol:  (50)
 MERGE-NEXT:   Symbol: MessageBoxA (1)
 MERGE-NEXT: }
+
+# Verify that import table is properly aligned.
+# RUN: llvm-readobj --headers %t.exe | FileCheck -check-prefix=IMPORTDIR %s
+IMPORTDIR:      ImportTableRVA: 0x1068
+IMPORTDIR-NEXT: ImportTableSize: 0x28

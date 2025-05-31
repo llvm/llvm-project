@@ -57,6 +57,8 @@ private:
   bool loadLinkModules(CompilerInstance &CI);
 
 protected:
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
+
   /// Create a new code generation action.  If the optional \p _VMContext
   /// parameter is supplied, the action uses it without taking ownership,
   /// otherwise it creates a fresh LLVM context and takes ownership.

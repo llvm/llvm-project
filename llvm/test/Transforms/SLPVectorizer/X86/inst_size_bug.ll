@@ -4,14 +4,20 @@
 define void @inst_size(ptr %a, <2 x i64> %b) {
 ; CHECK-LABEL: @inst_size(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VAL:%.*]] = extractelement <2 x i64> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[T41:%.*]] = icmp sgt i64 0, [[VAL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i64> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMPL1:%.*]] = load i64, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[PTR2]], align 4
+; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 3
+; CHECK-NEXT:    [[TMPL4:%.*]] = load i64, ptr [[PTR4]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[B:%.*]], <2 x i64> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[TMPL1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP2]], <2 x i64> [[TMP0]], i64 2)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i64> zeroinitializer, [[TMP3]]
+; CHECK-NEXT:    [[T45:%.*]] = icmp sgt i64 0, [[TMPL4]]
 ; CHECK-NEXT:    br label [[BLOCK:%.*]]
 ; CHECK:       block:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i1 [ [[T41]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i1> [ [[TMP2]], [[ENTRY]] ]
+; CHECK-NEXT:    [[PHI5:%.*]] = phi i1 [ [[T45]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i1> [ [[TMP4]], [[ENTRY]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

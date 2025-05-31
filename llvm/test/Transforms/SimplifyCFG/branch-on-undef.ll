@@ -3,10 +3,10 @@
 
 declare void @foo(i32)
 
-define void @br_undef_simple() {
+define void @br_undef_simple(i1 %arg) {
 ; CHECK-LABEL: @br_undef_simple(
 ; CHECK-NEXT:    call void @foo(i32 0)
-; CHECK-NEXT:    br i1 undef, label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       if:
@@ -17,7 +17,7 @@ define void @br_undef_simple() {
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   call void @foo(i32 0)
-  br i1 undef, label %if, label %else
+  br i1 %arg, label %if, label %else
 
 if:
   call void @foo(i32 1)
@@ -57,8 +57,8 @@ define void @br_poison_succs_used(i32 %v) {
 ; CHECK-LABEL: @br_poison_succs_used(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[BR:%.*]] [
-; CHECK-NEXT:    i32 1, label [[IF:%.*]]
-; CHECK-NEXT:    i32 2, label [[ELSE:%.*]]
+; CHECK-NEXT:      i32 1, label [[IF:%.*]]
+; CHECK-NEXT:      i32 2, label [[ELSE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       br:
 ; CHECK-NEXT:    call void @foo(i32 0)

@@ -1,14 +1,26 @@
 # RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
 # REQUIRES: asserts
 
-# Test that the loop carried dependence check correctly identifies a recurrence
+# Test that the loop carried dependence check correctly identifies dependences
 # when the loop variable decreases and the array index offset is negative.
 
-# CHECK: Rec NodeSet
-# CHECK: Rec NodeSet
-# CHECK: SU(3)
-# CHECK: SU(4)
-# CHECK: SU(5)
+# No dependence from the store to the load.
+# CHECK: Overlap check:
+# CHECK-NEXT:   BaseMI:   S2_storeri_io %{{[0-9]+}}:intregs, 0, %{{[0-9]+}}:intregs :: (store (s32) into %ir.lsr.iv1)
+# CHECK-NEXT:     Base + 0 + I * -4, Len: 4
+# CHECK-NEXT:   OtherMI:   %{{[0-9]+}}:intregs = L2_loadri_io %{{[0-9]+}}:intregs, -8 :: (load (s32) from %ir.cgep)
+# CHECK-NEXT:     Base + -8 + I * -4, Len: 4
+# CHECK-NEXT:   Result: No overlap
+
+# TODO: There is a loop carried dependence from the load to the store but it
+#   is not recognised. addLoopCarriedDependences() should be modified to
+#   recognise the dependence and enable the following checks.
+# CHECK-AFTER-FIX: Overlap check:
+# CHECK-AFTER-FIX-NEXT:   BaseMI:   %{{[0-9]+}}:intregs = L2_loadri_io %{{[0-9]+}}:intregs, -8 :: (load (s32) from %ir.cgep)
+# CHECK-AFTER-FIX-NEXT:     Base + -8 + I * -4, Len: 4
+# CHECK-AFTER-FIX-NEXT:   OtherMI:   S2_storeri_io %{{[0-9]+}}:intregs, 0, %{{[0-9]+}}:intregs :: (store (s32) into %ir.lsr.iv1)
+# CHECK-AFTER-FIX-NEXT:     Base + 0 + I * -4, Len: 4
+# CHECK-AFTER-FIX-NEXT:   Result: Overlap!
 
 --- |
 
@@ -17,18 +29,18 @@
     br label %b3
 
   b3:
-    %lsr.iv = phi [9 x i32]* [ %0, %b3 ], [ undef, %b0 ]
+    %lsr.iv = phi ptr [ %0, %b3 ], [ undef, %b0 ]
     %v0 = phi i32 [ %v8, %b3 ], [ 7, %b0 ]
     %v1 = phi i32 [ %v6, %b3 ], [ undef, %b0 ]
     %v2 = phi i32 [ %v1, %b3 ], [ undef, %b0 ]
-    %lsr.iv1 = bitcast [9 x i32]* %lsr.iv to i32*
-    %cgep = getelementptr i32, i32* %lsr.iv1, i32 -2
-    %v6 = load i32, i32* %cgep, align 4
+    %lsr.iv1 = bitcast ptr %lsr.iv to ptr
+    %cgep = getelementptr i32, ptr %lsr.iv1, i32 -2
+    %v6 = load i32, ptr %cgep, align 4
     %v7 = tail call i32 @llvm.hexagon.A2.subsat(i32 %v2, i32 %v6)
-    store i32 %v7, i32* %lsr.iv1, align 4
+    store i32 %v7, ptr %lsr.iv1, align 4
     %v8 = add i32 %v0, -1
-    %cgep3 = getelementptr [9 x i32], [9 x i32]* %lsr.iv, i32 0, i32 -1
-    %0 = bitcast i32* %cgep3 to [9 x i32]*
+    %cgep3 = getelementptr [9 x i32], ptr %lsr.iv, i32 0, i32 -1
+    %0 = bitcast ptr %cgep3 to ptr
     %v9 = icmp sgt i32 %v8, 1
     br i1 %v9, label %b3, label %b4
 
@@ -37,7 +49,7 @@
   }
 
   declare i32 @llvm.hexagon.A2.subsat(i32, i32) #0
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
 ...
 ---

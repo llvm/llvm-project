@@ -448,7 +448,7 @@ define <4 x i32> @vec_sink_sub_of_const_to_sub2(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @vec_sink_sub_from_const_to_sub(<4 x i32> %a, <4 x i32> %b) {
 ; ALL-LABEL: vec_sink_sub_from_const_to_sub:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    movdqa {{.*#+}} xmm2 = <42,24,u,46>
+; ALL-NEXT:    movdqa {{.*#+}} xmm2 = [42,24,u,46]
 ; ALL-NEXT:    paddd %xmm1, %xmm0
 ; ALL-NEXT:    psubd %xmm0, %xmm2
 ; ALL-NEXT:    movdqa %xmm2, %xmm0

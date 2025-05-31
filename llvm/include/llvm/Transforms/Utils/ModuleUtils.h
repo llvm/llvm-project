@@ -30,6 +30,7 @@ class FunctionCallee;
 class GlobalIFunc;
 class GlobalValue;
 class Constant;
+class ConstantStruct;
 class Value;
 class Type;
 
@@ -43,6 +44,14 @@ void appendToGlobalCtors(Module &M, Function *F, int Priority,
 /// Same as appendToGlobalCtors(), but for global dtors.
 void appendToGlobalDtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
+
+/// Apply 'Fn' to the list of global ctors of module M and replace contructor
+/// record with the one returned by `Fn`. If `nullptr` was returned, the
+/// corresponding constructor will be removed from the array. For details see
+/// https://llvm.org/docs/LangRef.html#the-llvm-global-ctors-global-variable
+using GlobalCtorTransformFn = llvm::function_ref<Constant *(Constant *)>;
+void transformGlobalCtors(Module &M, const GlobalCtorTransformFn &Fn);
+void transformGlobalDtors(Module &M, const GlobalCtorTransformFn &Fn);
 
 /// Sets the KCFI type for the function. Used for compiler-generated functions
 /// that are indirectly called in instrumented code.
@@ -143,12 +152,6 @@ void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
 bool lowerGlobalIFuncUsersAsGlobalCtor(
     Module &M, ArrayRef<GlobalIFunc *> IFuncsToLower = {});
 
-class CallInst;
-namespace VFABI {
-/// Overwrite the Vector Function ABI variants attribute with the names provide
-/// in \p VariantMappings.
-void setVectorVariantNames(CallInst *CI, ArrayRef<std::string> VariantMappings);
-} // End VFABI namespace
 } // End llvm namespace
 
 #endif // LLVM_TRANSFORMS_UTILS_MODULEUTILS_H

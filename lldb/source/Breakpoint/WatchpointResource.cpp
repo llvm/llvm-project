@@ -9,6 +9,7 @@
 #include <assert.h>
 
 #include "lldb/Breakpoint/WatchpointResource.h"
+#include "lldb/Utility/Stream.h"
 
 #include <algorithm>
 
@@ -42,8 +43,6 @@ void WatchpointResource::SetType(bool read, bool write) {
 
 wp_resource_id_t WatchpointResource::GetID() const { return m_id; }
 
-void WatchpointResource::SetID(wp_resource_id_t id) { m_id = id; }
-
 bool WatchpointResource::Contains(addr_t addr) {
   if (addr >= m_addr && addr < m_addr + m_size)
     return true;
@@ -74,10 +73,8 @@ bool WatchpointResource::ConstituentsContains(const WatchpointSP &wp_sp) {
 
 bool WatchpointResource::ConstituentsContains(const Watchpoint *wp) {
   std::lock_guard<std::mutex> guard(m_constituents_mutex);
-  WatchpointCollection::const_iterator match =
-      std::find_if(m_constituents.begin(), m_constituents.end(),
-                   [&wp](const WatchpointSP &x) { return x.get() == wp; });
-  return match != m_constituents.end();
+  return llvm::any_of(m_constituents,
+                      [&wp](const WatchpointSP &x) { return x.get() == wp; });
 }
 
 WatchpointSP WatchpointResource::GetConstituentAtIndex(size_t idx) {
@@ -115,7 +112,7 @@ bool WatchpointResource::ShouldStop(StoppointCallbackContext *context) {
 }
 
 void WatchpointResource::Dump(Stream *s) const {
-  return; // LWP_TODO
+  s->Printf("addr = 0x%8.8" PRIx64 " size = %zu", m_addr, m_size);
 }
 
 wp_resource_id_t WatchpointResource::GetNextID() {

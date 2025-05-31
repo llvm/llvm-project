@@ -19,6 +19,9 @@
 #include <utility>
 
 namespace mlir {
+
+class SymbolTableCollection;
+
 namespace mesh {
 
 // If we have an algebraic op like "+" and a summing all-reduce,
@@ -35,7 +38,7 @@ namespace mesh {
 // the algebraic structure.
 template <typename AlgebraicOp>
 void populateAllReduceEndomorphismSimplificationPatterns(
-    RewritePatternSet &patterns, Partial reduction) {
+    RewritePatternSet &patterns, ReductionKind reduction) {
   auto getEndomorphismOpOperand = [](Operation *op) {
     auto allReduceOp = llvm::cast<AllReduceOp>(op);
     return &allReduceOp.getInputMutable();
@@ -102,7 +105,12 @@ void populateAllReduceEndomorphismSimplificationPatterns(
       AlgebraicOp::getOperationName(), 1, patterns.getContext()));
 }
 
-void populateSimplificationPatterns(RewritePatternSet &patterns);
+// It is invalid to change ops that declare symbols during the application of
+// these patterns, because symbolTableCollection is used to cache them.
+void populateSimplificationPatterns(
+    RewritePatternSet &patterns, SymbolTableCollection &symbolTableCollection);
+void populateFoldingPatterns(RewritePatternSet &patterns,
+                             SymbolTableCollection &symbolTableCollection);
 
 } // namespace mesh
 } // namespace mlir

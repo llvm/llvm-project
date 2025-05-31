@@ -41,6 +41,7 @@ gpu::setMappingAttr(ParallelOp ploopOp,
         specifiedMappings.count(processor))
       return ploopOp.emitError(
           "invalid mapping multiple loops to same processor");
+    specifiedMappings.insert(processor);
   }
   ArrayRef<Attribute> mappingAsAttrs(mapping.data(), mapping.size());
   ploopOp->setAttr(getMappingAttrName(),
@@ -145,8 +146,3 @@ struct GpuMapParallelLoopsPass
 } // namespace
 } // namespace gpu
 } // namespace mlir
-
-std::unique_ptr<mlir::OperationPass<mlir::func::FuncOp>>
-mlir::createGpuMapParallelLoopsPass() {
-  return std::make_unique<gpu::GpuMapParallelLoopsPass>();
-}

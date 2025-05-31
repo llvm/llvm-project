@@ -5,7 +5,7 @@
 define i32 @test() nounwind {
 ; CHECK:    ld [%i0+value], %i0
 entry:
-  %0 = load i32, i32* @value
+  %0 = load i32, ptr @value
   ret i32 %0
 }
 

@@ -23,6 +23,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 namespace {
 
 class PrintModulePassWrapper : public ModulePass {
@@ -39,11 +41,12 @@ public:
         ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
   bool runOnModule(Module &M) override {
-    // RemoveDIs: there's no textual representation of the DPValue debug-info,
-    // convert to dbg.values before writing out.
-    bool IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
-    if (IsNewDbgInfoFormat)
-      M.convertFromNewDbgValues();
+    ScopedDbgInfoFormatSetter FormatSetter(M, UseNewDbgInfoFormat);
+    // Remove intrinsic declarations when printing in the new format.
+    // TODO: Move this into Module::setIsNewDbgInfoFormat when we're ready to
+    // update test output.
+    if (UseNewDbgInfoFormat)
+      M.removeDebugIntrinsicDeclarations();
 
     if (llvm::isFunctionInPrintList("*")) {
       if (!Banner.empty())
@@ -61,9 +64,6 @@ public:
         }
       }
     }
-
-    if (IsNewDbgInfoFormat)
-      M.convertToNewDbgValues();
 
     return false;
   }
@@ -87,11 +87,7 @@ public:
 
   // This pass just prints a banner followed by the function as it's processed.
   bool runOnFunction(Function &F) override {
-    // RemoveDIs: there's no textual representation of the DPValue debug-info,
-    // convert to dbg.values before writing out.
-    bool IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
-    if (IsNewDbgInfoFormat)
-      F.convertFromNewDbgValues();
+    ScopedDbgInfoFormatSetter FormatSetter(F, UseNewDbgInfoFormat);
 
     if (isFunctionInPrintList(F.getName())) {
       if (forcePrintModuleIR())
@@ -100,9 +96,6 @@ public:
       else
         OS << Banner << '\n' << static_cast<Value &>(F);
     }
-
-    if (IsNewDbgInfoFormat)
-      F.convertToNewDbgValues();
 
     return false;
   }

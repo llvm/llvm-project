@@ -31,7 +31,7 @@ template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
   void init(Allocator *Instance) NO_THREAD_SAFETY_ANALYSIS {
     DCHECK_EQ(DestructorIterations, 0U);
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
-    Instance->initCache(&Cache);
+    Instance->initAllocator(&SizeClassAllocator);
     DestructorIterations = PTHREAD_DESTRUCTOR_ITERATIONS;
   }
 
@@ -41,9 +41,9 @@ template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
       return true;
     }
     if (atomic_load_relaxed(&Precedence) == 0)
-      atomic_store_relaxed(&Precedence,
-                           static_cast<uptr>(getMonotonicTimeFast() >>
-                                             FIRST_32_SECOND_64(16, 0)));
+      atomic_store_relaxed(
+          &Precedence,
+          static_cast<uptr>(getMonotonicTime() >> FIRST_32_SECOND_64(16, 0)));
     return false;
   }
   inline void lock() NO_THREAD_SAFETY_ANALYSIS {
@@ -72,7 +72,10 @@ template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
   // TODO(chiahungduan): Ideally, we want to do `Mutex.assertHeld` but acquiring
   // TSD doesn't always require holding the lock. Add this assertion while the
   // lock is always acquired.
-  typename Allocator::CacheT &getCache() REQUIRES(Mutex) { return Cache; }
+  typename Allocator::SizeClassAllocatorT &getSizeClassAllocator()
+      REQUIRES(Mutex) {
+    return SizeClassAllocator;
+  }
   typename Allocator::QuarantineCacheT &getQuarantineCache() REQUIRES(Mutex) {
     return QuarantineCache;
   }
@@ -81,7 +84,7 @@ private:
   HybridMutex Mutex;
   atomic_uptr Precedence = {};
 
-  typename Allocator::CacheT Cache GUARDED_BY(Mutex);
+  typename Allocator::SizeClassAllocatorT SizeClassAllocator GUARDED_BY(Mutex);
   typename Allocator::QuarantineCacheT QuarantineCache GUARDED_BY(Mutex);
 };
 

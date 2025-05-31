@@ -480,25 +480,6 @@ func.func private @use_not_integer(!spirv.coopmatrix<8x8xi32, Subgroup, Subgroup
 // -----
 
 //===----------------------------------------------------------------------===//
-// NV.CooperativeMatrix
-//===----------------------------------------------------------------------===//
-
-// CHECK: func private @nv_coop_matrix_type(!spirv.NV.coopmatrix<8x16xi32, Subgroup>, !spirv.NV.coopmatrix<8x8xf32, Workgroup>)
-func.func private @nv_coop_matrix_type(!spirv.NV.coopmatrix<8x16xi32, Subgroup>, !spirv.NV.coopmatrix<8x8xf32, Workgroup>) -> ()
-
-// -----
-
-// expected-error @+1 {{expected ','}}
-func.func private @missing_scope(!spirv.NV.coopmatrix<8x16xi32>) -> ()
-
-// -----
-
-// expected-error @+1 {{expected rows and columns size}}
-func.func private @missing_count(!spirv.NV.coopmatrix<8xi32, Subgroup>) -> ()
-
-// -----
-
-//===----------------------------------------------------------------------===//
 // Matrix
 //===----------------------------------------------------------------------===//
 // CHECK: func private @matrix_type(!spirv.matrix<2 x vector<2xf16>>)
@@ -513,6 +494,11 @@ func.func private @matrix_type(!spirv.matrix<3 x vector<3xf32>>) -> ()
 
 // CHECK: func private @matrix_type(!spirv.matrix<4 x vector<4xf16>>)
 func.func private @matrix_type(!spirv.matrix<4 x vector<4xf16>>) -> ()
+
+// -----
+
+// CHECK: func private @matrix_type(!spirv.struct<(!spirv.matrix<3 x vector<3xf32>> [0])>)
+func.func private @matrix_type(!spirv.struct<(!spirv.matrix<3 x vector<3xf32>> [0])>) -> ()
 
 // -----
 

@@ -17,7 +17,7 @@
 using namespace mlir;
 using namespace mlir::bufferization;
 
-static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
+static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
 
 namespace {
 /// While CondBranchOp also implement the BranchOpInterface, we add a
@@ -84,7 +84,7 @@ struct CondBranchOpInterface
             DenseMap<Value, Value> &mapping) -> DeallocOp {
       SmallVector<Value> toRetain;
       state.getMemrefsToRetain(condBr->getBlock(), target,
-                               OperandRange(destOperands), toRetain);
+                               destOperands.getAsOperandRange(), toRetain);
       SmallVector<Value> adaptedConditions(
           llvm::map_range(conditions, conditionModifier));
       auto deallocOp = builder.create<bufferization::DeallocOp>(
@@ -133,8 +133,8 @@ struct CondBranchOpInterface
     // We specifically need to update the ownerships of values that are retained
     // in both dealloc operations again to get a combined 'Unique' ownership
     // instead of an 'Unknown' ownership.
-    SmallPtrSet<Value, 16> thenValues(thenTakenDeallocOp.getRetained().begin(),
-                                      thenTakenDeallocOp.getRetained().end());
+    SmallPtrSet<Value, 16> thenValues(llvm::from_range,
+                                      thenTakenDeallocOp.getRetained());
     SetVector<Value> commonValues;
     for (Value val : elseTakenDeallocOp.getRetained()) {
       if (thenValues.contains(val))

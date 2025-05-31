@@ -42,3 +42,4 @@ define void @tail_call_void_func_void() {
   tail call void @external_void_func_void()
   ret void
 }
+

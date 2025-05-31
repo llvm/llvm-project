@@ -55,7 +55,6 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -105,17 +104,17 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
         uncappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(uncappedSummaryStream, summaryOptions)
         uncappedSummary = uncappedSummaryStream.GetData()
-        self.assertTrue(
-            uncappedSummary.find("someText") > 0,
+        self.assertGreater(
+            uncappedSummary.find("someText"),
+            0,
             "uncappedSummary does not include the full string",
         )
         summaryOptions.SetCapping(lldb.eTypeSummaryCapped)
         cappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(cappedSummaryStream, summaryOptions)
         cappedSummary = cappedSummaryStream.GetData()
-        self.assertTrue(
-            cappedSummary.find("someText") <= 0,
-            "cappedSummary includes the full string",
+        self.assertLessEqual(
+            cappedSummary.find("someText"), 0, "cappedSummary includes the full string"
         )
 
         self.expect_expr(

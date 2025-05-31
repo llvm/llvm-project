@@ -13,7 +13,10 @@
 #include "llvm/ExecutionEngine/JITLink/MachO_x86_64.h"
 #include "llvm/ExecutionEngine/JITLink/DWARFRecordSectionSplitter.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
 
+#include "CompactUnwindSupport.h"
+#include "DefineExternalSectionStartAndEndSymbols.h"
 #include "MachOLinkGraphBuilder.h"
 
 #define DEBUG_TYPE "jitlink"
@@ -26,8 +29,10 @@ namespace {
 class MachOLinkGraphBuilder_x86_64 : public MachOLinkGraphBuilder {
 public:
   MachOLinkGraphBuilder_x86_64(const object::MachOObjectFile &Obj,
+                               std::shared_ptr<orc::SymbolStringPool> SSP,
                                SubtargetFeatures Features)
-      : MachOLinkGraphBuilder(Obj, Triple("x86_64-apple-darwin"),
+      : MachOLinkGraphBuilder(Obj, std::move(SSP),
+                              Triple("x86_64-apple-darwin"),
                               std::move(Features), x86_64::getEdgeKindName) {}
 
 private:
@@ -179,21 +184,41 @@ private:
     Edge::Kind DeltaKind;
     Symbol *TargetSymbol;
     uint64_t Addend;
+
+    bool FixingFromSymbol = true;
     if (&BlockToFix == &FromSymbol->getAddressable()) {
+      if (LLVM_UNLIKELY(&BlockToFix == &ToSymbol->getAddressable())) {
+        // From and To are symbols in the same block. Decide direction by offset
+        // instead.
+        if (ToSymbol->getAddress() > FixupAddress)
+          FixingFromSymbol = true;
+        else if (FromSymbol->getAddress() > FixupAddress)
+          FixingFromSymbol = false;
+        else
+          FixingFromSymbol = FromSymbol->getAddress() >= ToSymbol->getAddress();
+      } else
+        FixingFromSymbol = true;
+    } else {
+      if (&BlockToFix == &ToSymbol->getAddressable())
+        FixingFromSymbol = false;
+      else {
+        // BlockToFix was neither FromSymbol nor ToSymbol.
+        return make_error<JITLinkError>("SUBTRACTOR relocation must fix up "
+                                        "either 'A' or 'B' (or a symbol in one "
+                                        "of their alt-entry groups)");
+      }
+    }
+
+    if (FixingFromSymbol) {
       TargetSymbol = ToSymbol;
       DeltaKind = (SubRI.r_length == 3) ? x86_64::Delta64 : x86_64::Delta32;
       Addend = FixupValue + (FixupAddress - FromSymbol->getAddress());
       // FIXME: handle extern 'from'.
-    } else if (&BlockToFix == &ToSymbol->getAddressable()) {
+    } else {
       TargetSymbol = FromSymbol;
       DeltaKind =
           (SubRI.r_length == 3) ? x86_64::NegDelta64 : x86_64::NegDelta32;
       Addend = FixupValue - (FixupAddress - ToSymbol->getAddress());
-    } else {
-      // BlockToFix was neither FromSymbol nor ToSymbol.
-      return make_error<JITLinkError>("SUBTRACTOR relocation must fix up "
-                                      "either 'A' or 'B' (or a symbol in one "
-                                      "of their alt-entry chains)");
     }
 
     return PairRelocInfo(DeltaKind, TargetSymbol, Addend);
@@ -436,8 +461,8 @@ private:
 };
 
 Error buildGOTAndStubs_MachO_x86_64(LinkGraph &G) {
-  x86_64::GOTTableManager GOT;
-  x86_64::PLTTableManager PLT(GOT);
+  x86_64::GOTTableManager GOT(G);
+  x86_64::PLTTableManager PLT(G, GOT);
   visitExistingEdges(G, GOT, PLT);
   return Error::success();
 }
@@ -462,8 +487,8 @@ private:
   }
 };
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromMachOObject_x86_64(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromMachOObject_x86_64(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   auto MachOObj = object::ObjectFile::createMachOObjectFile(ObjectBuffer);
   if (!MachOObj)
     return MachOObj.takeError();
@@ -472,9 +497,35 @@ createLinkGraphFromMachOObject_x86_64(MemoryBufferRef ObjectBuffer) {
   if (!Features)
     return Features.takeError();
 
-  return MachOLinkGraphBuilder_x86_64(**MachOObj, std::move(*Features))
+  return MachOLinkGraphBuilder_x86_64(**MachOObj, std::move(SSP),
+                                      std::move(*Features))
       .buildGraph();
 }
+
+struct CompactUnwindTraits_MachO_x86_64
+    : public CompactUnwindTraits<CompactUnwindTraits_MachO_x86_64,
+                                 /* PointerSize = */ 8> {
+  // FIXME: Reinstate once we no longer need the MSVC workaround. See
+  //        FIXME for CompactUnwindTraits in CompactUnwindSupport.h.
+  // constexpr static size_t PointerSize = 8;
+
+  constexpr static endianness Endianness = endianness::little;
+
+  constexpr static uint32_t EncodingModeMask = 0x0f000000;
+  constexpr static uint32_t DWARFSectionOffsetMask = 0x00ffffff;
+
+  using GOTManager = x86_64::GOTTableManager;
+
+  static bool encodingSpecifiesDWARF(uint32_t Encoding) {
+    constexpr uint32_t DWARFMode = 0x04000000;
+    return (Encoding & EncodingModeMask) == DWARFMode;
+  }
+
+  static bool encodingCannotBeMerged(uint32_t Encoding) {
+    constexpr uint32_t StackIndirectMode = 0x03000000;
+    return (Encoding & EncodingModeMask) == StackIndirectMode;
+  }
+};
 
 void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
                        std::unique_ptr<JITLinkContext> Ctx) {
@@ -482,22 +533,44 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
   PassConfiguration Config;
 
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
-    // Add eh-frame passes.
-    Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_x86_64());
-    Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_x86_64());
-
-    // Add compact unwind splitter pass.
-    Config.PrePrunePasses.push_back(
-        CompactUnwindSplitter("__LD,__compact_unwind"));
-
     // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
       Config.PrePrunePasses.push_back(std::move(MarkLive));
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
+    // Add eh-frame passes.
+    Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_x86_64());
+    Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_x86_64());
+
+    // Create a compact-unwind manager for use in passes below.
+    auto CompactUnwindMgr = std::make_shared<
+        CompactUnwindManager<CompactUnwindTraits_MachO_x86_64>>(
+        orc::MachOCompactUnwindSectionName, orc::MachOUnwindInfoSectionName,
+        orc::MachOEHFrameSectionName);
+
+    // Add compact unwind prepare pass.
+    Config.PrePrunePasses.push_back([CompactUnwindMgr](LinkGraph &G) {
+      return CompactUnwindMgr->prepareForPrune(G);
+    });
+
+    // Resolve any external section start / end symbols.
+    Config.PostAllocationPasses.push_back(
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            identifyMachOSectionStartAndEndSymbols));
+
     // Add an in-place GOT/Stubs pass.
     Config.PostPrunePasses.push_back(buildGOTAndStubs_MachO_x86_64);
+
+    // Reserve space for unwind-info.
+    Config.PostPrunePasses.push_back([CompactUnwindMgr](LinkGraph &G) {
+      return CompactUnwindMgr->processAndReserveUnwindInfo(G);
+    });
+
+    // Translate compact-unwind to unwind-info.
+    Config.PreFixupPasses.push_back([CompactUnwindMgr](LinkGraph &G) {
+      return CompactUnwindMgr->writeUnwindInfo(G);
+    });
 
     // Add GOT/Stubs optimizer pass.
     Config.PreFixupPasses.push_back(x86_64::optimizeGOTAndStubAccesses);
@@ -511,11 +584,11 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 }
 
 LinkGraphPassFunction createEHFrameSplitterPass_MachO_x86_64() {
-  return DWARFRecordSectionSplitter("__TEXT,__eh_frame");
+  return DWARFRecordSectionSplitter(orc::MachOEHFrameSectionName);
 }
 
 LinkGraphPassFunction createEHFrameEdgeFixerPass_MachO_x86_64() {
-  return EHFrameEdgeFixer("__TEXT,__eh_frame", x86_64::PointerSize,
+  return EHFrameEdgeFixer(orc::MachOEHFrameSectionName, x86_64::PointerSize,
                           x86_64::Pointer32, x86_64::Pointer64, x86_64::Delta32,
                           x86_64::Delta64, x86_64::NegDelta32);
 }

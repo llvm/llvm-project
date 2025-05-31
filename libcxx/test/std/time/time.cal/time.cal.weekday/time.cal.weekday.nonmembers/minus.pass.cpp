@@ -20,8 +20,9 @@
 // [Example: Sunday - Monday == days{6}. -end example]
 
 #include <chrono>
-#include <type_traits>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "test_macros.h"
 #include "../../euclidian.h"

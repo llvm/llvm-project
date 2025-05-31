@@ -24,6 +24,9 @@ class TestFirmwareCorefiles(TestBase):
         aout_exe_basename = "a.out"
         aout_exe = self.getBuildArtifact(aout_exe_basename)
         verstr_corefile = self.getBuildArtifact("verstr.core")
+        verstr_corefile_invalid_ident = self.getBuildArtifact(
+            "verstr-invalid-ident.core"
+        )
         verstr_corefile_addr = self.getBuildArtifact("verstr-addr.core")
         create_corefile = self.getBuildArtifact("create-empty-corefile")
         slide = 0x70000000000
@@ -34,6 +37,14 @@ class TestFirmwareCorefiles(TestBase):
             + " "
             + aout_exe
             + " 0xffffffffffffffff 0xffffffffffffffff",
+            shell=True,
+        )
+        call(
+            create_corefile
+            + " version-string "
+            + verstr_corefile_invalid_ident
+            + ' "" '
+            + "0xffffffffffffffff 0xffffffffffffffff",
             shell=True,
         )
         call(
@@ -62,7 +73,7 @@ class TestFirmwareCorefiles(TestBase):
         if self.TraceOn():
             self.runCmd("script print('loading corefile %s')" % verstr_corefile)
         process = target.LoadCore(verstr_corefile)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")
@@ -71,13 +82,24 @@ class TestFirmwareCorefiles(TestBase):
         self.assertEqual(fspec.GetFilename(), aout_exe_basename)
         self.dbg.DeleteTarget(target)
 
-        # Second, try the "kern ver str" corefile where it loads at an address
+        # Second, try the "kern ver str" corefile which has an invalid ident,
+        # make sure we don't crash.
+        target = self.dbg.CreateTarget("")
+        err = lldb.SBError()
+        if self.TraceOn():
+            self.runCmd(
+                "script print('loading corefile %s')" % verstr_corefile_invalid_ident
+            )
+        process = target.LoadCore(verstr_corefile_invalid_ident)
+        self.assertTrue(process.IsValid())
+
+        # Third, try the "kern ver str" corefile where it loads at an address
         target = self.dbg.CreateTarget("")
         err = lldb.SBError()
         if self.TraceOn():
             self.runCmd("script print('loading corefile %s')" % verstr_corefile_addr)
         process = target.LoadCore(verstr_corefile_addr)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")
@@ -156,7 +178,7 @@ class TestFirmwareCorefiles(TestBase):
         if self.TraceOn():
             self.runCmd("script print('loading corefile %s')" % binspec_corefile)
         process = target.LoadCore(binspec_corefile)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")
@@ -170,7 +192,7 @@ class TestFirmwareCorefiles(TestBase):
         if self.TraceOn():
             self.runCmd("script print('loading corefile %s')" % binspec_corefile_addr)
         process = target.LoadCore(binspec_corefile_addr)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")
@@ -190,7 +212,7 @@ class TestFirmwareCorefiles(TestBase):
                 "script print('loading corefile %s')" % binspec_corefile_slideonly
             )
         process = target.LoadCore(binspec_corefile_slideonly)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")
@@ -263,7 +285,7 @@ class TestFirmwareCorefiles(TestBase):
             for l in python_init:
                 writer.write(l + "\n")
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
         dwarfdump_cmd_output = subprocess.check_output(
             ('/usr/bin/dwarfdump --uuid "%s"' % aout_exe), shell=True
         ).decode("utf-8")
@@ -330,7 +352,7 @@ class TestFirmwareCorefiles(TestBase):
             )
 
         process = target.LoadCore(binspec_corefile_addr)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             self.runCmd("image list")
             self.runCmd("target mod dump sections")

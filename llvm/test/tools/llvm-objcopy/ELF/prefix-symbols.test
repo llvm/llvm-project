@@ -1,8 +1,8 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --prefix-symbols prefix %t %t2
-# RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefixes=COMMON,BASIC
+# RUN: llvm-readelf --symbols %t2 | FileCheck %s --check-prefixes=COMMON,BASIC
 # RUN: llvm-objcopy --redefine-sym bar=baz --prefix-symbols prefix %t %t3
-# RUN: llvm-readobj --symbols %t3 | FileCheck %s --check-prefixes=COMMON,REDEF
+# RUN: llvm-readelf --symbols %t3 | FileCheck %s --check-prefixes=COMMON,REDEF
 
 ## Show that an empty string is permitted as the argument to
 ## --prefix-symbols.
@@ -40,51 +40,11 @@ Symbols:
   - Name:     undef
     Binding:  STB_GLOBAL
 
-# COMMON: Symbols [
-# COMMON-NEXT:  Symbol {
-# COMMON-NEXT:    Name:
-# COMMON-NEXT:    Value: 0x0
-# COMMON-NEXT:    Size: 0
-# COMMON-NEXT:    Binding: Local
-# COMMON-NEXT:    Type: None
-# COMMON-NEXT:    Other: 0
-# COMMON-NEXT:    Section: Undefined
-# COMMON-NEXT:  }
-# COMMON-NEXT:  Symbol {
-# COMMON-NEXT:    Name: foo
-# COMMON-NEXT:    Value: 0x0
-# COMMON-NEXT:    Size: 0
-# COMMON-NEXT:    Binding: Local
-# COMMON-NEXT:    Type: Section
-# COMMON-NEXT:    Other: 0
-# COMMON-NEXT:    Section: .text
-# COMMON-NEXT:  }
-# COMMON-NEXT:  Symbol {
-# BASIC-NEXT:    Name: prefixbar
-# REDEF-NEXT:    Name: prefixbaz
-# COMMON-NEXT:    Value: 0x0
-# COMMON-NEXT:    Size: 0
-# COMMON-NEXT:    Binding: Local
-# COMMON-NEXT:    Type: File
-# COMMON-NEXT:    Other: 0
-# COMMON-NEXT:    Section: .text
-# COMMON-NEXT:  }
-# COMMON-NEXT:  Symbol {
-# COMMON-NEXT:    Name: prefixfoobar
-# COMMON-NEXT:    Value: 0x0
-# COMMON-NEXT:    Size: 0
-# COMMON-NEXT:    Binding: Global
-# COMMON-NEXT:    Type: Function
-# COMMON-NEXT:    Other: 0
-# COMMON-NEXT:    Section: .text
-# COMMON-NEXT:  }
-# COMMON-NEXT:  Symbol {
-# COMMON-NEXT:    Name: prefixundef
-# COMMON-NEXT:    Value: 0x0
-# COMMON-NEXT:    Size: 0
-# COMMON-NEXT:    Binding: Global
-# COMMON-NEXT:    Type: None
-# COMMON-NEXT:    Other: 0
-# COMMON-NEXT:    Section: Undefined
-# COMMON-NEXT:  }
-# COMMON-NEXT:]
+# COMMON:      Symbol table '.symtab' contains 5 entries:
+# COMMON-NEXT:  Num: Value Size Type Bind Vis Ndx Name
+# COMMON-NEXT:   0: [[#]] 0 NOTYPE  LOCAL  {{.*}}
+# COMMON-NEXT:   1: [[#]] 0 SECTION LOCAL  {{.*}} foo
+# BASIC-NEXT:    2: [[#]] 0 FILE    LOCAL  {{.*}} prefixbar
+# REDEF-NEXT:    2: [[#]] 0 FILE    LOCAL  {{.*}} prefixbaz
+# COMMON-NEXT:   3: [[#]] 0 FUNC    GLOBAL {{.*}} prefixfoobar
+# COMMON-NEXT:   4: [[#]] 0 NOTYPE  GLOBAL {{.*}} prefixundef

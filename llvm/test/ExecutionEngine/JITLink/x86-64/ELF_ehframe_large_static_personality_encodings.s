@@ -2,8 +2,9 @@
 # UNSUPPORTED: system-windows
 # RUN: llvm-mc -triple=x86_64-pc-linux-gnu -large-code-model \
 # RUN:   -filetype=obj -o %t %s
-# RUN: llvm-jitlink -debug-only=jitlink -noexec -phony-externals %t 2>&1 | \
-# RUN:   FileCheck %s
+# RUN: llvm-jitlink -num-threads=0 -debug-only=jitlink -noexec \
+# RUN:              -phony-externals %t 2>&1 \
+# RUN:              | FileCheck %s
 #
 # Check handling of pointer encodings for personality functions when compiling
 # with `-mcmodel=large -static`.
@@ -190,7 +191,7 @@ GCC_except_table1:
 	.hidden	DW.ref.__gxx_personality_v0
 	.weak	DW.ref.__gxx_personality_v0
 
-	.section	.data.DW.ref.__gxx_personality_v0,"aGw",@progbits,DW.ref.__gxx_personality_v0,comdat
+	.section	.data.DW.ref.__gxx_personality_v0,"awG",@progbits,DW.ref.__gxx_personality_v0,comdat
 	.p2align	3
 	.type	DW.ref.__gxx_personality_v0,@object
 	.size	DW.ref.__gxx_personality_v0, 8

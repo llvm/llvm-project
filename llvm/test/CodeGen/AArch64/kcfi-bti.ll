@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
 
 ; ASM:       .word 12345678
-define void @f1(ptr noundef %x) !kcfi_type !2 {
+define void @f1(ptr noundef %x) #1 !kcfi_type !2 {
 ; ASM-LABEL: f1:
 ; ASM:       // %bb.0:
 ; ASM:         ldur w16, [x0, #-4]
@@ -30,7 +30,7 @@ define void @f1(ptr noundef %x) !kcfi_type !2 {
 }
 
 ; ASM:       .word 12345678
-define void @f2(ptr noundef %x) !kcfi_type !2 {
+define void @f2(ptr noundef %x)  #1 !kcfi_type !2 {
 ; ASM-LABEL: f2:
 ; ASM:       // %bb.0:
 ; ASM:         ldur w16, [x0, #-4]
@@ -58,7 +58,7 @@ define void @f2(ptr noundef %x) !kcfi_type !2 {
 }
 
 ; ASM-NOT: .word:
-define void @f3(ptr noundef %x) {
+define void @f3(ptr noundef %x) #1 {
 ; ASM-LABEL: f3:
 ; ASM:       // %bb.0:
 ; ASM:         ldur w9, [x16, #-4]
@@ -73,11 +73,11 @@ define void @f3(ptr noundef %x) {
 ; MIR-LABEL: name: f3
 ; MIR: body:
 
-; ISEL: TCRETURNriBTI %1, 0, csr_aarch64_aapcs, implicit $sp, cfi-type 12345678
+; ISEL: TCRETURNrix16x17 %1, 0, csr_aarch64_aapcs, implicit $sp, cfi-type 12345678
 
 ; KCFI:       BUNDLE{{.*}} {
 ; KCFI-NEXT:    KCFI_CHECK $x16, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
-; KCFI-NEXT:    TCRETURNriBTI internal killed $x16, 0, csr_aarch64_aapcs, implicit $sp
+; KCFI-NEXT:    TCRETURNrix16x17 internal killed $x16, 0, csr_aarch64_aapcs, implicit $sp
 ; KCFI-NEXT:  }
 
   tail call void %x() [ "kcfi"(i32 12345678) ]
@@ -85,6 +85,7 @@ define void @f3(ptr noundef %x) {
 }
 
 attributes #0 = { returns_twice }
+attributes #1 = { "branch-target-enforcement" }
 
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 8, !"branch-target-enforcement", i32 1}

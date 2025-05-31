@@ -124,21 +124,18 @@ define dso_local double @testDoubleNonRepresentableScalar() local_unnamed_addr {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xxsplti32dx vs1, 0, 1081435463
 ; CHECK-LE-NEXT:    xxsplti32dx vs1, 1, -1374389535
-; CHECK-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-NOPCREL-BE-LABEL: testDoubleNonRepresentableScalar:
 ; CHECK-NOPCREL-BE:       # %bb.0: # %entry
 ; CHECK-NOPCREL-BE-NEXT:    xxsplti32dx vs1, 0, 1081435463
 ; CHECK-NOPCREL-BE-NEXT:    xxsplti32dx vs1, 1, -1374389535
-; CHECK-NOPCREL-BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NOPCREL-BE-NEXT:    blr
 ;
 ; CHECK-NOPCREL-LE-LABEL: testDoubleNonRepresentableScalar:
 ; CHECK-NOPCREL-LE:       # %bb.0: # %entry
 ; CHECK-NOPCREL-LE-NEXT:    xxsplti32dx vs1, 0, 1081435463
 ; CHECK-NOPCREL-LE-NEXT:    xxsplti32dx vs1, 1, -1374389535
-; CHECK-NOPCREL-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NOPCREL-LE-NEXT:    blr
 ;
 ; CHECK-NOPREFIX-LABEL: testDoubleNonRepresentableScalar:
@@ -151,7 +148,6 @@ define dso_local double @testDoubleNonRepresentableScalar() local_unnamed_addr {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xxsplti32dx vs1, 0, 1081435463
 ; CHECK-BE-NEXT:    xxsplti32dx vs1, 1, -1374389535
-; CHECK-BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-BE-NEXT:    blr
 entry:
   ret double 3.423300e+02
@@ -162,21 +158,18 @@ define dso_local float @testFloatDenormScalar() local_unnamed_addr {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xxsplti32dx vs1, 0, 940259579
 ; CHECK-LE-NEXT:    xxsplti32dx vs1, 1, -2147483648
-; CHECK-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-NOPCREL-BE-LABEL: testFloatDenormScalar:
 ; CHECK-NOPCREL-BE:       # %bb.0: # %entry
 ; CHECK-NOPCREL-BE-NEXT:    xxsplti32dx vs1, 0, 940259579
 ; CHECK-NOPCREL-BE-NEXT:    xxsplti32dx vs1, 1, -2147483648
-; CHECK-NOPCREL-BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NOPCREL-BE-NEXT:    blr
 ;
 ; CHECK-NOPCREL-LE-LABEL: testFloatDenormScalar:
 ; CHECK-NOPCREL-LE:       # %bb.0: # %entry
 ; CHECK-NOPCREL-LE-NEXT:    xxsplti32dx vs1, 0, 940259579
 ; CHECK-NOPCREL-LE-NEXT:    xxsplti32dx vs1, 1, -2147483648
-; CHECK-NOPCREL-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NOPCREL-LE-NEXT:    blr
 ;
 ; CHECK-NOPREFIX-LABEL: testFloatDenormScalar:
@@ -189,7 +182,6 @@ define dso_local float @testFloatDenormScalar() local_unnamed_addr {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xxsplti32dx vs1, 0, 940259579
 ; CHECK-BE-NEXT:    xxsplti32dx vs1, 1, -2147483648
-; CHECK-BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-BE-NEXT:    blr
 entry:
   ret float 0x380B38FB80000000
@@ -200,21 +192,18 @@ define dso_local double @testFloatDenormToDoubleScalar() local_unnamed_addr {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    xxsplti32dx vs1, 0, 940259579
 ; CHECK-LE-NEXT:    xxsplti32dx vs1, 1, -2147483648
-; CHECK-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-NOPCREL-BE-LABEL: testFloatDenormToDoubleScalar:
 ; CHECK-NOPCREL-BE:       # %bb.0: # %entry
 ; CHECK-NOPCREL-BE-NEXT:    xxsplti32dx vs1, 0, 940259579
 ; CHECK-NOPCREL-BE-NEXT:    xxsplti32dx vs1, 1, -2147483648
-; CHECK-NOPCREL-BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NOPCREL-BE-NEXT:    blr
 ;
 ; CHECK-NOPCREL-LE-LABEL: testFloatDenormToDoubleScalar:
 ; CHECK-NOPCREL-LE:       # %bb.0: # %entry
 ; CHECK-NOPCREL-LE-NEXT:    xxsplti32dx vs1, 0, 940259579
 ; CHECK-NOPCREL-LE-NEXT:    xxsplti32dx vs1, 1, -2147483648
-; CHECK-NOPCREL-LE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NOPCREL-LE-NEXT:    blr
 ;
 ; CHECK-NOPREFIX-LABEL: testFloatDenormToDoubleScalar:
@@ -227,7 +216,6 @@ define dso_local double @testFloatDenormToDoubleScalar() local_unnamed_addr {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    xxsplti32dx vs1, 0, 940259579
 ; CHECK-BE-NEXT:    xxsplti32dx vs1, 1, -2147483648
-; CHECK-BE-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-BE-NEXT:    blr
 entry:
   ret double 0x380B38FB80000000

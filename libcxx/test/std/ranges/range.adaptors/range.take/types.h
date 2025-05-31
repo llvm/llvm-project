@@ -65,4 +65,54 @@ private:
   int* end_;
 };
 
+template <template <class...> typename Iter, bool Simple, bool Sized>
+struct CommonInputView : std::ranges::view_base {
+  constexpr explicit CommonInputView(int* b, int* e) : begin_(b), end_(e) {}
+
+  constexpr Iter<int*> begin() const { return Iter<int*>(begin_); }
+  constexpr Iter<int*> end() const { return Iter<int*>(end_); }
+
+  constexpr Iter<const int*> begin()
+    requires(!Simple)
+  {
+    return Iter<const int*>(begin_);
+  }
+  constexpr Iter<const int*> end()
+    requires(!Simple)
+  {
+    return Iter<const int*>(end_);
+  }
+
+  constexpr auto size() const
+    requires Sized
+  {
+    return end_ - begin_;
+  }
+
+private:
+  int* begin_;
+  int* end_;
+};
+
+using NonSimpleNonSizedView = CommonInputView<common_input_iterator, /*Simple=*/false, /*Sized=*/false>;
+static_assert(std::ranges::view<NonSimpleNonSizedView>);
+static_assert(!simple_view<NonSimpleNonSizedView>);
+static_assert(!std::ranges::sized_range<NonSimpleNonSizedView>);
+
+using SimpleViewNonSized = CommonInputView<common_input_iterator, /*Simple=*/true, /*Sized=*/false>;
+static_assert(std::ranges::view<SimpleViewNonSized>);
+static_assert(simple_view<SimpleViewNonSized>);
+static_assert(!std::ranges::sized_range<SimpleViewNonSized>);
+
+using NonSimpleSizedView = CommonInputView<common_input_iterator, /*Simple=*/false, /*Sized=*/true>;
+static_assert(std::ranges::view<NonSimpleSizedView>);
+static_assert(!simple_view<NonSimpleSizedView>);
+static_assert(std::ranges::sized_range<NonSimpleSizedView>);
+
+using NonSimpleSizedRandomView = CommonInputView<random_access_iterator, /*Simple=*/false, /*Sized=*/true>;
+static_assert(std::ranges::view<NonSimpleSizedRandomView>);
+static_assert(!simple_view<NonSimpleSizedRandomView>);
+static_assert(std::ranges::sized_range<NonSimpleSizedRandomView>);
+static_assert(std::ranges::random_access_range<NonSimpleSizedRandomView>);
+
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_TAKE_TYPES_H

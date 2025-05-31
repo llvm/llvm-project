@@ -289,8 +289,8 @@ Lforward:
 @ CHECK: addseq r0, pc, #-1073741824    @ encoding: [0x03,0x01,0x9f,0x02]
 @ CHECK:        Ltmp0:
 @ CHECK-NEXT:   Ltmp1:
-@ CHECK-NEXT:   adr	r0, (Ltmp1+8)+(Lback-Ltmp0) @ encoding: [A,A,0x0f'A',0xe2'A']
-@ CHECK-NEXT:                           @   fixup A - offset: 0, value: (Ltmp1+8)+(Lback-Ltmp0), kind: fixup_arm_adr_pcrel_12
+@ CHECK-NEXT:   adr	r0, Ltmp1+8+(Lback-Ltmp0) @ encoding: [A,A,0x0f'A',0xe2'A']
+@ CHECK-NEXT:                           @   fixup A - offset: 0, value: Ltmp1+8+(Lback-Ltmp0), kind: fixup_arm_adr_pcrel_12
 
     @ Test right shift by 32, which is encoded as 0
     add r3, r1, r2, lsr #32
@@ -1202,6 +1202,10 @@ Lforward:
 @ CHECK: ldrex	r1, [r7]                @ encoding: [0x9f,0x1f,0x97,0xe1]
 @ CHECK: ldrexd	r6, r7, [r8]            @ encoding: [0x9f,0x6f,0xb8,0xe1]
 
+@ GNU alias
+        ldrexd  r6, [r8]
+@ CHECK: ldrexd	r6, r7, [r8]            @ encoding: [0x9f,0x6f,0xb8,0xe1]
+
 @------------------------------------------------------------------------------
 @ LDRHT
 @------------------------------------------------------------------------------
@@ -1774,6 +1778,9 @@ Lforward:
         pkhtb r2, r2, r3, asr #31
         pkhtb r2, r2, r3, asr #15
 
+        it ne
+        pkhtbne r2, r2, r3, asr #15
+
 @ CHECK: pkhbt	r2, r2, r3              @ encoding: [0x13,0x20,0x82,0xe6]
 @ CHECK: pkhbt	r2, r2, r3, lsl #31     @ encoding: [0x93,0x2f,0x82,0xe6]
 @ CHECK: pkhbt	r2, r2, r3              @ encoding: [0x13,0x20,0x82,0xe6]
@@ -1782,6 +1789,7 @@ Lforward:
 @ CHECK: pkhbt	r2, r3, r2              @ encoding: [0x12,0x20,0x83,0xe6]
 @ CHECK: pkhtb	r2, r2, r3, asr #31     @ encoding: [0xd3,0x2f,0x82,0xe6]
 @ CHECK: pkhtb	r2, r2, r3, asr #15     @ encoding: [0xd3,0x27,0x82,0xe6]
+@ CHECK: pkhtbne r2, r2, r3, asr #15    @ encoding: [0xd3,0x27,0x82,0x16]
 
 @------------------------------------------------------------------------------
 @ FIXME: PLD
@@ -2898,6 +2906,10 @@ Lforward:
 @ CHECK: strexb	r1, r3, [r4]            @ encoding: [0x93,0x1f,0xc4,0xe1]
 @ CHECK: strexh	r4, r2, [r5]            @ encoding: [0x92,0x4f,0xe5,0xe1]
 @ CHECK: strex	r2, r1, [r7]            @ encoding: [0x91,0x2f,0x87,0xe1]
+@ CHECK: strexd	r6, r2, r3, [r8]        @ encoding: [0x92,0x6f,0xa8,0xe1]
+
+@ GNU alias
+        strexd  r6, r2, [r8]
 @ CHECK: strexd	r6, r2, r3, [r8]        @ encoding: [0x92,0x6f,0xa8,0xe1]
 
 @------------------------------------------------------------------------------

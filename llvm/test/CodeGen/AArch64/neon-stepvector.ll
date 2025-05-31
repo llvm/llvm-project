@@ -12,7 +12,7 @@ define <2 x i64> @stepvector_v2i64() {
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <2 x i64> @llvm.experimental.stepvector.v2i64()
+  %0 = call <2 x i64> @llvm.stepvector.v2i64()
   ret <2 x i64> %0
 }
 
@@ -28,7 +28,7 @@ define <4 x i32> @stepvector_v4i32() {
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <4 x i32> @llvm.experimental.stepvector.v4i32()
+  %0 = call <4 x i32> @llvm.stepvector.v4i32()
   ret <4 x i32> %0
 }
 
@@ -48,7 +48,7 @@ define <8 x i16> @stepvector_v8i16() {
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <8 x i16> @llvm.experimental.stepvector.v8i16()
+  %0 = call <8 x i16> @llvm.stepvector.v8i16()
   ret <8 x i16> %0
 }
 
@@ -76,7 +76,7 @@ define <16 x i8> @stepvector_v16i8() {
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <16 x i8> @llvm.experimental.stepvector.v16i8()
+  %0 = call <16 x i8> @llvm.stepvector.v16i8()
   ret <16 x i8> %0
 }
 
@@ -97,7 +97,7 @@ define <4 x i64> @stepvector_v4i64() {
 ; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI4_1]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <4 x i64> @llvm.experimental.stepvector.v4i64()
+  %0 = call <4 x i64> @llvm.stepvector.v4i64()
   ret <4 x i64> %0
 }
 
@@ -134,7 +134,7 @@ define <16 x i32> @stepvector_v16i32() {
 ; CHECK-NEXT:    ldr q3, [x11, :lo12:.LCPI5_3]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <16 x i32> @llvm.experimental.stepvector.v16i32()
+  %0 = call <16 x i32> @llvm.stepvector.v16i32()
   ret <16 x i32> %0
 }
 
@@ -148,7 +148,7 @@ define <2 x i32> @stepvector_v2i32() {
 ; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI6_0]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <2 x i32> @llvm.experimental.stepvector.v2i32()
+  %0 = call <2 x i32> @llvm.stepvector.v2i32()
   ret <2 x i32> %0
 }
 
@@ -164,17 +164,17 @@ define <4 x i16> @stepvector_v4i16() {
 ; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI7_0]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = call <4 x i16> @llvm.experimental.stepvector.v4i16()
+  %0 = call <4 x i16> @llvm.stepvector.v4i16()
   ret <4 x i16> %0
 }
 
 
-declare <2 x i64> @llvm.experimental.stepvector.v2i64()
-declare <4 x i32> @llvm.experimental.stepvector.v4i32()
-declare <8 x i16> @llvm.experimental.stepvector.v8i16()
-declare <16 x i8> @llvm.experimental.stepvector.v16i8()
+declare <2 x i64> @llvm.stepvector.v2i64()
+declare <4 x i32> @llvm.stepvector.v4i32()
+declare <8 x i16> @llvm.stepvector.v8i16()
+declare <16 x i8> @llvm.stepvector.v16i8()
 
-declare <4 x i64> @llvm.experimental.stepvector.v4i64()
-declare <16 x i32> @llvm.experimental.stepvector.v16i32()
-declare <2 x i32> @llvm.experimental.stepvector.v2i32()
-declare <4 x i16> @llvm.experimental.stepvector.v4i16()
+declare <4 x i64> @llvm.stepvector.v4i64()
+declare <16 x i32> @llvm.stepvector.v16i32()
+declare <2 x i32> @llvm.stepvector.v2i32()
+declare <4 x i16> @llvm.stepvector.v4i16()

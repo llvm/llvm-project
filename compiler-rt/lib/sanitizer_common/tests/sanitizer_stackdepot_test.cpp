@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#include <algorithm>
 #include <atomic>
 #include <numeric>
 #include <regex>
@@ -99,11 +100,11 @@ TEST_F(StackDepotTest, Print) {
   };
   EXPECT_EXIT(
       (StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
-      fix_regex("Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x7.*"));
-  EXPECT_EXIT(
-      (StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
       fix_regex(
-          "Stack for id .*#0 0x1.*#1 0x2.*#2 0x3.*#3 0x4.*#4 0x8.*#5 0x9.*"));
+          "Stack for id .*#0 0x0*1.*#1 0x0*2.*#2 0x0*3.*#3 0x0*4.*#4 0x0*7.*"));
+  EXPECT_EXIT((StackDepotPrintAll(), exit(0)), ::testing::ExitedWithCode(0),
+              fix_regex("Stack for id .*#0 0x0*1.*#1 0x0*2.*#2 0x0*3.*#3 "
+                        "0x0*4.*#4 0x0*8.*#5 0x0*9.*"));
 }
 
 TEST_F(StackDepotTest, PrintNoLock) {

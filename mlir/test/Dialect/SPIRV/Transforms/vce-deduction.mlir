@@ -66,7 +66,7 @@ spirv.module PhysicalStorageBuffer64 GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
     #spirv.vce<v1.0, [Shader, PhysicalStorageBufferAddresses], [SPV_EXT_physical_storage_buffer]>, #spirv.resource_limits<>>
 } {
-  spirv.func @physical_ptr(%val : !spirv.ptr<f32, PhysicalStorageBuffer>) "None" {
+  spirv.func @physical_ptr(%val : !spirv.ptr<f32, PhysicalStorageBuffer> { spirv.decoration = #spirv.decoration<Aliased> }) "None" {
     spirv.Return
   }
 }
@@ -101,7 +101,7 @@ spirv.module Logical GLSL450 attributes {
     #spirv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>, #spirv.resource_limits<>>
 } {
   spirv.func @group_non_uniform_iadd(%val : i32) -> i32 "None" {
-    %0 = spirv.GroupNonUniformIAdd "Subgroup" "Reduce" %val : i32
+    %0 = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %val : i32 -> i32
     spirv.ReturnValue %0: i32
   }
 }
@@ -112,7 +112,7 @@ spirv.module Logical GLSL450 attributes {
     #spirv.vce<v1.3, [Shader, GroupNonUniformClustered, GroupNonUniformBallot], []>, #spirv.resource_limits<>>
 } {
   spirv.func @group_non_uniform_iadd(%val : i32) -> i32 "None" {
-    %0 = spirv.GroupNonUniformIAdd "Subgroup" "Reduce" %val : i32
+    %0 = spirv.GroupNonUniformIAdd <Subgroup> <Reduce> %val : i32 -> i32
     spirv.ReturnValue %0: i32
   }
 }

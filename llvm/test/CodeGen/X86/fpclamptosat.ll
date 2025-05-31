@@ -217,9 +217,9 @@ entry:
 define i16 @stest_f64i16(double %x) nounwind {
 ; CHECK-LABEL: stest_f64i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-3.2768E+4,0.0E+0]
 ; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [3.2767E+4,0.0E+0]
 ; CHECK-NEXT:    minsd %xmm1, %xmm0
 ; CHECK-NEXT:    cvttsd2si %xmm0, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -276,9 +276,9 @@ entry:
 define i16 @stest_f32i16(float %x) nounwind {
 ; CHECK-LABEL: stest_f32i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-3.2768E+4,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    maxss %xmm0, %xmm1
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [3.2767E+4,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    minss %xmm1, %xmm0
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -815,9 +815,9 @@ entry:
 define i16 @stest_f64i16_mm(double %x) nounwind {
 ; CHECK-LABEL: stest_f64i16_mm:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [-3.2768E+4,0.0E+0]
 ; CHECK-NEXT:    maxsd %xmm0, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [3.2767E+4,0.0E+0]
 ; CHECK-NEXT:    minsd %xmm1, %xmm0
 ; CHECK-NEXT:    cvttsd2si %xmm0, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -869,9 +869,9 @@ entry:
 define i16 @stest_f32i16_mm(float %x) nounwind {
 ; CHECK-LABEL: stest_f32i16_mm:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [-3.2768E+4,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    maxss %xmm0, %xmm1
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = [3.2767E+4,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    minss %xmm1, %xmm0
 ; CHECK-NEXT:    cvttss2si %xmm0, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax

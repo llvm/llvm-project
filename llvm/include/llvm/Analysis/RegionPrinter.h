@@ -14,24 +14,25 @@
 #ifndef LLVM_ANALYSIS_REGIONPRINTER_H
 #define LLVM_ANALYSIS_REGIONPRINTER_H
 
-#include "llvm/Analysis/DOTGraphTraitsPass.h"
-#include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/DOTGraphTraits.h"
 
 namespace llvm {
   class FunctionPass;
   class Function;
   class RegionInfo;
+  class RegionNode;
 
-  FunctionPass *createRegionViewerPass();
-  FunctionPass *createRegionOnlyViewerPass();
-  FunctionPass *createRegionPrinterPass();
-  FunctionPass *createRegionOnlyPrinterPass();
+  LLVM_ABI FunctionPass *createRegionViewerPass();
+  LLVM_ABI FunctionPass *createRegionOnlyViewerPass();
+  LLVM_ABI FunctionPass *createRegionPrinterPass();
+  LLVM_ABI FunctionPass *createRegionOnlyPrinterPass();
 
   template <>
   struct DOTGraphTraits<RegionNode *> : public DefaultDOTGraphTraits {
     DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
-    std::string getNodeLabel(RegionNode *Node, RegionNode *Graph);
+    LLVM_ABI std::string getNodeLabel(RegionNode *Node, RegionNode *Graph);
   };
 
 #ifndef NDEBUG

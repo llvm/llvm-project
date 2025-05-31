@@ -6,18 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_PLATFORM_ERRORS_H
-#define LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_PLATFORM_ERRORS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_PLATFORM_ERRORS_H
+#define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_PLATFORM_ERRORS_H
 
 #include "linux_extension_errors.h"
 #include "posix_errors.h"
+#include "src/__support/macros/config.h"
 #include "stdc_errors.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE_VAR constexpr auto PLATFORM_ERRORS =
     STDC_ERRORS + POSIX_ERRORS + LINUX_ERRORS;
 
-} // namespace LIBC_NAMESPACE
+LIBC_INLINE_VAR constexpr auto PLATFORM_ERRNO_NAMES =
+    STDC_ERRNO_NAMES + POSIX_ERRNO_NAMES + LINUX_ERRNO_NAMES;
 
-#endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_TABLES_LINUX_PLATFORM_ERRORS_H
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_LINUX_PLATFORM_ERRORS_H

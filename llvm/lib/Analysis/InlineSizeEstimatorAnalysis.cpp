@@ -30,14 +30,13 @@ AnalysisKey InlineSizeEstimatorAnalysis::Key;
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include <algorithm>
 #include <deque>
 #include <optional>
 
-cl::opt<std::string> TFIR2NativeModelPath(
+static cl::opt<std::string> TFIR2NativeModelPath(
     "ml-inliner-ir2native-model", cl::Hidden,
     cl::desc("Path to saved model evaluating native size from IR."));
 
@@ -129,8 +128,9 @@ size_t getSize(Function &F, TargetTransformInfo &TTI) {
   size_t Ret = 0;
   for (const auto &BB : F)
     for (const auto &I : BB)
-      Ret += *(TTI.getInstructionCost(
-          &I, TargetTransformInfo::TargetCostKind::TCK_CodeSize).getValue());
+      Ret += TTI.getInstructionCost(
+                    &I, TargetTransformInfo::TargetCostKind::TCK_CodeSize)
+                 .getValue();
   return Ret;
 }
 

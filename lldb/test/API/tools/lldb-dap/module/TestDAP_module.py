@@ -16,8 +16,12 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact(program_basename)
         self.build_and_launch(program)
         functions = ["foo"]
-        breakpoint_ids = self.set_function_breakpoints(functions)
-        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+
+        # This breakpoint will be resolved only when the libfoo module is loaded
+        breakpoint_ids = self.set_function_breakpoints(
+            functions, wait_for_resolve=False
+        )
+        self.assertEqual(len(breakpoint_ids), len(functions), "expect one breakpoint")
         self.continue_to_breakpoints(breakpoint_ids)
         active_modules = self.dap_server.get_modules()
         program_module = active_modules[program_basename]
@@ -57,8 +61,30 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(program, program_module["path"])
         self.assertIn("addressRange", program_module)
 
+        # Collect all the module names we saw as events.
+        module_new_names = []
+        module_changed_names = []
+        module_event = self.dap_server.wait_for_event("module", 1)
+        while module_event is not None:
+            reason = module_event["body"]["reason"]
+            if reason == "new":
+                module_new_names.append(module_event["body"]["module"]["name"])
+            elif reason == "changed":
+                module_changed_names.append(module_event["body"]["module"]["name"])
+
+            module_event = self.dap_server.wait_for_event("module", 1)
+
+        # Make sure we got an event for every active module.
+        self.assertNotEqual(len(module_new_names), 0)
+        for module in active_modules:
+            self.assertIn(module, module_new_names)
+
+        # Make sure we got an update event for the program module when the
+        # symbols got added.
+        self.assertNotEqual(len(module_changed_names), 0)
+        self.assertIn(program_module["name"], module_changed_names)
+
     @skipIfWindows
-    @skipIfRemote
     def test_modules(self):
         """
         Mac or linux.
@@ -74,7 +100,6 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         )
 
     @skipUnlessDarwin
-    @skipIfRemote
     def test_modules_dsym(self):
         """
         Darwin only test with dSYM file.
@@ -85,7 +110,6 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         return self.run_test("a.out.dSYM", expect_debug_info_size=True)
 
     @skipIfWindows
-    @skipIfRemote
     def test_compile_units(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)

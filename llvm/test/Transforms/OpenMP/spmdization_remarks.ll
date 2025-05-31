@@ -1,12 +1,12 @@
 ; RUN: opt -passes=openmp-opt -pass-remarks=openmp-opt -pass-remarks-missed=openmp-opt -pass-remarks-analysis=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 target triple = "nvptx64"
 
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function to override.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:11:1: Generic-mode kernel is executed with a customized state machine that requires a fallback.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Call may contain unknown parallel regions. Use `__attribute__((assume("omp_no_parallelism")))` to override.
-; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:20:1: Transformed generic-mode kernel to SPMD-mode.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Value has potential side effects preventing SPMD-mode execution. Add `[[omp::assume("ompx_spmd_amenable")]]` to the called function to override.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Value has potential side effects preventing SPMD-mode execution. Add `[[omp::assume("ompx_spmd_amenable")]]` to the called function to override.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:11:1: Generic-mode kernel is executed with a customized state machine that requires a fallback.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Call may contain unknown parallel regions. Use `[[omp::assume("omp_no_parallelism")]]` to override.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Call may contain unknown parallel regions. Use `[[omp::assume("omp_no_parallelism")]]` to override.
+; CHECK{LITERAL}: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:20:1: Transformed generic-mode kernel to SPMD-mode.
 
 
 ;; void unknown(void);
@@ -26,7 +26,7 @@ target triple = "nvptx64"
 ;;   }
 ;; }
 ;;
-;; void no_openmp(void) __attribute__((assume("omp_no_openmp")));
+;; void no_openmp(void) [[omp::assume("omp_no_openmp")]];
 ;; void test_no_fallback(void) {
 ;;   #pragma omp target teams
 ;;   {
@@ -62,7 +62,7 @@ target triple = "nvptx64"
 
 
 ; Function Attrs: convergent norecurse nounwind
-define weak void @__omp_offloading_2a_d80d3d_test_fallback_l11(ptr %dyn) local_unnamed_addr #0 !dbg !15 {
+define weak ptx_kernel void @__omp_offloading_2a_d80d3d_test_fallback_l11(ptr %dyn) local_unnamed_addr #0 !dbg !15 {
 entry:
   %captured_vars_addrs.i.i = alloca [0 x ptr], align 8
   %0 = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_2a_d80d3d_test_fallback_l11_kernel_environment, ptr %dyn) #3, !dbg !18
@@ -107,7 +107,7 @@ declare i32 @__kmpc_global_thread_num(ptr) local_unnamed_addr #3
 declare void @__kmpc_target_deinit() local_unnamed_addr
 
 ; Function Attrs: norecurse nounwind
-define weak void @__omp_offloading_2a_d80d3d_test_no_fallback_l20(ptr %dyn) local_unnamed_addr #4 !dbg !32 {
+define weak ptx_kernel void @__omp_offloading_2a_d80d3d_test_no_fallback_l20(ptr %dyn) local_unnamed_addr #4 !dbg !32 {
 entry:
   %captured_vars_addrs.i2.i = alloca [0 x ptr], align 8
   %0 = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_2a_d80d3d_test_no_fallback_l20_kernel_environment, ptr %dyn) #3, !dbg !33
@@ -175,7 +175,6 @@ attributes #7 = { "llvm.assume"="ompx_spmd_amenable" }
 
 !llvm.dbg.cu = !{!0}
 !omp_offload.info = !{!3, !4}
-!nvvm.annotations = !{!5, !6}
 !llvm.module.flags = !{!7, !8, !9, !10, !11, !12, !13}
 !llvm.ident = !{!14}
 
@@ -184,8 +183,6 @@ attributes #7 = { "llvm.assume"="ompx_spmd_amenable" }
 !2 = !{}
 !3 = !{i32 0, i32 42, i32 14159165, !"test_no_fallback", i32 20, i32 1}
 !4 = !{i32 0, i32 42, i32 14159165, !"test_fallback", i32 11, i32 0}
-!5 = !{ptr @__omp_offloading_2a_d80d3d_test_fallback_l11, !"kernel", i32 1}
-!6 = !{ptr @__omp_offloading_2a_d80d3d_test_no_fallback_l20, !"kernel", i32 1}
 !7 = !{i32 7, !"Dwarf Version", i32 2}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}

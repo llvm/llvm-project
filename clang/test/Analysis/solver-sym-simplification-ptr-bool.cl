@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown -analyze -analyzer-checker=core %s
+// RUN: %clang_analyze_cc1 -triple amdgcn-unknown-unknown -analyzer-checker=core %s
 
 // expected-no-diagnostics
 

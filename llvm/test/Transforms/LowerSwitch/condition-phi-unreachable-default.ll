@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes=lowerswitch -S | FileCheck %s
+; RUN: opt < %s -passes=lower-switch -S | FileCheck %s
 
-; This test verifies -lowerswitch does not crash when an removing an
+; This test verifies -lower-switch does not crash when an removing an
 ; unreachable default branch causes a PHI node used as the switch
 ; condition to be erased.
 
@@ -10,7 +10,7 @@ entry:
 
 sw.epilog:                                        ; preds = %sw.epilog.outer, %for.body
   %i = phi i32 [ undef, %for.body ], [ 0, %entry ]
-  br i1 undef, label %for.body, label %for.end
+  br i1 true, label %for.body, label %for.end
 
 for.body:                                         ; preds = %sw.epilog
   switch i32 %i, label %sw.epilog [

@@ -14,7 +14,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -86,6 +85,11 @@ RISCVToolChain::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
   return ToolChain::UNW_None;
 }
 
+ToolChain::UnwindTableLevel RISCVToolChain::getDefaultUnwindTableLevel(
+    const llvm::opt::ArgList &Args) const {
+  return UnwindTableLevel::None;
+}
+
 void RISCVToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args,
@@ -141,7 +145,7 @@ std::string RISCVToolChain::computeSysRoot() const {
   if (!llvm::sys::fs::exists(SysRootDir))
     return std::string();
 
-  return std::string(SysRootDir.str());
+  return std::string(SysRootDir);
 }
 
 void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -155,6 +159,9 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
+
+  if (Args.hasArg(options::OPT_mno_relax))
+    CmdArgs.push_back("--no-relax");
 
   bool IsRV64 = ToolChain.getArch() == llvm::Triple::riscv64;
   CmdArgs.push_back("-m");

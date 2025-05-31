@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: __hexagon_memcpy_likely_aligned_min32bytes_mult8bytes
 
 target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-a0:0-n32"
@@ -20,7 +20,7 @@ entry:
   %0 = load ptr, ptr @t, align 4
   store ptr %0, ptr @q, align 4
   %1 = load ptr, ptr @q, align 4
-  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %1, ptr align 4 getelementptr inbounds ({ <{ { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e }, { %struct.e, { i8, i8, i8, [5 x i8] }, %struct.e } }> }, ptr @y, i32 0, i32 0, i32 0, i32 0, i32 0), i32 32, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %1, ptr align 4 @y, i32 32, i1 false)
   ret void
 }
 

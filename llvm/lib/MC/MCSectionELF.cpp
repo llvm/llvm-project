@@ -52,13 +52,11 @@ static void printName(raw_ostream &OS, StringRef Name) {
 
 void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                         raw_ostream &OS,
-                                        const MCExpr *Subsection) const {
+                                        uint32_t Subsection) const {
   if (shouldOmitSectionDirective(getName(), MAI)) {
     OS << '\t' << getName();
-    if (Subsection) {
-      OS << '\t';
-      Subsection->print(OS, &MAI);
-    }
+    if (Subsection)
+      OS << '\t' << Subsection;
     OS << '\n';
     return;
   }
@@ -90,8 +88,6 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << 'e';
   if (Flags & ELF::SHF_EXECINSTR)
     OS << 'x';
-  if (Flags & ELF::SHF_GROUP)
-    OS << 'G';
   if (Flags & ELF::SHF_WRITE)
     OS << 'w';
   if (Flags & ELF::SHF_MERGE)
@@ -102,6 +98,8 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << 'T';
   if (Flags & ELF::SHF_LINK_ORDER)
     OS << 'o';
+  if (Flags & ELF::SHF_GROUP)
+    OS << 'G';
   if (Flags & ELF::SHF_GNU_RETAIN)
     OS << 'R';
 
@@ -119,6 +117,9 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
       OS << 'd';
   } else if (T.isARM() || T.isThumb()) {
     if (Flags & ELF::SHF_ARM_PURECODE)
+      OS << 'y';
+  } else if (T.isAArch64()) {
+    if (Flags & ELF::SHF_AARCH64_PURECODE)
       OS << 'y';
   } else if (Arch == Triple::hexagon) {
     if (Flags & ELF::SHF_HEX_GPREL)
@@ -174,20 +175,14 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << "llvm_offloading";
   else if (Type == ELF::SHT_LLVM_LTO)
     OS << "llvm_lto";
+  else if (Type == ELF::SHT_LLVM_JT_SIZES)
+    OS << "llvm_jt_sizes";
   else
-    report_fatal_error("unsupported type 0x" + Twine::utohexstr(Type) +
-                       " for section " + getName());
+    OS << "0x" << Twine::utohexstr(Type);
 
   if (EntrySize) {
     assert(Flags & ELF::SHF_MERGE);
     OS << "," << EntrySize;
-  }
-
-  if (Flags & ELF::SHF_GROUP) {
-    OS << ",";
-    printName(OS, Group.getPointer()->getName());
-    if (isComdat())
-      OS << ",comdat";
   }
 
   if (Flags & ELF::SHF_LINK_ORDER) {
@@ -198,24 +193,26 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
       OS << '0';
   }
 
+  if (Flags & ELF::SHF_GROUP) {
+    OS << ",";
+    printName(OS, Group.getPointer()->getName());
+    if (isComdat())
+      OS << ",comdat";
+  }
+
   if (isUnique())
     OS << ",unique," << UniqueID;
 
   OS << '\n';
 
   if (Subsection) {
-    OS << "\t.subsection\t";
-    Subsection->print(OS, &MAI);
+    OS << "\t.subsection\t" << Subsection;
     OS << '\n';
   }
 }
 
 bool MCSectionELF::useCodeAlign() const {
   return getFlags() & ELF::SHF_EXECINSTR;
-}
-
-bool MCSectionELF::isVirtualSection() const {
-  return getType() == ELF::SHT_NOBITS;
 }
 
 StringRef MCSectionELF::getVirtualSectionKind() const { return "SHT_NOBITS"; }

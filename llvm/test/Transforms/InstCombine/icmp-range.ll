@@ -140,12 +140,22 @@ define i1 @test_two_ranges(ptr nocapture readonly %arg1, ptr nocapture readonly 
 ; CHECK-LABEL: @test_two_ranges(
 ; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[ARG1:%.*]], align 4, !range [[RNG4:![0-9]+]]
 ; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr [[ARG2:%.*]], align 4, !range [[RNG5:![0-9]+]]
-; CHECK-NEXT:    [[RVAL:%.*]] = icmp ult i32 [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp samesign ult i32 [[VAL2]], [[VAL1]]
 ; CHECK-NEXT:    ret i1 [[RVAL]]
 ;
   %val1 = load i32, ptr %arg1, !range !5
   %val2 = load i32, ptr %arg2, !range !6
   %rval = icmp ult i32 %val2, %val1
+  ret i1 %rval
+}
+
+; Values' ranges overlap each other, so it can not be simplified.
+define i1 @test_two_attribute_ranges(i32 range(i32 5, 10) %arg1, i32 range(i32 8, 16) %arg2) {
+; CHECK-LABEL: @test_two_attribute_ranges(
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp samesign ult i32 [[ARG2:%.*]], [[ARG1:%.*]]
+; CHECK-NEXT:    ret i1 [[RVAL]]
+;
+  %rval = icmp ult i32 %arg2, %arg1
   ret i1 %rval
 }
 
@@ -160,6 +170,35 @@ define i1 @test_two_ranges2(ptr nocapture readonly %arg1, ptr nocapture readonly
   ret i1 %rval
 }
 
+; Values' ranges do not overlap each other, so it can simplified to false.
+define i1 @test_two_argument_ranges(i32 range(i32 1, 6) %arg1, i32 range(i32 8, 16) %arg2) {
+; CHECK-LABEL: @test_two_argument_ranges(
+; CHECK-NEXT:    ret i1 false
+;
+  %rval = icmp ult i32 %arg2, %arg1
+  ret i1 %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to false.
+define i1 @test_one_range_and_one_argument_range(ptr nocapture readonly %arg1, i32 range(i32 8, 16) %arg2) {
+; CHECK-LABEL: @test_one_range_and_one_argument_range(
+; CHECK-NEXT:    ret i1 false
+;
+  %val1 = load i32, ptr %arg1, !range !0
+  %rval = icmp ult i32 %arg2, %val1
+  ret i1 %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to false.
+define i1 @test_one_argument_range_and_one_range(i32 range(i32 1, 6) %arg1, ptr nocapture readonly %arg2) {
+; CHECK-LABEL: @test_one_argument_range_and_one_range(
+; CHECK-NEXT:    ret i1 false
+;
+  %val1 = load i32, ptr %arg2, !range !6
+  %rval = icmp ult i32 %val1, %arg1
+  ret i1 %rval
+}
+
 ; Values' ranges do not overlap each other, so it can simplified to true.
 define i1 @test_two_ranges3(ptr nocapture readonly %arg1, ptr nocapture readonly %arg2) {
 ; CHECK-LABEL: @test_two_ranges3(
@@ -168,6 +207,137 @@ define i1 @test_two_ranges3(ptr nocapture readonly %arg1, ptr nocapture readonly
   %val1 = load i32, ptr %arg1, !range !0
   %val2 = load i32, ptr %arg2, !range !6
   %rval = icmp ugt i32 %val2, %val1
+  ret i1 %rval
+}
+
+; Values' ranges overlap each other, so it can not be simplified.
+define <2 x i1> @test_two_ranges_vec(ptr nocapture readonly %arg1, ptr nocapture readonly %arg2) {
+; CHECK-LABEL: @test_two_ranges_vec(
+; CHECK-NEXT:    [[VAL1:%.*]] = load <2 x i32>, ptr [[ARG1:%.*]], align 8, !range [[RNG4]]
+; CHECK-NEXT:    [[VAL2:%.*]] = load <2 x i32>, ptr [[ARG2:%.*]], align 8, !range [[RNG5]]
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp samesign ult <2 x i32> [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    ret <2 x i1> [[RVAL]]
+;
+  %val1 = load <2 x i32>, ptr %arg1, !range !5
+  %val2 = load <2 x i32>, ptr %arg2, !range !6
+  %rval = icmp ult <2 x i32> %val2, %val1
+  ret <2 x i1> %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to false.
+define <2 x i1> @test_two_ranges_vec_false(ptr nocapture readonly %arg1, ptr nocapture readonly %arg2) {
+; CHECK-LABEL: @test_two_ranges_vec_false(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %val1 = load <2 x i32>, ptr %arg1, !range !0
+  %val2 = load <2 x i32>, ptr %arg2, !range !6
+  %rval = icmp ult <2 x i32> %val2, %val1
+  ret <2 x i1> %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to true.
+define <2 x i1> @test_two_ranges_vec_true(ptr nocapture readonly %arg1, ptr nocapture readonly %arg2) {
+; CHECK-LABEL: @test_two_ranges_vec_true(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %val1 = load <2 x i32>, ptr %arg1, !range !0
+  %val2 = load <2 x i32>, ptr %arg2, !range !6
+  %rval = icmp ugt <2 x i32> %val2, %val1
+  ret <2 x i1> %rval
+}
+
+; Values' ranges overlap each other, so it can not be simplified.
+define <2 x i1> @test_two_argument_ranges_vec(<2 x i32> range(i32 5, 10) %arg1, <2 x i32> range(i32 8, 16) %arg2) {
+; CHECK-LABEL: @test_two_argument_ranges_vec(
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp samesign ult <2 x i32> [[ARG2:%.*]], [[ARG1:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[RVAL]]
+;
+  %rval = icmp ult <2 x i32> %arg2, %arg1
+  ret <2 x i1> %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to false.
+define <2 x i1> @test_two_argument_ranges_vec_false(<2 x i32> range(i32 1, 6) %arg1, <2 x i32> range(i32 8, 16) %arg2) {
+; CHECK-LABEL: @test_two_argument_ranges_vec_false(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %rval = icmp ult <2 x i32> %arg2, %arg1
+  ret <2 x i1> %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to true.
+define <2 x i1> @test_two_argument_ranges_vec_true(<2 x i32> range(i32 1, 6) %arg1, <2 x i32> range(i32 8, 16) %arg2) {
+; CHECK-LABEL: @test_two_argument_ranges_vec_true(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %rval = icmp ugt <2 x i32> %arg2, %arg1
+  ret <2 x i1> %rval
+}
+
+declare i32 @create_range1()
+declare range(i32 8, 16) i32 @create_range2()
+declare range(i32 1, 6) i32 @create_range3()
+
+; Values' ranges overlap each other, so it can not be simplified.
+define i1 @test_two_return_attribute_ranges_not_simplified() {
+; CHECK-LABEL: @test_two_return_attribute_ranges_not_simplified(
+; CHECK-NEXT:    [[VAL1:%.*]] = call range(i32 5, 10) i32 @create_range1()
+; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @create_range2()
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp samesign ult i32 [[VAL2]], [[VAL1]]
+; CHECK-NEXT:    ret i1 [[RVAL]]
+;
+  %val1 = call range(i32 5, 10) i32 @create_range1()
+  %val2 = call i32 @create_range2()
+  %rval = icmp ult i32 %val2, %val1
+  ret i1 %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to false.
+define i1 @test_two_return_attribute_ranges_one_in_call() {
+; CHECK-LABEL: @test_two_return_attribute_ranges_one_in_call(
+; CHECK-NEXT:    [[VAL1:%.*]] = call range(i32 1, 6) i32 @create_range1()
+; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @create_range2()
+; CHECK-NEXT:    ret i1 false
+;
+  %val1 = call range(i32 1, 6) i32 @create_range1()
+  %val2 = call i32 @create_range2()
+  %rval = icmp ult i32 %val2, %val1
+  ret i1 %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to false.
+define i1 @test_two_return_attribute_ranges() {
+; CHECK-LABEL: @test_two_return_attribute_ranges(
+; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @create_range3()
+; CHECK-NEXT:    [[VAL2:%.*]] = call i32 @create_range2()
+; CHECK-NEXT:    ret i1 false
+;
+  %val1 = call i32 @create_range3()
+  %val2 = call i32 @create_range2()
+  %rval = icmp ult i32 %val2, %val1
+  ret i1 %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to false.
+define i1 @test_one_return_argument_and_one_argument_range(i32 range(i32 8, 16) %arg1) {
+; CHECK-LABEL: @test_one_return_argument_and_one_argument_range(
+; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @create_range3()
+; CHECK-NEXT:    ret i1 false
+;
+  %val1 = call i32 @create_range3()
+  %rval = icmp ult i32 %arg1, %val1
+  ret i1 %rval
+}
+
+; Values' ranges do not overlap each other, so it can simplified to false.
+define i1 @test_one_range_and_one_return_argument(ptr nocapture readonly %arg1) {
+; CHECK-LABEL: @test_one_range_and_one_return_argument(
+; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @create_range3()
+; CHECK-NEXT:    ret i1 false
+;
+  %val1 = call i32 @create_range3()
+  %val2 = load i32, ptr %arg1, !range !6
+  %rval = icmp ult i32 %val2, %val1
   ret i1 %rval
 }
 
@@ -200,7 +370,7 @@ define <2 x i1> @ult_zext(<2 x i1> %b, <2 x i8> %p) {
 define i1 @uge_zext(i1 %b, i8 %x) {
 ; CHECK-LABEL: @uge_zext(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i1 %b to i8
@@ -229,7 +399,7 @@ define i1 @ugt_zext_use(i1 %b, i8 %x) {
 ; CHECK-LABEL: @ugt_zext_use(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[B:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[Z]])
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i1 %b to i8
@@ -243,7 +413,7 @@ define i1 @ugt_zext_use(i1 %b, i8 %x) {
 define i1 @ult_zext_not_i1(i2 %b, i8 %x) {
 ; CHECK-LABEL: @ult_zext_not_i1(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i2 [[B:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], [[Z]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i2 %b to i8
@@ -375,7 +545,7 @@ define i1 @sub_ule_zext(i1 %b, i8 %x, i8 %y) {
 
 define <2 x i1> @sub_ult_and(<2 x i8> %b, <2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sub_ult_and(
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[B:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[B:%.*]], splat (i8 1)
 ; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[S]], [[A]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -430,7 +600,7 @@ define <2 x i1> @ule_sext(<2 x i1> %b, <2 x i8> %p) {
 define i1 @ugt_sext(i1 %b, i8 %x) {
 ; CHECK-LABEL: @ugt_sext(
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], [[S]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = sext i1 %b to i8
@@ -459,7 +629,7 @@ define i1 @uge_sext_use(i1 %b, i8 %x) {
 ; CHECK-LABEL: @uge_sext_use(
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[B:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X:%.*]], [[S]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = sext i1 %b to i8
@@ -473,7 +643,7 @@ define i1 @uge_sext_use(i1 %b, i8 %x) {
 define i1 @ule_sext_not_i1(i2 %b, i8 %x) {
 ; CHECK-LABEL: @ule_sext_not_i1(
 ; CHECK-NEXT:    [[S:%.*]] = sext i2 [[B:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[S]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[X:%.*]], [[S]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = sext i2 %b to i8
@@ -605,7 +775,7 @@ define i1 @sub_ult_sext(i1 %b, i8 %x, i8 %y) {
 
 define <2 x i1> @sub_ule_ashr(<2 x i8> %b, <2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sub_ule_ashr(
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[B:%.*]], <i8 7, i8 7>
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[B:%.*]], splat (i8 7)
 ; CHECK-NEXT:    [[S:%.*]] = sub <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[S]], [[A]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -699,7 +869,7 @@ define i1 @zext_sext_add_icmp_i128(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_eq_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_eq_minus1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -715,7 +885,7 @@ define i1 @zext_sext_add_icmp_eq_minus1(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_ne_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_ne_minus1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -729,8 +899,8 @@ define i1 @zext_sext_add_icmp_ne_minus1(i1 %a, i1 %b) {
 
 define i1 @zext_sext_add_icmp_sgt_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_sgt_minus1(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[B_NOT:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[A:%.*]], [[B_NOT]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -745,7 +915,7 @@ define i1 @zext_sext_add_icmp_sgt_minus1(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_ult_minus1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_ult_minus1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -760,7 +930,7 @@ define i1 @zext_sext_add_icmp_ult_minus1(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_sgt_0(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_sgt_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -775,8 +945,8 @@ define i1 @zext_sext_add_icmp_sgt_0(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_slt_0(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_slt_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[B:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -790,7 +960,7 @@ define i1 @zext_sext_add_icmp_slt_0(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_eq_1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_eq_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -805,7 +975,7 @@ define i1 @zext_sext_add_icmp_eq_1(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_ne_1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_ne_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -820,7 +990,7 @@ define i1 @zext_sext_add_icmp_ne_1(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_slt_1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_slt_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %zext.a = zext i1 %a to i8
@@ -835,8 +1005,8 @@ define i1 @zext_sext_add_icmp_slt_1(i1 %a, i1 %b) {
 define i1 @zext_sext_add_icmp_ugt_1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @zext_sext_add_icmp_ugt_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[B:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %zext.a = zext i1 %a to i8
   %sext.b = sext i1 %b to i8
@@ -847,8 +1017,8 @@ define i1 @zext_sext_add_icmp_ugt_1(i1 %a, i1 %b) {
 
 define <2 x i1> @vector_zext_sext_add_icmp_slt_1(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @vector_zext_sext_add_icmp_slt_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[TMP1]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %zext.a = zext <2 x i1> %a to <2 x i8>
@@ -1165,7 +1335,7 @@ define i1 @icmp_eq_zext_ne_non_boolean(i32 %a) {
 
 define <2 x i1> @icmp_ne_zext_eq_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_zext_eq_zero_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 0, i32 0>
   %conv = zext <2 x i1> %cmp to <2 x i32>
@@ -1175,7 +1345,7 @@ define <2 x i1> @icmp_ne_zext_eq_zero_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_zext_ne_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_zext_ne_zero_vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[A:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp ne <2 x i32> %a, <i32 0, i32 0>
@@ -1186,7 +1356,7 @@ define <2 x i1> @icmp_ne_zext_ne_zero_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_zext_eq_one_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_zext_eq_one_vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i32> [[A:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 1, i32 1>
@@ -1197,7 +1367,7 @@ define <2 x i1> @icmp_ne_zext_eq_one_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_zext_ne_one_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_zext_ne_one_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp = icmp ne <2 x i32> %a, <i32 1, i32 1>
   %conv = zext <2 x i1> %cmp to <2 x i32>
@@ -1350,7 +1520,7 @@ define i1 @icmp_eq_sext_ne_otherwise(i32 %a) {
 
 define <2 x i1> @icmp_ne_sext_eq_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_eq_zero_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 0, i32 0>
   %conv = sext <2 x i1> %cmp to <2 x i32>
@@ -1360,8 +1530,8 @@ define <2 x i1> @icmp_ne_sext_eq_zero_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_sext_ne_zero_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_ne_zero_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 -2, i32 -2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[TMP1]], splat (i32 -2)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp ne <2 x i32> %a, <i32 0, i32 0>
@@ -1372,8 +1542,8 @@ define <2 x i1> @icmp_ne_sext_ne_zero_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_sext_eq_allones_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_eq_allones_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 -2, i32 -2>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[A:%.*]], splat (i32 -1)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i32> [[TMP1]], splat (i32 -2)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
 ;
   %cmp = icmp eq <2 x i32> %a, <i32 -1, i32 -1>
@@ -1384,7 +1554,7 @@ define <2 x i1> @icmp_ne_sext_eq_allones_vec(<2 x i32> %a) {
 
 define <2 x i1> @icmp_ne_sext_ne_allones_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_ne_sext_ne_allones_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cmp = icmp ne <2 x i32> %a, <i32 -1, i32 -1>
   %conv = sext <2 x i1> %cmp to <2 x i32>
@@ -1431,7 +1601,7 @@ define i1 @icmp_ne_sext_sgt_zero_nofold(i32 %a) {
 ; CHECK-LABEL: @icmp_ne_sext_sgt_zero_nofold(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A]], [[CONV]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp sgt i32 %a, 0
@@ -1444,7 +1614,7 @@ define i1 @icmp_slt_sext_ne_zero_nofold(i32 %a) {
 ; CHECK-LABEL: @icmp_slt_sext_ne_zero_nofold(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], [[CONV]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp ne i32 %a, 0
@@ -1457,7 +1627,7 @@ define i1 @icmp_ne_sext_slt_allones_nofold(i32 %a) {
 ; CHECK-LABEL: @icmp_ne_sext_slt_allones_nofold(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A]], [[CONV]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp slt i32 %a, -1
@@ -1470,7 +1640,7 @@ define i1 @icmp_slt_sext_ne_allones_nofold(i32 %a) {
 ; CHECK-LABEL: @icmp_slt_sext_ne_allones_nofold(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], -1
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], [[CONV]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp ne i32 %a, -1
@@ -1483,7 +1653,7 @@ define i1 @icmp_ne_sext_slt_otherwise_nofold(i32 %a) {
 ; CHECK-LABEL: @icmp_ne_sext_slt_otherwise_nofold(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A]], [[CONV]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp slt i32 %a, 2
@@ -1496,7 +1666,7 @@ define i1 @icmp_slt_sext_ne_otherwise_nofold(i32 %a) {
 ; CHECK-LABEL: @icmp_slt_sext_ne_otherwise_nofold(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[A:%.*]], 2
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[CONV]], [[A]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], [[CONV]]
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
   %cmp = icmp ne i32 %a, 2

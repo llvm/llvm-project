@@ -9,38 +9,17 @@
 #ifndef FORTRAN_PARSER_PARSING_H_
 #define FORTRAN_PARSER_PARSING_H_
 
-#include "characters.h"
 #include "instrumented-parser.h"
 #include "message.h"
+#include "options.h"
 #include "parse-tree.h"
 #include "provenance.h"
-#include "flang/Common/Fortran-features.h"
+#include "flang/Parser/preprocessor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
-#include <utility>
-#include <vector>
 
 namespace Fortran::parser {
-
-struct Options {
-  Options() {}
-
-  using Predefinition = std::pair<std::string, std::optional<std::string>>;
-
-  bool isFixedForm{false};
-  int fixedFormColumns{72};
-  common::LanguageFeatureControl features;
-  std::vector<std::string> searchDirectories;
-  std::vector<std::string> intrinsicModuleDirectories;
-  std::vector<Predefinition> predefinitions;
-  bool instrumentedParse{false};
-  bool isModuleFile{false};
-  bool needProvenanceRangeToCharBlockMappings{false};
-  Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
-  bool prescanAndReformat{false}; // -E
-  bool showColors{false};
-};
 
 class Parsing {
 public:
@@ -59,6 +38,7 @@ public:
   const SourceFile *Prescan(const std::string &path, Options);
   void EmitPreprocessedSource(
       llvm::raw_ostream &, bool lineDirectives = true) const;
+  void EmitPreprocessorMacros(llvm::raw_ostream &) const;
   void DumpCookedChars(llvm::raw_ostream &) const;
   void DumpProvenance(llvm::raw_ostream &) const;
   void DumpParsingLog(llvm::raw_ostream &) const;
@@ -83,6 +63,7 @@ private:
   const char *finalRestingPlace_{nullptr};
   std::optional<Program> parseTree_;
   ParsingLog log_;
+  Preprocessor preprocessor_{allCooked_.allSources()};
 };
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_PARSING_H_

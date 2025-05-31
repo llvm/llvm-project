@@ -21,6 +21,30 @@ int maxClone(int x, int y, int z) {
   return z; // expected-warning{{Potential copy-paste error; did you really mean to use 'z' here?}}
 }
 
+// Test that the checker works with [[clang::suppress]].
+int max_suppressed(int a, int b) {
+  log();
+  if (a > b)
+    return a;
+
+  // This [[clang::suppress]] doesn't suppress anything but we need it here
+  // because otherwise the other function won't count as a perfect clone.
+  // FIXME: The checker should probably skip the attribute entirely
+  // when detecting clones. Otherwise warnings will still get suppressed,
+  // but for a completely wrong reason.
+  [[clang::suppress]]
+  return b; // no-note
+}
+
+int maxClone_suppressed(int x, int y, int z) {
+  log();
+  if (x > y)
+    return x;
+  [[clang::suppress]]
+  return z; // no-warning
+}
+
+
 // Tests finding a suspicious clone that references global variables.
 
 struct mutex {

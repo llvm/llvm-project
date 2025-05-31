@@ -17,6 +17,7 @@ add_lldb_library(lldbPluginAppleObjCRuntime PLUGIN
     lldbSymbol
     lldbTarget
     lldbUtility
+    lldbValueObject
     lldbPluginExpressionParserClang
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang

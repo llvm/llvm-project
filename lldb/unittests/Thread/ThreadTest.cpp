@@ -28,14 +28,13 @@
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
-using namespace lldb_private::repro;
 using namespace lldb;
 
 namespace {
 
 #ifdef _WIN32
-using SetThreadDescriptionFunctionPtr = HRESULT
-WINAPI (*)(HANDLE hThread, PCWSTR lpThreadDescription);
+using SetThreadDescriptionFunctionPtr =
+    HRESULT(WINAPI *)(HANDLE hThread, PCWSTR lpThreadDescription);
 
 static SetThreadDescriptionFunctionPtr SetThreadName;
 #endif
@@ -49,7 +48,7 @@ public:
     HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
     if (hModule) {
       SetThreadName = reinterpret_cast<SetThreadDescriptionFunctionPtr>(
-          ::GetProcAddress(hModule, "SetThreadDescription"));
+          (void *)::GetProcAddress(hModule, "SetThreadDescription"));
     }
     PlatformWindows::Initialize();
 #endif

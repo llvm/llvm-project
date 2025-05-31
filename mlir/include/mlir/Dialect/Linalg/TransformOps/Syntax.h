@@ -12,7 +12,6 @@
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
-class ParseResult;
 class OpAsmParser;
 class OpAsmPrinter;
 class Type;
@@ -31,7 +30,7 @@ class Operation;
 /// the argument type in absence of result types, and does not accept the
 /// trailing `-> ()` construct, which makes the syntax nicer for operations.
 ParseResult parseSemiFunctionType(OpAsmParser &parser, Type &argumentType,
-                                  Type &resultType);
+                                  Type &resultType, bool resultOptional = true);
 ParseResult parseSemiFunctionType(OpAsmParser &parser, Type &argumentType,
                                   SmallVectorImpl<Type> &resultTypes);
 
@@ -41,7 +40,8 @@ ParseResult parseSemiFunctionType(OpAsmParser &parser, Type &argumentType,
 void printSemiFunctionType(OpAsmPrinter &printer, Operation *op,
                            Type argumentType, TypeRange resultType);
 void printSemiFunctionType(OpAsmPrinter &printer, Operation *op,
-                           Type argumentType, Type resultType);
+                           Type argumentType, Type resultType,
+                           bool resultOptional = true);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_LINALG_TRANSFORMOPS_SYNTAX_H
