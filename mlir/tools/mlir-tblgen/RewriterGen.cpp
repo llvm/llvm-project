@@ -2065,6 +2065,12 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
     assert(constraint && "attribute constraint was not uniqued");
     return *constraint;
   }
+  if (leaf.isPropMatcher()) {
+    std::optional<StringRef> constraint =
+        staticVerifierEmitter.getPropConstraintFn(leaf.getAsConstraint());
+    assert(constraint && "prop constraint was not uniqued");
+    return *constraint;
+  }
   assert(leaf.isOperandMatcher());
   return staticVerifierEmitter.getTypeConstraintFn(leaf.getAsConstraint());
 }

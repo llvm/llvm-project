@@ -407,8 +407,8 @@ class ConfinedProperty<Property p, Pred pred, string newSummary = "">
 /// of the attribute.
 class ConstantProp<Property prop, string val>
     : ConfinedProp<prop,
-        CPred<"$_self == " # value>,
-        "constant property " # value> {
+        CPred<"$_self == " # val>,
+        "constant '" # prop.summary # "': " # val> {
   string value = val;
 }
 
