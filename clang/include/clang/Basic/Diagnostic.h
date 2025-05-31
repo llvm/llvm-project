@@ -861,6 +861,18 @@ public:
 
   bool hasErrorOccurred() const { return ErrorOccurred; }
 
+  /// Sometimes we know an error will be produced at the end of a translation
+  /// unit, such as a delayed typo correction. However, CodeGen is run on each
+  /// top-level decl in an incremental fashion. We don't want CodeGen to run on
+  /// a declaration if an unrecoverable error occurred, but in those cases, the
+  /// error has not yet been emitted. This helper function lets you specify
+  /// that an unrecoverable error will occur later, specifically to ensure that
+  /// CodeGen is not run on those declarations.
+  void setUnrecoverableErrorWillOccur() {
+    UnrecoverableErrorOccurred = true;
+    ErrorOccurred = true;
+  }
+
   /// Errors that actually prevent compilation, not those that are
   /// upgraded from a warning by -Werror.
   bool hasUncompilableErrorOccurred() const {
