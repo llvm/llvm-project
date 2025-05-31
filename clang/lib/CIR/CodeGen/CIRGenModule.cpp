@@ -21,6 +21,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "CIRGenFunctionInfo.h"
@@ -391,9 +392,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     if (d->getTLSKind())
       errorNYI(d->getSourceRange(), "thread local global variable");
 
-    assert(!cir::MissingFeatures::opGlobalDLLImportExport());
-    assert(!cir::MissingFeatures::opGlobalPartition());
-    assert(!cir::MissingFeatures::setDSOLocal());
+    setGVProperties(gv, d);
 
     // If required by the ABI, treat declarations of static data members with
     // inline initializers as definitions.
@@ -401,15 +400,20 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       errorNYI(d->getSourceRange(), "MS static data member inline definition");
 
     assert(!cir::MissingFeatures::opGlobalSection());
-    assert(!cir::MissingFeatures::opGlobalVisibility());
+    gv.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(d));
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
       errorNYI(d->getSourceRange(), "XCore specific ABI requirements");
 
-    // We need to check for external const declarations with initializers here,
-    // but the 'isPublic()' part of the check uses the CIRGlobalValueInterface.
-    assert(!cir::MissingFeatures::opGlobalCIRGlobalValueInterface());
+    // Check if we a have a const declaration with an initializer, we may be
+    // able to emit it as available_externally to expose it's value to the
+    // optimizer.
+    if (getLangOpts().CPlusPlus && gv.isPublic() &&
+        d->getType().isConstQualified() && gv.isDeclaration() &&
+        !d->hasDefinition() && d->hasInit() && !d->hasAttr<DLLImportAttr>())
+      errorNYI(d->getSourceRange(),
+               "external const declaration with initializer");
   }
 
   return gv;
@@ -568,7 +572,9 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   // Set CIR linkage and DLL storage class.
   gv.setLinkage(linkage);
-
+  // FIXME(cir): setLinkage should likely set MLIR's visibility automatically.
+  gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
+  assert(!cir::MissingFeatures::opGlobalDLLImportExport());
   if (linkage == cir::GlobalLinkageKind::CommonLinkage)
     errorNYI(initExpr->getSourceRange(), "common linkage");
 }
@@ -632,8 +638,13 @@ CIRGenModule::getConstantArrayFromStringLiteral(const StringLiteral *e) {
   return mlir::Attribute();
 }
 
+bool CIRGenModule::supportsCOMDAT() const {
+  return getTriple().supportsCOMDAT();
+}
+
 static bool shouldBeInCOMDAT(CIRGenModule &cgm, const Decl &d) {
-  assert(!cir::MissingFeatures::supportComdat());
+  if (!cgm.supportsCOMDAT())
+    return false;
 
   if (d.hasAttr<SelectAnyAttr>())
     return true;
@@ -836,8 +847,11 @@ static cir::GlobalOp generateStringLiteral(mlir::Location loc,
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
   assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
   CIRGenModule::setInitializer(gv, c);
-  assert(!cir::MissingFeatures::supportComdat());
-  assert(!cir::MissingFeatures::opGlobalDSOLocal());
+  if (gv.isWeakForLinker()) {
+    assert(cgm.supportsCOMDAT() && "Only COFF uses weak string literals");
+    gv.setComdat(true);
+  }
+  cgm.setDSOLocal(static_cast<mlir::Operation *>(gv));
   return gv;
 }
 
@@ -894,7 +908,7 @@ cir::GlobalOp CIRGenModule::getGlobalForStringLiteral(const StringLiteral *s,
   auto typedC = llvm::cast<mlir::TypedAttr>(c);
   cir::GlobalOp gv =
       generateStringLiteral(loc, typedC, *this, uniqueName, alignment);
-  assert(!cir::MissingFeatures::opGlobalDSOLocal());
+  setDSOLocal(static_cast<mlir::Operation *>(gv));
 
   assert(!cir::MissingFeatures::sanitizers());
 
@@ -1075,6 +1089,134 @@ void CIRGenModule::emitTentativeDefinition(const VarDecl *d) {
   emitGlobalVarDefinition(d);
 }
 
+static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
+                                 cir::CIRGlobalValueInterface gv) {
+  if (gv.hasLocalLinkage())
+    return true;
+
+  if (!gv.hasDefaultVisibility() && !gv.hasExternalWeakLinkage())
+    return true;
+
+  // DLLImport explicitly marks the GV as external.
+  // so it shouldn't be dso_local
+  // But we don't have the info set now
+  assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+
+  const llvm::Triple &tt = cgm.getTriple();
+  const CodeGenOptions &cgOpts = cgm.getCodeGenOpts();
+  if (tt.isWindowsGNUEnvironment()) {
+    // In MinGW, variables without DLLImport can still be automatically
+    // imported from a DLL by the linker; don't mark variables that
+    // potentially could come from another DLL as DSO local.
+
+    // With EmulatedTLS, TLS variables can be autoimported from other DLLs
+    // (and this actually happens in the public interface of libstdc++), so
+    // such variables can't be marked as DSO local. (Native TLS variables
+    // can't be dllimported at all, though.)
+    cgm.errorNYI("shouldAssumeDSOLocal: MinGW");
+  }
+
+  // On COFF, don't mark 'extern_weak' symbols as DSO local. If these symbols
+  // remain unresolved in the link, they can be resolved to zero, which is
+  // outside the current DSO.
+  if (tt.isOSBinFormatCOFF() && gv.hasExternalWeakLinkage())
+    return false;
+
+  // Every other GV is local on COFF.
+  // Make an exception for windows OS in the triple: Some firmware builds use
+  // *-win32-macho triples. This (accidentally?) produced windows relocations
+  // without GOT tables in older clang versions; Keep this behaviour.
+  // FIXME: even thread local variables?
+  if (tt.isOSBinFormatCOFF() || (tt.isOSWindows() && tt.isOSBinFormatMachO()))
+    return true;
+
+  // Only handle COFF and ELF for now.
+  if (!tt.isOSBinFormatELF())
+    return false;
+
+  llvm::Reloc::Model rm = cgOpts.RelocationModel;
+  const LangOptions &lOpts = cgm.getLangOpts();
+  if (rm != llvm::Reloc::Static && !lOpts.PIE) {
+    // On ELF, if -fno-semantic-interposition is specified and the target
+    // supports local aliases, there will be neither CC1
+    // -fsemantic-interposition nor -fhalf-no-semantic-interposition. Set
+    // dso_local on the function if using a local alias is preferable (can avoid
+    // PLT indirection).
+    if (!(isa<cir::FuncOp>(gv) && gv.canBenefitFromLocalAlias()))
+      return false;
+    return !(lOpts.SemanticInterposition || lOpts.HalfNoSemanticInterposition);
+  }
+
+  // A definition cannot be preempted from an executable.
+  if (!gv.isDeclarationForLinker())
+    return true;
+
+  // Most PIC code sequences that assume that a symbol is local cannot produce a
+  // 0 if it turns out the symbol is undefined. While this is ABI and relocation
+  // depended, it seems worth it to handle it here.
+  if (rm == llvm::Reloc::PIC_ && gv.hasExternalWeakLinkage())
+    return false;
+
+  // PowerPC64 prefers TOC indirection to avoid copy relocations.
+  if (tt.isPPC64())
+    return false;
+
+  if (cgOpts.DirectAccessExternalData) {
+    // If -fdirect-access-external-data (default for -fno-pic), set dso_local
+    // for non-thread-local variables. If the symbol is not defined in the
+    // executable, a copy relocation will be needed at link time. dso_local is
+    // excluded for thread-local variables because they generally don't support
+    // copy relocations.
+    if (auto globalOp = dyn_cast<cir::GlobalOp>(gv.getOperation())) {
+      // Assume variables are not thread-local until that support is added.
+      assert(!cir::MissingFeatures::opGlobalThreadLocal());
+      return true;
+    }
+
+    // -fno-pic sets dso_local on a function declaration to allow direct
+    // accesses when taking its address (similar to a data symbol). If the
+    // function is not defined in the executable, a canonical PLT entry will be
+    // needed at link time. -fno-direct-access-external-data can avoid the
+    // canonical PLT entry. We don't generalize this condition to -fpie/-fpic as
+    // it could just cause trouble without providing perceptible benefits.
+    if (isa<cir::FuncOp>(gv) && !cgOpts.NoPLT && rm == llvm::Reloc::Static)
+      return true;
+  }
+
+  // If we can use copy relocations we can assume it is local.
+
+  // Otherwise don't assume it is local.
+
+  return false;
+}
+
+void CIRGenModule::setGlobalVisibility(mlir::Operation *gv,
+                                       const NamedDecl *d) const {
+  assert(!cir::MissingFeatures::opGlobalVisibility());
+}
+
+void CIRGenModule::setDSOLocal(cir::CIRGlobalValueInterface gv) const {
+  gv.setDSOLocal(shouldAssumeDSOLocal(*this, gv));
+}
+
+void CIRGenModule::setDSOLocal(mlir::Operation *op) const {
+  if (auto globalValue = dyn_cast<cir::CIRGlobalValueInterface>(op))
+    setDSOLocal(globalValue);
+}
+
+void CIRGenModule::setGVProperties(mlir::Operation *op,
+                                   const NamedDecl *d) const {
+  assert(!cir::MissingFeatures::opGlobalDLLImportExport());
+  setGVPropertiesAux(op, d);
+}
+
+void CIRGenModule::setGVPropertiesAux(mlir::Operation *op,
+                                      const NamedDecl *d) const {
+  setGlobalVisibility(op, d);
+  setDSOLocal(op);
+  assert(!cir::MissingFeatures::opGlobalPartition());
+}
+
 cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     StringRef mangledName, mlir::Type funcType, GlobalDecl gd, bool forVTable,
     bool dontDefer, bool isThunk, ForDefinition_t isForDefinition,
@@ -1111,7 +1253,7 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     // Handle dropped DLL attributes.
     if (d && !d->hasAttr<DLLImportAttr>() && !d->hasAttr<DLLExportAttr>()) {
       assert(!cir::MissingFeatures::setDLLStorageClass());
-      assert(!cir::MissingFeatures::setDSOLocal());
+      setDSOLocal(entry);
     }
 
     // If there are two attempts to define the same mangled name, issue an
@@ -1163,6 +1305,55 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
       theModule.push_back(func);
   }
   return func;
+}
+
+mlir::SymbolTable::Visibility
+CIRGenModule::getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind glk) {
+  switch (glk) {
+  case cir::GlobalLinkageKind::InternalLinkage:
+  case cir::GlobalLinkageKind::PrivateLinkage:
+    return mlir::SymbolTable::Visibility::Private;
+  case cir::GlobalLinkageKind::ExternalLinkage:
+  case cir::GlobalLinkageKind::ExternalWeakLinkage:
+  case cir::GlobalLinkageKind::LinkOnceODRLinkage:
+  case cir::GlobalLinkageKind::AvailableExternallyLinkage:
+  case cir::GlobalLinkageKind::CommonLinkage:
+  case cir::GlobalLinkageKind::WeakAnyLinkage:
+  case cir::GlobalLinkageKind::WeakODRLinkage:
+    return mlir::SymbolTable::Visibility::Public;
+  default: {
+    llvm::errs() << "visibility not implemented for '"
+                 << stringifyGlobalLinkageKind(glk) << "'\n";
+    assert(0 && "not implemented");
+  }
+  }
+  llvm_unreachable("linkage should be handled above!");
+}
+
+cir::VisibilityKind CIRGenModule::getGlobalVisibilityKindFromClangVisibility(
+    clang::VisibilityAttr::VisibilityType visibility) {
+  switch (visibility) {
+  case clang::VisibilityAttr::VisibilityType::Default:
+    return cir::VisibilityKind::Default;
+  case clang::VisibilityAttr::VisibilityType::Hidden:
+    return cir::VisibilityKind::Hidden;
+  case clang::VisibilityAttr::VisibilityType::Protected:
+    return cir::VisibilityKind::Protected;
+  }
+  llvm_unreachable("unexpected visibility value");
+}
+
+cir::VisibilityAttr
+CIRGenModule::getGlobalVisibilityAttrFromDecl(const Decl *decl) {
+  const clang::VisibilityAttr *va = decl->getAttr<clang::VisibilityAttr>();
+  cir::VisibilityAttr cirVisibility =
+      cir::VisibilityAttr::get(&getMLIRContext());
+  if (va) {
+    cirVisibility = cir::VisibilityAttr::get(
+        &getMLIRContext(),
+        getGlobalVisibilityKindFromClangVisibility(va->getVisibility()));
+  }
+  return cirVisibility;
 }
 
 mlir::Type CIRGenModule::convertType(QualType type) {
