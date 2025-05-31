@@ -71,7 +71,9 @@ class DAPTestCaseBase(TestBase):
             self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
-    def set_source_breakpoints_assembly(self, source_reference, lines, data=None):
+    def set_source_breakpoints_assembly(
+        self, source_reference, lines, data=None, wait_for_resolve=True
+    ):
         response = self.dap_server.request_setBreakpoints(
             Source(source_reference=source_reference),
             lines,
@@ -83,6 +85,8 @@ class DAPTestCaseBase(TestBase):
         breakpoint_ids = []
         for breakpoint in breakpoints:
             breakpoint_ids.append("%i" % (breakpoint["id"]))
+        if wait_for_resolve:
+            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
     def set_function_breakpoints(
