@@ -1187,10 +1187,9 @@ void VPIRPhi::execute(VPTransformState &State) {
 
 void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
   VPRecipeBase *R = const_cast<VPRecipeBase *>(getAsRecipe());
-  auto &Preds = R->getParent()->getPredecessors();
-  assert(R->getNumOperands() == Preds.size() &&
+  assert(R->getNumOperands() == R->getParent()->getNumPredecessors() &&
          "Number of phi operands must match number of predecessors");
-  unsigned Position = std::distance(Preds.begin(), find(Preds, IncomingBlock));
+  unsigned Position = R->getParent()->getIndexForPredecessor(IncomingBlock);
   R->removeOperand(Position);
 }
 
