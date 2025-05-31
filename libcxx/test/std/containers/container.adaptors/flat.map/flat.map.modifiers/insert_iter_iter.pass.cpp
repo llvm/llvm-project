@@ -78,19 +78,19 @@ constexpr void test() {
           {1, 1.5, 2},
       });
 
-  auto m_copy = m;
+  auto m2 = m;
 
-  m.insert(cpp17_input_iterator<P*>(ar2), cpp17_input_iterator<P*>(ar2 + sizeof(ar2) / sizeof(ar2[0])));
-  assert(m.size() == 5);
+  m2.insert(cpp17_input_iterator<P*>(ar2), cpp17_input_iterator<P*>(ar2 + sizeof(ar2) / sizeof(ar2[0])));
+  assert(m2.size() == 5);
 
-  assert(std::ranges::equal(m.keys(), KeyContainer{0, 1, 2, 3, 4}));
+  assert(std::ranges::equal(m2.keys(), KeyContainer{0, 1, 2, 3, 4}));
   check_possible_values(
-      m.values(),
+      m2.values(),
       std::vector<std::vector<double>>{
           {1, 1.5, 2},
-          {m_copy[1]},
-          {m_copy[2]},
-          {m_copy[3]},
+          {m[1]},
+          {m[2]},
+          {m[3]},
           {1, 1.5, 2},
       });
 }
