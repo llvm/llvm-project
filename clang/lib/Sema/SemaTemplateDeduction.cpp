@@ -2127,7 +2127,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         TA = S.Context.getTypeDeclType(MPA->getMostRecentCXXRecordDecl());
       } else {
         NestedNameSpecifier *QA = MPA->getQualifier();
-        TA = QualType(QA->translateToType(S.Context), 0);
+        TA = QualType(QA->translateToType(S.Context), 0).getUnqualifiedType();
       }
       assert(!TA.isNull() && "member pointer with non-type class");
       return DeduceTemplateArgumentsByTypeMatch(
