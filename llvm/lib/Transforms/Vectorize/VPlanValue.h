@@ -212,14 +212,6 @@ protected:
       addOperand(Operand);
   }
 
-  VPUser(std::initializer_list<VPValue *> Operands)
-      : VPUser(ArrayRef<VPValue *>(Operands)) {}
-
-  template <typename IterT> VPUser(iterator_range<IterT> Operands) {
-    for (VPValue *Operand : Operands)
-      addOperand(Operand);
-  }
-
 public:
   VPUser() = delete;
   VPUser(const VPUser &) = delete;
