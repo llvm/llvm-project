@@ -228,10 +228,11 @@ define void @merge_fp_v2half_type(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2
 ; CHECK-OOB-RELAXED-LABEL: define void @merge_fp_v2half_type(
 ; CHECK-OOB-RELAXED-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) #[[ATTR1]] {
 ; CHECK-OOB-RELAXED-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[PTR1]], i64 0
-; CHECK-OOB-RELAXED-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[GEP1]], align 4
-; CHECK-OOB-RELAXED-NEXT:    [[LOAD11:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
-; CHECK-OOB-RELAXED-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
-; CHECK-OOB-RELAXED-NEXT:    [[DOTCAST:%.*]] = bitcast float [[TMP2]] to <2 x half>
+; CHECK-OOB-RELAXED-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-OOB-RELAXED-NEXT:    [[LOAD12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-OOB-RELAXED-NEXT:    [[LOAD11:%.*]] = bitcast i32 [[LOAD12]] to float
+; CHECK-OOB-RELAXED-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-OOB-RELAXED-NEXT:    [[DOTCAST:%.*]] = bitcast i32 [[TMP6]] to <2 x half>
 ; CHECK-OOB-RELAXED-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
 ; CHECK-OOB-RELAXED-NEXT:    [[DOTCAST_CAST:%.*]] = bitcast <2 x half> [[DOTCAST]] to i32
 ; CHECK-OOB-RELAXED-NEXT:    [[TMP3:%.*]] = bitcast float [[LOAD11]] to i32
@@ -243,10 +244,11 @@ define void @merge_fp_v2half_type(ptr addrspace(1) %ptr1, ptr addrspace(2) %ptr2
 ; CHECK-OOB-STRICT-LABEL: define void @merge_fp_v2half_type(
 ; CHECK-OOB-STRICT-SAME: ptr addrspace(1) [[PTR1:%.*]], ptr addrspace(2) [[PTR2:%.*]]) {
 ; CHECK-OOB-STRICT-NEXT:    [[GEP1:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[PTR1]], i64 0
-; CHECK-OOB-STRICT-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr addrspace(1) [[GEP1]], align 4
-; CHECK-OOB-STRICT-NEXT:    [[LOAD11:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
-; CHECK-OOB-STRICT-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
-; CHECK-OOB-STRICT-NEXT:    [[DOTCAST:%.*]] = bitcast float [[TMP2]] to <2 x half>
+; CHECK-OOB-STRICT-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[GEP1]], align 4
+; CHECK-OOB-STRICT-NEXT:    [[LOAD12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-OOB-STRICT-NEXT:    [[LOAD11:%.*]] = bitcast i32 [[LOAD12]] to float
+; CHECK-OOB-STRICT-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-OOB-STRICT-NEXT:    [[DOTCAST:%.*]] = bitcast i32 [[TMP6]] to <2 x half>
 ; CHECK-OOB-STRICT-NEXT:    [[STORE_GEP1:%.*]] = getelementptr inbounds i32, ptr addrspace(2) [[PTR2]], i64 0
 ; CHECK-OOB-STRICT-NEXT:    [[DOTCAST_CAST:%.*]] = bitcast <2 x half> [[DOTCAST]] to i32
 ; CHECK-OOB-STRICT-NEXT:    [[TMP3:%.*]] = bitcast float [[LOAD11]] to i32

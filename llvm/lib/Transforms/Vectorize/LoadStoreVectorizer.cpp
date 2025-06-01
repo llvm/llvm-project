@@ -238,6 +238,11 @@ void reorder(Instruction *I) {
 }
 
 class Vectorizer {
+
+  enum ClassTyDist {
+    Int, Float, Ptr, Other
+  };
+
   Function &F;
   AliasAnalysis &AA;
   AssumptionCache &AC;
@@ -273,6 +278,17 @@ private:
   /// in the same BB with the same value for getUnderlyingObject() etc.
   bool runOnEquivalenceClass(const EqClassKey &EqClassKey,
                              ArrayRef<Instruction *> EqClass);
+
+  static int getTypeKind(Instruction *I) {
+    unsigned ID = I->getType()->getTypeID();
+    switch(ID) {
+      case Type::IntegerTyID:
+      case Type::FloatTyID:
+      case Type::PointerTyID:
+        return ID;
+    };
+    return -1;
+  }
 
   /// Runs the vectorizer on one chain, i.e. a subset of an equivalence class
   /// where all instructions access a known, constant offset from the first
@@ -1325,26 +1341,15 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
     }
   };
 
-  // For each class, determine if all instructions are of type int, FP or ptr.
-  // This information will help us determine the type instructions should be
-  // casted into.
-  MapVector<EqClassKey, Bitset<3>> ClassAllTy;
+  // For each class, determine the most defined type. This information will
+  // help us determine the type instructions should be casted into.
+  MapVector<EqClassKey, unsigned> ClassToNewTyID;
   for (const auto &C : EQClasses) {
-    auto CommonTypeKind = [](Instruction *I) {
-      if (I->getType()->isIntOrIntVectorTy())
-        return 0;
-      if (I->getType()->isFPOrFPVectorTy())
-        return 1;
-      if (I->getType()->isPtrOrPtrVectorTy())
-        return 2;
-      return -1; // Invalid type kind
-    };
-
-    int FirstTypeKind = CommonTypeKind(EQClasses[C.first][0]);
+    int FirstTypeKind = getTypeKind(EQClasses[C.first][0]);
     if (FirstTypeKind != -1 && all_of(EQClasses[C.first], [&](Instruction *I) {
-          return CommonTypeKind(I) == FirstTypeKind;
+          return getTypeKind(I) == FirstTypeKind;
         })) {
-      ClassAllTy[C.first].set(FirstTypeKind);
+      ClassToNewTyID[C.first] = FirstTypeKind;
     }
   }
 
@@ -1369,11 +1374,6 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
       if (Ptr1 != Ptr2 || AS1 != AS2 || IsLoad1 != IsLoad2 || TySize1 < TySize2)
         continue;
 
-      // An All-FP class should only be merged into another All-FP class.
-      if ((ClassAllTy[EC1.first].test(1) && !ClassAllTy[EC2.first].test(1)) ||
-          (!ClassAllTy[EC1.first].test(2) && ClassAllTy[EC2.first].test(2)))
-        continue;
-
       // Ensure all instructions in EC2 can be bitcasted into NewTy.
       /// TODO: NewTyBits is needed as stuctured binded variables cannot be
       /// captured by a lambda until C++20.
@@ -1386,19 +1386,15 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
       // Create a new type for the equivalence class.
       auto &Ctx = EC2.second[0]->getContext();
       Type *NewTy = Type::getIntNTy(EC2.second[0]->getContext(), NewTyBits);
-      if (ClassAllTy[EC1.first].test(1) && ClassAllTy[EC2.first].test(1)) {
-        if (NewTyBits == 16)
-          NewTy = Type::getHalfTy(Ctx);
-        else if (NewTyBits == 32)
-          NewTy = Type::getFloatTy(Ctx);
-        else if (NewTyBits == 64)
-          NewTy = Type::getDoubleTy(Ctx);
-      } else if (ClassAllTy[EC1.first].test(2) &&
-                 ClassAllTy[EC2.first].test(2)) {
+      if (ClassToNewTyID[EC1.first] == Type::FloatTyID &&
+          ClassToNewTyID[EC2.first] == Type::FloatTyID) {
+        NewTy = Type::getFloatTy(Ctx);
+      } else if (ClassToNewTyID[EC1.first] == Type::PointerTyID &&
+                 ClassToNewTyID[EC2.first] == Type::PointerTyID) {
         NewTy = PointerType::get(Ctx, AS2);
       }
 
-      for (auto *Inst : EC2.second) {
+      for (Instruction *Inst : EC2.second) {
         Value *Ptr = getLoadStorePointerOperand(Inst);
         Type *OrigTy = Inst->getType();
         if (OrigTy == NewTy)
