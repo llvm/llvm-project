@@ -3,6 +3,8 @@
 ; RUN: llc < %s -fast-isel | FileCheck %s --check-prefix=FASTISEL
 ; PR30981
 ; RUN: llc < %s -O0 -mcpu=x86-64 -mattr=+avx512f | FileCheck %s --check-prefix=AVX512F
+; RUN: llc < %s -O0 -mcpu=x86-64 -mattr=+zu | FileCheck %s --check-prefix=ZU
+
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 target triple = "x86_64-apple-darwin10"
 
@@ -26,6 +28,17 @@ define fastcc i32 @test() nounwind {
 ; AVX512F-NEXT:  LBB0_2: ## %.backedge
 ; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    retq
+;
+; ZU-LABEL: test:
+; ZU:       ## %bb.0: ## %entry
+; ZU-NEXT:    movl $1, %eax
+; ZU-NEXT:    addl $0, %eax
+; ZU-NEXT:    setzuo %al
+; ZU-NEXT:    jo LBB0_2
+; ZU-NEXT:  ## %bb.1: ## %BB3
+; ZU-NEXT:  LBB0_2: ## %.backedge
+; ZU-NEXT:    xorl %eax, %eax
+; ZU-NEXT:    retq
 entry:
 	%tmp1 = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 1, i32 0)
 	%tmp2 = extractvalue { i32, i1 } %tmp1, 1

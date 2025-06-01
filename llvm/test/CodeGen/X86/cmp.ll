@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -show-mc-encoding | FileCheck %s --check-prefixes=CHECK,NO-NDD
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ndd -show-mc-encoding | FileCheck --check-prefixes=CHECK,NDD %s
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ndd,+zu -show-mc-encoding | FileCheck --check-prefixes=CHECK,NDD-ZU %s
+; RUN: llc -O0 < %s -mtriple=x86_64-unknown-unknown -mattr=+ndd,+zu -show-mc-encoding | FileCheck --check-prefixes=CHECK,O0-NDD-ZU %s
 
 @d = dso_local global i8 0, align 1
 @d64 = dso_local global i64 0
@@ -31,18 +32,57 @@ ReturnBlock:
 }
 
 define i32 @test2(i32 %X, ptr %y) nounwind {
-; CHECK-LABEL: test2:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testl $536870911, (%rsi) # encoding: [0xf7,0x06,0xff,0xff,0xff,0x1f]
-; CHECK-NEXT:    # imm = 0x1FFFFFFF
-; CHECK-NEXT:    je .LBB1_2 # encoding: [0x74,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
-; CHECK-NEXT:  # %bb.1: # %cond_true
-; CHECK-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; CHECK-NEXT:    retq # encoding: [0xc3]
-; CHECK-NEXT:  .LBB1_2: # %ReturnBlock
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: test2:
+; NO-NDD:       # %bb.0: # %entry
+; NO-NDD-NEXT:    testl $536870911, (%rsi) # encoding: [0xf7,0x06,0xff,0xff,0xff,0x1f]
+; NO-NDD-NEXT:    # imm = 0x1FFFFFFF
+; NO-NDD-NEXT:    je .LBB1_2 # encoding: [0x74,A]
+; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
+; NO-NDD-NEXT:  # %bb.1: # %cond_true
+; NO-NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-NEXT:  .LBB1_2: # %ReturnBlock
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: test2:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    testl $536870911, (%rsi) # encoding: [0xf7,0x06,0xff,0xff,0xff,0x1f]
+; NDD-NEXT:    # imm = 0x1FFFFFFF
+; NDD-NEXT:    je .LBB1_2 # encoding: [0x74,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.1: # %cond_true
+; NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; NDD-NEXT:    retq # encoding: [0xc3]
+; NDD-NEXT:  .LBB1_2: # %ReturnBlock
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-ZU-LABEL: test2:
+; NDD-ZU:       # %bb.0: # %entry
+; NDD-ZU-NEXT:    testl $536870911, (%rsi) # encoding: [0xf7,0x06,0xff,0xff,0xff,0x1f]
+; NDD-ZU-NEXT:    # imm = 0x1FFFFFFF
+; NDD-ZU-NEXT:    je .LBB1_2 # encoding: [0x74,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
+; NDD-ZU-NEXT:  # %bb.1: # %cond_true
+; NDD-ZU-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; NDD-ZU-NEXT:  .LBB1_2: # %ReturnBlock
+; NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test2:
+; O0-NDD-ZU:       # %bb.0: # %entry
+; O0-NDD-ZU-NEXT:    shll $3, (%rsi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0x26,0x03]
+; O0-NDD-ZU-NEXT:    cmpl $0, %eax # encoding: [0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    je .LBB1_2 # encoding: [0x74,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:  # %bb.1: # %cond_true
+; O0-NDD-ZU-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; O0-NDD-ZU-NEXT:  .LBB1_2: # %ReturnBlock
+; O0-NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %tmp = load i32, ptr %y
   %tmp1 = shl i32 %tmp, 3
@@ -57,17 +97,55 @@ ReturnBlock:
 }
 
 define i8 @test2b(i8 %X, ptr %y) nounwind {
-; CHECK-LABEL: test2b:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testb $31, (%rsi) # encoding: [0xf6,0x06,0x1f]
-; CHECK-NEXT:    je .LBB2_2 # encoding: [0x74,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
-; CHECK-NEXT:  # %bb.1: # %cond_true
-; CHECK-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
-; CHECK-NEXT:    retq # encoding: [0xc3]
-; CHECK-NEXT:  .LBB2_2: # %ReturnBlock
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: test2b:
+; NO-NDD:       # %bb.0: # %entry
+; NO-NDD-NEXT:    testb $31, (%rsi) # encoding: [0xf6,0x06,0x1f]
+; NO-NDD-NEXT:    je .LBB2_2 # encoding: [0x74,A]
+; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
+; NO-NDD-NEXT:  # %bb.1: # %cond_true
+; NO-NDD-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-NEXT:  .LBB2_2: # %ReturnBlock
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: test2b:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    testb $31, (%rsi) # encoding: [0xf6,0x06,0x1f]
+; NDD-NEXT:    je .LBB2_2 # encoding: [0x74,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.1: # %cond_true
+; NDD-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
+; NDD-NEXT:    retq # encoding: [0xc3]
+; NDD-NEXT:  .LBB2_2: # %ReturnBlock
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-ZU-LABEL: test2b:
+; NDD-ZU:       # %bb.0: # %entry
+; NDD-ZU-NEXT:    testb $31, (%rsi) # encoding: [0xf6,0x06,0x1f]
+; NDD-ZU-NEXT:    je .LBB2_2 # encoding: [0x74,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
+; NDD-ZU-NEXT:  # %bb.1: # %cond_true
+; NDD-ZU-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
+; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; NDD-ZU-NEXT:  .LBB2_2: # %ReturnBlock
+; NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test2b:
+; O0-NDD-ZU:       # %bb.0: # %entry
+; O0-NDD-ZU-NEXT:    shlb $3, (%rsi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xc0,0x26,0x03]
+; O0-NDD-ZU-NEXT:    cmpb $0, %al # encoding: [0x3c,0x00]
+; O0-NDD-ZU-NEXT:    je .LBB2_2 # encoding: [0x74,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:  # %bb.1: # %cond_true
+; O0-NDD-ZU-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; O0-NDD-ZU-NEXT:  .LBB2_2: # %ReturnBlock
+; O0-NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; O0-NDD-ZU-NEXT:    # kill: def $al killed $al killed $eax
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %tmp = load i8, ptr %y
   %tmp1 = shl i8 %tmp, 3
@@ -101,6 +179,15 @@ define i64 @test3(i64 %x) nounwind {
 ; NDD-ZU-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test3:
+; O0-NDD-ZU:       # %bb.0: # %entry
+; O0-NDD-ZU-NEXT:    cmpq $0, %rdi # encoding: [0x48,0x83,0xff,0x00]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    # kill: def $rax killed $eax
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %t = icmp eq i64 %x, 0
   %r = zext i1 %t to i64
@@ -127,31 +214,108 @@ define i64 @test4(i64 %x) nounwind {
 ; NDD-ZU-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
 ; NDD-ZU-NEXT:    setzule %al # encoding: [0x62,0xf4,0x7f,0x18,0x4e,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test4:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    cmpq $1, %rdi # encoding: [0x48,0x83,0xff,0x01]
+; O0-NDD-ZU-NEXT:    setzul %al # encoding: [0x62,0xf4,0x7f,0x18,0x4c,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    # kill: def $rax killed $eax
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %t = icmp slt i64 %x, 1
   %r = zext i1 %t to i64
   ret i64 %r
 }
 
 define i32 @test5(double %A) nounwind {
-; CHECK-LABEL: test5:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; CHECK-NEXT:    ja .LBB5_3 # encoding: [0x77,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; CHECK-NEXT:    jb .LBB5_3 # encoding: [0x72,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
-; CHECK-NEXT:  # %bb.2: # %bb12
-; CHECK-NEXT:    movl $32, %eax # encoding: [0xb8,0x20,0x00,0x00,0x00]
-; CHECK-NEXT:    retq # encoding: [0xc3]
-; CHECK-NEXT:  .LBB5_3: # %bb8
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    jmp foo@PLT # TAILCALL
-; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: foo@PLT-1, kind: FK_PCRel_1
+; NO-NDD-LABEL: test5:
+; NO-NDD:       # %bb.0: # %entry
+; NO-NDD-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; NO-NDD-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; NO-NDD-NEXT:    ja .LBB5_3 # encoding: [0x77,A]
+; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
+; NO-NDD-NEXT:  # %bb.1: # %entry
+; NO-NDD-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; NO-NDD-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; NO-NDD-NEXT:    jb .LBB5_3 # encoding: [0x72,A]
+; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
+; NO-NDD-NEXT:  # %bb.2: # %bb12
+; NO-NDD-NEXT:    movl $32, %eax # encoding: [0xb8,0x20,0x00,0x00,0x00]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-NEXT:  .LBB5_3: # %bb8
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    jmp foo@PLT # TAILCALL
+; NO-NDD-NEXT:    # encoding: [0xeb,A]
+; NO-NDD-NEXT:    # fixup A - offset: 1, value: foo@PLT-1, kind: FK_PCRel_1
+;
+; NDD-LABEL: test5:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; NDD-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; NDD-NEXT:    ja .LBB5_3 # encoding: [0x77,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.1: # %entry
+; NDD-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; NDD-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; NDD-NEXT:    jb .LBB5_3 # encoding: [0x72,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.2: # %bb12
+; NDD-NEXT:    movl $32, %eax # encoding: [0xb8,0x20,0x00,0x00,0x00]
+; NDD-NEXT:    retq # encoding: [0xc3]
+; NDD-NEXT:  .LBB5_3: # %bb8
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-NEXT:    jmp foo@PLT # TAILCALL
+; NDD-NEXT:    # encoding: [0xeb,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: foo@PLT-1, kind: FK_PCRel_1
+;
+; NDD-ZU-LABEL: test5:
+; NDD-ZU:       # %bb.0: # %entry
+; NDD-ZU-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; NDD-ZU-NEXT:    ja .LBB5_3 # encoding: [0x77,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
+; NDD-ZU-NEXT:  # %bb.1: # %entry
+; NDD-ZU-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; NDD-ZU-NEXT:    jb .LBB5_3 # encoding: [0x72,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
+; NDD-ZU-NEXT:  # %bb.2: # %bb12
+; NDD-ZU-NEXT:    movl $32, %eax # encoding: [0xb8,0x20,0x00,0x00,0x00]
+; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; NDD-ZU-NEXT:  .LBB5_3: # %bb8
+; NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-ZU-NEXT:    jmp foo@PLT # TAILCALL
+; NDD-ZU-NEXT:    # encoding: [0xeb,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 1, value: foo@PLT-1, kind: FK_PCRel_1
+;
+; O0-NDD-ZU-LABEL: test5:
+; O0-NDD-ZU:       # %bb.0: # %entry
+; O0-NDD-ZU-NEXT:    movsd {{.*#+}} xmm1 = [1.5E+2,0.0E+0]
+; O0-NDD-ZU-NEXT:    # encoding: [0xf2,0x0f,0x10,0x0d,A,A,A,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; O0-NDD-ZU-NEXT:    ucomisd %xmm1, %xmm0 # encoding: [0x66,0x0f,0x2e,0xc1]
+; O0-NDD-ZU-NEXT:    setzua %al # encoding: [0x62,0xf4,0x7f,0x18,0x47,0xc0]
+; O0-NDD-ZU-NEXT:    movsd {{.*#+}} xmm1 = [7.5E+1,0.0E+0]
+; O0-NDD-ZU-NEXT:    # encoding: [0xf2,0x0f,0x10,0x0d,A,A,A,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; O0-NDD-ZU-NEXT:    ucomisd %xmm1, %xmm0 # encoding: [0x66,0x0f,0x2e,0xc1]
+; O0-NDD-ZU-NEXT:    setzub %cl # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc1]
+; O0-NDD-ZU-NEXT:    orb %cl, %al # EVEX TO LEGACY Compression encoding: [0x08,0xc8]
+; O0-NDD-ZU-NEXT:    testb $1, %al # encoding: [0xa8,0x01]
+; O0-NDD-ZU-NEXT:    jne .LBB5_1 # encoding: [0x75,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB5_1-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:    jmp .LBB5_2 # encoding: [0xeb,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB5_2-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:  .LBB5_1: # %bb8
+; O0-NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; O0-NDD-ZU-NEXT:    # kill: def $al killed $al killed $eax
+; O0-NDD-ZU-NEXT:    jmp foo@PLT # TAILCALL
+; O0-NDD-ZU-NEXT:    # encoding: [0xeb,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: foo@PLT-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:  .LBB5_2: # %bb12
+; O0-NDD-ZU-NEXT:    movl $32, %eax # encoding: [0xb8,0x20,0x00,0x00,0x00]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %tmp2 = fcmp ogt double %A, 1.500000e+02
   %tmp5 = fcmp ult double %A, 7.500000e+01
@@ -169,17 +333,53 @@ bb12:
 declare i32 @foo(...)
 
 define i32 @test6() nounwind align 2 {
-; CHECK-LABEL: test6:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpq $0, -{{[0-9]+}}(%rsp) # encoding: [0x48,0x83,0x7c,0x24,0xf8,0x00]
-; CHECK-NEXT:    je .LBB6_1 # encoding: [0x74,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB6_1-1, kind: FK_PCRel_1
-; CHECK-NEXT:  # %bb.2: # %F
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    retq # encoding: [0xc3]
-; CHECK-NEXT:  .LBB6_1: # %T
-; CHECK-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: test6:
+; NO-NDD:       # %bb.0: # %entry
+; NO-NDD-NEXT:    cmpq $0, -{{[0-9]+}}(%rsp) # encoding: [0x48,0x83,0x7c,0x24,0xf8,0x00]
+; NO-NDD-NEXT:    je .LBB6_1 # encoding: [0x74,A]
+; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB6_1-1, kind: FK_PCRel_1
+; NO-NDD-NEXT:  # %bb.2: # %F
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-NEXT:  .LBB6_1: # %T
+; NO-NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: test6:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpq $0, -{{[0-9]+}}(%rsp) # encoding: [0x48,0x83,0x7c,0x24,0xf8,0x00]
+; NDD-NEXT:    je .LBB6_1 # encoding: [0x74,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB6_1-1, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.2: # %F
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+; NDD-NEXT:  .LBB6_1: # %T
+; NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-ZU-LABEL: test6:
+; NDD-ZU:       # %bb.0: # %entry
+; NDD-ZU-NEXT:    cmpq $0, -{{[0-9]+}}(%rsp) # encoding: [0x48,0x83,0x7c,0x24,0xf8,0x00]
+; NDD-ZU-NEXT:    je .LBB6_1 # encoding: [0x74,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB6_1-1, kind: FK_PCRel_1
+; NDD-ZU-NEXT:  # %bb.2: # %F
+; NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; NDD-ZU-NEXT:  .LBB6_1: # %T
+; NDD-ZU-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test6:
+; O0-NDD-ZU:       # %bb.0: # %entry
+; O0-NDD-ZU-NEXT:    cmpq $0, -{{[0-9]+}}(%rsp) # encoding: [0x48,0x83,0x7c,0x24,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    jne .LBB6_2 # encoding: [0x75,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB6_2-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:  # %bb.1: # %T
+; O0-NDD-ZU-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; O0-NDD-ZU-NEXT:  .LBB6_2: # %F
+; O0-NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %A = alloca { i64, i64 }, align 8
   %B = getelementptr inbounds { i64, i64 }, ptr %A, i64 0, i32 1
@@ -214,6 +414,16 @@ define i32 @test7(i64 %res) nounwind {
 ; NDD-ZU-NEXT:    shrq $32, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x20]
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test7:
+; O0-NDD-ZU:       # %bb.0: # %entry
+; O0-NDD-ZU-NEXT:    movabsq $4294967296, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00]
+; O0-NDD-ZU-NEXT:    # imm = 0x100000000
+; O0-NDD-ZU-NEXT:    cmpq %rax, %rdi # encoding: [0x48,0x39,0xc7]
+; O0-NDD-ZU-NEXT:    setzub %al # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %lnot = icmp ult i64 %res, 4294967296
   %lnot.ext = zext i1 %lnot to i32
@@ -243,6 +453,16 @@ define i32 @test8(i64 %res) nounwind {
 ; NDD-ZU-NEXT:    cmpl $3, %edi # encoding: [0x83,0xff,0x03]
 ; NDD-ZU-NEXT:    setzub %al # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test8:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $12884901888, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x03,0x00,0x00,0x00]
+; O0-NDD-ZU-NEXT:    # imm = 0x300000000
+; O0-NDD-ZU-NEXT:    cmpq %rax, %rdi # encoding: [0x48,0x39,0xc7]
+; O0-NDD-ZU-NEXT:    setzub %al # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %lnot = icmp ult i64 %res, 12884901888
   %lnot.ext = zext i1 %lnot to i32
   ret i32 %lnot.ext
@@ -268,6 +488,16 @@ define i32 @test9(i64 %res) nounwind {
 ; NDD-ZU-NEXT:    shrq $33, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x21]
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test9:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $8589934592, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
+; O0-NDD-ZU-NEXT:    # imm = 0x200000000
+; O0-NDD-ZU-NEXT:    cmpq %rax, %rdi # encoding: [0x48,0x39,0xc7]
+; O0-NDD-ZU-NEXT:    setzub %al # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %lnot = icmp ult i64 %res, 8589934592
   %lnot.ext = zext i1 %lnot to i32
   ret i32 %lnot.ext
@@ -293,6 +523,16 @@ define i32 @test10(i64 %res) nounwind {
 ; NDD-ZU-NEXT:    shrq $32, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x20]
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test10:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $4294967296, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00]
+; O0-NDD-ZU-NEXT:    # imm = 0x100000000
+; O0-NDD-ZU-NEXT:    cmpq %rax, %rdi # encoding: [0x48,0x39,0xc7]
+; O0-NDD-ZU-NEXT:    setzuae %al # encoding: [0x62,0xf4,0x7f,0x18,0x43,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %lnot = icmp uge i64 %res, 4294967296
   %lnot.ext = zext i1 %lnot to i32
   ret i32 %lnot.ext
@@ -321,6 +561,19 @@ define i32 @test11(i64 %l) nounwind {
 ; NDD-ZU-NEXT:    cmpl $1, %edi # encoding: [0x83,0xff,0x01]
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test11:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $-140737488355328, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x00,0x80,0xff,0xff]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFFF800000000000
+; O0-NDD-ZU-NEXT:    andq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xf8]
+; O0-NDD-ZU-NEXT:    movabsq $140737488355328, %rcx # encoding: [0x48,0xb9,0x00,0x00,0x00,0x00,0x00,0x80,0x00,0x00]
+; O0-NDD-ZU-NEXT:    # imm = 0x800000000000
+; O0-NDD-ZU-NEXT:    cmpq %rcx, %rax # encoding: [0x48,0x39,0xc8]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %shr.mask = and i64 %l, -140737488355328
   %cmp = icmp eq i64 %shr.mask, 140737488355328
   %conv = zext i1 %cmp to i32
@@ -328,26 +581,91 @@ define i32 @test11(i64 %l) nounwind {
 }
 
 define i32 @test12() ssp uwtable {
-; CHECK-LABEL: test12:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rax # encoding: [0x50]
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq test12b@PLT # encoding: [0xe8,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: test12b@PLT-4, kind: FK_PCRel_4
-; CHECK-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
-; CHECK-NEXT:    je .LBB12_2 # encoding: [0x74,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB12_2-1, kind: FK_PCRel_1
-; CHECK-NEXT:  # %bb.1: # %T
-; CHECK-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; CHECK-NEXT:    popq %rcx # encoding: [0x59]
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    retq # encoding: [0xc3]
-; CHECK-NEXT:  .LBB12_2: # %F
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
-; CHECK-NEXT:    popq %rcx # encoding: [0x59]
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: test12:
+; NO-NDD:       # %bb.0: # %entry
+; NO-NDD-NEXT:    pushq %rax # encoding: [0x50]
+; NO-NDD-NEXT:    .cfi_def_cfa_offset 16
+; NO-NDD-NEXT:    callq test12b@PLT # encoding: [0xe8,A,A,A,A]
+; NO-NDD-NEXT:    # fixup A - offset: 1, value: test12b@PLT-4, kind: FK_PCRel_4
+; NO-NDD-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
+; NO-NDD-NEXT:    je .LBB12_2 # encoding: [0x74,A]
+; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB12_2-1, kind: FK_PCRel_1
+; NO-NDD-NEXT:  # %bb.1: # %T
+; NO-NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; NO-NDD-NEXT:    popq %rcx # encoding: [0x59]
+; NO-NDD-NEXT:    .cfi_def_cfa_offset 8
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-NEXT:  .LBB12_2: # %F
+; NO-NDD-NEXT:    .cfi_def_cfa_offset 16
+; NO-NDD-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
+; NO-NDD-NEXT:    popq %rcx # encoding: [0x59]
+; NO-NDD-NEXT:    .cfi_def_cfa_offset 8
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: test12:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    pushq %rax # encoding: [0x50]
+; NDD-NEXT:    .cfi_def_cfa_offset 16
+; NDD-NEXT:    callq test12b@PLT # encoding: [0xe8,A,A,A,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: test12b@PLT-4, kind: FK_PCRel_4
+; NDD-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
+; NDD-NEXT:    je .LBB12_2 # encoding: [0x74,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB12_2-1, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.1: # %T
+; NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; NDD-NEXT:    popq %rcx # encoding: [0x59]
+; NDD-NEXT:    .cfi_def_cfa_offset 8
+; NDD-NEXT:    retq # encoding: [0xc3]
+; NDD-NEXT:  .LBB12_2: # %F
+; NDD-NEXT:    .cfi_def_cfa_offset 16
+; NDD-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
+; NDD-NEXT:    popq %rcx # encoding: [0x59]
+; NDD-NEXT:    .cfi_def_cfa_offset 8
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-ZU-LABEL: test12:
+; NDD-ZU:       # %bb.0: # %entry
+; NDD-ZU-NEXT:    pushq %rax # encoding: [0x50]
+; NDD-ZU-NEXT:    .cfi_def_cfa_offset 16
+; NDD-ZU-NEXT:    callq test12b@PLT # encoding: [0xe8,A,A,A,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 1, value: test12b@PLT-4, kind: FK_PCRel_4
+; NDD-ZU-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
+; NDD-ZU-NEXT:    je .LBB12_2 # encoding: [0x74,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB12_2-1, kind: FK_PCRel_1
+; NDD-ZU-NEXT:  # %bb.1: # %T
+; NDD-ZU-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; NDD-ZU-NEXT:    popq %rcx # encoding: [0x59]
+; NDD-ZU-NEXT:    .cfi_def_cfa_offset 8
+; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; NDD-ZU-NEXT:  .LBB12_2: # %F
+; NDD-ZU-NEXT:    .cfi_def_cfa_offset 16
+; NDD-ZU-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
+; NDD-ZU-NEXT:    popq %rcx # encoding: [0x59]
+; NDD-ZU-NEXT:    .cfi_def_cfa_offset 8
+; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test12:
+; O0-NDD-ZU:       # %bb.0: # %entry
+; O0-NDD-ZU-NEXT:    pushq %rax # encoding: [0x50]
+; O0-NDD-ZU-NEXT:    .cfi_def_cfa_offset 16
+; O0-NDD-ZU-NEXT:    callq test12b@PLT # encoding: [0xe8,A,A,A,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: test12b@PLT-4, kind: FK_PCRel_4
+; O0-NDD-ZU-NEXT:    testb $1, %al # encoding: [0xa8,0x01]
+; O0-NDD-ZU-NEXT:    jne .LBB12_1 # encoding: [0x75,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB12_1-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:    jmp .LBB12_2 # encoding: [0xeb,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB12_2-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:  .LBB12_1: # %T
+; O0-NDD-ZU-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; O0-NDD-ZU-NEXT:    popq %rcx # encoding: [0x59]
+; O0-NDD-ZU-NEXT:    .cfi_def_cfa_offset 8
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; O0-NDD-ZU-NEXT:  .LBB12_2: # %F
+; O0-NDD-ZU-NEXT:    .cfi_def_cfa_offset 16
+; O0-NDD-ZU-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
+; O0-NDD-ZU-NEXT:    popq %rcx # encoding: [0x59]
+; O0-NDD-ZU-NEXT:    .cfi_def_cfa_offset 8
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %tmp1 = call zeroext i1 @test12b()
   br i1 %tmp1, label %T, label %F
@@ -380,6 +698,13 @@ define i32 @test13(i32 %mask, i32 %base, i32 %intra) {
 ; NDD-ZU-NEXT:    testb $8, %dil # encoding: [0x40,0xf6,0xc7,0x08]
 ; NDD-ZU-NEXT:    cmovnel %edx, %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x45,0xf2]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test13:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andl $8, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xe7,0x08]
+; O0-NDD-ZU-NEXT:    cmpl $0, %eax # encoding: [0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    cmovnel %edx, %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x45,0xf2]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %mask, 8
   %tobool = icmp ne i32 %and, 0
   %cond = select i1 %tobool, i32 %intra, i32 %base
@@ -405,6 +730,13 @@ define i32 @test14(i32 %mask, i32 %base, i32 %intra) {
 ; NDD-ZU-NEXT:    shrl $7, %edi # EVEX TO LEGACY Compression encoding: [0xc1,0xef,0x07]
 ; NDD-ZU-NEXT:    cmovnsl %edx, %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x49,0xf2]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test14:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    shrl $7, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0xef,0x07]
+; O0-NDD-ZU-NEXT:    cmpl $-1, %eax # encoding: [0x83,0xf8,0xff]
+; O0-NDD-ZU-NEXT:    cmovgl %edx, %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x4f,0xf2]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %s = lshr i32 %mask, 7
   %tobool = icmp sgt i32 %s, -1
   %cond = select i1 %tobool, i32 %intra, i32 %base
@@ -439,6 +771,17 @@ define zeroext i1 @test15(i32 %bf.load, i32 %n) {
 ; NDD-ZU-NEXT:    setzuae %cl # encoding: [0x62,0xf4,0x7f,0x18,0x43,0xc1]
 ; NDD-ZU-NEXT:    orb %cl, %al # EVEX TO LEGACY Compression encoding: [0x08,0xc8]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test15:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    shrl $16, %edi, %ecx # encoding: [0x62,0xf4,0x74,0x18,0xc1,0xef,0x10]
+; O0-NDD-ZU-NEXT:    cmpl $0, %ecx # encoding: [0x83,0xf9,0x00]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    cmpl %esi, %ecx # encoding: [0x39,0xf1]
+; O0-NDD-ZU-NEXT:    setzuae %cl # encoding: [0x62,0xf4,0x7f,0x18,0x43,0xc1]
+; O0-NDD-ZU-NEXT:    orb %cl, %al # EVEX TO LEGACY Compression encoding: [0x08,0xc8]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %bf.lshr = lshr i32 %bf.load, 16
   %cmp2 = icmp eq i32 %bf.lshr, 0
   %cmp5 = icmp uge i32 %bf.lshr, %n
@@ -464,6 +807,14 @@ define i8 @signbit_i16(i16 signext %L) {
 ; NDD-ZU-NEXT:    testw %di, %di # encoding: [0x66,0x85,0xff]
 ; NDD-ZU-NEXT:    setzuns %al # encoding: [0x62,0xf4,0x7f,0x18,0x49,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: signbit_i16:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movw %di, %ax # encoding: [0x66,0x89,0xf8]
+; O0-NDD-ZU-NEXT:    shrw $15, %ax # EVEX TO LEGACY Compression encoding: [0x66,0xc1,0xe8,0x0f]
+; O0-NDD-ZU-NEXT:    # kill: def $al killed $al killed $ax
+; O0-NDD-ZU-NEXT:    xorb $1, %al # EVEX TO LEGACY Compression encoding: [0x34,0x01]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %lshr = lshr i16 %L, 15
   %trunc = trunc i16 %lshr to i8
   %not = xor i8 %trunc, 1
@@ -488,6 +839,13 @@ define i8 @signbit_i32(i32 %L) {
 ; NDD-ZU-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
 ; NDD-ZU-NEXT:    setzuns %al # encoding: [0x62,0xf4,0x7f,0x18,0x49,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: signbit_i32:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    shrl $31, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0xef,0x1f]
+; O0-NDD-ZU-NEXT:    # kill: def $al killed $al killed $eax
+; O0-NDD-ZU-NEXT:    xorb $1, %al # EVEX TO LEGACY Compression encoding: [0x34,0x01]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %lshr = lshr i32 %L, 31
   %trunc = trunc i32 %lshr to i8
   %not = xor i8 %trunc, 1
@@ -512,6 +870,13 @@ define i8 @signbit_i64(i64 %L) {
 ; NDD-ZU-NEXT:    testq %rdi, %rdi # encoding: [0x48,0x85,0xff]
 ; NDD-ZU-NEXT:    setzuns %al # encoding: [0x62,0xf4,0x7f,0x18,0x49,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: signbit_i64:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    shrq $63, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xc1,0xef,0x3f]
+; O0-NDD-ZU-NEXT:    # kill: def $al killed $al killed $rax
+; O0-NDD-ZU-NEXT:    xorb $1, %al # EVEX TO LEGACY Compression encoding: [0x34,0x01]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %lshr = lshr i64 %L, 63
   %trunc = trunc i64 %lshr to i8
   %not = xor i8 %trunc, 1
@@ -536,6 +901,14 @@ define zeroext i1 @signbit_i32_i1(i32 %L) {
 ; NDD-ZU-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
 ; NDD-ZU-NEXT:    setzuns %al # encoding: [0x62,0xf4,0x7f,0x18,0x49,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: signbit_i32_i1:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    shrl $31, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0xef,0x1f]
+; O0-NDD-ZU-NEXT:    # kill: def $al killed $al killed $eax
+; O0-NDD-ZU-NEXT:    xorb $-1, %al # EVEX TO LEGACY Compression encoding: [0x34,0xff]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %lshr = lshr i32 %L, 31
   %trunc = trunc i32 %lshr to i1
   %not = xor i1 %trunc, true
@@ -587,6 +960,28 @@ define void @test20(i32 %bf.load, i8 %x1, ptr %b_addr) {
 ; NDD-ZU-NEXT:    setne d(%rip) # encoding: [0x0f,0x95,0x05,A,A,A,A]
 ; NDD-ZU-NEXT:    # fixup A - offset: 3, value: d-4, kind: reloc_riprel_4byte
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test20:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    # kill: def $sil killed $sil killed $esi
+; O0-NDD-ZU-NEXT:    shll $8, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0xe7,0x08]
+; O0-NDD-ZU-NEXT:    sarl $8, %eax, %ecx # encoding: [0x62,0xf4,0x74,0x18,0xc1,0xf8,0x08]
+; O0-NDD-ZU-NEXT:    cmpl $0, %ecx # encoding: [0x83,0xf9,0x00]
+; O0-NDD-ZU-NEXT:    setzune %cl # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc1]
+; O0-NDD-ZU-NEXT:    andb $1, %cl # EVEX TO LEGACY Compression encoding: [0x80,0xe1,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %cl, %ecx # encoding: [0x0f,0xb6,0xc9]
+; O0-NDD-ZU-NEXT:    movzbl %sil, %esi # encoding: [0x40,0x0f,0xb6,0xf6]
+; O0-NDD-ZU-NEXT:    addl %esi, %ecx # EVEX TO LEGACY Compression encoding: [0x01,0xf1]
+; O0-NDD-ZU-NEXT:    cmpl $0, %ecx # encoding: [0x83,0xf9,0x00]
+; O0-NDD-ZU-NEXT:    setzune %cl # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc1]
+; O0-NDD-ZU-NEXT:    andb $1, %cl # EVEX TO LEGACY Compression encoding: [0x80,0xe1,0x01]
+; O0-NDD-ZU-NEXT:    movb %cl, (%rdx) # encoding: [0x88,0x0a]
+; O0-NDD-ZU-NEXT:    cmpl $0, %eax # encoding: [0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movb %al, d # encoding: [0x88,0x04,0x25,A,A,A,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 3, value: d, kind: reloc_signed_4byte
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %bf.shl = shl i32 %bf.load, 8
   %bf.ashr = ashr exact i32 %bf.shl, 8
   %tobool4 = icmp ne i32 %bf.ashr, 0
@@ -603,10 +998,31 @@ define void @test20(i32 %bf.load, i8 %x1, ptr %b_addr) {
 }
 
 define i32 @highmask_i64_simplify(i64 %val) {
-; CHECK-LABEL: highmask_i64_simplify:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    retq # encoding: [0xc3]
+; NO-NDD-LABEL: highmask_i64_simplify:
+; NO-NDD:       # %bb.0:
+; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NO-NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: highmask_i64_simplify:
+; NDD:       # %bb.0:
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-ZU-LABEL: highmask_i64_simplify:
+; NDD-ZU:       # %bb.0:
+; NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: highmask_i64_simplify:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $-2199023255552, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x00,0xfe,0xff,0xff]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFFFFE0000000000
+; O0-NDD-ZU-NEXT:    andq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xf8]
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzub %al # encoding: [0x62,0xf4,0x7f,0x18,0x42,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -2199023255552
   %cmp = icmp ult i64 %and, 0
   %ret = zext i1 %cmp to i32
@@ -633,6 +1049,17 @@ define i32 @highmask_i64_mask64(i64 %val) {
 ; NDD-ZU-NEXT:    shrq $41, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x29]
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: highmask_i64_mask64:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $-2199023255552, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x00,0xfe,0xff,0xff]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFFFFE0000000000
+; O0-NDD-ZU-NEXT:    andq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xf8]
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -2199023255552
   %cmp = icmp ne i64 %and, 0
   %ret = zext i1 %cmp to i32
@@ -663,6 +1090,19 @@ define i64 @highmask_i64_mask64_extra_use(i64 %val) nounwind {
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    imulq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xaf,0xc7]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: highmask_i64_mask64_extra_use:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $-2199023255552, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x00,0xfe,0xff,0xff]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFFFFE0000000000
+; O0-NDD-ZU-NEXT:    andq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xf8]
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    # kill: def $rax killed $eax
+; O0-NDD-ZU-NEXT:    imulq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xaf,0xc7]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -2199023255552
   %cmp = icmp ne i64 %and, 0
   %z = zext i1 %cmp to i64
@@ -690,6 +1130,16 @@ define i32 @highmask_i64_mask32(i64 %val) {
 ; NDD-ZU-NEXT:    shrq $20, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xef,0x14]
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: highmask_i64_mask32:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andq $-1048576, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xe7,0x00,0x00,0xf0,0xff]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFF00000
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -1048576
   %cmp = icmp eq i64 %and, 0
   %ret = zext i1 %cmp to i32
@@ -722,6 +1172,18 @@ define i64 @highmask_i64_mask32_extra_use(i64 %val) nounwind {
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    imulq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xaf,0xc7]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: highmask_i64_mask32_extra_use:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andq $-1048576, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xe7,0x00,0x00,0xf0,0xff]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFF00000
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    # kill: def $rax killed $eax
+; O0-NDD-ZU-NEXT:    imulq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xaf,0xc7]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -1048576
   %cmp = icmp eq i64 %and, 0
   %z = zext i1 %cmp to i64
@@ -749,6 +1211,15 @@ define i32 @highmask_i64_mask8(i64 %val) {
 ; NDD-ZU-NEXT:    testq $-16, %rdi # encoding: [0x48,0xf7,0xc7,0xf0,0xff,0xff,0xff]
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: highmask_i64_mask8:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andq $-16, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xe7,0xf0]
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -16
   %cmp = icmp ne i64 %and, 0
   %ret = zext i1 %cmp to i32
@@ -775,6 +1246,17 @@ define i32 @lowmask_i64_mask64(i64 %val) {
 ; NDD-ZU-NEXT:    shlq $16, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x10]
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: lowmask_i64_mask64:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $281474976710655, %rax # encoding: [0x48,0xb8,0xff,0xff,0xff,0xff,0xff,0xff,0x00,0x00]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFFFFFFFFFFF
+; O0-NDD-ZU-NEXT:    andq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xf8]
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 281474976710655
   %cmp = icmp eq i64 %and, 0
   %ret = zext i1 %cmp to i32
@@ -805,6 +1287,19 @@ define i64 @lowmask_i64_mask64_extra_use(i64 %val) nounwind {
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    imulq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xaf,0xc7]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: lowmask_i64_mask64_extra_use:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $281474976710655, %rax # encoding: [0x48,0xb8,0xff,0xff,0xff,0xff,0xff,0xff,0x00,0x00]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFFFFFFFFFFF
+; O0-NDD-ZU-NEXT:    andq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x21,0xf8]
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    # kill: def $rax killed $eax
+; O0-NDD-ZU-NEXT:    imulq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xaf,0xc7]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 281474976710655
   %cmp = icmp eq i64 %and, 0
   %z = zext i1 %cmp to i64
@@ -832,6 +1327,16 @@ define i32 @lowmask_i64_mask32(i64 %val) {
 ; NDD-ZU-NEXT:    shlq $44, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0xc1,0xe7,0x2c]
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: lowmask_i64_mask32:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andq $1048575, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xe7,0xff,0xff,0x0f,0x00]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFFFF
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 1048575
   %cmp = icmp ne i64 %and, 0
   %ret = zext i1 %cmp to i32
@@ -864,6 +1369,18 @@ define i64 @lowmask_i64_mask32_extra_use(i64 %val) nounwind {
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    imulq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xaf,0xc7]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: lowmask_i64_mask32_extra_use:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andq $1048575, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xe7,0xff,0xff,0x0f,0x00]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFFFF
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    # kill: def $rax killed $eax
+; O0-NDD-ZU-NEXT:    imulq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xaf,0xc7]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 1048575
   %cmp = icmp ne i64 %and, 0
   %z = zext i1 %cmp to i64
@@ -891,6 +1408,15 @@ define i32 @lowmask_i64_mask8(i64 %val) {
 ; NDD-ZU-NEXT:    testb $31, %dil # encoding: [0x40,0xf6,0xc7,0x1f]
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: lowmask_i64_mask8:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andq $31, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xe7,0x1f]
+; O0-NDD-ZU-NEXT:    cmpq $0, %rax # encoding: [0x48,0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 31
   %cmp = icmp eq i64 %and, 0
   %ret = zext i1 %cmp to i32
@@ -920,6 +1446,16 @@ define i32 @highmask_i32_mask32(i32 %val) {
 ; NDD-ZU-NEXT:    # imm = 0xFFF00000
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: highmask_i32_mask32:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andl $-1048576, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xe7,0x00,0x00,0xf0,0xff]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFF00000
+; O0-NDD-ZU-NEXT:    cmpl $0, %eax # encoding: [0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %val, -1048576
   %cmp = icmp ne i32 %and, 0
   %ret = zext i1 %cmp to i32
@@ -946,6 +1482,15 @@ define i32 @highmask_i32_mask8(i32 %val) {
 ; NDD-ZU-NEXT:    testl $-16, %edi # encoding: [0xf7,0xc7,0xf0,0xff,0xff,0xff]
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: highmask_i32_mask8:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andl $-16, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xe7,0xf0]
+; O0-NDD-ZU-NEXT:    cmpl $0, %eax # encoding: [0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %val, -16
   %cmp = icmp eq i32 %and, 0
   %ret = zext i1 %cmp to i32
@@ -975,6 +1520,16 @@ define i32 @lowmask_i32_mask32(i32 %val) {
 ; NDD-ZU-NEXT:    # imm = 0xFFFFF
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: lowmask_i32_mask32:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andl $1048575, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xe7,0xff,0xff,0x0f,0x00]
+; O0-NDD-ZU-NEXT:    # imm = 0xFFFFF
+; O0-NDD-ZU-NEXT:    cmpl $0, %eax # encoding: [0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %val, 1048575
   %cmp = icmp eq i32 %and, 0
   %ret = zext i1 %cmp to i32
@@ -1001,6 +1556,15 @@ define i32 @lowmask_i32_mask8(i32 %val) {
 ; NDD-ZU-NEXT:    testb $31, %dil # encoding: [0x40,0xf6,0xc7,0x1f]
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: lowmask_i32_mask8:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andl $31, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xe7,0x1f]
+; O0-NDD-ZU-NEXT:    cmpl $0, %eax # encoding: [0x83,0xf8,0x00]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    andb $1, %al # EVEX TO LEGACY Compression encoding: [0x24,0x01]
+; O0-NDD-ZU-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %and = and i32 %val, 31
   %cmp = icmp ne i32 %and, 0
   %ret = zext i1 %cmp to i32
@@ -1028,6 +1592,14 @@ define i1 @shifted_mask64_testb(i64 %a) {
 ; NDD-ZU-NEXT:    testb %dil, %dil # encoding: [0x40,0x84,0xff]
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: shifted_mask64_testb:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    shrq $50, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xc1,0xef,0x32]
+; O0-NDD-ZU-NEXT:    # kill: def $al killed $al killed $rax
+; O0-NDD-ZU-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 287104476244869120  ; 0xff << 50
   %v1 = icmp ne i64 %v0, 0
   ret i1 %v1
@@ -1054,6 +1626,14 @@ define i1 @shifted_mask64_testw(i64 %a) {
 ; NDD-ZU-NEXT:    testw %di, %di # encoding: [0x66,0x85,0xff]
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: shifted_mask64_testw:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    shrq $33, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xc1,0xef,0x21]
+; O0-NDD-ZU-NEXT:    # kill: def $ax killed $ax killed $rax
+; O0-NDD-ZU-NEXT:    testw %ax, %ax # encoding: [0x66,0x85,0xc0]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 562941363486720  ; 0xffff << 33
   %v1 = icmp ne i64 %v0, 0
   ret i1 %v1
@@ -1080,6 +1660,14 @@ define i1 @shifted_mask64_testl(i64 %a) {
 ; NDD-ZU-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: shifted_mask64_testl:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    shrq $7, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xc1,0xef,0x07]
+; O0-NDD-ZU-NEXT:    # kill: def $eax killed $eax killed $rax
+; O0-NDD-ZU-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 549755813760  ; 0xffffffff << 7
   %v1 = icmp eq i64 %v0, 0
   ret i1 %v1
@@ -1115,6 +1703,17 @@ define i1 @shifted_mask64_extra_use_const(i64 %a) {
 ; NDD-ZU-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
 ; NDD-ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: shifted_mask64_extra_use_const:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $287104476244869120, %rcx # encoding: [0x48,0xb9,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x03]
+; O0-NDD-ZU-NEXT:    # imm = 0x3FC000000000000
+; O0-NDD-ZU-NEXT:    andq %rcx, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x21,0xcf]
+; O0-NDD-ZU-NEXT:    testq %rax, %rax # encoding: [0x48,0x85,0xc0]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 287104476244869120  ; 0xff << 50
   %v1 = icmp ne i64 %v0, 0
   store i64 287104476244869120, ptr @d64
@@ -1151,6 +1750,16 @@ define i1 @shifted_mask64_extra_use_and(i64 %a) {
 ; NDD-ZU-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; NDD-ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: shifted_mask64_extra_use_and:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movabsq $287104476244869120, %rax # encoding: [0x48,0xb8,0x00,0x00,0x00,0x00,0x00,0x00,0xfc,0x03]
+; O0-NDD-ZU-NEXT:    # imm = 0x3FC000000000000
+; O0-NDD-ZU-NEXT:    andq %rax, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x21,0xc7]
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 287104476244869120  ; 0xff << 50
   %v1 = icmp ne i64 %v0, 0
   store i64 %v0, ptr @d64
@@ -1178,6 +1787,14 @@ define i1 @shifted_mask32_testl_immediate(i64 %a) {
 ; NDD-ZU-NEXT:    # imm = 0x3FC0000
 ; NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: shifted_mask32_testl_immediate:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; O0-NDD-ZU-NEXT:    testl $66846720, %eax # encoding: [0xa9,0x00,0x00,0xfc,0x03]
+; O0-NDD-ZU-NEXT:    # imm = 0x3FC0000
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 66846720  ; 0xff << 18
   %v1 = icmp ne i64 %v0, 0
   ret i1 %v1
@@ -1213,6 +1830,17 @@ define i1 @shifted_mask32_extra_use_const(i64 %a) {
 ; NDD-ZU-NEXT:    # fixup A - offset: 3, value: d64-8, kind: reloc_riprel_4byte
 ; NDD-ZU-NEXT:    # imm = 0x3FC0000
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: shifted_mask32_extra_use_const:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; O0-NDD-ZU-NEXT:    testl $66846720, %eax # encoding: [0xa9,0x00,0x00,0xfc,0x03]
+; O0-NDD-ZU-NEXT:    # imm = 0x3FC0000
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    movq $66846720, d64(%rip) # encoding: [0x48,0xc7,0x05,A,A,A,A,0x00,0x00,0xfc,0x03]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 3, value: d64-8, kind: reloc_riprel_4byte
+; O0-NDD-ZU-NEXT:    # imm = 0x3FC0000
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 66846720  ; 0xff << 18
   %v1 = icmp ne i64 %v0, 0
   store i64 66846720, ptr @d64
@@ -1246,6 +1874,15 @@ define i1 @shifted_mask32_extra_use_and(i64 %a) {
 ; NDD-ZU-NEXT:    movq %rdi, d64(%rip) # encoding: [0x48,0x89,0x3d,A,A,A,A]
 ; NDD-ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: shifted_mask32_extra_use_and:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    andq $66846720, %rdi, %rcx # encoding: [0x62,0xf4,0xf4,0x18,0x81,0xe7,0x00,0x00,0xfc,0x03]
+; O0-NDD-ZU-NEXT:    # imm = 0x3FC0000
+; O0-NDD-ZU-NEXT:    setzune %al # encoding: [0x62,0xf4,0x7f,0x18,0x45,0xc0]
+; O0-NDD-ZU-NEXT:    movq %rcx, d64(%rip) # encoding: [0x48,0x89,0x0d,A,A,A,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 3, value: d64-4, kind: reloc_riprel_4byte
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %v0 = and i64 %a, 66846720  ; 0xff << 50
   %v1 = icmp ne i64 %v0, 0
   store i64 %v0, ptr @d64
@@ -1277,6 +1914,16 @@ define { i64, i64 } @pr39968(i64, i64, i32) {
 ; NDD-ZU-NEXT:    cmovneq %rdi, %rsi, %rdx # encoding: [0x62,0xf4,0xec,0x18,0x45,0xf7]
 ; NDD-ZU-NEXT:    cmovneq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x45,0xc7]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: pr39968:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movb %dl, %cl # encoding: [0x88,0xd1]
+; O0-NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; O0-NDD-ZU-NEXT:    testb $64, %cl # encoding: [0xf6,0xc1,0x40]
+; O0-NDD-ZU-NEXT:    cmovneq %rdi, %rsi, %rdx # encoding: [0x62,0xf4,0xec,0x18,0x45,0xf7]
+; O0-NDD-ZU-NEXT:    # kill: def $rax killed $eax
+; O0-NDD-ZU-NEXT:    cmovneq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x45,0xc7]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %4 = and i32 %2, 64
   %5 = icmp ne i32 %4, 0
   %6 = select i1 %5, i64 %0, i64 %1
@@ -1289,17 +1936,69 @@ define { i64, i64 } @pr39968(i64, i64, i32) {
 ; Make sure we use a 32-bit comparison without an extend based on the input
 ; being pre-sign extended by caller.
 define i32 @pr42189(i16 signext %c) {
-; CHECK-LABEL: pr42189:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
-; CHECK-NEXT:    # imm = 0x7FFF
-; CHECK-NEXT:    jne f@PLT # TAILCALL
-; CHECK-NEXT:    # encoding: [0x75,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
-; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:    # encoding: [0xeb,A]
-; CHECK-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
+; NO-NDD-LABEL: pr42189:
+; NO-NDD:       # %bb.0: # %entry
+; NO-NDD-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
+; NO-NDD-NEXT:    # imm = 0x7FFF
+; NO-NDD-NEXT:    jne f@PLT # TAILCALL
+; NO-NDD-NEXT:    # encoding: [0x75,A]
+; NO-NDD-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
+; NO-NDD-NEXT:  # %bb.1: # %if.then
+; NO-NDD-NEXT:    jmp g@PLT # TAILCALL
+; NO-NDD-NEXT:    # encoding: [0xeb,A]
+; NO-NDD-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
+;
+; NDD-LABEL: pr42189:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
+; NDD-NEXT:    # imm = 0x7FFF
+; NDD-NEXT:    jne f@PLT # TAILCALL
+; NDD-NEXT:    # encoding: [0x75,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.1: # %if.then
+; NDD-NEXT:    jmp g@PLT # TAILCALL
+; NDD-NEXT:    # encoding: [0xeb,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
+;
+; NDD-ZU-LABEL: pr42189:
+; NDD-ZU:       # %bb.0: # %entry
+; NDD-ZU-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
+; NDD-ZU-NEXT:    # imm = 0x7FFF
+; NDD-ZU-NEXT:    jne f@PLT # TAILCALL
+; NDD-ZU-NEXT:    # encoding: [0x75,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
+; NDD-ZU-NEXT:  # %bb.1: # %if.then
+; NDD-ZU-NEXT:    jmp g@PLT # TAILCALL
+; NDD-ZU-NEXT:    # encoding: [0xeb,A]
+; NDD-ZU-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
+;
+; O0-NDD-ZU-LABEL: pr42189:
+; O0-NDD-ZU:       # %bb.0: # %entry
+; O0-NDD-ZU-NEXT:    pushq %rax # encoding: [0x50]
+; O0-NDD-ZU-NEXT:    .cfi_def_cfa_offset 16
+; O0-NDD-ZU-NEXT:    movw %di, %ax # encoding: [0x66,0x89,0xf8]
+; O0-NDD-ZU-NEXT:    cmpw $32767, %ax # encoding: [0x66,0x3d,0xff,0x7f]
+; O0-NDD-ZU-NEXT:    # imm = 0x7FFF
+; O0-NDD-ZU-NEXT:    jne .LBB45_2 # encoding: [0x75,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB45_2-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:  # %bb.1: # %if.then
+; O0-NDD-ZU-NEXT:    callq g@PLT # encoding: [0xe8,A,A,A,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: g@PLT-4, kind: FK_PCRel_4
+; O0-NDD-ZU-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; O0-NDD-ZU-NEXT:    # encoding: [0x89,0x44,0x24,0x04]
+; O0-NDD-ZU-NEXT:    jmp .LBB45_3 # encoding: [0xeb,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB45_3-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:  .LBB45_2: # %if.end
+; O0-NDD-ZU-NEXT:    callq f@PLT # encoding: [0xe8,A,A,A,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: f@PLT-4, kind: FK_PCRel_4
+; O0-NDD-ZU-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; O0-NDD-ZU-NEXT:    # encoding: [0x89,0x44,0x24,0x04]
+; O0-NDD-ZU-NEXT:  .LBB45_3: # %return
+; O0-NDD-ZU-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; O0-NDD-ZU-NEXT:    # encoding: [0x8b,0x44,0x24,0x04]
+; O0-NDD-ZU-NEXT:    popq %rcx # encoding: [0x59]
+; O0-NDD-ZU-NEXT:    .cfi_def_cfa_offset 8
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %cmp = icmp eq i16 %c, 32767
   br i1 %cmp, label %if.then, label %if.end
@@ -1344,6 +2043,15 @@ define i1 @fold_test_and_with_chain(ptr %x, ptr %y, i32 %z) {
 ; NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
 ; NDD-ZU-NEXT:    movl %edx, (%rsi) # encoding: [0x89,0x16]
 ; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: fold_test_and_with_chain:
+; O0-NDD-ZU:       # %bb.0:
+; O0-NDD-ZU-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
+; O0-NDD-ZU-NEXT:    andl %edx, %eax # EVEX TO LEGACY Compression encoding: [0x21,0xd0]
+; O0-NDD-ZU-NEXT:    testl %eax, %eax # encoding: [0x85,0xc0]
+; O0-NDD-ZU-NEXT:    setzue %al # encoding: [0x62,0xf4,0x7f,0x18,0x44,0xc0]
+; O0-NDD-ZU-NEXT:    movl %edx, (%rsi) # encoding: [0x89,0x16]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
   %a = load i32, ptr %x
   %b = and i32 %z, %a
   %c = icmp eq i32 %b, 0

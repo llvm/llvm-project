@@ -2,6 +2,7 @@
 # RUN: llc  -mtriple=x86_64 -run-pass x86-flags-copy-lowering -mattr=+ndd -verify-machineinstrs -o - %s | FileCheck --check-prefixes=NDD %s
 # RUN: llc  -mtriple=x86_64 -run-pass x86-flags-copy-lowering -mattr=+ndd,+nf -verify-machineinstrs -o - %s | FileCheck --check-prefixes=NDD-NF %s
 # RUN: llc  -mtriple=x86_64 -run-pass x86-flags-copy-lowering -mattr=+ndd,+nf,+zu -verify-machineinstrs -o - %s | FileCheck --check-prefixes=NDD-NF-ZU %s
+# RUN: llc -O0 -mtriple=x86_64 -run-pass x86-flags-copy-lowering -mattr=+ndd,+nf,+zu -verify-machineinstrs -o - %s | FileCheck --check-prefixes=O0-NDD-NF-ZU %s
 # RUN: llc  -mtriple=x86_64 -run-pass x86-flags-copy-lowering -mattr=+ndd,+nf -x86-enable-apx-for-relocation=true -verify-machineinstrs -o - %s | FileCheck --check-prefixes=NDD-NF %s
 
 # Lower various interesting copy patterns of EFLAGS without using LAHF/SAHF.
@@ -54,6 +55,20 @@ body:             |
     ; NDD-NF-ZU-NEXT: [[ADC64ri32_ND1:%[0-9]+]]:gr64 = ADC64ri32_ND [[ADC64ri32_ND]], 42, implicit-def $eflags, implicit $eflags
     ; NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[ADC64ri32_ND1]]
     ; NDD-NF-ZU-NEXT: RET 0
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_adc
+    ; O0-NDD-NF-ZU: liveins: $rdi, $rsi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; O0-NDD-NF-ZU-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
+    ; O0-NDD-NF-ZU-NEXT: [[ADD64rr_ND:%[0-9]+]]:gr64 = ADD64rr_ND [[COPY]], [[COPY1]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr:%[0-9]+]]:gr8 = SETZUCCr 2, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; O0-NDD-NF-ZU-NEXT: dead [[ADD8ri_ND:%[0-9]+]]:gr8 = ADD8ri_ND [[SETZUCCr]], 255, implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[ADC64ri32_ND:%[0-9]+]]:gr64 = ADC64ri32_ND [[ADD64rr_ND]], 42, implicit-def $eflags, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[ADC64ri32_ND1:%[0-9]+]]:gr64 = ADC64ri32_ND [[ADC64ri32_ND]], 42, implicit-def $eflags, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[ADC64ri32_ND1]]
+    ; O0-NDD-NF-ZU-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
     %2:gr64 = ADD64rr_ND %0, %1, implicit-def $eflags
@@ -116,6 +131,20 @@ body:             |
     ; NDD-NF-ZU-NEXT: [[SBB64ri32_ND1:%[0-9]+]]:gr64 = SBB64ri32_ND [[SBB64ri32_ND]], 42, implicit-def dead $eflags, implicit killed $eflags
     ; NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[SBB64ri32_ND1]]
     ; NDD-NF-ZU-NEXT: RET 0
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_sbb
+    ; O0-NDD-NF-ZU: liveins: $rdi, $rsi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; O0-NDD-NF-ZU-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
+    ; O0-NDD-NF-ZU-NEXT: [[SUB64rr_ND:%[0-9]+]]:gr64 = SUB64rr_ND [[COPY]], [[COPY1]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr:%[0-9]+]]:gr8 = SETZUCCr 2, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; O0-NDD-NF-ZU-NEXT: dead [[ADD8ri_ND:%[0-9]+]]:gr8 = ADD8ri_ND [[SETZUCCr]], 255, implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SBB64ri32_ND:%[0-9]+]]:gr64 = SBB64ri32_ND [[SUB64rr_ND]], 42, implicit-def $eflags, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SBB64ri32_ND1:%[0-9]+]]:gr64 = SBB64ri32_ND [[SBB64ri32_ND]], 42, implicit-def dead $eflags, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[SBB64ri32_ND1]]
+    ; O0-NDD-NF-ZU-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
     %2:gr64 = SUB64rr_ND %0, %1, implicit-def $eflags
@@ -178,6 +207,20 @@ body:             |
     ; NDD-NF-ZU-NEXT: [[RCL64r1_ND1:%[0-9]+]]:gr64 = RCL64r1_ND [[RCL64r1_ND]], implicit-def $eflags, implicit $eflags
     ; NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[RCL64r1_ND1]]
     ; NDD-NF-ZU-NEXT: RET 0
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_rcl
+    ; O0-NDD-NF-ZU: liveins: $rdi, $rsi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; O0-NDD-NF-ZU-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
+    ; O0-NDD-NF-ZU-NEXT: [[ADD64rr_ND:%[0-9]+]]:gr64 = ADD64rr_ND [[COPY]], [[COPY1]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr:%[0-9]+]]:gr8 = SETZUCCr 2, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; O0-NDD-NF-ZU-NEXT: dead [[ADD8ri_ND:%[0-9]+]]:gr8 = ADD8ri_ND [[SETZUCCr]], 255, implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[RCL64r1_ND:%[0-9]+]]:gr64 = RCL64r1_ND [[ADD64rr_ND]], implicit-def $eflags, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[RCL64r1_ND1:%[0-9]+]]:gr64 = RCL64r1_ND [[RCL64r1_ND]], implicit-def $eflags, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[RCL64r1_ND1]]
+    ; O0-NDD-NF-ZU-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
     %2:gr64 = ADD64rr_ND %0, %1, implicit-def $eflags
@@ -240,6 +283,20 @@ body:             |
     ; NDD-NF-ZU-NEXT: [[RCR64r1_ND1:%[0-9]+]]:gr64 = RCR64r1_ND [[RCR64r1_ND]], implicit-def $eflags, implicit $eflags
     ; NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[RCR64r1_ND1]]
     ; NDD-NF-ZU-NEXT: RET 0
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_rcr
+    ; O0-NDD-NF-ZU: liveins: $rdi, $rsi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; O0-NDD-NF-ZU-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
+    ; O0-NDD-NF-ZU-NEXT: [[ADD64rr_ND:%[0-9]+]]:gr64 = ADD64rr_ND [[COPY]], [[COPY1]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr:%[0-9]+]]:gr8 = SETZUCCr 2, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; O0-NDD-NF-ZU-NEXT: dead [[ADD8ri_ND:%[0-9]+]]:gr8 = ADD8ri_ND [[SETZUCCr]], 255, implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[RCR64r1_ND:%[0-9]+]]:gr64 = RCR64r1_ND [[ADD64rr_ND]], implicit-def $eflags, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[RCR64r1_ND1:%[0-9]+]]:gr64 = RCR64r1_ND [[RCR64r1_ND]], implicit-def $eflags, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[RCR64r1_ND1]]
+    ; O0-NDD-NF-ZU-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
     %2:gr64 = ADD64rr_ND %0, %1, implicit-def $eflags
@@ -332,6 +389,30 @@ body:             |
     ; NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CMOV64rr_ND2]]
     ; NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CMOV64rr_ND3]]
     ; NDD-NF-ZU-NEXT: RET 0
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_cmov
+    ; O0-NDD-NF-ZU: liveins: $rdi, $rsi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; O0-NDD-NF-ZU-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
+    ; O0-NDD-NF-ZU-NEXT: CMP64rr [[COPY]], [[COPY1]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr:%[0-9]+]]:gr8 = SETZUCCr 7, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr1:%[0-9]+]]:gr8 = SETZUCCr 2, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr2:%[0-9]+]]:gr8 = SETZUCCr 4, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; O0-NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr]], [[SETZUCCr]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[CMOV64rr_ND:%[0-9]+]]:gr64 = CMOV64rr_ND [[COPY]], [[COPY1]], 5, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr1]], [[SETZUCCr1]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[CMOV64rr_ND1:%[0-9]+]]:gr64 = CMOV64rr_ND [[COPY]], [[COPY1]], 5, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr2]], [[SETZUCCr2]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[CMOV64rr_ND2:%[0-9]+]]:gr64 = CMOV64rr_ND [[COPY]], [[COPY1]], 5, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr2]], [[SETZUCCr2]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[CMOV64rr_ND3:%[0-9]+]]:gr64 = CMOV64rr_ND [[COPY]], [[COPY1]], 4, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CMOV64rr_ND]]
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CMOV64rr_ND1]]
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CMOV64rr_ND2]]
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CMOV64rr_ND3]]
+    ; O0-NDD-NF-ZU-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
     CMP64rr %0, %1, implicit-def $eflags
@@ -428,6 +509,30 @@ body:             |
     ; NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CFCMOV64rr_ND]]
     ; NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CFCMOV64rr_ND1]]
     ; NDD-NF-ZU-NEXT: RET 0
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_cfcmov
+    ; O0-NDD-NF-ZU: liveins: $rdi, $rsi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
+    ; O0-NDD-NF-ZU-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
+    ; O0-NDD-NF-ZU-NEXT: CMP64rr [[COPY]], [[COPY1]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr:%[0-9]+]]:gr8 = SETZUCCr 7, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr1:%[0-9]+]]:gr8 = SETZUCCr 2, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr2:%[0-9]+]]:gr8 = SETZUCCr 4, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
+    ; O0-NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr]], [[SETZUCCr]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[CFCMOV64rr:%[0-9]+]]:gr64 = CFCMOV64rr [[COPY1]], 5, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr1]], [[SETZUCCr1]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[CFCMOV64rr1:%[0-9]+]]:gr64 = CFCMOV64rr [[COPY1]], 5, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr2]], [[SETZUCCr2]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[CFCMOV64rr_ND:%[0-9]+]]:gr64 = CFCMOV64rr_ND [[COPY]], [[COPY1]], 5, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr2]], [[SETZUCCr2]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[CFCMOV64rr_ND1:%[0-9]+]]:gr64 = CFCMOV64rr_ND [[COPY]], [[COPY1]], 4, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CFCMOV64rr]]
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CFCMOV64rr1]]
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CFCMOV64rr_ND]]
+    ; O0-NDD-NF-ZU-NEXT: MOV64mr $rsp, 1, $noreg, -16, $noreg, killed [[CFCMOV64rr_ND1]]
+    ; O0-NDD-NF-ZU-NEXT: RET 0
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
     CMP64rr %0, %1, implicit-def $eflags
@@ -478,6 +583,14 @@ body:             |
     ; NDD-NF-ZU-NEXT: [[ADD32rr_NF:%[0-9]+]]:gr32 = ADD32rr_NF $edi, $edi
     ; NDD-NF-ZU-NEXT: CCMP32rr [[ADD32rr_NF]], [[ADD32rr_NF]], 0, 1, implicit-def $eflags, implicit $eflags
     ; NDD-NF-ZU-NEXT: RET 0, $al
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_ccmp
+    ; O0-NDD-NF-ZU: liveins: $edi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+    ; O0-NDD-NF-ZU-NEXT: [[ADD32rr_NF:%[0-9]+]]:gr32 = ADD32rr_NF $edi, $edi
+    ; O0-NDD-NF-ZU-NEXT: CCMP32rr [[ADD32rr_NF]], [[ADD32rr_NF]], 0, 1, implicit-def $eflags, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: RET 0, $al
     MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
     %1:gr64 = COPY $eflags
     %2:gr32 = ADD32rr $edi, $edi, implicit-def dead $eflags
@@ -517,6 +630,14 @@ body:             |
     ; NDD-NF-ZU-NEXT: [[ADD32rr_NF:%[0-9]+]]:gr32 = ADD32rr_NF $edi, $edi
     ; NDD-NF-ZU-NEXT: CTEST32rr [[ADD32rr_NF]], [[ADD32rr_NF]], 0, 1, implicit-def $eflags, implicit $eflags
     ; NDD-NF-ZU-NEXT: RET 0, $al
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_ctest
+    ; O0-NDD-NF-ZU: liveins: $edi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+    ; O0-NDD-NF-ZU-NEXT: [[ADD32rr_NF:%[0-9]+]]:gr32 = ADD32rr_NF $edi, $edi
+    ; O0-NDD-NF-ZU-NEXT: CTEST32rr [[ADD32rr_NF]], [[ADD32rr_NF]], 0, 1, implicit-def $eflags, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: RET 0, $al
     MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
     %1:gr64 = COPY $eflags
     %2:gr32 = ADD32rr $edi, $edi, implicit-def dead $eflags
@@ -556,6 +677,14 @@ body:             |
     ; NDD-NF-ZU-NEXT: [[ADD32rr_NF_ND:%[0-9]+]]:gr32 = ADD32rr_NF_ND $edi, $edi
     ; NDD-NF-ZU-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND]], 7, implicit $eflags
     ; NDD-NF-ZU-NEXT: RET 0, $al
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_evitable_clobber
+    ; O0-NDD-NF-ZU: liveins: $edi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+    ; O0-NDD-NF-ZU-NEXT: [[ADD32rr_NF_ND:%[0-9]+]]:gr32 = ADD32rr_NF_ND $edi, $edi
+    ; O0-NDD-NF-ZU-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND]], 7, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: RET 0, $al
     MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
     %1:gr64 = COPY $eflags
     %2:gr32 = ADD32rr_ND $edi, $edi, implicit-def dead $eflags
@@ -599,6 +728,16 @@ body:             |
     ; NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr]], [[SETZUCCr]], implicit-def $eflags
     ; NDD-NF-ZU-NEXT: $eax = CMOV32rr_ND $edi, [[ADC32rr_ND]], 5, implicit killed $eflags
     ; NDD-NF-ZU-NEXT: RET 0, $al
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_inevitable_clobber
+    ; O0-NDD-NF-ZU: liveins: $edi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr:%[0-9]+]]:gr8 = SETZUCCr 7, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[ADC32rr_ND:%[0-9]+]]:gr32 = ADC32rr_ND $edi, $edi, implicit-def dead $eflags, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr]], [[SETZUCCr]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: $eax = CMOV32rr_ND $edi, [[ADC32rr_ND]], 5, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: RET 0, $al
     MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
     %1:gr64 = COPY $eflags
     %2:gr32 = ADC32rr_ND $edi, $edi, implicit-def dead $eflags, implicit $eflags
@@ -645,6 +784,16 @@ body:             |
     ; NDD-NF-ZU-NEXT: [[ADD32rr_NF_ND1:%[0-9]+]]:gr32 = ADD32rr_NF_ND $edi, $eax
     ; NDD-NF-ZU-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND1]], 9, implicit $eflags
     ; NDD-NF-ZU-NEXT: RET 0, $al
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_evitable_clobber_multiple_uses
+    ; O0-NDD-NF-ZU: liveins: $edi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+    ; O0-NDD-NF-ZU-NEXT: [[ADD32rr_NF_ND:%[0-9]+]]:gr32 = ADD32rr_NF_ND $edi, $edi
+    ; O0-NDD-NF-ZU-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND]], 7, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[ADD32rr_NF_ND1:%[0-9]+]]:gr32 = ADD32rr_NF_ND $edi, $eax
+    ; O0-NDD-NF-ZU-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND1]], 9, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: RET 0, $al
     MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
     %1:gr64 = COPY $eflags
     %2:gr32 = ADD32rr_ND $edi, $edi, implicit-def dead $eflags
@@ -702,6 +851,19 @@ body:             |
     ; NDD-NF-ZU-NEXT: [[ADD32rr_NF_ND:%[0-9]+]]:gr32 = ADD32rr_NF_ND $edi, $edi
     ; NDD-NF-ZU-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND]], 1, implicit $eflags
     ; NDD-NF-ZU-NEXT: RET 0, $al
+    ;
+    ; O0-NDD-NF-ZU-LABEL: name: test_mixed_clobber
+    ; O0-NDD-NF-ZU: liveins: $edi
+    ; O0-NDD-NF-ZU-NEXT: {{  $}}
+    ; O0-NDD-NF-ZU-NEXT: MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+    ; O0-NDD-NF-ZU-NEXT: [[SETZUCCr:%[0-9]+]]:gr8 = SETZUCCr 7, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: [[ADC32rr_ND:%[0-9]+]]:gr32 = ADC32rr_ND $edi, $edi, implicit-def dead $eflags, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: TEST8rr [[SETZUCCr]], [[SETZUCCr]], implicit-def $eflags
+    ; O0-NDD-NF-ZU-NEXT: $eax = CMOV32rr_ND $edi, [[ADC32rr_ND]], 5, implicit killed $eflags
+    ; O0-NDD-NF-ZU-NEXT: MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+    ; O0-NDD-NF-ZU-NEXT: [[ADD32rr_NF_ND:%[0-9]+]]:gr32 = ADD32rr_NF_ND $edi, $edi
+    ; O0-NDD-NF-ZU-NEXT: $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND]], 1, implicit $eflags
+    ; O0-NDD-NF-ZU-NEXT: RET 0, $al
     MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
     %1:gr64 = COPY $eflags
     %2:gr32 = ADC32rr_ND $edi, $edi, implicit-def dead $eflags, implicit $eflags
@@ -769,6 +931,23 @@ body:             |
   ; NDD-NF-ZU-NEXT:   $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND]], 7, implicit $eflags
   ; NDD-NF-ZU-NEXT:   $eax = ADC32rr_ND $eax, $edi, implicit-def dead $eflags, implicit $eflags
   ; NDD-NF-ZU-NEXT:   RET 0, $al
+  ;
+  ; O0-NDD-NF-ZU-LABEL: name: test_evitable_clobber_crossbb
+  ; O0-NDD-NF-ZU: bb.0:
+  ; O0-NDD-NF-ZU-NEXT:   successors: %bb.1(0x80000000)
+  ; O0-NDD-NF-ZU-NEXT:   liveins: $edi
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT:   MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+  ; O0-NDD-NF-ZU-NEXT:   [[ADD32rr_NF_ND:%[0-9]+]]:gr32 = ADD32rr_NF_ND $edi, $edi
+  ; O0-NDD-NF-ZU-NEXT:   JCC_1 %bb.1, 4, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT:   RET 0, $al
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT: bb.1:
+  ; O0-NDD-NF-ZU-NEXT:   liveins: $eflags
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT:   $eax = CMOV32rr_ND $edi, [[ADD32rr_NF_ND]], 7, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT:   $eax = ADC32rr_ND $eax, $edi, implicit-def dead $eflags, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT:   RET 0, $al
   bb.0:
     liveins: $edi
 
@@ -834,6 +1013,22 @@ body:             |
   ; NDD-NF-ZU-NEXT:   TEST8rr [[SETZUCCr]], [[SETZUCCr]], implicit-def $eflags
   ; NDD-NF-ZU-NEXT:   $eax = CMOV32rr_ND $edi, [[ADC32rr_ND]], 5, implicit killed $eflags
   ; NDD-NF-ZU-NEXT:   RET 0, $al
+  ;
+  ; O0-NDD-NF-ZU-LABEL: name: test_inevitable_clobber_crossbb
+  ; O0-NDD-NF-ZU: bb.0:
+  ; O0-NDD-NF-ZU-NEXT:   successors: %bb.1(0x80000000)
+  ; O0-NDD-NF-ZU-NEXT:   liveins: $edi
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT:   MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+  ; O0-NDD-NF-ZU-NEXT:   [[SETZUCCr:%[0-9]+]]:gr8 = SETZUCCr 7, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT:   [[ADC32rr_ND:%[0-9]+]]:gr32 = ADC32rr_ND $edi, $edi, implicit-def dead $eflags, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT:   JCC_1 %bb.1, 4, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT:   RET 0, $al
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT: bb.1:
+  ; O0-NDD-NF-ZU-NEXT:   TEST8rr [[SETZUCCr]], [[SETZUCCr]], implicit-def $eflags
+  ; O0-NDD-NF-ZU-NEXT:   $eax = CMOV32rr_ND $edi, [[ADC32rr_ND]], 5, implicit killed $eflags
+  ; O0-NDD-NF-ZU-NEXT:   RET 0, $al
   bb.0:
     liveins: $edi
 
@@ -935,6 +1130,35 @@ body:             |
   ; NDD-NF-ZU-NEXT: {{  $}}
   ; NDD-NF-ZU-NEXT:   $eax = CMOV32rr_ND $edi, [[SUB32rr_NF_ND]], 7, implicit $eflags
   ; NDD-NF-ZU-NEXT:   RET 0, $al
+  ;
+  ; O0-NDD-NF-ZU-LABEL: name: test_evitable_clobber_crossbb_complex
+  ; O0-NDD-NF-ZU: bb.0:
+  ; O0-NDD-NF-ZU-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; O0-NDD-NF-ZU-NEXT:   liveins: $edi
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT:   MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+  ; O0-NDD-NF-ZU-NEXT:   [[SUB32rr_NF_ND:%[0-9]+]]:gr32 = SUB32rr_NF_ND $edi, $edi
+  ; O0-NDD-NF-ZU-NEXT:   JCC_1 %bb.2, 4, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT: bb.1:
+  ; O0-NDD-NF-ZU-NEXT:   successors: %bb.3(0x80000000)
+  ; O0-NDD-NF-ZU-NEXT:   liveins: $eflags
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT:   $eax = IMUL32rr_NF_ND $eax, $edi
+  ; O0-NDD-NF-ZU-NEXT:   JMP_1 %bb.3
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT: bb.2:
+  ; O0-NDD-NF-ZU-NEXT:   successors: %bb.3(0x80000000)
+  ; O0-NDD-NF-ZU-NEXT:   liveins: $eflags
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT:   $eax = IMUL32rr_NF $eax, $esi
+  ; O0-NDD-NF-ZU-NEXT:   JMP_1 %bb.3
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT: bb.3:
+  ; O0-NDD-NF-ZU-NEXT:   liveins: $eflags
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT:   $eax = CMOV32rr_ND $edi, [[SUB32rr_NF_ND]], 7, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT:   RET 0, $al
   bb.0:
     liveins: $edi
 
@@ -1039,6 +1263,33 @@ body:             |
   ; NDD-NF-ZU-NEXT:   TEST8rr [[SETZUCCr]], [[SETZUCCr]], implicit-def $eflags
   ; NDD-NF-ZU-NEXT:   $eax = CMOV32rr_ND $edi, [[SUB32rr_ND]], 5, implicit killed $eflags
   ; NDD-NF-ZU-NEXT:   RET 0, $al
+  ;
+  ; O0-NDD-NF-ZU-LABEL: name: test_inevitable_clobber_crossbb_complex
+  ; O0-NDD-NF-ZU: bb.0:
+  ; O0-NDD-NF-ZU-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; O0-NDD-NF-ZU-NEXT:   liveins: $edi
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT:   MUL32r $edi, implicit-def $eax, implicit-def dead $edx, implicit-def $eflags, implicit $eax
+  ; O0-NDD-NF-ZU-NEXT:   [[SETZUCCr:%[0-9]+]]:gr8 = SETZUCCr 7, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT:   [[SUB32rr_ND:%[0-9]+]]:gr32 = SUB32rr_ND $edi, $edi, implicit-def dead $eflags
+  ; O0-NDD-NF-ZU-NEXT:   JCC_1 %bb.2, 4, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT: bb.1:
+  ; O0-NDD-NF-ZU-NEXT:   successors: %bb.3(0x80000000)
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT:   $eax = IMUL32rr_ND $eax, $edi, implicit-def dead $eflags
+  ; O0-NDD-NF-ZU-NEXT:   JMP_1 %bb.3
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT: bb.2:
+  ; O0-NDD-NF-ZU-NEXT:   successors: %bb.3(0x80000000)
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT:   $eax = SBB32rr $eax, $esi, implicit-def dead $eflags, implicit $eflags
+  ; O0-NDD-NF-ZU-NEXT:   JMP_1 %bb.3
+  ; O0-NDD-NF-ZU-NEXT: {{  $}}
+  ; O0-NDD-NF-ZU-NEXT: bb.3:
+  ; O0-NDD-NF-ZU-NEXT:   TEST8rr [[SETZUCCr]], [[SETZUCCr]], implicit-def $eflags
+  ; O0-NDD-NF-ZU-NEXT:   $eax = CMOV32rr_ND $edi, [[SUB32rr_ND]], 5, implicit killed $eflags
+  ; O0-NDD-NF-ZU-NEXT:   RET 0, $al
   bb.0:
     liveins: $edi
 
