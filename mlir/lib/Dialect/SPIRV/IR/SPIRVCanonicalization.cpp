@@ -352,8 +352,7 @@ struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
       isApplicable = llvm::all_of(
           llvm::zip(prevVec.getValues<APInt>(), currVec.getValues<APInt>()),
           [](const auto &pair) {
-            const auto &[a, b] = pair;
-            return a.urem(b) == 0;
+            return std::get<0>(pair).urem(std::get<1>(pair)) == 0;
           });
     }
 
