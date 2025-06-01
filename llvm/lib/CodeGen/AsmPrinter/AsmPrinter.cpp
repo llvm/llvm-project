@@ -12,8 +12,10 @@
 
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "CodeViewDebug.h"
+#include "DwarfCompileUnit.h"
 #include "DwarfDebug.h"
 #include "DwarfException.h"
+#include "DwarfUnit.h"
 #include "PseudoProbePrinter.h"
 #include "WasmException.h"
 #include "WinCFGuard.h"

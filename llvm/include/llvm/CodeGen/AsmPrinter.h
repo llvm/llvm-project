@@ -951,4 +951,5 @@ protected:
 
 } // end namespace llvm
 
+#include "AsmPrinterHandler.h" /* expose destructor definitions */
 #endif // LLVM_CODEGEN_ASMPRINTER_H
