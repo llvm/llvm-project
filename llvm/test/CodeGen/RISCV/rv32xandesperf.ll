@@ -70,6 +70,89 @@ define i64 @bfoz_from_lshr_and_i64(i64 %x) {
   ret i64 %shifted
 }
 
+define i32 @bfos_from_ashr_shl_i32(i32 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 8
+; CHECK-NEXT:    srai a0, a0, 24
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 8
+  %ashr = ashr i32 %shl, 24
+  ret i32 %ashr
+}
+
+define i64 @bfos_from_ashr_shl_i64(i64 %x) {
+; CHECK-LABEL: bfos_from_ashr_shl_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $x12 killed $x11
+; CHECK-NEXT:    # kill: def $x12 killed $x10
+; CHECK-NEXT:    srli a2, a0, 24
+; CHECK-NEXT:    slli a1, a1, 8
+; CHECK-NEXT:    or a2, a1, a2
+; CHECK-NEXT:    slli a2, a2, 8
+; CHECK-NEXT:    nds.bfoz a0, a0, 23, 16
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    srai a1, a1, 24
+; CHECK-NEXT:    ret
+  %shl = shl i64 %x, 8
+  %ashr = ashr i64 %shl, 24
+  ret i64 %ashr
+}
+
+define i32 @bfos_from_ashr_sexti8_i32(i8 %x) {
+; CHECK-LABEL: bfos_from_ashr_sexti8_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $x11 killed $x10
+; CHECK-NEXT:    slli a0, a0, 24
+; CHECK-NEXT:    srai a0, a0, 29
+; CHECK-NEXT:    ret
+  %sext = sext i8 %x to i32
+  %ashr = ashr i32 %sext, 5
+  ret i32 %ashr
+}
+
+define i64 @bfos_from_ashr_sexti8_i64(i8 %x) {
+; CHECK-LABEL: bfos_from_ashr_sexti8_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $x11 killed $x10
+; CHECK-NEXT:    nds.bfos a0, a0, 7, 0
+; CHECK-NEXT:    srai a1, a0, 31
+; CHECK-NEXT:    srli a0, a0, 5
+; CHECK-NEXT:    slli a2, a1, 27
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    ret
+  %sext = sext i8 %x to i64
+  %ashr = ashr i64 %sext, 5
+  ret i64 %ashr
+}
+
+define i32 @bfos_from_ashr_sexti16_i32(i16 %x) {
+; CHECK-LABEL: bfos_from_ashr_sexti16_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $x11 killed $x10
+; CHECK-NEXT:    slli a0, a0, 16
+; CHECK-NEXT:    srai a0, a0, 27
+; CHECK-NEXT:    ret
+  %sext = sext i16 %x to i32
+  %ashr = ashr i32 %sext, 11
+  ret i32 %ashr
+}
+
+define i64 @bfos_from_ashr_sexti16_i64(i16 %x) {
+; CHECK-LABEL: bfos_from_ashr_sexti16_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $x11 killed $x10
+; CHECK-NEXT:    nds.bfos a0, a0, 15, 0
+; CHECK-NEXT:    srai a1, a0, 31
+; CHECK-NEXT:    srli a0, a0, 11
+; CHECK-NEXT:    slli a2, a1, 21
+; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    ret
+  %sext = sext i16 %x to i64
+  %ashr = ashr i64 %sext, 11
+  ret i64 %ashr
+}
+
 define i32 @sexti1_i32(i32 %a) {
 ; CHECK-LABEL: sexti1_i32:
 ; CHECK:       # %bb.0:
