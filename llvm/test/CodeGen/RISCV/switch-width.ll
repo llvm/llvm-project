@@ -194,16 +194,16 @@ return:
   %retval = phi i32 [ -1, %sw.default ], [ 0, %sw.bb0 ], [ 1, %sw.bb1 ]
   ret i32 %retval
 }
-
-
-define i32 @trunc_i12(i64 %a)  {
-; CHECK-LABEL: trunc_i12:
+define i32 @sext_i32(i16 %a)  {
+; CHECK-LABEL: sext_i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a1, 1
+; CHECK-NEXT:    lui a1, 16
 ; CHECK-NEXT:    addiw a1, a1, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    beq a0, a1, .LBB5_3
+; CHECK-NEXT:    and a2, a0, a1
+; CHECK-NEXT:    beq a2, a1, .LBB5_3
 ; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    slli a0, a0, 48
+; CHECK-NEXT:    srai a0, a0, 48
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    bne a0, a1, .LBB5_4
 ; CHECK-NEXT:  # %bb.2: # %sw.bb0
@@ -213,6 +213,89 @@ define i32 @trunc_i12(i64 %a)  {
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB5_4: # %sw.default
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+entry:
+  %sext = sext i16 %a to i32
+  switch i32 %sext, label %sw.default [
+  i32 1, label %sw.bb0
+  i32 -1, label %sw.bb1
+  ]
+
+sw.bb0:
+  br label %return
+
+sw.bb1:
+  br label %return
+
+sw.default:
+  br label %return
+
+return:
+  %retval = phi i32 [ -1, %sw.default ], [ 0, %sw.bb0 ], [ 1, %sw.bb1 ]
+  ret i32 %retval
+}
+
+define i32 @sext_i16(i8 %a)  {
+; CHECK-LABEL: sext_i16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andi a1, a0, 255
+; CHECK-NEXT:    li a2, 255
+; CHECK-NEXT:    beq a1, a2, .LBB6_3
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    slli a0, a0, 56
+; CHECK-NEXT:    srai a0, a0, 56
+; CHECK-NEXT:    slli a0, a0, 48
+; CHECK-NEXT:    srli a0, a0, 48
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    bne a0, a1, .LBB6_4
+; CHECK-NEXT:  # %bb.2: # %sw.bb0
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB6_3: # %sw.bb1
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB6_4: # %sw.default
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    ret
+entry:
+  %sext = sext i8 %a to i16
+  switch i16 %sext, label %sw.default [
+  i16 1, label %sw.bb0
+  i16 -1, label %sw.bb1
+  ]
+
+sw.bb0:
+  br label %return
+
+sw.bb1:
+  br label %return
+
+sw.default:
+  br label %return
+
+return:
+  %retval = phi i32 [ -1, %sw.default ], [ 0, %sw.bb0 ], [ 1, %sw.bb1 ]
+  ret i32 %retval
+}
+
+define i32 @trunc_i12(i64 %a)  {
+; CHECK-LABEL: trunc_i12:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a1, 1
+; CHECK-NEXT:    addiw a1, a1, -1
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    beq a0, a1, .LBB7_3
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    bne a0, a1, .LBB7_4
+; CHECK-NEXT:  # %bb.2: # %sw.bb0
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB7_3: # %sw.bb1
+; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB7_4: # %sw.default
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    ret
 entry:
@@ -241,17 +324,17 @@ define i32 @trunc_i11(i64 %a)  {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 2047
 ; CHECK-NEXT:    li a1, 2047
-; CHECK-NEXT:    beq a0, a1, .LBB6_3
+; CHECK-NEXT:    beq a0, a1, .LBB8_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    bne a0, a1, .LBB6_4
+; CHECK-NEXT:    bne a0, a1, .LBB8_4
 ; CHECK-NEXT:  # %bb.2: # %sw.bb0
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB6_3: # %sw.bb1
+; CHECK-NEXT:  .LBB8_3: # %sw.bb1
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB6_4: # %sw.default
+; CHECK-NEXT:  .LBB8_4: # %sw.default
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    ret
 entry:
@@ -281,17 +364,17 @@ define i32 @trunc_i10(i64 %a)  {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 1023
 ; CHECK-NEXT:    li a1, 1023
-; CHECK-NEXT:    beq a0, a1, .LBB7_3
+; CHECK-NEXT:    beq a0, a1, .LBB9_3
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:    bne a0, a1, .LBB7_4
+; CHECK-NEXT:    bne a0, a1, .LBB9_4
 ; CHECK-NEXT:  # %bb.2: # %sw.bb0
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB7_3: # %sw.bb1
+; CHECK-NEXT:  .LBB9_3: # %sw.bb1
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB7_4: # %sw.default
+; CHECK-NEXT:  .LBB9_4: # %sw.default
 ; CHECK-NEXT:    li a0, -1
 ; CHECK-NEXT:    ret
 entry:
