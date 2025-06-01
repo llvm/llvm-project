@@ -89,6 +89,7 @@ getElementTypeAndCount(Operation *op) {
     return getVectorElementTypeAndCount(loadOp.getVectorType());
   if (auto storeOp = dyn_cast<vector::StoreOp>(op))
     return getVectorElementTypeAndCount(storeOp.getVectorType());
+
   return std::nullopt;
 }
 
@@ -147,7 +148,8 @@ static Value getBase(Operation *op) {
     return loadOp.getBase();
   if (auto storeOp = dyn_cast<vector::StoreOp>(op))
     return storeOp.getBase();
-  return {};
+
+  llvm_unreachable("unsupported op");
 }
 
 static Value getValueToStore(Operation *op) {
@@ -156,7 +158,8 @@ static Value getValueToStore(Operation *op) {
     return storeOp.getValueToStore();
   if (auto storeOp = dyn_cast<vector::StoreOp>(op))
     return storeOp.getValueToStore();
-  return {};
+
+  llvm_unreachable("unsupported op");
 }
 
 static bool isContiguousLastDim(Value val) {
@@ -182,7 +185,8 @@ static ValueRange getIndices(Operation *op) {
     return loadOp.getIndices();
   if (auto storeOp = dyn_cast<vector::StoreOp>(op))
     return storeOp.getIndices();
-  return {};
+
+  llvm_unreachable("unsupported op");
 }
 
 static bool isAdjacentAffineMapIndices(Value idx1, Value idx2, int64_t offset) {
@@ -206,7 +210,7 @@ static bool isAdjacentAffineMapIndices(Value idx1, Value idx2, int64_t offset) {
   return diffConst && diffConst.getValue() == offset;
 }
 
-/// Check if two indices are consecutive, i.e index1 + 1 == index2.
+/// Check if two indices are consecutive, i.e index1 + offset == index2.
 static bool isAdjacentIndices(Value idx1, Value idx2, int64_t offset) {
   if (auto c1 = getConstantIntValue(idx1)) {
     if (auto c2 = getConstantIntValue(idx2))
@@ -232,7 +236,7 @@ static bool isAdjacentIndices(Value idx1, Value idx2, int64_t offset) {
 }
 
 /// Check if two ranges of indices are consecutive, i.e fastest index differs
-/// by 1 and all other indices are the same.
+/// by `offset` and all other indices are the same.
 static bool isAdjacentIndices(ValueRange idx1, ValueRange idx2,
                               int64_t offset) {
   if (idx1.empty() || idx1.size() != idx2.size())
@@ -272,6 +276,7 @@ static bool isAdjacentOps(Operation *op1, Operation *op2) {
   if (typeAndCount1 != typeAndCount2)
     return false;
 
+  // For now we are only merging ops with same elements count.
   return isAdjacentIndices(getIndices(op1), getIndices(op2),
                            typeAndCount1->second);
 }
@@ -332,6 +337,9 @@ extractContiguousGroups(const MemoryOpGroup &group) {
   return result;
 }
 
+/// Check if an operation is vectorizable.
+/// If `expectedElementsCount` is provided, check if original op had the
+/// specified number of elements.
 static bool
 isVectorizable(Operation *op,
                std::optional<int64_t> expectedElementsCount = std::nullopt) {
@@ -362,7 +370,8 @@ isVectorizable(Operation *op,
   return true;
 }
 
-/// Get the next operation in the block, assuming `op` is not a terminator.
+/// Get the next operation in the block, assuming `op` is not a terminator/last
+/// operation in the block.
 static Operation *nextOp(Operation *op) {
   assert(op && "null op");
   auto it = op->getIterator();
@@ -390,6 +399,9 @@ struct SLPGraphNode {
     return ops.front();
   }
 
+  /// Get the suitable insertion point for the new vectorized op.
+  /// This method is trying to take into account operands insertions points too
+  /// to satisfy dominance relations.
   Operation *getInsertionPoint() {
     assert(!ops.empty() && "empty node");
     if (insertionPoint)
@@ -1038,6 +1050,9 @@ SLPGraph::vectorize(IRRewriter &rewriter,
     Location loc = op->getLoc();
 
     auto handleNonVectorInputs = [&](ValueRange operands) {
+      // Handle the case when op operands are not vectorized or have smaller
+      // vector size, construct the vector from the scalar operands using
+      // FromElementsOp.
       for (auto [i, operand] : llvm::enumerate(operands)) {
         if (getNodeForOp(operand.getDefiningOp()))
           continue;
@@ -1064,6 +1079,8 @@ SLPGraph::vectorize(IRRewriter &rewriter,
     };
 
     auto handleNonVectorOutputs = [&](Value newResult) {
+      // Handle the case when op results are not vectorized or have smaller
+      // vector size, extract the elements from the vector.
       for (auto [i, result] : llvm::enumerate(node->ops)) {
         for (OpOperand &use : result->getUses()) {
           Operation *useOwner = use.getOwner();
@@ -1077,6 +1094,7 @@ SLPGraph::vectorize(IRRewriter &rewriter,
     };
 
     auto handleVecSizeMismatch = [&](Value arg, int64_t offset = 0) -> Value {
+      // Handle vector size misamatch between 2 vectorized nodes.
       auto srcType = cast<VectorType>(arg.getType());
       assert(srcType.getRank() == 1);
       if (srcType.getDimSize(0) == numElements)
@@ -1117,7 +1135,8 @@ SLPGraph::vectorize(IRRewriter &rewriter,
       mapping.map(op->getResults(), newOp->getResults());
       handleNonVectorOutputs(newOp->getResult(0));
     } else if (auto extract = dyn_cast<vector::ExtractOp>(op)) {
-      // We alredy verified index is valid during graph construction.
+      // We alredy verified index is valid during graph construction, so
+      // do need to check `getExtractIndex` result.
       int64_t offset = *getExtractIndex(extract);
       Value val = handleVecSizeMismatch(extract.getVector(), offset);
       mapping.map(extract.getResult(), val);
