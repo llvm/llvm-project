@@ -5857,6 +5857,20 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
 
   if (!VTablesToEmit.empty())
     Stream.EmitRecord(VTABLES_TO_EMIT, VTablesToEmit);
+
+  if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+    const auto *RecordToCopyCtor = Context.getRecordToCopyCtor();
+    if (RecordToCopyCtor) {
+      RecordData ExceptionCopyingConstructors;
+      for (const auto &[RD, CD] : *RecordToCopyCtor) {
+        AddDeclRef(RD, ExceptionCopyingConstructors);
+        AddDeclRef(CD, ExceptionCopyingConstructors);
+      }
+      if (!ExceptionCopyingConstructors.empty())
+        Stream.EmitRecord(MSCXXABI_EXCEPTION_COPYING_CONSTRUCTORS,
+                          ExceptionCopyingConstructors);
+    }
+  }
 }
 
 ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
