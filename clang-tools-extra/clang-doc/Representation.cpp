@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Representation.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
@@ -27,30 +28,25 @@ namespace clang {
 namespace doc {
 
 CommentKind stringToCommentKind(llvm::StringRef KindStr) {
-  if (KindStr == "FullComment")
-    return CommentKind::CK_FullComment;
-  if (KindStr == "ParagraphComment")
-    return CommentKind::CK_ParagraphComment;
-  if (KindStr == "TextComment")
-    return CommentKind::CK_TextComment;
-  if (KindStr == "InlineCommandComment")
-    return CommentKind::CK_InlineCommandComment;
-  if (KindStr == "HTMLStartTagComment")
-    return CommentKind::CK_HTMLStartTagComment;
-  if (KindStr == "HTMLEndTagComment")
-    return CommentKind::CK_HTMLEndTagComment;
-  if (KindStr == "BlockCommandComment")
-    return CommentKind::CK_BlockCommandComment;
-  if (KindStr == "ParamCommandComment")
-    return CommentKind::CK_ParamCommandComment;
-  if (KindStr == "TParamCommandComment")
-    return CommentKind::CK_TParamCommandComment;
-  if (KindStr == "VerbatimBlockComment")
-    return CommentKind::CK_VerbatimBlockComment;
-  if (KindStr == "VerbatimBlockLineComment")
-    return CommentKind::CK_VerbatimBlockLineComment;
-  if (KindStr == "VerbatimLineComment")
-    return CommentKind::CK_VerbatimLineComment;
+  static const llvm::StringMap<CommentKind> KindMap = {
+      {"FullComment", CommentKind::CK_FullComment},
+      {"ParagraphComment", CommentKind::CK_ParagraphComment},
+      {"TextComment", CommentKind::CK_TextComment},
+      {"InlineCommandComment", CommentKind::CK_InlineCommandComment},
+      {"HTMLStartTagComment", CommentKind::CK_HTMLStartTagComment},
+      {"HTMLEndTagComment", CommentKind::CK_HTMLEndTagComment},
+      {"BlockCommandComment", CommentKind::CK_BlockCommandComment},
+      {"ParamCommandComment", CommentKind::CK_ParamCommandComment},
+      {"TParamCommandComment", CommentKind::CK_TParamCommandComment},
+      {"VerbatimBlockComment", CommentKind::CK_VerbatimBlockComment},
+      {"VerbatimBlockLineComment", CommentKind::CK_VerbatimBlockLineComment},
+      {"VerbatimLineComment", CommentKind::CK_VerbatimLineComment},
+  };
+
+  auto It = KindMap.find(KindStr);
+  if (It != KindMap.end()) {
+    return It->second;
+  }
   return CommentKind::CK_Unknown;
 }
 
