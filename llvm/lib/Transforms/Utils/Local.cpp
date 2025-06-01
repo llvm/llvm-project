@@ -3520,7 +3520,6 @@ void llvm::copyMetadataForStore(StoreInst &Dest, const StoreInst &Source) {
     MDNode *N = MDPair.second;
     switch (ID) {
     case LLVMContext::MD_dbg:
-    case LLVMContext::MD_tbaa:
     case LLVMContext::MD_prof:
     case LLVMContext::MD_tbaa_struct:
     case LLVMContext::MD_alias_scope:
@@ -3532,7 +3531,13 @@ void llvm::copyMetadataForStore(StoreInst &Dest, const StoreInst &Source) {
     case LLVMContext::MD_mem_parallel_loop_access:
       Dest.setMetadata(ID, N);
       break;
-    
+
+    case LLVMContext::MD_tbaa: {
+      MDNode *NewTyNode =
+          MDB.createTBAAScalarTypeNode(NewType->getStructName(), N);
+      Dest.setMetadata(LLVMContext::MD_tbaa, NewTyNode);
+      break;
+    }
     case LLVMContext::MD_nonnull:
       break;
 
