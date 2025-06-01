@@ -1598,3 +1598,43 @@ define <2 x i32> @test_umax_smax_vec_neg(<2 x i32> %x) {
   %umax = call <2 x i32> @llvm.umax.v2i32(<2 x i32> %smax, <2 x i32> <i32 1, i32 10>)
   ret <2 x i32> %umax
 }
+
+define i32 @test_smin_sub1_nsw(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_smin_sub1_nsw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[W]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp slt i32 %x, %w
+  %sub = add nsw i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %r
+}
+
+define i32 @test_smax_add1_nsw(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_smax_add1_nsw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[X2:%.*]] = add nsw i32 [[W]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[X2]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp sgt i32 %x, %w
+  %add = add nsw i32 %w, 1
+  %r = select i1 %cmp, i32 %x, i32 %add
+  ret i32 %r
+}
+
+define i32 @test_umax_add1_nsw(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_umax_add1_nsw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[X2:%.*]] = add nuw i32 [[W]], 1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[X2]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp ugt i32 %x, %w
+  %add = add nuw i32 %w, 1
+  %r = select i1 %cmp, i32 %x, i32 %add
+  ret i32 %r
+}
+
