@@ -1841,40 +1841,36 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   }
 }
 
-/// Remove BranchOnCond recipes with true conditions together with removing
-/// dead edges to their successors.
-static void removeBranchOnCondTrue(VPlan &Plan) {
+/// Remove BranchOnCond recipes with true or false conditions together with
+/// removing dead edges to their successors.
+static void removeBranchOnConst(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
+    VPValue *Cond;
     if (VPBB->getNumSuccessors() != 2 || VPBB == Plan.getEntry() ||
-        !match(&VPBB->back(), m_BranchOnCond(m_True())))
+        !match(&VPBB->back(), m_BranchOnCond(m_VPValue(Cond))))
       continue;
 
-    VPBasicBlock *RemovedSucc = cast<VPBasicBlock>(VPBB->getSuccessors()[1]);
-    unsigned DeadIdx = RemovedSucc->getIndexForPredecessor(VPBB);
+    unsigned RemovedIdx;
+    if (match(Cond, m_True()))
+      RemovedIdx = 1;
+    else if (match(Cond, m_False()))
+      RemovedIdx = 0;
+    else
+      continue;
 
-    // Values coming from VPBB into ResumePhi recipes of RemoveSucc are removed
-    // from these recipes.
-    for (VPRecipeBase &R : make_early_inc_range(*RemovedSucc)) {
-      assert((!isa<VPIRInstruction>(&R) ||
-              !isa<PHINode>(cast<VPIRInstruction>(&R)->getInstruction())) &&
-             !isa<VPHeaderPHIRecipe>(&R) &&
-             "Cannot update VPIRInstructions wrapping phis or header phis yet");
-      auto *VPI = dyn_cast<VPPhi>(&R);
-      if (!VPI)
-        break;
-      VPBuilder B(VPI);
-      SmallVector<VPValue *> NewOperands;
-      // Create new operand list, with the dead incoming value filtered out.
-      for (const auto &[Idx, Op] : enumerate(VPI->operands())) {
-        if (Idx == DeadIdx)
-          continue;
-        NewOperands.push_back(Op);
-      }
-      VPI->replaceAllUsesWith(
-          B.createScalarPhi(NewOperands, VPI->getDebugLoc(), VPI->getName()));
-      VPI->eraseFromParent();
+    VPBasicBlock *RemovedSucc =
+        cast<VPBasicBlock>(VPBB->getSuccessors()[RemovedIdx]);
+    assert(count(RemovedSucc->getPredecessors(), VPBB) == 1 &&
+           "There must be a single edge between VPBB and its successor");
+    // Values coming from VPBB into phi recipes of RemoveSucc are removed from
+    // these recipes.
+    for (VPRecipeBase &R : RemovedSucc->phis()) {
+      auto *Phi = cast<VPPhiAccessors>(&R);
+      assert((!isa<VPIRPhi>(&R) || RemovedSucc->getNumPredecessors() == 1) &&
+             "VPIRPhis must have a single predecessor");
+      Phi->removeIncomingValueFor(VPBB);
     }
     // Disconnect blocks and remove the terminator. RemovedSucc will be deleted
     // automatically on VPlan destruction if it becomes unreachable.
@@ -1894,7 +1890,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
-  runPass(removeBranchOnCondTrue, Plan);
+  runPass(removeBranchOnConst, Plan);
   runPass(removeDeadRecipes, Plan);
 
   runPass(createAndOptimizeReplicateRegions, Plan);
