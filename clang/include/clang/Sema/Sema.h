@@ -146,6 +146,7 @@ class MangleNumberingContext;
 typedef ArrayRef<IdentifierLoc> ModuleIdPath;
 class ModuleLoader;
 class MultiLevelTemplateArgumentList;
+class ModuleNameLoc;
 struct NormalizedConstraint;
 class ObjCInterfaceDecl;
 class ObjCMethodDecl;
@@ -9918,7 +9919,8 @@ public:
   /// of a module interface or implementation.
   DeclGroupPtrTy ActOnModuleDecl(SourceLocation StartLoc,
                                  SourceLocation ModuleLoc, ModuleDeclKind MDK,
-                                 ModuleIdPath Path, ModuleIdPath Partition,
+                                 ModuleNameLoc *PathLoc,
+                                 ModuleNameLoc *PartitionLoc,
                                  ModuleImportState &ImportState);
 
   /// The parser has processed a global-module-fragment declaration that begins
@@ -9943,7 +9945,7 @@ public:
   /// \param IsPartition If the name is for a partition.
   DeclResult ActOnModuleImport(SourceLocation StartLoc,
                                SourceLocation ExportLoc,
-                               SourceLocation ImportLoc, ModuleIdPath Path,
+                               SourceLocation ImportLoc, ModuleNameLoc *PathLoc,
                                bool IsPartition = false);
   DeclResult ActOnModuleImport(SourceLocation StartLoc,
                                SourceLocation ExportLoc,
