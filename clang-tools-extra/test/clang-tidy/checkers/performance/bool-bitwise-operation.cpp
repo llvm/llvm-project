@@ -17,7 +17,7 @@ bool& normal() {
     return st;
 }
 
-bool bad() {
+bool bad() noexcept __attribute__((pure)) {
     bool a = true, b = false;
     a | b;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
@@ -61,7 +61,73 @@ bool bad_typedef() {
     return true;
 }
 
-void bad_volatile_bool() {
+bool function_with_possible_side_effects();
+
+void bad_side_effects() {
+    bool a = true, b = false;
+
+    a | function_with_possible_side_effects();
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    a & function_with_possible_side_effects();
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    function_with_possible_side_effects() | a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: function_with_possible_side_effects() || a;
+
+    function_with_possible_side_effects() & a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: function_with_possible_side_effects() && a;
+    a |= function_with_possible_side_effects();
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    a &= function_with_possible_side_effects();
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    // count of evaluation with side effect remains the same, so the fixit will be provided
+    bool c = true;
+
+    a || function_with_possible_side_effects() | c;
+    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a || function_with_possible_side_effects() || c;
+
+    function_with_possible_side_effects() || b | c;
+    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: function_with_possible_side_effects() || b || c;
+
+    a && function_with_possible_side_effects() & c;
+    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a && function_with_possible_side_effects() && c;
+
+    function_with_possible_side_effects() && b & c;
+    // CHECK-MESSAGES: :[[@LINE-1]]:48: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: function_with_possible_side_effects() && b && c;
+
+    // but here the count of evaluation migh be changed - no fix must be provided
+
+    a &= function_with_possible_side_effects() && c;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    a &= b && function_with_possible_side_effects();
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    a |= function_with_possible_side_effects() || c;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+
+    a |= b || function_with_possible_side_effects();
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+}
+
+void bad_side_effects_volatile() {
     bool a = true;
     volatile bool b = false;
     a | b;
@@ -118,11 +184,6 @@ void bad_with_priors() {
     // CHECK-MESSAGES: :[[@LINE-2]]:47: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-MESSAGES: :[[@LINE-3]]:72: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-FIXES: bool q = (true && (false || true)) && ((false || true) && (false && (true || false)));
-    
-    // TODO: ?? a && (b | c);
-    
-    // TODO: ?? a && (q ^ (b | c));
-
 }
 
 void bad_with_priors2() {
@@ -130,19 +191,62 @@ void bad_with_priors2() {
     a ^ b & c;
     // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-FIXES: a ^ (b && c);
+
+    // braces added in the first change
     a | b & c;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-FIXES: a || b && c;
+    // CHECK-FIXES: a || (b && c);
+
     b & c ^ a;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-FIXES: (b && c) ^ a;
 
-    // TODO: make a test case from it
-    // bool d = false;
-    // d ^ (a && b & c);
+    // braces added in the first change
+    b & c | a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: (b && c) || a;
 
-    // TODO: is there a hidden problem with priority when for example `|` surrounded by `||` changed to `||`
+    // case to check `hasAncestor` works as we expected:
+    bool d = false;
+    d ^ (a && b & c);
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: d ^ (a && b && c);
+}
+
+void bad_with_priors_already_braced() {
+    bool a = false, b = true, c = true;
+    a && (b | c);
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a && (b || c);
+    (b | c) && a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: (b || c) && a;
+
+    bool q = (true && (false | true)) && ((false | true) && (false && (true | false)));
+    // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:50: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-3]]:77: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: bool q = (true && (false || true)) && ((false || true) && (false && (true || false)));
+
+    a ^ (b & c);
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a ^ (b && c);
+
+    a | (b & c);
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:12: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a || (b && c);
+
+    (b & c) ^ a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: (b && c) ^ a;
+
+    (b & c) | a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-MESSAGES: :[[@LINE-2]]:13: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: (b && c) || a;
 }
 
 void bad_with_priors_compound() {
@@ -159,8 +263,13 @@ void bad_with_priors_compound() {
     a |= b && c;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
     // CHECK-FIXES: a = a || b && c;
-    
-    // TODO: test for already braced, `a &= (b || c);`
+}
+
+void bad_with_priors_compound_already_braced() {
+    bool a = false, b = true, c = true;
+    a &= (b || c);
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
+    // CHECK-FIXES: a = a && (b || c);
 }
 
 void bad_with_priors_nontraditional() {
@@ -183,17 +292,7 @@ void bad_with_priors_nontraditional() {
 }
 
 void bad_with_priors2_nontraditional() {
-    bool a = false, b = true, c = true;
-    a xor b bitand c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-FIXES: a xor (b and c);
-    a bitor b bitand c;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-MESSAGES: :[[@LINE-2]]:15: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-FIXES: a or b and c;
-    b bitand c xor a;
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator instead of bitwise one for bool [performance-bool-bitwise-operation]
-    // CHECK-FIXES: (b and c) xor a;
+    // TODO: implement this
 }
 
 void bad_with_priors_compound_nontraditional() {

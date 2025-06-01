@@ -17,6 +17,24 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 namespace {
+bool hasExplicitParentheses(const Expr* E, const SourceManager& SM, const LangOptions& LangOpts) {
+  if (!E)
+    return false;
+
+  const SourceLocation Start = E->getBeginLoc();
+  const SourceLocation End = E->getEndLoc();
+
+  if (Start.isMacroID() || End.isMacroID() || !Start.isValid() || !End.isValid()) {
+    return false;
+  }
+
+  const std::optional<Token> PrevTok = Lexer::findPreviousToken(Start, SM, LangOpts, /*IncludeComments=*/false);
+  const std::optional<Token> NextTok = Lexer::findNextToken(End, SM, LangOpts, /*IncludeComments=*/false);
+
+  return (PrevTok && PrevTok->is(tok::l_paren)) && 
+         (NextTok && NextTok->is(tok::r_paren));
+}
+
 template<typename AstNode>
 bool isInTemplateFunction(const AstNode* AN, ASTContext& Context) {
   auto Parents = Context.getParents(*AN);
@@ -57,10 +75,9 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
         unless(isExpansionInSystemHeader()),
         hasAnyOperatorName("|", "&", "|=", "&="),
         hasEitherOperand(expr(ignoringImpCasts(hasType(booleanType())))),
-        optionally(hasAncestor(
+        optionally(hasAncestor(   // to simple implement transformations like `a&&b|c` -> `a&&(b||c)`
             binaryOperator().bind("p")))
-        )
-    .bind("op"), this);
+    ).bind("op"), this);
 }
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
@@ -73,7 +90,8 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   const bool HasVolatileOperand = MatchedExpr->getLHS()->IgnoreImpCasts()->getType().isVolatileQualified() ||
                                   MatchedExpr->getRHS()->IgnoreImpCasts()->getType().isVolatileQualified();
-  if (HasVolatileOperand)
+  const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(*Result.Context); // TODO: `IncludePossibleEffects` option
+  if (HasVolatileOperand || HasSideEffects)
     return;
 
   SourceLocation Loc = MatchedExpr->getOperatorLoc();
@@ -127,13 +145,15 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
     RHSOpcode = RHS->getOpcode();
 
   const BinaryOperator* SurroundedExpr = nullptr;
-  // TODO: `*ParentOpcode == BO_Xor` - forgot about OR operator
   if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode.has_value() && *ParentOpcode == BO_LAnd) ||
-      (MatchedExpr->getOpcode() == BO_And && ParentOpcode.has_value() && *ParentOpcode == BO_Xor)) {
+      (MatchedExpr->getOpcode() == BO_And && ParentOpcode.has_value() && llvm::is_contained({BO_Xor, BO_Or}, *ParentOpcode))) {
     SurroundedExpr = MatchedExpr;
   } else if (MatchedExpr->getOpcode() == BO_AndAssign && RHSOpcode.has_value() && *RHSOpcode == BO_LOr) {
     SurroundedExpr = RHS;
   }
+
+  if (hasExplicitParentheses(SurroundedExpr, *Result.SourceManager,Result.Context->getLangOpts()))
+    SurroundedExpr = nullptr;
 
   if (SurroundedExpr) {
     const SourceLocation InsertFirstLoc = SurroundedExpr->getBeginLoc();
