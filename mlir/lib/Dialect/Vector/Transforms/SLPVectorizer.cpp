@@ -1092,8 +1092,14 @@ SLPGraph::vectorize(IRRewriter &rewriter,
           Value elem;
 
           if (auto vecType = dyn_cast<VectorType>(originalResultType)) {
-            elem = rewriter.create<vector::ExtractStridedSliceOp>(
-                loc, newResult, offset, vecType.getNumElements(), 1);
+            assert(vecType.getRank() <= 1);
+            if (vecType.getRank() == 0) {
+              elem = rewriter.create<vector::ExtractOp>(loc, newResult, offset);
+              elem = rewriter.create<vector::SplatOp>(loc, vecType, elem);
+            } else {
+              elem = rewriter.create<vector::ExtractStridedSliceOp>(
+                  loc, newResult, offset, vecType.getNumElements(), 1);
+            }
           } else {
             elem = rewriter.create<vector::ExtractOp>(loc, newResult, offset);
           }
