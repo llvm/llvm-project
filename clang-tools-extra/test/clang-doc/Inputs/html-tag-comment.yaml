@@ -1,0 +1,12 @@
+---
+Name:            'withHtmlTag'
+Description:
+  - Kind:          FullComment
+    Children:
+      - Kind:        VerbatimBlockComment
+        Name:        'verbatim'
+        CloseName:   'endverbatim'
+        Children:
+          - Kind:      VerbatimBlockLineComment
+            Text:      '<ul class="test"><li> Testing. </li></ul>'
+...

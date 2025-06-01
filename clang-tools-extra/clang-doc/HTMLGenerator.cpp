@@ -635,7 +635,8 @@ genHTML(const Index &Index, StringRef InfoPath, bool IsOutermostList) {
 }
 
 static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
-  if (I.Kind == "FullComment") {
+  switch (I.Kind) {
+  case CommentKind::CK_FullComment: {
     auto FullComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
     for (const auto &Child : I.Children) {
       std::unique_ptr<HTMLNode> Node = genHTML(*Child);
@@ -645,7 +646,7 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     return std::move(FullComment);
   }
 
-  if (I.Kind == "ParagraphComment") {
+  case CommentKind::CK_ParagraphComment: {
     auto ParagraphComment = std::make_unique<TagNode>(HTMLTag::TAG_P);
     for (const auto &Child : I.Children) {
       std::unique_ptr<HTMLNode> Node = genHTML(*Child);
@@ -657,7 +658,7 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
     return std::move(ParagraphComment);
   }
 
-  if (I.Kind == "BlockCommandComment") {
+  case CommentKind::CK_BlockCommandComment: {
     auto BlockComment = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
     BlockComment->Children.emplace_back(
         std::make_unique<TagNode>(HTMLTag::TAG_DIV, I.Name));
@@ -670,12 +671,17 @@ static std::unique_ptr<HTMLNode> genHTML(const CommentInfo &I) {
       return nullptr;
     return std::move(BlockComment);
   }
-  if (I.Kind == "TextComment") {
-    if (I.Text == "")
+
+  case CommentKind::CK_TextComment: {
+    if (I.Text.empty())
       return nullptr;
     return std::make_unique<TextNode>(I.Text);
   }
-  return nullptr;
+
+  // For now, no handling — fallthrough.
+  default:
+    return nullptr;
+  }
 }
 
 static std::unique_ptr<TagNode> genHTML(const std::vector<CommentInfo> &C) {
