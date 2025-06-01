@@ -5,6 +5,14 @@ from string import Template
 from itertools import product
 
 cmpxchg_func = Template(
+    """define i$size @${success}_${failure}_i${size}_${addrspace}_${ptx_scope}(ptr${addrspace_cast} %addr, i$size %cmp, i$size %new) {
+    %pairold = cmpxchg ptr${addrspace_cast} %addr, i$size %cmp, i$size %new syncscope(\"${llvm_scope}\") $success $failure
+    ret i$size %new
+}
+"""
+)
+
+cmpxchg_func_no_scope = Template(
     """define i$size @${success}_${failure}_i${size}_${addrspace}(ptr${addrspace_cast} %addr, i$size %cmp, i$size %new) {
     %pairold = cmpxchg ptr${addrspace_cast} %addr, i$size %cmp, i$size %new $success $failure
     ret i$size %new
@@ -45,8 +53,9 @@ if __name__ == "__main__":
                     addrspace_cast = ""
                 else:
                     addrspace_cast = " addrspace({})".format(str(addrspace))
+                # Test default scope
                 print(
-                    cmpxchg_func.substitute(
+                    cmpxchg_func_no_scope.substitute(
                         success=success,
                         failure=failure,
                         size=size,
@@ -55,3 +64,20 @@ if __name__ == "__main__":
                     ),
                     file=fp,
                 )
+
+                for llvm_scope in LLVM_SCOPES:
+                    # cluster ordering is supported from SM90 onwards
+                    if sm < 90 and llvm_scope == "cluster":
+                        continue
+                    print(
+                        cmpxchg_func.substitute(
+                            success=success,
+                            failure=failure,
+                            size=size,
+                            addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                            addrspace_cast=addrspace_cast,
+                            llvm_scope=llvm_scope,
+                            ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                        ),
+                        file=fp,
+                    )
