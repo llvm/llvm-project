@@ -173,14 +173,14 @@ template <class _Rp, class _Tp, template <class> class _RpQual, template <class>
   requires(__ref_wrap_common_reference_exists_with<_Rp, _Tp, _RpQual<_Rp>, _TpQual<_Tp>> &&
            !__ref_wrap_common_reference_exists_with<_Tp, _Rp, _TpQual<_Tp>, _RpQual<_Rp>>)
 struct basic_common_reference<_Rp, _Tp, _RpQual, _TpQual> {
-  using type = common_reference_t<typename _Rp::type&, _TpQual<_Tp>>;
+  using type _LIBCPP_NODEBUG = common_reference_t<typename _Rp::type&, _TpQual<_Tp>>;
 };
 
 template <class _Tp, class _Rp, template <class> class _TpQual, template <class> class _RpQual>
   requires(__ref_wrap_common_reference_exists_with<_Rp, _Tp, _RpQual<_Rp>, _TpQual<_Tp>> &&
            !__ref_wrap_common_reference_exists_with<_Tp, _Rp, _TpQual<_Tp>, _RpQual<_Rp>>)
 struct basic_common_reference<_Tp, _Rp, _TpQual, _RpQual> {
-  using type = common_reference_t<typename _Rp::type&, _TpQual<_Tp>>;
+  using type _LIBCPP_NODEBUG = common_reference_t<typename _Rp::type&, _TpQual<_Tp>>;
 };
 
 #endif // _LIBCPP_STD_VER >= 20
