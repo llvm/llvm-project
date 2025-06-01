@@ -23,4 +23,3 @@ void test() {
 
   returns_expected_void(); // expected-warning {{ignoring return value of type 'expected<void, int>' declared with 'nodiscard' attribute}}
 }
-
