@@ -10,40 +10,44 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include <array>
-#include <utility>
 #include <optional>
+#include <utility>
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 namespace {
-bool hasExplicitParentheses(const Expr* E, const SourceManager& SM, const LangOptions& LangOpts) {
+bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
+                            const LangOptions &LangOpts) {
   if (!E)
     return false;
 
   const SourceLocation Start = E->getBeginLoc();
   const SourceLocation End = E->getEndLoc();
 
-  if (Start.isMacroID() || End.isMacroID() || !Start.isValid() || !End.isValid()) {
+  if (Start.isMacroID() || End.isMacroID() || !Start.isValid() ||
+      !End.isValid()) {
     return false;
   }
 
-  const std::optional<Token> PrevTok = Lexer::findPreviousToken(Start, SM, LangOpts, /*IncludeComments=*/false);
-  const std::optional<Token> NextTok = Lexer::findNextToken(End, SM, LangOpts, /*IncludeComments=*/false);
+  const std::optional<Token> PrevTok =
+      Lexer::findPreviousToken(Start, SM, LangOpts, /*IncludeComments=*/false);
+  const std::optional<Token> NextTok =
+      Lexer::findNextToken(End, SM, LangOpts, /*IncludeComments=*/false);
 
-  return (PrevTok && PrevTok->is(tok::l_paren)) && 
+  return (PrevTok && PrevTok->is(tok::l_paren)) &&
          (NextTok && NextTok->is(tok::r_paren));
 }
 
-template<typename AstNode>
-bool isInTemplateFunction(const AstNode* AN, ASTContext& Context) {
+template <typename AstNode>
+bool isInTemplateFunction(const AstNode *AN, ASTContext &Context) {
   auto Parents = Context.getParents(*AN);
-  for (const auto& Parent : Parents) {
-    if (const auto* FD = Parent.template get<FunctionDecl>()) {
-      return FD->isTemplateInstantiation() || 
-              FD->getTemplatedKind() != FunctionDecl::TK_NonTemplate;
+  for (const auto &Parent : Parents) {
+    if (const auto *FD = Parent.template get<FunctionDecl>()) {
+      return FD->isTemplateInstantiation() ||
+             FD->getTemplatedKind() != FunctionDecl::TK_NonTemplate;
     }
-    if (const auto* S = Parent.template get<Stmt>()) {
+    if (const auto *S = Parent.template get<Stmt>()) {
       return isInTemplateFunction(S, Context);
     }
   }
@@ -68,37 +72,47 @@ llvm::StringRef translate(llvm::StringRef Value) {
 
   return {};
 }
-}
+} // namespace
 
-BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-      ChangePossibleSideEffects(Options.get("ChangePossibleSideEffects", false)) {}
+BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
+                                                     ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context), ChangePossibleSideEffects(Options.get(
+                                         "ChangePossibleSideEffects", false)) {}
 
-void BoolBitwiseOperationCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+void BoolBitwiseOperationCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ChangePossibleSideEffects", ChangePossibleSideEffects);
 }
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(binaryOperator(
-        unless(isExpansionInSystemHeader()),
-        hasAnyOperatorName("|", "&", "|=", "&="),
-        hasEitherOperand(expr(ignoringImpCasts(hasType(booleanType())))),
-        optionally(hasAncestor(   // to simple implement transformations like `a&&b|c` -> `a&&(b||c)`
-            binaryOperator().bind("p")))
-    ).bind("op"), this);
+  Finder->addMatcher(
+      binaryOperator(
+          unless(isExpansionInSystemHeader()),
+          hasAnyOperatorName("|", "&", "|=", "&="),
+          hasEitherOperand(expr(ignoringImpCasts(hasType(booleanType())))),
+          optionally(hasAncestor( // to simple implement transformations like
+                                  // `a&&b|c` -> `a&&(b||c)`
+              binaryOperator().bind("p"))))
+          .bind("op"),
+      this);
 }
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<BinaryOperator>("op");
 
-  auto Diag = diag(MatchedExpr->getOperatorLoc(), "use logical operator instead of bitwise one for bool");
+  auto Diag = diag(MatchedExpr->getOperatorLoc(),
+                   "use logical operator instead of bitwise one for bool");
 
   if (isInTemplateFunction(MatchedExpr, *Result.Context))
     return;
 
-  const bool HasVolatileOperand = MatchedExpr->getLHS()->IgnoreImpCasts()->getType().isVolatileQualified() ||
-                                  MatchedExpr->getRHS()->IgnoreImpCasts()->getType().isVolatileQualified();
-  const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(*Result.Context, !ChangePossibleSideEffects);
+  const bool HasVolatileOperand = llvm::any_of(
+      std::array{MatchedExpr->getLHS(), MatchedExpr->getRHS()},
+      [](const Expr *E) {
+        return E->IgnoreImpCasts()->getType().isVolatileQualified();
+      });
+  const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(
+      *Result.Context, !ChangePossibleSideEffects);
   if (HasVolatileOperand || HasSideEffects)
     return;
 
@@ -126,20 +140,20 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   FixItHint InsertEqual, ReplaceOperator, InsertBrace1, InsertBrace2;
   if (MatchedExpr->isCompoundAssignmentOp()) {
-    const auto *DelcRefLHS = dyn_cast<DeclRefExpr>(MatchedExpr->getLHS()->IgnoreImpCasts());
+    const auto *DelcRefLHS =
+        dyn_cast<DeclRefExpr>(MatchedExpr->getLHS()->IgnoreImpCasts());
     if (!DelcRefLHS)
       return;
     const SourceLocation LocLHS = DelcRefLHS->getEndLoc();
     if (LocLHS.isInvalid() || LocLHS.isMacroID())
       return;
     const SourceLocation InsertLoc = clang::Lexer::getLocForEndOfToken(
-        LocLHS, 0, *Result.SourceManager,
-        Result.Context->getLangOpts());
+        LocLHS, 0, *Result.SourceManager, Result.Context->getLangOpts());
     if (InsertLoc.isInvalid() || InsertLoc.isMacroID()) {
       return;
     }
-    InsertEqual = FixItHint::CreateInsertion(InsertLoc,
-                                        " = " + DelcRefLHS->getDecl()->getNameAsString());
+    InsertEqual = FixItHint::CreateInsertion(
+        InsertLoc, " = " + DelcRefLHS->getDecl()->getNameAsString());
   }
   ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
@@ -147,28 +161,34 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p"); Parent)
     ParentOpcode = Parent->getOpcode();
 
-  const auto *RHS = dyn_cast<BinaryOperator>(MatchedExpr->getRHS()->IgnoreParenCasts());
+  const auto *RHS =
+      dyn_cast<BinaryOperator>(MatchedExpr->getRHS()->IgnoreParenCasts());
   std::optional<BinaryOperatorKind> RHSOpcode;
   if (RHS)
     RHSOpcode = RHS->getOpcode();
 
-  const BinaryOperator* SurroundedExpr = nullptr;
-  if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode.has_value() && *ParentOpcode == BO_LAnd) ||
-      (MatchedExpr->getOpcode() == BO_And && ParentOpcode.has_value() && llvm::is_contained({BO_Xor, BO_Or}, *ParentOpcode))) {
+  const BinaryOperator *SurroundedExpr = nullptr;
+  if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode.has_value() &&
+       *ParentOpcode == BO_LAnd) ||
+      (MatchedExpr->getOpcode() == BO_And && ParentOpcode.has_value() &&
+       llvm::is_contained({BO_Xor, BO_Or}, *ParentOpcode))) {
     SurroundedExpr = MatchedExpr;
-  } else if (MatchedExpr->getOpcode() == BO_AndAssign && RHSOpcode.has_value() && *RHSOpcode == BO_LOr) {
+  } else if (MatchedExpr->getOpcode() == BO_AndAssign &&
+             RHSOpcode.has_value() && *RHSOpcode == BO_LOr) {
     SurroundedExpr = RHS;
   }
 
-  if (hasExplicitParentheses(SurroundedExpr, *Result.SourceManager,Result.Context->getLangOpts()))
+  if (hasExplicitParentheses(SurroundedExpr, *Result.SourceManager,
+                             Result.Context->getLangOpts()))
     SurroundedExpr = nullptr;
 
   if (SurroundedExpr) {
     const SourceLocation InsertFirstLoc = SurroundedExpr->getBeginLoc();
-    const SourceLocation InsertSecondLoc =
-        clang::Lexer::getLocForEndOfToken(SurroundedExpr->getEndLoc(), 0, *Result.SourceManager,
+    const SourceLocation InsertSecondLoc = clang::Lexer::getLocForEndOfToken(
+        SurroundedExpr->getEndLoc(), 0, *Result.SourceManager,
         Result.Context->getLangOpts());
-    if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() || InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID())
+    if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() ||
+        InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID())
       return;
     InsertBrace1 = FixItHint::CreateInsertion(InsertFirstLoc, "(");
     InsertBrace2 = FixItHint::CreateInsertion(InsertSecondLoc, ")");
