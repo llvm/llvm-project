@@ -265,6 +265,20 @@ public:
     AuxiliaryMemoryFD = AArch64::X13
   };
 
+  std::vector<MCInst> _generateRegisterStackPop(MCRegister Reg,
+                                                int imm = 0) const override {
+    std::vector<MCInst> Insts;
+    if (AArch64::GPR32RegClass.contains(Reg)) {
+      generateRegisterStackPop(Reg, Insts, imm);
+      return Insts;
+    }
+    if (AArch64::GPR64RegClass.contains(Reg)) {
+      generateRegisterStackPop(Reg, Insts, imm);
+      return Insts;
+    }
+    return {};
+  }
+
 private:
 #ifdef __linux__
   void generateLowerMunmap(std::vector<MCInst> &GeneratedCode) const override;
