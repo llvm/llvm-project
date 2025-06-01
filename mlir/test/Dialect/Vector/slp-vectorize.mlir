@@ -350,6 +350,38 @@ func.func @read_read_add_write_vec_1d(%arg0: memref<8xi32>, %arg1: memref<8xi32>
 }
 
 
+// CHECK-LABEL: func @read_read_add_write_mixed_vecs
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
+func.func @read_read_add_write_mixed_vecs(%arg0: memref<8xi32>, %arg1: memref<8xi32>) {
+  // CHECK:     %[[C0:.*]] = arith.constant 0 : index
+  // CHECK:     %[[A:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     %[[B:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK:     %[[RES:.*]] = arith.addi %[[A]], %[[B]] : vector<4xi32>
+  // CHECK:     vector.store %[[RES]], %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+
+  %0 = vector.load %arg0[%c0] : memref<8xi32>, vector<2xi32>
+  %2 = memref.load %arg0[%c2] : memref<8xi32>
+  %3 = vector.load %arg0[%c3] : memref<8xi32>, vector<1xi32>
+
+  %4 = vector.load %arg1[%c0] : memref<8xi32>, vector<2xi32>
+  %6 = memref.load %arg1[%c2] : memref<8xi32>
+  %7 = vector.load %arg1[%c3] : memref<8xi32>, vector<1xi32>
+
+  %8 = arith.addi %0, %4 : vector<2xi32>
+  %10 = arith.addi %2, %6 : i32
+  %11 = arith.addi %3, %7 : vector<1xi32>
+
+  vector.store %8, %arg0[%c0] : memref<8xi32>, vector<2xi32>
+  memref.store %10, %arg0[%c2] : memref<8xi32>
+  vector.store %11, %arg0[%c3] : memref<8xi32>, vector<1xi32>
+
+  return
+}
+
+
 // CHECK-LABEL: func @read_read_add_write_seven
 //  CHECK-SAME: (%[[ARG0:.*]]: memref<8xindex>, %[[ARG1:.*]]: memref<8xindex>)
 func.func @read_read_add_write_seven(%arg0: memref<8xindex>, %arg1: memref<8xindex>) {
