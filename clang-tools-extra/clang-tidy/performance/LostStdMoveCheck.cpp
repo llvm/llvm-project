@@ -16,13 +16,14 @@ namespace clang::tidy::performance {
 
 template <typename Node>
 void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
-                        llvm::SmallPtrSet<const Node*, 16>& Nodes) {
-  for (const BoundNodes& Match : Matches)
+                        llvm::SmallPtrSet<const Node *, 16> &Nodes) {
+  for (const BoundNodes &Match : Matches)
     Nodes.insert(Match.getNodeAs<Node>(ID));
 }
 
-static llvm::SmallPtrSet<const DeclRefExpr*, 16> allDeclRefExprsHonourLambda(
-    const VarDecl& VarDecl, const Decl& Decl, ASTContext& Context) {
+static llvm::SmallPtrSet<const DeclRefExpr *, 16>
+allDeclRefExprsHonourLambda(const VarDecl &VarDecl, const Decl &Decl,
+                            ASTContext &Context) {
   auto Matches = match(
       decl(forEachDescendant(
           declRefExpr(to(varDecl(equalsNode(&VarDecl))),
@@ -33,20 +34,22 @@ static llvm::SmallPtrSet<const DeclRefExpr*, 16> allDeclRefExprsHonourLambda(
                           )
               .bind("declRef"))),
       Decl, Context);
-  llvm::SmallPtrSet<const DeclRefExpr*, 16> DeclRefs;
+  llvm::SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   return DeclRefs;
 }
 
-static const Expr* getLastVarUsage(const VarDecl& Var, const Decl& Func,
-                                   ASTContext& Context) {
+static const Expr *getLastVarUsage(const VarDecl &Var, const Decl &Func,
+                                   ASTContext &Context) {
   auto Exprs = allDeclRefExprsHonourLambda(Var, Func, Context);
 
-  const Expr* LastExpr = nullptr;
-  for (const clang::DeclRefExpr* Expr : Exprs) {
-    if (!LastExpr) LastExpr = Expr;
+  const Expr *LastExpr = nullptr;
+  for (const clang::DeclRefExpr *Expr : Exprs) {
+    if (!LastExpr)
+      LastExpr = Expr;
 
-    if (LastExpr->getBeginLoc() < Expr->getBeginLoc()) LastExpr = Expr;
+    if (LastExpr->getBeginLoc() < Expr->getBeginLoc())
+      LastExpr = Expr;
   }
 
   return LastExpr;
@@ -56,7 +59,7 @@ AST_MATCHER(CXXRecordDecl, hasTrivialMoveConstructor) {
   return Node.hasDefinition() && Node.hasTrivialMoveConstructor();
 }
 
-void LostStdMoveCheck::registerMatchers(MatchFinder* Finder) {
+void LostStdMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto ReturnParent =
       hasParent(expr(hasParent(cxxConstructExpr(hasParent(returnStmt())))));
 
@@ -84,7 +87,7 @@ void LostStdMoveCheck::registerMatchers(MatchFinder* Finder) {
 
           unless(hasAncestor(whileStmt())),
 
-	  // Not in a body of lambda
+          // Not in a body of lambda
           unless(hasAncestor(compoundStmt(hasAncestor(lambdaExpr())))),
 
           // only non-X&
@@ -112,21 +115,22 @@ void LostStdMoveCheck::registerMatchers(MatchFinder* Finder) {
       this);
 }
 
-void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
-  const auto* MatchedDecl = Result.Nodes.getNodeAs<VarDecl>("decl");
-  const auto* MatchedFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
-  const auto* MatchedUse = Result.Nodes.getNodeAs<Expr>("use");
-  const auto* MatchedUseCall = Result.Nodes.getNodeAs<CallExpr>("use_parent");
-  const auto* MatchedLeafStatement =
+void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
+  const auto *MatchedDecl = Result.Nodes.getNodeAs<VarDecl>("decl");
+  const auto *MatchedFunc = Result.Nodes.getNodeAs<FunctionDecl>("func");
+  const auto *MatchedUse = Result.Nodes.getNodeAs<Expr>("use");
+  const auto *MatchedUseCall = Result.Nodes.getNodeAs<CallExpr>("use_parent");
+  const auto *MatchedLeafStatement =
       Result.Nodes.getNodeAs<Stmt>("leaf_statement");
 
-  if (!MatchedDecl->hasLocalStorage()) return;
+  if (!MatchedDecl->hasLocalStorage())
+    return;
 
   if (MatchedUseCall) {
     return;
   }
 
-  const Expr* LastUsage =
+  const Expr *LastUsage =
       getLastVarUsage(*MatchedDecl, *MatchedFunc, *Result.Context);
 
   if (LastUsage && LastUsage->getBeginLoc() > MatchedUse->getBeginLoc()) {
@@ -140,7 +144,7 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
   }
 
   // Calculate X usage count in the statement
-  llvm::SmallPtrSet<const DeclRefExpr*, 16> DeclRefs;
+  llvm::SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   ArrayRef<BoundNodes> Matches = match(
       findAll(declRefExpr(
 
@@ -158,7 +162,7 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
     return;
   }
 
-  const SourceManager& Source = Result.Context->getSourceManager();
+  const SourceManager &Source = Result.Context->getSourceManager();
   const auto Range =
       CharSourceRange::getTokenRange(MatchedUse->getSourceRange());
   const StringRef NeedleExprCode =
@@ -167,9 +171,11 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
   if (NeedleExprCode == "=") {
 
     diag(MatchedUse->getBeginLoc(), "could be std::move()")
-        << FixItHint::CreateInsertion(
-               MatchedUse->getBeginLoc(),
-               (MatchedDecl->getName() + " = std::move(" + MatchedDecl->getName() + "),").str());
+        << FixItHint::CreateInsertion(MatchedUse->getBeginLoc(),
+                                      (MatchedDecl->getName() +
+                                       " = std::move(" +
+                                       MatchedDecl->getName() + "),")
+                                          .str());
   } else {
     diag(MatchedUse->getBeginLoc(), "could be std::move()")
         << FixItHint::CreateReplacement(
@@ -177,4 +183,4 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
   }
 }
 
-}  // namespace clang::tidy::performance
+} // namespace clang::tidy::performance
