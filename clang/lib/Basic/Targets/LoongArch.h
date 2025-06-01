@@ -53,6 +53,7 @@ public:
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
     MCountName = "_mcount";
+    HasFloat16 = true;
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;
@@ -97,6 +98,8 @@ public:
   std::string convertConstraint(const char *&Constraint) const override;
 
   bool hasBitIntType() const override { return true; }
+
+  bool useFP16ConversionIntrinsics() const override { return false; }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
