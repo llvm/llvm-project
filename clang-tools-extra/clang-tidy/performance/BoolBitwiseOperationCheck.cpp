@@ -70,6 +70,14 @@ llvm::StringRef translate(llvm::StringRef Value) {
 }
 }
 
+BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name, ClangTidyContext *Context)
+      : ClangTidyCheck(Name, Context),
+      ChangePossibleSideEffects(Options.get("ChangePossibleSideEffects", false)) {}
+
+void BoolBitwiseOperationCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "ChangePossibleSideEffects", ChangePossibleSideEffects);
+}
+
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(binaryOperator(
         unless(isExpansionInSystemHeader()),
@@ -90,7 +98,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   const bool HasVolatileOperand = MatchedExpr->getLHS()->IgnoreImpCasts()->getType().isVolatileQualified() ||
                                   MatchedExpr->getRHS()->IgnoreImpCasts()->getType().isVolatileQualified();
-  const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(*Result.Context); // TODO: `IncludePossibleEffects` option
+  const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(*Result.Context, !ChangePossibleSideEffects);
   if (HasVolatileOperand || HasSideEffects)
     return;
 

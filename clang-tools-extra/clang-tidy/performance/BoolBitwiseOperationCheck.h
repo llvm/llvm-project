@@ -19,13 +19,16 @@ namespace clang::tidy::performance {
 /// http://clang.llvm.org/extra/clang-tidy/checks/performance/bool-bitwise-operation.html
 class BoolBitwiseOperationCheck : public ClangTidyCheck {
 public:
-  BoolBitwiseOperationCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  BoolBitwiseOperationCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Options) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+
+private:
+  bool ChangePossibleSideEffects;
 };
 
 } // namespace clang::tidy::performance
