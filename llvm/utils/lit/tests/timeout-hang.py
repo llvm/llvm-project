@@ -8,6 +8,10 @@
 # throwing an exception. We expect this to fail immediately, rather than
 # timeout.
 
+# lit should return immediately once it fails to execute the non-existent file.
+# This will take a variable amount of time depending on process scheduling, but
+# it should always be significantly less than the hard timeout, which is the
+# point where lit would cancel the test.
 # DEFINE: %{grace_period}=5
 # DEFINE: %{hard_timeout}=15
 
