@@ -3510,6 +3510,46 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   }
 }
 
+void llvm::copyMetadataForStore(StoreInst &Dest, const StoreInst &Source) {
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
+  Source.getAllMetadata(MD);
+  MDBuilder MDB(Dest.getContext());
+  Type *NewType = Dest.getType();
+  for (const auto &MDPair : MD) {
+    unsigned ID = MDPair.first;
+    MDNode *N = MDPair.second;
+    switch (ID) {
+    case LLVMContext::MD_dbg:
+    case LLVMContext::MD_tbaa:
+    case LLVMContext::MD_prof:
+    case LLVMContext::MD_tbaa_struct:
+    case LLVMContext::MD_alias_scope:
+    case LLVMContext::MD_noalias:
+    case LLVMContext::MD_nontemporal:
+    case LLVMContext::MD_access_group:
+    case LLVMContext::MD_noundef:
+    case LLVMContext::MD_noalias_addrspace:
+    case LLVMContext::MD_mem_parallel_loop_access:
+      Dest.setMetadata(ID, N);
+      break;
+    
+    case LLVMContext::MD_nonnull:
+      break;
+
+    case LLVMContext::MD_align:
+    case LLVMContext::MD_dereferenceable:
+    case LLVMContext::MD_dereferenceable_or_null:
+      // These only directly apply if the new type is also a pointer.
+      if (NewType->isPointerTy())
+        Dest.setMetadata(ID, N);
+      break;
+
+    case LLVMContext::MD_range:
+      break;
+    }
+  }
+}
+
 void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   auto *ReplInst = dyn_cast<Instruction>(Repl);
   if (!ReplInst)

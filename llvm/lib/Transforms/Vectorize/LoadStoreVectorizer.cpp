@@ -1335,14 +1335,6 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
   if (EQClasses.size() < 2)
     return;
 
-  auto CopyMetaDataFromTo = [&](Instruction *Src, Instruction *Dst) {
-    SmallVector<std::pair<unsigned, MDNode *>, 4> MD;
-    Src->getAllMetadata(MD);
-    for (const auto [ID, Node] : MD) {
-      Dst->setMetadata(ID, Node);
-    }
-  };
-
   // For each class, determine the most defined type. This information will
   // help us determine the type instructions should be casted into.
   MapVector<EqClassKey, unsigned> ClassToNewTyID;
@@ -1407,7 +1399,7 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
           auto *Cast = Builder.CreateBitOrPointerCast(
               NewLoad, OrigTy, NewLoad->getName() + ".cast");
           LI->replaceAllUsesWith(Cast);
-          CopyMetaDataFromTo(LI, NewLoad);
+          copyMetadataForLoad(*NewLoad, *LI);
           LI->eraseFromParent();
           EQClasses[EC1.first].emplace_back(NewLoad);
         } else {
@@ -1418,7 +1410,7 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
               SI->getValueOperand()->getName() + ".cast");
           auto *NewStore = Builder.CreateStore(
               Cast, getLoadStorePointerOperand(SI), SI->isVolatile());
-          CopyMetaDataFromTo(SI, NewStore);
+          copyMetadataForStore(*NewStore, *SI);
           SI->eraseFromParent();
           EQClasses[EC1.first].emplace_back(NewStore);
         }
