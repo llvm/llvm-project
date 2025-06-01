@@ -196,7 +196,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1016,7 +1015,7 @@ public:
         auto NewGV = uniquifyGVPerKernel(M, GV, F);
         Changed |= (NewGV != GV);
         int BarId = (NumAbsolutes + 1);
-        if (Kernel2BarId.find(F) != Kernel2BarId.end()) {
+        if (Kernel2BarId.contains(F)) {
           BarId = (Kernel2BarId[F] + 1);
         }
         Kernel2BarId[F] = BarId;

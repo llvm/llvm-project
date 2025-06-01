@@ -15,7 +15,14 @@
 #pragma once
 
 #ifndef ASSERT_SUCCESS
-#define ASSERT_SUCCESS(ACTUAL) ASSERT_EQ(OL_SUCCESS, ACTUAL)
+#define ASSERT_SUCCESS(ACTUAL)                                                 \
+  do {                                                                         \
+    ol_result_t Res = ACTUAL;                                                  \
+    if (Res && Res->Code != OL_ERRC_SUCCESS) {                                 \
+      GTEST_FAIL() << #ACTUAL " returned " << Res->Code << ": "                \
+                   << Res->Details;                                            \
+    }                                                                          \
+  } while (0)
 #endif
 
 // TODO: rework this so the EXPECTED/ACTUAL results are readable

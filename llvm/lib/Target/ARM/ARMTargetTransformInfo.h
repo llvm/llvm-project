@@ -230,8 +230,7 @@ public:
 
   bool preferInLoopReduction(RecurKind Kind, Type *Ty) const override;
 
-  bool preferPredicatedReductionSelect(unsigned Opcode,
-                                       Type *Ty) const override;
+  bool preferPredicatedReductionSelect() const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override {
     return false;
@@ -255,8 +254,8 @@ public:
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const override;
+                                     unsigned Index, const Value *Op0,
+                                     const Value *Op1) const override;
 
   InstructionCost getAddressComputationCost(Type *Val, ScalarEvolution *SE,
                                             const SCEV *Ptr) const override;

@@ -249,6 +249,9 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
   // generated code is placed inside the class's C++ namespace. `$cppClass` is
   // replaced by the class name.
   code extraClassDefinition = [{}];
+
+  // Generate a default 'getAlias' method for OpAsm{Type,Attr}Interface.
+  bit genMnemonicAlias = 0;
 }
 
 // Define a new attribute, named `name`, belonging to `dialect` that inherits

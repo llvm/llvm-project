@@ -168,22 +168,21 @@ void NewDeleteOverloadsCheck::onEndOfTranslationUnit() {
     // complexity when searching for corresponding free store functions.
     for (const auto *Overload : RP.second) {
       const auto *Match =
-          std::find_if(RP.second.begin(), RP.second.end(),
-                       [&Overload](const FunctionDecl *FD) {
-                         if (FD == Overload)
-                           return false;
-                         // If the declaration contexts don't match, we don't
-                         // need to check any further.
-                         if (FD->getDeclContext() != Overload->getDeclContext())
-                           return false;
+          llvm::find_if(RP.second, [&Overload](const FunctionDecl *FD) {
+            if (FD == Overload)
+              return false;
+            // If the declaration contexts don't match, we don't
+            // need to check any further.
+            if (FD->getDeclContext() != Overload->getDeclContext())
+              return false;
 
-                         // Since the declaration contexts match, see whether
-                         // the current element is the corresponding operator.
-                         if (!areCorrespondingOverloads(Overload, FD))
-                           return false;
+            // Since the declaration contexts match, see whether
+            // the current element is the corresponding operator.
+            if (!areCorrespondingOverloads(Overload, FD))
+              return false;
 
-                         return true;
-                       });
+            return true;
+          });
 
       if (Match == RP.second.end()) {
         // Check to see if there is a corresponding overload in a base class

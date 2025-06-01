@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
 // FIXME: SPIR-V codegen of llvm.spv.resource.handlefrombinding and resource types is not yet implemented
 // RUN-DISABLED: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
@@ -23,44 +23,36 @@ export void foo() {
 // CHECK: %"class.hlsl::AppendStructuredBuffer" = type { target("dx.RawBuffer", float, 1, 0) }
 
 // CHECK: @_ZL4Buf1 = internal global %"class.hlsl::StructuredBuffer" poison, align 4
+// CHECK: @[[Buf1Str:.*]] = private unnamed_addr constant [5 x i8] c"Buf1\00", align 1
 // CHECK: @_ZL4Buf2 = internal global %"class.hlsl::RWStructuredBuffer" poison, align 4
+// CHECK: @[[Buf2Str:.*]] = private unnamed_addr constant [5 x i8] c"Buf2\00", align 1
 
 // Buf1 initialization part 1 - global init function that calls StructuredBuffer<float> C1 constructor
 // with explicit binding
 // CHECK: define internal void @__cxx_global_var_init()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_ZN4hlsl16StructuredBufferIfEC1Ejjij(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf1,
-// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 1, i32 noundef 0)
+// CHECK-NEXT: call void @_ZN4hlsl16StructuredBufferIfEC1EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf1,
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 1, i32 noundef 0, ptr noundef @[[Buf1Str]])
 
 // Buf1 initialization part 2 - body of StructuredBuffer<float> C1 constructor with explicit binding 
 // that calls the C2 constructor
-// CHECK: define linkonce_odr void @_ZN4hlsl16StructuredBufferIfEC1Ejjij(ptr noundef nonnull align 4 dereferenceable(4) %this, 
-// CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index)
-// CHECK-NEXT: entry:
-// CHECK-NEXT: %this.addr = alloca ptr, align 4
-// CHECK-NEXT: %registerNo.addr = alloca i32, align 4
-// CHECK-NEXT: %spaceNo.addr = alloca i32, align 4
-// CHECK-NEXT: %range.addr = alloca i32, align 4
-// CHECK-NEXT: %index.addr = alloca i32, align 4
-// CHECK-NEXT: store ptr %this, ptr %this.addr, align 4
-// CHECK-NEXT: store i32 %registerNo, ptr %registerNo.addr, align 4
-// CHECK-NEXT: store i32 %spaceNo, ptr %spaceNo.addr, align 4
-// CHECK-NEXT: store i32 %range, ptr %range.addr, align 4
-// CHECK-NEXT: store i32 %index, ptr %index.addr, align 4
-// CHECK-NEXT: %this1 = load ptr, ptr %this.addr, align 4
-// CHECK-NEXT: %0 = load i32, ptr %registerNo.addr, align 4
-// CHECK-NEXT: %1 = load i32, ptr %spaceNo.addr, align 4
-// CHECK-NEXT: %2 = load i32, ptr %range.addr, align 4
-// CHECK-NEXT: %3 = load i32, ptr %index.addr, align 4
-// CHECK: call void @_ZN4hlsl16StructuredBufferIfEC2Ejjij(ptr noundef nonnull align 4 dereferenceable(4) %this1, 
-// CHECK-SAME: i32 noundef %0, i32 noundef %1, i32 noundef %2, i32 noundef %3)
-// CHECK-NEXT: ret void
+// CHECK: define linkonce_odr void @_ZN4hlsl16StructuredBufferIfEC1EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) %this, 
+// CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
+// CHECK: call void @_ZN4hlsl16StructuredBufferIfEC2EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4)
+// CHECK-SAME: %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, ptr noundef %{{.*}})
 
-// Buf2 initialization part 1 - FIXME: constructor with implicit binding does not exist yet; 
-// the global init function currently calls the default RWStructuredBufer<double> C1 constructor
+// Buf2 initialization part 1 - global init function that calls RWStructuredBuffer<float> C1 constructor with
+// implicit binding
 // CHECK: define internal void @__cxx_global_var_init.1()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_ZN4hlsl18RWStructuredBufferIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf2)
+// CHECK-NEXT: call void @_ZN4hlsl18RWStructuredBufferIfEC1EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf2,
+// CHECK-SAME: i32 noundef 0, i32 noundef 1, i32 noundef 0, i32 noundef 0, ptr noundef @[[Buf2Str]])
+
+// Buf2 initialization part 2 - body of RWStructuredBuffer<float> C1 constructor with implicit binding that calls the C2 constructor
+// CHECK: define linkonce_odr void @_ZN4hlsl18RWStructuredBufferIfEC1EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId, ptr noundef %name)
+// CHECK: call void @_ZN4hlsl18RWStructuredBufferIfEC2EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4)
+// CHECK-SAME: %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, ptr noundef %{{.*}})
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by 
 // AppendStructuredBuffer<float> C1 default constructor
@@ -72,47 +64,30 @@ export void foo() {
 // Buf3 initialization part 2 - body of AppendStructuredBuffer<float> default C1 constructor that calls
 // the default C2 constructor
 // CHECK: define linkonce_odr void @_ZN4hlsl22AppendStructuredBufferIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
-// CHECK-NEXT: entry:
-// CHECK-NEXT: %this.addr = alloca ptr, align 4
-// CHECK-NEXT: store ptr %this, ptr %this.addr, align 4
-// CHECK-NEXT: %this1 = load ptr, ptr %this.addr, align 4
-// CHECK: call void @_ZN4hlsl22AppendStructuredBufferIfEC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %this1)
-// CHECK-NEXT: ret void
+// CHECK: call void @_ZN4hlsl22AppendStructuredBufferIfEC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %{{.*}})
 
 // Buf1 initialization part 3 - body of AppendStructuredBuffer<float> C2 constructor with explicit binding 
 // that initializes handle with @llvm.dx.resource.handlefrombinding
-// CHECK: define linkonce_odr void @_ZN4hlsl16StructuredBufferIfEC2Ejjij(ptr noundef nonnull align 4 dereferenceable(4) %this,
-// CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index)
-// CHECK-NEXT: entry:
-// CHECK-NEXT: %this.addr = alloca ptr, align 4
-// CHECK-NEXT: %registerNo.addr = alloca i32, align 4
-// CHECK-NEXT: %spaceNo.addr = alloca i32, align 4
-// CHECK-NEXT: %range.addr = alloca i32, align 4
-// CHECK-NEXT: %index.addr = alloca i32, align 4
-// CHECK-NEXT: store ptr %this, ptr %this.addr, align 4
-// CHECK-NEXT: store i32 %registerNo, ptr %registerNo.addr, align 4
-// CHECK-NEXT: store i32 %spaceNo, ptr %spaceNo.addr, align 4
-// CHECK-NEXT: store i32 %range, ptr %range.addr, align 4
-// CHECK-NEXT: store i32 %index, ptr %index.addr, align 4
-// CHECK-NEXT: %this1 = load ptr, ptr %this.addr, align 4
-// CHECK-NEXT: %0 = load i32, ptr %registerNo.addr, align 4
-// CHECK-NEXT: %1 = load i32, ptr %spaceNo.addr, align 4
-// CHECK-NEXT: %2 = load i32, ptr %range.addr, align 4
-// CHECK-NEXT: %3 = load i32, ptr %index.addr, align 4
-// CHECK-DXIL-NEXT: %4 = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0t(
-// CHECK-DXIL-SAME: i32 %1, i32 %0, i32 %2, i32 %3, i1 false)
-// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %this1, i32 0, i32 0
-// CHECK-DXIL-NEXT: store target("dx.RawBuffer", float, 0, 0) %4, ptr %__handle, align 4
-// CHECK-NEXT: ret void
+// CHECK: define linkonce_odr void @_ZN4hlsl16StructuredBufferIfEC2EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
+// CHECK-DXIL: %[[HANDLE:.*]] = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0t(
+// CHECK-SAME: i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
+// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %{{.*}}, i32 0, i32 0
+// CHECK-DXIL-NEXT: store target("dx.RawBuffer", float, 0, 0) %[[HANDLE]], ptr %__handle, align 4
+
+// Buf2 initialization part 3 - body of RWStructuredBuffer<float> C2 constructor with implicit binding that initializes
+// handle with @llvm.dx.resource.handlefromimplicitbinding
+// CHECK: define linkonce_odr void @_ZN4hlsl18RWStructuredBufferIfEC2EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId, ptr noundef %name)
+// CHECK: %[[HANDLE:.*]] = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f32_1_0t
+// CHECK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
+// CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
+// CHECK-NEXT: store target("dx.RawBuffer", float, 1, 0) %[[HANDLE]], ptr %__handle, align 4
 
 // Buf3 initialization part 3 - body of AppendStructuredBuffer<float> default C2 constructor that
 // initializes handle to poison
 // CHECK: define linkonce_odr void @_ZN4hlsl22AppendStructuredBufferIfEC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
-// CHECK-NEXT: entry:
-// CHECK-NEXT: %this.addr = alloca ptr, align 4
-// CHECK-NEXT: store ptr %this, ptr %this.addr, align 4
-// CHECK-NEXT: %this1 = load ptr, ptr %this.addr, align 4
-// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::AppendStructuredBuffer", ptr %this1, i32 0, i32 0
+// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::AppendStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK: store target("dx.RawBuffer", float, 1, 0) poison, ptr %__handle, align 4
 
 // Module initialization

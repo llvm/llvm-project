@@ -9,11 +9,9 @@
 #ifndef _LIBCPP___BIT_POPCOUNT_H
 #define _LIBCPP___BIT_POPCOUNT_H
 
-#include <__bit/rotate.h>
 #include <__concepts/arithmetic.h>
 #include <__config>
 #include <__type_traits/is_unsigned.h>
-#include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

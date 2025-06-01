@@ -24,7 +24,7 @@ LIBC_CONFIGURE_OPTIONS = [
     # Documentation in libc/src/string/memory_utils/...
     # "LIBC_COPT_MEMCPY_USE_EMBEDDED_TINY",
     # "LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE",
-    # "LIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING",
+    "LIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING",
     "LIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING",
 
     # Documentation in libc/docs/dev/printf_behavior.rst

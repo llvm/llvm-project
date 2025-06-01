@@ -6,6 +6,7 @@ static_library("CodeGen") {
     "//clang/include/clang/Basic:arm_mve_builtin_cg",
     "//clang/include/clang/Basic:arm_sme_builtin_cg",
     "//clang/include/clang/Basic:arm_sve_builtin_cg",
+    "//clang/include/clang/Basic:riscv_andes_vector_builtin_cg",
     "//clang/include/clang/Basic:riscv_sifive_vector_builtin_cg",
     "//clang/include/clang/Basic:riscv_vector_builtin_cg",
     "//clang/lib/AST",

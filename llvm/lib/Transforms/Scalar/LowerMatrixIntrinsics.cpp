@@ -229,14 +229,11 @@ static bool isUniformShape(Value *V) {
   if (!I)
     return true;
 
+  if (I->isBinaryOp())
+    return true;
+
   switch (I->getOpcode()) {
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul: // Scalar multiply.
   case Instruction::FNeg:
-  case Instruction::Add:
-  case Instruction::Mul:
-  case Instruction::Sub:
     return true;
   default:
     return false;
@@ -1036,7 +1033,7 @@ public:
       for (Instruction &I : *BB) {
         if (match(&I, m_Intrinsic<Intrinsic::lifetime_end>()))
           LifetimeEnds.push_back(cast<IntrinsicInst>(&I));
-        if (ShapeMap.find(&I) == ShapeMap.end())
+        if (!ShapeMap.contains(&I))
           continue;
         if (match(&I, m_Intrinsic<Intrinsic::matrix_multiply>()))
           MaybeFusableInsts.push_back(cast<CallInst>(&I));
@@ -1354,7 +1351,7 @@ public:
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
     for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
-      if (ShapeMap.find(U.getUser()) == ShapeMap.end()) {
+      if (!ShapeMap.contains(U.getUser())) {
         if (!Flattened)
           Flattened = Matrix.embedInVector(Builder);
         U.set(Flattened);
@@ -1401,7 +1398,7 @@ public:
     // the returned cost is < 0, the argument is cheaper to use in the
     // dot-product lowering.
     auto GetCostForArg = [this, &CanBeFlattened](Value *Op, unsigned N) {
-      if (ShapeMap.find(Op) == ShapeMap.end())
+      if (!ShapeMap.contains(Op))
         return InstructionCost::getInvalid();
 
       if (!isa<Instruction>(Op))
@@ -1420,7 +1417,7 @@ public:
         return EmbedCost;
       }
 
-      if (match(Op, m_BinOp()) && ShapeMap.find(Op) != ShapeMap.end()) {
+      if (match(Op, m_BinOp()) && ShapeMap.contains(Op)) {
         InstructionCost OriginalCost =
             TTI.getArithmeticInstrCost(cast<Instruction>(Op)->getOpcode(),
                                        EltTy) *
@@ -2154,28 +2151,9 @@ public:
 
     Builder.setFastMathFlags(getFastMathFlags(Inst));
 
-    // Helper to perform binary op on vectors.
-    auto BuildVectorOp = [&Builder, Inst](Value *LHS, Value *RHS) {
-      switch (Inst->getOpcode()) {
-      case Instruction::Add:
-        return Builder.CreateAdd(LHS, RHS);
-      case Instruction::Mul:
-        return Builder.CreateMul(LHS, RHS);
-      case Instruction::Sub:
-        return Builder.CreateSub(LHS, RHS);
-      case Instruction::FAdd:
-        return Builder.CreateFAdd(LHS, RHS);
-      case Instruction::FMul:
-        return Builder.CreateFMul(LHS, RHS);
-      case Instruction::FSub:
-        return Builder.CreateFSub(LHS, RHS);
-      default:
-        llvm_unreachable("Unsupported binary operator for matrix");
-      }
-    };
-
     for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
-      Result.addVector(BuildVectorOp(A.getVector(I), B.getVector(I)));
+      Result.addVector(Builder.CreateBinOp(Inst->getOpcode(), A.getVector(I),
+                                           B.getVector(I)));
 
     finalizeLowering(Inst,
                      Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
@@ -2446,10 +2424,10 @@ public:
         return;
       } else {
         Ops.append(I->value_op_begin(), I->value_op_end());
-        write(std::string(I->getOpcodeName()));
+        write(I->getOpcodeName());
       }
 
-      write(std::string("("));
+      write("(");
 
       unsigned NumOpsToBreak = 1;
       if (match(Expr, m_Intrinsic<Intrinsic::matrix_column_major_load>()))

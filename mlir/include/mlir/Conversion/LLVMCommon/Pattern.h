@@ -30,6 +30,32 @@ LogicalResult oneToOneRewrite(
     const LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter,
     IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
 
+/// Replaces the given operation "op" with a call to an LLVM intrinsic with the
+/// specified name "intrinsic" and operands.
+///
+/// The rewrite performs a simple one-to-one matching between the op and LLVM
+/// intrinsic. For example:
+///
+/// ```mlir
+/// %res = intr.op %val : vector<16xf32>
+/// ```
+///
+/// can be converted to
+///
+/// ```mlir
+/// %res = llvm.call_intrinsic "intrinsic"(%val)
+/// ```
+///
+/// The provided operands must be LLVM-compatible.
+///
+/// Upholds a convention that multi-result operations get converted into an
+/// operation returning the LLVM IR structure type, in which case individual
+/// values are first extracted before replacing the original results.
+LogicalResult intrinsicRewrite(Operation *op, StringRef intrinsic,
+                               ValueRange operands,
+                               const LLVMTypeConverter &typeConverter,
+                               RewriterBase &rewriter);
+
 } // namespace detail
 
 /// Decomposes a `src` value into a set of values of type `dstType` through
@@ -43,6 +69,15 @@ SmallVector<Value> decomposeValue(OpBuilder &builder, Location loc, Value src,
 /// function is used to combine multiple values into a single value.
 Value composeValue(OpBuilder &builder, Location loc, ValueRange src,
                    Type dstType);
+
+/// Performs the index computation to get to the element at `indices` of the
+/// memory pointed to by `memRefDesc`, using the layout map of `type`.
+/// The indices are linearized as:
+///   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
+Value getStridedElementPtr(
+    OpBuilder &builder, Location loc, const LLVMTypeConverter &converter,
+    MemRefType type, Value memRefDesc, ValueRange indices,
+    LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none);
 } // namespace LLVM
 
 /// Base class for operation conversions targeting the LLVM IR dialect. It
@@ -81,11 +116,12 @@ protected:
   static Value createIndexAttrConstant(OpBuilder &builder, Location loc,
                                        Type resultType, int64_t value);
 
-  // This is a strided getElementPtr variant that linearizes subscripts as:
-  //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
-  Value getStridedElementPtr(Location loc, MemRefType type, Value memRefDesc,
-                             ValueRange indices,
-                             ConversionPatternRewriter &rewriter) const;
+  /// Convenience wrapper for the corresponding helper utility.
+  /// This is a strided getElementPtr variant with linearized subscripts.
+  Value getStridedElementPtr(
+      ConversionPatternRewriter &rewriter, Location loc, MemRefType type,
+      Value memRefDesc, ValueRange indices,
+      LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none) const;
 
   /// Returns if the given memref type is convertible to LLVM and has an
   /// identity layout map.

@@ -12,8 +12,8 @@
 ; CHECK: ld.global.u16  %[[B:rs[0-9]+]], [a];
 ; CHECK: st.global.u16  [b], %[[B]];
 ;
-; CHECK: ld.global.u32 %[[C:r[0-9]+]], [a];
-; CHECK: st.global.u32 [c], %[[C]];
+; CHECK: ld.global.b32 %[[C:r[0-9]+]], [a];
+; CHECK: st.global.b32 [c], %[[C]];
 
 define void @test1() #0 {
   %1 = load <2 x i8>, ptr addrspace(1) @a, align 8

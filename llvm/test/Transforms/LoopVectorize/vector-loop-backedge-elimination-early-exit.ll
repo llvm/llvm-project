@@ -55,8 +55,7 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 0
-; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P_SRC]], i32 0
+; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 0
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP3]])
@@ -91,8 +90,7 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF16UF1:       [[VECTOR_PH]]:
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF16UF1:       [[VECTOR_BODY]]:
-; VF16UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 0
-; VF16UF1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P_SRC]], i32 0
+; VF16UF1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 0
 ; VF16UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; VF16UF1-NEXT:    [[TMP3:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF16UF1-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])
@@ -190,8 +188,7 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 0
-; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P_SRC]], i32 0
+; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 0
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP3]])
@@ -228,8 +225,7 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF16UF1:       [[VECTOR_PH]]:
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF16UF1:       [[VECTOR_BODY]]:
-; VF16UF1-NEXT:    [[P_SRC:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 0
-; VF16UF1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P_SRC]], i32 0
+; VF16UF1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 0
 ; VF16UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; VF16UF1-NEXT:    [[TMP3:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF16UF1-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP3]])

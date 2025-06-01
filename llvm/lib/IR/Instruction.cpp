@@ -373,7 +373,7 @@ std::optional<BasicBlock::iterator> Instruction::getInsertionPointAfterDef() {
 }
 
 bool Instruction::isOnlyUserOfAnyOperand() {
-  return any_of(operands(), [](Value *V) { return V->hasOneUser(); });
+  return any_of(operands(), [](const Value *V) { return V->hasOneUser(); });
 }
 
 void Instruction::setHasNoUnsignedWrap(bool b) {

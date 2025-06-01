@@ -463,7 +463,6 @@ private:
 
     depth++;
     getMaxNestedDepth(op, depth);
-    return;
   }
 
   bool levelCheckMaxNesting(Operation *op) {
@@ -562,7 +561,7 @@ private:
 
   bool CheckVariable(Operation *op);
   bool CheckVariableReadOrWrite(Operation *op);
-  bool isValidElementType(Type type);
+  bool isValidElementType(Type type, const bool allowUnsigned = false);
 
   SmallVector<
       std::function<LogicalResult(Operation *, const tosa::TargetEnv &)>>
@@ -758,6 +757,10 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return success();
   }
 
+  // check rank and sizes early so later checks can assume shaped operands
+  if (!levelCheckRanksAndSizes(op))
+    return failure();
+
   // additional level checks from spec 0.70
   if (!levelCheckPool<tosa::AvgPool2dOp>(op) ||
       !levelCheckConv<tosa::Conv2DOp>(op) ||
@@ -767,10 +770,6 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
       !levelCheckPool<tosa::MaxPool2dOp>(op) ||
       !levelCheckFFT<tosa::RFFT2dOp>(op) || !levelCheckTransposeConv2d(op) ||
       !levelCheckResize(op)) {
-    return failure();
-  }
-
-  if (!levelCheckRanksAndSizes(op)) {
     return failure();
   }
 
@@ -1176,7 +1175,7 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   return success();
 }
 
-bool TosaValidation::isValidElementType(Type type) {
+bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
                Float8E5M2Type>(type);
@@ -1189,6 +1188,13 @@ bool TosaValidation::isValidElementType(Type type) {
       case 16:
       case 32:
       case 48:
+        return true;
+      }
+    } else if (allowUnsigned && intTy.isUnsigned()) {
+      switch (intTy.getWidth()) {
+      case 8:
+      case 16:
+      case 32:
         return true;
       }
     }
@@ -1209,11 +1215,15 @@ void TosaValidation::runOnOperation() {
     if (op->getDialect() != tosaDialect)
       return;
 
-    // perform valid element type check at the beginning to
-    // protect rest of code against quantized element types
+    // validate operator element types:
+    // - rescale operator is allowed to have ui8/ui16/ui32
+    //   operands/results
+    // - perform valid element type check at the beginning to
+    //   protect rest of code against quantized element types
+    const bool opIsRescale = isa<tosa::RescaleOp>(op);
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
-      if (!isValidElementType(elementTy)) {
+      if (!isValidElementType(elementTy, opIsRescale)) {
         op->emitOpError() << "is not profile-aligned: element type "
                           << elementTy << " is not legal";
         return signalPassFailure();
@@ -1221,7 +1231,7 @@ void TosaValidation::runOnOperation() {
     }
     for (Type resultTy : op->getResultTypes()) {
       auto elementTy = getElementTypeOrSelf(resultTy);
-      if (!isValidElementType(elementTy)) {
+      if (!isValidElementType(elementTy, opIsRescale)) {
         op->emitOpError() << "is not profile-aligned: element type "
                           << elementTy << " is not legal";
         return signalPassFailure();
@@ -1237,10 +1247,8 @@ void TosaValidation::runOnOperation() {
       return signalPassFailure();
 
     if (!allowInvalidOpDatatypeCombinations &&
-        failed(profileComp.checkInvalid(op))) {
-      op->emitOpError("illegal: operand/result data types not supported");
+        failed(profileComp.checkInvalid(op)))
       return signalPassFailure();
-    }
 
     // Some uses of TOSA rely on the constant operands of particular
     // operations.

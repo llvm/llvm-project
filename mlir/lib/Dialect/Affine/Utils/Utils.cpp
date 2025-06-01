@@ -1808,7 +1808,6 @@ mlir::affine::normalizeMemRef(memref::ReinterpretCastOp reinterpretCastOp) {
   ArrayRef<int64_t> oldShape = memrefType.getShape();
   ValueRange oldSizes = reinterpretCastOp.getSizes();
   unsigned idx = 0;
-  SmallVector<int64_t> newStaticSizes;
   OpBuilder b(reinterpretCastOp);
   // Collect the map operands which will be used to compute the new normalized
   // memref shape.

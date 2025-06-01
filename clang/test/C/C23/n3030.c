@@ -61,7 +61,7 @@ static_assert(b == 1);
 
 void f1(enum a : long b); // expected-error {{non-defining declaration of enumeration with a fixed underlying type is only permitted as a standalone declaration; missing list of enumerators?}}
                           // expected-warning@-1 {{declaration of 'enum a' will not be visible outside of this function}}
-void f2(enum c : long{x} d); // expected-warning {{declaration of 'enum c' will not be visible outside of this function}}
+void f2(enum c : long{x} d);
 enum e : int f3(); // expected-error {{non-defining declaration of enumeration with a fixed underlying type is only permitted as a standalone declaration; missing list of enumerators?}}
 
 typedef enum t u; // expected-warning {{ISO C forbids forward references to 'enum' types}}

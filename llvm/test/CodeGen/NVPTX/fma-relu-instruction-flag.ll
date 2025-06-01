@@ -147,16 +147,16 @@ define half @fma_f16_expanded_maxnum_no_nans(half %a, half %b, half %c)  {
 ; CHECK-SM70-LABEL: fma_f16_expanded_maxnum_no_nans(
 ; CHECK-SM70:       {
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<6>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<3>;
+; CHECK-SM70-NEXT:    .reg .b32 %r<3>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b16 %rs1, [fma_f16_expanded_maxnum_no_nans_param_0];
 ; CHECK-SM70-NEXT:    ld.param.b16 %rs2, [fma_f16_expanded_maxnum_no_nans_param_1];
 ; CHECK-SM70-NEXT:    ld.param.b16 %rs3, [fma_f16_expanded_maxnum_no_nans_param_2];
 ; CHECK-SM70-NEXT:    fma.rn.f16 %rs4, %rs1, %rs2, %rs3;
-; CHECK-SM70-NEXT:    cvt.f32.f16 %f1, %rs4;
-; CHECK-SM70-NEXT:    max.f32 %f2, %f1, 0f00000000;
-; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs5, %f2;
+; CHECK-SM70-NEXT:    cvt.f32.f16 %r1, %rs4;
+; CHECK-SM70-NEXT:    max.f32 %r2, %r1, 0f00000000;
+; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs5, %r2;
 ; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs5;
 ; CHECK-SM70-NEXT:    ret;
   %1 = fmul fast half %a, %b
@@ -195,30 +195,24 @@ define bfloat @fma_bf16_expanded_no_nans(bfloat %a, bfloat %b, bfloat %c)  {
 ; CHECK-SM70-NEXT:    .reg .pred %p<3>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<14>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<6>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
-; CHECK-SM70-NEXT:    ld.param.u16 %r1, [fma_bf16_expanded_no_nans_param_2];
+; CHECK-SM70-NEXT:    ld.param.b16 %r1, [fma_bf16_expanded_no_nans_param_2];
 ; CHECK-SM70-NEXT:    shl.b32 %r2, %r1, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r2;
-; CHECK-SM70-NEXT:    ld.param.u16 %r3, [fma_bf16_expanded_no_nans_param_1];
+; CHECK-SM70-NEXT:    ld.param.b16 %r3, [fma_bf16_expanded_no_nans_param_1];
 ; CHECK-SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r4;
-; CHECK-SM70-NEXT:    ld.param.u16 %r5, [fma_bf16_expanded_no_nans_param_0];
+; CHECK-SM70-NEXT:    ld.param.b16 %r5, [fma_bf16_expanded_no_nans_param_0];
 ; CHECK-SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r6;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r7, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r7, %r6, %r4, %r2;
 ; CHECK-SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r9, %r8, %r7;
 ; CHECK-SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; CHECK-SM70-NEXT:    or.b32 %r11, %r7, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r12; }
 ; CHECK-SM70-NEXT:    and.b32 %r13, %r12, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r13;
-; CHECK-SM70-NEXT:    setp.gt.f32 %p2, %f5, 0f00000000;
+; CHECK-SM70-NEXT:    setp.gt.f32 %p2, %r13, 0f00000000;
 ; CHECK-SM70-NEXT:    selp.b16 %rs2, %rs1, 0x0000, %p2;
 ; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs2;
 ; CHECK-SM70-NEXT:    ret;
@@ -252,8 +246,7 @@ define bfloat @fma_bf16_expanded_no_nans_multiple_uses_of_fma(bfloat %a, bfloat 
 ; CHECK-FTZ-LABEL: fma_bf16_expanded_no_nans_multiple_uses_of_fma(
 ; CHECK-FTZ:       {
 ; CHECK-FTZ-NEXT:    .reg .b16 %rs<9>;
-; CHECK-FTZ-NEXT:    .reg .b32 %r<7>;
-; CHECK-FTZ-NEXT:    .reg .b32 %f<6>;
+; CHECK-FTZ-NEXT:    .reg .b32 %r<9>;
 ; CHECK-FTZ-EMPTY:
 ; CHECK-FTZ-NEXT:  // %bb.0:
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs1, [fma_bf16_expanded_no_nans_multiple_uses_of_fma_param_0];
@@ -264,17 +257,14 @@ define bfloat @fma_bf16_expanded_no_nans_multiple_uses_of_fma(bfloat %a, bfloat 
 ; CHECK-FTZ-NEXT:    max.bf16 %rs6, %rs4, %rs5;
 ; CHECK-FTZ-NEXT:    cvt.u32.u16 %r1, %rs4;
 ; CHECK-FTZ-NEXT:    shl.b32 %r2, %r1, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f1, %r2;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f2, %f1, 0f40E00000;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs7, %f2;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r3, %rs6;
-; CHECK-FTZ-NEXT:    shl.b32 %r4, %r3, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f3, %r4;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r5, %rs7;
-; CHECK-FTZ-NEXT:    shl.b32 %r6, %r5, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f4, %r6;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f5, %f3, %f4;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs8, %f5;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r3, %r2, 0f40E00000;
+; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs7, %r3;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r4, %rs6;
+; CHECK-FTZ-NEXT:    shl.b32 %r5, %r4, 16;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r6, %rs7;
+; CHECK-FTZ-NEXT:    shl.b32 %r7, %r6, 16;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r8, %r5, %r7;
+; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs8, %r8;
 ; CHECK-FTZ-NEXT:    st.param.b16 [func_retval0], %rs8;
 ; CHECK-FTZ-NEXT:    ret;
 ;
@@ -283,50 +273,40 @@ define bfloat @fma_bf16_expanded_no_nans_multiple_uses_of_fma(bfloat %a, bfloat 
 ; CHECK-SM70-NEXT:    .reg .pred %p<5>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<29>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<10>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
-; CHECK-SM70-NEXT:    ld.param.u16 %r1, [fma_bf16_expanded_no_nans_multiple_uses_of_fma_param_2];
+; CHECK-SM70-NEXT:    ld.param.b16 %r1, [fma_bf16_expanded_no_nans_multiple_uses_of_fma_param_2];
 ; CHECK-SM70-NEXT:    shl.b32 %r2, %r1, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r2;
-; CHECK-SM70-NEXT:    ld.param.u16 %r3, [fma_bf16_expanded_no_nans_multiple_uses_of_fma_param_1];
+; CHECK-SM70-NEXT:    ld.param.b16 %r3, [fma_bf16_expanded_no_nans_multiple_uses_of_fma_param_1];
 ; CHECK-SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r4;
-; CHECK-SM70-NEXT:    ld.param.u16 %r5, [fma_bf16_expanded_no_nans_multiple_uses_of_fma_param_0];
+; CHECK-SM70-NEXT:    ld.param.b16 %r5, [fma_bf16_expanded_no_nans_multiple_uses_of_fma_param_0];
 ; CHECK-SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r6;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r7, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r7, %r6, %r4, %r2;
 ; CHECK-SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r9, %r8, %r7;
 ; CHECK-SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; CHECK-SM70-NEXT:    or.b32 %r11, %r7, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r12; }
 ; CHECK-SM70-NEXT:    and.b32 %r13, %r12, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r13;
-; CHECK-SM70-NEXT:    setp.gt.f32 %p2, %f5, 0f00000000;
+; CHECK-SM70-NEXT:    setp.gt.f32 %p2, %r13, 0f00000000;
 ; CHECK-SM70-NEXT:    selp.b16 %rs2, %rs1, 0x0000, %p2;
-; CHECK-SM70-NEXT:    add.rn.f32 %f6, %f5, 0f40E00000;
-; CHECK-SM70-NEXT:    mov.b32 %r14, %f6;
+; CHECK-SM70-NEXT:    add.rn.f32 %r14, %r13, 0f40E00000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r15, %r14, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r16, %r15, %r14;
 ; CHECK-SM70-NEXT:    add.s32 %r17, %r16, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %f6, %f6;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %r14, %r14;
 ; CHECK-SM70-NEXT:    or.b32 %r18, %r14, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r19, %r18, %r17, %p3;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r20, %rs2;
 ; CHECK-SM70-NEXT:    shl.b32 %r21, %r20, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f7, %r21;
 ; CHECK-SM70-NEXT:    and.b32 %r22, %r19, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f8, %r22;
-; CHECK-SM70-NEXT:    add.rn.f32 %f9, %f7, %f8;
-; CHECK-SM70-NEXT:    mov.b32 %r23, %f9;
+; CHECK-SM70-NEXT:    add.rn.f32 %r23, %r21, %r22;
 ; CHECK-SM70-NEXT:    bfe.u32 %r24, %r23, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r25, %r24, %r23;
 ; CHECK-SM70-NEXT:    add.s32 %r26, %r25, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p4, %f9, %f9;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p4, %r23, %r23;
 ; CHECK-SM70-NEXT:    or.b32 %r27, %r23, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r28, %r27, %r26, %p4;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs3}, %r28; }
@@ -373,34 +353,27 @@ define bfloat @fma_bf16_expanded_maxnum_no_nans(bfloat %a, bfloat %b, bfloat %c)
 ; CHECK-SM70-NEXT:    .reg .pred %p<3>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<20>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<7>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
-; CHECK-SM70-NEXT:    ld.param.u16 %r1, [fma_bf16_expanded_maxnum_no_nans_param_2];
+; CHECK-SM70-NEXT:    ld.param.b16 %r1, [fma_bf16_expanded_maxnum_no_nans_param_2];
 ; CHECK-SM70-NEXT:    shl.b32 %r2, %r1, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r2;
-; CHECK-SM70-NEXT:    ld.param.u16 %r3, [fma_bf16_expanded_maxnum_no_nans_param_1];
+; CHECK-SM70-NEXT:    ld.param.b16 %r3, [fma_bf16_expanded_maxnum_no_nans_param_1];
 ; CHECK-SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r4;
-; CHECK-SM70-NEXT:    ld.param.u16 %r5, [fma_bf16_expanded_maxnum_no_nans_param_0];
+; CHECK-SM70-NEXT:    ld.param.b16 %r5, [fma_bf16_expanded_maxnum_no_nans_param_0];
 ; CHECK-SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r6;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r7, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r7, %r6, %r4, %r2;
 ; CHECK-SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r9, %r8, %r7;
 ; CHECK-SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; CHECK-SM70-NEXT:    or.b32 %r11, %r7, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
 ; CHECK-SM70-NEXT:    and.b32 %r13, %r12, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r13;
-; CHECK-SM70-NEXT:    max.f32 %f6, %f5, 0f00000000;
-; CHECK-SM70-NEXT:    mov.b32 %r14, %f6;
+; CHECK-SM70-NEXT:    max.f32 %r14, %r13, 0f00000000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r15, %r14, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r16, %r15, %r14;
 ; CHECK-SM70-NEXT:    add.s32 %r17, %r16, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %f6, %f6;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r14, %r14;
 ; CHECK-SM70-NEXT:    or.b32 %r18, %r14, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r19, %r18, %r17, %p2;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r19; }
@@ -562,8 +535,7 @@ define <2 x half> @fma_f16x2_expanded_maxnum_no_nans(<2 x half> %a, <2 x half> %
 ; CHECK-SM70-LABEL: fma_f16x2_expanded_maxnum_no_nans(
 ; CHECK-SM70:       {
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<5>;
-; CHECK-SM70-NEXT:    .reg .b32 %r<6>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<5>;
+; CHECK-SM70-NEXT:    .reg .b32 %r<10>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b32 %r1, [fma_f16x2_expanded_maxnum_no_nans_param_2];
@@ -571,14 +543,14 @@ define <2 x half> @fma_f16x2_expanded_maxnum_no_nans(<2 x half> %a, <2 x half> %
 ; CHECK-SM70-NEXT:    ld.param.b32 %r3, [fma_f16x2_expanded_maxnum_no_nans_param_0];
 ; CHECK-SM70-NEXT:    fma.rn.f16x2 %r4, %r3, %r2, %r1;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; CHECK-SM70-NEXT:    cvt.f32.f16 %f1, %rs2;
-; CHECK-SM70-NEXT:    max.f32 %f2, %f1, 0f00000000;
-; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs3, %f2;
-; CHECK-SM70-NEXT:    cvt.f32.f16 %f3, %rs1;
-; CHECK-SM70-NEXT:    max.f32 %f4, %f3, 0f00000000;
-; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs4, %f4;
-; CHECK-SM70-NEXT:    mov.b32 %r5, {%rs4, %rs3};
-; CHECK-SM70-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-SM70-NEXT:    cvt.f32.f16 %r5, %rs2;
+; CHECK-SM70-NEXT:    max.f32 %r6, %r5, 0f00000000;
+; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs3, %r6;
+; CHECK-SM70-NEXT:    cvt.f32.f16 %r7, %rs1;
+; CHECK-SM70-NEXT:    max.f32 %r8, %r7, 0f00000000;
+; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs4, %r8;
+; CHECK-SM70-NEXT:    mov.b32 %r9, {%rs4, %rs3};
+; CHECK-SM70-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-SM70-NEXT:    ret;
   %1 = fmul fast <2 x half> %a, %b
   %2 = fadd fast <2 x half> %1, %c
@@ -616,7 +588,6 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans(<2 x bfloat> %a, <2 x bfloat> %
 ; CHECK-SM70-NEXT:    .reg .pred %p<5>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<11>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<31>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<11>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b32 %r1, [fma_bf16x2_expanded_no_nans_param_0];
@@ -625,48 +596,38 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans(<2 x bfloat> %a, <2 x bfloat> %
 ; CHECK-SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r4, %rs1;
 ; CHECK-SM70-NEXT:    shl.b32 %r5, %r4, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r5;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r6, %rs3;
 ; CHECK-SM70-NEXT:    shl.b32 %r7, %r6, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r7;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r8, %rs5;
 ; CHECK-SM70-NEXT:    shl.b32 %r9, %r8, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r9;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r10, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r10, %r9, %r7, %r5;
 ; CHECK-SM70-NEXT:    bfe.u32 %r11, %r10, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r12, %r11, %r10;
 ; CHECK-SM70-NEXT:    add.s32 %r13, %r12, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r10, %r10;
 ; CHECK-SM70-NEXT:    or.b32 %r14, %r10, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r15, %r14, %r13, %p1;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs7}, %r15; }
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r16, %rs2;
 ; CHECK-SM70-NEXT:    shl.b32 %r17, %r16, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r17;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r18, %rs4;
 ; CHECK-SM70-NEXT:    shl.b32 %r19, %r18, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f6, %r19;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r20, %rs6;
 ; CHECK-SM70-NEXT:    shl.b32 %r21, %r20, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f7, %r21;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f8, %f7, %f6, %f5;
-; CHECK-SM70-NEXT:    mov.b32 %r22, %f8;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r22, %r21, %r19, %r17;
 ; CHECK-SM70-NEXT:    bfe.u32 %r23, %r22, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r24, %r23, %r22;
 ; CHECK-SM70-NEXT:    add.s32 %r25, %r24, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %f8, %f8;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r22, %r22;
 ; CHECK-SM70-NEXT:    or.b32 %r26, %r22, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r27, %r26, %r25, %p2;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs8}, %r27; }
 ; CHECK-SM70-NEXT:    and.b32 %r28, %r15, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f9, %r28;
-; CHECK-SM70-NEXT:    setp.gt.f32 %p3, %f9, 0f00000000;
+; CHECK-SM70-NEXT:    setp.gt.f32 %p3, %r28, 0f00000000;
 ; CHECK-SM70-NEXT:    and.b32 %r29, %r27, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f10, %r29;
-; CHECK-SM70-NEXT:    setp.gt.f32 %p4, %f10, 0f00000000;
+; CHECK-SM70-NEXT:    setp.gt.f32 %p4, %r29, 0f00000000;
 ; CHECK-SM70-NEXT:    selp.b16 %rs9, %rs8, 0x0000, %p4;
 ; CHECK-SM70-NEXT:    selp.b16 %rs10, %rs7, 0x0000, %p3;
 ; CHECK-SM70-NEXT:    mov.b32 %r30, {%rs10, %rs9};
@@ -702,8 +663,7 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloa
 ; CHECK-FTZ-LABEL: fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(
 ; CHECK-FTZ:       {
 ; CHECK-FTZ-NEXT:    .reg .b16 %rs<7>;
-; CHECK-FTZ-NEXT:    .reg .b32 %r<20>;
-; CHECK-FTZ-NEXT:    .reg .b32 %f<11>;
+; CHECK-FTZ-NEXT:    .reg .b32 %r<24>;
 ; CHECK-FTZ-EMPTY:
 ; CHECK-FTZ-NEXT:  // %bb.0:
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r1, [fma_bf16x2_expanded_no_nans_multiple_uses_of_fma_param_2];
@@ -715,31 +675,25 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloa
 ; CHECK-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
 ; CHECK-FTZ-NEXT:    cvt.u32.u16 %r7, %rs2;
 ; CHECK-FTZ-NEXT:    shl.b32 %r8, %r7, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f1, %r8;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f2, %f1, 0f40E00000;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs3, %f2;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r9, %rs1;
-; CHECK-FTZ-NEXT:    shl.b32 %r10, %r9, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f3, %r10;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f4, %f3, 0f40E00000;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs4, %f4;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r9, %r8, 0f40E00000;
+; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs3, %r9;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r10, %rs1;
+; CHECK-FTZ-NEXT:    shl.b32 %r11, %r10, 16;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r12, %r11, 0f40E00000;
+; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs4, %r12;
 ; CHECK-FTZ-NEXT:    mov.b32 {%rs5, %rs6}, %r6;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r11, %rs5;
-; CHECK-FTZ-NEXT:    shl.b32 %r12, %r11, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f5, %r12;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r13, %rs4;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r13, %rs5;
 ; CHECK-FTZ-NEXT:    shl.b32 %r14, %r13, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f6, %r14;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f7, %f5, %f6;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r15, %rs6;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r15, %rs4;
 ; CHECK-FTZ-NEXT:    shl.b32 %r16, %r15, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f8, %r16;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r17, %rs3;
-; CHECK-FTZ-NEXT:    shl.b32 %r18, %r17, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f9, %r18;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f10, %f8, %f9;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r19, %f10, %f7;
-; CHECK-FTZ-NEXT:    st.param.b32 [func_retval0], %r19;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r17, %r14, %r16;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r18, %rs6;
+; CHECK-FTZ-NEXT:    shl.b32 %r19, %r18, 16;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r20, %rs3;
+; CHECK-FTZ-NEXT:    shl.b32 %r21, %r20, 16;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r22, %r19, %r21;
+; CHECK-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r23, %r22, %r17;
+; CHECK-FTZ-NEXT:    st.param.b32 [func_retval0], %r23;
 ; CHECK-FTZ-NEXT:    ret;
 ;
 ; CHECK-SM70-LABEL: fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(
@@ -747,7 +701,6 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloa
 ; CHECK-SM70-NEXT:    .reg .pred %p<9>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<11>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<61>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<19>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b32 %r1, [fma_bf16x2_expanded_no_nans_multiple_uses_of_fma_param_0];
@@ -756,90 +709,72 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloa
 ; CHECK-SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r4, %rs2;
 ; CHECK-SM70-NEXT:    shl.b32 %r5, %r4, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r5;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r6, %rs4;
 ; CHECK-SM70-NEXT:    shl.b32 %r7, %r6, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r7;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; CHECK-SM70-NEXT:    shl.b32 %r9, %r8, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r9;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r10, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r10, %r9, %r7, %r5;
 ; CHECK-SM70-NEXT:    bfe.u32 %r11, %r10, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r12, %r11, %r10;
 ; CHECK-SM70-NEXT:    add.s32 %r13, %r12, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r10, %r10;
 ; CHECK-SM70-NEXT:    or.b32 %r14, %r10, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r15, %r14, %r13, %p1;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs7}, %r15; }
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r16, %rs1;
 ; CHECK-SM70-NEXT:    shl.b32 %r17, %r16, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r17;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r18, %rs3;
 ; CHECK-SM70-NEXT:    shl.b32 %r19, %r18, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f6, %r19;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r20, %rs5;
 ; CHECK-SM70-NEXT:    shl.b32 %r21, %r20, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f7, %r21;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f8, %f7, %f6, %f5;
-; CHECK-SM70-NEXT:    mov.b32 %r22, %f8;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r22, %r21, %r19, %r17;
 ; CHECK-SM70-NEXT:    bfe.u32 %r23, %r22, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r24, %r23, %r22;
 ; CHECK-SM70-NEXT:    add.s32 %r25, %r24, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %f8, %f8;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r22, %r22;
 ; CHECK-SM70-NEXT:    or.b32 %r26, %r22, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r27, %r26, %r25, %p2;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs8}, %r27; }
 ; CHECK-SM70-NEXT:    and.b32 %r28, %r15, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f9, %r28;
-; CHECK-SM70-NEXT:    setp.gt.f32 %p3, %f9, 0f00000000;
+; CHECK-SM70-NEXT:    setp.gt.f32 %p3, %r28, 0f00000000;
 ; CHECK-SM70-NEXT:    and.b32 %r29, %r27, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f10, %r29;
-; CHECK-SM70-NEXT:    setp.gt.f32 %p4, %f10, 0f00000000;
+; CHECK-SM70-NEXT:    setp.gt.f32 %p4, %r29, 0f00000000;
 ; CHECK-SM70-NEXT:    selp.b16 %rs9, %rs8, 0x0000, %p4;
 ; CHECK-SM70-NEXT:    selp.b16 %rs10, %rs7, 0x0000, %p3;
-; CHECK-SM70-NEXT:    add.rn.f32 %f11, %f10, 0f40E00000;
-; CHECK-SM70-NEXT:    mov.b32 %r30, %f11;
+; CHECK-SM70-NEXT:    add.rn.f32 %r30, %r29, 0f40E00000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r31, %r30, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r32, %r31, %r30;
 ; CHECK-SM70-NEXT:    add.s32 %r33, %r32, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p5, %f11, %f11;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p5, %r30, %r30;
 ; CHECK-SM70-NEXT:    or.b32 %r34, %r30, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r35, %r34, %r33, %p5;
-; CHECK-SM70-NEXT:    add.rn.f32 %f12, %f9, 0f40E00000;
-; CHECK-SM70-NEXT:    mov.b32 %r36, %f12;
+; CHECK-SM70-NEXT:    add.rn.f32 %r36, %r28, 0f40E00000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r37, %r36, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r38, %r37, %r36;
 ; CHECK-SM70-NEXT:    add.s32 %r39, %r38, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p6, %f12, %f12;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p6, %r36, %r36;
 ; CHECK-SM70-NEXT:    or.b32 %r40, %r36, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r41, %r40, %r39, %p6;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r42, %rs10;
 ; CHECK-SM70-NEXT:    shl.b32 %r43, %r42, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f13, %r43;
 ; CHECK-SM70-NEXT:    and.b32 %r44, %r41, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f14, %r44;
-; CHECK-SM70-NEXT:    add.rn.f32 %f15, %f13, %f14;
-; CHECK-SM70-NEXT:    mov.b32 %r45, %f15;
+; CHECK-SM70-NEXT:    add.rn.f32 %r45, %r43, %r44;
 ; CHECK-SM70-NEXT:    bfe.u32 %r46, %r45, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r47, %r46, %r45;
 ; CHECK-SM70-NEXT:    add.s32 %r48, %r47, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p7, %f15, %f15;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p7, %r45, %r45;
 ; CHECK-SM70-NEXT:    or.b32 %r49, %r45, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r50, %r49, %r48, %p7;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r51, %rs9;
 ; CHECK-SM70-NEXT:    shl.b32 %r52, %r51, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f16, %r52;
 ; CHECK-SM70-NEXT:    and.b32 %r53, %r35, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f17, %r53;
-; CHECK-SM70-NEXT:    add.rn.f32 %f18, %f16, %f17;
-; CHECK-SM70-NEXT:    mov.b32 %r54, %f18;
+; CHECK-SM70-NEXT:    add.rn.f32 %r54, %r52, %r53;
 ; CHECK-SM70-NEXT:    bfe.u32 %r55, %r54, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r56, %r55, %r54;
 ; CHECK-SM70-NEXT:    add.s32 %r57, %r56, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p8, %f18, %f18;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p8, %r54, %r54;
 ; CHECK-SM70-NEXT:    or.b32 %r58, %r54, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r59, %r58, %r57, %p8;
 ; CHECK-SM70-NEXT:    prmt.b32 %r60, %r59, %r50, 0x7632U;
@@ -884,7 +819,6 @@ define <2 x bfloat> @fma_bf16x2_expanded_maxnum_no_nans(<2 x bfloat> %a, <2 x bf
 ; CHECK-SM70-NEXT:    .reg .pred %p<5>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<43>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<13>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b32 %r1, [fma_bf16x2_expanded_maxnum_no_nans_param_0];
@@ -893,58 +827,46 @@ define <2 x bfloat> @fma_bf16x2_expanded_maxnum_no_nans(<2 x bfloat> %a, <2 x bf
 ; CHECK-SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r4, %rs1;
 ; CHECK-SM70-NEXT:    shl.b32 %r5, %r4, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r5;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r6, %rs3;
 ; CHECK-SM70-NEXT:    shl.b32 %r7, %r6, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r7;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r8, %rs5;
 ; CHECK-SM70-NEXT:    shl.b32 %r9, %r8, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r9;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r10, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r10, %r9, %r7, %r5;
 ; CHECK-SM70-NEXT:    bfe.u32 %r11, %r10, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r12, %r11, %r10;
 ; CHECK-SM70-NEXT:    add.s32 %r13, %r12, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r10, %r10;
 ; CHECK-SM70-NEXT:    or.b32 %r14, %r10, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r15, %r14, %r13, %p1;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r16, %rs2;
 ; CHECK-SM70-NEXT:    shl.b32 %r17, %r16, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r17;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r18, %rs4;
 ; CHECK-SM70-NEXT:    shl.b32 %r19, %r18, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f6, %r19;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r20, %rs6;
 ; CHECK-SM70-NEXT:    shl.b32 %r21, %r20, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f7, %r21;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f8, %f7, %f6, %f5;
-; CHECK-SM70-NEXT:    mov.b32 %r22, %f8;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r22, %r21, %r19, %r17;
 ; CHECK-SM70-NEXT:    bfe.u32 %r23, %r22, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r24, %r23, %r22;
 ; CHECK-SM70-NEXT:    add.s32 %r25, %r24, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %f8, %f8;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r22, %r22;
 ; CHECK-SM70-NEXT:    or.b32 %r26, %r22, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r27, %r26, %r25, %p2;
 ; CHECK-SM70-NEXT:    and.b32 %r28, %r27, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f9, %r28;
-; CHECK-SM70-NEXT:    max.f32 %f10, %f9, 0f00000000;
-; CHECK-SM70-NEXT:    mov.b32 %r29, %f10;
+; CHECK-SM70-NEXT:    max.f32 %r29, %r28, 0f00000000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r30, %r29, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r31, %r30, %r29;
 ; CHECK-SM70-NEXT:    add.s32 %r32, %r31, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %f10, %f10;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %r29, %r29;
 ; CHECK-SM70-NEXT:    or.b32 %r33, %r29, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r34, %r33, %r32, %p3;
 ; CHECK-SM70-NEXT:    and.b32 %r35, %r15, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f11, %r35;
-; CHECK-SM70-NEXT:    max.f32 %f12, %f11, 0f00000000;
-; CHECK-SM70-NEXT:    mov.b32 %r36, %f12;
+; CHECK-SM70-NEXT:    max.f32 %r36, %r35, 0f00000000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r37, %r36, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r38, %r37, %r36;
 ; CHECK-SM70-NEXT:    add.s32 %r39, %r38, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p4, %f12, %f12;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p4, %r36, %r36;
 ; CHECK-SM70-NEXT:    or.b32 %r40, %r36, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r41, %r40, %r39, %p4;
 ; CHECK-SM70-NEXT:    prmt.b32 %r42, %r41, %r34, 0x7632U;
@@ -1084,16 +1006,16 @@ define half @fma_f16_maxnum_no_nans(half %a, half %b, half %c)  {
 ; CHECK-SM70-LABEL: fma_f16_maxnum_no_nans(
 ; CHECK-SM70:       {
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<6>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<3>;
+; CHECK-SM70-NEXT:    .reg .b32 %r<3>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b16 %rs1, [fma_f16_maxnum_no_nans_param_0];
 ; CHECK-SM70-NEXT:    ld.param.b16 %rs2, [fma_f16_maxnum_no_nans_param_1];
 ; CHECK-SM70-NEXT:    ld.param.b16 %rs3, [fma_f16_maxnum_no_nans_param_2];
 ; CHECK-SM70-NEXT:    fma.rn.f16 %rs4, %rs1, %rs2, %rs3;
-; CHECK-SM70-NEXT:    cvt.f32.f16 %f1, %rs4;
-; CHECK-SM70-NEXT:    max.f32 %f2, %f1, 0f00000000;
-; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs5, %f2;
+; CHECK-SM70-NEXT:    cvt.f32.f16 %r1, %rs4;
+; CHECK-SM70-NEXT:    max.f32 %r2, %r1, 0f00000000;
+; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs5, %r2;
 ; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs5;
 ; CHECK-SM70-NEXT:    ret;
   %1 = call nnan half @llvm.fma.f16(half %a, half %b, half %c)
@@ -1131,30 +1053,24 @@ define bfloat @fma_bf16_no_nans(bfloat %a, bfloat %b, bfloat %c)  {
 ; CHECK-SM70-NEXT:    .reg .pred %p<3>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<14>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<6>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
-; CHECK-SM70-NEXT:    ld.param.u16 %r1, [fma_bf16_no_nans_param_2];
+; CHECK-SM70-NEXT:    ld.param.b16 %r1, [fma_bf16_no_nans_param_2];
 ; CHECK-SM70-NEXT:    shl.b32 %r2, %r1, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r2;
-; CHECK-SM70-NEXT:    ld.param.u16 %r3, [fma_bf16_no_nans_param_1];
+; CHECK-SM70-NEXT:    ld.param.b16 %r3, [fma_bf16_no_nans_param_1];
 ; CHECK-SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r4;
-; CHECK-SM70-NEXT:    ld.param.u16 %r5, [fma_bf16_no_nans_param_0];
+; CHECK-SM70-NEXT:    ld.param.b16 %r5, [fma_bf16_no_nans_param_0];
 ; CHECK-SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r6;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r7, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r7, %r6, %r4, %r2;
 ; CHECK-SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r9, %r8, %r7;
 ; CHECK-SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; CHECK-SM70-NEXT:    or.b32 %r11, %r7, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r12; }
 ; CHECK-SM70-NEXT:    and.b32 %r13, %r12, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r13;
-; CHECK-SM70-NEXT:    setp.gt.f32 %p2, %f5, 0f00000000;
+; CHECK-SM70-NEXT:    setp.gt.f32 %p2, %r13, 0f00000000;
 ; CHECK-SM70-NEXT:    selp.b16 %rs2, %rs1, 0x0000, %p2;
 ; CHECK-SM70-NEXT:    st.param.b16 [func_retval0], %rs2;
 ; CHECK-SM70-NEXT:    ret;
@@ -1185,8 +1101,7 @@ define bfloat @fma_bf16_no_nans_multiple_uses_of_fma(bfloat %a, bfloat %b, bfloa
 ; CHECK-FTZ-LABEL: fma_bf16_no_nans_multiple_uses_of_fma(
 ; CHECK-FTZ:       {
 ; CHECK-FTZ-NEXT:    .reg .b16 %rs<7>;
-; CHECK-FTZ-NEXT:    .reg .b32 %r<5>;
-; CHECK-FTZ-NEXT:    .reg .b32 %f<5>;
+; CHECK-FTZ-NEXT:    .reg .b32 %r<7>;
 ; CHECK-FTZ-EMPTY:
 ; CHECK-FTZ-NEXT:  // %bb.0:
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs1, [fma_bf16_no_nans_multiple_uses_of_fma_param_0];
@@ -1195,14 +1110,12 @@ define bfloat @fma_bf16_no_nans_multiple_uses_of_fma(bfloat %a, bfloat %b, bfloa
 ; CHECK-FTZ-NEXT:    fma.rn.bf16 %rs4, %rs1, %rs2, %rs3;
 ; CHECK-FTZ-NEXT:    cvt.u32.u16 %r1, %rs4;
 ; CHECK-FTZ-NEXT:    shl.b32 %r2, %r1, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f1, %r2;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f2, %f1, 0f40E00000;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs5, %f2;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r3, %rs5;
-; CHECK-FTZ-NEXT:    shl.b32 %r4, %r3, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f3, %r4;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f4, %f3, %f1;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs6, %f4;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r3, %r2, 0f40E00000;
+; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs5, %r3;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r4, %rs5;
+; CHECK-FTZ-NEXT:    shl.b32 %r5, %r4, 16;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r6, %r5, %r2;
+; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs6, %r6;
 ; CHECK-FTZ-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; CHECK-FTZ-NEXT:    ret;
 ;
@@ -1211,44 +1124,35 @@ define bfloat @fma_bf16_no_nans_multiple_uses_of_fma(bfloat %a, bfloat %b, bfloa
 ; CHECK-SM70-NEXT:    .reg .pred %p<4>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<27>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<9>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
-; CHECK-SM70-NEXT:    ld.param.u16 %r1, [fma_bf16_no_nans_multiple_uses_of_fma_param_2];
+; CHECK-SM70-NEXT:    ld.param.b16 %r1, [fma_bf16_no_nans_multiple_uses_of_fma_param_2];
 ; CHECK-SM70-NEXT:    shl.b32 %r2, %r1, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r2;
-; CHECK-SM70-NEXT:    ld.param.u16 %r3, [fma_bf16_no_nans_multiple_uses_of_fma_param_1];
+; CHECK-SM70-NEXT:    ld.param.b16 %r3, [fma_bf16_no_nans_multiple_uses_of_fma_param_1];
 ; CHECK-SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r4;
-; CHECK-SM70-NEXT:    ld.param.u16 %r5, [fma_bf16_no_nans_multiple_uses_of_fma_param_0];
+; CHECK-SM70-NEXT:    ld.param.b16 %r5, [fma_bf16_no_nans_multiple_uses_of_fma_param_0];
 ; CHECK-SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r6;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r7, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r7, %r6, %r4, %r2;
 ; CHECK-SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r9, %r8, %r7;
 ; CHECK-SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; CHECK-SM70-NEXT:    or.b32 %r11, %r7, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
 ; CHECK-SM70-NEXT:    and.b32 %r13, %r12, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r13;
-; CHECK-SM70-NEXT:    add.rn.f32 %f6, %f5, 0f40E00000;
-; CHECK-SM70-NEXT:    mov.b32 %r14, %f6;
+; CHECK-SM70-NEXT:    add.rn.f32 %r14, %r13, 0f40E00000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r15, %r14, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r16, %r15, %r14;
 ; CHECK-SM70-NEXT:    add.s32 %r17, %r16, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %f6, %f6;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r14, %r14;
 ; CHECK-SM70-NEXT:    or.b32 %r18, %r14, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r19, %r18, %r17, %p2;
 ; CHECK-SM70-NEXT:    and.b32 %r20, %r19, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f7, %r20;
-; CHECK-SM70-NEXT:    add.rn.f32 %f8, %f7, %f5;
-; CHECK-SM70-NEXT:    mov.b32 %r21, %f8;
+; CHECK-SM70-NEXT:    add.rn.f32 %r21, %r20, %r13;
 ; CHECK-SM70-NEXT:    bfe.u32 %r22, %r21, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r23, %r22, %r21;
 ; CHECK-SM70-NEXT:    add.s32 %r24, %r23, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %f8, %f8;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %r21, %r21;
 ; CHECK-SM70-NEXT:    or.b32 %r25, %r21, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r26, %r25, %r24, %p3;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r26; }
@@ -1292,34 +1196,27 @@ define bfloat @fma_bf16_maxnum_no_nans(bfloat %a, bfloat %b, bfloat %c)  {
 ; CHECK-SM70-NEXT:    .reg .pred %p<3>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<20>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<7>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
-; CHECK-SM70-NEXT:    ld.param.u16 %r1, [fma_bf16_maxnum_no_nans_param_2];
+; CHECK-SM70-NEXT:    ld.param.b16 %r1, [fma_bf16_maxnum_no_nans_param_2];
 ; CHECK-SM70-NEXT:    shl.b32 %r2, %r1, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r2;
-; CHECK-SM70-NEXT:    ld.param.u16 %r3, [fma_bf16_maxnum_no_nans_param_1];
+; CHECK-SM70-NEXT:    ld.param.b16 %r3, [fma_bf16_maxnum_no_nans_param_1];
 ; CHECK-SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r4;
-; CHECK-SM70-NEXT:    ld.param.u16 %r5, [fma_bf16_maxnum_no_nans_param_0];
+; CHECK-SM70-NEXT:    ld.param.b16 %r5, [fma_bf16_maxnum_no_nans_param_0];
 ; CHECK-SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r6;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r7, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r7, %r6, %r4, %r2;
 ; CHECK-SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r9, %r8, %r7;
 ; CHECK-SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
 ; CHECK-SM70-NEXT:    or.b32 %r11, %r7, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
 ; CHECK-SM70-NEXT:    and.b32 %r13, %r12, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r13;
-; CHECK-SM70-NEXT:    max.f32 %f6, %f5, 0f00000000;
-; CHECK-SM70-NEXT:    mov.b32 %r14, %f6;
+; CHECK-SM70-NEXT:    max.f32 %r14, %r13, 0f00000000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r15, %r14, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r16, %r15, %r14;
 ; CHECK-SM70-NEXT:    add.s32 %r17, %r16, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %f6, %f6;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r14, %r14;
 ; CHECK-SM70-NEXT:    or.b32 %r18, %r14, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r19, %r18, %r17, %p2;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r19; }
@@ -1466,8 +1363,7 @@ define <2 x half> @fma_f16x2_maxnum_no_nans(<2 x half> %a, <2 x half> %b, <2 x h
 ; CHECK-SM70-LABEL: fma_f16x2_maxnum_no_nans(
 ; CHECK-SM70:       {
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<5>;
-; CHECK-SM70-NEXT:    .reg .b32 %r<6>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<5>;
+; CHECK-SM70-NEXT:    .reg .b32 %r<10>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b32 %r1, [fma_f16x2_maxnum_no_nans_param_2];
@@ -1475,14 +1371,14 @@ define <2 x half> @fma_f16x2_maxnum_no_nans(<2 x half> %a, <2 x half> %b, <2 x h
 ; CHECK-SM70-NEXT:    ld.param.b32 %r3, [fma_f16x2_maxnum_no_nans_param_0];
 ; CHECK-SM70-NEXT:    fma.rn.f16x2 %r4, %r3, %r2, %r1;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
-; CHECK-SM70-NEXT:    cvt.f32.f16 %f1, %rs2;
-; CHECK-SM70-NEXT:    max.f32 %f2, %f1, 0f00000000;
-; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs3, %f2;
-; CHECK-SM70-NEXT:    cvt.f32.f16 %f3, %rs1;
-; CHECK-SM70-NEXT:    max.f32 %f4, %f3, 0f00000000;
-; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs4, %f4;
-; CHECK-SM70-NEXT:    mov.b32 %r5, {%rs4, %rs3};
-; CHECK-SM70-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-SM70-NEXT:    cvt.f32.f16 %r5, %rs2;
+; CHECK-SM70-NEXT:    max.f32 %r6, %r5, 0f00000000;
+; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs3, %r6;
+; CHECK-SM70-NEXT:    cvt.f32.f16 %r7, %rs1;
+; CHECK-SM70-NEXT:    max.f32 %r8, %r7, 0f00000000;
+; CHECK-SM70-NEXT:    cvt.rn.f16.f32 %rs4, %r8;
+; CHECK-SM70-NEXT:    mov.b32 %r9, {%rs4, %rs3};
+; CHECK-SM70-NEXT:    st.param.b32 [func_retval0], %r9;
 ; CHECK-SM70-NEXT:    ret;
   %1 = call nnan <2 x half> @llvm.fma.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
   %2 = call nsz <2 x half> @llvm.maxnum.f16x2(<2 x half> %1, <2 x half> <half 0.0, half 0.0>)
@@ -1519,7 +1415,6 @@ define <2 x bfloat> @fma_bf16x2_no_nans(<2 x bfloat> %a, <2 x bfloat> %b, <2 x b
 ; CHECK-SM70-NEXT:    .reg .pred %p<5>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<11>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<31>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<11>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b32 %r1, [fma_bf16x2_no_nans_param_0];
@@ -1528,48 +1423,38 @@ define <2 x bfloat> @fma_bf16x2_no_nans(<2 x bfloat> %a, <2 x bfloat> %b, <2 x b
 ; CHECK-SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r4, %rs1;
 ; CHECK-SM70-NEXT:    shl.b32 %r5, %r4, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r5;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r6, %rs3;
 ; CHECK-SM70-NEXT:    shl.b32 %r7, %r6, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r7;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r8, %rs5;
 ; CHECK-SM70-NEXT:    shl.b32 %r9, %r8, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r9;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r10, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r10, %r9, %r7, %r5;
 ; CHECK-SM70-NEXT:    bfe.u32 %r11, %r10, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r12, %r11, %r10;
 ; CHECK-SM70-NEXT:    add.s32 %r13, %r12, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r10, %r10;
 ; CHECK-SM70-NEXT:    or.b32 %r14, %r10, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r15, %r14, %r13, %p1;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs7}, %r15; }
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r16, %rs2;
 ; CHECK-SM70-NEXT:    shl.b32 %r17, %r16, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r17;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r18, %rs4;
 ; CHECK-SM70-NEXT:    shl.b32 %r19, %r18, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f6, %r19;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r20, %rs6;
 ; CHECK-SM70-NEXT:    shl.b32 %r21, %r20, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f7, %r21;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f8, %f7, %f6, %f5;
-; CHECK-SM70-NEXT:    mov.b32 %r22, %f8;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r22, %r21, %r19, %r17;
 ; CHECK-SM70-NEXT:    bfe.u32 %r23, %r22, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r24, %r23, %r22;
 ; CHECK-SM70-NEXT:    add.s32 %r25, %r24, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %f8, %f8;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r22, %r22;
 ; CHECK-SM70-NEXT:    or.b32 %r26, %r22, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r27, %r26, %r25, %p2;
 ; CHECK-SM70-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs8}, %r27; }
 ; CHECK-SM70-NEXT:    and.b32 %r28, %r15, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f9, %r28;
-; CHECK-SM70-NEXT:    setp.gt.f32 %p3, %f9, 0f00000000;
+; CHECK-SM70-NEXT:    setp.gt.f32 %p3, %r28, 0f00000000;
 ; CHECK-SM70-NEXT:    and.b32 %r29, %r27, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f10, %r29;
-; CHECK-SM70-NEXT:    setp.gt.f32 %p4, %f10, 0f00000000;
+; CHECK-SM70-NEXT:    setp.gt.f32 %p4, %r29, 0f00000000;
 ; CHECK-SM70-NEXT:    selp.b16 %rs9, %rs8, 0x0000, %p4;
 ; CHECK-SM70-NEXT:    selp.b16 %rs10, %rs7, 0x0000, %p3;
 ; CHECK-SM70-NEXT:    mov.b32 %r30, {%rs10, %rs9};
@@ -1602,8 +1487,7 @@ define <2 x bfloat> @fma_bf16x2_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2
 ; CHECK-FTZ-LABEL: fma_bf16x2_no_nans_multiple_uses_of_fma(
 ; CHECK-FTZ:       {
 ; CHECK-FTZ-NEXT:    .reg .b16 %rs<5>;
-; CHECK-FTZ-NEXT:    .reg .b32 %r<14>;
-; CHECK-FTZ-NEXT:    .reg .b32 %f<9>;
+; CHECK-FTZ-NEXT:    .reg .b32 %r<18>;
 ; CHECK-FTZ-EMPTY:
 ; CHECK-FTZ-NEXT:  // %bb.0:
 ; CHECK-FTZ-NEXT:    ld.param.b32 %r1, [fma_bf16x2_no_nans_multiple_uses_of_fma_param_2];
@@ -1613,24 +1497,20 @@ define <2 x bfloat> @fma_bf16x2_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2
 ; CHECK-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
 ; CHECK-FTZ-NEXT:    cvt.u32.u16 %r5, %rs2;
 ; CHECK-FTZ-NEXT:    shl.b32 %r6, %r5, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f1, %r6;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f2, %f1, 0f40E00000;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs3, %f2;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r7, %rs1;
-; CHECK-FTZ-NEXT:    shl.b32 %r8, %r7, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f3, %r8;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f4, %f3, 0f40E00000;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs4, %f4;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r9, %rs4;
-; CHECK-FTZ-NEXT:    shl.b32 %r10, %r9, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f5, %r10;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f6, %f5, %f3;
-; CHECK-FTZ-NEXT:    cvt.u32.u16 %r11, %rs3;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r7, %r6, 0f40E00000;
+; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs3, %r7;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r8, %rs1;
+; CHECK-FTZ-NEXT:    shl.b32 %r9, %r8, 16;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r10, %r9, 0f40E00000;
+; CHECK-FTZ-NEXT:    cvt.rn.bf16.f32 %rs4, %r10;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r11, %rs4;
 ; CHECK-FTZ-NEXT:    shl.b32 %r12, %r11, 16;
-; CHECK-FTZ-NEXT:    mov.b32 %f7, %r12;
-; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %f8, %f7, %f1;
-; CHECK-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r13, %f8, %f6;
-; CHECK-FTZ-NEXT:    st.param.b32 [func_retval0], %r13;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r13, %r12, %r9;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r14, %rs3;
+; CHECK-FTZ-NEXT:    shl.b32 %r15, %r14, 16;
+; CHECK-FTZ-NEXT:    add.rn.ftz.f32 %r16, %r15, %r6;
+; CHECK-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r17, %r16, %r13;
+; CHECK-FTZ-NEXT:    st.param.b32 [func_retval0], %r17;
 ; CHECK-FTZ-NEXT:    ret;
 ;
 ; CHECK-SM70-LABEL: fma_bf16x2_no_nans_multiple_uses_of_fma(
@@ -1638,7 +1518,6 @@ define <2 x bfloat> @fma_bf16x2_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2
 ; CHECK-SM70-NEXT:    .reg .pred %p<7>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<57>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<17>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b32 %r1, [fma_bf16x2_no_nans_multiple_uses_of_fma_param_0];
@@ -1647,78 +1526,62 @@ define <2 x bfloat> @fma_bf16x2_no_nans_multiple_uses_of_fma(<2 x bfloat> %a, <2
 ; CHECK-SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r4, %rs2;
 ; CHECK-SM70-NEXT:    shl.b32 %r5, %r4, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r5;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r6, %rs4;
 ; CHECK-SM70-NEXT:    shl.b32 %r7, %r6, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r7;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r8, %rs6;
 ; CHECK-SM70-NEXT:    shl.b32 %r9, %r8, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r9;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r10, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r10, %r9, %r7, %r5;
 ; CHECK-SM70-NEXT:    bfe.u32 %r11, %r10, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r12, %r11, %r10;
 ; CHECK-SM70-NEXT:    add.s32 %r13, %r12, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r10, %r10;
 ; CHECK-SM70-NEXT:    or.b32 %r14, %r10, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r15, %r14, %r13, %p1;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r16, %rs1;
 ; CHECK-SM70-NEXT:    shl.b32 %r17, %r16, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r17;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r18, %rs3;
 ; CHECK-SM70-NEXT:    shl.b32 %r19, %r18, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f6, %r19;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r20, %rs5;
 ; CHECK-SM70-NEXT:    shl.b32 %r21, %r20, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f7, %r21;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f8, %f7, %f6, %f5;
-; CHECK-SM70-NEXT:    mov.b32 %r22, %f8;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r22, %r21, %r19, %r17;
 ; CHECK-SM70-NEXT:    bfe.u32 %r23, %r22, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r24, %r23, %r22;
 ; CHECK-SM70-NEXT:    add.s32 %r25, %r24, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %f8, %f8;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r22, %r22;
 ; CHECK-SM70-NEXT:    or.b32 %r26, %r22, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r27, %r26, %r25, %p2;
 ; CHECK-SM70-NEXT:    and.b32 %r28, %r27, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f9, %r28;
-; CHECK-SM70-NEXT:    add.rn.f32 %f10, %f9, 0f40E00000;
-; CHECK-SM70-NEXT:    mov.b32 %r29, %f10;
+; CHECK-SM70-NEXT:    add.rn.f32 %r29, %r28, 0f40E00000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r30, %r29, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r31, %r30, %r29;
 ; CHECK-SM70-NEXT:    add.s32 %r32, %r31, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %f10, %f10;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %r29, %r29;
 ; CHECK-SM70-NEXT:    or.b32 %r33, %r29, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r34, %r33, %r32, %p3;
 ; CHECK-SM70-NEXT:    and.b32 %r35, %r15, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f11, %r35;
-; CHECK-SM70-NEXT:    add.rn.f32 %f12, %f11, 0f40E00000;
-; CHECK-SM70-NEXT:    mov.b32 %r36, %f12;
+; CHECK-SM70-NEXT:    add.rn.f32 %r36, %r35, 0f40E00000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r37, %r36, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r38, %r37, %r36;
 ; CHECK-SM70-NEXT:    add.s32 %r39, %r38, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p4, %f12, %f12;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p4, %r36, %r36;
 ; CHECK-SM70-NEXT:    or.b32 %r40, %r36, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r41, %r40, %r39, %p4;
 ; CHECK-SM70-NEXT:    and.b32 %r42, %r41, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f13, %r42;
-; CHECK-SM70-NEXT:    add.rn.f32 %f14, %f13, %f11;
-; CHECK-SM70-NEXT:    mov.b32 %r43, %f14;
+; CHECK-SM70-NEXT:    add.rn.f32 %r43, %r42, %r35;
 ; CHECK-SM70-NEXT:    bfe.u32 %r44, %r43, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r45, %r44, %r43;
 ; CHECK-SM70-NEXT:    add.s32 %r46, %r45, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p5, %f14, %f14;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p5, %r43, %r43;
 ; CHECK-SM70-NEXT:    or.b32 %r47, %r43, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r48, %r47, %r46, %p5;
 ; CHECK-SM70-NEXT:    and.b32 %r49, %r34, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f15, %r49;
-; CHECK-SM70-NEXT:    add.rn.f32 %f16, %f15, %f9;
-; CHECK-SM70-NEXT:    mov.b32 %r50, %f16;
+; CHECK-SM70-NEXT:    add.rn.f32 %r50, %r49, %r28;
 ; CHECK-SM70-NEXT:    bfe.u32 %r51, %r50, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r52, %r51, %r50;
 ; CHECK-SM70-NEXT:    add.s32 %r53, %r52, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p6, %f16, %f16;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p6, %r50, %r50;
 ; CHECK-SM70-NEXT:    or.b32 %r54, %r50, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r55, %r54, %r53, %p6;
 ; CHECK-SM70-NEXT:    prmt.b32 %r56, %r55, %r48, 0x7632U;
@@ -1762,7 +1625,6 @@ define <2 x bfloat> @fma_bf16x2_maxnum_no_nans(<2 x bfloat> %a, <2 x bfloat> %b,
 ; CHECK-SM70-NEXT:    .reg .pred %p<5>;
 ; CHECK-SM70-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-SM70-NEXT:    .reg .b32 %r<43>;
-; CHECK-SM70-NEXT:    .reg .b32 %f<13>;
 ; CHECK-SM70-EMPTY:
 ; CHECK-SM70-NEXT:  // %bb.0:
 ; CHECK-SM70-NEXT:    ld.param.b32 %r1, [fma_bf16x2_maxnum_no_nans_param_0];
@@ -1771,58 +1633,46 @@ define <2 x bfloat> @fma_bf16x2_maxnum_no_nans(<2 x bfloat> %a, <2 x bfloat> %b,
 ; CHECK-SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r4, %rs1;
 ; CHECK-SM70-NEXT:    shl.b32 %r5, %r4, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f1, %r5;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r6, %rs3;
 ; CHECK-SM70-NEXT:    shl.b32 %r7, %r6, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f2, %r7;
 ; CHECK-SM70-NEXT:    mov.b32 {%rs5, %rs6}, %r1;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r8, %rs5;
 ; CHECK-SM70-NEXT:    shl.b32 %r9, %r8, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f3, %r9;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f4, %f3, %f2, %f1;
-; CHECK-SM70-NEXT:    mov.b32 %r10, %f4;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r10, %r9, %r7, %r5;
 ; CHECK-SM70-NEXT:    bfe.u32 %r11, %r10, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r12, %r11, %r10;
 ; CHECK-SM70-NEXT:    add.s32 %r13, %r12, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %f4, %f4;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p1, %r10, %r10;
 ; CHECK-SM70-NEXT:    or.b32 %r14, %r10, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r15, %r14, %r13, %p1;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r16, %rs2;
 ; CHECK-SM70-NEXT:    shl.b32 %r17, %r16, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f5, %r17;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r18, %rs4;
 ; CHECK-SM70-NEXT:    shl.b32 %r19, %r18, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f6, %r19;
 ; CHECK-SM70-NEXT:    cvt.u32.u16 %r20, %rs6;
 ; CHECK-SM70-NEXT:    shl.b32 %r21, %r20, 16;
-; CHECK-SM70-NEXT:    mov.b32 %f7, %r21;
-; CHECK-SM70-NEXT:    fma.rn.f32 %f8, %f7, %f6, %f5;
-; CHECK-SM70-NEXT:    mov.b32 %r22, %f8;
+; CHECK-SM70-NEXT:    fma.rn.f32 %r22, %r21, %r19, %r17;
 ; CHECK-SM70-NEXT:    bfe.u32 %r23, %r22, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r24, %r23, %r22;
 ; CHECK-SM70-NEXT:    add.s32 %r25, %r24, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %f8, %f8;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p2, %r22, %r22;
 ; CHECK-SM70-NEXT:    or.b32 %r26, %r22, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r27, %r26, %r25, %p2;
 ; CHECK-SM70-NEXT:    and.b32 %r28, %r27, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f9, %r28;
-; CHECK-SM70-NEXT:    max.f32 %f10, %f9, 0f00000000;
-; CHECK-SM70-NEXT:    mov.b32 %r29, %f10;
+; CHECK-SM70-NEXT:    max.f32 %r29, %r28, 0f00000000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r30, %r29, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r31, %r30, %r29;
 ; CHECK-SM70-NEXT:    add.s32 %r32, %r31, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %f10, %f10;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p3, %r29, %r29;
 ; CHECK-SM70-NEXT:    or.b32 %r33, %r29, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r34, %r33, %r32, %p3;
 ; CHECK-SM70-NEXT:    and.b32 %r35, %r15, -65536;
-; CHECK-SM70-NEXT:    mov.b32 %f11, %r35;
-; CHECK-SM70-NEXT:    max.f32 %f12, %f11, 0f00000000;
-; CHECK-SM70-NEXT:    mov.b32 %r36, %f12;
+; CHECK-SM70-NEXT:    max.f32 %r36, %r35, 0f00000000;
 ; CHECK-SM70-NEXT:    bfe.u32 %r37, %r36, 16, 1;
 ; CHECK-SM70-NEXT:    add.s32 %r38, %r37, %r36;
 ; CHECK-SM70-NEXT:    add.s32 %r39, %r38, 32767;
-; CHECK-SM70-NEXT:    setp.nan.f32 %p4, %f12, %f12;
+; CHECK-SM70-NEXT:    setp.nan.f32 %p4, %r36, %r36;
 ; CHECK-SM70-NEXT:    or.b32 %r40, %r36, 4194304;
 ; CHECK-SM70-NEXT:    selp.b32 %r41, %r40, %r39, %p4;
 ; CHECK-SM70-NEXT:    prmt.b32 %r42, %r41, %r34, 0x7632U;

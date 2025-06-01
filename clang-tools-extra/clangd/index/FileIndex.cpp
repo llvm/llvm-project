@@ -48,13 +48,12 @@ SlabTuple indexSymbols(ASTContext &AST, Preprocessor &PP,
                        const MainFileMacros *MacroRefsToIndex,
                        const include_cleaner::PragmaIncludes &PI,
                        bool IsIndexMainAST, llvm::StringRef Version,
-                       bool CollectMainFileRefs) {
+                       bool CollectMainFileRefs, SymbolOrigin Origin) {
   SymbolCollector::Options CollectorOpts;
   CollectorOpts.CollectIncludePath = true;
   CollectorOpts.PragmaIncludes = &PI;
   CollectorOpts.CountReferences = false;
-  CollectorOpts.Origin =
-      IsIndexMainAST ? SymbolOrigin::Open : SymbolOrigin::Preamble;
+  CollectorOpts.Origin = Origin;
   CollectorOpts.CollectMainFileRefs = CollectMainFileRefs;
   // We want stdlib implementation details in the index only if we've opened the
   // file in question. This does means xrefs won't work, though.
@@ -80,7 +79,8 @@ SlabTuple indexSymbols(ASTContext &AST, Preprocessor &PP,
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);
-  index::indexTopLevelDecls(AST, PP, DeclsToIndex, Collector, IndexOpts);
+  index::indexTopLevelDecls(AST, PP, DeclsToIndex, Collector,
+                            std::move(IndexOpts));
   if (MacroRefsToIndex)
     Collector.handleMacros(*MacroRefsToIndex);
 
@@ -221,22 +221,24 @@ FileShardedIndex::getShard(llvm::StringRef Uri) const {
 }
 
 SlabTuple indexMainDecls(ParsedAST &AST) {
-  return indexSymbols(
-      AST.getASTContext(), AST.getPreprocessor(), AST.getLocalTopLevelDecls(),
-      &AST.getMacros(), AST.getPragmaIncludes(),
-      /*IsIndexMainAST=*/true, AST.version(), /*CollectMainFileRefs=*/true);
+  return indexSymbols(AST.getASTContext(), AST.getPreprocessor(),
+                      AST.getLocalTopLevelDecls(), &AST.getMacros(),
+                      AST.getPragmaIncludes(),
+                      /*IsIndexMainAST=*/true, AST.version(),
+                      /*CollectMainFileRefs=*/true, SymbolOrigin::Open);
 }
 
 SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
                              Preprocessor &PP,
-                             const include_cleaner::PragmaIncludes &PI) {
+                             const include_cleaner::PragmaIncludes &PI,
+                             SymbolOrigin Origin) {
   std::vector<Decl *> DeclsToIndex(
       AST.getTranslationUnitDecl()->decls().begin(),
       AST.getTranslationUnitDecl()->decls().end());
   return indexSymbols(AST, PP, DeclsToIndex,
                       /*MainFileMacros=*/nullptr, PI,
                       /*IsIndexMainAST=*/false, Version,
-                      /*CollectMainFileRefs=*/false);
+                      /*CollectMainFileRefs=*/false, Origin);
 }
 
 FileSymbols::FileSymbols(IndexContents IdxContents, bool SupportContainedRefs)
@@ -462,7 +464,7 @@ void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
                                const include_cleaner::PragmaIncludes &PI) {
   IndexFileIn IF;
   std::tie(IF.Symbols, std::ignore, IF.Relations) =
-      indexHeaderSymbols(Version, AST, PP, PI);
+      indexHeaderSymbols(Version, AST, PP, PI, SymbolOrigin::Preamble);
   updatePreamble(std::move(IF));
 }
 

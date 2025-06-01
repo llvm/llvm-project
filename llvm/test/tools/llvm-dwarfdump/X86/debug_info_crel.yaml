@@ -1,0 +1,76 @@
+# Test llvm-dwarfdump handles CREL relocation sections correctly.
+
+# RUN: yaml2obj %s | llvm-dwarfdump - | FileCheck %s
+
+# CHECK: DW_AT_producer    ("clang version
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         011101252513050325721710171B25111B120673170000022E00111B120640187A196E2503253A0B3B0B49133F19000003240003253E0B0B0B000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '3400000005000108000000000100210001000000000000000002000600000000000000020006000000015703040001330000000305050400'
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         1C00000005000000000000000000000000000000000000000000000000000000
+  - Name:            .crel.debug_info
+    Type:            SHT_CREL
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x11
+        Symbol:          .debug_str_offsets
+        Type:            R_X86_64_32
+        Addend:          8
+  - Name:            .crel.debug_str_offsets
+    Type:            SHT_CREL
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Info:            .debug_str_offsets
+    Relocations:
+      - Offset:          0x8
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .debug_abbrev
+      - Name:            .debug_info
+      - Name:            .crel.debug_info
+      - Name:            .debug_str_offsets
+      - Name:            .crel.debug_str_offsets
+      - Name:            .debug_str
+      - Name:            .symtab
+Symbols:
+  - Name:            foo.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_str_offsets
+    Type:            STT_SECTION
+    Section:         .debug_str_offsets
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+DWARF:
+  debug_str:
+    - 'clang version 21.0.0git'
+...

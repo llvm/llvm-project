@@ -50,7 +50,6 @@ public:
     FT_CVInlineLines,
     FT_CVDefRange,
     FT_PseudoProbe,
-    FT_Dummy
   };
 
 private:
@@ -109,13 +108,6 @@ public:
   bool hasInstructions() const { return HasInstructions; }
 
   void dump() const;
-};
-
-class MCDummyFragment : public MCFragment {
-public:
-  explicit MCDummyFragment() : MCFragment(FT_Dummy, false) {}
-
-  static bool classof(const MCFragment *F) { return F->getKind() == FT_Dummy; }
 };
 
 /// Interface implemented by fragments that contain encoded instructions and/or

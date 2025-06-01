@@ -20,8 +20,6 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/Format.h"
 #include <optional>
 
 using namespace clang;
@@ -169,7 +167,10 @@ modulemap::parseModuleMap(FileID ID, clang::DirectoryEntryRef Dir,
 
   if (Failed)
     return std::nullopt;
+  Parser.MMF.ID = ID;
+  Parser.MMF.Dir = Dir;
   Parser.MMF.Start = Start;
+  Parser.MMF.IsSystem = IsSystem;
   return std::move(Parser.MMF);
 }
 

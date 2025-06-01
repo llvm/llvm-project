@@ -670,10 +670,10 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
   assert(DeadSize > ToRemoveSize && "Can't remove more than original size");
 
   uint64_t NewSize = DeadSize - ToRemoveSize;
-  if (auto *AMI = dyn_cast<AtomicMemIntrinsic>(DeadI)) {
+  if (DeadIntrinsic->isAtomic()) {
     // When shortening an atomic memory intrinsic, the newly shortened
     // length must remain an integer multiple of the element size.
-    const uint32_t ElementSize = AMI->getElementSizeInBytes();
+    const uint32_t ElementSize = DeadIntrinsic->getElementSizeInBytes();
     if (0 != NewSize % ElementSize)
       return false;
   }
@@ -1213,7 +1213,8 @@ struct DSEState {
 
     auto I = InvisibleToCallerAfterRet.insert({V, false});
     if (I.second && isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
-      I.first->second = !PointerMayBeCaptured(V, /*ReturnCaptures=*/true);
+      I.first->second = capturesNothing(PointerMayBeCaptured(
+          V, /*ReturnCaptures=*/true, CaptureComponents::Provenance));
     return I.first->second;
   }
 
@@ -1230,7 +1231,8 @@ struct DSEState {
       // with the killing MemoryDef. But we refrain from doing so for now to
       // limit compile-time and this does not cause any changes to the number
       // of stores removed on a large test set in practice.
-      I.first->second = PointerMayBeCaptured(V, /*ReturnCaptures=*/false);
+      I.first->second = capturesAnything(PointerMayBeCaptured(
+          V, /*ReturnCaptures=*/false, CaptureComponents::Provenance));
     return !I.first->second;
   }
 

@@ -41,8 +41,10 @@ define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef
 ; CHECK-NEXT:    [[TMP9:%.*]] = fcmp fast ogt <4 x double> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast <4 x double> [[TMP6]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x double> [[TMP7]], [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = tail call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> [[TMP6]], <4 x double> splat (double -0.000000e+00))
-; CHECK-NEXT:    [[TMP13:%.*]] = tail call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> [[TMP7]], <4 x double> splat (double -0.000000e+00))
+; CHECK-NEXT:    [[TMP24:%.*]] = fcmp fast ole <4 x double> [[TMP6]], splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP25:%.*]] = fcmp fast ole <4 x double> [[TMP7]], splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP12:%.*]] = select nnan ninf <4 x i1> [[TMP24]], <4 x double> splat (double -0.000000e+00), <4 x double> [[TMP6]]
+; CHECK-NEXT:    [[TMP13:%.*]] = select nnan ninf <4 x i1> [[TMP25]], <4 x double> splat (double -0.000000e+00), <4 x double> [[TMP7]]
 ; CHECK-NEXT:    [[TMP14]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI16]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI17]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP8]], <4 x double> [[TMP10]], <4 x double> splat (double -0.000000e+00)
@@ -75,7 +77,8 @@ define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub fast double [[MUL]], [[Z]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast ogt double [[SUB]], 0.000000e+00
 ; CHECK-NEXT:    [[MUL3:%.*]] = fmul fast double [[SUB]], [[SUB]]
-; CHECK-NEXT:    [[ADD8:%.*]] = tail call fast double @llvm.maxnum.f64(double [[SUB]], double -0.000000e+00)
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp fast ole double [[SUB]], -0.000000e+00
+; CHECK-NEXT:    [[ADD8:%.*]] = select nnan ninf i1 [[DOTINV]], double -0.000000e+00, double [[SUB]]
 ; CHECK-NEXT:    [[V0_2]] = fadd reassoc arcp contract afn double [[V0_011]], [[ADD8]]
 ; CHECK-NEXT:    [[ADD4:%.*]] = select i1 [[CMP1]], double [[MUL3]], double -0.000000e+00
 ; CHECK-NEXT:    [[V1_2]] = fadd reassoc arcp contract afn double [[V1_012]], [[ADD4]]
@@ -229,8 +232,10 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    [[TMP13:%.*]] = fcmp fast ogt <4 x double> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <4 x double> [[TMP10]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x double> [[TMP11]], [[TMP11]]
-; CHECK-NEXT:    [[TMP16:%.*]] = tail call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> [[TMP10]], <4 x double> splat (double -0.000000e+00))
-; CHECK-NEXT:    [[TMP17:%.*]] = tail call fast <4 x double> @llvm.maxnum.v4f64(<4 x double> [[TMP11]], <4 x double> splat (double -0.000000e+00))
+; CHECK-NEXT:    [[TMP28:%.*]] = fcmp fast ole <4 x double> [[TMP10]], splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP29:%.*]] = fcmp fast ole <4 x double> [[TMP11]], splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP16:%.*]] = select nnan ninf <4 x i1> [[TMP28]], <4 x double> splat (double -0.000000e+00), <4 x double> [[TMP10]]
+; CHECK-NEXT:    [[TMP17:%.*]] = select nnan ninf <4 x i1> [[TMP29]], <4 x double> splat (double -0.000000e+00), <4 x double> [[TMP11]]
 ; CHECK-NEXT:    [[TMP18]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI32]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP19]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI33]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP12]], <4 x double> [[TMP14]], <4 x double> splat (double -0.000000e+00)
@@ -263,7 +268,8 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    [[SUB_US:%.*]] = fsub fast double [[MUL_US]], [[Z]]
 ; CHECK-NEXT:    [[CMP4_US:%.*]] = fcmp fast ogt double [[SUB_US]], 0.000000e+00
 ; CHECK-NEXT:    [[ADD7_US:%.*]] = fmul fast double [[SUB_US]], [[SUB_US]]
-; CHECK-NEXT:    [[ADD12_US:%.*]] = tail call fast double @llvm.maxnum.f64(double [[SUB_US]], double -0.000000e+00)
+; CHECK-NEXT:    [[DOTINV_US:%.*]] = fcmp fast ole double [[SUB_US]], -0.000000e+00
+; CHECK-NEXT:    [[ADD12_US:%.*]] = select nnan ninf i1 [[DOTINV_US]], double -0.000000e+00, double [[SUB_US]]
 ; CHECK-NEXT:    [[V0_2_US]] = fadd reassoc arcp contract afn double [[V0_115_US]], [[ADD12_US]]
 ; CHECK-NEXT:    [[ADD7_US1:%.*]] = select i1 [[CMP4_US]], double [[ADD7_US]], double -0.000000e+00
 ; CHECK-NEXT:    [[V1_2_US]] = fadd reassoc arcp contract afn double [[V1_116_US]], [[ADD7_US1]]

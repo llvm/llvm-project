@@ -1,4 +1,4 @@
-// RUN: fir-opt --fir-to-llvm-ir %s | FileCheck %s
+// RUN: fir-opt --strict-fir-volatile-verifier --fir-to-llvm-ir %s | FileCheck %s
 func.func @_QQmain() {
   %0 = fir.alloca !fir.box<!fir.array<10xi32>, volatile>
   %c1 = arith.constant 1 : index

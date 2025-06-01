@@ -28,7 +28,7 @@ NestedMatch NestedMatch::build(Operation *operation,
                                ArrayRef<NestedMatch> nestedMatches) {
   auto *result = allocator()->Allocate<NestedMatch>();
   auto *children = allocator()->Allocate<NestedMatch>(nestedMatches.size());
-  std::uninitialized_copy(nestedMatches.begin(), nestedMatches.end(), children);
+  llvm::uninitialized_copy(nestedMatches, children);
   new (result) NestedMatch();
   result->matchedOperation = operation;
   result->matchedChildren =
@@ -46,7 +46,7 @@ void NestedPattern::copyNestedToThis(ArrayRef<NestedPattern> nested) {
     return;
 
   auto *newNested = allocator()->Allocate<NestedPattern>(nested.size());
-  std::uninitialized_copy(nested.begin(), nested.end(), newNested);
+  llvm::uninitialized_copy(nested, newNested);
   nestedPatterns = ArrayRef<NestedPattern>(newNested, nested.size());
 }
 

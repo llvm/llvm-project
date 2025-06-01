@@ -1104,16 +1104,17 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
                                                   MemCpyInst *MDep,
                                                   BatchAAResults &BAA) {
+  // We can only optimize non-volatile memcpy's.
+  if (MDep->isVolatile())
+    return false;
+
   // If dep instruction is reading from our current input, then it is a noop
   // transfer and substituting the input won't change this instruction. Just
   // ignore the input and let someone else zap MDep. This handles cases like:
   //    memcpy(a <- a)
   //    memcpy(b <- a)
-  if (M->getSource() == MDep->getSource())
-    return false;
-
-  // We can only optimize non-volatile memcpy's.
-  if (MDep->isVolatile())
+  // This also avoids infinite loops.
+  if (BAA.isMustAlias(MDep->getDest(), MDep->getSource()))
     return false;
 
   int64_t MForwardOffset = 0;
@@ -1177,10 +1178,6 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
       CopySourceAlign = commonAlignment(*CopySourceAlign, MForwardOffset);
   }
 
-  // Avoid infinite loops
-  if (BAA.isMustAlias(M->getSource(), CopySource))
-    return false;
-
   // Verify that the copied-from memory doesn't change in between the two
   // transfers.  For example, in:
   //    memcpy(a <- b)
@@ -1212,7 +1209,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     // Don't convert llvm.memcpy.inline into memmove because memmove can be
     // lowered as a call, and that is not allowed for llvm.memcpy.inline (and
     // there is no inline version of llvm.memmove)
-    if (isa<MemCpyInlineInst>(M))
+    if (M->isForceInlined())
       return false;
     UseMemMove = true;
   }
@@ -1229,17 +1226,18 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     NewM =
         Builder.CreateMemMove(M->getDest(), M->getDestAlign(), CopySource,
                               CopySourceAlign, M->getLength(), M->isVolatile());
-  else if (isa<MemCpyInlineInst>(M)) {
+  else if (M->isForceInlined())
     // llvm.memcpy may be promoted to llvm.memcpy.inline, but the converse is
     // never allowed since that would allow the latter to be lowered as a call
     // to an external function.
     NewM = Builder.CreateMemCpyInline(M->getDest(), M->getDestAlign(),
                                       CopySource, CopySourceAlign,
                                       M->getLength(), M->isVolatile());
-  } else
-    NewM =
-        Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), CopySource,
-                             CopySourceAlign, M->getLength(), M->isVolatile());
+  else
+    NewM = Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), CopySource,
+                                CopySourceAlign, M->getLength(),
+                                M->isVolatile());
+
   NewM->copyMetadata(*M, LLVMContext::MD_DIAssignID);
 
   assert(isa<MemoryDef>(MSSA->getMemoryAccess(M)));
@@ -1545,7 +1543,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         if (!Visited.insert(&U).second)
           continue;
         UseCaptureInfo CI = DetermineUseCaptureKind(U, AI);
-        // TODO(captures): Make this more precise.
         if (capturesAnything(CI.UseCC))
           return false;
 

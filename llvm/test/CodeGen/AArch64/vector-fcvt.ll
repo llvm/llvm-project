@@ -243,10 +243,10 @@ define <8 x double> @sitofp_v8i8_double(<8 x i8> %a) {
 ; CHECK-LABEL: sitofp_v8i8_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v1.b[0], v0.b[0]
-; CHECK-NEXT:    mov v2.b[0], v0.b[2]
-; CHECK-NEXT:    mov v3.b[0], v0.b[4]
-; CHECK-NEXT:    mov v4.b[0], v0.b[6]
+; CHECK-NEXT:    mov b1, v0.b[0]
+; CHECK-NEXT:    mov b2, v0.b[2]
+; CHECK-NEXT:    mov b3, v0.b[4]
+; CHECK-NEXT:    mov b4, v0.b[6]
 ; CHECK-NEXT:    mov v1.b[4], v0.b[1]
 ; CHECK-NEXT:    mov v2.b[4], v0.b[3]
 ; CHECK-NEXT:    mov v3.b[4], v0.b[5]
@@ -276,14 +276,14 @@ define <16 x double> @sitofp_v16i8_double(<16 x i8> %a) {
 ; CHECK-LABEL: sitofp_v16i8_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-NEXT:    mov v3.b[0], v0.b[2]
-; CHECK-NEXT:    mov v4.b[0], v0.b[4]
-; CHECK-NEXT:    mov v5.b[0], v0.b[6]
-; CHECK-NEXT:    mov v6.b[0], v1.b[0]
-; CHECK-NEXT:    mov v7.b[0], v1.b[2]
-; CHECK-NEXT:    mov v16.b[0], v1.b[4]
-; CHECK-NEXT:    mov v17.b[0], v1.b[6]
+; CHECK-NEXT:    mov b2, v0.b[0]
+; CHECK-NEXT:    mov b3, v0.b[2]
+; CHECK-NEXT:    mov b4, v0.b[4]
+; CHECK-NEXT:    mov b5, v0.b[6]
+; CHECK-NEXT:    mov b6, v1.b[0]
+; CHECK-NEXT:    mov b7, v1.b[2]
+; CHECK-NEXT:    mov b16, v1.b[4]
+; CHECK-NEXT:    mov b17, v1.b[6]
 ; CHECK-NEXT:    mov v2.b[4], v0.b[1]
 ; CHECK-NEXT:    mov v3.b[4], v0.b[3]
 ; CHECK-NEXT:    mov v4.b[4], v0.b[5]
@@ -396,10 +396,10 @@ define <8 x double> @uitofp_v8i8_double(<8 x i8> %a) {
 ; CHECK-LABEL: uitofp_v8i8_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-NEXT:    mov v3.b[0], v0.b[2]
-; CHECK-NEXT:    mov v4.b[0], v0.b[4]
-; CHECK-NEXT:    mov v5.b[0], v0.b[6]
+; CHECK-NEXT:    mov b2, v0.b[0]
+; CHECK-NEXT:    mov b3, v0.b[2]
+; CHECK-NEXT:    mov b4, v0.b[4]
+; CHECK-NEXT:    mov b5, v0.b[6]
 ; CHECK-NEXT:    movi d1, #0x0000ff000000ff
 ; CHECK-NEXT:    mov v2.b[4], v0.b[1]
 ; CHECK-NEXT:    mov v3.b[4], v0.b[3]
@@ -426,15 +426,15 @@ define <16 x double> @uitofp_v16i8_double(<16 x i8> %a) {
 ; CHECK-LABEL: uitofp_v16i8_double:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    mov v3.b[0], v0.b[0]
-; CHECK-NEXT:    mov v4.b[0], v0.b[2]
-; CHECK-NEXT:    mov v5.b[0], v0.b[4]
-; CHECK-NEXT:    mov v6.b[0], v0.b[6]
+; CHECK-NEXT:    mov b3, v0.b[0]
+; CHECK-NEXT:    mov b4, v0.b[2]
+; CHECK-NEXT:    mov b5, v0.b[4]
+; CHECK-NEXT:    mov b6, v0.b[6]
 ; CHECK-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-NEXT:    mov v7.b[0], v2.b[0]
-; CHECK-NEXT:    mov v16.b[0], v2.b[2]
-; CHECK-NEXT:    mov v17.b[0], v2.b[4]
-; CHECK-NEXT:    mov v18.b[0], v2.b[6]
+; CHECK-NEXT:    mov b7, v2.b[0]
+; CHECK-NEXT:    mov b16, v2.b[2]
+; CHECK-NEXT:    mov b17, v2.b[4]
+; CHECK-NEXT:    mov b18, v2.b[6]
 ; CHECK-NEXT:    mov v3.b[4], v0.b[1]
 ; CHECK-NEXT:    mov v4.b[4], v0.b[3]
 ; CHECK-NEXT:    mov v5.b[4], v0.b[5]

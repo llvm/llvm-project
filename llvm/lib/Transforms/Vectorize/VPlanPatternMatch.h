@@ -461,21 +461,14 @@ m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Select(Op0, m_True(), Op1);
 }
 
-using VPCanonicalIVPHI_match =
-    Recipe_match<std::tuple<>, 0, false, VPCanonicalIVPHIRecipe>;
-
-inline VPCanonicalIVPHI_match m_CanonicalIV() {
-  return VPCanonicalIVPHI_match();
-}
-
-template <typename Op0_t, typename Op1_t>
+template <typename Op0_t, typename Op1_t, typename Op2_t>
 using VPScalarIVSteps_match =
-    Recipe_match<std::tuple<Op0_t, Op1_t>, 0, false, VPScalarIVStepsRecipe>;
+    TernaryRecipe_match<Op0_t, Op1_t, Op2_t, 0, false, VPScalarIVStepsRecipe>;
 
-template <typename Op0_t, typename Op1_t>
-inline VPScalarIVSteps_match<Op0_t, Op1_t> m_ScalarIVSteps(const Op0_t &Op0,
-                                                           const Op1_t &Op1) {
-  return VPScalarIVSteps_match<Op0_t, Op1_t>(Op0, Op1);
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPScalarIVSteps_match<Op0_t, Op1_t, Op2_t>
+m_ScalarIVSteps(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return VPScalarIVSteps_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>

@@ -66,7 +66,7 @@ MacroArgs *MacroArgs::create(const MacroInfo *MI,
                   "uninitialized array (as opposed to reusing a cached "
                   "MacroArgs)");
     std::copy(UnexpArgTokens.begin(), UnexpArgTokens.end(),
-              Result->getTrailingObjects<Token>());
+              Result->getTrailingObjects());
   }
 
   return Result;
@@ -119,7 +119,7 @@ const Token *MacroArgs::getUnexpArgument(unsigned Arg) const {
   assert(Arg < getNumMacroArguments() && "Invalid arg #");
   // The unexpanded argument tokens start immediately after the MacroArgs object
   // in memory.
-  const Token *Start = getTrailingObjects<Token>();
+  const Token *Start = getTrailingObjects();
   const Token *Result = Start;
 
   // Scan to find Arg.

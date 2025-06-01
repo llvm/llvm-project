@@ -411,9 +411,6 @@ std::error_code SampleProfileReaderText::readImpl() {
         break;
       }
       case LineType::BodyProfile: {
-        while (InlineStack.size() > Depth) {
-          InlineStack.pop_back();
-        }
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TargetCountMap) {
           mergeSampleProfErrors(Result, FProfile.addCalledTargetSamples(

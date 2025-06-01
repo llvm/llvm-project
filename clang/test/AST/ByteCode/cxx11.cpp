@@ -23,6 +23,16 @@ int array2[recurse2]; // both-warning {{variable length arrays in C++}} \
                       // expected-error {{variable length array declaration not allowed at file scope}} \
                       // ref-warning {{variable length array folded to constant array as an extension}}
 
+constexpr int b = b; // both-error {{must be initialized by a constant expression}} \
+                     // both-note {{read of object outside its lifetime is not allowed in a constant expression}}
+
+
+[[clang::require_constant_initialization]] int c = c; // both-error {{variable does not have a constant initializer}} \
+                                                      // both-note {{attribute here}} \
+                                                      // both-note {{read of non-const variable}} \
+                                                      // both-note {{declared here}}
+
+
 struct S {
   int m;
 };
@@ -232,4 +242,21 @@ namespace IntToPtrCast {
   extern "C" int foo;
   constexpr intptr_t i = f((intptr_t)&foo - 10); // both-error{{constexpr variable 'i' must be initialized by a constant expression}} \
                                                  // both-note{{reinterpret_cast}}
+}
+
+namespace Volatile {
+  constexpr int f(volatile int &&r) {
+    return r; // both-note {{read of volatile-qualified type 'volatile int'}}
+  }
+  struct S {
+    int j : f(0); // both-error {{constant expression}} \
+                  // both-note {{in call to 'f(0)'}}
+  };
+}
+
+namespace ZeroSizeCmp {
+  extern void (*start[])();
+  extern void (*end[])();
+  static_assert(&start != &end, ""); // both-error {{constant expression}} \
+                                     // both-note {{comparison of pointers '&start' and '&end' to unrelated zero-sized objects}}
 }

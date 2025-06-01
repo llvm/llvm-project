@@ -26,7 +26,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -815,7 +814,8 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
     }
 
     if (!F.hasFnAttribute(Attribute::HybridPatchable) || F.isDeclaration() ||
-        F.hasLocalLinkage() || F.getName().ends_with("$hp_target"))
+        F.hasLocalLinkage() ||
+        F.getName().ends_with(HybridPatchableTargetSuffix))
       continue;
 
     // Rename hybrid patchable functions and change callers to use a global
@@ -823,7 +823,7 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
     if (std::optional<std::string> MangledName =
             getArm64ECMangledFunctionName(F.getName().str())) {
       std::string OrigName(F.getName());
-      F.setName(MangledName.value() + "$hp_target");
+      F.setName(MangledName.value() + HybridPatchableTargetSuffix);
 
       // The unmangled symbol is a weak alias to an undefined symbol with the
       // "EXP+" prefix. This undefined symbol is resolved by the linker by

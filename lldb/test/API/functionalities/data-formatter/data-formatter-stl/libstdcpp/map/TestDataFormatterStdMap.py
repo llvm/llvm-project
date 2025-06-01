@@ -2,7 +2,7 @@
 Test lldb data formatter subsystem.
 """
 
-
+from typing import Optional
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -19,8 +19,17 @@ class StdMapDataFormatterTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
     @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
     def test_with_run_command(self):
+        self.with_run_command()
+
+    @add_test_categories(["libstdcxx"])
+    @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
+    def test_with_run_command_debug(self):
+        build_args = {"CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
+        self.with_run_command("__debug::", build_args)
+
+    def with_run_command(self, namespace: str = "", dictionary: Optional[dict] = None):
         """Test that that file and class static variables display correctly."""
-        self.build()
+        self.build(dictionary=dictionary)
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_source_regexp(self, "Set break point at this line.")
@@ -41,7 +50,6 @@ class StdMapDataFormatterTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -49,7 +57,7 @@ class StdMapDataFormatterTestCase(TestBase):
         self.runCmd("frame variable ii --show-types")
 
         self.runCmd(
-            'type summary add -x "std::map<" --summary-string "map has ${svar%#} items" -e'
+            f'type summary add -x "std::{namespace}map<" --summary-string "map has ${{svar%#}} items" -e'
         )
 
         self.expect("frame variable ii", substrs=["map has 0 items", "{}"])

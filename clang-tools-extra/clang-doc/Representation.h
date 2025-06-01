@@ -60,6 +60,7 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
+  // TODO: The Kind field should be an enum, so we can switch on it easily.
   SmallString<16>
       Kind; // Kind of comment (FullComment, ParagraphComment, TextComment,
             // InlineCommandComment, HTMLStartTagComment, HTMLEndTagComment,
@@ -163,6 +164,9 @@ struct TypeInfo {
   bool operator==(const TypeInfo &Other) const { return Type == Other.Type; }
 
   Reference Type; // Referenced type in this info.
+
+  bool IsTemplate = false;
+  bool IsBuiltIn = false;
 };
 
 // Represents one template parameter.
@@ -362,6 +366,9 @@ struct FunctionInfo : public SymbolInfo {
   // specializations.
   SmallString<16> FullName;
 
+  // Function Prototype
+  SmallString<256> Prototype;
+
   // When present, this function is a template or specialization.
   std::optional<TemplateInfo> Template;
 };
@@ -415,7 +422,13 @@ struct TypedefInfo : public SymbolInfo {
 
   TypeInfo Underlying;
 
-  // Inidicates if this is a new C++ "using"-style typedef:
+  // Underlying type declaration
+  SmallString<16> TypeDeclaration;
+
+  /// Comment description for the typedef.
+  std::vector<CommentInfo> Description;
+
+  // Indicates if this is a new C++ "using"-style typedef:
   //   using MyVector = std::vector<int>
   // False means it's a C-style typedef:
   //   typedef std::vector<int> MyVector;
@@ -458,7 +471,8 @@ struct EnumValueInfo {
   // constant. This will be empty for implicit enumeration values.
   SmallString<16> ValueExpr;
 
-  std::vector<CommentInfo> Description; /// Comment description of this field.
+  /// Comment description of this field.
+  std::vector<CommentInfo> Description;
 };
 
 // TODO: Expand to allow for documenting templating.
@@ -527,7 +541,11 @@ struct ClangDocContext {
   std::vector<std::string> UserStylesheets;
   // JavaScript files that will be imported in all HTML files.
   std::vector<std::string> JsScripts;
+  // Base directory for remote repositories.
   StringRef Base;
+  // Maps mustache template types to specific mustache template files.
+  // Ex.    comment-template -> /path/to/comment-template.mustache
+  llvm::StringMap<std::string> MustacheTemplates;
   Index Idx;
 };
 

@@ -171,6 +171,10 @@ static void addDependentLibs(mlir::ModuleOp mlirModule, CompilerInstance &ci) {
 }
 
 bool CodeGenAction::beginSourceFileAction() {
+  // Delete previous LLVM module depending on old context before making a new
+  // one.
+  if (llvmModule)
+    llvmModule.reset(nullptr);
   llvmCtx = std::make_unique<llvm::LLVMContext>();
   CompilerInstance &ci = this->getInstance();
   mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
@@ -197,6 +201,9 @@ bool CodeGenAction::beginSourceFileAction() {
     return true;
   }
 
+  // Reset MLIR module if it was set before overriding the old context.
+  if (mlirModule)
+    mlirModule = mlir::OwningOpRef<mlir::ModuleOp>(nullptr);
   // Load the MLIR dialects required by Flang
   mlirCtx = std::make_unique<mlir::MLIRContext>();
   fir::support::loadDialects(*mlirCtx);
@@ -734,6 +741,8 @@ void CodeGenAction::generateLLVMIR() {
     config.VScaleMax = vsr->second;
   }
 
+  config.PreferVectorWidth = opts.PreferVectorWidth;
+
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
@@ -915,6 +924,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   if (ci.isTimingEnabled())
     si.getTimePasses().setOutStream(ci.getTimingStreamLLVM());
   pto.LoopUnrolling = opts.UnrollLoops;
+  pto.LoopInterchange = opts.InterchangeLoops;
   pto.LoopInterleaving = opts.UnrollLoops;
   pto.LoopVectorization = opts.VectorizeLoop;
   pto.SLPVectorization = opts.VectorizeSLP;

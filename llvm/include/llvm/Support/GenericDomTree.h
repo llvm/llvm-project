@@ -918,7 +918,7 @@ public:
   }
 
 protected:
-  void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
+  inline void addRoot(NodeT *BB) { this->Roots.push_back(BB); }
 
   DomTreeNodeBase<NodeT> *createNode(NodeT *BB,
                                      DomTreeNodeBase<NodeT> *IDom = nullptr) {

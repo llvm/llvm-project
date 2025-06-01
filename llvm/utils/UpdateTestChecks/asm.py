@@ -32,7 +32,7 @@ ASM_FUNCTION_X86_RE = re.compile(
 )
 
 ASM_FUNCTION_ARM_RE = re.compile(
-    r"^(?P<func>[0-9a-zA-Z_$]+):\n"  # f: (name of function)
+    r'^(?P<func>[0-9a-zA-Z_$]+):[ \t]*@+[ \t]*@"?(?P=func)"?\n'  # f: (name of function)
     r"(?:\.L(?P=func)\$local:\n)?"  # drop .L<func>$local:
     r"(?:\s*\.type\s+\.L(?P=func)\$local,@function\n)?"  # drop .type .L<func>$local
     r"\s+\.fnstart\n"  # .fnstart
@@ -175,7 +175,7 @@ ASM_FUNCTION_ARM_DARWIN_RE = re.compile(
 )
 
 ASM_FUNCTION_ARM_MACHO_RE = re.compile(
-    r"^_(?P<func>[^:]+):[ \t]*\n"
+    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
     r"([ \t]*.cfi_startproc\n[ \t]*)?"
     r"(?P<body>.*?)\n"
     r"[ \t]*\.cfi_endproc\n",
@@ -183,17 +183,23 @@ ASM_FUNCTION_ARM_MACHO_RE = re.compile(
 )
 
 ASM_FUNCTION_THUMBS_DARWIN_RE = re.compile(
-    r"^_(?P<func>[^:]+):\n" r"(?P<body>.*?)\n" r"[ \t]*\.data_region\n",
+    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r"(?P<body>.*?)\n"
+    r"[ \t]*\.data_region\n",
     flags=(re.M | re.S),
 )
 
 ASM_FUNCTION_THUMB_DARWIN_RE = re.compile(
-    r"^_(?P<func>[^:]+):\n" r"(?P<body>.*?)\n" r"^[ \t]*@[ \t]--[ \t]End[ \t]function",
+    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r"(?P<body>.*?)\n"
+    r"^[ \t]*@[ \t]--[ \t]End[ \t]function",
     flags=(re.M | re.S),
 )
 
 ASM_FUNCTION_ARM_IOS_RE = re.compile(
-    r"^_(?P<func>[^:]+):\n" r"(?P<body>.*?)" r"^[ \t]*@[ \t]--[ \t]End[ \t]function",
+    r'^_(?P<func>[^:]+):[ \t]*@[ \t]@"?(?P=func)"?\n'
+    r"(?P<body>.*?)"
+    r"^[ \t]*@[ \t]--[ \t]End[ \t]function",
     flags=(re.M | re.S),
 )
 

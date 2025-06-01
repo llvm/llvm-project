@@ -161,7 +161,6 @@ bool HexagonVExtract::runOnMachineFunction(MachineFunction &MF) {
       assert(ExtI->getOperand(1).getReg() == VecR);
 
       MachineBasicBlock &ExtB = *ExtI->getParent();
-      DebugLoc DL = ExtI->getDebugLoc();
       Register BaseR = EmitAddr(ExtB, ExtI, ExtI->getDebugLoc(), FI,
                                 SR == 0 ? 0 : VecSize/2);
 

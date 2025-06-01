@@ -40,10 +40,10 @@ extern Target TheXtensaTarget;
 MCCodeEmitter *createXtensaMCCodeEmitter(const MCInstrInfo &MCII,
                                          MCContext &Ctx);
 
-MCAsmBackend *createXtensaMCAsmBackend(const Target &T,
-                                       const MCSubtargetInfo &STI,
-                                       const MCRegisterInfo &MRI,
-                                       const MCTargetOptions &Options);
+MCAsmBackend *createXtensaAsmBackend(const Target &T,
+                                     const MCSubtargetInfo &STI,
+                                     const MCRegisterInfo &MRI,
+                                     const MCTargetOptions &Options);
 std::unique_ptr<MCObjectTargetWriter>
 createXtensaObjectWriter(uint8_t OSABI, bool IsLittleEndian);
 

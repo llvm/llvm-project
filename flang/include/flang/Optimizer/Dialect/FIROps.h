@@ -40,6 +40,7 @@ mlir::ParseResult parseSelector(mlir::OpAsmParser &parser,
                                 mlir::OperationState &result,
                                 mlir::OpAsmParser::UnresolvedOperand &selector,
                                 mlir::Type &type);
+bool useStrictVolatileVerification();
 
 static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
   return "normalized.lb";
@@ -146,6 +147,10 @@ private:
   mlir::ValueRange values;
 };
 
+struct LocalitySpecifierOperands {
+  llvm::SmallVector<::mlir::Value> privateVars;
+  llvm::SmallVector<::mlir::Attribute> privateSyms;
+};
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPS_H
