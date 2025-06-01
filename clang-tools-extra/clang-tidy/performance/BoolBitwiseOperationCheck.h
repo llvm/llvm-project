@@ -13,7 +13,9 @@
 
 namespace clang::tidy::performance {
 
-/// FIXME: Write a short description.
+/// Finds potentially unefficient uses of bitwise operators such as `|`,
+/// `&` and their compound analogues with `bool` type and suggests replacing
+/// them with logical ones, like `||` and `&&`.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/performance/bool-bitwise-operation.html

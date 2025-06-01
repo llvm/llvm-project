@@ -139,7 +139,9 @@ New checks
 - New :doc:`performance-bool-bitwise-operation
   <clang-tidy/checks/performance/bool-bitwise-operation>` check.
 
-  FIXME: Write a short description.
+  Finds potentially unefficient uses of bitwise operators such as ``|``, 
+  ``&`` and their compound analogues with ``bool`` type and suggests replacing
+  them with logical ones, like ``||`` and ``&&``.
 
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
