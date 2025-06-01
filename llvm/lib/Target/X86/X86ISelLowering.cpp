@@ -28988,7 +28988,7 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
     return LowerVectorCTLZ_AVX512CDI(Op, DAG, Subtarget);
 
   // Decompose 256-bit ops into smaller 128-bit ops.
-  if (VT.is256BitVector() && !Subtarget.hasInt256())
+  if (VT.is256BitVector() && !Subtarget.hasInt256()) 
     return splitVectorIntUnary(Op, DAG, DL);
 
   // Decompose 512-bit ops into smaller 256-bit ops.
@@ -28998,35 +28998,39 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
   assert(Subtarget.hasSSSE3() && "Expected SSSE3 support for PSHUFB");
   return LowerVectorCTLZInRegLUT(Op, DL, Subtarget, DAG);
 }
-static SDValue LowerVectorCTLZ_GFNI(SDValue Op, SelectionDAG &DAG,
+static SDValue LowerVectorCTLZ_GFNI(SDValue Op, const SDLoc &DL,
+                                    SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
-  SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
   SDValue Input = Op.getOperand(0);
 
-  if (!VT.isVector() || VT.getVectorElementType() != MVT::i8)
-    return SDValue();
-  SmallVector<SDValue, 16> MatrixVals;
-  for (unsigned i = 0; i < VT.getVectorNumElements(); ++i) {
-    uint8_t mask = 1 << (7 - (i % 8));
-    MatrixVals.push_back(DAG.getConstant(mask, dl, MVT::i8));
-  }
+  assert(VT.isVector() && VT.getVectorElementType() == MVT::i8 &&
+         "Expected vXi8 input for GFNI-based CTLZ lowering");
 
-  SDValue Matrix = DAG.getBuildVector(VT, dl, MatrixVals);
-  SDValue Reversed = DAG.getNode(X86ISD::GF2P8AFFINEQB, dl, VT, Input, Matrix,
-                                 DAG.getTargetConstant(0, dl, MVT::i8));
-  SDValue AddMask = DAG.getConstant(0xFF, dl, MVT::i8);
+  // Step 1: Bit-reverse input
+  SDValue Reversed = DAG.getNode(ISD::BITREVERSE, DL, VT, Input);
 
-  SDValue AddVec = DAG.getSplatBuildVector(VT, dl, AddMask);
-  SDValue Summed = DAG.getNode(ISD::ADD, dl, VT, Reversed, AddVec);
-  SDValue NotSummed = DAG.getNode(ISD::XOR, dl, VT, Summed, AddVec);
-  SDValue Filtered = DAG.getNode(ISD::AND, dl, VT, NotSummed, Reversed);
-  SDValue FinalMatrix = DAG.getBuildVector(VT, dl, MatrixVals);
+  // Step 2: Add 0xFF
+  SDValue AddVec = DAG.getAllOnesConstant(DL, VT);
+  SDValue Summed = DAG.getNode(ISD::ADD, DL, VT, Reversed, AddVec);
+
+  // Step 3: Not(Summed)
+  SDValue NotSummed = DAG.getNOT(DL, Summed, VT);
+
+  // Step 4: AND with Reversed
+  SDValue Filtered = DAG.getNode(ISD::AND, DL, VT, NotSummed, Reversed);
+
+  // Step 5: Apply CTTZ LUT using GF2P8AFFINEQB
+  MVT VT64 = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+  SDValue CTTZConst = DAG.getConstant(0xAACCF0FF00000000ULL, DL, VT64);
+  SDValue CTTZMatrix = DAG.getBitcast(VT, CTTZConst);
+
   SDValue LZCNT =
-      DAG.getNode(X86ISD::GF2P8AFFINEQB, dl, VT, Filtered, FinalMatrix,
-                  DAG.getTargetConstant(8, dl, MVT::i8));
+      DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, Filtered, CTTZMatrix,
+                  DAG.getTargetConstant(8, DL, MVT::i8));
   return LZCNT;
 }
+
 
 static SDValue LowerCTLZ(SDValue Op, const X86Subtarget &Subtarget,
                          SelectionDAG &DAG) {
@@ -29037,7 +29041,7 @@ static SDValue LowerCTLZ(SDValue Op, const X86Subtarget &Subtarget,
   unsigned Opc = Op.getOpcode();
 
   if (VT.isVector() && VT.getScalarType() == MVT::i8 && Subtarget.hasGFNI())
-    return LowerVectorCTLZ_GFNI(Op, DAG, Subtarget);
+    return LowerVectorCTLZ_GFNI(Op, dl, DAG, Subtarget);
 
   if (VT.isVector())
     return LowerVectorCTLZ(Op, dl, Subtarget, DAG);
