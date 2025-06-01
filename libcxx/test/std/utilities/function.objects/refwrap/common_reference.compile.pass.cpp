@@ -144,7 +144,6 @@ struct Test {
 template struct Test<int>;
 template struct Test<std::reference_wrapper<int>>;
 
-
 // reference_wrapper as both args is unaffected.
 // subject to simple first rule of
 static_assert(check<Ref<int>&, Ref<int>&, Ref<int>&>);
