@@ -1204,6 +1204,13 @@ def : Pat<(i16 (atomic_load_nonext_16 addr:$src)), (MOV16rm addr:$src)>;
 def : Pat<(i32 (atomic_load_nonext_32 addr:$src)), (MOV32rm addr:$src)>;
 def : Pat<(i64 (atomic_load_nonext_64 addr:$src)), (MOV64rm addr:$src)>;
 
+def : Pat<(v4i32 (scalar_to_vector (i32 (zext (i16 (atomic_load_16 addr:$src)))))),
+           (MOVDI2PDIrm addr:$src)>;   // load atomic <2 x i8>
+def : Pat<(v4i32 (scalar_to_vector (i32 (atomic_load_32 addr:$src)))),
+           (MOVDI2PDIrm addr:$src)>;   // load atomic <2 x i16>
+def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
+           (MOV64toPQIrm  addr:$src)>; // load atomic <2 x i32,float>
+
 // Floating point loads/stores.
 def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
           (MOVSSmr addr:$dst, FR32:$src)>, Requires<[UseSSE1]>;
