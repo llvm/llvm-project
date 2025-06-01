@@ -10,6 +10,7 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
+#include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
@@ -490,98 +491,6 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
   return filter;
 }
 
-static std::string GetLoadAddressString(const lldb::addr_t addr) {
-  std::string result;
-  llvm::raw_string_ostream os(result);
-  os << llvm::format_hex(addr, 18);
-  return result;
-}
-
-protocol::Source CreateSource(const lldb::SBFileSpec &file) {
-  protocol::Source source;
-  if (file.IsValid()) {
-    const char *name = file.GetFilename();
-    if (name)
-      source.name = name;
-    char path[PATH_MAX] = "";
-    if (file.GetPath(path, sizeof(path)) &&
-        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX))
-      source.path = path;
-  }
-  return source;
-}
-
-protocol::Source CreateSource(const lldb::SBLineEntry &line_entry) {
-  return CreateSource(line_entry.GetFileSpec());
-}
-
-protocol::Source CreateSource(llvm::StringRef source_path) {
-  protocol::Source source;
-  llvm::StringRef name = llvm::sys::path::filename(source_path);
-  source.name = name;
-  source.path = source_path;
-  return source;
-}
-
-protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
-                                      lldb::SBAddress &address) {
-  protocol::Source source;
-
-  auto symbol = address.GetSymbol();
-  std::string name;
-  if (symbol.IsValid()) {
-    source.sourceReference = symbol.GetStartAddress().GetLoadAddress(target);
-    name = symbol.GetName();
-  } else {
-    const auto load_addr = address.GetLoadAddress(target);
-    source.sourceReference = load_addr;
-    name = GetLoadAddressString(load_addr);
-  }
-
-  lldb::SBModule module = address.GetModule();
-  if (module.IsValid()) {
-    lldb::SBFileSpec file_spec = module.GetFileSpec();
-    if (file_spec.IsValid()) {
-      std::string path = GetSBFileSpecPath(file_spec);
-      if (!path.empty())
-        source.path = path + '`' + name;
-    }
-  }
-
-  source.name = std::move(name);
-
-  // Mark the source as deemphasized since users will only be able to view
-  // assembly for these frames.
-  source.presentationHint =
-      protocol::Source::PresentationHint::eSourcePresentationHintDeemphasize;
-
-  return source;
-}
-
-bool ShouldDisplayAssemblySource(
-    const lldb::SBLineEntry &line_entry,
-    lldb::StopDisassemblyType stop_disassembly_display) {
-  if (stop_disassembly_display == lldb::eStopDisassemblyTypeNever)
-    return false;
-
-  if (stop_disassembly_display == lldb::eStopDisassemblyTypeAlways)
-    return true;
-
-  // A line entry of 0 indicates the line is compiler generated i.e. no source
-  // file is associated with the frame.
-  auto file_spec = line_entry.GetFileSpec();
-  if (!file_spec.IsValid() || line_entry.GetLine() == 0 ||
-      line_entry.GetLine() == LLDB_INVALID_LINE_NUMBER)
-    return true;
-
-  if (stop_disassembly_display == lldb::eStopDisassemblyTypeNoSource &&
-      !file_spec.Exists()) {
-    return true;
-  }
-
-  return false;
-}
-
 // "StackFrame": {
 //   "type": "object",
 //   "description": "A Stackframe contains the source location.",
@@ -643,9 +552,8 @@ bool ShouldDisplayAssemblySource(
 //   },
 //   "required": [ "id", "name", "line", "column" ]
 // }
-llvm::json::Value
-CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
-                 lldb::StopDisassemblyType stop_disassembly_display) {
+llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
+                                   lldb::SBFormat &format) {
   llvm::json::Object object;
   int64_t frame_id = MakeDAPFrameID(frame);
   object.try_emplace("id", frame_id);
@@ -673,22 +581,18 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto line_entry = frame.GetLineEntry();
-  if (!ShouldDisplayAssemblySource(line_entry, stop_disassembly_display)) {
-    object.try_emplace("source", CreateSource(line_entry));
+  auto target = frame.GetThread().GetProcess().GetTarget();
+  auto source = CreateSource(frame.GetPCAddress(), target);
+  if (!IsAssemblySource(source)) {
+    // This is a normal source with a valid line entry.
+    auto line_entry = frame.GetLineEntry();
     object.try_emplace("line", line_entry.GetLine());
     auto column = line_entry.GetColumn();
     object.try_emplace("column", column);
   } else if (frame.GetSymbol().IsValid()) {
-    // If no source is associated with the frame, use the DAPFrameID to track
-    // the 'source' and generate assembly.
-    auto frame_address = frame.GetPCAddress();
-    object.try_emplace("source", CreateAssemblySource(
-                                     frame.GetThread().GetProcess().GetTarget(),
-                                     frame_address));
-
-    // Calculate the line of the current PC from the start of the current
-    // symbol.
+    // This is a source where the disassembly is used, but there is a valid
+    // symbol. Calculate the line of the current PC from the start of the
+    // current symbol.
     lldb::SBTarget target = frame.GetThread().GetProcess().GetTarget();
     lldb::SBInstructionList inst_list = target.ReadInstructions(
         frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
@@ -699,13 +603,11 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
     object.try_emplace("column", 1);
   } else {
     // No valid line entry or symbol.
-    auto frame_address = frame.GetPCAddress();
-    object.try_emplace("source", CreateAssemblySource(
-                                     frame.GetThread().GetProcess().GetTarget(),
-                                     frame_address));
     object.try_emplace("line", 1);
     object.try_emplace("column", 1);
   }
+
+  object.try_emplace("source", std::move(source));
 
   const auto pc = frame.GetPC();
   if (pc != LLDB_INVALID_ADDRESS) {
