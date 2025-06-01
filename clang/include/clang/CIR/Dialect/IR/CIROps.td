@@ -17,6 +17,7 @@
 include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypes.td"
 include "clang/CIR/Dialect/IR/CIRAttrs.td"
+include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 
 include "clang/CIR/Interfaces/CIROpInterfaces.td"
 include "clang/CIR/Interfaces/CIRLoopOpInterface.td"
@@ -2177,7 +2178,9 @@ def VecShuffleOp : CIR_Op<"vec.shuffle",
     doesn't matter. The result vector, which must have the same element type as
     the input vectors and the same number of elements as the list of integer
     constant indices, is constructed by taking the elements at the given
-    indices from the concatenated vector.
+    indices from the concatenated vector. The size of the result vector does
+    not have to match the size of the individual input vectors or of the
+    concatenated vector.
 
     ```mlir
     %new_vec = cir.vec.shuffle(%vec_1, %vec_2 : !cir.vector<2 x !s32i>)
@@ -2188,7 +2191,7 @@ def VecShuffleOp : CIR_Op<"vec.shuffle",
   let arguments = (ins
     CIR_VectorType:$vec1,
     CIR_VectorType:$vec2,
-    TypedArrayAttrBase<IntAttr, "Integer array attribute">:$indices
+    CIR_IntArrayAttr:$indices
   );
 
   let results = (outs CIR_VectorType:$result);
