@@ -21,7 +21,7 @@ void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
     Nodes.insert(Match.getNodeAs<Node>(ID));
 }
 
-llvm::SmallPtrSet<const DeclRefExpr*, 16> allDeclRefExprsHonourLambda(
+static llvm::SmallPtrSet<const DeclRefExpr*, 16> allDeclRefExprsHonourLambda(
     const VarDecl& VarDecl, const Decl& Decl, ASTContext& Context) {
   auto Matches = match(
       decl(forEachDescendant(
@@ -83,6 +83,9 @@ void LostStdMoveCheck::registerMatchers(MatchFinder* Finder) {
           unless(hasAncestor(doStmt())),
 
           unless(hasAncestor(whileStmt())),
+
+	  // Not in a body of lambda
+          unless(hasAncestor(compoundStmt(hasAncestor(lambdaExpr())))),
 
           // only non-X&
           unless(hasDeclaration(

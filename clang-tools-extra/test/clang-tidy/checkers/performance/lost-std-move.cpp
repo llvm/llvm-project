@@ -24,6 +24,7 @@ void f_arg(std::shared_ptr<int> ptr)
   if (*ptr)
     f(ptr);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: could be std::move() [performance-lost-std-move]
+  // CHECK-FIXES:   f(std::move(ptr));
 }
 
 void f_rvalue_ref(std::shared_ptr<int>&& ptr)
@@ -31,6 +32,7 @@ void f_rvalue_ref(std::shared_ptr<int>&& ptr)
   if (*ptr)
     f(ptr);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: could be std::move() [performance-lost-std-move]
+  // CHECK-FIXES:   f(std::move(ptr));
 }
 
 using SharedPtr = std::shared_ptr<int>;
@@ -74,6 +76,7 @@ void f_local()
   if (*ptr)
     f(ptr);
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: could be std::move() [performance-lost-std-move]
+  // CHECK-FIXES:   f(std::move(ptr));
 }
 
 void f_move()
@@ -131,7 +134,7 @@ void f_cycle4()
   std::shared_ptr<int> ptr;
   do {
     f(ptr);
-  } while (*ptr);
+  } while (true);
 }
 
 int f_multiple_usages()
@@ -145,6 +148,8 @@ int f_macro()
 {
   std::shared_ptr<int> ptr;
   return FUN(ptr);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: could be std::move() [performance-lost-std-move]
+  // CHECK-FIXES: return FUN(std::move(ptr));
 }
 
 void f_lambda_ref()
@@ -160,9 +165,8 @@ void f_lambda()
 {
   std::shared_ptr<int> ptr;
   auto Lambda = [ptr]() mutable {
-    // CHECK-MESSAGES: [[@LINE-1]]:18: warning: Parameter 'Mov' is copied on last use, consider moving it instead. [performance-unnecessary-copy-on-last-use]
-    // CHECK-FIXES: auto Lambda = [Mov]() mutable {
-    // Note: No fix, because a fix requires c++14.
+    // CHECK-MESSAGES: [[@LINE-1]]:18: warning: could be std::move() [performance-lost-std-move]
+    // CHECK-FIXES: auto Lambda = [std::move(ptr)]() mutable {
     f(ptr);
     };
   Lambda();
@@ -172,9 +176,8 @@ void f_lambda_assign()
 {
   std::shared_ptr<int> ptr;
   auto Lambda = [ptr = ptr]() mutable {
-    // CHECK-MESSAGES: [[@LINE-1]]:18: warning: Parameter 'Mov' is copied on last use, consider moving it instead. [performance-unnecessary-copy-on-last-use]
-    // CHECK-FIXES: auto Lambda = [Mov]() mutable {
-    // Note: No fix, because a fix requires c++14.
+    // CHECK-MESSAGES: [[@LINE-1]]:24: warning: could be std::move() [performance-lost-std-move]
+    // CHECK-FIXES: auto Lambda = [ptr = std::move(ptr)]() mutable {
     f(ptr);
     };
   Lambda();
