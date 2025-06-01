@@ -136,6 +136,12 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`performance-lost-std-move
+  <clang-tidy/checks/performance/lost-std-move>` check.
+
+  Warns if copy constructor is used instead of std::move() and suggests a fix.
+  It honours cycles, lambdas, and unspecified call order in compound expressions.
+
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
 

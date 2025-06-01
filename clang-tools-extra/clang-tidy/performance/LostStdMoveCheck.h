@@ -13,7 +13,8 @@
 
 namespace clang::tidy::performance {
 
-/// Search for lost std::move().
+/// Warns if copy constructor is used instead of std::move() and suggests a fix.
+/// It honours cycles, lambdas, and unspecified call order in compound expressions.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/performance/lost-std-move.html
