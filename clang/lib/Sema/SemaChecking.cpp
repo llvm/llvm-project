@@ -12304,6 +12304,12 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     if (SourceMgr.isInSystemMacro(CC))
       return;
 
+    if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+      if (UO->getOpcode() == UO_Minus)
+        return DiagnoseImpCast(
+            *this, E, T, CC, diag::warn_impcast_integer_precision_on_negation);
+    }
+
     if (TargetRange.Width == 32 && Context.getIntWidth(E->getType()) == 64)
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_integer_64_32,
                              /* pruneControlFlow */ true);
