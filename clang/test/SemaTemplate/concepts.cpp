@@ -1000,13 +1000,13 @@ template<class>
 concept True = true;
 
 template<class>
-concept False = false; // expected-note 9 {{'false' evaluated to false}}
+concept False = false; // expected-note 8 {{'false' evaluated to false}}
 
 template<class>
 concept Irrelevant = false;
 
 template <typename T>
-concept ErrorRequires = requires(ErrorRequires auto x) { x; };
+concept ErrorRequires = requires(ErrorRequires auto x) { x; }; //#GH54678-ill-formed-concept
 // expected-error@-1 {{a concept definition cannot refer to itself}} \
 // expected-error@-1 {{'auto' not allowed in requires expression parameter}} \
 // expected-note@-1 {{declared here}}
@@ -1027,7 +1027,8 @@ template<class T> void eee(T t) // expected-note {{candidate template ignored: c
 requires (Irrelevant<T> || Irrelevant<T> || True<T>) && False<T> {} // expected-note {{'long' does not satisfy 'False'}}
 
 template<class T> void fff(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
-requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{'unsigned long' does not satisfy 'False'}}
+requires((ErrorRequires<T> || False<T> || True<T>) && False<T>) {} // expected-note {{because 'unsigned long' does not satisfy 'ErrorRequires'}}
+// // expected-note@#GH54678-ill-formed-concept {{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 
 void test() {
     aaa(42); // expected-error {{no matching function}}

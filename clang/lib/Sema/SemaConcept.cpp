@@ -550,9 +550,7 @@ static bool calculateConstraintSatisfaction(
     if (!Success)
       return false;
     if (!Conjunction && Satisfaction.IsSatisfied) {
-      auto EffectiveDetailEnd = Satisfaction.Details.begin();
-      std::advance(EffectiveDetailEnd, EffectiveDetailEndIndex);
-      Satisfaction.Details.erase(EffectiveDetailEnd,
+      Satisfaction.Details.erase(Satisfaction.Details.begin() + EffectiveDetailEndIndex,
                                  Satisfaction.Details.end());
       break;
     }
@@ -635,24 +633,34 @@ static bool calculateConstraintSatisfaction(
     ConstraintSatisfaction &Satisfaction,
     UnsignedOrNone PackSubstitutionIndex) {
 
+  auto EffectiveDetailEndIndex = Satisfaction.Details.size();
+
   bool Ok = calculateConstraintSatisfaction(
       S, Constraint.getLHS(), Template, TemplateNameLoc, MLTAL, Satisfaction,
       PackSubstitutionIndex);
 
   if (!Ok || Satisfaction.ContainsErrors)
-    return false;
+    return Ok;
 
   if (Satisfaction.IsSatisfied &&
       Constraint.getCompoundKind() == NormalizedConstraint::CCK_Disjunction) {
     return true;
   }
   if (!Satisfaction.IsSatisfied &&
-      Constraint.getCompoundKind() == NormalizedConstraint::CCK_Conjunction)
+      Constraint.getCompoundKind() == NormalizedConstraint::CCK_Conjunction) {
     return true;
+  }
 
-  return calculateConstraintSatisfaction(S, Constraint.getRHS(), Template,
+  Satisfaction.ContainsErrors = false;
+  Satisfaction.IsSatisfied = false;
+
+  Ok = calculateConstraintSatisfaction(S, Constraint.getRHS(), Template,
                                          TemplateNameLoc, MLTAL, Satisfaction,
                                          PackSubstitutionIndex);
+  if(Ok && Satisfaction.IsSatisfied && !Satisfaction.ContainsErrors)
+    Satisfaction.Details.erase(Satisfaction.Details.begin() + EffectiveDetailEndIndex,
+                               Satisfaction.Details.end());
+  return Ok;
 }
 
 static bool calculateConstraintSatisfaction(
@@ -1349,6 +1357,7 @@ static void diagnoseUnsatisfiedRequirement(Sema &S,
                                            concepts::NestedRequirement *Req,
                                            bool First) {
   DiagnoseUnsatisfiedConstraint(S, Req->getConstraintSatisfaction().records(),
+                                Req->hasInvalidConstraint() ? SourceLocation() :
                                 Req->getConstraintExpr()->getExprLoc(), First,
                                 Req);
 }
