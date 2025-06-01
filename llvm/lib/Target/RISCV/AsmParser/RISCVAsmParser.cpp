@@ -908,6 +908,8 @@ public:
            VK == RISCVMCExpr::VK_QC_ABS20;
   }
 
+  bool isSImm10Unsigned() const { return isSImm<10>() || isUImm<10>(); }
+
   bool isUImm20LUI() const {
     if (!isImm())
       return false;
@@ -1538,6 +1540,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 8,
         "immediate must be a multiple of 8 bytes in the range");
+  case Match_InvalidSImm10Unsigned:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
+                                      (1 << 10) - 1);
   case Match_InvalidUImm10Lsb00NonZero:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 4, (1 << 10) - 4,
