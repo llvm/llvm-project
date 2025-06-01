@@ -3254,6 +3254,48 @@ static Value *createBitOrPointerCast(IRBuilderBase &Builder, Value *V,
   return Builder.CreateBitOrPointerCast(CastVal, DstVTy);
 }
 
+static Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor) {
+  switch (Factor) {
+  case 2:
+    return Intrinsic::vector_interleave2;
+  case 3:
+    return Intrinsic::vector_interleave3;
+  case 4:
+    return Intrinsic::vector_interleave4;
+  case 5:
+    return Intrinsic::vector_interleave5;
+  case 6:
+    return Intrinsic::vector_interleave6;
+  case 7:
+    return Intrinsic::vector_interleave7;
+  case 8:
+    return Intrinsic::vector_interleave8;
+  default:
+    llvm_unreachable("Unexpected factor");
+  }
+}
+
+static Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor) {
+  switch (Factor) {
+  case 2:
+    return Intrinsic::vector_deinterleave2;
+  case 3:
+    return Intrinsic::vector_deinterleave3;
+  case 4:
+    return Intrinsic::vector_deinterleave4;
+  case 5:
+    return Intrinsic::vector_deinterleave5;
+  case 6:
+    return Intrinsic::vector_deinterleave6;
+  case 7:
+    return Intrinsic::vector_deinterleave7;
+  case 8:
+    return Intrinsic::vector_deinterleave8;
+  default:
+    llvm_unreachable("Unexpected factor");
+  }
+}
+
 /// Return a vector containing interleaved elements from multiple
 /// smaller input vectors.
 static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
@@ -3270,6 +3312,14 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
+    if (Factor <= 8) {
+      VectorType *InterleaveTy = VectorType::get(
+          VecTy->getElementType(),
+          VecTy->getElementCount().multiplyCoefficientBy(Factor));
+      return Builder.CreateIntrinsic(InterleaveTy,
+                                     getInterleaveIntrinsicID(Factor), Vals,
+                                     /*FMFSource=*/nullptr, Name);
+    }
     assert(isPowerOf2_32(Factor) && "Unsupported interleave factor for "
                                     "scalable vectors, must be power of 2");
     SmallVector<Value *> InterleavingValues(Vals);
@@ -3370,7 +3420,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
                           &InterleaveFactor](Value *MaskForGaps) -> Value * {
     if (State.VF.isScalable()) {
       assert(!MaskForGaps && "Interleaved groups with gaps are not supported.");
-      assert(isPowerOf2_32(InterleaveFactor) &&
+      assert((InterleaveFactor <= 8 || isPowerOf2_32(InterleaveFactor)) &&
              "Unsupported deinterleave factor for scalable vectors");
       auto *ResBlockInMask = State.get(BlockInMask);
       SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
@@ -3414,34 +3464,43 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     ArrayRef<VPValue *> VPDefs = definedValues();
     const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
     if (VecTy->isScalableTy()) {
-      assert(isPowerOf2_32(InterleaveFactor) &&
-             "Unsupported deinterleave factor for scalable vectors");
-
       // Scalable vectors cannot use arbitrary shufflevectors (only splats),
       // so must use intrinsics to deinterleave.
       SmallVector<Value *> DeinterleavedValues(InterleaveFactor);
-      DeinterleavedValues[0] = NewLoad;
-      // For the case of InterleaveFactor > 2, we will have to do recursive
-      // deinterleaving, because the current available deinterleave intrinsic
-      // supports only Factor of 2, otherwise it will bailout after first
-      // iteration.
-      // When deinterleaving, the number of values will double until we
-      // have "InterleaveFactor".
-      for (unsigned NumVectors = 1; NumVectors < InterleaveFactor;
-           NumVectors *= 2) {
+
+      if (InterleaveFactor <= 8) {
+        Value *Deinterleave = State.Builder.CreateIntrinsic(
+            getDeinterleaveIntrinsicID(InterleaveFactor), NewLoad->getType(),
+            NewLoad,
+            /*FMFSource=*/nullptr, "strided.vec");
+        for (unsigned I = 0; I < InterleaveFactor; I++)
+          DeinterleavedValues[I] =
+              State.Builder.CreateExtractValue(Deinterleave, I);
+      } else {
+        assert(isPowerOf2_32(InterleaveFactor) &&
+               "Unsupported deinterleave factor for scalable vectors");
+        DeinterleavedValues[0] = NewLoad;
+        // For InterleaveFactor > 8 we have to do recursive deinterleaving via
+        // deinterleave2, because the intrinsics only go up to Factor 8. We
+        // currently only support power-of-2 factors. When deinterleaving, the
+        // number of values will double until we have "InterleaveFactor".
         // Deinterleave the elements within the vector
-        SmallVector<Value *> TempDeinterleavedValues(NumVectors);
-        for (unsigned I = 0; I < NumVectors; ++I) {
-          auto *DiTy = DeinterleavedValues[I]->getType();
-          TempDeinterleavedValues[I] = State.Builder.CreateIntrinsic(
-              Intrinsic::vector_deinterleave2, DiTy, DeinterleavedValues[I],
-              /*FMFSource=*/nullptr, "strided.vec");
+        SmallVector<Value *> TempDeinterleavedValues(InterleaveFactor);
+        for (unsigned NumVectors = 1; NumVectors < InterleaveFactor;
+             NumVectors *= 2) {
+          for (unsigned I = 0; I < NumVectors; ++I) {
+            auto *DiTy = DeinterleavedValues[I]->getType();
+            TempDeinterleavedValues[I] = State.Builder.CreateIntrinsic(
+                Intrinsic::vector_deinterleave2, DiTy, DeinterleavedValues[I],
+                /*FMFSource=*/nullptr, "strided.vec");
+          }
+          // Extract the deinterleaved values:
+          for (unsigned I = 0; I < 2; ++I)
+            for (unsigned J = 0; J < NumVectors; ++J)
+              DeinterleavedValues[NumVectors * I + J] =
+                  State.Builder.CreateExtractValue(TempDeinterleavedValues[J],
+                                                   I);
         }
-        // Extract the deinterleaved values:
-        for (unsigned I = 0; I < 2; ++I)
-          for (unsigned J = 0; J < NumVectors; ++J)
-            DeinterleavedValues[NumVectors * I + J] =
-                State.Builder.CreateExtractValue(TempDeinterleavedValues[J], I);
       }
 
 #ifndef NDEBUG
