@@ -53,6 +53,7 @@
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaSPIRV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
@@ -4154,7 +4155,7 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
   }
   if (!IsValid)
     return nullptr;
-  SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::INVALID);
+  SmallVector<int> FakeParamIndices(N, LifetimeCaptureByAttr::Invalid);
   auto *CapturedBy =
       LifetimeCaptureByAttr::Create(Context, FakeParamIndices.data(), N, AL);
   CapturedBy->setArgs(ParamIdents, ParamLocs);
@@ -4197,8 +4198,8 @@ void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
   if (Attrs.empty())
     return;
   llvm::StringMap<int> NameIdxMapping = {
-      {"global", LifetimeCaptureByAttr::GLOBAL},
-      {"unknown", LifetimeCaptureByAttr::UNKNOWN}};
+      {"global", LifetimeCaptureByAttr::Global},
+      {"unknown", LifetimeCaptureByAttr::Unknown}};
   int Idx = 0;
   if (HasImplicitThisParam) {
     NameIdxMapping["this"] = 0;
@@ -5852,12 +5853,13 @@ static void handleBuiltinAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   bool IsAArch64 = S.Context.getTargetInfo().getTriple().isAArch64();
   bool IsARM = S.Context.getTargetInfo().getTriple().isARM();
   bool IsRISCV = S.Context.getTargetInfo().getTriple().isRISCV();
+  bool IsSPIRV = S.Context.getTargetInfo().getTriple().isSPIRV();
   bool IsHLSL = S.Context.getLangOpts().HLSL;
   if ((IsAArch64 && !S.ARM().SveAliasValid(BuiltinID, AliasName)) ||
       (IsARM && !S.ARM().MveAliasValid(BuiltinID, AliasName) &&
        !S.ARM().CdeAliasValid(BuiltinID, AliasName)) ||
       (IsRISCV && !S.RISCV().isAliasValid(BuiltinID, AliasName)) ||
-      (!IsAArch64 && !IsARM && !IsRISCV && !IsHLSL)) {
+      (!IsAArch64 && !IsARM && !IsRISCV && !IsHLSL && !IsSPIRV)) {
     S.Diag(AL.getLoc(), diag::err_attribute_builtin_alias) << AL;
     return;
   }
