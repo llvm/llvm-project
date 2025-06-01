@@ -1026,9 +1026,24 @@ func.func @umod_fail_2_fold(%arg0: i32) -> (i32, i32) {
   return %0, %1: i32, i32
 }
 
-// CHECK-LABEL: @umod_vec_fail_fold
+// CHECK-LABEL: @umod_vector_fail_1_fold
 // CHECK-SAME: (%[[ARG:.*]]: vector<4xi32>)
-func.func @umod_vec_fail_fold(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi32>) {
+func.func @umod_vector_fail_1_fold(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi32>) {
+  // CHECK: %[[CONST9:.*]] = spirv.Constant dense<9> : vector<4xi32>
+  // CHECK: %[[CONST64:.*]] = spirv.Constant dense<64> : vector<4xi32>
+  %const1 = spirv.Constant dense<64> : vector<4xi32>
+  %0 = spirv.UMod %arg0, %const1 : vector<4xi32>
+  // CHECK: %[[UMOD0:.*]] = spirv.UMod %[[ARG]], %[[CONST64]]
+  %const2 = spirv.Constant dense<9> : vector<4xi32>
+  %1 = spirv.UMod %0, %const2 : vector<4xi32>
+  // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[UMOD0]], %[[CONST9]]
+  // CHECK: return %[[UMOD0]], %[[UMOD1]]
+  return %0, %1: vector<4xi32>, vector<4xi32>
+}
+
+// CHECK-LABEL: @umod_vector_fail_2_fold
+// CHECK-SAME: (%[[ARG:.*]]: vector<4xi32>)
+func.func @umod_vector_fail_2_fold(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi32>) {
   // CHECK: %[[CONST32:.*]] = spirv.Constant dense<32> : vector<4xi32>
   // CHECK: %[[CONST4:.*]] = spirv.Constant dense<4> : vector<4xi32>
   %const1 = spirv.Constant dense<4> : vector<4xi32>
