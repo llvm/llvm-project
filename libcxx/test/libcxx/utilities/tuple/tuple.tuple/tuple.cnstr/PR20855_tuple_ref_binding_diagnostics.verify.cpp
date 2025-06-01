@@ -40,7 +40,7 @@ void F(typename CannotDeduce<std::tuple<Args...>>::type const&) {}
 
 
 void f() {
-#if TEST_HAS_BUILTIN_IDENTIFIER(__reference_binds_to_temporary)
+#if TEST_HAS_BUILTIN_IDENTIFIER(__reference_constructs_from_temporary)
   // Test that we emit our diagnostic from the library.
   // expected-error@tuple:* 8 {{Attempted construction of reference element binds to a temporary whose lifetime has ended}}
 
