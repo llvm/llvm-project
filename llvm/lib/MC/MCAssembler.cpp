@@ -300,8 +300,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     return cast<MCCVDefRangeFragment>(F).getContents().size();
   case MCFragment::FT_PseudoProbe:
     return cast<MCPseudoProbeAddrFragment>(F).getContents().size();
-  case MCFragment::FT_Dummy:
-    llvm_unreachable("Should not have been added");
   }
 
   llvm_unreachable("invalid fragment kind");
@@ -767,8 +765,6 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     OS << PF.getContents();
     break;
   }
-  case MCFragment::FT_Dummy:
-    llvm_unreachable("Should not have been added");
   }
 
   assert(OS.tell() - Start == FragmentSize &&
@@ -846,7 +842,7 @@ void MCAssembler::layout() {
 
     // Chain together fragments from all subsections.
     if (Sec.Subsections.size() > 1) {
-      MCDummyFragment Dummy;
+      MCDataFragment Dummy;
       MCFragment *Tail = &Dummy;
       for (auto &[_, List] : Sec.Subsections) {
         assert(List.Head);
