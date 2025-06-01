@@ -95,14 +95,7 @@ public:
   /// https://llvm.org/docs/LangRef.html#vector-predication-intrinsics and
   /// "IR-level VP intrinsics",
   /// https://llvm.org/docs/Proposals/VectorPredication.html#ir-level-vp-intrinsics).
-  /// \param Opcode the opcode of the instruction checked for predicated version
-  /// support.
-  /// \param DataType the type of the instruction with the \p Opcode checked for
-  /// prediction support.
-  /// \param Alignment the alignment for memory access operation checked for
-  /// predicated version support.
-  bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
-                             Align Alignment) const override;
+  bool hasActiveVectorLength() const override;
 
   TargetTransformInfo::PopcntSupportKind
   getPopcntSupport(unsigned TyWidth) const override;
