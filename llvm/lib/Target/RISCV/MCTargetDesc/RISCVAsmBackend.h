@@ -12,6 +12,7 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVFixupKinds.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -31,6 +32,8 @@ class RISCVAsmBackend : public MCAsmBackend {
 
   bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
 
+  StringMap<MCSymbol *> VendorSymbols;
+
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   const MCTargetOptions &Options);
@@ -47,8 +50,14 @@ public:
   bool evaluateTargetFixup(const MCFixup &Fixup, const MCValue &Target,
                            uint64_t &Value) override;
 
+  std::optional<StringRef>
+  getVendorIdentifierForFixup(unsigned FixupKind) const;
+
   bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
                 uint64_t &FixedValue, bool IsResolved) override;
+
+  void addVendorReloc(const MCFragment &, const MCFixup &,
+                      StringRef VendorSymbol);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,

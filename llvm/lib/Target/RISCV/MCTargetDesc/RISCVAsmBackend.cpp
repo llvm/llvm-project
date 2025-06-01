@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVAsmBackend.h"
+#include "RISCVFixupKinds.h"
 #include "RISCVMCExpr.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -38,7 +39,7 @@ static cl::opt<bool> ULEB128Reloc(
 RISCVAsmBackend::RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
                                  bool Is64Bit, const MCTargetOptions &Options)
     : MCAsmBackend(llvm::endianness::little), STI(STI), OSABI(OSABI),
-      Is64Bit(Is64Bit), TargetOptions(Options) {
+      Is64Bit(Is64Bit), TargetOptions(Options), VendorSymbols() {
   RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
 }
 
@@ -611,6 +612,43 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
          isPCRelFixupResolved(AUIPCTarget.getAddSym(), *AUIPCDF);
 }
 
+std::optional<StringRef>
+RISCVAsmBackend::getVendorIdentifierForFixup(unsigned FixupKind) const {
+  switch (FixupKind) {
+  case RISCV::fixup_riscv_qc_e_branch:
+  case RISCV::fixup_riscv_qc_abs20_u:
+  case RISCV::fixup_riscv_qc_e_32:
+  case RISCV::fixup_riscv_qc_e_jump_plt:
+    return "QUALCOMM";
+  }
+
+  return std::nullopt;
+}
+
+void RISCVAsmBackend::addVendorReloc(const MCFragment &F, const MCFixup &Fixup,
+                                     StringRef VendorIdentifier) {
+  MCContext &Ctx = Asm->getContext();
+
+  auto It = VendorSymbols.find(VendorIdentifier);
+  if (It == VendorSymbols.end()) {
+    MCSymbol *VendorSymbol = Ctx.createLocalSymbol(VendorIdentifier);
+    VendorSymbol->setVariableValue(MCConstantExpr::create(0, Ctx));
+    Asm->registerSymbol(*VendorSymbol);
+
+    It = VendorSymbols.try_emplace(VendorIdentifier, VendorSymbol).first;
+  }
+
+  MCSymbol *VendorSymbol = It->getValue();
+  const MCExpr *VendorExpr = MCSymbolRefExpr::create(VendorSymbol, Ctx);
+  MCFixup VendorFixup =
+      MCFixup::create(Fixup.getOffset(), VendorExpr, ELF::R_RISCV_VENDOR);
+  // Explicitly create MCValue so that the absolute symbol is not evaluated to
+  // a constant.
+  MCValue VendorTarget = MCValue::get(VendorSymbol);
+  uint64_t VendorValue;
+  Asm->getWriter().recordRelocation(F, VendorFixup, VendorTarget, VendorValue);
+}
+
 bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target, uint64_t &FixedValue,
                                bool IsResolved) {
@@ -660,7 +698,16 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   if (IsResolved &&
       (getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel))
     IsResolved = isPCRelFixupResolved(Target.getAddSym(), F);
-  IsResolved = MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
+
+  if (!IsResolved) {
+    // Some Fixups require a vendor relocation, record it (directly) before we
+    // add the relocation.
+    if (std::optional<StringRef> VendorIdentifier =
+            getVendorIdentifierForFixup(Fixup.getTargetKind()))
+      addVendorReloc(F, Fixup, *VendorIdentifier);
+
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+  }
 
   if (Fixup.isLinkerRelaxable()) {
     auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
