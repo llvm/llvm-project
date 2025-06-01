@@ -73,8 +73,7 @@ define i64 @bfoz_from_lshr_and_i64(i64 %x) {
 define i32 @bfos_from_ashr_shl_i32(i32 %x) {
 ; CHECK-LABEL: bfos_from_ashr_shl_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 8
-; CHECK-NEXT:    srai a0, a0, 24
+; CHECK-NEXT:    nds.bfos a0, a0, 23, 16
 ; CHECK-NEXT:    ret
   %shl = shl i32 %x, 8
   %ashr = ashr i32 %shl, 24
@@ -103,8 +102,7 @@ define i32 @bfos_from_ashr_sexti8_i32(i8 %x) {
 ; CHECK-LABEL: bfos_from_ashr_sexti8_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $x11 killed $x10
-; CHECK-NEXT:    slli a0, a0, 24
-; CHECK-NEXT:    srai a0, a0, 29
+; CHECK-NEXT:    nds.bfos a0, a0, 7, 5
 ; CHECK-NEXT:    ret
   %sext = sext i8 %x to i32
   %ashr = ashr i32 %sext, 5
@@ -130,8 +128,7 @@ define i32 @bfos_from_ashr_sexti16_i32(i16 %x) {
 ; CHECK-LABEL: bfos_from_ashr_sexti16_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $x11 killed $x10
-; CHECK-NEXT:    slli a0, a0, 16
-; CHECK-NEXT:    srai a0, a0, 27
+; CHECK-NEXT:    nds.bfos a0, a0, 15, 11
 ; CHECK-NEXT:    ret
   %sext = sext i16 %x to i32
   %ashr = ashr i32 %sext, 11
