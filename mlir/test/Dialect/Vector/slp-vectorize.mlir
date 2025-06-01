@@ -672,6 +672,32 @@ func.func @read_read_add_add(%arg0: memref<8xi32>, %arg1: memref<8xi32>,
 }
 
 
+// CHECK-LABEL: func @read_read_add_add_vec
+//  CHECK-SAME: (%[[ARG0:.*]]: memref<8xi32>, %[[ARG1:.*]]: memref<8xi32>)
+func.func @read_read_add_add_vec(%arg0: memref<8xi32>, %arg1: memref<8xi32>) ->
+                                   (vector<2xi32>, vector<2xi32>){
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[V0:.*]] = vector.load %[[ARG0]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK: %[[V1:.*]] = vector.load %[[ARG1]][%[[C0]]] : memref<8xi32>, vector<4xi32>
+  // CHECK: %[[V2:.*]] = arith.addi %[[V0]], %[[V1]] : vector<4xi32>
+  // CHECK: %[[V3:.*]] = vector.extract_strided_slice %[[V2]] {offsets = [0], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+  // CHECK: %[[V4:.*]] = vector.extract_strided_slice %[[V2]] {offsets = [2], sizes = [2], strides = [1]} : vector<4xi32> to vector<2xi32>
+  // CHECK: return %[[V3]], %[[V4]] : vector<2xi32>, vector<2xi32>
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+
+  %0 = vector.load %arg0[%c0] : memref<8xi32>, vector<2xi32>
+  %2 = vector.load %arg0[%c2] : memref<8xi32>, vector<2xi32>
+
+  %4 = vector.load %arg1[%c0] : memref<8xi32>, vector<2xi32>
+  %6 = vector.load %arg1[%c2] : memref<8xi32>, vector<2xi32>
+
+  %8 = arith.addi %0, %4 : vector<2xi32>
+  %10 = arith.addi %2, %6 : vector<2xi32>
+
+  return %8, %10 : vector<2xi32>, vector<2xi32>
+}
+
 
 func.func private @use(i32)
 
