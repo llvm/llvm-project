@@ -19,7 +19,8 @@ std::expected<int, int> returns_expected() { return std::expected<int, int>(5); 
 std::expected<void, int> returns_expected_void() { return std::expected<void, int>(); }
 
 void test() {
-  returns_expected(); // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  returns_expected(); // expected-warning {{ignoring return value of type 'expected<int, int>' declared with 'nodiscard' attribute}}
 
-  returns_expected_void(); // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  returns_expected_void(); // expected-warning {{ignoring return value of type 'expected<void, int>' declared with 'nodiscard' attribute}}
 }
+
