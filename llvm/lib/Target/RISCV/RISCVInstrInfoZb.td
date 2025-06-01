@@ -54,6 +54,7 @@ def riscv_unzip   : RVSDNode<"UNZIP",   SDTIntUnaryOp>;
 def riscv_absw    : RVSDNode<"ABSW",    SDTIntUnaryOp>;
 
 // Scalar cryptography
+def clmul         : RVSDNode<"CLMUL",   SDTIntBinOp>;
 def riscv_clmul   : RVSDNode<"CLMUL",   SDTIntBinOp>;
 def riscv_clmulh  : RVSDNode<"CLMULH",  SDTIntBinOp>;
 def riscv_clmulr  : RVSDNode<"CLMULR",  SDTIntBinOp>;
@@ -794,6 +795,7 @@ def : Sh3AddPat<SH3ADD>;
 } // Predicates = [HasStdExtZba, IsRV64]
 
 let Predicates = [HasStdExtZbcOrZbkc] in {
+def : PatGprGpr<clmul, CLMUL>;
 def : PatGprGpr<riscv_clmul, CLMUL>;
 def : PatGprGpr<riscv_clmulh, CLMULH>;
 } // Predicates = [HasStdExtZbcOrZbkc]

@@ -207,7 +207,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_XOR:
   case ISD::VP_ADD:
   case ISD::VP_SUB:
-  case ISD::VP_MUL:      Res = PromoteIntRes_SimpleIntBinOp(N); break;
+  case ISD::VP_MUL:
+  case ISD::CLMUL:      Res = PromoteIntRes_SimpleIntBinOp(N); break;
 
   case ISD::ABDS:
   case ISD::AVGCEILS:
@@ -3100,6 +3101,10 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
     ExpandIntRes_FunnelShift(N, Lo, Hi);
     break;
 
+  case ISD::CLMUL:
+    ExpandIntRes_CLMUL(N, Lo, Hi);
+    break;
+
   case ISD::VSCALE:
     ExpandIntRes_VSCALE(N, Lo, Hi);
     break;
@@ -5425,6 +5430,37 @@ void DAGTypeLegalizer::ExpandIntRes_FunnelShift(SDNode *N, SDValue &Lo,
   SDValue Select3 = DAG.getNode(ISD::SELECT, DL, HalfVT, Cond, In3, In4);
   Lo = DAG.getNode(Opc, DL, HalfVT, Select2, Select1, NewShAmt);
   Hi = DAG.getNode(Opc, DL, HalfVT, Select3, Select2, NewShAmt);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo,
+                                          SDValue &Hi) {
+  // Values numbered from least significant to most significant.
+  SDValue LL, LH, RL, RH;
+  GetExpandedInteger(N->getOperand(0), LL, LH);
+  GetExpandedInteger(N->getOperand(1), RL, RH);
+  EVT HalfVT = LL.getValueType();
+  SDLoc DL(N);
+  
+  // Lo is computed from the low half
+  Lo = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RL);
+  // CLMUL is carryless so the high bits not included in CLMUL(A,B)
+  // can be computed by
+  // BITREVERSE(CLMUL(BITREVERSE(A), BITREVERSE(B))) >> 1
+  // Therefore we can compute the 2 hi/lo cross products
+  // and the the overflow of the low product
+  // and xor them together to compute HI
+  // TODO: if the target supports a widening CLMUL or a CLMULH we should probably use that
+  SDValue BitRevLL = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, LL);
+  SDValue BitRevRL = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, RL);
+  SDValue BitRevLoHi = DAG.getNode(ISD::CLMUL, DL, HalfVT, BitRevLL, BitRevRL);
+  SDValue LoHi = DAG.getNode(ISD::BITREVERSE, DL, HalfVT, BitRevLoHi);
+  SDValue One = DAG.getShiftAmountConstant(1, HalfVT, DL);
+  Hi = DAG.getNode(ISD::SRL, DL, HalfVT, LoHi, One);
+  
+  SDValue HiTmp = DAG.getNode(ISD::CLMUL, DL, HalfVT, LL, RH);
+  Hi = DAG.getNode(ISD::XOR, DL, HalfVT, Hi, HiTmp);
+  HiTmp = DAG.getNode(ISD::CLMUL, DL, HalfVT, LH, RL);
+  Hi = DAG.getNode(ISD::XOR, DL, HalfVT, Hi, HiTmp);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,
