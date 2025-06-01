@@ -17,7 +17,7 @@
 namespace absl
 {
 template <typename... Args>
-std::string StrFormat(const std::string &format, const Args&... args);
+std::string StrFormat(const std::string_view &format, const Args&... args);
 } // namespace absl
 
 template <typename T>
