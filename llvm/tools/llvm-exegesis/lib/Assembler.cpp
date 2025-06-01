@@ -33,6 +33,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
+#define DEBUG_TYPE "exegesis-assembler"
 #ifdef HAVE_LIBPFM
 #include "perfmon/perf_event.h"
 #endif // HAVE_LIBPFM
@@ -80,6 +81,22 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
                                       ->getStackPointerRegisterToSaveRestore();
   bool isFirstRegister = true;
   for (const RegisterValue &RV : Key.RegisterInitialValues) {
+    // Debug: register name and class name and value from BenchmarkKey
+    const MCRegisterInfo *RegInfo = BBF.MF.getTarget().getMCRegisterInfo();
+    const char *RegName = RegInfo->getName(RV.Register);
+    const char *regClassName = "Unknown";
+    for (unsigned i = 0, e = RegInfo->getNumRegClasses(); i < e; ++i) {
+      const MCRegisterClass &RC = RegInfo->getRegClass(i);
+      if (RC.contains(RV.Register)) {
+        regClassName = RegInfo->getRegClassName(&RC);
+        break;
+      }
+    }
+    LLVM_DEBUG(
+        dbgs() << "Setting register (Class: " << regClassName << ") " << RegName
+               << std::string(
+                      std::max(0, 3 - static_cast<int>(strlen(RegName))), ' '));
+
     if (GenerateMemoryInstructions) {
       // If we're generating memory instructions, don't load in the value for
       // the register with the stack pointer as it will be used later to finish
@@ -92,12 +109,15 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
         for (const auto &Inst : StackLoadInsts)
           BBF.addInstruction(Inst);
         isFirstRegister = false;
+        LLVM_DEBUG(dbgs() << "from stack with post-increment offset of " << 16
+                          << " bytes\n");
         continue;
       }
 #endif
     }
 
     // Load a constant in the register.
+    LLVM_DEBUG(dbgs() << " to " << RV.Value << "\n");
     const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
     if (SetRegisterCode.empty())
       IsSnippetSetupComplete = false;
