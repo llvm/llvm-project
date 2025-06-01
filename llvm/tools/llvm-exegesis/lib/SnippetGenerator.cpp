@@ -276,9 +276,11 @@ static Error randomizeMCOperand(const LLVMState &State,
     AssignedValue = MCOperand::createReg(randomBit(AllowedRegs));
     break;
   }
-  /// Omit unknown operands to default immediate value based on the instruction
+  /// Omit unknown and pc-relative operands to imm value based on the instruction
+  // TODO: Is aarch64 gaurd neccessary ?
 #ifdef __aarch64__
   case MCOI::OperandType::OPERAND_UNKNOWN:
+  case MCOI::OperandType::OPERAND_PCREL:
     return State.getExegesisTarget().randomizeTargetMCOperand(
         Instr, Var, AssignedValue, ForbiddenRegs);
 #endif

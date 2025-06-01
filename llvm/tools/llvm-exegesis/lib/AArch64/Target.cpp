@@ -236,19 +236,29 @@ private:
 Error ExegesisAArch64Target::randomizeTargetMCOperand(
     const Instruction &Instr, const Variable &Var, MCOperand &AssignedValue,
     const BitVector &ForbiddenRegs) const {
-  unsigned Opcode = Instr.getOpcode();
-  switch (Opcode) {
-  case AArch64::MOVIv2s_msl:
-  case AArch64::MOVIv4s_msl:
-  case AArch64::MVNIv2s_msl:
-  case AArch64::MVNIv4s_msl:
-    AssignedValue = MCOperand::createImm(8); // or 16, as needed
-    break;
-  default:
-    AssignedValue = MCOperand::createImm(0);
-    break;
+  const Operand &Op = Instr.getPrimaryOperand(Var);
+  switch (Op.getExplicitOperandInfo().OperandType) {
+  case MCOI::OperandType::OPERAND_UNKNOWN: {
+    unsigned Opcode = Instr.getOpcode();
+    switch (Opcode) {
+    case AArch64::MOVIv2s_msl:
+    case AArch64::MOVIv4s_msl:
+    case AArch64::MVNIv2s_msl:
+    case AArch64::MVNIv4s_msl:
+      AssignedValue = MCOperand::createImm(8); // or 16, as needed
+      break;
+    default:
+      AssignedValue = MCOperand::createImm(0);
+      break;
+    }
+    return Error::success();
   }
-  return Error::success();
+  case MCOI::OperandType::OPERAND_PCREL:
+    AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  default:
+    llvm_unreachable("Unexpected operand type in randomizeTargetMCOperand");
+  }
 }
 
 } // namespace
