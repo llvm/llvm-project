@@ -743,6 +743,8 @@ void CodeGenAction::generateLLVMIR() {
 
   config.PreferVectorWidth = opts.PreferVectorWidth;
 
+  config.Reciprocals = opts.Reciprocals;
+
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
