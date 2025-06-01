@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, no-exceptions
+// UNSUPPORTED: no-exceptions
 
 // unsigned long long to_ullong() const; // constexpr since C++23
 
@@ -61,7 +61,7 @@ TEST_CONSTEXPR_CXX23 bool test() {
 
   if (!TEST_IS_CONSTANT_EVALUATED) {
     // bitset has true bits beyond the size of unsigned long long
-    std::bitset<std::numeric_limits<unsigned long long>::digits + 1> q{0};
+    std::bitset<std::numeric_limits<unsigned long long>::digits + 1> q(0);
     q.flip();
     try {
       q.to_ullong(); // throws
