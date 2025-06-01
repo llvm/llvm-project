@@ -18,7 +18,7 @@ entry:
 define <8 x i8> @hadd_trunc_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: hadd_trunc_v8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [3,3,3,3,3,3,3,3]
+; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [3,3,3,3,3,3,3,3]
 ; CHECK-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; CHECK-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vphaddw %xmm1, %xmm0, %xmm0
@@ -181,8 +181,8 @@ define <8 x i16> @hadd_extract_4th_trunc_redundant_and_v4i32(<8 x i32> %x, <8 x 
 ; CHECK-LABEL: hadd_extract_4th_trunc_redundant_and_v4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [3,3,3,3,3,3,3,3]
-; CHECK-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; CHECK-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vphaddd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]

@@ -60,14 +60,14 @@ define <8 x i32> @test_vpslld_var(i32 %shift) {
 ; X86-LABEL: test_vpslld_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vpmovzxbd {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
+; X86-NEXT:    vmovdqa {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
 ; X86-NEXT:    vpslld %xmm0, %ymm1, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_vpslld_var:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovd %edi, %xmm0
-; X64-NEXT:    vpmovzxbd {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
+; X64-NEXT:    vmovdqa {{.*#+}} ymm1 = [192,193,194,195,196,197,198,199]
 ; X64-NEXT:    vpslld %xmm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
   %amt = insertelement <8 x i32> undef, i32 %shift, i32 0
@@ -267,19 +267,19 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ; X86-SLOW-LABEL: srl_trunc_and_v4i64:
 ; X86-SLOW:       # %bb.0:
 ; X86-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; X86-SLOW-NEXT:    vbroadcastss {{.*#+}} xmm3 = [8,8,8,8]
 ; X86-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; X86-SLOW-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8,8,8,8]
-; X86-SLOW-NEXT:    vandps %xmm2, %xmm1, %xmm1
+; X86-SLOW-NEXT:    vandps %xmm3, %xmm1, %xmm1
 ; X86-SLOW-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
 ; X86-SLOW-NEXT:    vzeroupper
 ; X86-SLOW-NEXT:    retl
 ;
 ; X86-FAST-ALL-LABEL: srl_trunc_and_v4i64:
 ; X86-FAST-ALL:       # %bb.0:
-; X86-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,2,4,6,0,0,0,0]
+; X86-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,u,u,u,u]
+; X86-FAST-ALL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [8,8,8,8]
 ; X86-FAST-ALL-NEXT:    vpermd %ymm1, %ymm2, %ymm1
-; X86-FAST-ALL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [8,8,8,8]
-; X86-FAST-ALL-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; X86-FAST-ALL-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; X86-FAST-ALL-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
 ; X86-FAST-ALL-NEXT:    vzeroupper
 ; X86-FAST-ALL-NEXT:    retl
@@ -287,9 +287,9 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ; X86-FAST-PERLANE-LABEL: srl_trunc_and_v4i64:
 ; X86-FAST-PERLANE:       # %bb.0:
 ; X86-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; X86-FAST-PERLANE-NEXT:    vbroadcastss {{.*#+}} xmm3 = [8,8,8,8]
 ; X86-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; X86-FAST-PERLANE-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8,8,8,8]
-; X86-FAST-PERLANE-NEXT:    vandps %xmm2, %xmm1, %xmm1
+; X86-FAST-PERLANE-NEXT:    vandps %xmm3, %xmm1, %xmm1
 ; X86-FAST-PERLANE-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
 ; X86-FAST-PERLANE-NEXT:    vzeroupper
 ; X86-FAST-PERLANE-NEXT:    retl
@@ -297,19 +297,19 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ; X64-SLOW-LABEL: srl_trunc_and_v4i64:
 ; X64-SLOW:       # %bb.0:
 ; X64-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; X64-SLOW-NEXT:    vbroadcastss {{.*#+}} xmm3 = [8,8,8,8]
 ; X64-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; X64-SLOW-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8,8,8,8]
-; X64-SLOW-NEXT:    vandps %xmm2, %xmm1, %xmm1
+; X64-SLOW-NEXT:    vandps %xmm3, %xmm1, %xmm1
 ; X64-SLOW-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
 ; X64-SLOW-NEXT:    vzeroupper
 ; X64-SLOW-NEXT:    retq
 ;
 ; X64-FAST-ALL-LABEL: srl_trunc_and_v4i64:
 ; X64-FAST-ALL:       # %bb.0:
-; X64-FAST-ALL-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,2,4,6,0,0,0,0]
+; X64-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,u,u,u,u]
+; X64-FAST-ALL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [8,8,8,8]
 ; X64-FAST-ALL-NEXT:    vpermd %ymm1, %ymm2, %ymm1
-; X64-FAST-ALL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [8,8,8,8]
-; X64-FAST-ALL-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; X64-FAST-ALL-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; X64-FAST-ALL-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
 ; X64-FAST-ALL-NEXT:    vzeroupper
 ; X64-FAST-ALL-NEXT:    retq
@@ -317,9 +317,9 @@ define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ; X64-FAST-PERLANE-LABEL: srl_trunc_and_v4i64:
 ; X64-FAST-PERLANE:       # %bb.0:
 ; X64-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; X64-FAST-PERLANE-NEXT:    vbroadcastss {{.*#+}} xmm3 = [8,8,8,8]
 ; X64-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; X64-FAST-PERLANE-NEXT:    vbroadcastss {{.*#+}} xmm2 = [8,8,8,8]
-; X64-FAST-PERLANE-NEXT:    vandps %xmm2, %xmm1, %xmm1
+; X64-FAST-PERLANE-NEXT:    vandps %xmm3, %xmm1, %xmm1
 ; X64-FAST-PERLANE-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0
 ; X64-FAST-PERLANE-NEXT:    vzeroupper
 ; X64-FAST-PERLANE-NEXT:    retq
@@ -446,7 +446,6 @@ define <32 x i8> @ashr_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; CHECK-NEXT:    vpsraw $1, %ymm3, %ymm4
 ; CHECK-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
 ; CHECK-NEXT:    vpblendvb %ymm2, %ymm4, %ymm3, %ymm2
-; CHECK-NEXT:    vpsrlw $8, %ymm2, %ymm2
 ; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; CHECK-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; CHECK-NEXT:    vpsraw $4, %ymm0, %ymm3
@@ -457,8 +456,9 @@ define <32 x i8> @ashr_32i8(<32 x i8> %r, <32 x i8> %a) nounwind {
 ; CHECK-NEXT:    vpsraw $1, %ymm0, %ymm3
 ; CHECK-NEXT:    vpaddw %ymm1, %ymm1, %ymm1
 ; CHECK-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
+; CHECK-NEXT:    vpsrlw $8, %ymm2, %ymm1
 ; CHECK-NEXT:    vpsrlw $8, %ymm0, %ymm0
-; CHECK-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpackuswb %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ashr = ashr <32 x i8> %r, %a
   ret <32 x i8> %ashr

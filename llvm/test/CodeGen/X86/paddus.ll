@@ -613,7 +613,7 @@ define <64 x i8> @test17(<64 x i8> %x) {
 ;
 ; AVX1-LABEL: test17:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; AVX1-NEXT:    vxorps %ymm2, %ymm0, %ymm3
 ; AVX1-NEXT:    vxorps %ymm2, %ymm1, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
@@ -993,26 +993,12 @@ define <16 x i16> @test27(<16 x i16> %x) {
 }
 
 define <16 x i16> @test28(<16 x i16> %x) {
-; SSE2-LABEL: test28:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65534,65534,65534,65534,65534,65534,65534,65534]
-; SSE2-NEXT:    paddusw %xmm2, %xmm0
-; SSE2-NEXT:    paddusw %xmm2, %xmm1
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: test28:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [65534,65534,65534,65534,65534,65534,65534,65534]
-; SSSE3-NEXT:    paddusw %xmm2, %xmm0
-; SSSE3-NEXT:    paddusw %xmm2, %xmm1
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: test28:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm2 = [65534,65534,65534,65534,65534,65534,65534,65534]
-; SSE41-NEXT:    paddusw %xmm2, %xmm0
-; SSE41-NEXT:    paddusw %xmm2, %xmm1
-; SSE41-NEXT:    retq
+; SSE-LABEL: test28:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [65534,65534,65534,65534,65534,65534,65534,65534]
+; SSE-NEXT:    paddusw %xmm2, %xmm0
+; SSE-NEXT:    paddusw %xmm2, %xmm1
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test28:
 ; AVX1:       # %bb.0:
@@ -1129,26 +1115,12 @@ define <16 x i16> @test29(<16 x i16> %x) {
 }
 
 define <16 x i16> @test30(<16 x i16> %x) {
-; SSE2-LABEL: test30:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
-; SSE2-NEXT:    paddusw %xmm2, %xmm0
-; SSE2-NEXT:    paddusw %xmm2, %xmm1
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: test30:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
-; SSSE3-NEXT:    paddusw %xmm2, %xmm0
-; SSSE3-NEXT:    paddusw %xmm2, %xmm1
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: test30:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
-; SSE41-NEXT:    paddusw %xmm2, %xmm0
-; SSE41-NEXT:    paddusw %xmm2, %xmm1
-; SSE41-NEXT:    retq
+; SSE-LABEL: test30:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
+; SSE-NEXT:    paddusw %xmm2, %xmm0
+; SSE-NEXT:    paddusw %xmm2, %xmm1
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test30:
 ; AVX1:       # %bb.0:
@@ -1322,32 +1294,14 @@ define <32 x i16> @test33(<32 x i16> %x) {
 }
 
 define <32 x i16> @test34(<32 x i16> %x) {
-; SSE2-LABEL: test34:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [65534,65534,65534,65534,65534,65534,65534,65534]
-; SSE2-NEXT:    paddusw %xmm4, %xmm0
-; SSE2-NEXT:    paddusw %xmm4, %xmm1
-; SSE2-NEXT:    paddusw %xmm4, %xmm2
-; SSE2-NEXT:    paddusw %xmm4, %xmm3
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: test34:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [65534,65534,65534,65534,65534,65534,65534,65534]
-; SSSE3-NEXT:    paddusw %xmm4, %xmm0
-; SSSE3-NEXT:    paddusw %xmm4, %xmm1
-; SSSE3-NEXT:    paddusw %xmm4, %xmm2
-; SSSE3-NEXT:    paddusw %xmm4, %xmm3
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: test34:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm4 = [65534,65534,65534,65534,65534,65534,65534,65534]
-; SSE41-NEXT:    paddusw %xmm4, %xmm0
-; SSE41-NEXT:    paddusw %xmm4, %xmm1
-; SSE41-NEXT:    paddusw %xmm4, %xmm2
-; SSE41-NEXT:    paddusw %xmm4, %xmm3
-; SSE41-NEXT:    retq
+; SSE-LABEL: test34:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [65534,65534,65534,65534,65534,65534,65534,65534]
+; SSE-NEXT:    paddusw %xmm4, %xmm0
+; SSE-NEXT:    paddusw %xmm4, %xmm1
+; SSE-NEXT:    paddusw %xmm4, %xmm2
+; SSE-NEXT:    paddusw %xmm4, %xmm3
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test34:
 ; AVX1:       # %bb.0:
@@ -1467,7 +1421,7 @@ define <32 x i16> @test35(<32 x i16> %x) {
 ;
 ; AVX1-LABEL: test35:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm2 = [32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768]
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768]
 ; AVX1-NEXT:    vxorps %ymm2, %ymm0, %ymm3
 ; AVX1-NEXT:    vxorps %ymm2, %ymm1, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
@@ -1524,32 +1478,14 @@ define <32 x i16> @test35(<32 x i16> %x) {
 }
 
 define <32 x i16> @test36(<32 x i16> %x) {
-; SSE2-LABEL: test36:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [2,2,2,2,2,2,2,2]
-; SSE2-NEXT:    paddusw %xmm4, %xmm0
-; SSE2-NEXT:    paddusw %xmm4, %xmm1
-; SSE2-NEXT:    paddusw %xmm4, %xmm2
-; SSE2-NEXT:    paddusw %xmm4, %xmm3
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: test36:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [2,2,2,2,2,2,2,2]
-; SSSE3-NEXT:    paddusw %xmm4, %xmm0
-; SSSE3-NEXT:    paddusw %xmm4, %xmm1
-; SSSE3-NEXT:    paddusw %xmm4, %xmm2
-; SSSE3-NEXT:    paddusw %xmm4, %xmm3
-; SSSE3-NEXT:    retq
-;
-; SSE41-LABEL: test36:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovsxbw {{.*#+}} xmm4 = [2,2,2,2,2,2,2,2]
-; SSE41-NEXT:    paddusw %xmm4, %xmm0
-; SSE41-NEXT:    paddusw %xmm4, %xmm1
-; SSE41-NEXT:    paddusw %xmm4, %xmm2
-; SSE41-NEXT:    paddusw %xmm4, %xmm3
-; SSE41-NEXT:    retq
+; SSE-LABEL: test36:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [2,2,2,2,2,2,2,2]
+; SSE-NEXT:    paddusw %xmm4, %xmm0
+; SSE-NEXT:    paddusw %xmm4, %xmm1
+; SSE-NEXT:    paddusw %xmm4, %xmm2
+; SSE-NEXT:    paddusw %xmm4, %xmm3
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test36:
 ; AVX1:       # %bb.0:

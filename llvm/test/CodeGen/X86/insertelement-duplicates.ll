@@ -10,21 +10,21 @@ define void @PR15298(ptr nocapture %source, ptr nocapture %dest) nounwind noinli
 ; SSE-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; SSE-32-NEXT:    xorps %xmm0, %xmm0
+; SSE-32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,3],mem[0,0]
 ; SSE-32-NEXT:    xorps %xmm1, %xmm1
-; SSE-32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],mem[0,0]
-; SSE-32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
-; SSE-32-NEXT:    movups %xmm0, 624(%eax)
-; SSE-32-NEXT:    movups %xmm1, 608(%eax)
+; SSE-32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,3,1]
+; SSE-32-NEXT:    movups %xmm1, 624(%eax)
+; SSE-32-NEXT:    movups %xmm0, 608(%eax)
 ; SSE-32-NEXT:    retl
 ;
 ; SSE-64-LABEL: PR15298:
 ; SSE-64:       # %bb.0: # %L.entry
 ; SSE-64-NEXT:    xorps %xmm0, %xmm0
+; SSE-64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,3],mem[0,0]
 ; SSE-64-NEXT:    xorps %xmm1, %xmm1
-; SSE-64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],mem[0,0]
-; SSE-64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2,3,1]
-; SSE-64-NEXT:    movups %xmm0, 624(%rsi)
-; SSE-64-NEXT:    movups %xmm1, 608(%rsi)
+; SSE-64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,3,1]
+; SSE-64-NEXT:    movups %xmm1, 624(%rsi)
+; SSE-64-NEXT:    movups %xmm0, 608(%rsi)
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: PR15298:

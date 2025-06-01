@@ -45,7 +45,7 @@ define <4 x i32> @combine_blend_of_permutes_v4i32(<2 x i64> %a0, <2 x i64> %a1) 
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [2,19,0,17]
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm2 = [2,19,0,17]
 ; AVX512-NEXT:    vpermt2d %zmm1, %zmm2, %zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
@@ -83,7 +83,7 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-NEXT:    pshufb %xmm3, %xmm4
 ; SSE-NEXT:    pshufb %xmm8, %xmm1
 ; SSE-NEXT:    por %xmm4, %xmm1
-; SSE-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    movdqa %xmm1, %xmm3
 ; SSE-NEXT:    pand %xmm2, %xmm3
 ; SSE-NEXT:    movdqa %xmm0, %xmm4

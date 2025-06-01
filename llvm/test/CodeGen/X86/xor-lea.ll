@@ -180,8 +180,8 @@ define i64 @xor_add_sminval_i64(i64 %x, i64 %y) {
 ; X86-LABEL: xor_add_sminval_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl $-2147483648, %edx # imm = 0x80000000
 ; X86-NEXT:    retl
@@ -261,8 +261,8 @@ define i64 @add_xor_sminval_i64(i64 %x, i64 %y) {
 ; X86-LABEL: add_xor_sminval_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    addl $-2147483648, %edx # imm = 0x80000000
 ; X86-NEXT:    retl

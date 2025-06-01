@@ -36,7 +36,8 @@ define void @bar(i32 %i) nounwind {
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    calll frob@PLT
 ; CHECK-NEXT:    addl $4, %esp
-; CHECK-NEXT:    leal X(%esp,%esi,4), %eax
+; CHECK-NEXT:    leal (%esp,%esi,4), %eax
+; CHECK-NEXT:    addl $X, %eax
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    calll borf@PLT
 ; CHECK-NEXT:    addl $44, %esp

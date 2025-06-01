@@ -4,8 +4,8 @@
 define i32 @foo(<2 x i64> %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    ptest %xmm0, %xmm0
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmovnel %esi, %eax
 ; CHECK-NEXT:    retq
   %t1 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %c, <2 x i64> %c)

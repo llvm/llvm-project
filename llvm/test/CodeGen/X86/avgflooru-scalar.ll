@@ -273,8 +273,8 @@ define i64 @test_fixed_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-LABEL: test_fixed_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setb %dl
 ; X86-NEXT:    movzbl %dl, %edx
@@ -308,11 +308,11 @@ define i64 @test_lsb_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl %edi, %ebx
-; X86-NEXT:    shrl %ebx
 ; X86-NEXT:    shldl $31, %eax, %edi
+; X86-NEXT:    shrl %ebx
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    shrl %edx
 ; X86-NEXT:    shldl $31, %esi, %ecx
+; X86-NEXT:    shrl %edx
 ; X86-NEXT:    addl %edi, %ecx
 ; X86-NEXT:    adcl %ebx, %edx
 ; X86-NEXT:    andl %esi, %eax
@@ -348,8 +348,8 @@ define i64 @test_ext_i64(i64 %a0, i64 %a1) nounwind {
 ; X86-LABEL: test_ext_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setb %dl
 ; X86-NEXT:    movzbl %dl, %edx

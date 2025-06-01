@@ -98,7 +98,8 @@ define i32 @select_40_43_i32(i32 %offset, i64 %x) {
 ; CHECK-NEXT:    cmpq $42, %rsi
 ; CHECK-NEXT:    setl %al
 ; CHECK-NEXT:    leal (%rax,%rax,2), %eax
-; CHECK-NEXT:    leal 40(%rdi,%rax), %eax
+; CHECK-NEXT:    addl %edi, %eax
+; CHECK-NEXT:    addl $40, %eax
 ; CHECK-NEXT:    retq
   %b = icmp sgt i64 %x, 41
   %s = select i1 %b, i32 40, i32 43
@@ -244,8 +245,10 @@ define ptr @bullet(i1 %b, ptr readnone %ptr, i64 %idx) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    leaq (%rdx,%rdx,4), %rax
 ; CHECK-NEXT:    shlq $4, %rax
-; CHECK-NEXT:    leaq 60(%rsi,%rax), %rcx
-; CHECK-NEXT:    leaq 66(%rsi,%rax), %rax
+; CHECK-NEXT:    leaq (%rsi,%rax), %rcx
+; CHECK-NEXT:    addq $60, %rcx
+; CHECK-NEXT:    addq %rsi, %rax
+; CHECK-NEXT:    addq $66, %rax
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    retq

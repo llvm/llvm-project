@@ -9,56 +9,53 @@
 define void @t(ptr nocapture %in, ptr nocapture %out, ptr nocapture %rk, i32 %r) nounwind {
 ; GENERIC-LABEL: t:
 ; GENERIC:       ## %bb.0: ## %entry
-; GENERIC-NEXT:    pushq %rbp
-; GENERIC-NEXT:    pushq %r15
 ; GENERIC-NEXT:    pushq %r14
 ; GENERIC-NEXT:    pushq %rbx
 ; GENERIC-NEXT:    ## kill: def $ecx killed $ecx def $rcx
 ; GENERIC-NEXT:    movl (%rdx), %r8d
-; GENERIC-NEXT:    movl 4(%rdx), %ebx
+; GENERIC-NEXT:    movl 4(%rdx), %r11d
 ; GENERIC-NEXT:    decl %ecx
-; GENERIC-NEXT:    leaq 20(%rdx), %r9
+; GENERIC-NEXT:    shlq $4, %rcx
+; GENERIC-NEXT:    xorl %r9d, %r9d
 ; GENERIC-NEXT:    movq _Te0@GOTPCREL(%rip), %rdi
 ; GENERIC-NEXT:    movq _Te1@GOTPCREL(%rip), %rax
 ; GENERIC-NEXT:    movq _Te3@GOTPCREL(%rip), %r10
-; GENERIC-NEXT:    movq %rcx, %r11
 ; GENERIC-NEXT:    .p2align 4
 ; GENERIC-NEXT:  LBB0_1: ## %bb
 ; GENERIC-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; GENERIC-NEXT:    movzbl %r8b, %r14d
 ; GENERIC-NEXT:    ## kill: def $r8d killed $r8d def $r8
 ; GENERIC-NEXT:    shrl $24, %r8d
-; GENERIC-NEXT:    movl %ebx, %r15d
-; GENERIC-NEXT:    shrl $14, %r15d
-; GENERIC-NEXT:    andl $1020, %r15d ## imm = 0x3FC
-; GENERIC-NEXT:    movl (%rax,%r15), %ebp
-; GENERIC-NEXT:    xorl (%rdi,%r8,4), %ebp
-; GENERIC-NEXT:    xorl -12(%r9), %ebp
-; GENERIC-NEXT:    shrl $24, %ebx
-; GENERIC-NEXT:    movl (%r10,%r14,4), %r14d
-; GENERIC-NEXT:    xorl (%rdi,%rbx,4), %r14d
-; GENERIC-NEXT:    xorl -8(%r9), %r14d
-; GENERIC-NEXT:    movl %ebp, %r8d
-; GENERIC-NEXT:    shrl $24, %r8d
-; GENERIC-NEXT:    movl (%rdi,%r8,4), %r8d
-; GENERIC-NEXT:    subq $1, %r11
-; GENERIC-NEXT:    jb LBB0_3
-; GENERIC-NEXT:  ## %bb.2: ## %bb1
-; GENERIC-NEXT:    ## in Loop: Header=BB0_1 Depth=1
-; GENERIC-NEXT:    movl %r14d, %ebx
+; GENERIC-NEXT:    movl %r11d, %ebx
 ; GENERIC-NEXT:    shrl $14, %ebx
 ; GENERIC-NEXT:    andl $1020, %ebx ## imm = 0x3FC
-; GENERIC-NEXT:    xorl (%rax,%rbx), %r8d
-; GENERIC-NEXT:    xorl -4(%r9), %r8d
+; GENERIC-NEXT:    movl (%rax,%rbx), %ebx
+; GENERIC-NEXT:    xorl (%rdi,%r8,4), %ebx
+; GENERIC-NEXT:    xorl 8(%rdx,%r9), %ebx
+; GENERIC-NEXT:    shrl $24, %r11d
+; GENERIC-NEXT:    movl (%r10,%r14,4), %r14d
+; GENERIC-NEXT:    xorl (%rdi,%r11,4), %r14d
+; GENERIC-NEXT:    xorl 12(%rdx,%r9), %r14d
+; GENERIC-NEXT:    movl %ebx, %r8d
+; GENERIC-NEXT:    shrl $24, %r8d
+; GENERIC-NEXT:    movl (%rdi,%r8,4), %r8d
+; GENERIC-NEXT:    cmpq %r9, %rcx
+; GENERIC-NEXT:    je LBB0_3
+; GENERIC-NEXT:  ## %bb.2: ## %bb1
+; GENERIC-NEXT:    ## in Loop: Header=BB0_1 Depth=1
+; GENERIC-NEXT:    movl %r14d, %r11d
+; GENERIC-NEXT:    shrl $14, %r11d
+; GENERIC-NEXT:    andl $1020, %r11d ## imm = 0x3FC
+; GENERIC-NEXT:    xorl (%rax,%r11), %r8d
+; GENERIC-NEXT:    xorl 16(%rdx,%r9), %r8d
 ; GENERIC-NEXT:    shrl $24, %r14d
-; GENERIC-NEXT:    movzbl %bpl, %ebx
-; GENERIC-NEXT:    movl (%r10,%rbx,4), %ebx
-; GENERIC-NEXT:    xorl (%rdi,%r14,4), %ebx
-; GENERIC-NEXT:    xorl (%r9), %ebx
+; GENERIC-NEXT:    movzbl %bl, %r11d
+; GENERIC-NEXT:    movl (%r10,%r11,4), %r11d
+; GENERIC-NEXT:    xorl (%rdi,%r14,4), %r11d
+; GENERIC-NEXT:    xorl 20(%rdx,%r9), %r11d
 ; GENERIC-NEXT:    addq $16, %r9
 ; GENERIC-NEXT:    jmp LBB0_1
 ; GENERIC-NEXT:  LBB0_3: ## %bb2
-; GENERIC-NEXT:    shlq $4, %rcx
 ; GENERIC-NEXT:    andl $-16777216, %r8d ## imm = 0xFF000000
 ; GENERIC-NEXT:    movl %r14d, %r9d
 ; GENERIC-NEXT:    shrl $14, %r9d
@@ -70,7 +67,7 @@ define void @t(ptr nocapture %in, ptr nocapture %out, ptr nocapture %rk, i32 %r)
 ; GENERIC-NEXT:    shrl $8, %r14d
 ; GENERIC-NEXT:    movzbl 3(%rdi,%r14,4), %edi
 ; GENERIC-NEXT:    shll $24, %edi
-; GENERIC-NEXT:    movzbl %bpl, %r8d
+; GENERIC-NEXT:    movzbl %bl, %r8d
 ; GENERIC-NEXT:    movzbl 2(%rax,%r8,4), %eax
 ; GENERIC-NEXT:    shll $16, %eax
 ; GENERIC-NEXT:    orl %edi, %eax
@@ -87,8 +84,6 @@ define void @t(ptr nocapture %in, ptr nocapture %out, ptr nocapture %rk, i32 %r)
 ; GENERIC-NEXT:    movb %al, 5(%rsi)
 ; GENERIC-NEXT:    popq %rbx
 ; GENERIC-NEXT:    popq %r14
-; GENERIC-NEXT:    popq %r15
-; GENERIC-NEXT:    popq %rbp
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: t:

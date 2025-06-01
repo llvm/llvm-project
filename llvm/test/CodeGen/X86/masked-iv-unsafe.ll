@@ -174,31 +174,32 @@ return:
 define void @count_down_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: count_down_signed:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq $-10, %rax
-; CHECK-NEXT:    movl $167772160, %ecx # imm = 0xA000000
-; CHECK-NEXT:    movl $2560, %edx # imm = 0xA00
+; CHECK-NEXT:    movl $167772160, %eax # imm = 0xA000000
+; CHECK-NEXT:    movl $2560, %ecx # imm = 0xA00
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rdx, %rsi
+; CHECK-NEXT:    movq %rcx, %rsi
 ; CHECK-NEXT:    sarq $8, %rsi
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdi,%rsi,8)
-; CHECK-NEXT:    movq %rcx, %rsi
+; CHECK-NEXT:    movq %rax, %rsi
 ; CHECK-NEXT:    sarq $24, %rsi
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm1, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdi,%rsi,8)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
-; CHECK-NEXT:    movsd %xmm3, 160(%rdi,%rax,8)
-; CHECK-NEXT:    addq $-16777216, %rcx # imm = 0xFF000000
-; CHECK-NEXT:    addq $-256, %rdx
-; CHECK-NEXT:    decq %rax
+; CHECK-NEXT:    movsd %xmm3, 80(%rdi,%rdx,8)
+; CHECK-NEXT:    decq %rdx
+; CHECK-NEXT:    addq $-16777216, %rax # imm = 0xFF000000
+; CHECK-NEXT:    addq $-256, %rcx
+; CHECK-NEXT:    cmpq $10, %rdx
 ; CHECK-NEXT:    jne .LBB3_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
@@ -346,7 +347,7 @@ define void @another_count_up_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -362,11 +363,11 @@ define void @another_count_up_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    movsd %xmm3, (%rdi,%r8,8)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
-; CHECK-NEXT:    movsd %xmm3, (%rdx)
-; CHECK-NEXT:    addq $8, %rdx
+; CHECK-NEXT:    movsd %xmm3, (%rdi,%rdx,8)
+; CHECK-NEXT:    incq %rdx
 ; CHECK-NEXT:    addq $16777216, %rcx # imm = 0x1000000
 ; CHECK-NEXT:    addq $256, %rax # imm = 0x100
-; CHECK-NEXT:    decq %rsi
+; CHECK-NEXT:    cmpq %rdx, %rsi
 ; CHECK-NEXT:    jne .LBB6_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
@@ -402,32 +403,33 @@ return:
 define void @another_count_down_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: another_count_down_signed:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    leaq -10(%rsi), %rax
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    shlq $24, %rax
 ; CHECK-NEXT:    movq %rsi, %rcx
-; CHECK-NEXT:    shlq $24, %rcx
-; CHECK-NEXT:    shlq $8, %rsi
+; CHECK-NEXT:    shlq $8, %rcx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB7_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    movq %rcx, %rdx
 ; CHECK-NEXT:    sarq $8, %rdx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdi,%rdx,8)
-; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    movq %rax, %rdx
 ; CHECK-NEXT:    sarq $24, %rdx
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm1, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdi,%rdx,8)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
-; CHECK-NEXT:    movsd %xmm3, 80(%rdi,%rax,8)
-; CHECK-NEXT:    addq $-16777216, %rcx # imm = 0xFF000000
-; CHECK-NEXT:    addq $-256, %rsi
-; CHECK-NEXT:    decq %rax
+; CHECK-NEXT:    movsd %xmm3, (%rdi,%rsi,8)
+; CHECK-NEXT:    decq %rsi
+; CHECK-NEXT:    addq $-16777216, %rax # imm = 0xFF000000
+; CHECK-NEXT:    addq $-256, %rcx
+; CHECK-NEXT:    cmpq $10, %rsi
 ; CHECK-NEXT:    jne .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
@@ -463,7 +465,7 @@ return:
 define void @yet_another_count_down(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: yet_another_count_down:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq $-2040, %rax # imm = 0xF808
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
@@ -474,16 +476,17 @@ define void @yet_another_count_down(ptr %d, i64 %n) nounwind {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm3
-; CHECK-NEXT:    movsd %xmm3, 2040(%rdi,%rax)
+; CHECK-NEXT:    movsd %xmm3, (%rdi,%rax,8)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm1, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rcx)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdx)
+; CHECK-NEXT:    addq $255, %rax
 ; CHECK-NEXT:    addq $-8, %rdx
 ; CHECK-NEXT:    addq $134217720, %rcx # imm = 0x7FFFFF8
-; CHECK-NEXT:    addq $2040, %rax # imm = 0x7F8
+; CHECK-NEXT:    cmpq $255, %rax
 ; CHECK-NEXT:    jne .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
@@ -624,31 +627,32 @@ return:
 define void @yet_another_count_up_signed(ptr %d, i64 %n) nounwind {
 ; CHECK-LABEL: yet_another_count_up_signed:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq $-10, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0000000000000001E-1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.2999999999999998E+0,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm2 = [4.5E+0,0.0E+0]
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB11_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rcx, %rsi
+; CHECK-NEXT:    movq %rax, %rsi
 ; CHECK-NEXT:    sarq $8, %rsi
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm0, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdi,%rsi,8)
-; CHECK-NEXT:    movq %rdx, %rsi
+; CHECK-NEXT:    movq %rcx, %rsi
 ; CHECK-NEXT:    sarq $24, %rsi
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm1, %xmm3
 ; CHECK-NEXT:    movsd %xmm3, (%rdi,%rsi,8)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm2, %xmm3
-; CHECK-NEXT:    movsd %xmm3, 80(%rdi,%rax,8)
-; CHECK-NEXT:    addq $50331648, %rdx # imm = 0x3000000
-; CHECK-NEXT:    addq $768, %rcx # imm = 0x300
-; CHECK-NEXT:    addq $3, %rax
+; CHECK-NEXT:    movsd %xmm3, (%rdi,%rdx,8)
+; CHECK-NEXT:    addq $3, %rdx
+; CHECK-NEXT:    addq $50331648, %rcx # imm = 0x3000000
+; CHECK-NEXT:    addq $768, %rax # imm = 0x300
+; CHECK-NEXT:    cmpq $10, %rdx
 ; CHECK-NEXT:    jne .LBB11_1
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq

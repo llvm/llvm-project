@@ -15,8 +15,8 @@ define void @widen_fsub_v2f32_v4f32(ptr %a0, ptr %b0, ptr %c0) {
 ; SSE-NEXT:    subps %xmm2, %xmm0
 ; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; SSE-NEXT:    subps %xmm2, %xmm1
-; SSE-NEXT:    movlps %xmm0, (%rdx)
-; SSE-NEXT:    movlps %xmm1, 8(%rdx)
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    movups %xmm0, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: widen_fsub_v2f32_v4f32:
@@ -55,14 +55,14 @@ define void @widen_fsub_v2f32_v8f32(ptr %a0, ptr %b0, ptr %c0) {
 ; SSE-NEXT:    subps %xmm4, %xmm0
 ; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
 ; SSE-NEXT:    subps %xmm4, %xmm1
-; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
-; SSE-NEXT:    subps %xmm4, %xmm2
-; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
-; SSE-NEXT:    subps %xmm4, %xmm3
-; SSE-NEXT:    movlps %xmm0, (%rdx)
-; SSE-NEXT:    movlps %xmm1, 8(%rdx)
-; SSE-NEXT:    movlps %xmm2, 16(%rdx)
-; SSE-NEXT:    movlps %xmm3, 24(%rdx)
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    subps %xmm1, %xmm2
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    subps %xmm1, %xmm3
+; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; SSE-NEXT:    movups %xmm0, (%rdx)
+; SSE-NEXT:    movups %xmm2, 16(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: widen_fsub_v2f32_v8f32:
@@ -117,37 +117,37 @@ define void @widen_fsub_v2f32_v16f32(ptr %a0, ptr %b0, ptr %c0) {
 ; SSE-LABEL: widen_fsub_v2f32_v16f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
 ; SSE-NEXT:    subps %xmm4, %xmm0
 ; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
-; SSE-NEXT:    subps %xmm4, %xmm1
-; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
 ; SSE-NEXT:    subps %xmm4, %xmm2
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE-NEXT:    subps %xmm2, %xmm1
+; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE-NEXT:    subps %xmm2, %xmm3
+; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm3[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
+; SSE-NEXT:    subps %xmm3, %xmm2
+; SSE-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
+; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
+; SSE-NEXT:    subps %xmm4, %xmm3
+; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; SSE-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
 ; SSE-NEXT:    subps %xmm4, %xmm3
 ; SSE-NEXT:    movsd {{.*#+}} xmm4 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm5 = mem[0],zero
 ; SSE-NEXT:    subps %xmm5, %xmm4
-; SSE-NEXT:    movsd {{.*#+}} xmm5 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm6 = mem[0],zero
-; SSE-NEXT:    subps %xmm6, %xmm5
-; SSE-NEXT:    movsd {{.*#+}} xmm6 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm7 = mem[0],zero
-; SSE-NEXT:    subps %xmm7, %xmm6
-; SSE-NEXT:    movsd {{.*#+}} xmm7 = mem[0],zero
-; SSE-NEXT:    movsd {{.*#+}} xmm8 = mem[0],zero
-; SSE-NEXT:    subps %xmm8, %xmm7
-; SSE-NEXT:    movlps %xmm0, (%rdx)
-; SSE-NEXT:    movlps %xmm1, 8(%rdx)
-; SSE-NEXT:    movlps %xmm2, 16(%rdx)
-; SSE-NEXT:    movlps %xmm3, 24(%rdx)
-; SSE-NEXT:    movlps %xmm4, 32(%rdx)
-; SSE-NEXT:    movlps %xmm5, 40(%rdx)
-; SSE-NEXT:    movlps %xmm6, 48(%rdx)
-; SSE-NEXT:    movlps %xmm7, 56(%rdx)
+; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; SSE-NEXT:    movups %xmm0, (%rdx)
+; SSE-NEXT:    movups %xmm1, 16(%rdx)
+; SSE-NEXT:    movups %xmm2, 32(%rdx)
+; SSE-NEXT:    movups %xmm3, 48(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: widen_fsub_v2f32_v16f32:
@@ -254,14 +254,14 @@ define void @widen_fsub_v2f32_v16f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX512VL-NEXT:    vsubps %xmm8, %xmm7, %xmm7
 ; AVX512VL-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512VL-NEXT:    vmovapd {{.*#+}} ymm1 = [0,2,4,6]
 ; AVX512VL-NEXT:    vpermi2pd %ymm2, %ymm0, %ymm1
 ; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm7, %zmm6, %zmm0
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm5, %zmm4, %zmm2
-; AVX512VL-NEXT:    vbroadcasti64x4 {{.*#+}} zmm3 = [0,2,8,10,0,2,8,10]
-; AVX512VL-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3]
-; AVX512VL-NEXT:    vpermi2pd %zmm0, %zmm2, %zmm3
-; AVX512VL-NEXT:    vinsertf64x4 $0, %ymm1, %zmm3, %zmm0
+; AVX512VL-NEXT:    vbroadcasti64x4 {{.*#+}} zmm2 = [0,2,8,10,0,2,8,10]
+; AVX512VL-NEXT:    # zmm2 = mem[0,1,2,3,0,1,2,3]
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm5, %zmm4, %zmm3
+; AVX512VL-NEXT:    vpermi2pd %zmm0, %zmm3, %zmm2
+; AVX512VL-NEXT:    vinsertf64x4 $0, %ymm1, %zmm2, %zmm0
 ; AVX512VL-NEXT:    vmovupd %zmm0, (%rdx)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -374,16 +374,27 @@ define <16 x float> @widen_fsub_v4f32_v16f32_const(<4 x float> %x, <4 x float> %
 ; SSE-NEXT:    subps %xmm4, %xmm3
 ; SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: widen_fsub_v4f32_v16f32_const:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
-; AVX1OR2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0]
-; AVX1OR2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX1OR2-NEXT:    vaddps %ymm1, %ymm2, %ymm1
-; AVX1OR2-NEXT:    retq
+; AVX1-LABEL: widen_fsub_v4f32_v16f32_const:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm1 = [-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0]
+; AVX1-NEXT:    vaddps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX1-NEXT:    vaddps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: widen_fsub_v4f32_v16f32_const:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0,-2.0E+0]
+; AVX2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX2-NEXT:    vaddps %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: widen_fsub_v4f32_v16f32_const:
 ; AVX512:       # %bb.0:

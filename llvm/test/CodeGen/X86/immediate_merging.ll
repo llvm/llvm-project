@@ -177,8 +177,8 @@ define dso_local void @foomemset() optsize {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movabsq $2387225703656530209, %rax # imm = 0x2121212121212121
 ; X64-NEXT:    movq %rax, AA+16(%rip)
-; X64-NEXT:    movq %rax, AA+8(%rip)
-; X64-NEXT:    movq %rax, AA(%rip)
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33]
+; X64-NEXT:    movups %xmm0, AA(%rip)
 ; X64-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr @AA, i8 33, i32 24, i1 false)
@@ -204,8 +204,8 @@ define dso_local void @foomemset_pgso() !prof !14 {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movabsq $2387225703656530209, %rax # imm = 0x2121212121212121
 ; X64-NEXT:    movq %rax, AA+16(%rip)
-; X64-NEXT:    movq %rax, AA+8(%rip)
-; X64-NEXT:    movq %rax, AA(%rip)
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33]
+; X64-NEXT:    movups %xmm0, AA(%rip)
 ; X64-NEXT:    retq
 entry:
   call void @llvm.memset.p0.i32(ptr @AA, i8 33, i32 24, i1 false)

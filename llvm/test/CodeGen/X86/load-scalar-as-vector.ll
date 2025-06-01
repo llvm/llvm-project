@@ -494,18 +494,32 @@ define <2 x i64> @udiv_op1_constant(ptr %p) nounwind {
 define <2 x i64> @urem_op0_constant(ptr %p) nounwind {
 ; SSE-LABEL: urem_op0_constant:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    movq (%rdi), %rcx
+; SSE-NEXT:    movl $42, %edx
+; SSE-NEXT:    cmpq $42, %rcx
+; SSE-NEXT:    ja .LBB22_2
+; SSE-NEXT:  # %bb.1:
 ; SSE-NEXT:    movl $42, %eax
 ; SSE-NEXT:    xorl %edx, %edx
-; SSE-NEXT:    divq (%rdi)
-; SSE-NEXT:    movq %rdx, %xmm0
+; SSE-NEXT:    divl %ecx
+; SSE-NEXT:    # kill: def $edx killed $edx def $rdx
+; SSE-NEXT:  .LBB22_2:
+; SSE-NEXT:    movd %edx, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: urem_op0_constant:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    movq (%rdi), %rcx
+; AVX-NEXT:    movl $42, %edx
+; AVX-NEXT:    cmpq $42, %rcx
+; AVX-NEXT:    ja .LBB22_2
+; AVX-NEXT:  # %bb.1:
 ; AVX-NEXT:    movl $42, %eax
 ; AVX-NEXT:    xorl %edx, %edx
-; AVX-NEXT:    divq (%rdi)
-; AVX-NEXT:    vmovq %rdx, %xmm0
+; AVX-NEXT:    divl %ecx
+; AVX-NEXT:    # kill: def $edx killed $edx def $rdx
+; AVX-NEXT:  .LBB22_2:
+; AVX-NEXT:    vmovd %edx, %xmm0
 ; AVX-NEXT:    retq
   %x = load i64, ptr %p
   %b = urem i64 42, %x

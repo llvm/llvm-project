@@ -36,7 +36,7 @@ define <8 x i16> @testv8i16(<8 x i16> %in) {
 define <16 x i8> @testv16i8(<16 x i8> %in) {
 ; AVX256-LABEL: testv16i8:
 ; AVX256:       # %bb.0:
-; AVX256-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX256-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX256-NEXT:    vpand %xmm1, %xmm0, %xmm2
 ; AVX256-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX256-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
@@ -60,10 +60,9 @@ define <16 x i8> @testv16i8(<16 x i8> %in) {
 define <16 x i16> @testv16i16(<16 x i16> %in) {
 ; AVX256-LABEL: testv16i16:
 ; AVX256:       # %bb.0:
-; AVX256-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX256-NEXT:    vmovdqa {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX256-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; AVX256-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; AVX256-NEXT:    # ymm3 = mem[0,1,0,1]
+; AVX256-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX256-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
 ; AVX256-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; AVX256-NEXT:    vpand %ymm1, %ymm0, %ymm0
@@ -87,10 +86,9 @@ define <16 x i16> @testv16i16(<16 x i16> %in) {
 define <32 x i8> @testv32i8(<32 x i8> %in) {
 ; AVX256-LABEL: testv32i8:
 ; AVX256:       # %bb.0:
-; AVX256-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX256-NEXT:    vmovdqa {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX256-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; AVX256-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; AVX256-NEXT:    # ymm3 = mem[0,1,0,1]
+; AVX256-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX256-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
 ; AVX256-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; AVX256-NEXT:    vpand %ymm1, %ymm0, %ymm0
@@ -100,10 +98,9 @@ define <32 x i8> @testv32i8(<32 x i8> %in) {
 ;
 ; AVX512VL-LABEL: testv32i8:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512VL-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; AVX512VL-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; AVX512VL-NEXT:    # ymm3 = mem[0,1,0,1]
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX512VL-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
 ; AVX512VL-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpand %ymm1, %ymm0, %ymm0
@@ -115,8 +112,7 @@ define <32 x i8> @testv32i8(<32 x i8> %in) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpbroadcastb {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; AVX512F-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; AVX512F-NEXT:    vbroadcasti128 {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
-; AVX512F-NEXT:    # ymm3 = mem[0,1,0,1]
+; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
 ; AVX512F-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
 ; AVX512F-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpand %ymm1, %ymm0, %ymm0

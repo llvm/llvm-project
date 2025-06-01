@@ -11,8 +11,8 @@ define <4 x i32> @combine_vec_rot_rot(<4 x i32> %x) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,3,2,3]
 ; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,3,2,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,3,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -118,11 +118,12 @@ define <4 x i32> @combine_vec_rot_select_zero(<4 x i32>, <4 x i32>) {
 ; SSE2-LABEL: combine_vec_rot_select_zero:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    pslld $23, %xmm3
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm2
-; SSE2-NEXT:    pslld $23, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    cvttps2dq %xmm1, %xmm1
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; SSE2-NEXT:    cvttps2dq %xmm3, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,3,2,3]
@@ -150,16 +151,16 @@ define <4 x i32> @combine_vec_rot_select_zero(<4 x i32>, <4 x i32>) {
 ;
 ; AVX2-LABEL: combine_vec_rot_select_zero:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [31,31,31,31]
-; AVX2-NEXT:    vpand %xmm3, %xmm1, %xmm3
-; AVX2-NEXT:    vpsllvd %xmm3, %xmm0, %xmm4
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [32,32,32,32]
-; AVX2-NEXT:    vpsubd %xmm3, %xmm5, %xmm3
-; AVX2-NEXT:    vpsrlvd %xmm3, %xmm0, %xmm3
-; AVX2-NEXT:    vpor %xmm3, %xmm4, %xmm3
-; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vblendvps %xmm1, %xmm0, %xmm3, %xmm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,31,31,31]
+; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm2
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [32,32,32,32]
+; AVX2-NEXT:    vpsllvd %xmm2, %xmm0, %xmm5
+; AVX2-NEXT:    vpsubd %xmm2, %xmm4, %xmm2
+; AVX2-NEXT:    vpsrlvd %xmm2, %xmm0, %xmm2
+; AVX2-NEXT:    vpor %xmm2, %xmm5, %xmm2
+; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_vec_rot_select_zero:

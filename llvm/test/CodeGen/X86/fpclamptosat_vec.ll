@@ -9,10 +9,10 @@ define <2 x i32> @stest_f64i32(<2 x double> %x) nounwind {
 ; SSE-LABEL: stest_f64i32:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
-; SSE-NEXT:    movq %rax, %xmm1
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; SSE-NEXT:    cvttsd2si %xmm0, %rax
-; SSE-NEXT:    movq %rax, %xmm0
+; SSE-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE-NEXT:    movq %rax, %xmm1
+; SSE-NEXT:    movq %rcx, %xmm0
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
@@ -32,8 +32,8 @@ define <2 x i32> @stest_f64i32(<2 x double> %x) nounwind {
 ; SSE-NEXT:    pxor %xmm3, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm2
 ; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,2,2]
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
@@ -87,30 +87,30 @@ define <2 x i32> @utest_f64i32(<2 x double> %x) nounwind {
 ; SSE-NEXT:    movq %rcx, %rdx
 ; SSE-NEXT:    sarq $63, %rdx
 ; SSE-NEXT:    andq %rax, %rdx
-; SSE-NEXT:    orq %rcx, %rdx
-; SSE-NEXT:    movq %rdx, %xmm2
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
+; SSE-NEXT:    orq %rcx, %rdx
 ; SSE-NEXT:    subsd %xmm1, %xmm0
 ; SSE-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE-NEXT:    movq %rdx, %xmm0
 ; SSE-NEXT:    movq %rax, %rdx
 ; SSE-NEXT:    sarq $63, %rdx
 ; SSE-NEXT:    andq %rcx, %rdx
 ; SSE-NEXT:    orq %rax, %rdx
-; SSE-NEXT:    movq %rdx, %xmm0
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [9223372039002259456,9223372039002259456]
-; SSE-NEXT:    pxor %xmm2, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movq %rdx, %xmm1
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259456,9223372039002259456]
 ; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; SSE-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,2,2]
+; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pandn %xmm2, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pxor %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: utest_f64i32:
@@ -230,16 +230,16 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) nounwind {
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
 ; SSE-NEXT:    cvttss2si %xmm1, %rax
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE-NEXT:    cvttss2si %xmm1, %rcx
 ; SSE-NEXT:    movq %rax, %xmm1
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
-; SSE-NEXT:    cvttss2si %xmm2, %rax
-; SSE-NEXT:    movq %rax, %xmm2
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; SSE-NEXT:    movq %rcx, %xmm2
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
 ; SSE-NEXT:    movq %rax, %xmm4
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm0[0]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [2147483647,2147483647]
@@ -357,30 +357,30 @@ define <4 x i32> @utest_f32i32(<4 x float> %x) nounwind {
 ; SSE-NEXT:    sarq $63, %rdx
 ; SSE-NEXT:    andq %rax, %rdx
 ; SSE-NEXT:    orq %rcx, %rdx
-; SSE-NEXT:    movq %rdx, %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm3
 ; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[1,1]
 ; SSE-NEXT:    cvttss2si %xmm3, %rax
+; SSE-NEXT:    movq %rdx, %xmm1
 ; SSE-NEXT:    subss %xmm2, %xmm3
 ; SSE-NEXT:    cvttss2si %xmm3, %rcx
 ; SSE-NEXT:    movq %rax, %rdx
 ; SSE-NEXT:    sarq $63, %rdx
 ; SSE-NEXT:    andq %rcx, %rdx
 ; SSE-NEXT:    orq %rax, %rdx
-; SSE-NEXT:    movq %rdx, %xmm3
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; SSE-NEXT:    movaps %xmm0, %xmm3
 ; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3],xmm0[3,3]
 ; SSE-NEXT:    cvttss2si %xmm3, %rax
+; SSE-NEXT:    movq %rdx, %xmm4
 ; SSE-NEXT:    subss %xmm2, %xmm3
 ; SSE-NEXT:    cvttss2si %xmm3, %rcx
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm4[0]
 ; SSE-NEXT:    movq %rax, %rdx
 ; SSE-NEXT:    sarq $63, %rdx
 ; SSE-NEXT:    andq %rcx, %rdx
 ; SSE-NEXT:    orq %rax, %rdx
-; SSE-NEXT:    movq %rdx, %xmm3
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
+; SSE-NEXT:    movq %rdx, %xmm3
 ; SSE-NEXT:    subss %xmm2, %xmm0
 ; SSE-NEXT:    cvttss2si %xmm0, %rcx
 ; SSE-NEXT:    movq %rax, %rdx
@@ -1180,8 +1180,8 @@ define <4 x i16> @utest_f32i16(<4 x float> %x) nounwind {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    psrad $31, %xmm2
 ; SSE-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    psrad $31, %xmm2
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    por %xmm1, %xmm0
@@ -1700,8 +1700,8 @@ define <4 x i8> @utest_f32i8(<4 x float> %x) nounwind {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    psrad $31, %xmm2
 ; SSE-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    psrad $31, %xmm2
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm3
 ; SSE-NEXT:    pand %xmm2, %xmm3
 ; SSE-NEXT:    por %xmm1, %xmm3
@@ -1797,11 +1797,11 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) nounwind {
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
 ; SSE-NEXT:    cmpq %rsi, %rdi
 ; SSE-NEXT:    movq $-1, %r8
-; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
+; SSE-NEXT:    sbbq %rcx, %r8
+; SSE-NEXT:    movq $-1, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rsi
 ; SSE-NEXT:    cmpq %rax, %rdi
-; SSE-NEXT:    sbbq %rdx, %r8
+; SSE-NEXT:    sbbq %rdx, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    movq %rsi, %xmm1
@@ -2074,11 +2074,11 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) nounwind {
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
 ; SSE-NEXT:    cmpq %rsi, %rdi
 ; SSE-NEXT:    movq $-1, %r8
-; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
+; SSE-NEXT:    sbbq %rcx, %r8
+; SSE-NEXT:    movq $-1, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rsi
 ; SSE-NEXT:    cmpq %rax, %rdi
-; SSE-NEXT:    sbbq %rdx, %r8
+; SSE-NEXT:    sbbq %rdx, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    movq %rsi, %xmm1
@@ -2351,11 +2351,11 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) nounwind {
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
 ; SSE-NEXT:    cmpq %rsi, %rdi
 ; SSE-NEXT:    movq $-1, %r8
-; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
+; SSE-NEXT:    sbbq %rcx, %r8
+; SSE-NEXT:    movq $-1, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rsi
 ; SSE-NEXT:    cmpq %rax, %rdi
-; SSE-NEXT:    sbbq %rdx, %r8
+; SSE-NEXT:    sbbq %rdx, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    movq %rsi, %xmm1
@@ -2633,10 +2633,10 @@ define <2 x i32> @stest_f64i32_mm(<2 x double> %x) nounwind {
 ; SSE-LABEL: stest_f64i32_mm:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
-; SSE-NEXT:    movq %rax, %xmm1
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; SSE-NEXT:    cvttsd2si %xmm0, %rax
-; SSE-NEXT:    movq %rax, %xmm0
+; SSE-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE-NEXT:    movq %rax, %xmm1
+; SSE-NEXT:    movq %rcx, %xmm0
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
@@ -2656,8 +2656,8 @@ define <2 x i32> @stest_f64i32_mm(<2 x double> %x) nounwind {
 ; SSE-NEXT:    pxor %xmm3, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm2
 ; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,2,2]
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
@@ -2709,30 +2709,30 @@ define <2 x i32> @utest_f64i32_mm(<2 x double> %x) nounwind {
 ; SSE-NEXT:    movq %rcx, %rdx
 ; SSE-NEXT:    sarq $63, %rdx
 ; SSE-NEXT:    andq %rax, %rdx
-; SSE-NEXT:    orq %rcx, %rdx
-; SSE-NEXT:    movq %rdx, %xmm2
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvttsd2si %xmm0, %rax
+; SSE-NEXT:    orq %rcx, %rdx
 ; SSE-NEXT:    subsd %xmm1, %xmm0
 ; SSE-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE-NEXT:    movq %rdx, %xmm0
 ; SSE-NEXT:    movq %rax, %rdx
 ; SSE-NEXT:    sarq $63, %rdx
 ; SSE-NEXT:    andq %rcx, %rdx
 ; SSE-NEXT:    orq %rax, %rdx
-; SSE-NEXT:    movq %rdx, %xmm0
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [9223372039002259456,9223372039002259456]
-; SSE-NEXT:    pxor %xmm2, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSE-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    movq %rdx, %xmm1
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259456,9223372039002259456]
 ; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; SSE-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,2,2]
+; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pandn %xmm2, %xmm1
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pxor %xmm1, %xmm2
+; SSE-NEXT:    pand %xmm0, %xmm1
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: utest_f64i32_mm:
@@ -2849,16 +2849,16 @@ define <4 x i32> @stest_f32i32_mm(<4 x float> %x) nounwind {
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
 ; SSE-NEXT:    cvttss2si %xmm1, %rax
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE-NEXT:    cvttss2si %xmm1, %rcx
 ; SSE-NEXT:    movq %rax, %xmm1
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
-; SSE-NEXT:    cvttss2si %xmm2, %rax
-; SSE-NEXT:    movq %rax, %xmm2
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; SSE-NEXT:    movq %rcx, %xmm2
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
 ; SSE-NEXT:    movq %rax, %xmm3
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
 ; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648]
@@ -2974,30 +2974,30 @@ define <4 x i32> @utest_f32i32_mm(<4 x float> %x) nounwind {
 ; SSE-NEXT:    sarq $63, %rdx
 ; SSE-NEXT:    andq %rax, %rdx
 ; SSE-NEXT:    orq %rcx, %rdx
-; SSE-NEXT:    movq %rdx, %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm3
 ; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[1,1]
 ; SSE-NEXT:    cvttss2si %xmm3, %rax
+; SSE-NEXT:    movq %rdx, %xmm1
 ; SSE-NEXT:    subss %xmm2, %xmm3
 ; SSE-NEXT:    cvttss2si %xmm3, %rcx
 ; SSE-NEXT:    movq %rax, %rdx
 ; SSE-NEXT:    sarq $63, %rdx
 ; SSE-NEXT:    andq %rcx, %rdx
 ; SSE-NEXT:    orq %rax, %rdx
-; SSE-NEXT:    movq %rdx, %xmm3
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm3[0]
 ; SSE-NEXT:    movaps %xmm0, %xmm3
 ; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3],xmm0[3,3]
 ; SSE-NEXT:    cvttss2si %xmm3, %rax
+; SSE-NEXT:    movq %rdx, %xmm4
 ; SSE-NEXT:    subss %xmm2, %xmm3
 ; SSE-NEXT:    cvttss2si %xmm3, %rcx
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm4[0]
 ; SSE-NEXT:    movq %rax, %rdx
 ; SSE-NEXT:    sarq $63, %rdx
 ; SSE-NEXT:    andq %rcx, %rdx
 ; SSE-NEXT:    orq %rax, %rdx
-; SSE-NEXT:    movq %rdx, %xmm3
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
+; SSE-NEXT:    movq %rdx, %xmm3
 ; SSE-NEXT:    subss %xmm2, %xmm0
 ; SSE-NEXT:    cvttss2si %xmm0, %rcx
 ; SSE-NEXT:    movq %rax, %rdx
@@ -3782,8 +3782,8 @@ define <4 x i16> @utest_f32i16_mm(<4 x float> %x) nounwind {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    psrad $31, %xmm2
 ; SSE-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    psrad $31, %xmm2
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
 ; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    por %xmm1, %xmm0
@@ -4197,11 +4197,11 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) nounwind {
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
 ; SSE-NEXT:    cmpq %rsi, %rdi
 ; SSE-NEXT:    movq $-1, %r8
-; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
+; SSE-NEXT:    sbbq %rcx, %r8
+; SSE-NEXT:    movq $-1, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rsi
 ; SSE-NEXT:    cmpq %rax, %rdi
-; SSE-NEXT:    sbbq %rdx, %r8
+; SSE-NEXT:    sbbq %rdx, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    movq %rsi, %xmm1
@@ -4457,11 +4457,11 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) nounwind {
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
 ; SSE-NEXT:    cmpq %rsi, %rdi
 ; SSE-NEXT:    movq $-1, %r8
-; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
+; SSE-NEXT:    sbbq %rcx, %r8
+; SSE-NEXT:    movq $-1, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rsi
 ; SSE-NEXT:    cmpq %rax, %rdi
-; SSE-NEXT:    sbbq %rdx, %r8
+; SSE-NEXT:    sbbq %rdx, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    movq %rsi, %xmm1
@@ -4717,11 +4717,11 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) nounwind {
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
 ; SSE-NEXT:    cmpq %rsi, %rdi
 ; SSE-NEXT:    movq $-1, %r8
-; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
+; SSE-NEXT:    sbbq %rcx, %r8
+; SSE-NEXT:    movq $-1, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rsi
 ; SSE-NEXT:    cmpq %rax, %rdi
-; SSE-NEXT:    sbbq %rdx, %r8
+; SSE-NEXT:    sbbq %rdx, %rcx
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    movq %rsi, %xmm1

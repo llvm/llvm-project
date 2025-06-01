@@ -805,17 +805,17 @@ define i32 @freeze_fshr(i32 %a0, i32 %a1, i32 %a2) nounwind {
 define void @pr59676_frozen(ptr %dst, i32 %x.orig) {
 ; X86-LABEL: pr59676_frozen:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    imull %eax, %eax
 ; X86-NEXT:    imull $84, %eax, %eax
-; X86-NEXT:    movl $818089009, %edx # imm = 0x30C30C31
-; X86-NEXT:    imull %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shrl $31, %eax
+; X86-NEXT:    movl $818089009, %ecx # imm = 0x30C30C31
+; X86-NEXT:    imull %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    shrl $31, %ecx
 ; X86-NEXT:    sarl $3, %edx
-; X86-NEXT:    addl %eax, %edx
-; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr59676_frozen:
@@ -843,17 +843,17 @@ define void @pr59676_frozen(ptr %dst, i32 %x.orig) {
 define void @pr59676_nsw_frozen(ptr %dst, i32 %x.orig) {
 ; X86-LABEL: pr59676_nsw_frozen:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    imull %eax, %eax
 ; X86-NEXT:    imull $84, %eax, %eax
-; X86-NEXT:    movl $818089009, %edx # imm = 0x30C30C31
-; X86-NEXT:    imull %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shrl $31, %eax
+; X86-NEXT:    movl $818089009, %ecx # imm = 0x30C30C31
+; X86-NEXT:    imull %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    shrl $31, %ecx
 ; X86-NEXT:    sarl $3, %edx
-; X86-NEXT:    addl %eax, %edx
-; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr59676_nsw_frozen:
@@ -882,16 +882,16 @@ define void @pr59676_nsw(ptr %dst, i32 %x) {
 ; X86-LABEL: pr59676_nsw:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    imull %eax, %eax
 ; X86-NEXT:    imull $84, %eax, %eax
-; X86-NEXT:    movl $818089009, %edx # imm = 0x30C30C31
-; X86-NEXT:    imull %edx
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    shrl $31, %eax
+; X86-NEXT:    movl $818089009, %ecx # imm = 0x30C30C31
+; X86-NEXT:    imull %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    shrl $31, %ecx
 ; X86-NEXT:    sarl $3, %edx
-; X86-NEXT:    addl %eax, %edx
-; X86-NEXT:    movl %edx, (%ecx)
+; X86-NEXT:    addl %ecx, %edx
+; X86-NEXT:    movl %edx, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr59676_nsw:

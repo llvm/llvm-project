@@ -186,14 +186,14 @@ define void @func_05(i32 %x) nounwind {
 ; X86-NOSSE:       # %bb.0:
 ; X86-NOSSE-NEXT:    pushl %eax
 ; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NOSSE-NEXT:    leal 4(%eax,%eax), %ecx
+; X86-NOSSE-NEXT:    leal 4(,%eax,2), %ecx
 ; X86-NOSSE-NEXT:    movl $201, %eax
 ; X86-NOSSE-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NOSSE-NEXT:    shll %cl, %eax
-; X86-NOSSE-NEXT:    andl $3072, %eax # imm = 0xC00
 ; X86-NOSSE-NEXT:    fnstcw (%esp)
 ; X86-NOSSE-NEXT:    movl $-3073, %ecx # imm = 0xF3FF
 ; X86-NOSSE-NEXT:    andl (%esp), %ecx
+; X86-NOSSE-NEXT:    andl $3072, %eax # imm = 0xC00
 ; X86-NOSSE-NEXT:    orl %eax, %ecx
 ; X86-NOSSE-NEXT:    movw %cx, (%esp)
 ; X86-NOSSE-NEXT:    fldcw (%esp)
@@ -204,14 +204,14 @@ define void @func_05(i32 %x) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pushl %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    leal 4(%eax,%eax), %ecx
+; X86-SSE-NEXT:    leal 4(,%eax,2), %ecx
 ; X86-SSE-NEXT:    movl $201, %eax
 ; X86-SSE-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-SSE-NEXT:    shll %cl, %eax
-; X86-SSE-NEXT:    andl $3072, %eax # imm = 0xC00
 ; X86-SSE-NEXT:    fnstcw (%esp)
 ; X86-SSE-NEXT:    movl $-3073, %ecx # imm = 0xF3FF
 ; X86-SSE-NEXT:    andl (%esp), %ecx
+; X86-SSE-NEXT:    andl $3072, %eax # imm = 0xC00
 ; X86-SSE-NEXT:    orl %eax, %ecx
 ; X86-SSE-NEXT:    movw %cx, (%esp)
 ; X86-SSE-NEXT:    fldcw (%esp)
@@ -227,14 +227,14 @@ define void @func_05(i32 %x) nounwind {
 ; X64-LABEL: func_05:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal 4(%rdi,%rdi), %ecx
+; X64-NEXT:    leal 4(,%rdi,2), %ecx
 ; X64-NEXT:    movl $201, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
-; X64-NEXT:    andl $3072, %eax # imm = 0xC00
 ; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl $-3073, %ecx # imm = 0xF3FF
 ; X64-NEXT:    andl -{{[0-9]+}}(%rsp), %ecx
+; X64-NEXT:    andl $3072, %eax # imm = 0xC00
 ; X64-NEXT:    orl %eax, %ecx
 ; X64-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)

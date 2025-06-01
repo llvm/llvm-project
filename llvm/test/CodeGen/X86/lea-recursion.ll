@@ -18,7 +18,8 @@ define dso_local void @foo() {
 ; CHECK-NEXT:    movl g0(%rip), %eax
 ; CHECK-NEXT:    movl g1(%rip), %ecx
 ; CHECK-NEXT:    leal (%rax,%rcx), %edx
-; CHECK-NEXT:    leal 1(%rax,%rcx), %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    movl %eax, g0+4(%rip)
 ; CHECK-NEXT:    movl g1+4(%rip), %eax
 ; CHECK-NEXT:    leal 1(%rax,%rdx), %ecx
@@ -41,7 +42,8 @@ define dso_local void @foo() {
 ; CHECK-NEXT:    leal 2(%rax,%rdx), %eax
 ; CHECK-NEXT:    movl %eax, g0+24(%rip)
 ; CHECK-NEXT:    movl g1+24(%rip), %eax
-; CHECK-NEXT:    leal 2(%rax,%rcx), %eax
+; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    addl $2, %eax
 ; CHECK-NEXT:    movl %eax, g0+28(%rip)
 ; CHECK-NEXT:    retq
 entry:

@@ -106,10 +106,10 @@ define <2 x i256> @test_zext1() {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    xorps %xmm0, %xmm0
-; X64-NEXT:    movaps %xmm0, 48(%rdi)
+; X64-NEXT:    movups %xmm0, 40(%rdi)
 ; X64-NEXT:    movaps %xmm0, 16(%rdi)
 ; X64-NEXT:    movaps %xmm0, (%rdi)
-; X64-NEXT:    movq $0, 40(%rdi)
+; X64-NEXT:    movq $0, 56(%rdi)
 ; X64-NEXT:    movq $254, 32(%rdi)
 ; X64-NEXT:    retq
   %Se = zext <2 x i8> <i8 -1, i8 -2> to <2 x i256>

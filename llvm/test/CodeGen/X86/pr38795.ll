@@ -68,10 +68,10 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    calll printf
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dh # 1-byte Reload
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dl # 1-byte Reload
-; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    # implicit-def: $eax
 ; CHECK-NEXT:    movb %dh, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
+; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_15
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  # %bb.5: # %for.cond35
@@ -288,9 +288,9 @@ define void @verifier_error_reduced_issue38788(i1 %cmp11) {
 ; CHECK-NEXT:  # %bb.9: # %if.then13
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    movl $0, %ebx
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    jne .LBB1_8
 ; CHECK-NEXT:    jmp .LBB1_5
 ; CHECK-NEXT:    .p2align 4

@@ -367,8 +367,8 @@ define void @add_64r(ptr %p, i64 %v) {
 ; X32-NEXT:    fildll (%eax)
 ; X32-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    addl 12(%ebp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    adcl 16(%ebp), %edx
 ; X32-NEXT:    movl %ecx, (%esp)
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
@@ -550,8 +550,8 @@ define void @sub_64r(ptr %p, i64 %v) {
 ; X32-NEXT:    fildll (%eax)
 ; X32-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    subl 12(%ebp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    sbbl 16(%ebp), %edx
 ; X32-NEXT:    movl %ecx, (%esp)
 ; X32-NEXT:    movl %edx, {{[0-9]+}}(%esp)

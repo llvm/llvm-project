@@ -11,6 +11,7 @@ define void @a(ptr %arg, i32 %arg1) {
 ; SSE2-NEXT:  ## %bb.1: ## %bb2
 ; SSE2-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; SSE2-NEXT:    movl %esi, %eax
+; SSE2-NEXT:    xorl %ecx, %ecx
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  LBB0_2: ## %bb6
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -18,9 +19,9 @@ define void @a(ptr %arg, i32 %arg1) {
 ; SSE2-NEXT:    ## InlineAsm End
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Folded Reload
-; SSE2-NEXT:    movss %xmm0, (%rdi)
-; SSE2-NEXT:    addq $4, %rdi
-; SSE2-NEXT:    decq %rax
+; SSE2-NEXT:    movss %xmm0, (%rdi,%rcx,4)
+; SSE2-NEXT:    incq %rcx
+; SSE2-NEXT:    cmpq %rcx, %rax
 ; SSE2-NEXT:    jne LBB0_2
 ; SSE2-NEXT:  LBB0_3: ## %bb5
 ; SSE2-NEXT:    retq
@@ -32,6 +33,7 @@ define void @a(ptr %arg, i32 %arg1) {
 ; AVX-NEXT:  ## %bb.1: ## %bb2
 ; AVX-NEXT:    movl %esi, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; AVX-NEXT:    movl %esi, %eax
+; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  LBB0_2: ## %bb6
 ; AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -39,10 +41,10 @@ define void @a(ptr %arg, i32 %arg1) {
 ; AVX-NEXT:    ## InlineAsm End
 ; AVX-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Reload
 ; AVX-NEXT:    ## xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vaddss (%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vmovss %xmm0, (%rdi)
-; AVX-NEXT:    addq $4, %rdi
-; AVX-NEXT:    decq %rax
+; AVX-NEXT:    vaddss (%rdi,%rcx,4), %xmm0, %xmm0
+; AVX-NEXT:    vmovss %xmm0, (%rdi,%rcx,4)
+; AVX-NEXT:    incq %rcx
+; AVX-NEXT:    cmpq %rcx, %rax
 ; AVX-NEXT:    jne LBB0_2
 ; AVX-NEXT:  LBB0_3: ## %bb5
 ; AVX-NEXT:    retq
@@ -77,6 +79,7 @@ define void @b(ptr %arg, i64 %arg1) {
 ; SSE2-NEXT:    jle LBB1_3
 ; SSE2-NEXT:  ## %bb.1: ## %bb2
 ; SSE2-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  LBB1_2: ## %bb6
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -84,9 +87,9 @@ define void @b(ptr %arg, i64 %arg1) {
 ; SSE2-NEXT:    ## InlineAsm End
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    addsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 8-byte Folded Reload
-; SSE2-NEXT:    movsd %xmm0, (%rdi)
-; SSE2-NEXT:    addq $8, %rdi
-; SSE2-NEXT:    decq %rsi
+; SSE2-NEXT:    movsd %xmm0, (%rdi,%rax,8)
+; SSE2-NEXT:    incq %rax
+; SSE2-NEXT:    cmpq %rax, %rsi
 ; SSE2-NEXT:    jne LBB1_2
 ; SSE2-NEXT:  LBB1_3: ## %bb5
 ; SSE2-NEXT:    retq
@@ -97,6 +100,7 @@ define void @b(ptr %arg, i64 %arg1) {
 ; AVX-NEXT:    jle LBB1_3
 ; AVX-NEXT:  ## %bb.1: ## %bb2
 ; AVX-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  LBB1_2: ## %bb6
 ; AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -104,10 +108,10 @@ define void @b(ptr %arg, i64 %arg1) {
 ; AVX-NEXT:    ## InlineAsm End
 ; AVX-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 8-byte Reload
 ; AVX-NEXT:    ## xmm0 = mem[0],zero
-; AVX-NEXT:    vaddsd (%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vmovsd %xmm0, (%rdi)
-; AVX-NEXT:    addq $8, %rdi
-; AVX-NEXT:    decq %rsi
+; AVX-NEXT:    vaddsd (%rdi,%rax,8), %xmm0, %xmm0
+; AVX-NEXT:    vmovsd %xmm0, (%rdi,%rax,8)
+; AVX-NEXT:    incq %rax
+; AVX-NEXT:    cmpq %rax, %rsi
 ; AVX-NEXT:    jne LBB1_2
 ; AVX-NEXT:  LBB1_3: ## %bb5
 ; AVX-NEXT:    retq
@@ -142,6 +146,8 @@ define void @c(ptr %arg, ptr %arg1, i32 %arg2) {
 ; SSE2-NEXT:  ## %bb.1: ## %bb4
 ; SSE2-NEXT:    movl %edx, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; SSE2-NEXT:    movl %edx, %eax
+; SSE2-NEXT:    shlq $4, %rax
+; SSE2-NEXT:    xorl %ecx, %ecx
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  LBB2_2: ## %bb8
 ; SSE2-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -149,9 +155,9 @@ define void @c(ptr %arg, ptr %arg1, i32 %arg2) {
 ; SSE2-NEXT:    ## InlineAsm End
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Folded Reload
-; SSE2-NEXT:    movss %xmm0, (%rdi)
-; SSE2-NEXT:    addq $16, %rdi
-; SSE2-NEXT:    decq %rax
+; SSE2-NEXT:    movss %xmm0, (%rdi,%rcx)
+; SSE2-NEXT:    addq $16, %rcx
+; SSE2-NEXT:    cmpq %rcx, %rax
 ; SSE2-NEXT:    jne LBB2_2
 ; SSE2-NEXT:  LBB2_3: ## %bb7
 ; SSE2-NEXT:    retq
@@ -163,6 +169,8 @@ define void @c(ptr %arg, ptr %arg1, i32 %arg2) {
 ; AVX-NEXT:  ## %bb.1: ## %bb4
 ; AVX-NEXT:    movl %edx, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; AVX-NEXT:    movl %edx, %eax
+; AVX-NEXT:    shlq $4, %rax
+; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    .p2align 4
 ; AVX-NEXT:  LBB2_2: ## %bb8
 ; AVX-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -170,10 +178,10 @@ define void @c(ptr %arg, ptr %arg1, i32 %arg2) {
 ; AVX-NEXT:    ## InlineAsm End
 ; AVX-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Reload
 ; AVX-NEXT:    ## xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vaddss (%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vmovss %xmm0, (%rdi)
-; AVX-NEXT:    addq $16, %rdi
-; AVX-NEXT:    decq %rax
+; AVX-NEXT:    vaddss (%rdi,%rcx), %xmm0, %xmm0
+; AVX-NEXT:    vmovss %xmm0, (%rdi,%rcx)
+; AVX-NEXT:    addq $16, %rcx
+; AVX-NEXT:    cmpq %rcx, %rax
 ; AVX-NEXT:    jne LBB2_2
 ; AVX-NEXT:  LBB2_3: ## %bb7
 ; AVX-NEXT:    retq

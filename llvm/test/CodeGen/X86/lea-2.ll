@@ -11,14 +11,16 @@ define i32 @test1(i32 %A, i32 %B) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    leal -5(%ecx,%eax,4), %eax
+; X86-NEXT:    leal (%ecx,%eax,4), %eax
+; X86-NEXT:    addl $-5, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal -5(%rsi,%rdi,4), %eax
+; X64-NEXT:    leal (%rsi,%rdi,4), %eax
+; X64-NEXT:    addl $-5, %eax
 ; X64-NEXT:    retq
   %t1 = shl i32 %A, 2
   %t3 = add i32 %B, -5
@@ -35,7 +37,7 @@ define i64 @test2(i32 %a0, i64 %a1) {
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    andl $2147483640, %eax # imm = 0x7FFFFFF8
 ; X86-NEXT:    shrl $31, %edx
-; X86-NEXT:    leal 4(%eax,%eax), %eax
+; X86-NEXT:    leal 4(,%eax,2), %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
@@ -44,7 +46,8 @@ define i64 @test2(i32 %a0, i64 %a1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    andl $-8, %edi
-; X64-NEXT:    leaq 4(%rsi,%rdi,2), %rax
+; X64-NEXT:    leaq (%rsi,%rdi,2), %rax
+; X64-NEXT:    addq $4, %rax
 ; X64-NEXT:    retq
   %x1 = and i32 %a0, -8
   %x2 = or i32 %x1, 2

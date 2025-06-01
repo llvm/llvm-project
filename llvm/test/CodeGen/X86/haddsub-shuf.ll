@@ -1169,8 +1169,8 @@ define <4 x double> @hadd_4f64_v4f64_shuffle(<4 x double> %a0, <4 x double> %a1)
 ; SSE-LABEL: hadd_4f64_v4f64_shuffle:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddpd %xmm1, %xmm0
-; SSE-NEXT:    haddpd %xmm3, %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm1
+; SSE-NEXT:    haddpd %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: hadd_4f64_v4f64_shuffle:
@@ -1197,8 +1197,8 @@ define <4 x double> @hsub_4f64_v4f64_shuffle(<4 x double> %a0, <4 x double> %a1)
 ; SSE-LABEL: hsub_4f64_v4f64_shuffle:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    hsubpd %xmm1, %xmm0
-; SSE-NEXT:    hsubpd %xmm3, %xmm2
 ; SSE-NEXT:    movapd %xmm2, %xmm1
+; SSE-NEXT:    hsubpd %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: hsub_4f64_v4f64_shuffle:
@@ -1225,8 +1225,8 @@ define <8 x float> @hadd_8f32_v8f32_shuffle(<8 x float> %a0, <8 x float> %a1) {
 ; SSE-LABEL: hadd_8f32_v8f32_shuffle:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm0
-; SSE-NEXT:    haddps %xmm3, %xmm2
 ; SSE-NEXT:    movaps %xmm2, %xmm1
+; SSE-NEXT:    haddps %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: hadd_8f32_v8f32_shuffle:
@@ -1253,8 +1253,8 @@ define <8 x float> @hsub_8f32_v8f32_shuffle(<8 x float> %a0, <8 x float> %a1) {
 ; SSE-LABEL: hsub_8f32_v8f32_shuffle:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm0
-; SSE-NEXT:    haddps %xmm3, %xmm2
 ; SSE-NEXT:    movaps %xmm2, %xmm1
+; SSE-NEXT:    haddps %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: hsub_8f32_v8f32_shuffle:
@@ -1294,8 +1294,8 @@ define <8 x i32> @hadd_8i32_v8i32_shuffle(<8 x i32> %a0, <8 x i32> %a1) {
 ; SSSE3-LABEL: hadd_8i32_v8i32_shuffle:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    phaddd %xmm1, %xmm0
-; SSSE3-NEXT:    phaddd %xmm3, %xmm2
 ; SSSE3-NEXT:    movdqa %xmm2, %xmm1
+; SSSE3-NEXT:    phaddd %xmm3, %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: hadd_8i32_v8i32_shuffle:
@@ -1338,8 +1338,8 @@ define <8 x i32> @hsub_8i32_v8i32_shuffle(<8 x i32> %a0, <8 x i32> %a1) {
 ; SSSE3-LABEL: hsub_8i32_v8i32_shuffle:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    phsubd %xmm1, %xmm0
-; SSSE3-NEXT:    phsubd %xmm3, %xmm2
 ; SSSE3-NEXT:    movdqa %xmm2, %xmm1
+; SSSE3-NEXT:    phsubd %xmm3, %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: hsub_8i32_v8i32_shuffle:
@@ -1395,8 +1395,8 @@ define <16 x i16> @hadd_16i16_16i16_shuffle(<16 x i16> %a0, <16 x i16> %a1) {
 ; SSSE3-LABEL: hadd_16i16_16i16_shuffle:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    phaddw %xmm1, %xmm0
-; SSSE3-NEXT:    phaddw %xmm3, %xmm2
 ; SSSE3-NEXT:    movdqa %xmm2, %xmm1
+; SSSE3-NEXT:    phaddw %xmm3, %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; AVX1-LABEL: hadd_16i16_16i16_shuffle:

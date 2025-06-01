@@ -26,8 +26,10 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    movq %rsi, %rbx
 ; CHECK-NEXT:    movslq %edi, %rbp
 ; CHECK-NEXT:    leaq (,%rbp,8), %rax
-; CHECK-NEXT:    leaq global(%rax,%rax,2), %r14
-; CHECK-NEXT:    leaq global+4(%rax,%rax,2), %r15
+; CHECK-NEXT:    leaq (%rax,%rax,2), %r14
+; CHECK-NEXT:    addq $global, %r14
+; CHECK-NEXT:    leaq (%rax,%rax,2), %r15
+; CHECK-NEXT:    addq $global+4, %r15
 ; CHECK-NEXT:    xorl %r13d, %r13d
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb8
@@ -43,7 +45,8 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    testb %r13b, %r13b
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %bb15
-; CHECK-NEXT:    leaq (%rbp,%rbp,2), %rax
+; CHECK-NEXT:    leaq (,%rbp,2), %rax
+; CHECK-NEXT:    addq %rbp, %rax
 ; CHECK-NEXT:    movq %r12, global+16(,%rax,8)
 ; CHECK-NEXT:    movabsq $-2305847407260205056, %r14 # imm = 0xDFFFFC0000000000
 ; CHECK-NEXT:    #APP
