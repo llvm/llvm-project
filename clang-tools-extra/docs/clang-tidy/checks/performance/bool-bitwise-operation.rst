@@ -6,8 +6,8 @@ performance-bool-bitwise-operation
 Finds potentially inefficient use of bitwise operators such as ``&``, 
 ``|`` and their compound analogues on boolean values where logical 
 operators like ``&&`` and ``||`` would be more appropriate. Bitwise 
-operations on booleans can incur unnecessary performance overhead due
- to implicit integer conversions and missed short-circuit evaluation.
+operations on booleans can incur unnecessary performance overhead 
+due to implicit integer conversions and missed short-circuit evaluation.
 
 .. code-block:: c++
 
