@@ -104,6 +104,8 @@ createImmutableModuleSummaryIndexWrapperPass(const ModuleSummaryIndex *Index);
 /// consistency between summary analysis and the ThinLTO backend processing.
 LLVM_ABI bool mayHaveMemprofSummary(const CallBase *CB);
 
+extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_MODULESUMMARYANALYSIS_H
