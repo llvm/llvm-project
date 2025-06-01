@@ -621,11 +621,12 @@ nvfortran defines `-fast` as
 The environment variable `FCC_OVERRIDE_OPTIONS` can be used to edit flang's
 command line arguments. The value of this variable is a space-separated list of
 edits to perform. The edits are applied in the order in which they appear in
-`FCC_OVERRIDE_OPTIONS`. Each edit should be one of the following forms:
+`FCC_OVERRIDE_OPTIONS`. Each edit should be one of the following form:
 
 - `#`: Silence information about the changes to the command line arguments.
 
-- `^FOO`: Add `FOO` as a new argument at the beginning of the command line.
+- `^FOO`: Add `FOO` as a new argument at the beginning of the command line right
+  after the name of the compiler executable.
 
 - `+FOO`: Add `FOO` as a new argument at the end of the command line.
 
