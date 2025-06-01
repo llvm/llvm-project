@@ -62,12 +62,16 @@ class DWARFDebugAbbrev {
   mutable DWARFAbbreviationDeclarationSetMap AbbrDeclSets;
   mutable DWARFAbbreviationDeclarationSetMap::const_iterator PrevAbbrOffsetPos;
   mutable std::optional<DataExtractor> Data;
+  mutable std::map<uint64_t, DWARFAbbreviationDeclaration> CUAbbrevs;
 
 public:
   DWARFDebugAbbrev(DataExtractor Data);
 
   Expected<const DWARFAbbreviationDeclarationSet *>
   getAbbreviationDeclarationSet(uint64_t CUAbbrOffset) const;
+
+  Expected<const DWARFAbbreviationDeclaration *>
+  tryExtractCUAbbrevFast(uint64_t CUAbbrOffset) const;
 
   void dump(raw_ostream &OS) const;
   Error parse() const;
