@@ -182,3 +182,14 @@ void f_lambda_assign()
     };
   Lambda();
 }
+
+void f_lambda_assign_all()
+{
+  std::shared_ptr<int> ptr;
+  auto Lambda = [=]() mutable {
+    // CHECK-MESSAGES: [[@LINE-1]]:18: warning: could be std::move() [performance-lost-std-move]
+    // CHECK-FIXES: auto Lambda = [ptr = std::move(ptr),=]() mutable {
+    f(ptr);
+    };
+  Lambda();
+}

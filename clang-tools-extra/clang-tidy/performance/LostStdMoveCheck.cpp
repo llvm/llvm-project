@@ -169,7 +169,7 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult& Result) {
     diag(MatchedUse->getBeginLoc(), "could be std::move()")
         << FixItHint::CreateInsertion(
                MatchedUse->getBeginLoc(),
-               ("std::move(" + MatchedDecl->getName() + "),").str());
+               (MatchedDecl->getName() + " = std::move(" + MatchedDecl->getName() + "),").str());
   } else {
     diag(MatchedUse->getBeginLoc(), "could be std::move()")
         << FixItHint::CreateReplacement(
