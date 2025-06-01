@@ -104,6 +104,7 @@ STATISTIC(GCDindependence, "GCD independence");
 STATISTIC(BanerjeeApplications, "Banerjee applications");
 STATISTIC(BanerjeeIndependence, "Banerjee independence");
 STATISTIC(BanerjeeSuccesses, "Banerjee successes");
+STATISTIC(SeparateLoopsConsidered, "Separate loops considered");
 
 static cl::opt<bool>
     Delinearize("da-delinearize", cl::init(true), cl::Hidden,
@@ -258,10 +259,7 @@ bool Dependence::isAnti() const {
 // if no subscript in the source or destination mention the induction
 // variable associated with the loop at this level.
 // Leave this out of line, so it will serve as a virtual method anchor
-bool Dependence::isScalar(unsigned level) const {
-  return false;
-}
-
+bool Dependence::isScalar(unsigned level, bool Separate) const { return false; }
 
 //===----------------------------------------------------------------------===//
 // FullDependence methods
@@ -273,6 +271,7 @@ FullDependence::FullDependence(Instruction *Source, Instruction *Destination,
     : Dependence(Source, Destination, Assumes), Levels(CommonLevels),
       LoopIndependent(PossiblyLoopIndependent) {
   Consistent = true;
+  SeparateLevels = 0;
   if (CommonLevels)
     DV = std::make_unique<DVEntry[]>(CommonLevels);
 }
@@ -335,51 +334,48 @@ bool FullDependence::normalize(ScalarEvolution *SE) {
 
 // The rest are simple getters that hide the implementation.
 
-// getDirection - Returns the direction associated with a particular level.
-unsigned FullDependence::getDirection(unsigned Level) const {
-  assert(0 < Level && Level <= Levels && "Level out of range");
-  return DV[Level - 1].Direction;
+// getDirection - Returns the direction associated with a particular common or
+// separate level.
+unsigned FullDependence::getDirection(unsigned Level, bool Separate) const {
+  return getDVEntry(Level, Separate).Direction;
 }
 
-
-// Returns the distance (or NULL) associated with a particular level.
-const SCEV *FullDependence::getDistance(unsigned Level) const {
-  assert(0 < Level && Level <= Levels && "Level out of range");
-  return DV[Level - 1].Distance;
+// Returns the distance (or NULL) associated with a particular common or
+// separate level.
+const SCEV *FullDependence::getDistance(unsigned Level, bool Separate) const {
+  return getDVEntry(Level, Separate).Distance;
 }
 
-
-// Returns true if a particular level is scalar; that is,
-// if no subscript in the source or destination mention the induction
-// variable associated with the loop at this level.
-bool FullDependence::isScalar(unsigned Level) const {
-  assert(0 < Level && Level <= Levels && "Level out of range");
-  return DV[Level - 1].Scalar;
+// Returns true if a particular regular or separate level is scalar; that is,
+// if no subscript in the source or destination mention the induction variable
+// associated with the loop at this level.
+bool FullDependence::isScalar(unsigned Level, bool Separate) const {
+  return getDVEntry(Level, Separate).Scalar;
 }
 
-
-// Returns true if peeling the first iteration from this loop
-// will break this dependence.
-bool FullDependence::isPeelFirst(unsigned Level) const {
-  assert(0 < Level && Level <= Levels && "Level out of range");
-  return DV[Level - 1].PeelFirst;
+// Returns true if peeling the first iteration from this regular or separate
+// loop level will break this dependence.
+bool FullDependence::isPeelFirst(unsigned Level, bool Separate) const {
+  return getDVEntry(Level, Separate).PeelFirst;
 }
 
-
-// Returns true if peeling the last iteration from this loop
-// will break this dependence.
-bool FullDependence::isPeelLast(unsigned Level) const {
-  assert(0 < Level && Level <= Levels && "Level out of range");
-  return DV[Level - 1].PeelLast;
+// Returns true if peeling the last iteration from this regular or separate
+// loop level will break this dependence.
+bool FullDependence::isPeelLast(unsigned Level, bool Separate) const {
+  return getDVEntry(Level, Separate).PeelLast;
 }
 
-
-// Returns true if splitting this loop will break the dependence.
-bool FullDependence::isSplitable(unsigned Level) const {
-  assert(0 < Level && Level <= Levels && "Level out of range");
-  return DV[Level - 1].Splitable;
+// Returns true if splitting loop will break the dependence.
+bool FullDependence::isSplitable(unsigned Level, bool Separate) const {
+  return getDVEntry(Level, Separate).Splitable;
 }
 
+// inSeparateLoops - Returns true if this level is a separate level, i.e.,
+// performed across two separate loop nests.
+bool FullDependence::inSeparateLoops(unsigned Level) const {
+  assert(0 < Level && Level <= Levels + SeparateLevels && "Level out of range");
+  return Level > Levels;
+}
 
 //===----------------------------------------------------------------------===//
 // DependenceInfo::Constraint methods
@@ -434,38 +430,50 @@ const SCEV *DependenceInfo::Constraint::getD() const {
   return SE->getNegativeSCEV(C);
 }
 
-
-// Returns the loop associated with this constraint.
-const Loop *DependenceInfo::Constraint::getAssociatedLoop() const {
+// Returns the source loop associated with this constraint.
+const Loop *DependenceInfo::Constraint::getAssociatedSrcLoop() const {
   assert((Kind == Distance || Kind == Line || Kind == Point) &&
          "Kind should be Distance, Line, or Point");
-  return AssociatedLoop;
+  return AssociatedSrcLoop;
+}
+
+// Returns the destination loop associated with this constraint.
+const Loop *DependenceInfo::Constraint::getAssociatedDstLoop() const {
+  assert((Kind == Distance || Kind == Line || Kind == Point) &&
+         "Kind should be Distance, Line, or Point");
+  return AssociatedDstLoop;
 }
 
 void DependenceInfo::Constraint::setPoint(const SCEV *X, const SCEV *Y,
-                                          const Loop *CurLoop) {
+                                          const Loop *CurSrcLoop,
+                                          const Loop *CurDstLoop) {
   Kind = Point;
   A = X;
   B = Y;
-  AssociatedLoop = CurLoop;
+  AssociatedSrcLoop = CurSrcLoop;
+  AssociatedDstLoop = CurDstLoop;
 }
 
 void DependenceInfo::Constraint::setLine(const SCEV *AA, const SCEV *BB,
-                                         const SCEV *CC, const Loop *CurLoop) {
+                                         const SCEV *CC, const Loop *CurSrcLoop,
+                                         const Loop *CurDstLoop) {
   Kind = Line;
   A = AA;
   B = BB;
   C = CC;
-  AssociatedLoop = CurLoop;
+  AssociatedSrcLoop = CurSrcLoop;
+  AssociatedDstLoop = CurDstLoop;
 }
 
 void DependenceInfo::Constraint::setDistance(const SCEV *D,
-                                             const Loop *CurLoop) {
+                                             const Loop *CurSrcLoop,
+                                             const Loop *CurDstLoop) {
   Kind = Distance;
   A = SE->getOne(D->getType());
   B = SE->getNegativeSCEV(A);
   C = SE->getNegativeSCEV(D);
-  AssociatedLoop = CurLoop;
+  AssociatedSrcLoop = CurSrcLoop;
+  AssociatedDstLoop = CurDstLoop;
 }
 
 void DependenceInfo::Constraint::setEmpty() { Kind = Empty; }
@@ -612,8 +620,8 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
         ++DeltaSuccesses;
         return true;
       }
-      if (const SCEVConstant *CUB =
-          collectConstantUpperBound(X->getAssociatedLoop(), Prod1->getType())) {
+      if (const SCEVConstant *CUB = collectConstantUpperBound(
+              X->getAssociatedSrcLoop(), Prod1->getType())) {
         const APInt &UpperBound = CUB->getAPInt();
         LLVM_DEBUG(dbgs() << "\t\tupper bound = " << UpperBound << "\n");
         if (Xq.sgt(UpperBound) || Yq.sgt(UpperBound)) {
@@ -622,9 +630,8 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
           return true;
         }
       }
-      X->setPoint(SE->getConstant(Xq),
-                  SE->getConstant(Yq),
-                  X->getAssociatedLoop());
+      X->setPoint(SE->getConstant(Xq), SE->getConstant(Yq),
+                  X->getAssociatedSrcLoop(), X->getAssociatedDstLoop());
       ++DeltaSuccesses;
       return true;
     }
@@ -659,7 +666,6 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
 
 // For debugging purposes. Dumps a dependence to OS.
 void Dependence::dump(raw_ostream &OS) const {
-  bool Splitable = false;
   if (isConfused())
     OS << "confused";
   else {
@@ -673,41 +679,12 @@ void Dependence::dump(raw_ostream &OS) const {
       OS << "anti";
     else if (isInput())
       OS << "input";
-    unsigned Levels = getLevels();
-    OS << " [";
-    for (unsigned II = 1; II <= Levels; ++II) {
-      if (isSplitable(II))
-        Splitable = true;
-      if (isPeelFirst(II))
-        OS << 'p';
-      const SCEV *Distance = getDistance(II);
-      if (Distance)
-        OS << *Distance;
-      else if (isScalar(II))
-        OS << "S";
-      else {
-        unsigned Direction = getDirection(II);
-        if (Direction == DVEntry::ALL)
-          OS << "*";
-        else {
-          if (Direction & DVEntry::LT)
-            OS << "<";
-          if (Direction & DVEntry::EQ)
-            OS << "=";
-          if (Direction & DVEntry::GT)
-            OS << ">";
-        }
-      }
-      if (isPeelLast(II))
-        OS << 'p';
-      if (II < Levels)
-        OS << " ";
+    dumpImp(OS);
+    unsigned SeparateLevels = getSeparateLevels();
+    if (SeparateLevels > 0) {
+      OS << "! / assuming " << SeparateLevels << " fused loop(s): ";
+      dumpImp(OS, true);
     }
-    if (isLoopIndependent())
-      OS << "|<";
-    OS << "]";
-    if (Splitable)
-      OS << " splitable";
   }
   OS << "!\n";
 
@@ -716,6 +693,54 @@ void Dependence::dump(raw_ostream &OS) const {
     OS << "  Runtime Assumptions:\n";
     Assumptions.print(OS, 2);
   }
+}
+
+// For debugging purposes. Dumps a dependence to OS with or without considering
+// the separate levels.
+void Dependence::dumpImp(raw_ostream &OS, bool Separate) const {
+  bool Splitable = false;
+  unsigned Levels = getLevels();
+  unsigned SeparateLevels = getSeparateLevels();
+  bool OnSeparates = false;
+  unsigned LevelNum = Levels;
+  if (Separate)
+    LevelNum += SeparateLevels;
+  OS << " [";
+  for (unsigned II = 1; II <= LevelNum; ++II) {
+    if (!OnSeparates && inSeparateLoops(II))
+      OnSeparates = true;
+    if (isSplitable(II, OnSeparates))
+      Splitable = true;
+    if (isPeelFirst(II, OnSeparates))
+      OS << 'p';
+    const SCEV *Distance = getDistance(II, OnSeparates);
+    if (Distance)
+      OS << *Distance;
+    else if (isScalar(II, OnSeparates))
+      OS << "S";
+    else {
+      unsigned Direction = getDirection(II, OnSeparates);
+      if (Direction == DVEntry::ALL)
+        OS << "*";
+      else {
+        if (Direction & DVEntry::LT)
+          OS << "<";
+        if (Direction & DVEntry::EQ)
+          OS << "=";
+        if (Direction & DVEntry::GT)
+          OS << ">";
+      }
+    }
+    if (isPeelLast(II, OnSeparates))
+      OS << 'p';
+    if (II < LevelNum)
+      OS << " ";
+  }
+  if (isLoopIndependent())
+    OS << "|<";
+  OS << "]";
+  if (Splitable)
+    OS << " splitable";
 }
 
 // Returns NoAlias/MayAliass/MustAlias for two memory locations based upon their
@@ -768,6 +793,34 @@ bool isLoadOrStore(const Instruction *I) {
   return false;
 }
 
+// Returns true if two loops are the same or they have the same tripcount and
+// depth
+bool DependenceInfo::areLoopsSimilar(const Loop *SrcLoop,
+                                     const Loop *DstLoop) const {
+  if (SrcLoop == DstLoop)
+    return true;
+
+  if (SrcLoop->getLoopDepth() != DstLoop->getLoopDepth())
+    return false;
+
+  if (!SrcLoop || !SrcLoop->getLoopLatch() || !DstLoop ||
+      !DstLoop->getLoopLatch())
+    return false;
+
+  const SCEV *SrcUB, *DstUP;
+  if (SE->hasLoopInvariantBackedgeTakenCount(SrcLoop))
+    SrcUB = SE->getBackedgeTakenCount(SrcLoop);
+  if (SE->hasLoopInvariantBackedgeTakenCount(DstLoop))
+    DstUP = SE->getBackedgeTakenCount(DstLoop);
+
+  if (SrcUB == nullptr || DstUP == nullptr)
+    return false;
+
+  if (SE->isKnownPredicate(ICmpInst::ICMP_EQ, SrcUB, DstUP))
+    return true;
+
+  return false;
+}
 
 // Examines the loop nesting of the Src and Dst
 // instructions and establishes their shared loops. Sets the variables
@@ -819,6 +872,11 @@ bool isLoadOrStore(const Instruction *I) {
 //     e - 5
 //     f - 6
 //     g - 7 = MaxLevels
+// SeparateLevels counts the number of levels after common levels that are
+// not common but are similar, meaning that they have the same tripcount
+// and depth. Assume that in this code fragment, levels c and e are
+// similar. In this case only the loop nests at the next level after
+// common levels are similar, and SeparateLevel is set to 1.
 void DependenceInfo::establishNestingLevels(const Instruction *Src,
                                             const Instruction *Dst) {
   const BasicBlock *SrcBlock = Src->getParent();
@@ -829,6 +887,7 @@ void DependenceInfo::establishNestingLevels(const Instruction *Src,
   const Loop *DstLoop = LI->getLoopFor(DstBlock);
   SrcLevels = SrcLevel;
   MaxLevels = SrcLevel + DstLevel;
+  SeparateLevels = 0;
   while (SrcLevel > DstLevel) {
     SrcLoop = SrcLoop->getParentLoop();
     SrcLevel--;
@@ -837,15 +896,19 @@ void DependenceInfo::establishNestingLevels(const Instruction *Src,
     DstLoop = DstLoop->getParentLoop();
     DstLevel--;
   }
+
+  // find the first common level and count the separate levels leading to it
   while (SrcLoop != DstLoop) {
+    SeparateLevels++;
+    if (!areLoopsSimilar(SrcLoop, DstLoop))
+      SeparateLevels = 0;
+    SrcLevel--;
     SrcLoop = SrcLoop->getParentLoop();
     DstLoop = DstLoop->getParentLoop();
-    SrcLevel--;
   }
   CommonLevels = SrcLevel;
   MaxLevels -= CommonLevels;
 }
-
 
 // Given one of the loops containing the source, return
 // its level index in our numbering scheme.
@@ -1233,8 +1296,9 @@ bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
 //
 // Return true if dependence disproved.
 bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
-                                   const SCEV *DstConst, const Loop *CurLoop,
-                                   unsigned Level, FullDependence &Result,
+                                   const SCEV *DstConst, const Loop *CurSrcLoop,
+                                   const Loop *CurDstLoop, unsigned Level,
+                                   FullDependence &Result,
                                    Constraint &NewConstraint) const {
   LLVM_DEBUG(dbgs() << "\tStrong SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff);
@@ -1252,7 +1316,8 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   LLVM_DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
 
   // check that |Delta| < iteration count
-  if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
+  if (const SCEV *UpperBound =
+          collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
     LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
     const SCEV *AbsDelta =
@@ -1285,7 +1350,8 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
       return true;
     }
     Result.DV[Level].Distance = SE->getConstant(Distance);
-    NewConstraint.setDistance(SE->getConstant(Distance), CurLoop);
+    NewConstraint.setDistance(SE->getConstant(Distance), CurSrcLoop,
+                              CurDstLoop);
     if (Distance.sgt(0))
       Result.DV[Level].Direction &= Dependence::DVEntry::LT;
     else if (Distance.slt(0))
@@ -1297,7 +1363,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   else if (Delta->isZero()) {
     // since 0/X == 0
     Result.DV[Level].Distance = Delta;
-    NewConstraint.setDistance(Delta, CurLoop);
+    NewConstraint.setDistance(Delta, CurSrcLoop, CurDstLoop);
     Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
     ++StrongSIVsuccesses;
   }
@@ -1305,13 +1371,12 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
     if (Coeff->isOne()) {
       LLVM_DEBUG(dbgs() << "\t    Distance = " << *Delta << "\n");
       Result.DV[Level].Distance = Delta; // since X/1 == X
-      NewConstraint.setDistance(Delta, CurLoop);
+      NewConstraint.setDistance(Delta, CurSrcLoop, CurDstLoop);
     }
     else {
       Result.Consistent = false;
-      NewConstraint.setLine(Coeff,
-                            SE->getNegativeSCEV(Coeff),
-                            SE->getNegativeSCEV(Delta), CurLoop);
+      NewConstraint.setLine(Coeff, SE->getNegativeSCEV(Coeff),
+                            SE->getNegativeSCEV(Delta), CurSrcLoop, CurDstLoop);
     }
 
     // maybe we can get a useful direction
@@ -1338,7 +1403,6 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   }
   return false;
 }
-
 
 // weakCrossingSIVtest -
 // From the paper, Practical Dependence Testing, Section 4.2.2
@@ -1370,8 +1434,9 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
 // Return true if dependence disproved.
 bool DependenceInfo::weakCrossingSIVtest(
     const SCEV *Coeff, const SCEV *SrcConst, const SCEV *DstConst,
-    const Loop *CurLoop, unsigned Level, FullDependence &Result,
-    Constraint &NewConstraint, const SCEV *&SplitIter) const {
+    const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
+    FullDependence &Result, Constraint &NewConstraint,
+    const SCEV *&SplitIter) const {
   LLVM_DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
@@ -1382,7 +1447,7 @@ bool DependenceInfo::weakCrossingSIVtest(
   Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
-  NewConstraint.setLine(Coeff, Coeff, Delta, CurLoop);
+  NewConstraint.setLine(Coeff, Coeff, Delta, CurSrcLoop, CurDstLoop);
   if (Delta->isZero()) {
     Result.DV[Level].Direction &= ~Dependence::DVEntry::LT;
     Result.DV[Level].Direction &= ~Dependence::DVEntry::GT;
@@ -1430,7 +1495,8 @@ bool DependenceInfo::weakCrossingSIVtest(
 
   // We're certain that Delta > 0 and ConstCoeff > 0.
   // Check Delta/(2*ConstCoeff) against upper loop bound
-  if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
+  if (const SCEV *UpperBound =
+          collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *ConstantTwo = SE->getConstant(UpperBound->getType(), 2);
     const SCEV *ML = SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound),
@@ -1483,7 +1549,6 @@ bool DependenceInfo::weakCrossingSIVtest(
   }
   return false;
 }
-
 
 // Kirch's algorithm, from
 //
@@ -1570,7 +1635,8 @@ static APInt ceilingOfQuotient(const APInt &A, const APInt &B) {
 // returns all the dependencies that exist between Dst and Src.
 bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                   const SCEV *SrcConst, const SCEV *DstConst,
-                                  const Loop *CurLoop, unsigned Level,
+                                  const Loop *CurSrcLoop,
+                                  const Loop *CurDstLoop, unsigned Level,
                                   FullDependence &Result,
                                   Constraint &NewConstraint) const {
   LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
@@ -1585,7 +1651,7 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   NewConstraint.setLine(SrcCoeff, SE->getNegativeSCEV(DstCoeff), Delta,
-                        CurLoop);
+                        CurSrcLoop, CurDstLoop);
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
   const SCEVConstant *ConstSrcCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
   const SCEVConstant *ConstDstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
@@ -1612,7 +1678,7 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   bool UMValid = false;
   // UM is perhaps unavailable, let's check
   if (const SCEVConstant *CUB =
-          collectConstantUpperBound(CurLoop, Delta->getType())) {
+          collectConstantUpperBound(CurSrcLoop, Delta->getType())) {
     UM = CUB->getAPInt();
     LLVM_DEBUG(dbgs() << "\t    UM = " << UM << "\n");
     UMValid = true;
@@ -1719,7 +1785,6 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   return Result.DV[Level].Direction == Dependence::DVEntry::NONE;
 }
 
-
 // Return true if the divisor evenly divides the dividend.
 static
 bool isRemainderZero(const SCEVConstant *Dividend,
@@ -1761,12 +1826,10 @@ bool isRemainderZero(const SCEVConstant *Dividend,
 // (see also weakZeroDstSIVtest)
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
-                                        const SCEV *SrcConst,
-                                        const SCEV *DstConst,
-                                        const Loop *CurLoop, unsigned Level,
-                                        FullDependence &Result,
-                                        Constraint &NewConstraint) const {
+bool DependenceInfo::weakZeroSrcSIVtest(
+    const SCEV *DstCoeff, const SCEV *SrcConst, const SCEV *DstConst,
+    const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
+    FullDependence &Result, Constraint &NewConstraint) const {
   // For the WeakSIV test, it's possible the loop isn't common to
   // the Src and Dst loops. If it isn't, then there's no need to
   // record a direction.
@@ -1780,7 +1843,7 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
   NewConstraint.setLine(SE->getZero(Delta->getType()), DstCoeff, Delta,
-                        CurLoop);
+                        CurSrcLoop, CurDstLoop);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (isKnownPredicate(CmpInst::ICMP_EQ, SrcConst, DstConst)) {
     if (Level < CommonLevels) {
@@ -1801,7 +1864,8 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
 
   // check that Delta/SrcCoeff < iteration count
   // really check NewDelta < count*AbsCoeff
-  if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
+  if (const SCEV *UpperBound =
+          collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
     if (isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
@@ -1839,7 +1903,6 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   return false;
 }
 
-
 // weakZeroDstSIVtest -
 // From the paper, Practical Dependence Testing, Section 4.2.2
 //
@@ -1871,12 +1934,10 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
 // (see also weakZeroSrcSIVtest)
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
-                                        const SCEV *SrcConst,
-                                        const SCEV *DstConst,
-                                        const Loop *CurLoop, unsigned Level,
-                                        FullDependence &Result,
-                                        Constraint &NewConstraint) const {
+bool DependenceInfo::weakZeroDstSIVtest(
+    const SCEV *SrcCoeff, const SCEV *SrcConst, const SCEV *DstConst,
+    const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
+    FullDependence &Result, Constraint &NewConstraint) const {
   // For the WeakSIV test, it's possible the loop isn't common to the
   // Src and Dst loops. If it isn't, then there's no need to record a direction.
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (dst) SIV test\n");
@@ -1889,7 +1950,7 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   NewConstraint.setLine(SrcCoeff, SE->getZero(Delta->getType()), Delta,
-                        CurLoop);
+                        CurSrcLoop, CurDstLoop);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (isKnownPredicate(CmpInst::ICMP_EQ, DstConst, SrcConst)) {
     if (Level < CommonLevels) {
@@ -1910,7 +1971,8 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
 
   // check that Delta/SrcCoeff < iteration count
   // really check NewDelta < count*AbsCoeff
-  if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
+  if (const SCEV *UpperBound =
+          collectUpperBound(CurSrcLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
     if (isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
@@ -1947,7 +2009,6 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   }
   return false;
 }
-
 
 // exactRDIVtest - Tests the RDIV subscript pair for dependence.
 // Things of the form [c1 + a*i] and [c2 + b*j],
@@ -2240,43 +2301,47 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     const SCEV *DstConst = DstAddRec->getStart();
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
-    const Loop *CurLoop = SrcAddRec->getLoop();
-    assert(CurLoop == DstAddRec->getLoop() &&
-           "both loops in SIV should be same");
-    Level = mapSrcLoop(CurLoop);
+    const Loop *CurSrcLoop = SrcAddRec->getLoop();
+    const Loop *CurDstLoop = DstAddRec->getLoop();
+    assert(areLoopsSimilar(CurSrcLoop, CurDstLoop) &&
+           "both loops in SIV should be the same or have the same tripcount "
+           "and depth");
+    Level = mapSrcLoop(CurSrcLoop);
     bool disproven;
     if (SrcCoeff == DstCoeff)
-      disproven = strongSIVtest(SrcCoeff, SrcConst, DstConst, CurLoop,
-                                Level, Result, NewConstraint);
+      disproven = strongSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
+                                CurDstLoop, Level, Result, NewConstraint);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
-      disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurLoop,
-                                      Level, Result, NewConstraint, SplitIter);
+      disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
+                                      CurDstLoop, Level, Result, NewConstraint,
+                                      SplitIter);
     else
-      disproven = exactSIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurLoop,
-                               Level, Result, NewConstraint);
-    return disproven ||
-      gcdMIVtest(Src, Dst, Result) ||
-      symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurLoop, CurLoop);
+      disproven =
+          exactSIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurSrcLoop,
+                       CurDstLoop, Level, Result, NewConstraint);
+    return disproven || gcdMIVtest(Src, Dst, Result) ||
+           symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurSrcLoop,
+                            CurDstLoop);
   }
   if (SrcAddRec) {
     const SCEV *SrcConst = SrcAddRec->getStart();
     const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
     const SCEV *DstConst = Dst;
-    const Loop *CurLoop = SrcAddRec->getLoop();
-    Level = mapSrcLoop(CurLoop);
-    return weakZeroDstSIVtest(SrcCoeff, SrcConst, DstConst, CurLoop,
-                              Level, Result, NewConstraint) ||
-      gcdMIVtest(Src, Dst, Result);
+    const Loop *CurSrcLoop = SrcAddRec->getLoop();
+    Level = mapSrcLoop(CurSrcLoop);
+    return weakZeroDstSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
+                              CurSrcLoop, Level, Result, NewConstraint) ||
+           gcdMIVtest(Src, Dst, Result);
   }
   if (DstAddRec) {
     const SCEV *DstConst = DstAddRec->getStart();
     const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
     const SCEV *SrcConst = Src;
-    const Loop *CurLoop = DstAddRec->getLoop();
-    Level = mapDstLoop(CurLoop);
-    return weakZeroSrcSIVtest(DstCoeff, SrcConst, DstConst,
-                              CurLoop, Level, Result, NewConstraint) ||
-      gcdMIVtest(Src, Dst, Result);
+    const Loop *CurDstLoop = DstAddRec->getLoop();
+    Level = mapDstLoop(CurDstLoop);
+    return weakZeroSrcSIVtest(DstCoeff, SrcConst, DstConst, CurDstLoop,
+                              CurDstLoop, Level, Result, NewConstraint) ||
+           gcdMIVtest(Src, Dst, Result);
   }
   llvm_unreachable("SIV test expected at least one AddRec");
   return false;
@@ -3181,19 +3246,20 @@ bool DependenceInfo::propagate(const SCEV *&Src, const SCEV *&Dst,
 bool DependenceInfo::propagateDistance(const SCEV *&Src, const SCEV *&Dst,
                                        Constraint &CurConstraint,
                                        bool &Consistent) {
-  const Loop *CurLoop = CurConstraint.getAssociatedLoop();
+  const Loop *CurSrcLoop = CurConstraint.getAssociatedSrcLoop();
+  const Loop *CurDstLoop = CurConstraint.getAssociatedDstLoop();
   LLVM_DEBUG(dbgs() << "\t\tSrc is " << *Src << "\n");
-  const SCEV *A_K = findCoefficient(Src, CurLoop);
+  const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
   if (A_K->isZero())
     return false;
   const SCEV *DA_K = SE->getMulExpr(A_K, CurConstraint.getD());
   Src = SE->getMinusSCEV(Src, DA_K);
-  Src = zeroCoefficient(Src, CurLoop);
+  Src = zeroCoefficient(Src, CurSrcLoop);
   LLVM_DEBUG(dbgs() << "\t\tnew Src is " << *Src << "\n");
   LLVM_DEBUG(dbgs() << "\t\tDst is " << *Dst << "\n");
-  Dst = addToCoefficient(Dst, CurLoop, SE->getNegativeSCEV(A_K));
+  Dst = addToCoefficient(Dst, CurDstLoop, SE->getNegativeSCEV(A_K));
   LLVM_DEBUG(dbgs() << "\t\tnew Dst is " << *Dst << "\n");
-  if (!findCoefficient(Dst, CurLoop)->isZero())
+  if (!findCoefficient(Dst, CurDstLoop)->isZero())
     Consistent = false;
   return true;
 }
@@ -3207,7 +3273,8 @@ bool DependenceInfo::propagateDistance(const SCEV *&Src, const SCEV *&Dst,
 bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
                                    Constraint &CurConstraint,
                                    bool &Consistent) {
-  const Loop *CurLoop = CurConstraint.getAssociatedLoop();
+  const Loop *CurSrcLoop = CurConstraint.getAssociatedSrcLoop();
+  const Loop *CurDstLoop = CurConstraint.getAssociatedDstLoop();
   const SCEV *A = CurConstraint.getA();
   const SCEV *B = CurConstraint.getB();
   const SCEV *C = CurConstraint.getC();
@@ -3223,11 +3290,11 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
     APInt Charlie = Cconst->getAPInt();
     APInt CdivB = Charlie.sdiv(Beta);
     assert(Charlie.srem(Beta) == 0 && "C should be evenly divisible by B");
-    const SCEV *AP_K = findCoefficient(Dst, CurLoop);
+    const SCEV *AP_K = findCoefficient(Dst, CurDstLoop);
     //    Src = SE->getAddExpr(Src, SE->getMulExpr(AP_K, SE->getConstant(CdivB)));
     Src = SE->getMinusSCEV(Src, SE->getMulExpr(AP_K, SE->getConstant(CdivB)));
-    Dst = zeroCoefficient(Dst, CurLoop);
-    if (!findCoefficient(Src, CurLoop)->isZero())
+    Dst = zeroCoefficient(Dst, CurDstLoop);
+    if (!findCoefficient(Src, CurSrcLoop)->isZero())
       Consistent = false;
   }
   else if (B->isZero()) {
@@ -3238,10 +3305,10 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
     APInt Charlie = Cconst->getAPInt();
     APInt CdivA = Charlie.sdiv(Alpha);
     assert(Charlie.srem(Alpha) == 0 && "C should be evenly divisible by A");
-    const SCEV *A_K = findCoefficient(Src, CurLoop);
+    const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
     Src = SE->getAddExpr(Src, SE->getMulExpr(A_K, SE->getConstant(CdivA)));
-    Src = zeroCoefficient(Src, CurLoop);
-    if (!findCoefficient(Dst, CurLoop)->isZero())
+    Src = zeroCoefficient(Src, CurSrcLoop);
+    if (!findCoefficient(Dst, CurDstLoop)->isZero())
       Consistent = false;
   }
   else if (isKnownPredicate(CmpInst::ICMP_EQ, A, B)) {
@@ -3252,22 +3319,22 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
     APInt Charlie = Cconst->getAPInt();
     APInt CdivA = Charlie.sdiv(Alpha);
     assert(Charlie.srem(Alpha) == 0 && "C should be evenly divisible by A");
-    const SCEV *A_K = findCoefficient(Src, CurLoop);
+    const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
     Src = SE->getAddExpr(Src, SE->getMulExpr(A_K, SE->getConstant(CdivA)));
-    Src = zeroCoefficient(Src, CurLoop);
-    Dst = addToCoefficient(Dst, CurLoop, A_K);
-    if (!findCoefficient(Dst, CurLoop)->isZero())
+    Src = zeroCoefficient(Src, CurSrcLoop);
+    Dst = addToCoefficient(Dst, CurDstLoop, A_K);
+    if (!findCoefficient(Dst, CurDstLoop)->isZero())
       Consistent = false;
   }
   else {
     // paper is incorrect here, or perhaps just misleading
-    const SCEV *A_K = findCoefficient(Src, CurLoop);
+    const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
     Src = SE->getMulExpr(Src, A);
     Dst = SE->getMulExpr(Dst, A);
     Src = SE->getAddExpr(Src, SE->getMulExpr(A_K, C));
-    Src = zeroCoefficient(Src, CurLoop);
-    Dst = addToCoefficient(Dst, CurLoop, SE->getMulExpr(A_K, B));
-    if (!findCoefficient(Dst, CurLoop)->isZero())
+    Src = zeroCoefficient(Src, CurSrcLoop);
+    Dst = addToCoefficient(Dst, CurDstLoop, SE->getMulExpr(A_K, B));
+    if (!findCoefficient(Dst, CurDstLoop)->isZero())
       Consistent = false;
   }
   LLVM_DEBUG(dbgs() << "\t\tnew Src = " << *Src << "\n");
@@ -3281,17 +3348,18 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
 // Return true if some simplification occurs.
 bool DependenceInfo::propagatePoint(const SCEV *&Src, const SCEV *&Dst,
                                     Constraint &CurConstraint) {
-  const Loop *CurLoop = CurConstraint.getAssociatedLoop();
-  const SCEV *A_K = findCoefficient(Src, CurLoop);
-  const SCEV *AP_K = findCoefficient(Dst, CurLoop);
+  const Loop *CurSrcLoop = CurConstraint.getAssociatedSrcLoop();
+  const Loop *CurDstLoop = CurConstraint.getAssociatedDstLoop();
+  const SCEV *A_K = findCoefficient(Src, CurSrcLoop);
+  const SCEV *AP_K = findCoefficient(Dst, CurDstLoop);
   const SCEV *XA_K = SE->getMulExpr(A_K, CurConstraint.getX());
   const SCEV *YAP_K = SE->getMulExpr(AP_K, CurConstraint.getY());
   LLVM_DEBUG(dbgs() << "\t\tSrc is " << *Src << "\n");
   Src = SE->getAddExpr(Src, SE->getMinusSCEV(XA_K, YAP_K));
-  Src = zeroCoefficient(Src, CurLoop);
+  Src = zeroCoefficient(Src, CurSrcLoop);
   LLVM_DEBUG(dbgs() << "\t\tnew Src is " << *Src << "\n");
   LLVM_DEBUG(dbgs() << "\t\tDst is " << *Dst << "\n");
-  Dst = zeroCoefficient(Dst, CurLoop);
+  Dst = zeroCoefficient(Dst, CurDstLoop);
   LLVM_DEBUG(dbgs() << "\t\tnew Dst is " << *Dst << "\n");
   return true;
 }
@@ -3690,14 +3758,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     }
   }
 
-  establishNestingLevels(Src, Dst);
-  LLVM_DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
-  LLVM_DEBUG(dbgs() << "    maximum nesting levels = " << MaxLevels << "\n");
-
-  FullDependence Result(Src, Dst, SCEVUnionPredicate(Assume, *SE),
-                        PossiblyLoopIndependent, CommonLevels);
-  ++TotalArrayPairs;
-
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
   Pair[0].Src = SrcSCEV;
@@ -3708,6 +3768,47 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
       LLVM_DEBUG(dbgs() << "    delinearized\n");
       Pairs = Pair.size();
     }
+  }
+
+  // Establish loop nesting levels considering separate but similar loops as
+  // common
+  establishNestingLevels(Src, Dst);
+
+  LLVM_DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
+  LLVM_DEBUG(dbgs() << "    maximum nesting levels = " << MaxLevels << "\n");
+  LLVM_DEBUG(dbgs() << "    separate nesting levels = " << SeparateLevels
+                    << "\n");
+
+  // Modify common levels to consider the similar separate levels in the tests
+  CommonLevels += SeparateLevels;
+  MaxLevels -= SeparateLevels;
+  if (SeparateLevels > 0) {
+    // Not all tests are handled yet over separate loops
+    // Revoke if there are any tests other than ZIV, SIV or RDIV
+    for (unsigned P = 0; P < Pairs; ++P) {
+      Pair[P].Loops.resize(MaxLevels + 1);
+      Subscript::ClassificationKind TestClass = classifyPair(
+          Pair[P].Src, LI->getLoopFor(Src->getParent()), Pair[P].Dst,
+          LI->getLoopFor(Dst->getParent()), Pair[P].Loops);
+
+      if (TestClass != Subscript::ZIV && TestClass != Subscript::SIV &&
+          TestClass != Subscript::RDIV) {
+        // Revert the levels to not consider the separate levels
+        CommonLevels -= SeparateLevels;
+        MaxLevels += SeparateLevels;
+        SeparateLevels = 0;
+        break;
+      }
+    }
+  }
+
+  FullDependence Result(Src, Dst, SCEVUnionPredicate(Assume, *SE),
+                        PossiblyLoopIndependent, CommonLevels);
+  ++TotalArrayPairs;
+
+  if (SeparateLevels > 0) {
+    Result.Consistent = false;
+    SeparateLoopsConsidered++;
   }
 
   for (unsigned P = 0; P < Pairs; ++P) {
@@ -3998,6 +4099,25 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   for (unsigned II = 1; II <= CommonLevels; ++II)
     if (CompleteLoops[II])
       Result.DV[II - 1].Scalar = false;
+
+  if (SeparateLevels > 0) {
+    // Extracting separate levels from the common levels
+    // Reverting CommonLevels and MaxLevels to their original values
+    assert(CommonLevels >= SeparateLevels);
+    CommonLevels -= SeparateLevels;
+    MaxLevels += SeparateLevels;
+    std::unique_ptr<FullDependence::DVEntry[]> DV, DVSeparate;
+    DV = std::make_unique<FullDependence::DVEntry[]>(CommonLevels);
+    DVSeparate = std::make_unique<FullDependence::DVEntry[]>(SeparateLevels);
+    for (unsigned level = 0; level < CommonLevels; ++level)
+      DV[level] = Result.DV[level];
+    for (unsigned level = 0; level < SeparateLevels; ++level)
+      DVSeparate[level] = Result.DV[CommonLevels + level];
+    Result.DV = std::move(DV);
+    Result.DVSeparate = std::move(DVSeparate);
+    Result.Levels = CommonLevels;
+    Result.SeparateLevels = SeparateLevels;
+  }
 
   if (PossiblyLoopIndependent) {
     // Make sure the LoopIndependent flag is set correctly.
