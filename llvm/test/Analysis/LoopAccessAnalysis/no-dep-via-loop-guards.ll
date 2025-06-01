@@ -349,3 +349,90 @@ loop:
 exit:
   ret void
 }
+
+; TODO Should be able to determine no-dep, same as @nodep_via_logical_and_2.
+define void @nodep_via_logical_and_1(ptr %A, i32 %index, i32 %n) {
+; CHECK-LABEL: 'nodep_via_logical_and_1'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %0 = load double, ptr %gep.load, align 8 ->
+; CHECK-NEXT:            store double %0, ptr %gep.store, align 8
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %pre.0 = icmp sgt i32 %index, 0
+  %pre.1 = icmp slt i32 %index, %n
+  %and.pre = select i1 %pre.1, i1 %pre.0, i1 false
+  br i1 %and.pre, label %ph, label %exit
+
+ph:
+  %idx.1 = add i32 %index, 1
+  %start = zext i32 %idx.1 to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %ph ], [ %iv.next, %loop ]
+  %gep.load = getelementptr double, ptr %A, i64 %iv
+  %1 = load double, ptr %gep.load, align 8
+  %index.ext = zext i32 %index to i64
+  %gep.store = getelementptr double, ptr %A, i64 %index.ext
+  store double %1, ptr %gep.store, align 8
+  %iv.next = add i64 %iv, 1
+  %t = trunc i64 %iv to i32
+  %ec = icmp slt i32 %t, 1
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Same as nodep_via_logical_and_1 but with different operand order of the logical and.
+define void @nodep_via_logical_and_2(ptr %A, i32 %index, i32 %n) {
+; CHECK-LABEL: 'nodep_via_logical_and_2'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %pre.0 = icmp sgt i32 %index, 0
+  %pre.1 = icmp slt i32 %index, %n
+  %and.pre = select i1 %pre.0, i1 %pre.1, i1 false
+  br i1 %and.pre, label %ph, label %exit
+
+ph:
+  %idx.1 = add i32 %index, 1
+  %start = zext i32 %idx.1 to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %ph ], [ %iv.next, %loop ]
+  %gep.load = getelementptr double, ptr %A, i64 %iv
+  %1 = load double, ptr %gep.load, align 8
+  %index.ext = zext i32 %index to i64
+  %gep.store = getelementptr double, ptr %A, i64 %index.ext
+  store double %1, ptr %gep.store, align 8
+  %iv.next = add i64 %iv, 1
+  %t = trunc i64 %iv to i32
+  %ec = icmp slt i32 %t, 1
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
