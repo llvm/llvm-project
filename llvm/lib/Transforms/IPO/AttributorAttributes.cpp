@@ -191,6 +191,7 @@ PIPE_OPERATOR(AAInterFnReachability)
 PIPE_OPERATOR(AAPointerInfo)
 PIPE_OPERATOR(AAAssumptionInfo)
 PIPE_OPERATOR(AAUnderlyingObjects)
+PIPE_OPERATOR(AAInvariantLoadPointer)
 PIPE_OPERATOR(AAAddressSpace)
 PIPE_OPERATOR(AAAllocationInfo)
 PIPE_OPERATOR(AAIndirectCallInfo)
@@ -12534,6 +12535,269 @@ private:
 };
 } // namespace
 
+/// --------------------- Invariant Load Pointer -------------------------------
+namespace {
+
+struct AAInvariantLoadPointerImpl
+    : public StateWrapper<BitIntegerState<uint8_t, 7>, AAInvariantLoadPointer,
+                          uint8_t> {
+  // load invariance is implied by, but not equivalent to IS_NOALIAS |
+  // IS_NOEFFECT, as load invariance is also implied by all underlying objects
+  // being load invariant.
+  //
+  // IS_KNOWN_INVARIANT is set to indicate that the contents of the pointer are
+  // *known* to be invariant, and is therefore a pessimistic bit.
+  enum {
+    IS_KNOWN_INVARIANT = 1 << 0,
+    IS_NOALIAS = 1 << 1,
+    IS_NOEFFECT = 1 << 2,
+
+    IS_IMPLIED_INVARIANT = IS_NOALIAS | IS_NOEFFECT,
+  };
+  static_assert(getBestState() == (IS_KNOWN_INVARIANT | IS_IMPLIED_INVARIANT),
+                "Unexpected best state!");
+
+  using Base = StateWrapper<BitIntegerState<uint8_t, 7>, AAInvariantLoadPointer,
+                            uint8_t>;
+
+  // the BitIntegerState is optimistic about IS_NOALIAS and IS_NOEFFECT, but
+  // pessimistic about IS_KNOWN_INVARIANT
+  AAInvariantLoadPointerImpl(const IRPosition &IRP, Attributor &A)
+      : Base(IRP, IS_IMPLIED_INVARIANT) {}
+
+  void initialize(Attributor &A) final {
+    removeAssumedBits(IS_KNOWN_INVARIANT);
+  }
+
+  bool isKnownInvariant() const final {
+    return isKnown(IS_KNOWN_INVARIANT) || isKnown(IS_IMPLIED_INVARIANT);
+  }
+
+  bool isAssumedInvariant() const final {
+    if (isAssumed(IS_KNOWN_INVARIANT) || isAssumed(IS_IMPLIED_INVARIANT))
+      return true;
+    // if the function is callable, optimistically assume that invariance can be
+    // inferred from the caller
+    const auto *F = getAssociatedFunction();
+    return F && isCallableCC(F->getCallingConv());
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    if (isKnownInvariant())
+      return indicateOptimisticFixpoint();
+
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+    Changed |= checkNoAlias(A);
+    Changed |= checkNoEffect(A);
+
+    // try to infer invariance from underlying objects
+    const auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(
+        getIRPosition(), this, DepClassTy::REQUIRED);
+
+    bool UsedAssumedInformation = false;
+    const auto IsInvariantLoadIfPointer = [&](const Value &V) {
+      if (!V.getType()->isPointerTy())
+        return true;
+      const auto *IsInvariantLoadPointer =
+          A.getOrCreateAAFor<AAInvariantLoadPointer>(IRPosition::value(V), this,
+                                                     DepClassTy::REQUIRED);
+      if (IsInvariantLoadPointer->isKnownInvariant())
+        return true;
+      if (!IsInvariantLoadPointer->isAssumedInvariant())
+        return false;
+
+      UsedAssumedInformation = true;
+      return true;
+    };
+    if (!AUO->forallUnderlyingObjects(IsInvariantLoadIfPointer))
+      return indicatePessimisticFixpoint();
+
+    if (!UsedAssumedInformation) {
+      // pointer is known (not assumed) to be invariant
+      addKnownBits(IS_KNOWN_INVARIANT);
+      return indicateOptimisticFixpoint() | Changed;
+    }
+
+    return Changed;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (!isKnownInvariant())
+      return ChangeStatus::UNCHANGED;
+
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    Value *Ptr = &getAssociatedValue();
+    const auto TagInvariantLoads = [&](const Use &U, bool &) {
+      if (U.get() != Ptr)
+        return true;
+      auto *I = dyn_cast<Instruction>(U.getUser());
+      if (!I)
+        return true;
+
+      // Ensure that we are only changing uses from the corresponding callgraph
+      // SSC in the case that the AA isn't run on the entire module
+      if (!A.isRunOn(I->getFunction()))
+        return true;
+
+      if (I->hasMetadata(LLVMContext::MD_invariant_load))
+        return true;
+
+      if (auto *LI = dyn_cast<LoadInst>(I)) {
+
+        LI->setMetadata(LLVMContext::MD_invariant_load,
+                        MDNode::get(LI->getContext(), {}));
+        Changed = ChangeStatus::CHANGED;
+      }
+      return true;
+    };
+
+    (void)A.checkForAllUses(TagInvariantLoads, *this, *Ptr);
+    return Changed;
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr(Attributor *) const override {
+    std::string Str;
+    raw_string_ostream OS(Str);
+    OS << "load invariant pointer: " << isKnown() << '\n';
+    return Str;
+  }
+
+  /// See AbstractAttribute::trackStatistics().
+  void trackStatistics() const override {}
+
+private:
+  ChangeStatus checkNoAlias(Attributor &A) {
+    if (isKnown(IS_NOALIAS) || !isAssumed(IS_NOALIAS))
+      return ChangeStatus::UNCHANGED;
+
+    const auto *F = getAssociatedFunction();
+
+    if (F && isCallableCC(F->getCallingConv())) {
+      // program-wide alias information cannot be inferred
+      removeAssumedBits(IS_NOALIAS);
+      return ChangeStatus::CHANGED;
+    }
+
+    // try to use AANoAlias
+    if (const auto *ANoAlias = A.getOrCreateAAFor<AANoAlias>(
+            getIRPosition(), this, DepClassTy::REQUIRED)) {
+      if (ANoAlias->isKnownNoAlias()) {
+        addKnownBits(IS_NOALIAS);
+        return ChangeStatus::UNCHANGED;
+      }
+
+      if (!ANoAlias->isAssumedNoAlias()) {
+        removeAssumedBits(IS_NOALIAS);
+        return ChangeStatus::CHANGED;
+      }
+
+      return ChangeStatus::UNCHANGED;
+    }
+
+    // if the function is not callable, try to infer noalias from argument
+    // attribute, since it is applicable for the duration of the function
+    if (const auto *Arg = getAssociatedArgument()) {
+      if (Arg->hasNoAliasAttr()) {
+        addKnownBits(IS_NOALIAS);
+        return ChangeStatus::UNCHANGED;
+      }
+
+      // noalias information is not provided, and cannot be inferred,
+      // so we conservatively assume the pointer aliases.
+      removeAssumedBits(IS_NOALIAS);
+      return ChangeStatus::CHANGED;
+    }
+
+    return ChangeStatus::UNCHANGED;
+  }
+
+  ChangeStatus checkNoEffect(Attributor &A) {
+    if (isKnown(IS_NOEFFECT) || !isAssumed(IS_NOEFFECT))
+      return ChangeStatus::UNCHANGED;
+
+    const auto *F = getAssociatedFunction();
+
+    if (!F)
+      return ChangeStatus::UNCHANGED;
+
+    if (isCallableCC(F->getCallingConv())) {
+      // effects cannot be tracked outside of function call;
+      // conservatively assume pointer has effectful uses
+      removeAssumedBits(IS_NOEFFECT);
+      return ChangeStatus::CHANGED;
+    }
+
+    const auto HasNoSideEffects = [](const Use &U, bool &) {
+      const auto *I = dyn_cast<LoadInst>(U.getUser());
+      return !I || !I->mayHaveSideEffects();
+    };
+    if (!A.checkForAllUses(HasNoSideEffects, *this, getAssociatedValue())) {
+      removeAssumedBits(IS_NOEFFECT);
+      return ChangeStatus::CHANGED;
+    }
+
+    // try to use AAMemoryBehavior to infer readonly attribute
+    if (const auto *AMemoryBehavior = A.getOrCreateAAFor<AAMemoryBehavior>(
+            getIRPosition(), this, DepClassTy::REQUIRED)) {
+      if (!AMemoryBehavior->isAssumedReadOnly()) {
+        removeAssumedBits(IS_NOEFFECT);
+        return ChangeStatus::CHANGED;
+      }
+
+      if (AMemoryBehavior->isKnownReadOnly()) {
+        addKnownBits(IS_NOEFFECT);
+        return ChangeStatus::UNCHANGED;
+      }
+
+      return ChangeStatus::UNCHANGED;
+    }
+
+    if (const auto *Arg = getAssociatedArgument()) {
+      if (Arg->onlyReadsMemory()) {
+        addKnownBits(IS_NOEFFECT);
+        return ChangeStatus::UNCHANGED;
+      }
+
+      // readonly information is not provided, and cannot be inferred from
+      // AAMemoryBehavior
+      removeAssumedBits(IS_NOEFFECT);
+      return ChangeStatus::CHANGED;
+    }
+
+    return ChangeStatus::UNCHANGED;
+  }
+};
+
+struct AAInvariantLoadPointerFloating final : AAInvariantLoadPointerImpl {
+  AAInvariantLoadPointerFloating(const IRPosition &IRP, Attributor &A)
+      : AAInvariantLoadPointerImpl(IRP, A) {}
+};
+
+struct AAInvariantLoadPointerReturned final : AAInvariantLoadPointerImpl {
+  AAInvariantLoadPointerReturned(const IRPosition &IRP, Attributor &A)
+      : AAInvariantLoadPointerImpl(IRP, A) {}
+};
+
+struct AAInvariantLoadPointerCallSiteReturned final
+    : AAInvariantLoadPointerImpl {
+  AAInvariantLoadPointerCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AAInvariantLoadPointerImpl(IRP, A) {}
+};
+
+struct AAInvariantLoadPointerArgument final : AAInvariantLoadPointerImpl {
+  AAInvariantLoadPointerArgument(const IRPosition &IRP, Attributor &A)
+      : AAInvariantLoadPointerImpl(IRP, A) {}
+};
+
+struct AAInvariantLoadPointerCallSiteArgument final
+    : AAInvariantLoadPointerImpl {
+  AAInvariantLoadPointerCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AAInvariantLoadPointerImpl(IRP, A) {}
+};
+} // namespace
+
 /// ------------------------ Address Space  ------------------------------------
 namespace {
 
@@ -13020,6 +13284,7 @@ const char AAInterFnReachability::ID = 0;
 const char AAPointerInfo::ID = 0;
 const char AAAssumptionInfo::ID = 0;
 const char AAUnderlyingObjects::ID = 0;
+const char AAInvariantLoadPointer::ID = 0;
 const char AAAddressSpace::ID = 0;
 const char AAAllocationInfo::ID = 0;
 const char AAIndirectCallInfo::ID = 0;
@@ -13154,6 +13419,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialValues)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUndef)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFPClass)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPointerInfo)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAInvariantLoadPointer)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAddressSpace)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAllocationInfo)
 
