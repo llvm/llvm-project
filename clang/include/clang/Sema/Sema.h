@@ -14856,8 +14856,9 @@ public:
 
   /// \brief Emit diagnostics explaining why a constraint expression was deemed
   /// unsatisfied.
-  void DiagnoseUnsatisfiedConstraint(
-      const ConceptSpecializationExpr *ConstraintExpr);
+  void
+  DiagnoseUnsatisfiedConstraint(const ConceptSpecializationExpr *ConstraintExpr,
+                                bool First = true);
 
   const NormalizedConstraint *getNormalizedAssociatedConstraints(
       ConstrainedDeclOrNestedRequirement Entity,
