@@ -13,7 +13,6 @@
 
 namespace absl
 {
-// Use const char * for the format since the real type is hard to mock up.
 template <typename... Args>
 int PrintF(const std::string_view &format, const Args&... args);
 
