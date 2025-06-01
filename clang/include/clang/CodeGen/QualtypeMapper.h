@@ -1,35 +1,29 @@
-#ifndef LLVM_ABI_QUALTYPE_MAPPER_H
-#define LLVM_ABI_QUALTYPE_MAPPER_H
+//==---- QualtypeMapper.h - Maps Clang Qualtype to LLVMABI Types -----------==//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Maps Clang QualType instances to corresponding LLVM ABI type
+/// representations. This mapper translates high-level type information from the
+/// AST into low-level ABI-specific types that encode size, alignment, and
+/// layout details required for code generation and cross-language
+/// interoperability.
+///
+//===----------------------------------------------------------------------===//
+#ifndef CLANG_CODEGEN_QUALTYPE_MAPPER_H
+#define CLANG_CODEGEN_QUALTYPE_MAPPER_H
 
-#include "llvm/IR/DerivedTypes.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeOrdering.h"
+#include "llvm/ABI/Types.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Allocator.h"
-#include <clang/AST/ASTContext.h>
-#include <clang/AST/Decl.h>
-#include <clang/AST/Type.h>
-#include <llvm/ABI/Types.h>
-#include <llvm/ADT/DenseMap.h>
-
-// Specialization for QualType
-template <> struct llvm::DenseMapInfo<clang::QualType> {
-  static inline clang::QualType getEmptyKey() {
-    return clang::QualType::getFromOpaquePtr(
-        reinterpret_cast<clang::Type *>(-1));
-  }
-
-  static inline clang::QualType getTombstoneKey() {
-    return clang::QualType::getFromOpaquePtr(
-        reinterpret_cast<clang::Type *>(-2));
-  }
-
-  static unsigned getHashValue(const clang::QualType &Val) {
-    return (unsigned)((uintptr_t)Val.getAsOpaquePtr()) ^
-           ((unsigned)((uintptr_t)Val.getAsOpaquePtr() >> 9));
-  }
-
-  static bool isEqual(const clang::QualType &LHS, const clang::QualType &RHS) {
-    return LHS == RHS;
-  }
-};
 
 namespace clang {
 namespace mapper {
@@ -75,4 +69,4 @@ public:
 } // namespace mapper
 } // namespace clang
 
-#endif // !LLVM_ABI_QUALTYPE_MAPPER_H
+#endif // !CLANG_CODEGEN_QUALTYPE_MAPPER_H

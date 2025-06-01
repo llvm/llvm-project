@@ -1,13 +1,27 @@
+//===- ABI/Types.h ----------------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines the Types and related helper methods concerned to the
+/// LLVMABI library which mirrors ABI related type information from
+/// the LLVM frontend.
+///
+//===----------------------------------------------------------------------===//
 #ifndef LLVM_ABI_TYPES_H
 #define LLVM_ABI_TYPES_H
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/TypeSize.h"
 #include <cstdint>
-#include <llvm/IR/CallingConv.h>
 
 namespace llvm {
 namespace abi {
@@ -27,21 +41,21 @@ class Type {
 protected:
   TypeKind Kind;
   TypeSize SizeInBits;
-  Align AlignInBits;
+  Align Alignment;
   bool IsExplicitlyAligned;
 
   Type(TypeKind K, TypeSize Size, Align Align, bool ExplicitAlign = false)
-      : Kind(K), SizeInBits(Size), AlignInBits(Align),
+      : Kind(K), SizeInBits(Size), Alignment(Align),
         IsExplicitlyAligned(ExplicitAlign) {}
 
 public:
   TypeKind getKind() const { return Kind; }
   TypeSize getSizeInBits() const { return SizeInBits; }
-  Align getAlignInBits() const { return AlignInBits; }
+  Align getAlignment() const { return Alignment; }
   bool hasExplicitAlignment() const { return IsExplicitlyAligned; }
 
   void setExplicitAlignment(Align Align) {
-    AlignInBits = Align;
+    Alignment = Align;
     IsExplicitlyAligned = true;
   }
 
@@ -109,7 +123,7 @@ private:
 public:
   ArrayType(const Type *ElemType, uint64_t NumElems)
       : Type(TypeKind::Array, ElemType->getSizeInBits() * NumElems,
-             ElemType->getAlignInBits()),
+             ElemType->getAlignment()),
         ElementType(ElemType), NumElements(NumElems) {}
 
   const Type *getElementType() const { return ElementType; }
