@@ -1,12 +1,28 @@
+//==---- QualtypeMapper.cpp - Maps Clang Qualtype to LLVMABI Types ---------==//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Maps Clang QualType instances to corresponding LLVM ABI type
+/// representations. This mapper translates high-level type information from the
+/// AST into low-level ABI-specific types that encode size, alignment, and
+/// layout details required for code generation and cross-language
+/// interoperability.
+///
+//===----------------------------------------------------------------------===//
+#include "clang/CodeGen/QualtypeMapper.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
-#include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/Casting.h"
-#include <clang/ABI/QualTypeMapper.h>
+#include "llvm/Support/TypeSize.h"
 
 namespace clang {
 namespace mapper {
@@ -40,87 +56,44 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
 
 const llvm::abi::Type *
 QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
+  QualType QT(BT, 0);
+
   switch (BT->getKind()) {
   case BuiltinType::Void:
     return Builder.getVoidType();
 
   case BuiltinType::Bool:
-  case BuiltinType::UChar:
-  case BuiltinType::Char_U:
-  case BuiltinType::UShort:
-    return Builder.getIntegerType(ASTCtx.getTypeSize(QualType(BT, 0)),
-                                  getTypeAlign(QualType(BT, 0)), false);
-
   case BuiltinType::Char_S:
+  case BuiltinType::Char_U:
   case BuiltinType::SChar:
-  case BuiltinType::Short:
-    return Builder.getIntegerType(ASTCtx.getCharWidth(),
-                                  getTypeAlign(QualType(BT, 0)), true);
-
-  case BuiltinType::WChar_U:
-    return Builder.getIntegerType(ASTCtx.getCharWidth(),
-                                  getTypeAlign(QualType(BT, 0)), false);
-
+  case BuiltinType::UChar:
   case BuiltinType::WChar_S:
-    return Builder.getIntegerType(ASTCtx.getCharWidth(),
-                                  getTypeAlign(QualType(BT, 0)), true);
-
+  case BuiltinType::WChar_U:
   case BuiltinType::Char8:
-    return Builder.getIntegerType(8, getTypeAlign(QualType(BT, 0)), false);
-
   case BuiltinType::Char16:
-    return Builder.getIntegerType(16, getTypeAlign(QualType(BT, 0)), false);
-
   case BuiltinType::Char32:
-    return Builder.getIntegerType(32, getTypeAlign(QualType(BT, 0)), false);
-
+  case BuiltinType::Short:
+  case BuiltinType::UShort:
   case BuiltinType::Int:
   case BuiltinType::UInt:
-    return Builder.getIntegerType(ASTCtx.getIntWidth(QualType(BT, 0)),
-                                  getTypeAlign(QualType(BT, 0)),
-                                  BT->getKind() == BuiltinType::Int);
-
   case BuiltinType::Long:
   case BuiltinType::ULong:
-    return Builder.getIntegerType(ASTCtx.getTypeSize(QualType(BT, 0)),
-                                  getTypeAlign(QualType(BT, 0)),
-                                  BT->getKind() == BuiltinType::Long);
-
   case BuiltinType::LongLong:
   case BuiltinType::ULongLong:
-    return Builder.getIntegerType(ASTCtx.getTypeSize(QualType(BT, 0)),
-                                  getTypeAlign(QualType(BT, 0)),
-                                  BT->getKind() == BuiltinType::LongLong);
-
   case BuiltinType::Int128:
   case BuiltinType::UInt128:
-    return Builder.getIntegerType(128, getTypeAlign(QualType(BT, 0)),
-                                  BT->getKind() == BuiltinType::Int128);
+    return Builder.getIntegerType(ASTCtx.getTypeSize(QT), getTypeAlign(QT),
+                                  BT->isSignedInteger());
 
   case BuiltinType::Half:
   case BuiltinType::Float16:
-    return Builder.getFloatType(llvm::APFloat::IEEEhalf(),
-                                getTypeAlign(QualType(BT, 0)));
-
-  case BuiltinType::Float:
-    return Builder.getFloatType(llvm::APFloat::IEEEsingle(),
-                                getTypeAlign(QualType(BT, 0)));
-
-  case BuiltinType::Double:
-    return Builder.getFloatType(llvm::APFloat::IEEEdouble(),
-                                getTypeAlign(QualType(BT, 0)));
-
-  case BuiltinType::LongDouble:
-    return Builder.getFloatType(ASTCtx.getFloatTypeSemantics(QualType(BT, 0)),
-                                getTypeAlign(QualType(BT, 0)));
-
   case BuiltinType::BFloat16:
-    return Builder.getFloatType(llvm::APFloat::BFloat(),
-                                getTypeAlign(QualType(BT, 0)));
-
+  case BuiltinType::Float:
+  case BuiltinType::Double:
+  case BuiltinType::LongDouble:
   case BuiltinType::Float128:
-    return Builder.getFloatType(llvm::APFloat::IEEEquad(),
-                                getTypeAlign(QualType(BT, 0)));
+    return Builder.getFloatType(ASTCtx.getFloatTypeSemantics(QT),
+                                getTypeAlign(QT));
 
   default:
     return Builder.getIntegerType(ASTCtx.getTypeSize(QualType(BT, 0)),
@@ -169,6 +142,45 @@ const llvm::abi::Type *QualTypeMapper::convertRecordType(const RecordType *RT) {
 const llvm::abi::Type *
 QualTypeMapper::convertPointerType(const clang::PointerType *PT) {
   return createPointerTypeForPointee(PT->getPointeeType());
+}
+
+const llvm::abi::Type *
+QualTypeMapper::convertEnumType(const clang::EnumType *ET) {
+  const EnumDecl *ED = ET->getDecl();
+  QualType UnderlyingType = ED->getIntegerType();
+
+  if (UnderlyingType.isNull())
+    UnderlyingType = ASTCtx.IntTy;
+
+  return convertType(UnderlyingType);
+}
+
+const llvm::abi::StructType *
+QualTypeMapper::convertStructType(const clang::RecordDecl *RD) {
+  const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
+
+  SmallVector<llvm::abi::FieldInfo, 16> Fields;
+  computeFieldInfo(RD, Fields, Layout);
+
+  llvm::TypeSize Size =
+      llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
+  llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+
+  return Builder.getStructType(Fields, Size, Alignment);
+}
+
+const llvm::abi::UnionType *
+QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
+  const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
+
+  SmallVector<llvm::abi::FieldInfo, 16> Fields;
+  computeFieldInfo(RD, Fields, Layout);
+
+  llvm::TypeSize Size =
+      llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
+  llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
+
+  return Builder.getUnionType(Fields, Size, Alignment);
 }
 
 llvm::Align QualTypeMapper::getTypeAlign(QualType QT) const {
