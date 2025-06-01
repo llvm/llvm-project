@@ -380,11 +380,12 @@ SubstitutionInTemplateArguments(
       if (I < Used.size() && Used[I]) {
         // SubstitutedOuterMost[I].dump();
         // SubstArgs[MappedIndex].getArgument().dump();
+        TemplateArgument Arg = S.Context.getCanonicalTemplateArgument(
+            SubstArgs[MappedIndex++].getArgument());
         if (I < SubstitutedOuterMost.size())
-          SubstitutedOuterMost[I] = SubstArgs[MappedIndex++].getArgument();
+          SubstitutedOuterMost[I] = Arg;
         else
-          SubstitutedOuterMost.push_back(
-              SubstArgs[MappedIndex++].getArgument());
+          SubstitutedOuterMost.push_back(Arg);
       }
     MLTAL.replaceOutermostTemplateArguments(
         const_cast<NamedDecl *>(Constraint.getConstraintDecl()),
@@ -548,10 +549,6 @@ static bool calculateConstraintSatisfaction(
         *SubstitutedArgs, Satisfaction, UnsignedOrNone(I));
     if (!Success)
       return false;
-    if(!Satisfaction.IsSatisfied || Satisfaction.ContainsErrors) {
-      if(Conjunction)
-        return true;
-    }
     if (!Conjunction && Satisfaction.IsSatisfied) {
       auto EffectiveDetailEnd = Satisfaction.Details.begin();
       std::advance(EffectiveDetailEnd, EffectiveDetailEndIndex);
@@ -1337,21 +1334,14 @@ static void diagnoseUnsatisfiedConstraintExpr(
 static void DiagnoseUnsatisfiedConstraint(
     Sema &S, ArrayRef<UnsatisfiedConstraintRecord> Records, SourceLocation Loc,
     bool First = true, concepts::NestedRequirement *Req = nullptr) {
-  std::vector<bool> Prevs;
   for (auto &Record : Records) {
     if (Record.isNull()) {
-      First = Prevs.back();
-      Prevs.pop_back();
+      First = false;
       continue;
     }
     diagnoseUnsatisfiedConstraintExpr(S, Record, Loc, First, Req);
     Loc = {};
-    if (isa<const ConceptReference *>(Record)) {
-      Prevs.push_back(First);
-      First = true;
-      continue;
-    }
-    First = false;
+    First = isa<const ConceptReference *>(Record);
   }
 }
 
@@ -1444,7 +1434,7 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
     return;
   } else if (auto *CSE = dyn_cast<ConceptSpecializationExpr>(SubstExpr)) {
     // Drill down concept ids treated as atomic constraints
-    S.DiagnoseUnsatisfiedConstraint(CSE);
+    S.DiagnoseUnsatisfiedConstraint(CSE, First);
     return;
   } else if (auto *TTE = dyn_cast<TypeTraitExpr>(SubstExpr);
              TTE && TTE->getTrait() == clang::TypeTrait::BTT_IsDeducible) {
@@ -1494,7 +1484,7 @@ void Sema::DiagnoseUnsatisfiedConstraint(
 }
 
 void Sema::DiagnoseUnsatisfiedConstraint(
-    const ConceptSpecializationExpr *ConstraintExpr) {
+    const ConceptSpecializationExpr *ConstraintExpr, bool First) {
 
   const ASTConstraintSatisfaction &Satisfaction =
       ConstraintExpr->getSatisfaction();
@@ -1503,7 +1493,7 @@ void Sema::DiagnoseUnsatisfiedConstraint(
          "Attempted to diagnose a satisfied constraint");
 
   ::DiagnoseUnsatisfiedConstraint(*this, Satisfaction.records(),
-                                  ConstraintExpr->getBeginLoc());
+                                  ConstraintExpr->getBeginLoc(), First);
 }
 
 const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
@@ -1602,11 +1592,9 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
   if (S.SubstTemplateArgumentsInParameterMapping(N.getParameterMapping(), MLTAL,
                                                  SubstArgs))
     return true;
-
   TemplateArgumentLoc *TempArgs =
       new (S.Context) TemplateArgumentLoc[SubstArgs.size()];
-  std::copy(SubstArgs.arguments().begin(), SubstArgs.arguments().end(),
-            TempArgs);
+  llvm::copy(SubstArgs.arguments(), TempArgs);
   N.updateParameterMapping(
       N.mappingOccurenceList(),
       MutableArrayRef<TemplateArgumentLoc>(TempArgs, SubstArgs.size()));
