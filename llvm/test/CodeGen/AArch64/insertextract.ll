@@ -630,7 +630,7 @@ define <8 x i8> @insert_v8i8_c(<8 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
 ; CHECK-GI-NEXT:    and x9, x9, #0x7
-; CHECK-GI-NEXT:    mul x8, x9, x8
+; CHECK-GI-NEXT:    umull x8, w9, w8
 ; CHECK-GI-NEXT:    add x9, sp, #8
 ; CHECK-GI-NEXT:    strb w0, [x9, x8]
 ; CHECK-GI-NEXT:    ldr d0, [sp, #8]
@@ -682,7 +682,7 @@ define <16 x i8> @insert_v16i8_c(<16 x i8> %a, i8 %b, i32 %c) {
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    and x9, x9, #0xf
-; CHECK-GI-NEXT:    mul x8, x9, x8
+; CHECK-GI-NEXT:    umull x8, w9, w8
 ; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    strb w0, [x9, x8]
 ; CHECK-GI-NEXT:    ldr q0, [sp], #16
