@@ -286,8 +286,16 @@ LogicalResult cir::ContinueOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::CastOp::verify() {
-  const mlir::Type resType = getResult().getType();
-  const mlir::Type srcType = getSrc().getType();
+  mlir::Type resType = getResult().getType();
+  mlir::Type srcType = getSrc().getType();
+
+  if (mlir::isa<cir::VectorType>(srcType) &&
+      mlir::isa<cir::VectorType>(resType)) {
+    // Use the element type of the vector to verify the cast kind. (Except for
+    // bitcast, see below.)
+    srcType = mlir::dyn_cast<cir::VectorType>(srcType).getElementType();
+    resType = mlir::dyn_cast<cir::VectorType>(resType).getElementType();
+  }
 
   switch (getKind()) {
   case cir::CastKind::int_to_bool: {
@@ -601,10 +609,10 @@ verifyCallCommInSymbolUses(mlir::Operation *op,
     unsigned numCallOperands = callIf.getNumArgOperands();
     unsigned numFnOpOperands = fnType.getNumInputs();
 
-    assert(!cir::MissingFeatures::opCallVariadic());
-
-    if (numCallOperands != numFnOpOperands)
+    if (!fnType.isVarArg() && numCallOperands != numFnOpOperands)
       return op->emitOpError("incorrect number of operands for callee");
+    if (fnType.isVarArg() && numCallOperands < numFnOpOperands)
+      return op->emitOpError("too few operands for callee");
 
     for (unsigned i = 0, e = numFnOpOperands; i != e; ++i)
       if (callIf.getArgOperand(i).getType() != fnType.getInput(i))

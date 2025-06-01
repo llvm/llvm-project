@@ -8411,6 +8411,7 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
   MVT ArgVT = A.getSimpleValueType();
   assert(ArgVT == B.getSimpleValueType() &&
          ArgVT.getVectorElementType() == MVT::i8);
+  (void)ArgVT;
 
   // The zvqdotq pseudos are defined with sources and destination both
   // being i32.  This cast is needed for correctness to avoid incorrect
@@ -21863,8 +21864,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
         "SiFive-CLIC-stack-swap",
         "SiFive-CLIC-preemptible-stack-swap",
     };
-    if (llvm::find(SupportedInterruptKinds, Kind) ==
-        std::end(SupportedInterruptKinds))
+    if (!llvm::is_contained(SupportedInterruptKinds, Kind))
       report_fatal_error(
         "Function interrupt attribute argument not supported!");
 
