@@ -1078,7 +1078,8 @@ SLPGraph::vectorize(IRRewriter &rewriter,
       }
     };
 
-    auto handleNonVectorOutputs = [&](Value newResult) {
+    auto handleNonVectorOutputs = [&](Value newResult,
+                                      Type originalResultType) {
       // Handle the case when op results are not vectorized or have smaller
       // vector size, extract the elements from the vector.
       for (auto [i, result] : llvm::enumerate(node->ops)) {
@@ -1087,7 +1088,16 @@ SLPGraph::vectorize(IRRewriter &rewriter,
           if (getNodeForOp(useOwner))
             continue;
 
-          Value elem = rewriter.create<vector::ExtractOp>(loc, newResult, i);
+          int64_t offset = i * node->elementsCount;
+          Value elem;
+
+          if (auto vecType = dyn_cast<VectorType>(originalResultType)) {
+            elem = rewriter.create<vector::ExtractStridedSliceOp>(
+                loc, newResult, offset, vecType.getNumElements(), 1);
+          } else {
+            elem = rewriter.create<vector::ExtractOp>(loc, newResult, offset);
+          }
+
           use.set(elem);
         }
       }
@@ -1109,8 +1119,9 @@ SLPGraph::vectorize(IRRewriter &rewriter,
           VectorType::get(numElements, getElementTypeAndCount(op)->first);
       Value result = rewriter.create<vector::LoadOp>(loc, vecType, getBase(op),
                                                      getIndices(op));
-      mapping.map(op->getResult(0), result);
-      handleNonVectorOutputs(result);
+      Value originalResult = op->getResult(0);
+      mapping.map(originalResult, result);
+      handleNonVectorOutputs(result, originalResult.getType());
     } else if (maybeWriteOp(op)) {
       handleNonVectorInputs(getValueToStore(op));
       Value val = mapping.lookupOrDefault(getValueToStore(op));
@@ -1133,7 +1144,7 @@ SLPGraph::vectorize(IRRewriter &rewriter,
       newOp->getResult(0).setType(resVectorType);
 
       mapping.map(op->getResults(), newOp->getResults());
-      handleNonVectorOutputs(newOp->getResult(0));
+      handleNonVectorOutputs(newOp->getResult(0), op->getResultTypes().front());
     } else if (auto extract = dyn_cast<vector::ExtractOp>(op)) {
       // We alredy verified index is valid during graph construction, so
       // do need to check `getExtractIndex` result.
