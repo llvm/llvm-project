@@ -785,8 +785,8 @@ public:
       OmpAllocate, OmpDeclarativeAllocateDirective,
       OmpExecutableAllocateDirective, OmpDeclareSimd, OmpDeclareTarget,
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
-      OmpIfSpecified, OmpNone, OmpPreDetermined, OmpImplicit, OmpDependObject,
-      OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction);
+      OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,
+      OmpDependObject, OmpInclusiveScan, OmpExclusiveScan, OmpInScanReduction);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
