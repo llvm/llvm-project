@@ -370,7 +370,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
   { // Scope for SwitchInstProfUpdateWrapper. It must not live during
     // ConstantFoldTerminator() as the underlying SwitchInst can be changed.
     SwitchInstProfUpdateWrapper SI(*I);
-    unsigned ReachableCaseCount = 0;
+    SmallVector<APInt, 4> ReachableCaseValues;
 
     for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
@@ -407,13 +407,15 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
       // Increment the case iterator since we didn't delete it.
       ++CI;
-      ++ReachableCaseCount;
+      ReachableCaseValues.push_back(Case->getValue());
     }
 
-    if (ReachableCaseCount > 1 && !SI->defaultDestUnreachable()) {
+    if (ReachableCaseValues.size() > 1 && !SI->defaultDestUnreachable()) {
       BasicBlock *DefaultDest = SI->getDefaultDest();
       ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
                                                     /*UndefAllowed*/ false);
+      unsigned ReachableCaseCount = count_if(
+          ReachableCaseValues, [&](const APInt &V) { return CR.contains(V); });
       // The default dest is unreachable if all cases are covered.
       if (!CR.isSizeLargerThan(ReachableCaseCount)) {
         BasicBlock *NewUnreachableBB =

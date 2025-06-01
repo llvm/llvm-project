@@ -305,9 +305,7 @@ define void @pr142286() {
 ; CHECK:       loop2:
 ; CHECK-NEXT:    br label [[LOOP3:%.*]]
 ; CHECK:       loop3:
-; CHECK-NEXT:    br label [[DEFAULT_UNREACHABLE:%.*]]
-; CHECK:       default.unreachable:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
