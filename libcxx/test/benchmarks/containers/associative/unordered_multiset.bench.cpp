@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+#include <string>
 #include <unordered_set>
 
 #include "associative_container_benchmarks.h"
