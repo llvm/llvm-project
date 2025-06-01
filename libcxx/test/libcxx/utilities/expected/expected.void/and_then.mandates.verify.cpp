@@ -125,9 +125,11 @@ void test() {
   
   // Test nodiscard
   {
-    const std::expected<int, int> f1(std::unexpected<int>(1));
+    std::expected<int, int> f1(1);
     
-    f1.and_then([](int& _){ return 1; }); // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    f1.and_then([](void){ return std::expected<int, int>(1); }); // expected-warning {{ignoring return value of type 'expected<int, int>' declared with 'nodiscard' attribute}}
+    // expected-error-re@*:* {{no type named 'type' in 'std::invoke_result<{{.*}}>'}}
+    // expected-error-re@*:* {{static assertion failed {{.*}}The result of f({{.*}}) must be a specialization of std::expected}}
   }
 }
 // clang-format on
