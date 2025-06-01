@@ -19,7 +19,6 @@
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include "llvm/Support/StringSaver.h"
 #include <optional>
 
 using namespace clang;
