@@ -315,7 +315,9 @@ struct LineLocationHash {
 
 raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
-using TypeMap = std::map<FunctionId, uint64_t>;
+/// Key represents the id of a vtable and value represents its count.
+/// TODO: Rename FunctionId to SymbolId.
+using TypeCountMap = std::map<FunctionId, uint64_t>;
 
 /// Representation of a single sample record.
 ///
@@ -406,8 +408,8 @@ public:
 
   uint64_t getSamples() const { return NumSamples; }
   const CallTargetMap &getCallTargets() const { return CallTargets; }
-  const TypeMap &getTypes() const { return TypeCounts; }
-  TypeMap &getTypes() { return TypeCounts; }
+  const TypeCountMap &getTypes() const { return TypeCounts; }
+  TypeCountMap &getTypes() { return TypeCounts; }
   const SortedCallTargetSet getSortedCallTargets() const {
     return sortCallTargets(CallTargets);
   }
@@ -456,7 +458,8 @@ public:
 private:
   uint64_t NumSamples = 0;
   CallTargetMap CallTargets;
-  TypeMap TypeCounts;
+  // The vtable types and their counts in this sample record.
+  TypeCountMap TypeCounts;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample);
@@ -752,7 +755,7 @@ using BodySampleMap = std::map<LineLocation, SampleRecord>;
 // memory, which is *very* significant for large profiles.
 using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
-using CallsiteTypeMap = std::map<LineLocation, TypeMap>;
+using CallsiteTypeMap = std::map<LineLocation, TypeCountMap>;
 using LocToLocMap =
     std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
 
@@ -810,19 +813,21 @@ public:
         Func, Num, Weight);
   }
 
-  sampleprof_error addTypeSamples(uint32_t LineOffset, uint32_t Discriminator,
-                                  FunctionId Func, uint64_t Num,
-                                  uint64_t Weight = 1) {
-    return BodySamples[LineLocation(LineOffset, Discriminator)].addTypeCount(
-        Func, Num, Weight);
-  }
-
-  sampleprof_error addTypeSamples(const LineLocation &Loc, FunctionId Func,
-                                  uint64_t Num, uint64_t Weight = 1) {
+  sampleprof_error addFunctionBodyTypeSamples(const LineLocation &Loc,
+                                              FunctionId Func, uint64_t Num,
+                                              uint64_t Weight = 1) {
     return BodySamples[Loc].addTypeCount(Func, Num, Weight);
   }
 
-  TypeMap &getTypeSamples(const LineLocation &Loc) {
+  sampleprof_error addFunctionBodyTypeSamples(uint32_t LineOffset,
+                                              uint32_t Discriminator,
+                                              FunctionId Func, uint64_t Num,
+                                              uint64_t Weight = 1) {
+    return addFunctionBodyTypeSamples(LineLocation(LineOffset, Discriminator),
+                                      Func, Num, Weight);
+  }
+
+  TypeCountMap &getFunctionBodyTypeSamples(const LineLocation &Loc) {
     return BodySamples[Loc].getTypes();
   }
 
@@ -951,7 +956,7 @@ public:
     return &Iter->second;
   }
 
-  const TypeMap *findTypeSamplesAt(const LineLocation &Loc) const {
+  const TypeCountMap *findTypeSamplesAt(const LineLocation &Loc) const {
     auto Iter = VirtualCallsiteTypes.find(mapIRLocToProfileLoc(Loc));
     if (Iter == VirtualCallsiteTypes.end())
       return nullptr;
@@ -1023,7 +1028,7 @@ public:
     return VirtualCallsiteTypes;
   }
 
-  TypeMap& getTypeSamplesAt(const LineLocation &Loc) {
+  TypeCountMap &getTypeSamplesAt(const LineLocation &Loc) {
     return VirtualCallsiteTypes[mapIRLocToProfileLoc(Loc)];
   }
 
@@ -1087,9 +1092,9 @@ public:
         mergeSampleProfErrors(Result,
                               FSMap[Rec.first].merge(Rec.second, Weight));
     }
-    for (const auto &[Loc, TypeCountMap] : Other.getCallsiteTypes()) {
-      TypeMap &TypeCounts = getTypeSamplesAt(Loc);
-      for (const auto &[Type, Count] : TypeCountMap) {
+    for (const auto &[Loc, TypeMap] : Other.getCallsiteTypes()) {
+      TypeCountMap &TypeCounts = getTypeSamplesAt(Loc);
+      for (const auto &[Type, Count] : TypeMap) {
         TypeCounts[Type] =
             SaturatingMultiplyAdd(Count, Weight, TypeCounts[Type]);
       }

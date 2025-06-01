@@ -448,7 +448,7 @@ std::error_code SampleProfileReaderText::readImpl() {
       }
 
       case LineType::CallSiteTypeProfile: {
-        TypeMap &Map = InlineStack.back()->getTypeSamplesAt(
+        auto &Map = InlineStack.back()->getTypeSamplesAt(
             LineLocation(LineOffset, Discriminator));
         for (const auto [Type, Count] : TypeCountMap)
           Map[FunctionId(Type)] += Count;
@@ -461,10 +461,10 @@ std::error_code SampleProfileReaderText::readImpl() {
         }
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TypeCountMap) {
-          mergeSampleProfErrors(
-              Result, FProfile.addTypeSamples(LineOffset, Discriminator,
-                                              FunctionId(name_count.first),
-                                              name_count.second));
+          mergeSampleProfErrors(Result, FProfile.addFunctionBodyTypeSamples(
+                                            LineOffset, Discriminator,
+                                            FunctionId(name_count.first),
+                                            name_count.second));
         }
         break;
       }
@@ -653,7 +653,7 @@ SampleProfileReaderBinary::readSampleContextFromTable() {
   return std::make_pair(Context, Hash);
 }
 
-std::error_code SampleProfileReaderExtBinary::readTypeMap(TypeMap &M) {
+std::error_code SampleProfileReaderExtBinary::readTypeMap(TypeCountMap &M) {
   auto NumVTableTypes = readNumber<uint32_t>();
   if (std::error_code EC = NumVTableTypes.getError())
     return EC;
@@ -667,7 +667,6 @@ std::error_code SampleProfileReaderExtBinary::readTypeMap(TypeMap &M) {
     if (std::error_code EC = VTableSamples.getError())
       return EC;
 
-    errs() << "readTypeMap\t" << *VTableType << "\t" << *VTableSamples << "\n";
     M.insert(std::make_pair(*VTableType, *VTableSamples));
   }
   return sampleprof_error::success;
@@ -679,7 +678,7 @@ SampleProfileReaderExtBinary::readVTableProf(const LineLocation &Loc,
   if (!ReadVTableProf)
     return sampleprof_error::success;
 
-  return readTypeMap(FProfile.getTypeSamples(Loc));
+  return readTypeMap(FProfile.getFunctionBodyTypeSamples(Loc));
 }
 
 std::error_code SampleProfileReaderExtBinary::readCallsiteVTableProf(
@@ -800,10 +799,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
   }
 
-  std::error_code EC = readCallsiteVTableProf(FProfile);
-  errs() << "readFunctionSample\t";
-  FProfile.print(errs(), 2);
-  return EC;
+  return readCallsiteVTableProf(FProfile);
 }
 
 std::error_code
@@ -866,7 +862,6 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       FunctionSamples::ProfileIsFS = ProfileIsFS = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagHasVTableTypeProf)) {
-      errs() << "SampleProfileReaderExtBinaryBase::readVTableProf\n";
       ReadVTableProf = true;
     }
     break;

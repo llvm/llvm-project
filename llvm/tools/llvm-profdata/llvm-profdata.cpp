@@ -1630,13 +1630,9 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
           Remapper ? remapSamples(I->second, *Remapper, Result)
                    : FunctionSamples();
       FunctionSamples &Samples = Remapper ? Remapped : I->second;
-      errs() << "llvm-profdata.cpp\tfunction samples:\t";
-      Samples.print(errs(), 2);
       SampleContext FContext = Samples.getContext();
       mergeSampleProfErrors(Result,
                             ProfileMap[FContext].merge(Samples, Input.Weight));
-      errs() << "llvm-profdata.cpp\tmerged samples:\t";
-      ProfileMap[FContext].print(errs(), 2);
       if (Result != sampleprof_error::success) {
         std::error_code EC = make_error_code(Result);
         handleMergeWriterError(errorCodeToError(EC), Input.Filename,

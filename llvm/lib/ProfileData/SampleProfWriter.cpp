@@ -636,7 +636,8 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
         return EC;
     }
 
-    if (const TypeMap *Map = S.findTypeSamplesAt(Loc); Map && !Map->empty()) {
+    if (const TypeCountMap *Map = S.findTypeSamplesAt(Loc);
+        Map && !Map->empty()) {
       OS.indent(Indent);
       Loc.print(OS);
       OS << ": ";
@@ -850,12 +851,11 @@ std::error_code SampleProfileWriterExtBinaryBase::writeHeader(
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileWriterExtBinary::writeTypeMap(const TypeMap &Map,
-                                                           raw_ostream &OS) {
+std::error_code
+SampleProfileWriterExtBinary::writeTypeMap(const TypeCountMap &Map,
+                                           raw_ostream &OS) {
   encodeULEB128(Map.size(), OS);
   for (const auto &[TypeName, TypeSamples] : Map) {
-    errs() << "TypeName: " << TypeName << "\t" << "TypeSamples: " << TypeSamples
-           << "\n";
     if (std::error_code EC = writeNameIdx(TypeName))
       return EC;
     encodeULEB128(TypeSamples, OS);

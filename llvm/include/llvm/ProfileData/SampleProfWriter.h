@@ -219,7 +219,7 @@ protected:
   writeCallsiteType(const FunctionSamples &FunctionSample, raw_ostream &OS) {
     return sampleprof_error::success;
   }
-  virtual void addTypeNames(const TypeMap &M) {}
+  virtual void addTypeNames(const TypeCountMap &M) {}
   std::error_code writeHeader(const SampleProfileMap &ProfileMap) override;
   std::error_code writeSummary();
   virtual std::error_code writeContextIdx(const SampleContext &Context);
@@ -430,7 +430,9 @@ protected:
   std::error_code writeCallsiteType(const FunctionSamples &FunctionSample,
                                     raw_ostream &OS) override;
 
-  void addTypeNames(const TypeMap &M) override {
+  /// Add the type names to NameTable.
+  /// TODO: Use map_range to map keys only.
+  void addTypeNames(const TypeCountMap &M) override {
     if (!WriteVTableProf)
       return;
     // Add type name to TypeNameTable.
@@ -454,7 +456,7 @@ private:
            "Unsupported layout");
   }
 
-  std::error_code writeTypeMap(const TypeMap &Map, raw_ostream& OS);
+  std::error_code writeTypeMap(const TypeCountMap &Map, raw_ostream &OS);
 
   // TODO:This should be configurable by flag.
   bool WriteVTableProf = false;

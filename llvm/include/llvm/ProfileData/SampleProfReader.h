@@ -872,7 +872,8 @@ private:
 
   std::error_code readCallsiteVTableProf(FunctionSamples &FProfile) override;
 
-   std::error_code readTypeMap(TypeMap& M);
+  std::error_code readTypeMap(TypeCountMap &M);
+
 public:
   SampleProfileReaderExtBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
                                SampleProfileFormat Format = SPF_Ext_Binary)
