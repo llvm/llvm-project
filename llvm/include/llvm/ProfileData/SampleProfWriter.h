@@ -209,17 +209,7 @@ protected:
   virtual MapVector<FunctionId, uint32_t> &getNameTable() { return NameTable; }
   virtual std::error_code writeMagicIdent(SampleProfileFormat Format);
   virtual std::error_code writeNameTable();
-  virtual std::error_code
-  writeSampleRecordVTableProf(const SampleRecord &Record, raw_ostream &OS) {
-    // TODO: This is not virtual because SampleProfWriter may create objects of
-    // type SampleProfileWriterRawBinary.
-    return sampleprof_error::success;
-  }
-  virtual std::error_code
-  writeCallsiteType(const FunctionSamples &FunctionSample, raw_ostream &OS) {
-    return sampleprof_error::success;
-  }
-  virtual void addTypeNames(const TypeMap &M) {}
+
   std::error_code writeHeader(const SampleProfileMap &ProfileMap) override;
   std::error_code writeSummary();
   virtual std::error_code writeContextIdx(const SampleContext &Context);
@@ -231,9 +221,22 @@ protected:
   MapVector<FunctionId, uint32_t> NameTable;
 
   void addName(FunctionId FName);
-  void addTypeName(FunctionId TypeName);
+  /// void addTypeName(FunctionId TypeName);
   virtual void addContext(const SampleContext &Context);
   void addNames(const FunctionSamples &S);
+
+  /// Add the type names to NameTable.
+  void addTypeNames(const TypeCountMap &M);
+
+  /// Write \p CallsiteTypeMap to the output stream \p OS.
+  std::error_code
+  writeCallsiteVTableProf(const CallsiteTypeMap &CallsiteTypeMap,
+                          raw_ostream &OS);
+  /// Write \p Map to the output stream \p OS.
+  std::error_code writeTypeMap(const TypeCountMap &Map, raw_ostream &OS);
+
+  // TODO:This should be configurable by flag.
+  bool WriteVTableProf = false;
 
 private:
   friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
@@ -423,22 +426,6 @@ class SampleProfileWriterExtBinary : public SampleProfileWriterExtBinaryBase {
 public:
   SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS);
 
-protected:
-  std::error_code writeSampleRecordVTableProf(const SampleRecord &Record,
-                                              raw_ostream &OS) override;
-
-  std::error_code writeCallsiteType(const FunctionSamples &FunctionSample,
-                                    raw_ostream &OS) override;
-
-  void addTypeNames(const TypeMap &M) override {
-    if (!WriteVTableProf)
-      return;
-    // Add type name to TypeNameTable.
-    for (const auto &[Type, Cnt] : M) {
-      addName(Type);
-    }
-  }
-
 private:
   std::error_code writeDefaultLayout(const SampleProfileMap &ProfileMap);
   std::error_code writeCtxSplitLayout(const SampleProfileMap &ProfileMap);
@@ -453,11 +440,6 @@ private:
     assert((SL == DefaultLayout || SL == CtxSplitLayout) &&
            "Unsupported layout");
   }
-
-  std::error_code writeTypeMap(const TypeMap &Map, raw_ostream& OS);
-
-  // TODO:This should be configurable by flag.
-  bool WriteVTableProf = false;
 };
 
 } // end namespace sampleprof

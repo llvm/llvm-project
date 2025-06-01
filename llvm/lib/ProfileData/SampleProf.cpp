@@ -20,6 +20,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <system_error>
@@ -90,6 +91,10 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Zlib is unavailable";
     case sampleprof_error::hash_mismatch:
       return "Function hash mismatch";
+    case sampleprof_error::illegal_line_offset:
+      return "Illegal line offset in sample profile data";
+    case sampleprof_error::duplicate_vtable_type:
+      return "Duplicate vtable type in one map";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }
@@ -108,6 +113,11 @@ void LineLocation::print(raw_ostream &OS) const {
     OS << "." << Discriminator;
 }
 
+void LineLocation::serialize(raw_ostream &OS) const {
+  encodeULEB128(LineOffset, OS);
+  encodeULEB128(Discriminator, OS);
+}
+
 raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
                                           const LineLocation &Loc) {
   Loc.print(OS);
@@ -123,9 +133,10 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   for (const auto &I : Other.getCallTargets()) {
     mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
-  for (const auto &[TypeName, Count] : Other.getTypes()) {
-    mergeSampleProfErrors(Result, addTypeCount(TypeName, Count, Weight));
-  }
+  for (const auto &[TypeName, Count] : Other.getVTableAccessCounts())
+    mergeSampleProfErrors(Result,
+                          addVTableAccessCount(TypeName, Count, Weight));
+
   return Result;
 }
 
@@ -141,12 +152,30 @@ void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
     for (const auto &I : getSortedCallTargets())
       OS << " " << I.first << ":" << I.second;
   }
-  if (!TypeCounts.empty()) {
-    OS << ", types:";
-    for (const auto &I : TypeCounts)
-      OS << " " << I.first << ":" << I.second;
+  if (!VTableAccessCounts.empty()) {
+    OS << ", vtables:";
+    for (const auto [Type, Count] : VTableAccessCounts)
+      OS << " " << Type << ":" << Count;
   }
   OS << "\n";
+}
+
+static sampleprof_error addWeightSample(uint64_t S, uint64_t Weight,
+                                        uint64_t &Samples) {
+  bool Overflowed;
+  Samples = SaturatingMultiplyAdd(S, Weight, Samples, &Overflowed);
+  return Overflowed ? sampleprof_error::counter_overflow
+                    : sampleprof_error::success;
+}
+
+sampleprof_error SampleRecord::addCalledTarget(FunctionId F, uint64_t S,
+                                               uint64_t Weight) {
+  return addWeightSample(S, Weight, CallTargets[F]);
+}
+
+sampleprof_error SampleRecord::addVTableAccessCount(FunctionId F, uint64_t S,
+                                                    uint64_t Weight) {
+  return addWeightSample(S, Weight, VTableAccessCounts[F]);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

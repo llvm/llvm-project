@@ -331,16 +331,14 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
       // Change n3 to the next blank space after colon + integer pair.
       n3 = n4;
     }
-  } else if (Rest.ends_with("// CallTargetVtables")) {
+  } else if (Rest.starts_with(kBodySampleVTableProfPrefix)) {
     LineTy = LineType::CallTargetTypeProfile;
-    return parseTypeCountMap(
-        Rest.substr(0, Rest.size() - strlen("// CallTargetVtables")),
-        TypeCountMap);
-  } else if (Rest.ends_with("// CallSiteVtables")) {
+    return parseTypeCountMap(Rest.substr(strlen(kBodySampleVTableProfPrefix)),
+                             TypeCountMap);
+  } else if (Rest.starts_with(kInlinedCallsiteVTablerofPrefix)) {
     LineTy = LineType::CallSiteTypeProfile;
     return parseTypeCountMap(
-        Rest.substr(0, Rest.size() - strlen("// CallSiteVtables")),
-        TypeCountMap);
+        Rest.substr(strlen(kInlinedCallsiteVTablerofPrefix)), TypeCountMap);
   } else {
     LineTy = LineType::CallSiteProfile;
     size_t n3 = Rest.find_last_of(':');
@@ -448,10 +446,9 @@ std::error_code SampleProfileReaderText::readImpl() {
       }
 
       case LineType::CallSiteTypeProfile: {
-        TypeMap &Map = InlineStack.back()->getTypeSamplesAt(
-            LineLocation(LineOffset, Discriminator));
-        for (const auto [Type, Count] : TypeCountMap)
-          Map[FunctionId(Type)] += Count;
+        mergeSampleProfErrors(
+            Result, InlineStack.back()->addCallsiteVTableTypeProfAt(
+                        LineLocation(LineOffset, Discriminator), TypeCountMap));
         break;
       }
 
@@ -462,9 +459,9 @@ std::error_code SampleProfileReaderText::readImpl() {
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TypeCountMap) {
           mergeSampleProfErrors(
-              Result, FProfile.addTypeSamples(LineOffset, Discriminator,
-                                              FunctionId(name_count.first),
-                                              name_count.second));
+              Result, FProfile.addFunctionBodyTypeSamples(
+                          LineLocation(LineOffset, Discriminator),
+                          FunctionId(name_count.first), name_count.second));
         }
         break;
       }
@@ -653,7 +650,8 @@ SampleProfileReaderBinary::readSampleContextFromTable() {
   return std::make_pair(Context, Hash);
 }
 
-std::error_code SampleProfileReaderExtBinary::readTypeMap(TypeMap &M) {
+std::error_code
+SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
   auto NumVTableTypes = readNumber<uint32_t>();
   if (std::error_code EC = NumVTableTypes.getError())
     return EC;
@@ -667,23 +665,14 @@ std::error_code SampleProfileReaderExtBinary::readTypeMap(TypeMap &M) {
     if (std::error_code EC = VTableSamples.getError())
       return EC;
 
-    errs() << "readTypeMap\t" << *VTableType << "\t" << *VTableSamples << "\n";
-    M.insert(std::make_pair(*VTableType, *VTableSamples));
+    if (!M.insert(std::make_pair(*VTableType, *VTableSamples)).second)
+      return sampleprof_error::duplicate_vtable_type;
   }
   return sampleprof_error::success;
 }
 
 std::error_code
-SampleProfileReaderExtBinary::readVTableProf(const LineLocation &Loc,
-                                             FunctionSamples &FProfile) {
-  if (!ReadVTableProf)
-    return sampleprof_error::success;
-
-  return readTypeMap(FProfile.getTypeSamples(Loc));
-}
-
-std::error_code SampleProfileReaderExtBinary::readCallsiteVTableProf(
-    FunctionSamples &FProfile) {
+SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
   if (!ReadVTableProf)
     return sampleprof_error::success;
 
@@ -697,18 +686,17 @@ std::error_code SampleProfileReaderExtBinary::readCallsiteVTableProf(
     if (std::error_code EC = LineOffset.getError())
       return EC;
 
+    if (!isOffsetLegal(*LineOffset))
+      return sampleprof_error::illegal_line_offset;
+
     auto Discriminator = readNumber<uint64_t>();
     if (std::error_code EC = Discriminator.getError())
       return EC;
 
     // Here we handle FS discriminators:
-    uint32_t DiscriminatorVal = (*Discriminator) & getDiscriminatorMask();
+    const uint32_t DiscriminatorVal = (*Discriminator) & getDiscriminatorMask();
 
-    if (!isOffsetLegal(*LineOffset)) {
-      return std::error_code();
-    }
-
-    if (std::error_code EC = readTypeMap(FProfile.getTypeSamplesAt(
+    if (std::error_code EC = readVTableTypeCountMap(FProfile.getTypeSamplesAt(
             LineLocation(*LineOffset, DiscriminatorVal))))
       return EC;
   }
@@ -764,10 +752,13 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
                                       *CalledFunction, *CalledFunctionSamples);
     }
 
-    // read vtable type profiles.
-    if (std::error_code EC = readVTableProf(
-            LineLocation(*LineOffset, DiscriminatorVal), FProfile))
-      return EC;
+    if (ReadVTableProf) {
+      // read vtable type profiles.
+      if (std::error_code EC =
+              readVTableTypeCountMap(FProfile.getFunctionBodyTypeSamples(
+                  LineLocation(*LineOffset, DiscriminatorVal))))
+        return EC;
+    }
 
     FProfile.addBodySamples(*LineOffset, DiscriminatorVal, *NumSamples);
   }
@@ -800,10 +791,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
   }
 
-  std::error_code EC = readCallsiteVTableProf(FProfile);
-  errs() << "readFunctionSample\t";
-  FProfile.print(errs(), 2);
-  return EC;
+  return readCallsiteVTableProf(FProfile);
 }
 
 std::error_code
@@ -865,10 +853,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       FunctionSamples::ProfileIsPreInlined = ProfileIsPreInlined = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       FunctionSamples::ProfileIsFS = ProfileIsFS = true;
-    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagHasVTableTypeProf)) {
-      errs() << "SampleProfileReaderExtBinaryBase::readVTableProf\n";
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagHasVTableTypeProf))
       ReadVTableProf = true;
-    }
     break;
   case SecNameTable: {
     bool FixedLengthMD5 =

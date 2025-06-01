@@ -701,16 +701,10 @@ protected:
   /// otherwise same as readStringFromTable, also return its hash value.
   ErrorOr<std::pair<SampleContext, uint64_t>> readSampleContextFromTable();
 
-  /// Overridden by SampleProfileReaderExtBinary to read the vtable profile.
-  virtual std::error_code readVTableProf(const LineLocation &Loc,
-                                         FunctionSamples &FProfile) {
-    return sampleprof_error::success;
-  }
-
-  virtual std::error_code readCallsiteVTableProf(FunctionSamples &FProfile) {
-    return sampleprof_error::success;
-  }
-
+  std::error_code readBodySampleVTableProf(const LineLocation &Loc,
+                                           FunctionSamples &FProfile);
+  /// Read all callsites' vtable access counts for \p FProfile.
+  std::error_code readCallsiteVTableProf(FunctionSamples &FProfile);
 
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;
@@ -735,6 +729,12 @@ protected:
   /// hashes of non-CS contexts are already in the profile. Otherwise it points
   /// to the start of MD5SampleContextTable.
   const uint64_t *MD5SampleContextStart = nullptr;
+
+  /// Read bytes from the input buffer pointed by `Data` and decode them into
+  /// \p M. `Data` will be advanced to the end of the read bytes when this
+  /// function returns. Returns error if any.
+  std::error_code readVTableTypeCountMap(TypeCountMap &M);
+  bool ReadVTableProf = false;
 
 private:
   std::error_code readSummaryEntry(std::vector<ProfileSummaryEntry> &Entries);
@@ -825,8 +825,6 @@ protected:
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
 
-  bool ReadVTableProf = false;
-
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
                                    LLVMContext &C, SampleProfileFormat Format)
@@ -867,12 +865,6 @@ private:
     return sampleprof_error::success;
   };
 
-  std::error_code readVTableProf(const LineLocation &Loc,
-                                 FunctionSamples &FProfile) override;
-
-  std::error_code readCallsiteVTableProf(FunctionSamples &FProfile) override;
-
-   std::error_code readTypeMap(TypeMap& M);
 public:
   SampleProfileReaderExtBinary(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
                                SampleProfileFormat Format = SPF_Ext_Binary)
