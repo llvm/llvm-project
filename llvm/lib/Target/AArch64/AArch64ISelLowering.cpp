@@ -3382,8 +3382,19 @@ bool isLegalCmpImmed(APInt C) {
   return isLegalArithImmed(C.abs().getZExtValue());
 }
 
-static bool cannotBeIntMin(SDValue CheckedVal, SelectionDAG &DAG) {
-  KnownBits KnownSrc = DAG.computeKnownBits(CheckedVal);
+static bool isSafeSignedCMN(SDValue Op, SelectionDAG &DAG) {
+  // 0 - INT_MIN sign wraps, so no signed wrap means cmn is safe.
+  if (Op->getFlags().hasNoSignedWrap())
+    return true;
+
+  // Created nodes may have no flags. SelectionDAG inherits flags from the IR,
+  // but if the DAG makes the node, as of now it doesn't set any flags.
+
+  // FIXME: We can remove this check and simply rely on
+  // Op->getFlags().hasNoSignedWrap() if SelectionDAG/ISelLowering never creates
+  // subtract nodes, or SelectionDAG/ISelLowering consistently sets them
+  // appropiately when making said nodes.
+  KnownBits KnownSrc = DAG.computeKnownBits(Op.getOperand(1));
   return !KnownSrc.getSignedMinValue().isMinSignedValue();
 }
 
@@ -3392,7 +3403,7 @@ static bool cannotBeIntMin(SDValue CheckedVal, SelectionDAG &DAG) {
 // can be set differently by this operation. It comes down to whether
 // "SInt(~op2)+1 == SInt(~op2+1)" (and the same for UInt). If they are then
 // everything is fine. If not then the optimization is wrong. Thus general
-// comparisons are only valid if op2 != 0.
+// comparisons are only valid if op2 != 0 and op2 != INT_MIN.
 //
 // So, finally, the only LLVM-native comparisons that don't mention C or V
 // are the ones that aren't unsigned comparisons. They're the only ones we can
@@ -3401,7 +3412,7 @@ static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
   return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0)) &&
          (isIntEqualitySetCC(CC) ||
           (isUnsignedIntSetCC(CC) && DAG.isKnownNeverZero(Op.getOperand(1))) ||
-          (isSignedIntSetCC(CC) && cannotBeIntMin(Op.getOperand(1), DAG)));
+          (isSignedIntSetCC(CC) && isSafeSignedCMN(Op, DAG)));
 }
 
 static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &dl,
