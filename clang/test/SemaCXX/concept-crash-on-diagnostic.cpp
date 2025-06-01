@@ -60,3 +60,16 @@ concept atomicish = requires() {
 };
 atomicish<int> f(); // expected-error {{expected 'auto' or 'decltype(auto)' after concept name}}
 } // namespace GH138820
+
+namespace GH91564 {
+template <class T> using A = struct B { // expected-error {{'GH91564::B' cannot be defined in a type alias template}}
+  template <class> void f() requires (T()); // expected-note {{candidate template ignored: failed template argument deduction}}
+};
+template void B::f<void>(); // expected-error {{explicit instantiation of 'f' does not refer to a function template, variable template, member function, member class, or static data member}}
+
+template <class T> using C = struct D { // expected-error {{'GH91564::D' cannot be defined in a type alias template}}
+  using E = T;
+};
+template <class> void g() requires (D::E()); // expected-note {{candidate template ignored: failed template argument deduction}}
+template void g<void>(); // expected-error {{explicit instantiation of 'g' does not refer to a function template, variable template, member function, member class, or static data member}}
+}
