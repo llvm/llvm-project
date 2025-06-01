@@ -104,7 +104,8 @@ let Class = MemberPointerType in {
     let Read = [{ node->getQualifier() }];
   }
   def : Property<"Cls", DeclRef> {
-    let Read = [{ node->getMostRecentCXXRecordDecl() }];
+    let Read =
+        [{ node->isSugared() ? node->getMostRecentCXXRecordDecl()->getCanonicalDecl() : nullptr }];
   }
 
   def : Creator<[{
