@@ -1579,6 +1579,38 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 // VecShuffleDynamicOp
 //===----------------------------------------------------------------------===//
 
+OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute vec = adaptor.getVec();
+  mlir::Attribute indices = adaptor.getIndices();
+  if (mlir::isa_and_nonnull<cir::ConstVectorAttr>(vec) &&
+      mlir::isa_and_nonnull<cir::ConstVectorAttr>(indices)) {
+    auto vecAttr = mlir::cast<cir::ConstVectorAttr>(vec);
+    auto indicesAttr = mlir::cast<cir::ConstVectorAttr>(indices);
+    auto vecTy = cast<cir::VectorType>(vecAttr.getType());
+
+    mlir::ArrayAttr vecElts = vecAttr.getElts();
+    mlir::ArrayAttr indicesElts = indicesAttr.getElts();
+
+    const uint64_t numElements = vecElts.size();
+
+    SmallVector<mlir::Attribute, 16> elements;
+    elements.reserve(numElements);
+
+    const uint64_t maskBits = llvm::NextPowerOf2(numElements - 1) - 1;
+    for (uint64_t i = 0; i < numElements; i++) {
+      cir::IntAttr idxAttr = mlir::cast<cir::IntAttr>(indicesElts[i]);
+      uint64_t idxValue = idxAttr.getUInt();
+      uint64_t newIdx = idxValue & maskBits;
+      elements.push_back(vecElts[newIdx]);
+    }
+
+    return cir::ConstVectorAttr::get(
+        vecTy, mlir::ArrayAttr::get(getContext(), elements));
+  }
+
+  return {};
+}
+
 LogicalResult cir::VecShuffleDynamicOp::verify() {
   // The number of elements in the two input vectors must match.
   if (getVec().getType().getSize() !=

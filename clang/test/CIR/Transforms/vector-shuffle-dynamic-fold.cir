@@ -1,0 +1,18 @@
+// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fold_shuffle_dynamic_vector_op_test() {
+    %alloca = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["r", init]
+    %vec = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+    %indices = cir.const #cir.const_vector<[#cir.int<8> : !s32i, #cir.int<7> : !s32i, #cir.int<6> : !s32i, #cir.int<5> : !s32i]> : !cir.vector<4 x !s32i>
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<4 x !s32i>, %indices : !cir.vector<4 x !s32i>
+    cir.store align(16) %new_vec, %alloca : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+    cir.return
+  }
+
+  // CHECK: %[[NEW_VEC:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<4> : !s32i, #cir.int<3> : !s32i, #cir.int<2> : !s32i]> : !cir.vector<4 x !s32i>
+}
+
+

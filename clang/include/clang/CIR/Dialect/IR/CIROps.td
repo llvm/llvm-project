@@ -2192,6 +2192,7 @@ def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
