@@ -265,6 +265,13 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __add_lvalue_reference_t<_Tp> operator*() const
       _NOEXCEPT_(_NOEXCEPT_(*std::declval<pointer>())) {
+    // TODO(LLVM-21): Remove this workaround
+#if !defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER != 1800
+    // TODO: use reference_converts_from_temporary_v once implemented.
+    static_assert(
+        !__reference_converts_from_temporary(__add_lvalue_reference_t<_Tp>, decltype(*std::declval<pointer>())),
+        "Reference type _Tp must not convert from a temporary object");
+#endif
     return *__ptr_;
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer operator->() const _NOEXCEPT { return __ptr_; }
