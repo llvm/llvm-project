@@ -260,7 +260,6 @@ protected:
     return __to_ulong();
   }
 
-#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const {
     // Check for overflow if _Size does not fit in unsigned long long
     if _LIBCPP_CONSTEXPR (_Size > sizeof(unsigned long long) * CHAR_BIT) {
@@ -284,7 +283,6 @@ protected:
       return __r;
     }
   }
-#  endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool all() const _NOEXCEPT { return !__scan_bits(__bit_not()); }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool any() const _NOEXCEPT {
@@ -335,15 +333,6 @@ private:
 #  ifdef _LIBCPP_CXX03_LANG
   void __init(unsigned long long __v, false_type) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI void __init(unsigned long long __v, true_type) _NOEXCEPT;
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long __to_ulong(false_type) const;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long __to_ulong(true_type) const;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long __to_ulong(true_type, false_type) const;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long __to_ulong(true_type, true_type) const;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long __to_ullong(false_type) const;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long __to_ullong(true_type) const;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long __to_ullong(true_type, false_type) const;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long __to_ullong(true_type, true_type) const;
 #  else
   template <size_t... _Indices>
   _LIBCPP_HIDE_FROM_ABI constexpr __bitset(unsigned long long __v, std::__tuple_indices<_Indices...>) _NOEXCEPT
@@ -391,7 +380,7 @@ inline _LIBCPP_CONSTEXPR __bitset<_N_words, _Size>::__bitset(unsigned long long 
 #  endif
 {
 #  ifdef _LIBCPP_CXX03_LANG
-  __init(__v, _BoolConstant<sizeof(unsigned long long) == sizeof(__storage_type)>());
+  __init(__v, _BoolConstant<sizeof(unsigned long long) <= sizeof(__storage_type)>());
 #  endif
 }
 
@@ -501,7 +490,6 @@ protected:
     return static_cast<unsigned long>(__first_);
   }
 
-#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const {
     // If _Size exceeds the size of unsigned long long, check for overflow
     if _LIBCPP_CONSTEXPR (_Size > sizeof(unsigned long long) * CHAR_BIT) {
@@ -513,7 +501,6 @@ protected:
     // If _Size fits or no overflow, directly cast to unsigned long long
     return static_cast<unsigned long long>(__first_);
   }
-#  endif
 
   template <bool _Sparse, class _CharT, class _Traits, class _Allocator>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 basic_string<_CharT, _Traits, _Allocator>
@@ -540,8 +527,9 @@ inline _LIBCPP_CONSTEXPR __bitset<1, _Size>::__bitset() _NOEXCEPT : __first_(0) 
 
 template <size_t _Size>
 inline _LIBCPP_CONSTEXPR __bitset<1, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
-    // TODO: This is a workaround for a GCC bug causing stage1 CI (generic-gcc, gcc-14, g++-14)
-    // failure due to __bits_per_word lookup failure if not referenced here.
+    // TODO: This is a workaround for a gdb test failure (gdb_pretty_printer_test.sh.cpp) in
+    // stage1 CI (generic-gcc, gcc-14, g++-14), due to the __bits_per_word name lookup failure
+    // if not referenced in the constructor initializer list.
     // See: https://github.com/llvm/llvm-project/actions/runs/15071518915/job/42368867929?pr=121348#logs
     : __first_(_Size == __bits_per_word ? static_cast<__storage_type>(__v) : static_cast<__storage_type>(__v)) {}
 
@@ -630,9 +618,7 @@ protected:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void flip() _NOEXCEPT {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const { return 0UL; }
-#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const { return 0ULL; }
-#  endif
 
   template <bool _Sparse, class _CharT, class _Traits, class _Allocator>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 basic_string<_CharT, _Traits, _Allocator>
@@ -660,8 +646,6 @@ class bitset : private __bitset<_Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) *
 public:
   static const unsigned __n_words = _Size == 0 ? 0 : (_Size - 1) / (sizeof(size_t) * CHAR_BIT) + 1;
   typedef __bitset<__n_words, _Size> __base;
-
-public:
   typedef typename __base::reference reference;
   typedef typename __base::__const_reference __const_reference;
 
@@ -741,11 +725,9 @@ public:
     return __base::__make_ref(__p);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long to_ulong() const { return __base::to_ulong(); }
-#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unsigned long long to_ullong() const {
     return __base::to_ullong();
   }
-#  endif
   template <class _CharT, class _Traits, class _Allocator>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 basic_string<_CharT, _Traits, _Allocator>
   to_string(_CharT __zero = _CharT('0'), _CharT __one = _CharT('1')) const;
