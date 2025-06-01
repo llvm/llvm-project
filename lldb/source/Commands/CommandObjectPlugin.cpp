@@ -11,7 +11,6 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "llvm/Support/GlobPattern.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -103,6 +102,52 @@ int SetEnableOnMatchingPlugins(const llvm::StringRef &pattern,
         }
       });
 }
+
+static std::string ConvertJSONToPrettyString(const llvm::json::Value &json) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  os << llvm::formatv("{0:2}", json).str();
+  os.flush();
+  return str;
+}
+
+#define LLDB_OPTIONS_plugin_list
+#include "CommandOptions.inc"
+
+// These option definitions are used by the plugin list command.
+class PluginListCommandOptions : public Options {
+public:
+  PluginListCommandOptions() = default;
+
+  ~PluginListCommandOptions() override = default;
+
+  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                        ExecutionContext *execution_context) override {
+    Status error;
+    const int short_option = m_getopt_table[option_idx].val;
+
+    switch (short_option) {
+    case 'j':
+      m_json_format = true;
+      break;
+    default:
+      llvm_unreachable("Unimplemented option");
+    }
+
+    return error;
+  }
+
+  void OptionParsingStarting(ExecutionContext *execution_context) override {
+    m_json_format = false;
+  }
+
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+    return llvm::ArrayRef(g_plugin_list_options);
+  }
+
+  // Instance variables to hold the values for command options.
+  bool m_json_format = false;
+};
 } // namespace
 
 class CommandObjectPluginList : public CommandObjectParsed {
@@ -147,6 +192,8 @@ List only the plugin 'foo' matching a fully qualified name exactly
 
   ~CommandObjectPluginList() override = default;
 
+  Options *GetOptions() override { return &m_options; }
+
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     size_t argc = command.GetArgumentCount();
@@ -157,20 +204,31 @@ protected:
     llvm::StringRef pattern = argc ? command[0].ref() : "";
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
-    int num_matching = ActOnMatchingPlugins(
-        pattern, [&](const PluginNamespace &plugin_namespace,
-                     const std::vector<RegisteredPluginInfo> &plugins) {
-          result.AppendMessage(plugin_namespace.name);
-          for (auto &plugin : plugins) {
-            result.AppendMessageWithFormat(
-                "  %s %-30s %s\n", plugin.enabled ? "[+]" : "[-]",
-                plugin.name.data(), plugin.description.data());
-          }
-        });
+    bool found_matching = false;
+    if (m_options.m_json_format) {
+      llvm::json::Object obj = PluginManager::GetJSON(pattern);
+      found_matching = obj.size() > 0;
+      if (found_matching)
+        result.AppendMessage(ConvertJSONToPrettyString(std::move(obj)));
+    } else {
+      int num_matching = ActOnMatchingPlugins(
+          pattern, [&](const PluginNamespace &plugin_namespace,
+                       const std::vector<RegisteredPluginInfo> &plugins) {
+            result.AppendMessage(plugin_namespace.name);
+            for (auto &plugin : plugins) {
+              result.AppendMessageWithFormat(
+                  "  %s %-30s %s\n", plugin.enabled ? "[+]" : "[-]",
+                  plugin.name.data(), plugin.description.data());
+            }
+          });
+      found_matching = num_matching > 0;
+    }
 
-    if (num_matching == 0)
+    if (!found_matching)
       result.AppendErrorWithFormat("Found no matching plugins");
   }
+
+  PluginListCommandOptions m_options;
 };
 
 class CommandObjectPluginEnable : public CommandObjectParsed {

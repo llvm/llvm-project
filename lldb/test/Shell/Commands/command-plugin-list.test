@@ -25,6 +25,18 @@ plugin list system-runtime
 # CHECK: system-runtime
 # CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
+# Test json output for plugin list.
+plugin list --json
+# CHECK-LABEL plugin list --json
+# CHECK: {
+# CHECK:  "system-runtime": [
+# CHECK:    {
+# CHECK:      "enabled": true,
+# CHECK:      "name": "systemruntime-macosx"
+# CHECK:    }
+# CHECK:  ]
+# CHECK: }
+
 # Test plugin list does not match a plugin name by substring.
 # RUN: %lldb -o "plugin list macosx" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
 

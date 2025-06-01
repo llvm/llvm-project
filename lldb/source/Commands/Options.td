@@ -683,6 +683,11 @@ let Command = "platform shell" in {
     Desc<"Shell interpreter path. This is the binary used to run the command.">;
 }
 
+let Command = "plugin list" in {
+  def plugin_list_json : Option<"json", "j">,
+                         Desc<"Output the plugin list in json format.">;
+}
+
 let Command = "process launch" in {
   def process_launch_stop_at_entry : Option<"stop-at-entry", "s">,
     Desc<"Stop at the entry point of the program when launching a process.">;
