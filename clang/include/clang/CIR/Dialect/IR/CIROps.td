@@ -2169,7 +2169,7 @@ def VecShuffleOp : CIR_Op<"vec.shuffle",
   let summary = "Combine two vectors using indices passed as constant integers";
   let description = [{
     The `cir.vec.shuffle` operation implements the documented form of Clang's
-    __builtin_shufflevector, where the indices of the shuffled result are
+    `__builtin_shufflevector`, where the indices of the shuffled result are
     integer constants.
 
     The two input vectors, which must have the same type, are concatenated.
