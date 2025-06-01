@@ -263,8 +263,6 @@ protected:
   // Cache the DataLayout since we use it a lot.
   const DataLayout &DL;
 
-  DominatorTree DT;
-
   /// The OptimizationRemarkEmitter available for this compilation.
   OptimizationRemarkEmitter *ORE;
 
@@ -1691,9 +1689,8 @@ bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
   // Make sure that the callsite is recursive:
   if (CandidateCall.getCaller() != &F)
     return false;
-  CallInst *CallInstr = dyn_cast<CallInst>(&CandidateCall);
   // Only handle the case when the callsite has a single predecessor:
-  auto *CallBB = CallInstr->getParent();
+  auto *CallBB = CandidateCall.getParent();
   auto *Predecessor = CallBB->getSinglePredecessor();
   if (!Predecessor)
     return false;
@@ -1707,9 +1704,9 @@ bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
   bool ArgFound = false;
   Value *FuncArg = nullptr, *CallArg = nullptr;
   for (unsigned ArgNum = 0;
-       ArgNum < F.arg_size() && ArgNum < CallInstr->arg_size(); ArgNum++) {
+       ArgNum < F.arg_size() && ArgNum < CandidateCall.arg_size(); ArgNum++) {
     FuncArg = F.getArg(ArgNum);
-    CallArg = CallInstr->getArgOperand(ArgNum);
+    CallArg = CandidateCall.getArgOperand(ArgNum);
     if (FuncArg == CmpOp && CallArg != CmpOp) {
       ArgFound = true;
       break;
@@ -1721,8 +1718,8 @@ bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
   // Now we have a recursive call that is guarded by a cmp instruction.
   // Check if this cmp can be simplified:
   SimplifyQuery SQ(DL, dyn_cast<Instruction>(CallArg));
-  CondContext CC(cast<Value>(&Cmp));
-  CC.CondIsTrue = CallBB == Br->getSuccessor(0);
+  CondContext CC(&Cmp);
+  CC.Invert = (CallBB != Br->getSuccessor(0));
   SQ.CC = &CC;
   CC.AffectedValues.insert(FuncArg);
   Value *SimplifiedInstruction = llvm::simplifyInstructionWithOperands(
@@ -1730,8 +1727,8 @@ bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
   if (auto *ConstVal = dyn_cast_or_null<ConstantInt>(SimplifiedInstruction)) {
     // Make sure that the BB of the recursive call is NOT the true successor
     // of the icmp. In other words, make sure that the recursion depth is 1.
-    if ((ConstVal->isOne() && !CC.CondIsTrue) ||
-        (ConstVal->isZero() && CC.CondIsTrue)) {
+    if ((ConstVal->isOne() && CC.Invert) ||
+        (ConstVal->isZero() && !CC.Invert)) {
       SimplifiedValues[&Cmp] = ConstVal;
       return true;
     }

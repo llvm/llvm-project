@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -passes='cgscc(inline),instcombine,cgscc(inline)' -S -debug-only=inline -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK:  Inlining calls in: test
