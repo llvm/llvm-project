@@ -49,7 +49,7 @@ struct MoveThrowsComp {
   bool operator()(const auto&, const auto&) const;
 };
 
-int main(int, char**) {
+void test() {
   {
     using C = std::flat_map<int, int>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
@@ -105,6 +105,4 @@ int main(int, char**) {
     using C = std::flat_map<int, int, std::less<int>, std::vector<int>, std::pmr::vector<int>>;
     static_assert(!std::is_nothrow_move_assignable_v<C>);
   }
-
-  return 0;
 }
