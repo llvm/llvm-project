@@ -993,13 +993,17 @@ static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
+  VPlan *Plan = R.getParent()->getPlan();
+
+  auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
+  if (!Def)
+    return;
 
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
   if (TypeSwitch<VPRecipeBase *, bool>(&R)
           .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
                 VPReplicateRecipe>([&](auto *I) {
-            VPlan *Plan = R.getParent()->getPlan();
             const DataLayout &DL =
                 Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
             Value *V = tryToFoldLiveIns(*I, I->getOpcode(), I->operands(), DL,
@@ -1013,7 +1017,6 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
   // Fold PredPHI constant -> constant.
   if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&R)) {
-    VPlan *Plan = R.getParent()->getPlan();
     VPValue *Op = PredPHI->getOperand(0);
     if (!Op->isLiveIn() || !Op->getLiveInIRValue())
       return;
@@ -1021,27 +1024,15 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       PredPHI->replaceAllUsesWith(Plan->getOrAddLiveIn(C));
   }
 
-  // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
-  // part 0 can be replaced by their start value, if only the first lane is
-  // demanded.
-  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
-    if (Steps->getParent()->getPlan()->isUnrolled() && Steps->isPart0() &&
-        vputils::onlyFirstLaneUsed(Steps)) {
-      Steps->replaceAllUsesWith(Steps->getOperand(0));
-      return;
-    }
-  }
-
   VPValue *A;
-  if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
-    VPValue *Trunc = R.getVPSingleValue();
-    Type *TruncTy = TypeInfo.inferScalarType(Trunc);
+  if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
+    Type *TruncTy = TypeInfo.inferScalarType(Def);
     Type *ATy = TypeInfo.inferScalarType(A);
     if (TruncTy == ATy) {
-      Trunc->replaceAllUsesWith(A);
+      Def->replaceAllUsesWith(A);
     } else {
       // Don't replace a scalarizing recipe with a widened cast.
-      if (isa<VPReplicateRecipe>(&R))
+      if (isa<VPReplicateRecipe>(Def))
         return;
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
 
@@ -1055,18 +1046,17 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
           VPC->setUnderlyingValue(UnderlyingExt);
         }
         VPC->insertBefore(&R);
-        Trunc->replaceAllUsesWith(VPC);
+        Def->replaceAllUsesWith(VPC);
       } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
         auto *VPC = new VPWidenCastRecipe(Instruction::Trunc, A, TruncTy);
         VPC->insertBefore(&R);
-        Trunc->replaceAllUsesWith(VPC);
+        Def->replaceAllUsesWith(VPC);
       }
     }
 #ifndef NDEBUG
     // Verify that the cached type info is for both A and its users is still
     // accurate by comparing it to freshly computed types.
-    VPTypeAnalysis TypeInfo2(
-        R.getParent()->getPlan()->getCanonicalIV()->getScalarType());
+    VPTypeAnalysis TypeInfo2(Plan->getCanonicalIV()->getScalarType());
     assert(TypeInfo.inferScalarType(A) == TypeInfo2.inferScalarType(A));
     for (VPUser *U : A->users()) {
       auto *R = cast<VPRecipeBase>(U);
@@ -1081,31 +1071,31 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // && (Y || Z) and (X || !X) into true. This requires queuing newly created
   // recipes to be visited during simplification.
   VPValue *X, *Y;
-  if (match(&R,
+  if (match(Def,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                          m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y)))))) {
-    R.getVPSingleValue()->replaceAllUsesWith(X);
-    R.eraseFromParent();
+    Def->replaceAllUsesWith(X);
+    Def->eraseFromParent();
     return;
   }
 
   // OR x, 1 -> 1.
-  if (match(&R, m_c_BinaryOr(m_VPValue(X), m_AllOnes()))) {
-    R.getVPSingleValue()->replaceAllUsesWith(
-        R.getOperand(0) == X ? R.getOperand(1) : R.getOperand(0));
-    R.eraseFromParent();
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes()))) {
+    Def->replaceAllUsesWith(Def->getOperand(0) == X ? Def->getOperand(1)
+                                                    : Def->getOperand(0));
+    Def->eraseFromParent();
     return;
   }
 
-  if (match(&R, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
-    return R.getVPSingleValue()->replaceAllUsesWith(X);
+  if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
+    return Def->replaceAllUsesWith(X);
 
-  if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
-    return R.getVPSingleValue()->replaceAllUsesWith(A);
+  if (match(Def, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
+    return Def->replaceAllUsesWith(A);
 
-  if (match(&R, m_Not(m_VPValue(A)))) {
+  if (match(Def, m_Not(m_VPValue(A)))) {
     if (match(A, m_Not(m_VPValue(A))))
-      return R.getVPSingleValue()->replaceAllUsesWith(A);
+      return Def->replaceAllUsesWith(A);
 
     // Try to fold Not into compares by adjusting the predicate in-place.
     if (isa<VPWidenRecipe>(A) && A->getNumUsers() == 1) {
@@ -1114,7 +1104,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
           WideCmp->getOpcode() == Instruction::FCmp) {
         WideCmp->setPredicate(
             CmpInst::getInversePredicate(WideCmp->getPredicate()));
-        R.getVPSingleValue()->replaceAllUsesWith(WideCmp);
+        Def->replaceAllUsesWith(WideCmp);
         // If WideCmp doesn't have a debug location, use the one from the
         // negation, to preserve the location.
         if (!WideCmp->getDebugLoc() && R.getDebugLoc())
@@ -1124,32 +1114,46 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   }
 
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
-  if ((match(&R,
+  if ((match(Def,
              m_DerivedIV(m_SpecificInt(0), m_VPValue(A), m_SpecificInt(1))) ||
-       match(&R,
+       match(Def,
              m_DerivedIV(m_SpecificInt(0), m_SpecificInt(0), m_VPValue()))) &&
-      TypeInfo.inferScalarType(R.getOperand(1)) ==
-          TypeInfo.inferScalarType(R.getVPSingleValue()))
-    return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
+      TypeInfo.inferScalarType(Def->getOperand(1)) ==
+          TypeInfo.inferScalarType(Def))
+    return Def->replaceAllUsesWith(Def->getOperand(1));
 
-  if (match(&R, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
-                                                           m_SpecificInt(1)))) {
-    Type *WideStepTy = TypeInfo.inferScalarType(R.getVPSingleValue());
+  if (match(Def, m_VPInstruction<VPInstruction::WideIVStep>(
+                     m_VPValue(X), m_SpecificInt(1)))) {
+    Type *WideStepTy = TypeInfo.inferScalarType(Def);
     if (TypeInfo.inferScalarType(X) != WideStepTy)
-      X = VPBuilder(&R).createWidenCast(Instruction::Trunc, X, WideStepTy);
-    R.getVPSingleValue()->replaceAllUsesWith(X);
+      X = VPBuilder(Def).createWidenCast(Instruction::Trunc, X, WideStepTy);
+    Def->replaceAllUsesWith(X);
     return;
   }
 
   // For i1 vp.merges produced by AnyOf reductions:
   // vp.merge true, (or x, y), x, evl -> vp.merge y, true, x, evl
-  if (match(&R, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
-                                                 m_VPValue(X), m_VPValue())) &&
+  if (match(Def, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
+                                                  m_VPValue(X), m_VPValue())) &&
       match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
       TypeInfo.inferScalarType(R.getVPSingleValue())->isIntegerTy(1)) {
-    R.setOperand(1, R.getOperand(0));
-    R.setOperand(0, Y);
+    Def->setOperand(1, Def->getOperand(0));
+    Def->setOperand(0, Y);
     return;
+  }
+
+  // Some simplifications can only be applied after unrolling. Perform them
+  // below.
+  if (!Plan->isUnrolled())
+    return;
+
+  // VPScalarIVSteps for part 0 can be replaced by their start value, if only
+  // the first lane is demanded.
+  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(Def)) {
+    if (Steps->isPart0() && vputils::onlyFirstLaneUsed(Steps)) {
+      Steps->replaceAllUsesWith(Steps->getOperand(0));
+      return;
+    }
   }
 }
 
