@@ -110,6 +110,11 @@ static GlobalVariable *createRelLookupTable(Function &Func,
 
   for (Use &Operand : LookupTableArr->operands()) {
     Constant *Element = cast<Constant>(Operand);
+    // Drop unnamed_addr to avoid matching pattern in
+    // `handleIndirectSymViaGOTPCRel`, which generates GOTPCREL relocations not
+    // supported by the GNU linker and LLD versions below 18 on aarch64.
+    if (auto *GlobalElement = dyn_cast<GlobalValue>(Element))
+      GlobalElement->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
     Type *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
     Constant *Base = llvm::ConstantExpr::getPtrToInt(RelLookupTable, IntPtrTy);
     Constant *Target = llvm::ConstantExpr::getPtrToInt(Element, IntPtrTy);

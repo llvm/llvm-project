@@ -18,32 +18,32 @@
 @load_relative_2.table = private unnamed_addr constant [4 x ptr] [ptr @y3, ptr @y2, ptr @y1, ptr @y0]
 
 ;.
-; x86_64: @a0 = private unnamed_addr constant i32 0
-; x86_64: @a1 = private unnamed_addr constant i32 1
-; x86_64: @a2 = private unnamed_addr constant i32 2
+; x86_64: @a0 = private constant i32 0
+; x86_64: @a1 = private constant i32 1
+; x86_64: @a2 = private constant i32 2
 ; x86_64: @load_relative_1.table.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @a0 to i64), i64 ptrtoint (ptr @load_relative_1.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @a1 to i64), i64 ptrtoint (ptr @load_relative_1.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @a2 to i64), i64 ptrtoint (ptr @load_relative_1.table.rel to i64)) to i32)], align 4
 ; x86_64: @x0 = internal unnamed_addr constant i64 0
 ; x86_64: @x1 = internal unnamed_addr constant i64 1
 ; x86_64: @x2 = internal unnamed_addr constant i64 2
 ; x86_64: @x3 = internal unnamed_addr constant i64 3
-; x86_64: @y0 = internal unnamed_addr constant ptr @x3
-; x86_64: @y1 = internal unnamed_addr constant ptr @x2
-; x86_64: @y2 = internal unnamed_addr constant ptr @x1
-; x86_64: @y3 = internal unnamed_addr constant ptr @x0
+; x86_64: @y0 = internal constant ptr @x3
+; x86_64: @y1 = internal constant ptr @x2
+; x86_64: @y2 = internal constant ptr @x1
+; x86_64: @y3 = internal constant ptr @x0
 ; x86_64: @load_relative_2.table.rel = private unnamed_addr constant [4 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @y3 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y2 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y1 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y0 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32)], align 4
 ;.
-; aarch64: @a0 = private unnamed_addr constant i32 0
-; aarch64: @a1 = private unnamed_addr constant i32 1
-; aarch64: @a2 = private unnamed_addr constant i32 2
+; aarch64: @a0 = private constant i32 0
+; aarch64: @a1 = private constant i32 1
+; aarch64: @a2 = private constant i32 2
 ; aarch64: @load_relative_1.table.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @a0 to i64), i64 ptrtoint (ptr @load_relative_1.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @a1 to i64), i64 ptrtoint (ptr @load_relative_1.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @a2 to i64), i64 ptrtoint (ptr @load_relative_1.table.rel to i64)) to i32)], align 4
 ; aarch64: @x0 = internal unnamed_addr constant i64 0
 ; aarch64: @x1 = internal unnamed_addr constant i64 1
 ; aarch64: @x2 = internal unnamed_addr constant i64 2
 ; aarch64: @x3 = internal unnamed_addr constant i64 3
-; aarch64: @y0 = internal unnamed_addr constant ptr @x3
-; aarch64: @y1 = internal unnamed_addr constant ptr @x2
-; aarch64: @y2 = internal unnamed_addr constant ptr @x1
-; aarch64: @y3 = internal unnamed_addr constant ptr @x0
+; aarch64: @y0 = internal constant ptr @x3
+; aarch64: @y1 = internal constant ptr @x2
+; aarch64: @y2 = internal constant ptr @x1
+; aarch64: @y3 = internal constant ptr @x0
 ; aarch64: @load_relative_2.table.rel = private unnamed_addr constant [4 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @y3 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y2 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y1 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @y0 to i64), i64 ptrtoint (ptr @load_relative_2.table.rel to i64)) to i32)], align 4
 ;.
 define ptr @load_relative_1(i64 %offset) {
