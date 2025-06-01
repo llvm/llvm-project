@@ -89,5 +89,11 @@ func.func @ops(%f: f32) {
   // CHECK: complex.bitcast %[[C]]
   %i64 = complex.bitcast %complex : complex<f32> to i64
 
+ // CHECK: complex.add %[[C]], %[[C]] overflow<nsw> : complex<f32>
+  %add_intflags = complex.add %complex, %complex overflow<nsw> : complex<f32>  
+
+ // CHECK: complex.sub %[[C]], %[[C]] overflow<nsw, nuw> : complex<f32>
+  %sub_intflags = complex.sub %complex, %complex overflow<nsw, nuw> : complex<f32>  
+
   return
 }
