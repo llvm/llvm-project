@@ -9,8 +9,8 @@
 subroutine func
 end subroutine func
 
-! CHECK-DEF-NOT: attributes #0 = { "prefer-vector-width"={{.*}} }
-! CHECK-NONE: attributes #0 = { "prefer-vector-width"="none" }
-! CHECK-128: attributes #0 = { "prefer-vector-width"="128" }
-! CHECK-256: attributes #0 = { "prefer-vector-width"="256" }
+! CHECK-DEF-NOT: attributes #0 = { "prefer-vector-width"={{.*}}
+! CHECK-NONE: attributes #0 = { "prefer-vector-width"="none"
+! CHECK-128: attributes #0 = { "prefer-vector-width"="128"
+! CHECK-256: attributes #0 = { "prefer-vector-width"="256"
 ! CHECK-INVALID:error: invalid value 'xxx' in '-mprefer-vector-width=xxx'
