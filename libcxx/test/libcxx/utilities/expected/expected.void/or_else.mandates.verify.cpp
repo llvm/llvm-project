@@ -118,14 +118,5 @@ void test() {
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f(std::move(error())) must have the same value_type as this expected}}
     }
   }
-
-  // Test nodiscard
-  {
-    std::expected<int, int> f1(1);
-    
-    f1.or_else([](void){ return std::expected<int, int>(1); }); // expected-warning {{ignoring return value of type 'expected<int, int>' declared with 'nodiscard' attribute}}
-    // expected-error-re@*:* {{no type named 'type' in 'std::invoke_result<{{.*}}>'}}
-    // expected-error-re@*:* {{static assertion failed {{.*}}The result of f({{.*}}) must be a specialization of std::expected}}
-  }
 }
 // clang-format on

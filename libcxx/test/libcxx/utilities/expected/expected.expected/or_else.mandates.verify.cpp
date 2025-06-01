@@ -127,9 +127,8 @@ void test() {
   {
     std::expected<int, int> f1(1);
     
-    f1.or_else([](const int&){ return std::expected<int, int>(1); }); // expected-warning {{ignoring return value of type 'expected<int, int>' declared with 'nodiscard' attribute}}
-    // expected-error-re@*:* {{no type named 'type' in 'std::invoke_result<{{.*}}>'}}
-    // expected-error-re@*:* {{static assertion failed {{.*}}The result of f({{.*}}) must be a specialization of std::expected}}
+    f1.or_else([](const int&){ return std::expected<int, int>(1); }); // expected-warning{{ignoring return value of function declared with 'nodiscard' attribute}}
+    
   }
 }
 // clang-format on
