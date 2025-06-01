@@ -1121,10 +1121,10 @@ void RuntimeTableBuilder::DescribeSpecialProc(
     int argThatMightBeDescriptor{0};
     MaybeExpr which;
     if (isAssignment) {
-      // Only type-bound asst's with the same type on both dummy arguments
+      // Only type-bound asst's with compatible types on both dummy arguments
       // are germane to the runtime, which needs only these to implement
       // component assignment as part of intrinsic assignment.
-      // Non-type-bound generic INTERFACEs and assignments from distinct
+      // Non-type-bound generic INTERFACEs and assignments from incompatible
       // types must not be used for component intrinsic assignment.
       CHECK(proc->dummyArguments.size() == 2);
       const auto t1{
@@ -1137,8 +1137,12 @@ void RuntimeTableBuilder::DescribeSpecialProc(
               .type.type()};
       if (!binding || t1.category() != TypeCategory::Derived ||
           t2.category() != TypeCategory::Derived ||
-          t1.IsUnlimitedPolymorphic() || t2.IsUnlimitedPolymorphic() ||
-          t1.GetDerivedTypeSpec() != t2.GetDerivedTypeSpec()) {
+          t1.IsUnlimitedPolymorphic() || t2.IsUnlimitedPolymorphic()) {
+        return;
+      }
+      if (!derivedTypeSpec ||
+          !derivedTypeSpec->MatchesOrExtends(t1.GetDerivedTypeSpec()) ||
+          !derivedTypeSpec->MatchesOrExtends(t2.GetDerivedTypeSpec())) {
         return;
       }
       which = proc->IsElemental() ? elementalAssignmentEnum_
