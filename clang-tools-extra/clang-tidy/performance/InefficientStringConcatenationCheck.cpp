@@ -31,12 +31,12 @@ void InefficientStringConcatenationCheck::registerMatchers(
 
   const auto BasicStringPlusOperator = cxxOperatorCallExpr(
       hasOverloadedOperatorName("+"),
-      hasAnyArgument(ignoringImpCasts(declRefExpr(BasicStringType))));
+      hasAnyArgument(ignoringParenImpCasts(declRefExpr(BasicStringType))));
 
   const auto PlusOperator =
       cxxOperatorCallExpr(
           hasOverloadedOperatorName("+"),
-          hasAnyArgument(ignoringImpCasts(declRefExpr(BasicStringType))),
+          hasAnyArgument(ignoringParenImpCasts(declRefExpr(BasicStringType))),
           hasDescendant(BasicStringPlusOperator))
           .bind("plusOperator");
 
