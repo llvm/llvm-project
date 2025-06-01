@@ -99,6 +99,10 @@ struct VPlanTransforms {
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx);
 
+  /// Explicitly unroll VPReplicateRecipes outside of replicate regions by \p
+  /// VF.
+  static void unrollByVF(VPlan &Plan, ElementCount VF);
+
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
   /// resulting plan to \p BestVF and \p BestUF.
   static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,

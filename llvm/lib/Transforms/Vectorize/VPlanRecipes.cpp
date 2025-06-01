@@ -493,6 +493,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
+    return State.get(getOperand(0),
+                     VPLane(cast<ConstantInt>(getOperand(1)->getLiveInIRValue())
+                                ->getZExtValue()));
     Value *Vec = State.get(getOperand(0));
     Value *Idx = State.get(getOperand(1), /*IsScalar=*/true);
     return Builder.CreateExtractElement(Vec, Idx, Name);
@@ -603,6 +606,33 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::Broadcast: {
     return Builder.CreateVectorSplat(
         State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
+  }
+  case VPInstruction::BuildVector: {
+    auto *ScalarTy = State.TypeAnalysis.inferScalarType(getOperand(0));
+    Value *Res = PoisonValue::get(
+        toVectorizedTy(ScalarTy, ElementCount::getFixed(getNumOperands())));
+    for (const auto &[Idx, Op] : enumerate(operands()))
+      Res = State.Builder.CreateInsertElement(Res, State.get(Op, true),
+                                              State.Builder.getInt32(Idx));
+    return Res;
+  }
+  case VPInstruction::BuildStructVector: {
+    // For struct types, we need to build a new 'wide' struct type, where each
+    // element is widened.
+    auto *STy =
+        cast<StructType>(State.TypeAnalysis.inferScalarType(getOperand(0)));
+    Value *Res = PoisonValue::get(
+        toVectorizedTy(STy, ElementCount::getFixed(getNumOperands())));
+    for (const auto &[Idx, Op] : enumerate(operands())) {
+      for (unsigned I = 0, E = STy->getNumElements(); I != E; I++) {
+        Value *ScalarValue = Builder.CreateExtractValue(State.get(Op, true), I);
+        Value *VectorValue = Builder.CreateExtractValue(Res, I);
+        VectorValue =
+            Builder.CreateInsertElement(VectorValue, ScalarValue, Idx);
+        Res = Builder.CreateInsertValue(Res, VectorValue, I);
+      }
+    }
+    return Res;
   }
   case VPInstruction::ComputeAnyOfResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
@@ -872,10 +902,11 @@ void VPInstruction::execute(VPTransformState &State) {
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
-  assert(
-      (GeneratedValue->getType()->isVectorTy() == !GeneratesPerFirstLaneOnly ||
-       State.VF.isScalar()) &&
-      "scalar value but not only first lane defined");
+  assert((((GeneratedValue->getType()->isVectorTy() ||
+            GeneratedValue->getType()->isStructTy()) ==
+           !GeneratesPerFirstLaneOnly) ||
+          State.VF.isScalar()) &&
+         "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
 }
@@ -889,6 +920,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::ICmp:
   case Instruction::Select:
   case VPInstruction::AnyOf:
+  case VPInstruction::BuildVector:
+  case VPInstruction::BuildStructVector:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExtractLastElement:
@@ -1007,6 +1040,12 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::Broadcast:
     O << "broadcast";
+    break;
+  case VPInstruction::BuildVector:
+    O << "buildvector";
+    break;
+  case VPInstruction::BuildStructVector:
+    O << "buildstructvector";
     break;
   case VPInstruction::ExtractLastElement:
     O << "extract-last-element";
@@ -2763,20 +2802,6 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     scalarizeInstruction(UI, this, VPLane(0), State);
     return;
   }
-
-  // A store of a loop varying value to a uniform address only needs the last
-  // copy of the store.
-  if (isa<StoreInst>(UI) && vputils::isSingleScalar(getOperand(1))) {
-    auto Lane = VPLane::getLastLaneForVF(State.VF);
-    scalarizeInstruction(UI, this, VPLane(Lane), State);
-    return;
-  }
-
-  // Generate scalar instances for all VF lanes.
-  assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-  const unsigned EndLane = State.VF.getKnownMinValue();
-  for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-    scalarizeInstruction(UI, this, VPLane(Lane), State);
 }
 
 bool VPReplicateRecipe::shouldPack() const {

@@ -907,6 +907,12 @@ public:
     BranchOnCount,
     BranchOnCond,
     Broadcast,
+    /// Creates a vector containing all operands. The vector element count
+    /// matches the number of operands.
+    BuildVector,
+    /// Creates a struct of vectors containing all operands. The vector element
+    /// count matches the number of operands.
+    BuildStructVector,
     ComputeAnyOfResult,
     ComputeFindLastIVResult,
     ComputeReductionResult,

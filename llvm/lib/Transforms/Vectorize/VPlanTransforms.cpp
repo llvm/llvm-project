@@ -1140,6 +1140,22 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Look through Extract(Last|Penultimate)Element (BuildVector ....).
+  if (match(&R,
+            m_VPInstruction<VPInstruction::ExtractLastElement>(m_VPValue(A))) ||
+      match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                    m_VPValue(A)))) {
+    unsigned Offset = cast<VPInstruction>(&R)->getOpcode() ==
+                              VPInstruction::ExtractLastElement
+                          ? 1
+                          : 2;
+    auto *BV = dyn_cast<VPInstruction>(A);
+    if (BV && BV->getOpcode() == VPInstruction::BuildVector) {
+      Def->replaceAllUsesWith(BV->getOperand(BV->getNumOperands() - Offset));
+      return;
+    }
+  }
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())

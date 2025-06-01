@@ -79,20 +79,20 @@ define void @struct_return_f32_replicate(ptr noalias %in, ptr noalias writeonly 
 ; CHECK:         [[CALL_LANE_1:%.*]] = tail call { float, float } @foo(float {{%.*}})
 ;                // Lane 0
 ; CHECK:         [[A_0:%.*]] = extractvalue { float, float } [[CALL_LANE_0]], 0
-; CHECK:         [[VEC_A_0:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
+; CHECK:         [[VEC_A_0:%.*]] = insertelement <2 x float> poison, float [[A_0]], i64 0
 ; CHECK:         [[WIDE_A_0:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[VEC_A_0]], 0
 ; CHECK:         [[B_0:%.*]] = extractvalue { float, float } [[CALL_LANE_0]], 1
 ; CHECK:         [[UNDEF_B_0:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE_A_0]], 1
-; CHECK:         [[VEC_B_0:%.*]] = insertelement <2 x float> [[UNDEF_B_0]], float [[B_0]], i32 0
+; CHECK:         [[VEC_B_0:%.*]] = insertelement <2 x float> [[UNDEF_B_0]], float [[B_0]], i64 0
 ; CHECK:         [[WIDE_0:%.*]] = insertvalue { <2 x float>, <2 x float> } [[WIDE_A_0]], <2 x float> [[VEC_B_0]], 1
 ;                // Lane 1
 ; CHECK:         [[A_1:%.*]] = extractvalue { float, float } [[CALL_LANE_1]], 0
 ; CHECK:         [[VEC_A_0_EXT:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE_0]], 0
-; CHECK:         [[VEC_A:%.*]] = insertelement <2 x float> [[VEC_A_0_EXT]], float [[A_1]], i32 1
+; CHECK:         [[VEC_A:%.*]] = insertelement <2 x float> [[VEC_A_0_EXT]], float [[A_1]], i64 1
 ; CHECK:         [[WIDE_A:%.*]] = insertvalue { <2 x float>, <2 x float> } [[WIDE_0]], <2 x float> [[VEC_A]], 0
 ; CHECK:         [[B_1:%.*]] = extractvalue { float, float } [[CALL_LANE_1]], 1
 ; CHECK:         [[VEC_B_0_EXT:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE_A]], 1
-; CHECK:         [[VEC_B:%.*]] = insertelement <2 x float> [[VEC_B_0_EXT]], float [[B_1]], i32 1
+; CHECK:         [[VEC_B:%.*]] = insertelement <2 x float> [[VEC_B_0_EXT]], float [[B_1]], i64 1
 ; CHECK:         [[WIDE:%.*]] = insertvalue { <2 x float>, <2 x float> } [[WIDE_A]], <2 x float> [[VEC_B]], 1
 ;                // Store wide values:
 ; CHECK:         [[VEC_A_EXT:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE]], 0
