@@ -52,9 +52,14 @@ bool Operand::isVariable() const { return VariableIndex.has_value(); }
 
 bool Operand::isEarlyClobber() const { return IsEarlyClobber; }
 
+// FIXME: Verify if mayLoadOrStore check is necessary for AArch64 memory operand detection
 bool Operand::isMemory() const {
-  return isExplicit() &&
-         getExplicitOperandInfo().OperandType == MCOI::OPERAND_MEMORY;
+  return (isExplicit() && getExplicitOperandInfo().OperandType == MCOI::OPERAND_MEMORY) 
+        //  || mayLoadOrStore 
+         ;
+  // AArch64 has no operands with MCOI::OPERAND_MEMORY thus also adding mayLoadOrStore
+  // to check for mayLoad and mayStore which potentially have memory operands
+  // Uncommenting this check will cause illegal instruction error for AArch64
 }
 
 bool Operand::isImmediate() const {
@@ -130,6 +135,7 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     if (TiedToIndex >= 0)
       Operand.TiedToIndex = TiedToIndex;
     Operand.Info = &OpInfo;
+    Operand.mayLoadOrStore = Description->mayLoad() || Description->mayStore();
     Operands.push_back(Operand);
   }
   for (MCPhysReg MCPhysReg : Description->implicit_defs()) {

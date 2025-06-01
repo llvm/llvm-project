@@ -18,6 +18,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include <vector>
 
+#define DEBUG_TYPE "exegesis-aarch64-target"
 #if defined(__aarch64__) && defined(__linux__)
 #include <sys/mman.h>
 #include <sys/syscall.h>
@@ -362,9 +363,47 @@ private:
 
     return nullptr;
   }
+  MCRegister getScratchMemoryRegister(const Triple &) const override;
+  void fillMemoryOperands(InstructionTemplate &IT, MCRegister Reg,
+                          unsigned Offset) const override;
 };
 
 } // namespace
+
+// Implementation follows RISCV pattern for memory operand handling.
+// Note: This implementation requires validation for AArch64-specific requirements.
+void ExegesisAArch64Target::fillMemoryOperands(InstructionTemplate &IT,
+                        MCRegister Reg,
+                        unsigned Offset) const {  
+  LLVM_DEBUG(dbgs() << "Executing fillMemoryOperands");
+  // AArch64 memory operands typically have the following structure:
+  // [base_register, offset]
+  auto &I = IT.getInstr();
+  auto MemOpIt =
+      find_if(I.Operands, [](const Operand &Op) { return Op.isMemory(); });
+  assert(MemOpIt != I.Operands.end() &&
+         "Instruction must have memory operands");
+
+  const Operand &MemOp = *MemOpIt;
+
+  assert(MemOp.isReg() && "Memory operand expected to be register");
+
+  IT.getValueFor(MemOp) = MCOperand::createReg(Reg);
+  IT.getValueFor(MemOp) = MCOperand::createImm(Offset);
+}
+enum ScratchMemoryRegister {
+  Z = AArch64::Z14,
+  X = AArch64::X14,
+  W = AArch64::W14,
+};
+
+MCRegister
+ExegesisAArch64Target::getScratchMemoryRegister(const Triple &TT) const {
+  // return MCRegister();   // Implemented in target.h
+  // return hardcoded scratch memory register, similar to RISCV (uses a0)
+  return ScratchMemoryRegister::X ; 
+}
+
 
 #ifdef __linux__
 // true : let use of fixed address to Virtual Address Space Ceiling
