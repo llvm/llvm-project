@@ -18,10 +18,13 @@
 #include <cassert>
 #include "test_macros.h"
 
-#if TEST_HAS_BUILTIN_IDENTIFIER(__reference_constructs_from_temporary)
+#if TEST_HAS_BUILTIN(__reference_constructs_from_temporary)
 #  define ASSERT_REFERENCE_BINDS_TEMPORARY(...) static_assert(__reference_constructs_from_temporary(__VA_ARGS__), "")
 #  define ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(...)                                                                    \
     static_assert(!__reference_constructs_from_temporary(__VA_ARGS__), "")
+#elif TEST_HAS_BUILTIN(__reference_binds_to_temporary)
+#  define ASSERT_REFERENCE_BINDS_TEMPORARY(...) static_assert(__reference_binds_to_temporary(__VA_ARGS__), "")
+#  define ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(...) static_assert(!__reference_binds_to_temporary(__VA_ARGS__), "")
 #else
 #  define ASSERT_REFERENCE_BINDS_TEMPORARY(...) static_assert(true, "")
 #  define ASSERT_NOT_REFERENCE_BINDS_TEMPORARY(...) static_assert(true, "")

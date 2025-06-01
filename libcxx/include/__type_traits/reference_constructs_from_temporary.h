@@ -30,6 +30,19 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool reference_constructs_from_tempo
 
 #endif
 
+#if __has_builtin(__reference_constructs_from_temporary)
+template <class _Tp, class _Up>
+inline const bool __reference_constructs_from_temporary_v = __reference_constructs_from_temporary(_Tp, _Up);
+#elif __has_builtin(__reference_binds_to_temporary)
+// TODO: Remove this once all support compilers have __reference_constructs_from_temporary implemented.
+template <class _Tp, class _Up>
+inline const bool __reference_constructs_from_temporary_v = __reference_binds_to_temporary(_Tp, _Up);
+#else
+// TODO: Remove this once https://github.com/llvm/llvm-project/issues/111477 no longer affects supported compilers.
+template <class _Tp, class _Up>
+inline const bool __reference_constructs_from_temporary_v = false;
+#endif
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___TYPE_TRAITS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY_H

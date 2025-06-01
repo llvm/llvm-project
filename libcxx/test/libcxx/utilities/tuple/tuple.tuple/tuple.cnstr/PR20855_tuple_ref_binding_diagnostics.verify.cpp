@@ -38,9 +38,16 @@ template <class T> struct CannotDeduce {
 template <class ...Args>
 void F(typename CannotDeduce<std::tuple<Args...>>::type const&) {}
 
+#if TEST_HAS_BUILTIN(__reference_constructs_from_temporary)
+#  define TEST_HAS_REFERENCE_BINDING_TRAIT 1
+#elif TEST_HAS_BUILTIN(__reference_binds_to_temporary)
+#  define TEST_HAS_REFERENCE_BINDING_TRAIT 1
+#else
+#  define TEST_HAS_REFERENCE_BINDING_TRAIT 0
+#endif
 
 void f() {
-#if TEST_HAS_BUILTIN_IDENTIFIER(__reference_constructs_from_temporary)
+#if TEST_HAS_REFERENCE_BINDING_TRAIT
   // Test that we emit our diagnostic from the library.
   // expected-error@tuple:* 8 {{Attempted construction of reference element binds to a temporary whose lifetime has ended}}
 
