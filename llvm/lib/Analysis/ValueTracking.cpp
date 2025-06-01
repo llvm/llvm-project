@@ -8390,6 +8390,24 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
     }
   }
 
+  // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
+  // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
+  // When overflow corresponding to the sign of the comparison is poison.
+  // Note that the UMIN case is not possible as we canonicalize to addition.
+  if (CmpLHS == TrueVal) {
+    if (Pred == CmpInst::ICMP_SGT &&
+        match(FalseVal, m_NSWAddLike(m_Specific(CmpRHS), m_ConstantInt<1>())))
+      return {SPF_SMAX, SPNB_NA, false};
+
+    if (Pred == CmpInst::ICMP_SLT &&
+        match(FalseVal, m_NSWAddLike(m_Specific(CmpRHS), m_ConstantInt<-1>())))
+      return {SPF_SMIN, SPNB_NA, false};
+
+    if (Pred == CmpInst::ICMP_UGT &&
+        match(FalseVal, m_NUWAddLike(m_Specific(CmpRHS), m_ConstantInt<1>())))
+      return {SPF_UMAX, SPNB_NA, false};
+  }
+
   if (Pred != CmpInst::ICMP_SGT && Pred != CmpInst::ICMP_SLT)
     return {SPF_UNKNOWN, SPNB_NA, false};
 
