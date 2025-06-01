@@ -955,7 +955,7 @@ define double @reduction_increment_by_first_order_recurrence() {
 ; CHECK-UNORDERED:  middle.block:
 ; CHECK-UNORDERED:    [[RDX:%.*]] = call double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[RED_NEXT]])
 ; CHECK-UNORDERED:  scalar.ph:
-; CHECK-UNORDERED:    [[BC_MERGE_RDX:%.*]] = phi double [ [[RDX]], %middle.block ], [ 0.000000e+00, %entry ]
+; CHECK-UNORDERED:    [[BC_MERGE_RDX:%.*]] = phi double [ 0.000000e+00, %entry ]
 ;
 ; CHECK-NOT-VECTORIZED-LABEL: @reduction_increment_by_first_order_recurrence(
 ; CHECK-NOT-VECTORIZED-NOT: vector.body

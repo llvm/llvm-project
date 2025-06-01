@@ -22,7 +22,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; VF2-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF2-NEXT:    br [[EXIT:label %.*]]
 ; VF2:       [[SCALAR_PH]]:
 ;
 ; VF4-LABEL: define void @load_store_interleave_group(
@@ -45,7 +45,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; VF4-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF4-NEXT:    br [[EXIT:label %.*]]
 ; VF4:       [[SCALAR_PH]]:
 ;
 entry:
@@ -87,7 +87,7 @@ define void @load_store_interleave_group_different_objecs(ptr noalias %src, ptr 
 ; VF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF2-NEXT:    br [[EXIT:label %.*]]
 ; VF2:       [[SCALAR_PH]]:
 ;
 ; VF4-LABEL: define void @load_store_interleave_group_different_objecs(
@@ -111,7 +111,7 @@ define void @load_store_interleave_group_different_objecs(ptr noalias %src, ptr 
 ; VF4-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF4-NEXT:    br [[EXIT:label %.*]]
 ; VF4:       [[SCALAR_PH]]:
 ;
 entry:
@@ -158,7 +158,7 @@ define void @single_wide_load_store_interleave_group(ptr noalias %src, ptr noali
 ; VF2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF2-NEXT:    br [[EXIT:label %.*]]
 ; VF2:       [[SCALAR_PH]]:
 ;
 ; VF4-LABEL: define void @single_wide_load_store_interleave_group(
@@ -181,7 +181,7 @@ define void @single_wide_load_store_interleave_group(ptr noalias %src, ptr noali
 ; VF4-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF4-NEXT:    br [[EXIT:label %.*]]
 ; VF4:       [[SCALAR_PH]]:
 ;
 entry:

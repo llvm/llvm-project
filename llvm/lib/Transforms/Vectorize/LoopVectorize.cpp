@@ -7297,6 +7297,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
+  VPlanTransforms::removeBranchOnConst(BestVPlan);
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
@@ -10309,6 +10310,25 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
                                VF.MinProfitableTripCount, IC, &CM, BFI, PSI,
                                Checks, BestPlan);
+
+        // Materialize vector trip counts for constants early if it can simply
+        // be computed as (Original TC / VF * UF) * VF * UF.
+        if (BestPlan.hasScalarTail() &&
+            !CM.requiresScalarEpilogue(VF.Width.isVector())) {
+          VPValue *TC = BestPlan.getTripCount();
+          if (TC->isLiveIn()) {
+            ScalarEvolution &SE = *PSE.getSE();
+            auto *TCScev = SE.getSCEV(TC->getLiveInIRValue());
+            const SCEV *VFxUF =
+                SE.getElementCount(TCScev->getType(), VF.Width * IC);
+            auto VecTCScev =
+                SE.getMulExpr(SE.getUDivExpr(TCScev, VFxUF), VFxUF);
+            if (auto *NewC = dyn_cast<SCEVConstant>(VecTCScev))
+              BestPlan.getVectorTripCount().setUnderlyingValue(
+                  NewC->getValue());
+          }
+        }
+
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 

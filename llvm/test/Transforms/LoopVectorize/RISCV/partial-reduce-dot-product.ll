@@ -115,7 +115,7 @@ define i32 @vqdot(ptr %a, ptr %b) #0 {
 ; FIXED-V:       middle.block:
 ; FIXED-V-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP13]], [[TMP12]]
 ; FIXED-V-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX]])
-; FIXED-V-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-V-NEXT:    br label [[FOR_EXIT:%.*]]
 ; FIXED-V:       scalar.ph:
 ;
 ; FIXED-ZVQDOTQ-LABEL: define i32 @vqdot(
@@ -152,7 +152,7 @@ define i32 @vqdot(ptr %a, ptr %b) #0 {
 ; FIXED-ZVQDOTQ:       middle.block:
 ; FIXED-ZVQDOTQ-NEXT:    [[BIN_RDX:%.*]] = add <2 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; FIXED-ZVQDOTQ-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[BIN_RDX]])
-; FIXED-ZVQDOTQ-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-ZVQDOTQ-NEXT:    br label [[FOR_EXIT:%.*]]
 ; FIXED-ZVQDOTQ:       scalar.ph:
 ;
 entry:
@@ -287,7 +287,7 @@ define i32 @vqdotu(ptr %a, ptr %b) #0 {
 ; FIXED-V:       middle.block:
 ; FIXED-V-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP13]], [[TMP12]]
 ; FIXED-V-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX]])
-; FIXED-V-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-V-NEXT:    br label [[FOR_EXIT:%.*]]
 ; FIXED-V:       scalar.ph:
 ;
 ; FIXED-ZVQDOTQ-LABEL: define i32 @vqdotu(
@@ -324,7 +324,7 @@ define i32 @vqdotu(ptr %a, ptr %b) #0 {
 ; FIXED-ZVQDOTQ:       middle.block:
 ; FIXED-ZVQDOTQ-NEXT:    [[BIN_RDX:%.*]] = add <2 x i32> [[PARTIAL_REDUCE5]], [[PARTIAL_REDUCE]]
 ; FIXED-ZVQDOTQ-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[BIN_RDX]])
-; FIXED-ZVQDOTQ-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-ZVQDOTQ-NEXT:    br label [[FOR_EXIT:%.*]]
 ; FIXED-ZVQDOTQ:       scalar.ph:
 ;
 entry:
@@ -422,7 +422,7 @@ define i32 @vqdotsu(ptr %a, ptr %b) #0 {
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP13]], [[TMP12]]
 ; FIXED-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX]])
-; FIXED-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_EXIT:%.*]]
 ; FIXED:       scalar.ph:
 ;
 entry:
@@ -519,7 +519,7 @@ define i32 @vqdotsu2(ptr %a, ptr %b) #0 {
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    [[BIN_RDX:%.*]] = add <8 x i32> [[TMP13]], [[TMP12]]
 ; FIXED-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[BIN_RDX]])
-; FIXED-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; FIXED-NEXT:    br label [[FOR_EXIT:%.*]]
 ; FIXED:       scalar.ph:
 ;
 entry:
