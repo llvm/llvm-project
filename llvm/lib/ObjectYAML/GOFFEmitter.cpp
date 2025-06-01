@@ -218,7 +218,8 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
   }
 
   GW.makeNewRecord(GOFF::RT_HDR, GOFF::PayloadLength);
-  GW << binaryBe(FileHdr.TargetEnvironment)     // TargetEnvironment
+  GW << zeros(1)                                // Reserved
+     << binaryBe(FileHdr.TargetEnvironment)     // TargetEnvironment
      << binaryBe(FileHdr.TargetOperatingSystem) // TargetOperatingSystem
      << zeros(2)                                // Reserved
      << binaryBe(FileHdr.CCSID)                 // CCSID

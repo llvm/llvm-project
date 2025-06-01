@@ -1,0 +1,13 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+# CHECK: FileHeader:      {}
+
+--- !GOFF
+FileHeader:
+  TargetEnvironment: 0
+  TargetOperatingSystem: 0
+  CCSID:           0
+  CharacterSetName: "\0"
+  LanguageProductIdentifier: "\0"
+  ArchitectureLevel: 1
+...
