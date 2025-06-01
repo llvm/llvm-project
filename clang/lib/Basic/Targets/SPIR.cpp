@@ -12,7 +12,6 @@
 
 #include "SPIR.h"
 #include "AMDGPU.h"
-#include "Targets.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/TargetParser/TargetParser.h"
