@@ -146,7 +146,7 @@ body:             |
     ; GCN-NEXT:   $stg_srcc = V_LOAD_IDX [[S_LSHL_B32_1]], 12, implicit $exec :: (dereferenceable load (s128), addrspace 10)
     ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX [[S_LSHL_B32_1]], 7, implicit $exec :: (dereferenceable load (s32), addrspace 10)
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_1]], 8, implicit $exec :: (dereferenceable load (s128), addrspace 10)
-    ; GCN-NEXT:   $stg_dsta = nnan ninf nsz arcp contract afn reassoc V_FMA_FROM_TENSOR_F32_F16_regular_4x2 internal killed $stg_srca, internal killed $stg_srcb, internal killed $stg_srcc, 2, 0, 0, 0, implicit $exec
+    ; GCN-NEXT:   $stg_dsta = nnan ninf nsz arcp contract afn reassoc V_FMA_FROM_TENSOR_F32_F16_regular internal killed $stg_srca, internal killed $stg_srcb, internal killed $stg_srcc, 2, 0, 0, 0, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 0, implicit $exec :: (store (s128), addrspace 10)
     ; GCN-NEXT: }
     ;
@@ -159,7 +159,7 @@ body:             |
     ; ALLOC-NEXT:   $stg_srcc = V_LOAD_IDX $idx2, 12, implicit $exec :: (dereferenceable load (s128), addrspace 10)
     ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX $idx2, 7, implicit $exec :: (dereferenceable load (s32), addrspace 10)
     ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx2, 8, implicit $exec :: (dereferenceable load (s128), addrspace 10)
-    ; ALLOC-NEXT:   $stg_dsta = nnan ninf nsz arcp contract afn reassoc V_FMA_FROM_TENSOR_F32_F16_regular_4x2 internal killed $stg_srca, internal killed $stg_srcb, internal killed $stg_srcc, 2, 0, 0, 0, implicit $exec
+    ; ALLOC-NEXT:   $stg_dsta = nnan ninf nsz arcp contract afn reassoc V_FMA_FROM_TENSOR_F32_F16_regular internal killed $stg_srca, internal killed $stg_srcb, internal killed $stg_srcc, 2, 0, 0, 0, implicit $exec
     ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s128), addrspace 10)
     ; ALLOC-NEXT: }
     ;
@@ -173,13 +173,13 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 4, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
-    ; LOWERED-NEXT: undef $vgpr0_vgpr1 = nnan ninf nsz arcp contract afn reassoc V_FMA_FROM_TENSOR_F32_F16_regular_4x2 killed undef $vgpr8_vgpr9, killed undef $vgpr7, killed undef $vgpr12_vgpr13, 2, 0, 131617, 0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0_vgpr1 = nnan ninf nsz arcp contract afn reassoc V_FMA_FROM_TENSOR_F32_F16_regular killed undef $vgpr8_vgpr9, killed undef $vgpr7, killed undef $vgpr12_vgpr13, 2, 0, 131617, 0, <0x{{[0-9a-f]+}}>, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
     %2:vreg_64_align2 = V_LOAD_IDX %1:sreg_32_xexec_hi, 12, implicit $exec :: (dereferenceable load (s128), addrspace 10)
     %3:vreg_64_align2 = V_LOAD_IDX %1:sreg_32_xexec_hi, 8, implicit $exec :: (dereferenceable load (s128), addrspace 10)
     %4:vgpr_32 = V_LOAD_IDX %1:sreg_32_xexec_hi, 7, implicit $exec :: (dereferenceable load (s32), addrspace 10)
-    %5:vreg_64_align2 = nnan ninf nsz arcp contract afn reassoc V_FMA_FROM_TENSOR_F32_F16_regular_4x2 killed %3:vreg_64_align2, killed %4:vgpr_32, killed %2:vreg_64_align2, 2, 0, 0, 0, implicit $exec
+    %5:vreg_64_align2 = nnan ninf nsz arcp contract afn reassoc V_FMA_FROM_TENSOR_F32_F16_regular killed %3:vreg_64_align2, killed %4:vgpr_32, killed %2:vreg_64_align2, 2, 0, 0, 0, implicit $exec
     V_STORE_IDX %5:vreg_64_align2, %0:sreg_32_xexec_hi, 0, implicit $exec :: (store (s128), addrspace 10)
 ...
 
