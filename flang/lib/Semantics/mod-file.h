@@ -66,6 +66,7 @@ private:
   void WriteAll(const Scope &);
   void WriteOne(const Scope &);
   void Write(const Symbol &);
+  std::string WriteModuleAndDependents(const Symbol &);
   std::string GetAsString(const Symbol &);
   void PrepareRenamings(const Scope &);
   void PutSymbols(const Scope &, UnorderedSymbolSet *hermetic);
