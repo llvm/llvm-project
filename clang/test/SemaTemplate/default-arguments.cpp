@@ -283,3 +283,12 @@ static_assert(S<short *>().SizeOfT<char>() == sizeof(short *), "");
 } // namespace GH68490
 
 #endif
+
+namespace PR54279 {
+// Using a different name for the argument when there is a default argument
+// caused a crash.
+template <typename T> void f(const T &a, int c = 0);
+template <> void f(const int &unused, int) {
+  f(42);
+}
+}
