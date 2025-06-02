@@ -3839,6 +3839,8 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   } else {
     if (Current.isNot(TT_StartOfName) || Current.NestingLevel != 0)
       return false;
+    while (Next && Next->startsSequence(tok::hashhash, tok::identifier))
+      Next = Next->Next->Next;
     for (; Next; Next = Next->Next) {
       if (Next->is(TT_TemplateOpener) && Next->MatchingParen) {
         Next = Next->MatchingParen;
