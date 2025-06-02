@@ -7,7 +7,7 @@
 
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+v -debug-only=loop-vectorize -scalable-vectorization=on \
+; RUN:   -mattr=+v -debug-only=loop-vectorize,vplan -scalable-vectorization=on \
 ; RUN:   -riscv-v-vector-bits-min=128 -disable-output < %s 2>&1 | FileCheck %s
 
 define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocapture noundef readonly %B, i32 noundef signext %n) {
@@ -46,7 +46,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !0
 ; CHECK-NEXT:  LV: Using user VF vscale x 4.
-; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK:       LV: Loop does not require scalar epilogue
 ; CHECK:       LV: Scalarizing: %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:  LV: Scalarizing: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Scalarizing: %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
@@ -98,8 +98,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -196,7 +196,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
-; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:    vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
@@ -220,8 +220,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME_2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -294,7 +294,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !0
 ; CHECK-NEXT:  LV: Using user VF vscale x 4.
-; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK:       LV: Loop does not require scalar epilogue
 ; CHECK:       LV: Scalarizing: %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:  LV: Scalarizing: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Scalarizing: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
@@ -346,8 +346,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -444,7 +444,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
-; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
+; CHECK-NEXT:    EMIT-SCALAR vp<[[CAN_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<[[CAN_IV_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:    vp<[[DEV_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[CAN_IV]]> * ir<-1>
 ; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<[[DEV_IV]]>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
@@ -468,8 +468,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
-; CHECK-NEXT:    EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%n>
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
