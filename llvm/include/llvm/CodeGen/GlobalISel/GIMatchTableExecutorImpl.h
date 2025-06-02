@@ -415,10 +415,10 @@ bool GIMatchTableExecutor::executeMatchTable(
       uint64_t OpIdx = readULEB();
       uint16_t Predicate = readU16();
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs()
-                          << CurrentIdx << ": GIM_CheckLeafOperandPredicate(MIs["
-                          << InsnID << "]->getOperand(" << OpIdx
-                          << "), Predicate=" << Predicate << ")\n");
+                      dbgs() << CurrentIdx
+                             << ": GIM_CheckLeafOperandPredicate(MIs[" << InsnID
+                             << "]->getOperand(" << OpIdx
+                             << "), Predicate=" << Predicate << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       assert(State.MIs[InsnID]->getOperand(OpIdx).isReg() &&
              "Expected register operand");
