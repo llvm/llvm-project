@@ -217,12 +217,12 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     auto &FF = cast<MCFillFragment>(F);
     int64_t NumValues = 0;
     if (!FF.getNumValues().evaluateKnownAbsolute(NumValues, *this)) {
-      reportError(FF.getLoc(), "expected assembly-time absolute expression");
+      recordError(FF.getLoc(), "expected assembly-time absolute expression");
       return 0;
     }
     int64_t Size = NumValues * FF.getValueSize();
     if (Size < 0) {
-      reportError(FF.getLoc(), "invalid number of bytes");
+      recordError(FF.getLoc(), "invalid number of bytes");
       return 0;
     }
     return Size;
@@ -266,7 +266,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     const MCOrgFragment &OF = cast<MCOrgFragment>(F);
     MCValue Value;
     if (!OF.getOffset().evaluateAsValue(Value, *this)) {
-      reportError(OF.getLoc(), "expected assembly-time absolute expression");
+      recordError(OF.getLoc(), "expected assembly-time absolute expression");
       return 0;
     }
 
@@ -275,14 +275,14 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     if (const auto *SA = Value.getAddSym()) {
       uint64_t Val;
       if (!getSymbolOffset(*SA, Val)) {
-        reportError(OF.getLoc(), "expected absolute expression");
+        recordError(OF.getLoc(), "expected absolute expression");
         return 0;
       }
       TargetLocation += Val;
     }
     int64_t Size = TargetLocation - FragmentOffset;
     if (Size < 0 || Size >= 0x40000000) {
-      reportError(OF.getLoc(), "invalid .org offset '" + Twine(TargetLocation) +
+      recordError(OF.getLoc(), "invalid .org offset '" + Twine(TargetLocation) +
                                    "' (at offset '" + Twine(FragmentOffset) +
                                    "')");
       return 0;
@@ -825,6 +825,7 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
   for (const MCFragment &F : *Sec)
     writeFragment(OS, *this, F);
 
+  flushPendingErrors();
   assert(getContext().hadError() ||
          OS.tell() - Start == getSectionAddressSize(*Sec));
 }
@@ -877,6 +878,8 @@ void MCAssembler::layout() {
 
   // Finalize the layout, including fragment lowering.
   getBackend().finishLayout(*this);
+
+  flushPendingErrors();
 
   DEBUG_WITH_TYPE("mc-dump", {
       errs() << "assembler backend - final-layout\n--\n";
@@ -968,6 +971,7 @@ void MCAssembler::Finish() {
   stats::ObjectBytes += getWriter().writeObject();
 
   HasLayout = false;
+  assert(PendingErrors.empty());
 }
 
 bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -1222,6 +1226,7 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
 
 bool MCAssembler::layoutOnce() {
   ++stats::RelaxationSteps;
+  PendingErrors.clear();
 
   bool Changed = false;
   for (MCSection &Sec : *this)
@@ -1233,6 +1238,16 @@ bool MCAssembler::layoutOnce() {
 
 void MCAssembler::reportError(SMLoc L, const Twine &Msg) const {
   getContext().reportError(L, Msg);
+}
+
+void MCAssembler::recordError(SMLoc Loc, const Twine &Msg) const {
+  PendingErrors.emplace_back(Loc, Msg.str());
+}
+
+void MCAssembler::flushPendingErrors() const {
+  for (auto &Err : PendingErrors)
+    reportError(Err.first, Err.second);
+  PendingErrors.clear();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
