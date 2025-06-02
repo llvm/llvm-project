@@ -9613,7 +9613,7 @@ define void @store_i32_stride7_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX-NEXT:    vshufps {{.*#+}} ymm1 = ymm5[0,1],ymm1[2,0],ymm5[4,5],ymm1[6,4]
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm1[2,3],ymm0[2,3]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm4[6,7]
-; AVX-NEXT:    vperm2f128 {{.*#+}} ymm1 = mem[2,3,2,3]
+; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
 ; AVX-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[1,1,2,2,5,5,6,6]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3,4,5,6],ymm1[7]
 ; AVX-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm3[2,3],ymm0[2,3]
