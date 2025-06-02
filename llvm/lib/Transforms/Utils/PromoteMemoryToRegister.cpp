@@ -392,15 +392,6 @@ struct PromoteMem2Reg {
   /// number.
   SmallVector<unsigned> BBNumPreds;
 
-  /// The state of incoming values for the current DFS step.
-  RenamePassData::ValVector IncomingVals;
-
-  /// The state of incoming locations for the current DFS step.
-  RenamePassData::LocationVector IncomingLocs;
-
-  // DFS work stack.
-  SmallVector<RenamePassData, 8> Worklist;
-
   /// Whether the function has the no-signed-zeros-fp-math attribute set.
   bool NoSignedZeros = false;
 
@@ -432,7 +423,10 @@ private:
   void ComputeLiveInBlocks(AllocaInst *AI, AllocaInfo &Info,
                            const SmallPtrSetImpl<BasicBlock *> &DefBlocks,
                            SmallPtrSetImpl<BasicBlock *> &LiveInBlocks);
-  void RenamePass(BasicBlock *BB, BasicBlock *Pred);
+  void RenamePass(BasicBlock *BB, BasicBlock *Pred,
+                  RenamePassData::ValVector IncVals,
+                  RenamePassData::LocationVector IncLocs,
+                  std::vector<RenamePassData> &Worklist);
   bool QueuePhiNode(BasicBlock *BB, unsigned AllocaIdx, unsigned &Version);
 
   /// Delete dbg.assigns that have been demoted to dbg.values.
@@ -443,20 +437,6 @@ private:
     for (auto *DVR : DVRAssignsToDelete)
       DVR->eraseFromParent();
     DVRAssignsToDelete.clear();
-  }
-
-  void pushToWorklist(BasicBlock *BB, BasicBlock *Pred,
-                      RenamePassData::ValVector IncVals,
-                      RenamePassData::LocationVector IncLocs) {
-    Worklist.emplace_back(BB, Pred, std::move(IncVals), std::move(IncLocs));
-  }
-
-  RenamePassData popFromWorklist() {
-    RenamePassData R = std::move(Worklist.back());
-    Worklist.pop_back();
-    IncomingVals = std::move(R.Values);
-    IncomingLocs = std::move(R.Locations);
-    return R;
   }
 };
 
@@ -869,26 +849,29 @@ void PromoteMem2Reg::run() {
   // Set the incoming values for the basic block to be null values for all of
   // the alloca's.  We do this in case there is a load of a value that has not
   // been stored yet.  In this case, it will get this null value.
-  IncomingVals.assign(Allocas.size(), nullptr);
+  RenamePassData::ValVector Values(Allocas.size());
   for (unsigned i = 0, e = Allocas.size(); i != e; ++i)
-    IncomingVals[i] = UndefValue::get(Allocas[i]->getAllocatedType());
+    Values[i] = UndefValue::get(Allocas[i]->getAllocatedType());
 
   // When handling debug info, treat all incoming values as if they have unknown
   // locations until proven otherwise.
-  IncomingLocs.assign(Allocas.size(), {});
+  RenamePassData::LocationVector Locations(Allocas.size());
 
   // The renamer uses the Visited set to avoid infinite loops.
   Visited.resize(F.getMaxBlockNumber());
 
   // Walks all basic blocks in the function performing the SSA rename algorithm
   // and inserting the phi nodes we marked as necessary
-  pushToWorklist(&F.front(), nullptr, std::move(IncomingVals),
-                 std::move(IncomingLocs));
+  std::vector<RenamePassData> RenamePassWorkList;
+  RenamePassWorkList.emplace_back(&F.front(), nullptr, std::move(Values),
+                                  std::move(Locations));
   do {
-    RenamePassData RPD = popFromWorklist();
+    RenamePassData RPD = std::move(RenamePassWorkList.back());
+    RenamePassWorkList.pop_back();
     // RenamePass may add new worklist entries.
-    RenamePass(RPD.BB, RPD.Pred);
-  } while (!Worklist.empty());
+    RenamePass(RPD.BB, RPD.Pred, std::move(RPD.Values),
+               std::move(RPD.Locations), RenamePassWorkList);
+  } while (!RenamePassWorkList.empty());
 
   // Remove the allocas themselves from the function.
   for (Instruction *A : Allocas) {
@@ -1113,7 +1096,10 @@ static void updateForIncomingValueLocation(PHINode *PN, DebugLoc DL,
 ///
 /// IncomingVals indicates what value each Alloca contains on exit from the
 /// predecessor block Pred.
-void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred) {
+void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred,
+                                RenamePassData::ValVector IncomingVals,
+                                RenamePassData::LocationVector IncomingLocs,
+                                std::vector<RenamePassData> &Worklist) {
   // If we are inserting any phi nodes into this BB, they will already be in the
   // block.
   if (PHINode *APN = dyn_cast<PHINode>(BB->begin())) {
@@ -1240,7 +1226,8 @@ void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred) {
         IncomingVals = Worklist.back().Values;
         IncomingLocs = Worklist.back().Locations;
       }
-      pushToWorklist(S, BB, std::move(IncomingVals), std::move(IncomingLocs));
+      Worklist.emplace_back(S, BB, std::move(IncomingVals),
+                            std::move(IncomingLocs));
     }
 }
 
