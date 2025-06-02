@@ -475,14 +475,6 @@ bool MCExpr::evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm) const {
 bool MCExpr::evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const {
   return evaluateAsRelocatableImpl(Res, &Asm, true);
 }
-static bool canExpand(const MCSymbol &Sym, bool InSet) {
-  if (Sym.isWeakExternal())
-    return false;
-
-  if (InSet)
-    return true;
-  return !Sym.isInSection();
-}
 
 bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                        bool InSet) const {
@@ -500,7 +492,10 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     const auto Kind = SRE->getKind();
     bool Layout = Asm && Asm->hasLayout();
 
-    // Evaluate recursively if this is a variable.
+    // If the symbol is equated, resolve the inner expression.
+    // However, when two IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY symbols reference
+    // each other, we retain the equated symbol to avoid a cyclic definition
+    // error.
     if (Sym.isResolving()) {
       if (Asm && Asm->hasFinalLayout()) {
         Asm->getContext().reportError(
@@ -511,13 +506,20 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       return false;
     }
     if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&
-        canExpand(Sym, InSet)) {
+        !Sym.isWeakExternal()) {
       Sym.setIsResolving(true);
       auto _ = make_scope_exit([&] { Sym.setIsResolving(false); });
       bool IsMachO =
           Asm && Asm->getContext().getAsmInfo()->hasSubsectionsViaSymbols();
-      if (Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
-                                                            InSet || IsMachO)) {
+      if (!Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
+                                                             InSet || IsMachO))
+        return false;
+      // When generating relocations, if Sym resolves to a symbol relative to a
+      // section, relocations are generated against Sym. Treat label differences
+      // as constants.
+      auto *A = Res.getAddSym();
+      auto *B = Res.getSubSym();
+      if (InSet || !(A && !B && A->isInSection())) {
         if (Kind != MCSymbolRefExpr::VK_None) {
           if (Res.isAbsolute()) {
             Res = MCValue::get(&Sym, nullptr, 0, Kind);
@@ -534,8 +536,6 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         if (!IsMachO)
           return true;
 
-        auto *A = Res.getAddSym();
-        auto *B = Res.getSubSym();
         // FIXME: This is small hack. Given
         // a = b + 4
         // .long a
@@ -548,8 +548,6 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         // Allows aliases with zero offset.
         if (Res.getConstant() == 0 && (!A || !B))
           return true;
-      } else {
-        return false;
       }
     }
 
