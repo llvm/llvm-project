@@ -123,7 +123,7 @@ bool ValueObjectChild::UpdateValue() {
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
         // BEGIN SWIFT MOD
-        lldb::addr_t addr = parent->GetPointerValue();
+        lldb::addr_t addr = parent->GetPointerValue().address;
 
         if (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer))
           if (auto process_sp = GetProcessSP())

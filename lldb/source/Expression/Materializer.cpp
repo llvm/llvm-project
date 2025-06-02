@@ -512,10 +512,8 @@ public:
         return;
       }
     } else {
-      AddressType address_type = eAddressTypeInvalid;
-      const bool scalar_is_load_address = false;
       lldb::addr_t addr_of_valobj =
-          valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
+          valobj_sp->GetAddressOf(/*scalar_is_load_address=*/false).address;
 
       // BEGIN Swift.
       if (addr_of_valobj != LLDB_INVALID_ADDRESS)
