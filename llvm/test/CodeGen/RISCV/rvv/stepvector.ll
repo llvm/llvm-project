@@ -501,7 +501,7 @@ define <vscale x 8 x i64> @mul_bigimm_stepvector_nxv8i64() {
 ; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vid.v v8
 ; RV64-NEXT:    lui a0, 1987
-; RV64-NEXT:    addiw a0, a0, -731
+; RV64-NEXT:    addi a0, a0, -731
 ; RV64-NEXT:    slli a0, a0, 12
 ; RV64-NEXT:    addi a0, a0, -683
 ; RV64-NEXT:    vmul.vx v8, v8, a0
@@ -670,7 +670,7 @@ define <vscale x 16 x i64> @mul_bigimm_stepvector_nxv16i64() {
 ; RV64-NEXT:    lui a1, 1987
 ; RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vid.v v8
-; RV64-NEXT:    addiw a1, a1, -731
+; RV64-NEXT:    addi a1, a1, -731
 ; RV64-NEXT:    slli a1, a1, 12
 ; RV64-NEXT:    addi a1, a1, -683
 ; RV64-NEXT:    mul a0, a0, a1

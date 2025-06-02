@@ -243,6 +243,8 @@ public:
 protected:
   TelemetryManager(std::unique_ptr<LLDBConfig> config);
 
+  inline const std::string &GetSessionId() const { return m_id; }
+
   static void SetInstance(std::unique_ptr<TelemetryManager> manger);
 
 private:

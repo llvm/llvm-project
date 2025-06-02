@@ -851,18 +851,18 @@ llvm.func @nvvm_dot_accumulate_4way(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32)
   // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
   // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
   // CHECK: call i32 @llvm.nvvm.idp4a.u.u(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
-  %0 = nvvm.dot.accumulate.4way %a <u8>, %b <u8>, %c: vector<4xi8>, vector<4xi8>
+  %0 = nvvm.dot.accumulate.4way %a <unsigned>, %b <unsigned>, %c: vector<4xi8>, vector<4xi8>
   // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
   // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
   // CHECK: call i32 @llvm.nvvm.idp4a.s.u(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
-  %1 = nvvm.dot.accumulate.4way %a <s8>, %b <u8>, %c: vector<4xi8>, vector<4xi8>
+  %1 = nvvm.dot.accumulate.4way %a <signed>, %b <unsigned>, %c: vector<4xi8>, vector<4xi8>
   // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
   // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
   // CHECK: call i32 @llvm.nvvm.idp4a.u.s(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
-  %2 = nvvm.dot.accumulate.4way %a <u8>, %b <s8>, %c: vector<4xi8>, vector<4xi8>
+  %2 = nvvm.dot.accumulate.4way %a <unsigned>, %b <signed>, %c: vector<4xi8>, vector<4xi8>
   // CHECK: %[[a_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
   // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
   // CHECK: call i32 @llvm.nvvm.idp4a.s.s(i32 %[[a_cast]], i32 %[[b_cast]], i32 %{{.*}})
-  %3 = nvvm.dot.accumulate.4way %a <s8>, %b <s8>, %c: vector<4xi8>, vector<4xi8>
+  %3 = nvvm.dot.accumulate.4way %a <signed>, %b <signed>, %c: vector<4xi8>, vector<4xi8>
   llvm.return
 }

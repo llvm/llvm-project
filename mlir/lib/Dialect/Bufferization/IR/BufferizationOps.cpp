@@ -163,14 +163,15 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   // Get "copy" buffer.
   Value copyBuffer;
   if (getCopy()) {
-    FailureOr<Value> maybeCopyBuffer = getBuffer(rewriter, getCopy(), options);
+    FailureOr<Value> maybeCopyBuffer =
+        getBuffer(rewriter, getCopy(), options, state);
     if (failed(maybeCopyBuffer))
       return failure();
     copyBuffer = *maybeCopyBuffer;
   }
 
   // Create memory allocation.
-  auto allocType = bufferization::getBufferType(getResult(), options);
+  auto allocType = bufferization::getBufferType(getResult(), options, state);
   if (failed(allocType))
     return failure();
   SmallVector<Value> dynamicDims = getDynamicSizes();
@@ -223,6 +224,7 @@ AliasingValueList AllocTensorOp::getAliasingValues(OpOperand &opOperand,
 
 FailureOr<BaseMemRefType>
 AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
+                             const BufferizationState &state,
                              SmallVector<Value> &invocationStack) {
   assert(value == getResult() && "invalid value");
 
@@ -231,8 +233,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options,
   if (getMemorySpace().has_value()) {
     memorySpace = *getMemorySpace();
   } else if (getCopy()) {
-    auto copyBufferType =
-        bufferization::getBufferType(getCopy(), options, invocationStack);
+    auto copyBufferType = bufferization::getBufferType(getCopy(), options,
+                                                       state, invocationStack);
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpace();
@@ -532,7 +534,7 @@ void CloneOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
                                          const BufferizationOptions &options,
                                          BufferizationState &state) {
-  FailureOr<Value> buffer = getBuffer(rewriter, getTensor(), options);
+  FailureOr<Value> buffer = getBuffer(rewriter, getTensor(), options, state);
   if (failed(buffer))
     return failure();
   rewriter.create<memref::DeallocOp>(getLoc(), *buffer);
@@ -583,7 +585,8 @@ MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
   bool tensorDest = isa<TensorType>(getDest().getType());
   Value buffer;
   if (tensorDest) {
-    FailureOr<Value> maybeBuffer = getBuffer(rewriter, getDest(), options);
+    FailureOr<Value> maybeBuffer =
+        getBuffer(rewriter, getDest(), options, state);
     if (failed(maybeBuffer))
       return failure();
     buffer = *maybeBuffer;
@@ -591,7 +594,7 @@ MaterializeInDestinationOp::bufferize(RewriterBase &rewriter,
     assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
     buffer = getDest();
   }
-  auto srcBuffer = getBuffer(rewriter, getSource(), options);
+  auto srcBuffer = getBuffer(rewriter, getSource(), options, state);
   if (failed(srcBuffer))
     return failure();
   if (failed(options.createMemCpy(rewriter, getLoc(), *srcBuffer, buffer)))

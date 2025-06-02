@@ -152,11 +152,13 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   // out, don't do it.  This includes virtual base classes which get laid out
   // when a class is translated, even though they aren't embedded by-value into
   // the class.
-  if (isa<CXXRecordDecl>(rd)) {
-    assert(!cir::MissingFeatures::cxxSupport());
-    cgt.getCGModule().errorNYI(rd->getSourceRange(),
-                               "isSafeToConvert: CXXRecordDecl");
-    return false;
+  if (auto *crd = dyn_cast<CXXRecordDecl>(rd)) {
+    if (crd->getNumBases() > 0) {
+      assert(!cir::MissingFeatures::cxxSupport());
+      cgt.getCGModule().errorNYI(rd->getSourceRange(),
+                                 "isSafeToConvert: CXXRecordDecl with bases");
+      return false;
+    }
   }
 
   // If this type would require laying out members that are currently being laid

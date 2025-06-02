@@ -1,8 +1,7 @@
-
-// RUN: %clang_cc1 -x c++ -gkey-instructions %s -debug-info-kind=line-tables-only -gno-column-info -emit-llvm -o - -ftrivial-auto-var-init=pattern \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c++ -gkey-instructions %s -debug-info-kind=line-tables-only -gno-column-info -emit-llvm -o - -ftrivial-auto-var-init=pattern \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// RUN: %clang_cc1 -x c -gkey-instructions %s -debug-info-kind=line-tables-only -gno-column-info -emit-llvm -o - -ftrivial-auto-var-init=pattern \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c -gkey-instructions %s -debug-info-kind=line-tables-only -gno-column-info -emit-llvm -o - -ftrivial-auto-var-init=pattern \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 // The implicit-check-not is important; we don't want the GEPs created for the
@@ -36,15 +35,15 @@ void a() {
 // CHECK: call void @llvm.memset{{.*}}%arr{{.*}}, !dbg [[G4R1:!.*]]
     char arr[] = { 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, };
 
-// CHECK: store i8 -86, ptr %uninit{{.*}}, !dbg [[G5R1:!.*]], !annotation
+// CHECK: store i8 {{.*}}, ptr %uninit{{.*}}, !dbg [[G5R1:!.*]], !annotation
     char uninit; // -ftrivial-auto-var-init=pattern
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
-// CHECK: [[B_LINE]] = !DILocation(line: 23, scope: ![[#]])
+// CHECK: [[B_LINE]] = !DILocation(line: 22, scope: ![[#]])
 // CHECK: [[G2R2]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
-// CHECK: [[big_LINE]] = !DILocation(line: 34, scope: ![[#]])
+// CHECK: [[big_LINE]] = !DILocation(line: 33, scope: ![[#]])
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
 // CHECK: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)

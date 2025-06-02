@@ -7,7 +7,7 @@ define void @foo(<vscale x 8 x half> %0) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    lui a0, 1
-; CHECK-NEXT:    addiw a0, a0, -1096
+; CHECK-NEXT:    addi a0, a0, -1096
 ; CHECK-NEXT:    vmv.v.i v11, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    #APP

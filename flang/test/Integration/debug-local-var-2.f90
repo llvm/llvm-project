@@ -20,7 +20,7 @@
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i64 @_QFPfn1
-! BOTH-SAME: (ptr captures(none) %[[ARG1:.*]], ptr captures(none) %[[ARG2:.*]], ptr captures(none) %[[ARG3:.*]])
+! BOTH-SAME: (ptr {{[^%]*}}%[[ARG1:.*]], ptr {{[^%]*}}%[[ARG2:.*]], ptr {{[^%]*}}%[[ARG3:.*]])
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG1]], ![[A1:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG2]], ![[B1:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG3]], ![[C1:.*]], !DIExpression(), !{{.*}})
@@ -29,7 +29,7 @@
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i32 @_QFPfn2
-! BOTH-SAME: (ptr captures(none) %[[FN2ARG1:.*]], ptr captures(none) %[[FN2ARG2:.*]], ptr captures(none) %[[FN2ARG3:.*]])
+! BOTH-SAME: (ptr {{[^%]*}}%[[FN2ARG1:.*]], ptr {{[^%]*}}%[[FN2ARG2:.*]], ptr {{[^%]*}}%[[FN2ARG3:.*]])
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG1]], ![[A2:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG2]], ![[B2:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG3]], ![[C2:.*]], !DIExpression(), !{{.*}})

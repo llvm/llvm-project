@@ -12,6 +12,7 @@ module {
     // CHECK-SAME: #dlti.function_pointer_alignment<0, function_dependent = false>,
     // CHECK: global_memory_space = 0
     // CHECK: index = 64
+    // CHECK: legal_int_widths = array<i32>
     // CHECK: mangling_mode = ""
     // CHECK: preferred = 8
     // CHECK: program_memory_space = 0
@@ -27,6 +28,7 @@ module {
     // CHECK-SAME: #dlti.function_pointer_alignment<0, function_dependent = false>,
     // CHECK: global_memory_space = 0
     // CHECK: index = 64
+    // CHECK: legal_int_widths = array<i32>
     // CHECK: mangling_mode = ""
     // CHECK: preferred = 8
     // CHECK: program_memory_space = 0
@@ -42,6 +44,7 @@ module {
     // CHECK-SAME: #dlti.function_pointer_alignment<0, function_dependent = false>,
     // CHECK: global_memory_space = 0
     // CHECK: index = 64
+    // CHECK: legal_int_widths = array<i32>
     // CHECK: mangling_mode = ""
     // CHECK: preferred = 8
     // CHECK: program_memory_space = 0
@@ -65,6 +68,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<"dlti.program_memory_space", 3 : ui64>,
   #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>,
   #dlti.dl_entry<"dlti.mangling_mode", "e">,
+  #dlti.dl_entry<"dlti.legal_int_widths", array<i32: 32, 64>>,
   #dlti.dl_entry<"dlti.function_pointer_alignment",
                  "#dlti.function_pointer_alignment<32, function_dependent = true>">
 >} {
@@ -79,6 +83,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK-SAME: "#dlti.function_pointer_alignment<32, function_dependent = true>",
     // CHECK: global_memory_space = 2
     // CHECK: index = 32
+    // CHECK: legal_int_widths = array<i32: 32, 64>
     // CHECK: mangling_mode = "e"
     // CHECK: preferred = 8
     // CHECK: program_memory_space = 3
@@ -94,6 +99,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK-SAME: "#dlti.function_pointer_alignment<32, function_dependent = true>",
     // CHECK: global_memory_space = 2
     // CHECK: index = 32
+    // CHECK: legal_int_widths = array<i32: 32, 64>
     // CHECK: preferred = 8
     // CHECK: program_memory_space = 3
     // CHECK: size = 4
@@ -108,6 +114,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK-SAME: "#dlti.function_pointer_alignment<32, function_dependent = true>",
     // CHECK: global_memory_space = 2
     // CHECK: index = 64
+    // CHECK: legal_int_widths = array<i32: 32, 64>
     // CHECK: mangling_mode = "e"
     // CHECK: preferred = 8
     // CHECK: program_memory_space = 3
@@ -123,6 +130,7 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // CHECK-SAME: "#dlti.function_pointer_alignment<32, function_dependent = true>",
     // CHECK: global_memory_space = 2
     // CHECK: index = 24
+    // CHECK: legal_int_widths = array<i32: 32, 64>
     // CHECK: mangling_mode = "e"
     // CHECK: preferred = 8
     // CHECK: program_memory_space = 3

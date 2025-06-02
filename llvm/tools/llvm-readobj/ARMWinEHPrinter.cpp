@@ -306,7 +306,7 @@ ErrorOr<SymbolRef> Decoder::getSymbolForLocation(
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(AddressOrErr.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
     // We apply SymbolOffset here directly. We return it separately to allow
     // the caller to print it as an offset on the symbol name.
@@ -1094,7 +1094,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
   // A header is one or two words, followed by at least one word to describe
   // the unwind codes. Applicable to both ARM and AArch64.
   if (Contents.size() - Offset < 8)
-    report_fatal_error(".xdata must be at least 8 bytes in size");
+    reportFatalUsageError(".xdata must be at least 8 bytes in size");
 
   const ExceptionDataRecord XData(Data, isAArch64);
   DictScope XRS(SW, "ExceptionData");
@@ -1115,7 +1115,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
                 (XData.E() ? 0 : XData.EpilogueCount() * 4) -
                 (XData.X() ? 8 : 0)) < (int64_t)ByteCodeLength) {
     SW.flush();
-    report_fatal_error("Malformed unwind data");
+    reportFatalUsageError("Malformed unwind data");
   }
 
   if (XData.E()) {
@@ -1178,7 +1178,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(Name.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
 
     ListScope EHS(SW, "ExceptionHandler");
@@ -1217,7 +1217,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
     FunctionName = *FunctionNameOrErr;
   }
@@ -1231,7 +1231,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(Name.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
 
     SW.printString("ExceptionRecord",
@@ -1276,7 +1276,7 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
     FunctionName = *FunctionNameOrErr;
   }
@@ -1375,7 +1375,7 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
       logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
-      report_fatal_error(Twine(Buf));
+      reportFatalUsageError(Twine(Buf));
     }
     FunctionName = *FunctionNameOrErr;
   }

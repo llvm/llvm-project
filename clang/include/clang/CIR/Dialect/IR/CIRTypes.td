@@ -275,18 +275,31 @@ def CIR_VectorType : CIR_Type<"Vector", "vector",
 
   let summary = "CIR vector type";
   let description = [{
-   `!cir.vector' represents fixed-size vector types, parameterized
-    by the element type and the number of elements.
+    The `!cir.vector` type represents a fixed-size, one-dimensional vector.
+    It takes two parameters: the element type and the number of elements.
 
-    Example:
+    Syntax:
 
     ```mlir
-    !cir.vector<!u64i x 2>
-    !cir.vector<!cir.float x 4>
+    vector-type ::= !cir.vector<size x element-type>
+    element-type ::= float-type | integer-type | pointer-type
+    ```
+
+    The `element-type` must be a scalar CIR type. Zero-sized vectors are not
+    allowed. The `size` must be a positive integer.
+
+    Examples:
+
+    ```mlir
+    !cir.vector<4 x !cir.int<u, 8>>
+    !cir.vector<2 x !cir.float>
     ```
   }];
 
-  let parameters = (ins "mlir::Type":$elementType, "uint64_t":$size);
+  let parameters = (ins
+    CIR_VectorElementType:$elementType,
+    "uint64_t":$size
+  );
 
   let assemblyFormat = [{
     `<` $size `x` $elementType `>`

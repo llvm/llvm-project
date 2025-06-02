@@ -10,6 +10,7 @@
 #include "DirectX.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -40,9 +41,10 @@ static bool findAndReplaceVectors(Module &M);
 class DataScalarizerVisitor : public InstVisitor<DataScalarizerVisitor, bool> {
 public:
   DataScalarizerVisitor() : GlobalMap() {}
-  bool visit(Instruction &I);
+  bool visit(Function &F);
   // InstVisitor methods.  They return true if the instruction was scalarized,
   // false if nothing changed.
+  bool visitAllocaInst(AllocaInst &AI);
   bool visitInstruction(Instruction &I) { return false; }
   bool visitSelectInst(SelectInst &SI) { return false; }
   bool visitICmpInst(ICmpInst &ICI) { return false; }
@@ -67,9 +69,14 @@ private:
   DenseMap<GlobalVariable *, GlobalVariable *> GlobalMap;
 };
 
-bool DataScalarizerVisitor::visit(Instruction &I) {
-  assert(!GlobalMap.empty());
-  return InstVisitor::visit(I);
+bool DataScalarizerVisitor::visit(Function &F) {
+  bool MadeChange = false;
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *BB : make_early_inc_range(RPOT)) {
+    for (Instruction &I : make_early_inc_range(*BB))
+      MadeChange |= InstVisitor::visit(I);
+  }
+  return MadeChange;
 }
 
 GlobalVariable *
@@ -81,6 +88,42 @@ DataScalarizerVisitor::lookupReplacementGlobal(Value *CurrOperand) {
     }
   }
   return nullptr; // Not found
+}
+
+// Recursively creates an array version of the given vector type.
+static Type *replaceVectorWithArray(Type *T, LLVMContext &Ctx) {
+  if (auto *VecTy = dyn_cast<VectorType>(T))
+    return ArrayType::get(VecTy->getElementType(),
+                          dyn_cast<FixedVectorType>(VecTy)->getNumElements());
+  if (auto *ArrayTy = dyn_cast<ArrayType>(T)) {
+    Type *NewElementType =
+        replaceVectorWithArray(ArrayTy->getElementType(), Ctx);
+    return ArrayType::get(NewElementType, ArrayTy->getNumElements());
+  }
+  // If it's not a vector or array, return the original type.
+  return T;
+}
+
+static bool isArrayOfVectors(Type *T) {
+  if (ArrayType *ArrType = dyn_cast<ArrayType>(T))
+    return isa<VectorType>(ArrType->getElementType());
+  return false;
+}
+
+bool DataScalarizerVisitor::visitAllocaInst(AllocaInst &AI) {
+  if (!isArrayOfVectors(AI.getAllocatedType()))
+    return false;
+
+  ArrayType *ArrType = cast<ArrayType>(AI.getAllocatedType());
+  IRBuilder<> Builder(&AI);
+  LLVMContext &Ctx = AI.getContext();
+  Type *NewType = replaceVectorWithArray(ArrType, Ctx);
+  AllocaInst *ArrAlloca =
+      Builder.CreateAlloca(NewType, nullptr, AI.getName() + ".scalarize");
+  ArrAlloca->setAlignment(AI.getAlign());
+  AI.replaceAllUsesWith(ArrAlloca);
+  AI.eraseFromParent();
+  return true;
 }
 
 bool DataScalarizerVisitor::visitLoadInst(LoadInst &LI) {
@@ -152,20 +195,6 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   GEPI.replaceAllUsesWith(NewGEP);
   GEPI.eraseFromParent();
   return true;
-}
-
-// Recursively Creates and Array like version of the given vector like type.
-static Type *replaceVectorWithArray(Type *T, LLVMContext &Ctx) {
-  if (auto *VecTy = dyn_cast<VectorType>(T))
-    return ArrayType::get(VecTy->getElementType(),
-                          dyn_cast<FixedVectorType>(VecTy)->getNumElements());
-  if (auto *ArrayTy = dyn_cast<ArrayType>(T)) {
-    Type *NewElementType =
-        replaceVectorWithArray(ArrayTy->getElementType(), Ctx);
-    return ArrayType::get(NewElementType, ArrayTy->getNumElements());
-  }
-  // If it's not a vector or array, return the original type.
-  return T;
 }
 
 Constant *transformInitializer(Constant *Init, Type *OrigType, Type *NewType,
@@ -253,18 +282,13 @@ static bool findAndReplaceVectors(Module &M) {
       // Note: we want to do G.replaceAllUsesWith(NewGlobal);, but it assumes
       // type equality. Instead we will use the visitor pattern.
       Impl.GlobalMap[&G] = NewGlobal;
-      for (User *U : make_early_inc_range(G.users())) {
-        if (isa<ConstantExpr>(U) && isa<Operator>(U)) {
-          ConstantExpr *CE = cast<ConstantExpr>(U);
-          for (User *UCE : make_early_inc_range(CE->users())) {
-            if (Instruction *Inst = dyn_cast<Instruction>(UCE))
-              Impl.visit(*Inst);
-          }
-        }
-        if (Instruction *Inst = dyn_cast<Instruction>(U))
-          Impl.visit(*Inst);
-      }
     }
+  }
+
+  for (auto &F : make_early_inc_range(M.functions())) {
+    if (F.isDeclaration())
+      continue;
+    MadeChange |= Impl.visit(F);
   }
 
   // Remove the old globals after the iteration

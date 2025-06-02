@@ -198,8 +198,9 @@ public:
   virtual bool writeNopData(raw_ostream &OS, uint64_t Count,
                             const MCSubtargetInfo *STI) const = 0;
 
-  /// Give backend an opportunity to finish layout after relaxation
-  virtual void finishLayout(MCAssembler const &Asm) const {}
+  // Return true if fragment offsets have been adjusted and an extra layout
+  // iteration is needed.
+  virtual bool finishLayout(const MCAssembler &Asm) const { return false; }
 
   /// Generate the compact unwind encoding for the CFI instructions.
   virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,

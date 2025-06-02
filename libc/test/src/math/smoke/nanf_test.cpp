@@ -45,6 +45,6 @@ TEST_F(LlvmLibcNanfTest, RandomString) {
 
 #if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
 TEST_F(LlvmLibcNanfTest, InvalidInput) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf(nullptr); });
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf(nullptr); }, WITH_SIGNAL(-1));
 }
 #endif // LIBC_HAS_ADDRESS_SANITIZER

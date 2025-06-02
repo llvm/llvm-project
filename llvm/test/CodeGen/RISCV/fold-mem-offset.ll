@@ -575,12 +575,11 @@ define signext i32 @test_large_offset(ptr %p, iXLen %x, iXLen %y) {
 ; RV64I-NEXT:    lui a3, 2
 ; RV64I-NEXT:    slli a1, a1, 2
 ; RV64I-NEXT:    slli a2, a2, 2
-; RV64I-NEXT:    addiw a3, a3, -1392
 ; RV64I-NEXT:    add a0, a0, a3
 ; RV64I-NEXT:    add a1, a0, a1
 ; RV64I-NEXT:    add a0, a2, a0
-; RV64I-NEXT:    lw a1, 0(a1)
-; RV64I-NEXT:    lw a0, 40(a0)
+; RV64I-NEXT:    lw a1, -1392(a1)
+; RV64I-NEXT:    lw a0, -1352(a0)
 ; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;

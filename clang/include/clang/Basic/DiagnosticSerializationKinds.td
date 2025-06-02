@@ -24,8 +24,9 @@ def err_fe_ast_file_modified : Error<
     DefaultFatal;
 def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
-def note_pch_required_by : Note<"'%0' required by '%1'">;
-def note_pch_rebuild_required : Note<"please rebuild precompiled header '%0'">;
+def note_ast_file_required_by : Note<"'%0' required by '%1'">;
+def note_ast_file_rebuild_required
+    : Note<"please rebuild precompiled file '%0'">;
 def note_module_cache_path : Note<
     "after modifying system headers, please delete the module cache at '%0'">;
 

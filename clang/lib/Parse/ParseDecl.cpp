@@ -676,7 +676,8 @@ void Parser::ParseGNUAttributeArgs(
                          Form);
     return;
   } else if (AttrKind == ParsedAttr::AT_CXXAssume) {
-    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc, Form);
+    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, ScopeName,
+                               ScopeLoc, EndLoc, Form);
     return;
   }
 
@@ -734,7 +735,8 @@ unsigned Parser::ParseClangAttributeArgs(
     break;
 
   case ParsedAttr::AT_CXXAssume:
-    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc, Form);
+    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, ScopeName,
+                               ScopeLoc, EndLoc, Form);
     break;
   }
   return !Attrs.empty() ? Attrs.begin()->getNumArgs() : 0;

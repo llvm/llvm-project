@@ -22,6 +22,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfSummary.h"
 #include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -690,6 +691,8 @@ private:
   /// The MemProf version.
   memprof::IndexedVersion Version =
       static_cast<memprof::IndexedVersion>(memprof::MinimumSupportedVersion);
+  /// MemProf summary (if available, version >= 4).
+  std::unique_ptr<memprof::MemProfSummary> MemProfSum;
   /// MemProf profile schema (if available).
   memprof::MemProfSchema Schema;
   /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
@@ -725,6 +728,8 @@ public:
 
   // Return the entire MemProf profile.
   memprof::AllMemProfData getAllMemProfData() const;
+
+  memprof::MemProfSummary *getSummary() const { return MemProfSum.get(); }
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -885,6 +890,11 @@ public:
       assert(Summary && "No profile summary");
       return *Summary;
     }
+  }
+
+  /// Return the MemProf summary. Will be null if unavailable (version < 4).
+  memprof::MemProfSummary *getMemProfSummary() const {
+    return MemProfReader.getSummary();
   }
 
   Error readBinaryIds(std::vector<llvm::object::BuildID> &BinaryIds) override;

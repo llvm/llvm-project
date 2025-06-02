@@ -13,6 +13,7 @@
 #include "RISCVCallingConv.h"
 #include "RISCVSubtarget.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
@@ -333,9 +334,15 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   MVT XLenVT = Subtarget.getXLenVT();
 
   // Static chain parameter must not be passed in normal argument registers,
-  // so we assign t2 for it as done in GCC's __builtin_call_with_static_chain
+  // so we assign t2/t3 for it as done in GCC's __builtin_call_with_static_chain
+  bool HasCFBranch =
+      Subtarget.hasStdExtZicfilp() &&
+      MF.getFunction().getParent()->getModuleFlag("cf-protection-branch");
+  // Normal: t2, Branch control flow protection: t3
+  const auto StaticChainReg = HasCFBranch ? RISCV::X28 : RISCV::X7;
+
   if (ArgFlags.isNest()) {
-    if (MCRegister Reg = State.AllocateReg(RISCV::X7)) {
+    if (MCRegister Reg = State.AllocateReg(StaticChainReg)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }

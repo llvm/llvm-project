@@ -200,15 +200,16 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
 
   if constexpr (Dir == ShiftDir::Left) {
     if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
-      const Expr *E = S.Current->getExpr(OpPC);
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       if (LHS.isNegative()) {
+        const Expr *E = S.Current->getExpr(OpPC);
         S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
         if (!S.noteUndefinedBehavior())
           return false;
       } else if (LHS.toUnsigned().countLeadingZeros() <
                  static_cast<unsigned>(RHS)) {
+        const Expr *E = S.Current->getExpr(OpPC);
         S.CCEDiag(E, diag::note_constexpr_lshift_discards);
         if (!S.noteUndefinedBehavior())
           return false;
