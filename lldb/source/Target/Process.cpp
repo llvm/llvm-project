@@ -80,16 +80,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace std::chrono;
 
-// Comment out line below to disable memory caching, overriding the process
-// setting target.process.disable-memory-cache
-#define ENABLE_MEMORY_CACHING
-
-#ifdef ENABLE_MEMORY_CACHING
-#define DISABLE_MEM_CACHE_DEFAULT false
-#else
-#define DISABLE_MEM_CACHE_DEFAULT true
-#endif
-
 class ProcessOptionValueProperties
     : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
 public:
@@ -2297,9 +2287,7 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   if (ABISP abi_sp = GetABI())
     addr = abi_sp->FixAnyAddress(addr);
 
-#if defined(ENABLE_MEMORY_CACHING)
   m_memory_cache.Flush(addr, size);
-#endif
 
   if (buf == nullptr || size == 0)
     return 0;
