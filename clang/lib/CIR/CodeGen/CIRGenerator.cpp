@@ -74,13 +74,9 @@ void CIRGenerator::HandleTranslationUnit(ASTContext &astContext) {
   if (!diags.hasErrorOccurred() && cgm)
     cgm->release();
 
-  // If there are errors before or when releasing the CGM, reset the module to
+  // If there are errors before or when releasing the cgm, reset the module to
   // stop here before invoking the backend.
-  if (diags.hasErrorOccurred()) {
-    if (cgm)
-      // TODO: cgm->clear();
-      return;
-  }
+  assert(!cir::MissingFeatures::cleanupAfterErrorDiags());
 }
 
 void CIRGenerator::HandleInlineFunctionDefinition(FunctionDecl *d) {
