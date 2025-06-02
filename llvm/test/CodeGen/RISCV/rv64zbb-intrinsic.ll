@@ -33,6 +33,7 @@ define signext i32 @orcb32_knownbits(i32 signext %a) nounwind {
 ; RV64ZBB-NEXT:    orc.b a0, a0
 ; RV64ZBB-NEXT:    addi a1, a1, 255
 ; RV64ZBB-NEXT:    or a0, a0, a1
+; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    ret
   %tmp = and i32 %a, 4278190080 ; 0xFF000000
   %tmp2 = or i32 %tmp, 8388609 ; 0x800001

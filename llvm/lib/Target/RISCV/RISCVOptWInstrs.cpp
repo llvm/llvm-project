@@ -600,7 +600,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
             Imm = SignExtend64<32>(Imm << 12);
             Imm += (uint64_t)MI->getOperand(2).getImm();
             if (isInt<32>(Imm))
-              return true;
+              continue;
           }
         }
       }
