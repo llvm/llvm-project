@@ -1857,7 +1857,6 @@ private:
 
 std::string operation::ToString(operation::Operator op) {
   switch (op) {
-  default:
   case Operator::Unknown:
     return "??";
   case Operator::Add:
@@ -1915,6 +1914,7 @@ std::string operation::ToString(operation::Operator op) {
   case Operator::True:
     return ".TRUE.";
   }
+  llvm_unreachable("Unhandler operator");
 }
 
 operation::Operator operation::OperationCode(
