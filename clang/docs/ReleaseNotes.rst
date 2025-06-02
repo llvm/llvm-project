@@ -575,7 +575,8 @@ Improvements to Clang's diagnostics
 
 - ``-Wswitch`` will now diagnose unhandled enumerators in switches also when
   the enumerator is deprecated. Warnings about using deprecated enumerators in
-  switch cases have moved behind a new ``-Wdeprecated-switch-case`` flag.
+  switch cases have moved behind a new ``-Wdeprecated-declarations-switch-case``
+  flag.
 
   For example:
 
@@ -598,7 +599,11 @@ Improvements to Clang's diagnostics
   The warning can be fixed either by adding a ``default:``, or by adding
   ``case Blue:``. Since the enumerator is deprecated, the latter approach will
   trigger a ``'Blue' is deprecated`` warning, which can be turned off with
-  ``-Wno-deprecated-switch-case``.
+  ``-Wno-deprecated-declarations-switch-case``.
+
+- Split diagnosis of implicit integer comparison on negation to a new
+  diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
+  ``-Wimplicit-int-conversion``, so user can turn it off independently.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -668,6 +673,7 @@ Bug Fixes in This Version
   base classes. (GH139452)
 - Fixed an assertion failure in serialization of constexpr structs containing unions. (#GH140130)
 - Fixed duplicate entries in TableGen that caused the wrong attribute to be selected. (GH#140701)
+- Fixed type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed. (#GH141397)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -820,6 +826,7 @@ Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fixed crash when ``-print-stats`` is enabled in compiling IR files. (#GH131608)
+- Fix code completion crash involving PCH serialzied templates. (#GH139019)
 
 OpenACC Specific Changes
 ------------------------

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/MemoryProfileInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -93,13 +94,6 @@ std::string llvm::memprof::getAllocTypeAttributeString(AllocationType Type) {
     assert(false && "Unexpected alloc type");
   }
   llvm_unreachable("invalid alloc type");
-}
-
-static void addAllocTypeAttribute(LLVMContext &Ctx, CallBase *CI,
-                                  AllocationType AllocType) {
-  auto AllocTypeString = getAllocTypeAttributeString(AllocType);
-  auto A = llvm::Attribute::get(Ctx, "memprof", AllocTypeString);
-  CI->addFnAttr(A);
 }
 
 bool llvm::memprof::hasSingleAllocType(uint8_t AllocTypes) {
@@ -425,7 +419,9 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
 
 void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
                                                 StringRef Descriptor) {
-  addAllocTypeAttribute(CI->getContext(), CI, AT);
+  auto AllocTypeString = getAllocTypeAttributeString(AT);
+  auto A = llvm::Attribute::get(CI->getContext(), "memprof", AllocTypeString);
+  CI->addFnAttr(A);
   if (MemProfReportHintedSizes) {
     std::vector<ContextTotalSize> ContextSizeInfo;
     collectContextSizeInfo(Alloc, ContextSizeInfo);
@@ -435,6 +431,12 @@ void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
              << getAllocTypeAttributeString(AT) << ": " << TotalSize << "\n";
     }
   }
+  if (ORE)
+    ORE->emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CI)
+              << ore::NV("AllocationCall", CI) << " in function "
+              << ore::NV("Caller", CI->getFunction())
+              << " marked with memprof allocation attribute "
+              << ore::NV("Attribute", AllocTypeString));
 }
 
 // Build and attach the minimal necessary MIB metadata. If the alloc has a

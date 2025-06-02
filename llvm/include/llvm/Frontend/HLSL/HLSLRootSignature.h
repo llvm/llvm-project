@@ -15,6 +15,7 @@
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/raw_ostream.h"
 #include <variant>
@@ -76,6 +77,33 @@ enum class ShaderVisibility {
   Mesh = 7,
 };
 
+enum class TextureAddressMode {
+  Wrap = 1,
+  Mirror = 2,
+  Clamp = 3,
+  Border = 4,
+  MirrorOnce = 5
+};
+
+enum class ComparisonFunc : unsigned {
+  Never = 1,
+  Less = 2,
+  Equal = 3,
+  LessEqual = 4,
+  Greater = 5,
+  NotEqual = 6,
+  GreaterEqual = 7,
+  Always = 8
+};
+
+enum class StaticBorderColor {
+  TransparentBlack = 0,
+  OpaqueBlack = 1,
+  OpaqueWhite = 2,
+  OpaqueBlackUint = 3,
+  OpaqueWhiteUint = 4
+};
+
 // Definitions of the in-memory data layout structures
 
 // Models the different registers: bReg | tReg | uReg | sReg
@@ -123,7 +151,7 @@ struct DescriptorTable {
   uint32_t NumClauses = 0;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
 
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
 static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
@@ -153,10 +181,22 @@ struct DescriptorTableClause {
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const DescriptorTableClause &Clause);
 
 struct StaticSampler {
   Register Reg;
+  TextureAddressMode AddressU = TextureAddressMode::Wrap;
+  TextureAddressMode AddressV = TextureAddressMode::Wrap;
+  TextureAddressMode AddressW = TextureAddressMode::Wrap;
+  float MipLODBias = 0.f;
+  uint32_t MaxAnisotropy = 16;
+  ComparisonFunc CompFunc = ComparisonFunc::LessEqual;
+  StaticBorderColor BorderColor = StaticBorderColor::OpaqueWhite;
+  float MinLOD = 0.f;
+  float MaxLOD = std::numeric_limits<float>::max();
+  uint32_t Space = 0;
+  ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam
@@ -179,7 +219,7 @@ using RootElement =
     std::variant<RootFlags, RootConstants, RootDescriptor, DescriptorTable,
                  DescriptorTableClause, StaticSampler>;
 
-void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
+LLVM_ABI void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 
 class MetadataBuilder {
 public:
@@ -190,10 +230,13 @@ public:
   ///
   /// Accumulates the root signature and returns the Metadata node that is just
   /// a list of all the elements
-  MDNode *BuildRootSignature();
+  LLVM_ABI MDNode *BuildRootSignature();
 
 private:
   /// Define the various builders for the different metadata types
+  MDNode *BuildRootFlags(const RootFlags &Flags);
+  MDNode *BuildRootConstants(const RootConstants &Constants);
+  MDNode *BuildRootDescriptor(const RootDescriptor &Descriptor);
   MDNode *BuildDescriptorTable(const DescriptorTable &Table);
   MDNode *BuildDescriptorTableClause(const DescriptorTableClause &Clause);
 
