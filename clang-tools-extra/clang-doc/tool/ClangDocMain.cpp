@@ -110,7 +110,7 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
-enum OutputFormatTy { md, yaml, html, mustache };
+enum OutputFormatTy { md, yaml, html, mustache, json };
 
 static llvm::cl::opt<OutputFormatTy> FormatEnum(
     "format", llvm::cl::desc("Format for outputted docs."),
@@ -121,7 +121,9 @@ static llvm::cl::opt<OutputFormatTy> FormatEnum(
                      clEnumValN(OutputFormatTy::html, "html",
                                 "Documentation in HTML format."),
                      clEnumValN(OutputFormatTy::mustache, "mustache",
-                                "Documentation in mustache HTML format")),
+                                "Documentation in mustache HTML format"),
+                     clEnumValN(OutputFormatTy::json, "json",
+                                "Documentation in JSON format")),
     llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
 
 static llvm::ExitOnError ExitOnErr;
@@ -136,6 +138,8 @@ static std::string getFormatString() {
     return "html";
   case OutputFormatTy::mustache:
     return "mustache";
+  case OutputFormatTy::json:
+    return "json";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
