@@ -90,8 +90,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   }
 
   assert(NumParameters == ParamsOffsets.size());
-  const RootParameterInfo *H = ParametersContainer.begin();
-  for (size_t I = 0; I < NumParameters; ++I, H++) {
+  for (size_t I = 0; I < NumParameters; ++I) {
     rewriteOffsetToCurrentByte(BOS, ParamsOffsets[I]);
     const auto &[Type, Loc] = ParametersContainer.getTypeAndLocForParameter(I);
     switch (Type) {
@@ -104,12 +103,13 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       support::endian::write(BOS, Constants.Num32BitValues,
                              llvm::endianness::little);
-      }  break;
+      break;
+    }
     case llvm::to_underlying(dxbc::RootParameterType::CBV):
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):{
+    case llvm::to_underlying(dxbc::RootParameterType::UAV): {
       const dxbc::RTS0::v2::RootDescriptor &Descriptor =
-                ParametersContainer.getRootDescriptor(Loc);
+          ParametersContainer.getRootDescriptor(Loc);
 
       support::endian::write(BOS, Descriptor.ShaderRegister,
                              llvm::endianness::little);

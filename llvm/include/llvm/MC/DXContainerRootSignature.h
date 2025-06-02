@@ -9,7 +9,6 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include <cstdint>
 #include <limits>
-#include <variant>
 
 namespace llvm {
 
