@@ -7462,18 +7462,11 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::FNeg:
   case Instruction::PHI:
   case Instruction::Select:
-  case Instruction::URem:
-  case Instruction::SRem:
   case Instruction::ExtractValue:
   case Instruction::InsertValue:
   case Instruction::Freeze:
   case Instruction::ICmp:
   case Instruction::FCmp:
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul:
-  case Instruction::FDiv:
-  case Instruction::FRem:
   case Instruction::GetElementPtr:
     return false;
   default: {
