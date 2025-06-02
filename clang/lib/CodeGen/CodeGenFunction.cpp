@@ -82,7 +82,8 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
       Builder(cgm, cgm.getModule().getContext(), llvm::ConstantFolder(),
               CGBuilderInserterTy(this)),
       SanOpts(CGM.getLangOpts().Sanitize), CurFPFeatures(CGM.getLangOpts()),
-      DebugInfo(CGM.getModuleDebugInfo()), PGO(cgm),
+      DebugInfo(CGM.getModuleDebugInfo()),
+      PGO(std::make_unique<CodeGenPGO>(cgm)),
       ShouldEmitLifetimeMarkers(
           shouldEmitLifetimeMarkers(CGM.getCodeGenOpts(), CGM.getLangOpts())) {
   if (!suppressNewContext)
@@ -1611,7 +1612,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     CurFn->addFnAttr(llvm::Attribute::MustProgress);
 
   // Generate the body of the function.
-  PGO.assignRegionCounters(GD, CurFn);
+  PGO->assignRegionCounters(GD, CurFn);
   if (isa<CXXDestructorDecl>(FD))
     EmitDestructorBody(Args);
   else if (isa<CXXConstructorDecl>(FD))
@@ -1697,7 +1698,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   // Emit the standard function epilogue.
   FinishFunction(BodyRange.getEnd());
 
-  PGO.verifyCounterMap();
+  PGO->verifyCounterMap();
 
   // If we haven't marked the function nothrow through other means, do
   // a quick pass now to see if we can.
@@ -1821,7 +1822,7 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
   if (!AllowLabels && CodeGenFunction::ContainsLabel(Cond))
     return false;  // Contains a label.
 
-  PGO.markStmtMaybeUsed(Cond);
+  PGO->markStmtMaybeUsed(Cond);
   ResultInt = Int;
   return true;
 }
