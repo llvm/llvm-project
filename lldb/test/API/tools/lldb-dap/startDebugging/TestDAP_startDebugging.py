@@ -15,7 +15,7 @@ class TestDAP_startDebugging(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         source = "main.c"
-        self.build_and_launch(program, stopOnEntry=True)
+        self.build_and_launch(program)
 
         breakpoint_line = line_number(source, "// breakpoint")
 

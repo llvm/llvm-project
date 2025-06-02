@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines the analyzer options avaible with -analyzer-config.
+//  Note that clang/docs/tools/generate_analyzer_options_docs.py relies on the
+//  structure of this file, so if this file is refactored, then make sure to
+//  update that script as well.
 //
 //===----------------------------------------------------------------------===//
 

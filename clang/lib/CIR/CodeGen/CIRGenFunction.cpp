@@ -12,6 +12,7 @@
 
 #include "CIRGenFunction.h"
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
@@ -41,10 +42,6 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
 #include "clang/AST/TypeNodes.inc"
       llvm_unreachable("non-canonical or dependent type in IR-generation");
 
-    case Type::ArrayParameter:
-    case Type::HLSLAttributedResource:
-      llvm_unreachable("NYI");
-
     case Type::Auto:
     case Type::DeducedTemplateSpecialization:
       llvm_unreachable("undeduced type in IR-generation");
@@ -65,6 +62,8 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       return cir::TEK_Scalar;
 
     // Complexes.
@@ -78,6 +77,7 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::Record:
     case Type::ObjCObject:
     case Type::ObjCInterface:
+    case Type::ArrayParameter:
       return cir::TEK_Aggregate;
 
     // We operate on atomic values according to their underlying type.
@@ -475,14 +475,31 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   return fn;
 }
 
+/// Given a value of type T* that may not be to a complete object, construct
+/// an l-vlaue withi the natural pointee alignment of T.
+LValue CIRGenFunction::makeNaturalAlignPointeeAddrLValue(mlir::Value val,
+                                                         QualType ty) {
+  // FIXME(cir): is it safe to assume Op->getResult(0) is valid? Perhaps
+  // assert on the result type first.
+  LValueBaseInfo baseInfo;
+  assert(!cir::MissingFeatures::opTBAA());
+  CharUnits align = cgm.getNaturalTypeAlignment(ty, &baseInfo);
+  return makeAddrLValue(Address(val, align), ty, baseInfo);
+}
+
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
                                                      FunctionArgList &args) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
   QualType retTy = fd->getReturnType();
 
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
-  if (md && md->isInstance())
-    cgm.errorNYI(fd->getSourceRange(), "buildFunctionArgList: CXXMethodDecl");
+  if (md && md->isInstance()) {
+    if (cgm.getCXXABI().hasThisReturn(gd))
+      cgm.errorNYI(fd->getSourceRange(), "this return");
+    else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
+      cgm.errorNYI(fd->getSourceRange(), "most derived return");
+    cgm.getCXXABI().buildThisParam(*this, args);
+  }
 
   if (isa<CXXConstructorDecl>(fd))
     cgm.errorNYI(fd->getSourceRange(),
@@ -513,6 +530,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
+  case Expr::StringLiteralClass:
+    return emitStringLiteralLValue(cast<StringLiteral>(e));
   case Expr::MemberExprClass:
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::BinaryOperatorClass:
@@ -530,10 +549,20 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                  "CompoundAssignOperator with ComplexType");
     return LValue();
   }
+  case Expr::CallExprClass:
+  case Expr::CXXMemberCallExprClass:
+  case Expr::CXXOperatorCallExprClass:
+  case Expr::UserDefinedLiteralClass:
+    return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  case Expr::CStyleCastExprClass:
+  case Expr::CXXStaticCastExprClass:
+  case Expr::CXXDynamicCastExprClass:
+  case Expr::ImplicitCastExprClass:
+    return emitCastLValue(cast<CastExpr>(e));
   }
 }
 
@@ -577,7 +606,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // respective address.
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
   const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
-  builder.createStore(loc, zeroValue, destPtr.getPointer());
+  builder.createStore(loc, zeroValue, destPtr);
 }
 
 } // namespace clang::CIRGen

@@ -14,6 +14,7 @@
 
 #include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
+#include "flang/Optimizer/CodeGen/LLVMInsertChainFolder.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
@@ -1043,22 +1044,12 @@ static mlir::SymbolRefAttr getMalloc(fir::AllocMemOp op,
 static mlir::Value
 computeElementDistance(mlir::Location loc, mlir::Type llvmObjectType,
                        mlir::Type idxTy,
-                       mlir::ConversionPatternRewriter &rewriter) {
-  // Note that we cannot use something like
-  // mlir::LLVM::getPrimitiveTypeSizeInBits() for the element type here. For
-  // example, it returns 10 bytes for mlir::Float80Type for targets where it
-  // occupies 16 bytes. Proper solution is probably to use
-  // mlir::DataLayout::getTypeABIAlignment(), but DataLayout is not being set
-  // yet (see llvm-project#57230). For the time being use the '(intptr_t)((type
-  // *)0 + 1)' trick for all types. The generated instructions are optimized
-  // into constant by the first pass of InstCombine, so it should not be a
-  // performance issue.
-  auto llvmPtrTy = ::getLlvmPtrType(llvmObjectType.getContext());
-  auto nullPtr = rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPtrTy);
-  auto gep = rewriter.create<mlir::LLVM::GEPOp>(
-      loc, llvmPtrTy, llvmObjectType, nullPtr,
-      llvm::ArrayRef<mlir::LLVM::GEPArg>{1});
-  return rewriter.create<mlir::LLVM::PtrToIntOp>(loc, idxTy, gep);
+                       mlir::ConversionPatternRewriter &rewriter,
+                       const mlir::DataLayout &dataLayout) {
+  llvm::TypeSize size = dataLayout.getTypeSize(llvmObjectType);
+  unsigned short alignment = dataLayout.getTypeABIAlignment(llvmObjectType);
+  std::int64_t distance = llvm::alignTo(size, alignment);
+  return genConstantIndex(loc, idxTy, rewriter, distance);
 }
 
 /// Return value of the stride in bytes between adjacent elements
@@ -1066,10 +1057,10 @@ computeElementDistance(mlir::Location loc, mlir::Type llvmObjectType,
 /// \p idxTy integer type.
 static mlir::Value
 genTypeStrideInBytes(mlir::Location loc, mlir::Type idxTy,
-                     mlir::ConversionPatternRewriter &rewriter,
-                     mlir::Type llTy) {
+                     mlir::ConversionPatternRewriter &rewriter, mlir::Type llTy,
+                     const mlir::DataLayout &dataLayout) {
   // Create a pointer type and use computeElementDistance().
-  return computeElementDistance(loc, llTy, idxTy, rewriter);
+  return computeElementDistance(loc, llTy, idxTy, rewriter, dataLayout);
 }
 
 namespace {
@@ -1111,7 +1102,7 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
   mlir::Value genTypeSizeInBytes(mlir::Location loc, mlir::Type idxTy,
                                  mlir::ConversionPatternRewriter &rewriter,
                                  mlir::Type llTy) const {
-    return computeElementDistance(loc, llTy, idxTy, rewriter);
+    return computeElementDistance(loc, llTy, idxTy, rewriter, getDataLayout());
   }
 };
 } // namespace
@@ -1323,8 +1314,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                                    fir::CharacterType charTy,
                                    mlir::ValueRange lenParams) const {
     auto i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
-    mlir::Value size =
-        genTypeStrideInBytes(loc, i64Ty, rewriter, this->convertType(charTy));
+    mlir::Value size = genTypeStrideInBytes(
+        loc, i64Ty, rewriter, this->convertType(charTy), this->getDataLayout());
     if (charTy.hasConstantLen())
       return size; // Length accounted for in the genTypeStrideInBytes GEP.
     // Otherwise,  multiply the single character size by the length.
@@ -1338,6 +1329,7 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
   std::tuple<mlir::Value, mlir::Value> getSizeAndTypeCode(
       mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
       mlir::Type boxEleTy, mlir::ValueRange lenParams = {}) const {
+    const mlir::DataLayout &dataLayout = this->getDataLayout();
     auto i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
     if (auto eleTy = fir::dyn_cast_ptrEleTy(boxEleTy))
       boxEleTy = eleTy;
@@ -1354,18 +1346,19 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
         mlir::dyn_cast<fir::LogicalType>(boxEleTy) || fir::isa_real(boxEleTy) ||
         fir::isa_complex(boxEleTy))
       return {genTypeStrideInBytes(loc, i64Ty, rewriter,
-                                   this->convertType(boxEleTy)),
+                                   this->convertType(boxEleTy), dataLayout),
               typeCodeVal};
     if (auto charTy = mlir::dyn_cast<fir::CharacterType>(boxEleTy))
       return {getCharacterByteSize(loc, rewriter, charTy, lenParams),
               typeCodeVal};
     if (fir::isa_ref_type(boxEleTy)) {
       auto ptrTy = ::getLlvmPtrType(rewriter.getContext());
-      return {genTypeStrideInBytes(loc, i64Ty, rewriter, ptrTy), typeCodeVal};
+      return {genTypeStrideInBytes(loc, i64Ty, rewriter, ptrTy, dataLayout),
+              typeCodeVal};
     }
     if (mlir::isa<fir::RecordType>(boxEleTy))
       return {genTypeStrideInBytes(loc, i64Ty, rewriter,
-                                   this->convertType(boxEleTy)),
+                                   this->convertType(boxEleTy), dataLayout),
               typeCodeVal};
     fir::emitFatalError(loc, "unhandled type in fir.box code generation");
   }
@@ -1837,7 +1830,9 @@ static bool isDeviceAllocation(mlir::Value val, mlir::Value adaptorVal) {
         (callOp.getCallee().value().getRootReference().getValue().starts_with(
              RTNAME_STRING(CUFMemAlloc)) ||
          callOp.getCallee().value().getRootReference().getValue().starts_with(
-             RTNAME_STRING(CUFAllocDescriptor))))
+             RTNAME_STRING(CUFAllocDescriptor)) ||
+         callOp.getCallee().value().getRootReference().getValue() ==
+             "__tgt_acc_get_deviceptr"))
       return true;
   return false;
 }
@@ -1909,8 +1904,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     if (hasSubcomp) {
       // We have a subcomponent. The step value needs to be the number of
       // bytes per element (which is a derived type).
-      prevDimByteStride =
-          genTypeStrideInBytes(loc, i64Ty, rewriter, convertType(seqEleTy));
+      prevDimByteStride = genTypeStrideInBytes(
+          loc, i64Ty, rewriter, convertType(seqEleTy), getDataLayout());
     } else if (hasSubstr) {
       // We have a substring. The step value needs to be the number of bytes
       // per CHARACTER element.
@@ -2420,15 +2415,39 @@ struct InsertOnRangeOpConversion
   doRewrite(fir::InsertOnRangeOp range, mlir::Type ty, OpAdaptor adaptor,
             mlir::ConversionPatternRewriter &rewriter) const override {
 
-    llvm::SmallVector<std::int64_t> dims;
-    auto type = adaptor.getOperands()[0].getType();
+    auto arrayType = adaptor.getSeq().getType();
 
     // Iteratively extract the array dimensions from the type.
+    llvm::SmallVector<std::int64_t> dims;
+    mlir::Type type = arrayType;
     while (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(type)) {
       dims.push_back(t.getNumElements());
       type = t.getElementType();
     }
 
+    // Avoid generating long insert chain that are very slow to fold back
+    // (which is required in globals when later generating LLVM IR). Attempt to
+    // fold the inserted element value to an attribute and build an ArrayAttr
+    // for the resulting array.
+    if (range.isFullRange()) {
+      llvm::FailureOr<mlir::Attribute> cst =
+          fir::tryFoldingLLVMInsertChain(adaptor.getVal(), rewriter);
+      if (llvm::succeeded(cst)) {
+        mlir::Attribute dimVal = *cst;
+        for (auto dim : llvm::reverse(dims)) {
+          // Use std::vector in case the number of elements is big.
+          std::vector<mlir::Attribute> elements(dim, dimVal);
+          dimVal = mlir::ArrayAttr::get(range.getContext(), elements);
+        }
+        // Replace insert chain with constant.
+        rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(range, arrayType,
+                                                            dimVal);
+        return mlir::success();
+      }
+    }
+
+    // The inserted value cannot be folded to an attribute, turn the
+    // insert_range into an llvm.insertvalue chain.
     llvm::SmallVector<std::int64_t> lBounds;
     llvm::SmallVector<std::int64_t> uBounds;
 
@@ -2442,8 +2461,8 @@ struct InsertOnRangeOpConversion
 
     auto &subscripts = lBounds;
     auto loc = range.getLoc();
-    mlir::Value lastOp = adaptor.getOperands()[0];
-    mlir::Value insertVal = adaptor.getOperands()[1];
+    mlir::Value lastOp = adaptor.getSeq();
+    mlir::Value insertVal = adaptor.getVal();
 
     while (subscripts != uBounds) {
       lastOp = rewriter.create<mlir::LLVM::InsertValueOp>(
@@ -3139,7 +3158,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       // initialization is on the full range.
       auto insertOnRangeOps = gr.front().getOps<fir::InsertOnRangeOp>();
       for (auto insertOp : insertOnRangeOps) {
-        if (isFullRange(insertOp.getCoor(), insertOp.getType())) {
+        if (insertOp.isFullRange()) {
           auto seqTyAttr = convertType(insertOp.getType());
           auto *op = insertOp.getVal().getDefiningOp();
           auto constant = mlir::dyn_cast<mlir::arith::ConstantOp>(op);
@@ -3169,22 +3188,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     return mlir::success();
   }
 
-  bool isFullRange(mlir::DenseIntElementsAttr indexes,
-                   fir::SequenceType seqTy) const {
-    auto extents = seqTy.getShape();
-    if (indexes.size() / 2 != static_cast<int64_t>(extents.size()))
-      return false;
-    auto cur_index = indexes.value_begin<int64_t>();
-    for (unsigned i = 0; i < indexes.size(); i += 2) {
-      if (*(cur_index++) != 0)
-        return false;
-      if (*(cur_index++) != extents[i / 2] - 1)
-        return false;
-    }
-    return true;
-  }
-
-  // TODO: String comparaison should be avoided. Replace linkName with an
+  // TODO: String comparisons should be avoided. Replace linkName with an
   // enumeration.
   mlir::LLVM::Linkage
   convertLinkage(std::optional<llvm::StringRef> optLinkage) const {
@@ -3251,8 +3255,9 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
       if (auto callOp = mlir::dyn_cast_or_null<mlir::LLVM::CallOp>(
               inputBoxStorage.getDefiningOp())) {
         if (callOp.getCallee() &&
-            (*callOp.getCallee())
-                .starts_with(RTNAME_STRING(CUFAllocDescriptor))) {
+            ((*callOp.getCallee())
+                 .starts_with(RTNAME_STRING(CUFAllocDescriptor)) ||
+             (*callOp.getCallee()).starts_with("__tgt_acc_get_deviceptr"))) {
           // CUDA Fortran local descriptor are allocated in managed memory. So
           // new storage must be allocated the same way.
           auto mod = load->getParentOfType<mlir::ModuleOp>();
@@ -3604,8 +3609,8 @@ struct CopyOpConversion : public fir::FIROpConversion<fir::CopyOp> {
     mlir::Value llvmDestination = adaptor.getDestination();
     mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
     mlir::Type copyTy = fir::unwrapRefType(copy.getSource().getType());
-    mlir::Value copySize =
-        genTypeStrideInBytes(loc, i64Ty, rewriter, convertType(copyTy));
+    mlir::Value copySize = genTypeStrideInBytes(
+        loc, i64Ty, rewriter, convertType(copyTy), getDataLayout());
 
     mlir::LLVM::AliasAnalysisOpInterface newOp;
     if (copy.getNoOverlap())

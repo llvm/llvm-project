@@ -6056,7 +6056,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in {
                         PseudoInstExpansion<(CSRRS GPR:$rd, SysRegVLENB.Encoding, X0)>,
                         Sched<[WriteRdVLENB]>;
   let Defs = [VL, VTYPE] in {
-  def PseudoReadVLENBViaVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins uimm5:$shamt),
+  def PseudoReadVLENBViaVSETVLIX0 : Pseudo<(outs GPRNoX0:$rd), (ins uimm5:$shamt),
                                   []>,
                            Sched<[WriteVSETVLI, ReadVSETVLI]>;
   }
@@ -6096,9 +6096,12 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
 def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPRNoX0:$rs1, VTypeIOp11:$vtypei), []>,
                     PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
                     Sched<[WriteVSETVLI, ReadVSETVLI]>;
-def PseudoVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>,
+def PseudoVSETVLIX0 : Pseudo<(outs GPRNoX0:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>,
                       PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
                       Sched<[WriteVSETVLI, ReadVSETVLI]>;
+def PseudoVSETVLIX0X0 : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>,
+                        PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
+                        Sched<[WriteVSETVLI, ReadVSETVLI]>;
 def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp10:$vtypei), []>,
                      PseudoInstExpansion<(VSETIVLI GPR:$rd, uimm5:$rs1, VTypeIOp10:$vtypei)>,
                      Sched<[WriteVSETIVLI]>;
@@ -6733,9 +6736,9 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
     Sched<[WriteVMovXS, ReadVMovXS]>,
     RISCVVPseudo;
   let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X, isReMaterializable = 1,
-      Constraints = "$rd = $rs1" in
+      Constraints = "$rd = $passthru" in
   def PseudoVMV_S_X: Pseudo<(outs VR:$rd),
-                            (ins VR:$rs1, GPR:$rs2, AVL:$vl, sew:$sew),
+                            (ins VR:$passthru, GPR:$rs1, AVL:$vl, sew:$sew),
                             []>,
     Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>,
     RISCVVPseudo;
@@ -6756,10 +6759,10 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
       Sched<[WriteVMovFS, ReadVMovFS]>,
       RISCVVPseudo;
     let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F, isReMaterializable = 1,
-        Constraints = "$rd = $rs1" in
+        Constraints = "$rd = $passthru" in
     def "PseudoVFMV_S_" # f.FX :
       Pseudo<(outs VR:$rd),
-             (ins VR:$rs1, f.fprclass:$rs2, AVL:$vl, sew:$sew),
+             (ins VR:$passthru, f.fprclass:$rs1, AVL:$vl, sew:$sew),
              []>,
       Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>,
       RISCVVPseudo;

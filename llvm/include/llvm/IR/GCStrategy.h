@@ -63,6 +63,7 @@ class Type;
 class GCStrategy {
 private:
   friend class GCModuleInfo;
+  friend class CollectorMetadataAnalysis;
 
   std::string Name;
 

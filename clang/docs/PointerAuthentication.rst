@@ -554,7 +554,7 @@ with this idea:
 
 - It's unclear whether this kind of encryption is even possible without
   increasing the storage size of a signed pointer.  If the storage size can be
-  increased, brute-force atacks can be equally well mitigated by simply storing
+  increased, brute-force attacks can be equally well mitigated by simply storing
   a larger signature.
 
 - It would likely be impossible to implement a ``strip`` operation, which might

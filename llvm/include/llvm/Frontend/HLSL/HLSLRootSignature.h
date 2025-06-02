@@ -20,6 +20,10 @@
 #include <variant>
 
 namespace llvm {
+class LLVMContext;
+class MDNode;
+class Metadata;
+
 namespace hlsl {
 namespace rootsig {
 
@@ -40,6 +44,14 @@ enum class RootFlags : uint32_t {
   CBVSRVUAVHeapDirectlyIndexed = 0x400,
   SamplerHeapDirectlyIndexed = 0x800,
   ValidFlags = 0x00000fff
+};
+
+enum class RootDescriptorFlags : unsigned {
+  None = 0,
+  DataVolatile = 0x2,
+  DataStaticWhileSetAtExecute = 0x4,
+  DataStatic = 0x8,
+  ValidFlags = 0xe,
 };
 
 enum class DescriptorRangeFlags : unsigned {
@@ -64,6 +76,33 @@ enum class ShaderVisibility {
   Mesh = 7,
 };
 
+enum class TextureAddressMode {
+  Wrap = 1,
+  Mirror = 2,
+  Clamp = 3,
+  Border = 4,
+  MirrorOnce = 5
+};
+
+enum class ComparisonFunc : unsigned {
+  Never = 1,
+  Less = 2,
+  Equal = 3,
+  LessEqual = 4,
+  Greater = 5,
+  NotEqual = 6,
+  GreaterEqual = 7,
+  Always = 8
+};
+
+enum class StaticBorderColor {
+  TransparentBlack = 0,
+  OpaqueBlack = 1,
+  OpaqueWhite = 2,
+  OpaqueBlackUint = 3,
+  OpaqueWhiteUint = 4
+};
+
 // Definitions of the in-memory data layout structures
 
 // Models the different registers: bReg | tReg | uReg | sReg
@@ -81,13 +120,37 @@ struct RootConstants {
   ShaderVisibility Visibility = ShaderVisibility::All;
 };
 
+enum class DescriptorType : uint8_t { SRV = 0, UAV, CBuffer };
+// Models RootDescriptor : CBV | SRV | UAV, by collecting like parameters
+struct RootDescriptor {
+  DescriptorType Type;
+  Register Reg;
+  uint32_t Space = 0;
+  ShaderVisibility Visibility = ShaderVisibility::All;
+  RootDescriptorFlags Flags;
+
+  void setDefaultFlags() {
+    switch (Type) {
+    case DescriptorType::CBuffer:
+    case DescriptorType::SRV:
+      Flags = RootDescriptorFlags::DataStaticWhileSetAtExecute;
+      break;
+    case DescriptorType::UAV:
+      Flags = RootDescriptorFlags::DataVolatile;
+      break;
+    }
+  }
+};
+
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
   ShaderVisibility Visibility = ShaderVisibility::All;
-  uint32_t NumClauses = 0; // The number of clauses in the table
-
-  void dump(raw_ostream &OS) const;
+  // Denotes that the previous NumClauses in the RootElement array
+  // are the clauses in the table.
+  uint32_t NumClauses = 0;
 };
+
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
 
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
 static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
@@ -115,15 +178,70 @@ struct DescriptorTableClause {
       break;
     }
   }
-
-  void dump(raw_ostream &OS) const;
 };
 
-// Models RootElement : RootConstants | DescriptorTable | DescriptorTableClause
-using RootElement = std::variant<RootFlags, RootConstants, DescriptorTable,
-                                 DescriptorTableClause>;
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
+
+struct StaticSampler {
+  Register Reg;
+  TextureAddressMode AddressU = TextureAddressMode::Wrap;
+  TextureAddressMode AddressV = TextureAddressMode::Wrap;
+  TextureAddressMode AddressW = TextureAddressMode::Wrap;
+  float MipLODBias = 0.f;
+  uint32_t MaxAnisotropy = 16;
+  ComparisonFunc CompFunc = ComparisonFunc::LessEqual;
+  StaticBorderColor BorderColor = StaticBorderColor::OpaqueWhite;
+  float MinLOD = 0.f;
+  float MaxLOD = std::numeric_limits<float>::max();
+  uint32_t Space = 0;
+  ShaderVisibility Visibility = ShaderVisibility::All;
+};
+
+/// Models RootElement : RootFlags | RootConstants | RootParam
+///  | DescriptorTable | DescriptorTableClause | StaticSampler
+///
+/// A Root Signature is modeled in-memory by an array of RootElements. These
+/// aim to map closely to their DSL grammar reprsentation defined in the spec.
+///
+/// Each optional parameter has its default value defined in the struct, and,
+/// each mandatory parameter does not have a default initialization.
+///
+/// For the variants RootFlags, RootConstants, RootParam, StaticSampler and
+/// DescriptorTableClause: each data member maps directly to a parameter in the
+/// grammar.
+///
+/// The DescriptorTable is modelled by having its Clauses as the previous
+/// RootElements in the array, and it holds a data member for the Visibility
+/// parameter.
+using RootElement =
+    std::variant<RootFlags, RootConstants, RootDescriptor, DescriptorTable,
+                 DescriptorTableClause, StaticSampler>;
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
+
+class MetadataBuilder {
+public:
+  MetadataBuilder(llvm::LLVMContext &Ctx, ArrayRef<RootElement> Elements)
+      : Ctx(Ctx), Elements(Elements) {}
+
+  /// Iterates through the elements and dispatches onto the correct Build method
+  ///
+  /// Accumulates the root signature and returns the Metadata node that is just
+  /// a list of all the elements
+  MDNode *BuildRootSignature();
+
+private:
+  /// Define the various builders for the different metadata types
+  MDNode *BuildRootFlags(const RootFlags &Flags);
+  MDNode *BuildRootConstants(const RootConstants &Constants);
+  MDNode *BuildRootDescriptor(const RootDescriptor &Descriptor);
+  MDNode *BuildDescriptorTable(const DescriptorTable &Table);
+  MDNode *BuildDescriptorTableClause(const DescriptorTableClause &Clause);
+
+  llvm::LLVMContext &Ctx;
+  ArrayRef<RootElement> Elements;
+  SmallVector<Metadata *> GeneratedMetadata;
+};
 
 } // namespace rootsig
 } // namespace hlsl
