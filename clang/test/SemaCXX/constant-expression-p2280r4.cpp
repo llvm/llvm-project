@@ -250,3 +250,15 @@ namespace uninit_reference_used {
   // expected-note {{in call to 'g5()'}}
 
 }
+
+namespace param_reference {
+  constexpr int arbitrary = -12345;
+  constexpr void f(const int &x = arbitrary) { // expected-note {{declared here}}
+    constexpr const int &v1 = x; // expected-error {{must be initialized by a constant expression}} \
+    // expected-note {{reference to 'x' is not a constant expression}}
+    constexpr const int &v2 = (x, arbitrary); // expected-warning {{left operand of comma operator has no effect}}
+    constexpr int v3 = x; // expected-error {{must be initialized by a constant expression}}
+    static_assert(x==arbitrary); // expected-error {{static assertion expression is not an integral constant expression}}
+    static_assert(&x - &x == 0);
+  }
+}
