@@ -1636,18 +1636,6 @@ MCCVInlineLineTableFragmentRef::materialize(MCCASReader &Reader,
   return getData().size();
 }
 
-Expected<MCDummyFragmentRef>
-MCDummyFragmentRef::create(MCCASBuilder &MB, const MCDummyFragment &F,
-                           unsigned FragmentSize,
-                           ArrayRef<char> FragmentContents) {
-  llvm_unreachable("Should not have been added");
-}
-
-Expected<uint64_t> MCDummyFragmentRef::materialize(MCCASReader &Reader,
-                                                   raw_ostream *Stream) const {
-  llvm_unreachable("Should not have been added");
-}
-
 Expected<MCFillFragmentRef>
 MCFillFragmentRef::create(MCCASBuilder &MB, const MCFillFragment &F,
                           unsigned FragmentSize,
