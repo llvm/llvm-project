@@ -1587,7 +1587,7 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
       mlir::isa_and_nonnull<cir::ConstVectorAttr>(indices)) {
     auto vecAttr = mlir::cast<cir::ConstVectorAttr>(vec);
     auto indicesAttr = mlir::cast<cir::ConstVectorAttr>(indices);
-    auto vecTy = cast<cir::VectorType>(vecAttr.getType());
+    auto vecTy = mlir::cast<cir::VectorType>(vecAttr.getType());
 
     mlir::ArrayAttr vecElts = vecAttr.getElts();
     mlir::ArrayAttr indicesElts = indicesAttr.getElts();
@@ -1598,9 +1598,8 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
     elements.reserve(numElements);
 
     const uint64_t maskBits = llvm::NextPowerOf2(numElements - 1) - 1;
-    for (const mlir::APInt &idxAttr :
-         indicesElts.getAsValueRange<cir::IntAttr, mlir::APInt>()) {
-      uint64_t idxValue = idxAttr.getZExtValue();
+    for (const auto &idxAttr : indicesElts.getAsRange<cir::IntAttr>()) {
+      uint64_t idxValue = idxAttr.getUInt();
       uint64_t newIdx = idxValue & maskBits;
       elements.push_back(vecElts[newIdx]);
     }
