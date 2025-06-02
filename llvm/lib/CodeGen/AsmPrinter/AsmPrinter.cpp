@@ -2322,7 +2322,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   }
 
   if (!TM.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
-    llvm::report_fatal_error("IFuncs are not supported on this platform");
+    reportFatalUsageError("IFuncs are not supported on this platform");
 
   // On Darwin platforms, emit a manually-constructed .symbol_resolver that
   // implements the symbol resolution duties of the IFunc.
@@ -2878,17 +2878,16 @@ void AsmPrinter::emitConstantPool() {
   // Now print stuff into the calculated sections.
   const MCSection *CurSection = nullptr;
   unsigned Offset = 0;
-  for (unsigned i = 0, e = CPSections.size(); i != e; ++i) {
-    for (unsigned j = 0, ee = CPSections[i].CPEs.size(); j != ee; ++j) {
-      unsigned CPI = CPSections[i].CPEs[j];
+  for (const SectionCPs &CPSection : CPSections) {
+    for (unsigned CPI : CPSection.CPEs) {
       MCSymbol *Sym = GetCPISymbol(CPI);
       if (!Sym->isUndefined())
         continue;
 
-      if (CurSection != CPSections[i].S) {
-        OutStreamer->switchSection(CPSections[i].S);
-        emitAlignment(Align(CPSections[i].Alignment));
-        CurSection = CPSections[i].S;
+      if (CurSection != CPSection.S) {
+        OutStreamer->switchSection(CPSection.S);
+        emitAlignment(Align(CPSection.Alignment));
+        CurSection = CPSection.S;
         Offset = 0;
       }
 
@@ -4471,7 +4470,7 @@ GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
 
-  auto [GCPI, Inserted] = GCMetadataPrinters.insert({&S, nullptr});
+  auto [GCPI, Inserted] = GCMetadataPrinters.try_emplace(&S);
   if (!Inserted)
     return GCPI->second.get();
 

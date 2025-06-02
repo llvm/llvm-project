@@ -3138,10 +3138,10 @@ define <2 x i16> @cvt_2f64_to_2i16(<2 x double> %a0) nounwind {
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    vpbroadcastw %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa (%rsp), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; AVX512-NEXT:    vpblendd $13, (%rsp), %xmm0, %xmm1 # 16-byte Folded Reload
+; AVX512-NEXT:    # xmm1 = mem[0],xmm0[1],mem[2,3]
 ; AVX512-NEXT:    vpbroadcastw %xmm0, %xmm0
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; AVX512-NEXT:    addq $40, %rsp
 ; AVX512-NEXT:    retq
   %1 = fptrunc <2 x double> %a0 to <2 x half>
@@ -3272,8 +3272,8 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) nounwind {
 ; AVX512-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    vpbroadcastw %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vpblendd $3, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512-NEXT:    # xmm0 = mem[0,1],xmm0[2,3]
 ; AVX512-NEXT:    addq $72, %rsp
 ; AVX512-NEXT:    retq
   %1 = fptrunc <4 x double> %a0 to <4 x half>
@@ -3404,8 +3404,8 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) nounwind {
 ; AVX512-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    vpbroadcastw %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vpblendd $3, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512-NEXT:    # xmm0 = mem[0,1],xmm0[2,3]
 ; AVX512-NEXT:    addq $72, %rsp
 ; AVX512-NEXT:    retq
   %1 = fptrunc <4 x double> %a0 to <4 x half>
@@ -4107,8 +4107,8 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, ptr %a1) nounwind {
 ; AVX512-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512-NEXT:    callq __truncdfhf2@PLT
 ; AVX512-NEXT:    vpbroadcastw %xmm0, %xmm0
-; AVX512-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512-NEXT:    vpblendd $3, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512-NEXT:    # xmm0 = mem[0,1],xmm0[2,3]
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rbx)
 ; AVX512-NEXT:    addq $64, %rsp
 ; AVX512-NEXT:    popq %rbx

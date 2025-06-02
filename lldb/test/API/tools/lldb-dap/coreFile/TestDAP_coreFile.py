@@ -19,6 +19,7 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
 
         self.create_debug_adapter()
         self.attach(program=exe_file, coreFile=core_file)
+        self.dap_server.request_configurationDone()
 
         expected_frames = [
             {

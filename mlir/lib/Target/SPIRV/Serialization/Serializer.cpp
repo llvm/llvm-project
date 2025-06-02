@@ -996,7 +996,6 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
 
   auto resultID = getNextID();
   APFloat value = floatAttr.getValue();
-  APInt intValue = value.bitcastToAPInt();
 
   auto opcode =
       isSpec ? spirv::Opcode::OpSpecConstant : spirv::Opcode::OpConstant;

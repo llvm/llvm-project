@@ -1141,11 +1141,9 @@ define <4 x i8> @test_bitcast_float_to_4xi8(float %a) #0 {
 ; CHECK-LABEL: test_bitcast_float_to_4xi8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %f1, [test_bitcast_float_to_4xi8_param_0];
-; CHECK-NEXT:    mov.b32 %r1, %f1;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_bitcast_float_to_4xi8_param_0];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %r = bitcast float %a to <4 x i8>
@@ -1169,12 +1167,10 @@ define float @test_bitcast_4xi8_to_float(<4 x i8> %a) #0 {
 ; CHECK-LABEL: test_bitcast_4xi8_to_float(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_bitcast_4xi8_to_float_param_0];
-; CHECK-NEXT:    mov.b32 %f1, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %f1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %r = bitcast <4 x i8> %a to float
   ret float %r

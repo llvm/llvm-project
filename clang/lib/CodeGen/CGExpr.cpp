@@ -21,6 +21,7 @@
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -56,14 +57,16 @@ using namespace clang;
 using namespace CodeGen;
 
 namespace clang {
-// TODO: Introduce frontend options to enabled per sanitizers, similar to
-// `fsanitize-trap`.
+// TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
+//       by -fsanitize-skip-hot-cutoff
 llvm::cl::opt<bool> ClSanitizeGuardChecks(
     "ubsan-guard-checks", llvm::cl::Optional,
     llvm::cl::desc("Guard UBSAN checks with `llvm.allow.ubsan.check()`."));
 
 } // namespace clang
 
+// TODO: consider deprecating ClArrayBoundsPseudoFn; functionality is subsumed
+//       by -fsanitize-annotate-debug-info
 static llvm::cl::opt<bool> ClArrayBoundsPseudoFn(
     "array-bounds-pseudofn", llvm::cl::Hidden, llvm::cl::Optional,
     llvm::cl::desc("Emit debug info that places array-bounds instrumentation "
@@ -205,7 +208,7 @@ RawAddress CodeGenFunction::CreateMemTempWithoutCast(QualType Ty,
 /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
 /// expression and compare the result against zero, returning an Int1Ty value.
 llvm::Value *CodeGenFunction::EvaluateExprAsBool(const Expr *E) {
-  PGO.setCurrentStmt(E);
+  PGO->setCurrentStmt(E);
   if (const MemberPointerType *MPT = E->getType()->getAs<MemberPointerType>()) {
     llvm::Value *MemPtr = EmitScalarExpr(E);
     return CGM.getCXXABI().EmitMemberPointerIsNotNull(*this, MemPtr, MPT);
@@ -2222,6 +2225,8 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   }
 
   llvm::StoreInst *Store = Builder.CreateStore(Value, Addr, Volatile);
+  addInstToCurrentSourceAtom(Store, Value);
+
   if (isNontemporal) {
     llvm::MDNode *Node =
         llvm::MDNode::get(Store->getContext(),
@@ -2505,8 +2510,9 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         Vec = Builder.CreateBitCast(Vec, IRStoreTy);
       }
 
-      Builder.CreateStore(Vec, Dst.getVectorAddress(),
-                          Dst.isVolatileQualified());
+      auto *I = Builder.CreateStore(Vec, Dst.getVectorAddress(),
+                                    Dst.isVolatileQualified());
+      addInstToCurrentSourceAtom(I, Vec);
       return;
     }
 
@@ -2528,8 +2534,9 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       llvm::Instruction *Load = Builder.CreateLoad(Dst.getMatrixAddress());
       llvm::Value *Vec =
           Builder.CreateInsertElement(Load, Src.getScalarVal(), Idx, "matins");
-      Builder.CreateStore(Vec, Dst.getMatrixAddress(),
-                          Dst.isVolatileQualified());
+      auto *I = Builder.CreateStore(Vec, Dst.getMatrixAddress(),
+                                    Dst.isVolatileQualified());
+      addInstToCurrentSourceAtom(I, Vec);
       return;
     }
 
@@ -2670,7 +2677,8 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
   }
 
   // Write the new value back out.
-  Builder.CreateStore(SrcVal, Ptr, Dst.isVolatileQualified());
+  auto *I = Builder.CreateStore(SrcVal, Ptr, Dst.isVolatileQualified());
+  addInstToCurrentSourceAtom(I, SrcVal);
 
   // Return the new value of the bit-field, if requested.
   if (Result) {
@@ -2694,14 +2702,20 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
 
 void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
                                                                LValue Dst) {
+  llvm::Value *SrcVal = Src.getScalarVal();
+  Address DstAddr = Dst.getExtVectorAddress();
+  if (DstAddr.getElementType()->getScalarSizeInBits() >
+      SrcVal->getType()->getScalarSizeInBits())
+    SrcVal = Builder.CreateZExt(
+        SrcVal, convertTypeForLoadStore(Dst.getType(), SrcVal->getType()));
+
   // HLSL allows storing to scalar values through ExtVector component LValues.
   // To support this we need to handle the case where the destination address is
   // a scalar.
-  Address DstAddr = Dst.getExtVectorAddress();
   if (!DstAddr.getElementType()->isVectorTy()) {
     assert(!Dst.getType()->isVectorType() &&
            "this should only occur for non-vector l-values");
-    Builder.CreateStore(Src.getScalarVal(), DstAddr, Dst.isVolatileQualified());
+    Builder.CreateStore(SrcVal, DstAddr, Dst.isVolatileQualified());
     return;
   }
 
@@ -2722,11 +2736,6 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       for (unsigned i = 0; i != NumSrcElts; ++i)
         Mask[getAccessedFieldNo(i, Elts)] = i;
 
-      llvm::Value *SrcVal = Src.getScalarVal();
-      if (VecTy->getScalarSizeInBits() >
-          SrcVal->getType()->getScalarSizeInBits())
-        SrcVal = Builder.CreateZExt(SrcVal, VecTy);
-
       Vec = Builder.CreateShuffleVector(SrcVal, Mask);
     } else if (NumDstElts > NumSrcElts) {
       // Extended the source vector to the same length and then shuffle it
@@ -2737,8 +2746,7 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
       for (unsigned i = 0; i != NumSrcElts; ++i)
         ExtMask.push_back(i);
       ExtMask.resize(NumDstElts, -1);
-      llvm::Value *ExtSrcVal =
-          Builder.CreateShuffleVector(Src.getScalarVal(), ExtMask);
+      llvm::Value *ExtSrcVal = Builder.CreateShuffleVector(SrcVal, ExtMask);
       // build identity
       SmallVector<int, 4> Mask;
       for (unsigned i = 0; i != NumDstElts; ++i)
@@ -2763,10 +2771,6 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
     // be updating one element.
     unsigned InIdx = getAccessedFieldNo(0, Elts);
     llvm::Value *Elt = llvm::ConstantInt::get(SizeTy, InIdx);
-
-    llvm::Value *SrcVal = Src.getScalarVal();
-    if (VecTy->getScalarSizeInBits() > SrcVal->getType()->getScalarSizeInBits())
-      SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
 
     Vec = Builder.CreateInsertElement(Vec, SrcVal, Elt);
   }
@@ -2940,9 +2944,31 @@ CodeGenFunction::EmitLoadOfReference(LValue RefLVal,
   llvm::LoadInst *Load =
       Builder.CreateLoad(RefLVal.getAddress(), RefLVal.isVolatile());
   CGM.DecorateInstructionWithTBAA(Load, RefLVal.getTBAAInfo());
-  return makeNaturalAddressForPointer(Load, RefLVal.getType()->getPointeeType(),
-                                      CharUnits(), /*ForPointeeType=*/true,
-                                      PointeeBaseInfo, PointeeTBAAInfo);
+  QualType PTy = RefLVal.getType()->getPointeeType();
+  CharUnits Align = CGM.getNaturalTypeAlignment(
+      PTy, PointeeBaseInfo, PointeeTBAAInfo, /*ForPointeeType=*/true);
+  if (!PTy->isIncompleteType()) {
+    llvm::LLVMContext &Ctx = getLLVMContext();
+    llvm::MDBuilder MDB(Ctx);
+    // Emit !nonnull metadata
+    if (CGM.getTypes().getTargetAddressSpace(PTy) == 0 &&
+        !CGM.getCodeGenOpts().NullPointerIsValid)
+      Load->setMetadata(llvm::LLVMContext::MD_nonnull,
+                        llvm::MDNode::get(Ctx, {}));
+    // Emit !align metadata
+    if (PTy->isObjectType()) {
+      auto AlignVal = Align.getQuantity();
+      if (AlignVal > 1) {
+        Load->setMetadata(
+            llvm::LLVMContext::MD_align,
+            llvm::MDNode::get(Ctx, MDB.createConstant(llvm::ConstantInt::get(
+                                       Builder.getInt64Ty(), AlignVal))));
+      }
+    }
+  }
+  return makeNaturalAddressForPointer(Load, PTy, Align,
+                                      /*ForPointeeType=*/true, PointeeBaseInfo,
+                                      PointeeTBAAInfo);
 }
 
 LValue CodeGenFunction::EmitLoadOfReferenceLValue(LValue RefLVal) {
@@ -3971,6 +3997,8 @@ void CodeGenFunction::EmitCfiCheckFail() {
                          {Addr, AllVtables}),
       IntPtrTy);
 
+  // TODO: the instructions above are not annotated with debug info. It is
+  // inconvenient to do so because we have not determined SanitizerKind yet.
   const std::pair<int, SanitizerKind::SanitizerOrdinal> CheckKinds[] = {
       {CFITCK_VCall, SanitizerKind::SO_CFIVCall},
       {CFITCK_NVCall, SanitizerKind::SO_CFINVCall},
@@ -3981,6 +4009,9 @@ void CodeGenFunction::EmitCfiCheckFail() {
   for (auto CheckKindOrdinalPair : CheckKinds) {
     int Kind = CheckKindOrdinalPair.first;
     SanitizerKind::SanitizerOrdinal Ordinal = CheckKindOrdinalPair.second;
+
+    ApplyDebugLocation ApplyTrapDI(*this, SanitizerAnnotateDebugInfo(Ordinal));
+
     llvm::Value *Cond =
         Builder.CreateICmpNE(CheckKind, llvm::ConstantInt::get(Int8Ty, Kind));
     if (CGM.getLangOpts().Sanitize.has(Ordinal))
@@ -5978,6 +6009,15 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 
   assert(E->getOpcode() == BO_Assign && "unexpected binary l-value");
 
+  // Create a Key Instructions source location atom group that covers both
+  // LHS and RHS expressions. Nested RHS expressions may get subsequently
+  // separately grouped (1 below):
+  //
+  //   1. `a = b = c`  -> Two atoms.
+  //   2. `x = new(1)` -> One atom (for both addr store and value store).
+  //   3. Complex and agg assignment -> One atom.
+  ApplyAtomGroup Grp(getDebugInfo());
+
   // Note that in all of these cases, __block variables need the RHS
   // evaluated first just in case the variable gets moved by the RHS.
 
@@ -6315,6 +6355,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
     SanitizerScope SanScope(this);
     EmitSanitizerStatReport(llvm::SanStat_CFI_ICall);
+    ApplyDebugLocation ApplyTrapDI(
+        *this, SanitizerAnnotateDebugInfo(SanitizerKind::SO_CFIICall));
 
     llvm::Metadata *MD;
     if (CGM.getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
