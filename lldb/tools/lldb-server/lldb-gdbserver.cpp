@@ -18,7 +18,6 @@
 #endif
 
 #include "LLDBServerUtilities.h"
-#include "Plugins/MockGPU/LLDBServerPluginMockGPU.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
@@ -48,7 +47,13 @@
 #include "Plugins/Process/Windows/Common/NativeProcessWindows.h"
 #endif
 
-#include "Plugins/MockGPU/ProcessMockGPU.h"
+#if defined(LLDB_ENABLE_AMDGPU_PLUGIN)
+#include "Plugins/AMDGPU/LLDBServerPluginAMDGPU.h"
+typedef lldb_private::lldb_server::LLDBServerPluginAMDGPU LLDBServerGPUPlugin;
+#elif defined(LLDB_ENABLE_MOCKGPU_PLUGIN)
+#include "Plugins/MockGPU/LLDBServerPluginMockGPU.h"
+typedef lldb_private::lldb_server::LLDBServerPluginMockGPU LLDBServerGPUPlugin;
+#endif
 
 #ifndef LLGS_PROGRAM_NAME
 #define LLGS_PROGRAM_NAME "lldb-server"
@@ -438,7 +443,7 @@ int main_gdbserver(int argc, char *argv[]) {
   if (!LLDBServerUtilities::SetupLogging(
           log_file, log_channels,
           LLDB_LOG_OPTION_PREPEND_TIMESTAMP |
-          LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD))
+              LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD))
     return -1;
 
   std::vector<llvm::StringRef> Inputs;
@@ -456,8 +461,11 @@ int main_gdbserver(int argc, char *argv[]) {
   NativeProcessManager manager(mainloop);
   GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager, "gdb-server");
 
-  // Install the mock GPU plugin.
-  gdb_server.InstallPlugin(std::make_unique<LLDBServerPluginMockGPU>(gdb_server));
+#if defined(LLDB_ENABLE_AMDGPU_PLUGIN) || defined(LLDB_ENABLE_MOCKGPU_PLUGIN)
+  // Install GPU plugin.
+  gdb_server.InstallPlugin(
+      std::make_unique<LLDBServerGPUPlugin>(gdb_server, mainloop));
+#endif
 
   llvm::StringRef host_and_port;
   if (!Inputs.empty() && connection_fd == SharedSocket::kInvalidFD) {

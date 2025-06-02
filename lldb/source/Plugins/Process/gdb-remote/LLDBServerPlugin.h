@@ -35,14 +35,14 @@ protected:
   using GDBServer = process_gdb_remote::GDBRemoteCommunicationServerLLGS;
   using Manager = NativeProcessProtocol::Manager;
   GDBServer &m_native_process;
-  MainLoop m_main_loop;
+  MainLoop &m_main_loop;
   std::unique_ptr<Manager> m_process_manager_up;
   std::unique_ptr<GDBServer> m_gdb_server;
   bool m_is_listening = false;
   bool m_is_connected = false;
 
 public:
-  LLDBServerPlugin(GDBServer &native_process);
+  LLDBServerPlugin(GDBServer &native_process, MainLoop &main_loop);
   virtual ~LLDBServerPlugin();
 
   /// Check if we are already connected.

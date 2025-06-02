@@ -26,8 +26,8 @@ using namespace lldb_private::lldb_server;
 using namespace lldb_private::process_gdb_remote;
 
 LLDBServerPluginMockGPU::LLDBServerPluginMockGPU(
-  LLDBServerPlugin::GDBServer &native_process)
-    : LLDBServerPlugin(native_process) {
+  LLDBServerPlugin::GDBServer &native_process, MainLoop &main_loop)
+    : LLDBServerPlugin(native_process, main_loop) {
   m_process_manager_up.reset(new ProcessMockGPU::Manager(m_main_loop));
   m_gdb_server.reset(new GDBRemoteCommunicationServerLLGS(
       m_main_loop, *m_process_manager_up, "mock-gpu.server"));
