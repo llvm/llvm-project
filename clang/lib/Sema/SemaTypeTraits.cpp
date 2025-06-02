@@ -1947,6 +1947,8 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
             TypeTrait::UTT_IsCppTriviallyRelocatable)
       .Case("is_replaceable", TypeTrait::UTT_IsReplaceable)
       .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
+      .Case("is_constructible", TypeTrait::TT_IsConstructible)
+      .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
       .Default(std::nullopt);
 }
 
@@ -2257,21 +2259,180 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   }
 }
 
-static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
-                                               SourceLocation Loc, QualType T) {
-  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
-      << T << diag::TraitName::TriviallyCopyable;
+static void DiagnoseNonConstructibleReason(
+    Sema &SemaRef, SourceLocation Loc,
+    const llvm::SmallVector<clang::QualType, 1> &Ts) {
+  if (Ts.empty()) {
+    return;
+  }
 
-  if (T->isReferenceType())
+  bool ContainsVoid = false;
+  for (const QualType &ArgTy : Ts) {
+    ContainsVoid |= ArgTy->isVoidType();
+  }
+
+  if (ContainsVoid)
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
+
+  QualType T = Ts[0];
+  if (T->isFunctionType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+
+  if (T->isIncompleteArrayType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::IncompleteArrayType;
+
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl() || !D->hasDefinition())
+    return;
+
+  llvm::BumpPtrAllocator OpaqueExprAllocator;
+  SmallVector<Expr *, 2> ArgExprs;
+  ArgExprs.reserve(Ts.size() - 1);
+  for (unsigned I = 1, N = Ts.size(); I != N; ++I) {
+    QualType ArgTy = Ts[I];
+    if (ArgTy->isObjectType() || ArgTy->isFunctionType())
+      ArgTy = SemaRef.Context.getRValueReferenceType(ArgTy);
+    ArgExprs.push_back(
+        new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
+            OpaqueValueExpr(Loc, ArgTy.getNonLValueExprType(SemaRef.Context),
+                            Expr::getValueKindForType(ArgTy)));
+  }
+
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::ContextRAII TUContext(SemaRef,
+                              SemaRef.Context.getTranslationUnitDecl());
+  InitializedEntity To(InitializedEntity::InitializeTemporary(T));
+  InitializationKind InitKind(InitializationKind::CreateDirect(Loc, Loc, Loc));
+  InitializationSequence Init(SemaRef, To, InitKind, ArgExprs);
+
+  Init.Diagnose(SemaRef, To, InitKind, ArgExprs);
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
+                                            QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::StandardLayout;
+
+  // Check type-level exclusion first
+  if (T->isVariablyModifiedType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::VLA;
+    return;
+  }
+
+  if (T->isReferenceType()) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::Ref;
-
+    return;
+  }
+  T = T.getNonReferenceType();
   const CXXRecordDecl *D = T->getAsCXXRecordDecl();
   if (!D || D->isInvalidDecl())
     return;
 
   if (D->hasDefinition())
-    DiagnoseNonTriviallyCopyableReason(SemaRef, Loc, D);
+    DiagnoseNonStandardLayoutReason(SemaRef, Loc, D);
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static bool hasMixedAccessSpecifier(const CXXRecordDecl *D) {
+  AccessSpecifier FirstAccess = AS_none;
+  for (const FieldDecl *Field : D->fields()) {
+    if (Field->isUnnamedBitField())
+      continue;
+    AccessSpecifier FieldAccess = Field->getAccess();
+    if (FirstAccess == AS_none) {
+      FirstAccess = FieldAccess;
+    } else if (FieldAccess != FirstAccess) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool hasMultipleDataBaseClassesWithFields(const CXXRecordDecl *D) {
+  int NumBasesWithFields = 0;
+  for (const CXXBaseSpecifier &Base : D->bases()) {
+    const CXXRecordDecl *BaseRD = Base.getType()->getAsCXXRecordDecl();
+    if (!BaseRD || BaseRD->isInvalidDecl())
+      continue;
+
+    for (const FieldDecl *Field : BaseRD->fields()) {
+      if (!Field->isUnnamedBitField()) {
+        ++NumBasesWithFields;
+        break; // Only count the base once.
+      }
+    }
+  }
+  return NumBasesWithFields > 1;
+}
+
+static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
+                                            const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    assert(B.getType()->getAsCXXRecordDecl() && "invalid base?");
+    if (B.isVirtual()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    }
+    if (!B.getType()->isStandardLayoutType()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonStdLayoutBase << B.getType()
+          << B.getSourceRange();
+    }
+  }
+  if (hasMixedAccessSpecifier(D)) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::MixedAccess;
+  }
+  if (hasMultipleDataBaseClassesWithFields(D)) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::MultipleDataBase;
+  }
+  if (D->isPolymorphic()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::VirtualFunction;
+  }
+  for (const FieldDecl *Field : D->fields()) {
+    if (!Field->getType()->isStandardLayoutType()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonStdLayoutMember << Field
+          << Field->getType() << Field->getSourceRange();
+    }
+  }
+}
+
+static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
+                                            QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::StandardLayout;
+
+  // Check type-level exclusion first
+  if (T->isVariablyModifiedType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::VLA;
+    return;
+  }
+
+  if (T->isReferenceType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+    return;
+  }
+  T = T.getNonReferenceType();
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl())
+    return;
+
+  if (D->hasDefinition())
+    DiagnoseNonStandardLayoutReason(SemaRef, Loc, D);
 
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
@@ -2295,6 +2456,12 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case UTT_IsTriviallyCopyable:
     DiagnoseNonTriviallyCopyableReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case TT_IsConstructible:
+    DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
+    break;
+  case UTT_IsStandardLayout:
+    DiagnoseNonStandardLayoutReason(*this, E->getBeginLoc(), Args[0]);
     break;
   default:
     break;
