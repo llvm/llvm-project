@@ -129,6 +129,8 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
     return reportError(Ctx, "Root Descriptor, first element is not a string.");
 
   dxbc::RTS0::v1::RootParameterHeader Header;
+  // a default scenario is not needed here. Scenarios where ElementText is
+  // invalid is previously checked and error handled when this method is called.
   Header.ParameterType =
       StringSwitch<uint32_t>(*ElementText)
           .Case("RootCBV", llvm::to_underlying(dxbc::RootParameterType::CBV))
