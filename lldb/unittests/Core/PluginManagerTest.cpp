@@ -426,7 +426,7 @@ TEST_F(PluginManagerTest, JsonFormat) {
 
   // We should have a "system-runtime" array in the top-level object.
   llvm::json::Array *maybe_array = obj.getArray("system-runtime");
-  ASSERT_TRUE(maybe_array!= nullptr);
+  ASSERT_TRUE(maybe_array != nullptr);
   auto &array = *maybe_array;
   ASSERT_EQ(array.size(), 3u);
 
@@ -460,7 +460,8 @@ TEST_F(PluginManagerTest, JsonFormat) {
   ASSERT_TRUE(array[1].getAsObject()->getString("name") == "c");
 
   // Filtering the JSON output should only include the matching plugins.
-  array = *PluginManager::GetJSON("system-runtime.c").getArray("system-runtime");
+  array =
+      *PluginManager::GetJSON("system-runtime.c").getArray("system-runtime");
   ASSERT_EQ(array.size(), 1u);
   ASSERT_TRUE(array[0].getAsObject()->getString("name") == "c");
 
