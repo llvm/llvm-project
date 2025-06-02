@@ -2959,7 +2959,7 @@ static bool IsAllocatable(const SomeExpr &expr) {
   std::vector<SomeExpr> dsgs{atomic::DesignatorCollector{}(expr)};
   assert(dsgs.size() == 1 && "Should have a single top-level designator");
   evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
-  return !syms.empty() && IsAllocatable(syms.back());
+  return !syms.empty() && IsAllocatable(syms.back()) && !IsArrayElement(expr);
 }
 
 static bool IsPointerAssignment(const evaluate::Assignment &x) {
