@@ -15,7 +15,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-wchar_t *wcsncat(wchar_t *__restrict s1, const wchar_t *__restrict s2, size_t n);
+wchar_t *wcsncat(wchar_t *__restrict s1, const wchar_t *__restrict s2,
+                 size_t n);
 
 } // namespace LIBC_NAMESPACE_DECL
 
