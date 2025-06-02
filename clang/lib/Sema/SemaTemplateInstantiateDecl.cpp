@@ -647,21 +647,30 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
   EnterExpressionEvaluationContext Unevaluated(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  ExprResult ResultX = S.SubstExpr(Attr.getMaxNumWorkGroupsX(), TemplateArgs);
-  if (!ResultX.isUsable())
-    return;
-  ExprResult ResultY = S.SubstExpr(Attr.getMaxNumWorkGroupsY(), TemplateArgs);
-  if (!ResultY.isUsable())
-    return;
-  ExprResult ResultZ = S.SubstExpr(Attr.getMaxNumWorkGroupsZ(), TemplateArgs);
-  if (!ResultZ.isUsable())
-    return;
+  Expr *XExpr = nullptr;
+  Expr *YExpr = nullptr;
+  Expr *ZExpr = nullptr;
 
-  Expr *XExpr = ResultX.getAs<Expr>();
-  Expr *YExpr = ResultY.getAs<Expr>();
-  Expr *ZExpr = ResultZ.getAs<Expr>();
+  if (Attr.getMaxNumWorkGroupsX()) {
+    ExprResult ResultX = S.SubstExpr(Attr.getMaxNumWorkGroupsX(), TemplateArgs);
+    if (ResultX.isUsable())
+      XExpr = ResultX.getAs<Expr>();
+  }
 
-  S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
+  if (Attr.getMaxNumWorkGroupsY()) {
+    ExprResult ResultY = S.SubstExpr(Attr.getMaxNumWorkGroupsY(), TemplateArgs);
+    if (ResultY.isUsable())
+      YExpr = ResultY.getAs<Expr>();
+  }
+
+  if (Attr.getMaxNumWorkGroupsZ()) {
+    ExprResult ResultZ = S.SubstExpr(Attr.getMaxNumWorkGroupsZ(), TemplateArgs);
+    if (ResultZ.isUsable())
+      ZExpr = ResultZ.getAs<Expr>();
+  }
+
+  if (XExpr)
+    S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
 }
 
 // This doesn't take any template parameters, but we have a custom action that
@@ -1439,17 +1448,19 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
   // happen to be processing that implementation, fake up the g++ ?:
   // semantics. See LWG issue 2141 for more information on the bug.  The bugs
   // are fixed in g++ and libstdc++ 4.9.0 (2014-04-22).
-  const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
-  CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
-  if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&
-      DT->isReferenceType() &&
-      RD->getEnclosingNamespaceContext() == SemaRef.getStdNamespace() &&
-      RD->getIdentifier() && RD->getIdentifier()->isStr("common_type") &&
-      D->getIdentifier() && D->getIdentifier()->isStr("type") &&
-      SemaRef.getSourceManager().isInSystemHeader(D->getBeginLoc()))
-    // Fold it to the (non-reference) type which g++ would have produced.
-    DI = SemaRef.Context.getTrivialTypeSourceInfo(
-      DI->getType().getNonReferenceType());
+  if (SemaRef.getPreprocessor().NeedsStdLibCxxWorkaroundBefore(2014'04'22)) {
+    const DecltypeType *DT = DI->getType()->getAs<DecltypeType>();
+    CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(D->getDeclContext());
+    if (DT && RD && isa<ConditionalOperator>(DT->getUnderlyingExpr()) &&
+        DT->isReferenceType() &&
+        RD->getEnclosingNamespaceContext() == SemaRef.getStdNamespace() &&
+        RD->getIdentifier() && RD->getIdentifier()->isStr("common_type") &&
+        D->getIdentifier() && D->getIdentifier()->isStr("type") &&
+        SemaRef.getSourceManager().isInSystemHeader(D->getBeginLoc()))
+      // Fold it to the (non-reference) type which g++ would have produced.
+      DI = SemaRef.Context.getTrivialTypeSourceInfo(
+          DI->getType().getNonReferenceType());
+  }
 
   // Create the new typedef
   TypedefNameDecl *Typedef;
@@ -2952,8 +2963,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       if (MSInfo->getPointOfInstantiation().isInvalid()) {
         SourceLocation Loc = D->getLocation(); // FIXME
         MSInfo->setPointOfInstantiation(Loc);
-        SemaRef.PendingLocalImplicitInstantiations.push_back(
-            std::make_pair(Function, Loc));
+        SemaRef.PendingLocalImplicitInstantiations.emplace_back(Function, Loc);
       }
     }
   }
@@ -5478,8 +5488,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       // definition will be required).
       assert(!Recursive);
       Function->setInstantiationIsPending(true);
-      PendingInstantiations.push_back(
-        std::make_pair(Function, PointOfInstantiation));
+      PendingInstantiations.emplace_back(Function, PointOfInstantiation);
 
       if (llvm::isTimeTraceVerbose()) {
         llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
@@ -6219,8 +6228,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   // unit.
   if (!Def && !DefinitionRequired) {
     if (TSK == TSK_ExplicitInstantiationDefinition) {
-      PendingInstantiations.push_back(
-        std::make_pair(Var, PointOfInstantiation));
+      PendingInstantiations.emplace_back(Var, PointOfInstantiation);
     } else if (TSK == TSK_ImplicitInstantiation) {
       // Warn about missing definition at the end of translation unit.
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred() &&

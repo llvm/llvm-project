@@ -7,13 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExceptionEscapeCheck.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/ASTMatchers/ASTMatchersMacros.h"
 
 using namespace clang::ast_matchers;
 

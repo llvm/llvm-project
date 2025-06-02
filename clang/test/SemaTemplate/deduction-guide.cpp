@@ -913,3 +913,56 @@ void f() {
 // CHECK-NEXT:   `-ParmVarDecl {{.+}} 'int'
 
 }
+
+namespace GH141425 {
+
+template<class... Lambda>
+struct Container
+{
+    Container(Lambda...) {}
+};
+
+template<class... T>
+using Alias = Container<T...>;
+
+template<class = void>
+struct Invocable {
+    using T = decltype([]() {
+        (void)Alias([]() -> void {});
+    }());
+};
+
+struct Type {
+    using T = bool;
+};
+
+template<class...>
+struct ExpandType {
+    using T = bool;
+};
+
+template<class... X>
+using Expand = ExpandType<typename X::T...>;
+
+Expand<Type, Invocable<>> _{};
+
+// CHECK-LABEL: Dumping GH141425::<deduction guide for Alias>:
+// CHECK-NEXT:  FunctionTemplateDecl {{.+}} implicit <deduction guide for Alias>
+// CHECK-NEXT:   |-TemplateTypeParmDecl {{.+}} class depth 0 index 0 ... T
+// CHECK-NEXT:   |-TypeTraitExpr {{.+}} 'bool' __is_deducible
+// CHECK-NEXT:   | |-DeducedTemplateSpecializationType {{.+}} 'GH141425::Alias' dependent
+// CHECK-NEXT:   | | `-name: 'GH141425::Alias'
+// CHECK-NEXT:   | |   `-TypeAliasTemplateDecl {{.+}} Alias
+// CHECK-NEXT:   | `-TemplateSpecializationType {{.+}} 'Container<T...>' dependent
+// CHECK-NEXT:   |   |-name: 'Container':'GH141425::Container' qualified
+// CHECK-NEXT:   |   | `-ClassTemplateDecl {{.+}} Container
+// CHECK-NEXT:   |   `-TemplateArgument type 'T...':'type-parameter-0-0...'
+// CHECK-NEXT:   |     `-PackExpansionType {{.+}} 'T...' dependent
+// CHECK-NEXT:   |       `-SubstTemplateTypeParmType {{.+}} 'T' sugar dependent contains_unexpanded_pack class depth 0 index 0 ... Lambda pack_index 0
+// CHECK-NEXT:   |         |-FunctionTemplate {{.+}} '<deduction guide for Container>'
+// CHECK-NEXT:   |         `-TemplateTypeParmType {{.+}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
+// CHECK-NEXT:   |           `-TemplateTypeParm {{.+}} 'T'
+// CHECK-NEXT:   |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for Alias> 'auto (T...) -> Container<T...>'
+// CHECK-NEXT:   | `-ParmVarDecl {{.+}} 'T...' pack
+
+}

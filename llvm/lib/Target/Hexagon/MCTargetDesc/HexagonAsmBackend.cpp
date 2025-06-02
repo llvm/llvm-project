@@ -564,8 +564,7 @@ public:
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, const MCValue &,
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, const MCValue &,
                                     uint64_t Value,
                                     bool Resolved) const override {
     MCInst const &MCB = *RelaxedMCB;
@@ -698,7 +697,7 @@ public:
     return true;
   }
 
-  void finishLayout(MCAssembler const &Asm) const override {
+  bool finishLayout(const MCAssembler &Asm) const override {
     SmallVector<MCFragment *> Frags;
     for (MCSection &Sec : Asm) {
       Frags.clear();
@@ -761,7 +760,6 @@ public:
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);
-              Sec.setHasLayout(false);
               Size = 0; // Only look back one instruction
               break;
             }
@@ -771,6 +769,7 @@ public:
         }
       }
     }
+    return true;
   }
 }; // class HexagonAsmBackend
 

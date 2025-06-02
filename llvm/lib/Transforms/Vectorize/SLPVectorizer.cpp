@@ -15317,6 +15317,20 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           UserPHI ? UserPHI->getIncomingBlock(UseEI.EdgeIdx)->getTerminator()
                   : &getLastInstructionInBundle(UseEI.UserTE);
       if (TEInsertPt == InsertPt) {
+        // Check nodes, which might be emitted first.
+        if (TEUseEI.UserTE->State == TreeEntry::Vectorize &&
+            (TEUseEI.UserTE->getOpcode() != Instruction::PHI ||
+             TEUseEI.UserTE->isAltShuffle()) &&
+            all_of(TEUseEI.UserTE->Scalars,
+                   [](Value *V) { return isUsedOutsideBlock(V); })) {
+          if (UseEI.UserTE->State != TreeEntry::Vectorize ||
+              (UseEI.UserTE->getOpcode() == Instruction::PHI &&
+               !UseEI.UserTE->isAltShuffle()) ||
+              any_of(UseEI.UserTE->Scalars,
+                     [](Value *V) { return !isUsedOutsideBlock(V); }))
+            continue;
+        }
+
         // If the schedulable insertion point is used in multiple entries - just
         // exit, no known ordering at this point, available only after real
         // scheduling.
@@ -18535,6 +18549,7 @@ Value *BoUpSLP::vectorizeTree(
     }
   }
   for (auto &Entry : GatherEntries) {
+    IRBuilderBase::InsertPointGuard Guard(Builder);
     Builder.SetInsertPoint(Entry.second);
     Builder.SetCurrentDebugLocation(Entry.second->getDebugLoc());
     (void)vectorizeTree(Entry.first);

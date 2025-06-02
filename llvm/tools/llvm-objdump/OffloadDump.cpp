@@ -16,7 +16,6 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Object/OffloadBundle.h"
-#include "llvm/Support/Alignment.h"
 
 using namespace llvm;
 using namespace llvm::object;
