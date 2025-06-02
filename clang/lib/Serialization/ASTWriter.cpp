@@ -5081,6 +5081,9 @@ void ASTWriter::WriteCUDAPragmas(Sema &SemaRef) {
 }
 
 void ASTWriter::WriteObjCCategories() {
+  if (ObjCClassesWithCategories.empty())
+    return;
+
   SmallVector<ObjCCategoriesInfo, 2> CategoriesMap;
   RecordData Categories;
 
