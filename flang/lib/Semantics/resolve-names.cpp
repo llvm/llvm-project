@@ -1516,6 +1516,9 @@ public:
     SkipImplicitTyping(true);
     return true;
   }
+  void Post(const parser::OpenMPDeclareSimdConstruct &x) {
+    SkipImplicitTyping(false);
+  }
 
   bool Pre(const parser::OmpInitializerProc &x) {
     auto &procDes = std::get<parser::ProcedureDesignator>(x.t);
@@ -1662,9 +1665,11 @@ public:
   }
   bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
     AddOmpSourceRange(x.source);
+    SkipImplicitTyping(true);
     return true;
   }
   void Post(const parser::OpenMPDeclarativeConstruct &) {
+    SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OpenMPDepobjConstruct &x) {
