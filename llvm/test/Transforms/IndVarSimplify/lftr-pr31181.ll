@@ -286,7 +286,7 @@ define i32 @switch_to_different_iv_first_poison(ptr %ptr, i1 %always_false) {
 ; CHECK-NEXT:    store volatile i32 [[IV2]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[ALWAYS_TAKEN]]
 ; CHECK:       always_taken:
-; CHECK-NEXT:    [[IV2_INC]] = add nuw nsw i32 [[IV2]], 1
+; CHECK-NEXT:    [[IV2_INC]] = add nuw i32 [[IV2]], 1
 ; CHECK-NEXT:    [[IV_INC]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV2_INC]], -2147483628
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND]], label [[FOR_END:%.*]]
@@ -329,7 +329,7 @@ define i32 @switch_to_different_iv_second_poison(ptr %ptr, i1 %always_false) {
 ; CHECK-NEXT:    store volatile i32 [[IV2]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[ALWAYS_TAKEN]]
 ; CHECK:       always_taken:
-; CHECK-NEXT:    [[IV2_INC]] = add nsw i32 [[IV2]], 1
+; CHECK-NEXT:    [[IV2_INC]] = add i32 [[IV2]], 1
 ; CHECK-NEXT:    [[IV_INC]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV2_INC]], -2147483629
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND]], label [[FOR_END:%.*]]
