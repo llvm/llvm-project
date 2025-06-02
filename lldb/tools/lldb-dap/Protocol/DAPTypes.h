@@ -23,28 +23,27 @@
 
 namespace lldb_dap::protocol {
 
-/// Data used to help lldb-dap resolve assembly breakpoints across different
-/// sessions.
-struct AssemblyBreakpointData {
+/// Data used to help lldb-dap resolve breakpoints persistently across different sessions.
+/// This information is especially useful for assembly breakpoints, because `sourceReference`
+/// can change across sessions. For regular source breakpoints the path and line are the same
+/// For each session.
+struct PersistenceData {
   /// The source module path.
   std::string module;
 
   /// The symbol unique name.
   std::string symbol_mangled_name;
-
-  /// The breakpoint offset from the symbol resolved address.
-  lldb::addr_t offset;
 };
-bool fromJSON(const llvm::json::Value &, AssemblyBreakpointData &,
+bool fromJSON(const llvm::json::Value &, PersistenceData &,
               llvm::json::Path);
-llvm::json::Value toJSON(const AssemblyBreakpointData &);
+llvm::json::Value toJSON(const PersistenceData &);
 
 /// Custom source data used by lldb-dap.
 /// This data should help lldb-dap identify sources correctly across different
 /// sessions.
 struct SourceLLDBData {
-  /// Assembly breakpoint data.
-  std::optional<AssemblyBreakpointData> assembly_breakpoint;
+  /// Data that helps lldb resolve this source persistently across different sessions.
+  std::optional<PersistenceData> persistence_data;
 };
 bool fromJSON(const llvm::json::Value &, SourceLLDBData &, llvm::json::Path);
 llvm::json::Value toJSON(const SourceLLDBData &);
