@@ -1255,7 +1255,7 @@ def Arith_ScalingExtFOp
     inputTy = get_type(input)
     assert(scaleTy.shape() == inputTy.shape() == resultTy.shape())
     scale.exponent = arith.truncf(scale) : scaleTy to f8E8M0
-    scale.extf = arith.extf(sale.bcast) : f8E8M0 to resultTy
+    scale.extf = arith.extf(scale.exponent) : f8E8M0 to resultTy
     input.extf = arith.extf(input) : inputTy to resultTy
     result = arith.mulf(scale.extf, input.extf)
     ```
@@ -1375,7 +1375,7 @@ def Arith_ScalingTruncFOp
     inputETy = get_type(input)
     resultETy = get_type(result)
     // prepare Scale values with normalization and clamping
-    scale.exponent = arith.truncf(scale.bcst) : scaleETy to f8E8M0
+    scale.exponent = arith.truncf(scale) : scaleETy to f8E8M0
     scale.extf = arith.extf(scale.exponent)  : f8E8M0 to inputETy
     // emax is calculated as exponent of the largest normal value in quantized type.
     scale.normalize = arith.divf(scale.extf, emax)   
