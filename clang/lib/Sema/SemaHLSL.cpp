@@ -960,8 +960,8 @@ namespace {
 // - overlapping visbility
 class ResourceRanges {
 public:
-  // KeyT: 32-lsb denotes resource space, and 32-msb denotes resource type enum
-  using KeyT = uint64_t;
+  // KeyT: 32-lsb denotes resource space, and 32-msb denotes ResourceClass enum
+  using KeyT = std::pair<ResourceClass, uint32_t>;
 
   static const unsigned NumVisEnums =
       (unsigned)llvm::hlsl::rootsig::ShaderVisibility::NumEnums;
@@ -977,9 +977,7 @@ private:
   MapT RangeMaps[NumVisEnums];
 
   constexpr static KeyT getKey(const llvm::hlsl::rootsig::RangeInfo &Info) {
-    uint64_t SpacePacked = (uint64_t)Info.Space;
-    uint64_t ClassPacked = (uint64_t)llvm::to_underlying(Info.Class);
-    return (ClassPacked << 32) | SpacePacked;
+    return {Info.Class, Info.Space};
   }
 
 public:
