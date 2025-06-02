@@ -247,11 +247,6 @@ void GenericDetails::set_derivedType(Symbol &derivedType) {
   derivedType_ = &derivedType;
 }
 void GenericDetails::clear_derivedType() { derivedType_ = nullptr; }
-void GenericDetails::AddUse(const Symbol &use) {
-  CHECK(use.has<UseDetails>());
-  uses_.push_back(use);
-}
-
 const Symbol *GenericDetails::CheckSpecific() const {
   return const_cast<GenericDetails *>(this)->CheckSpecific();
 }
@@ -278,10 +273,31 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
     derivedType_ = from.derivedType_;
   }
   for (std::size_t i{0}; i < from.specificProcs_.size(); ++i) {
-    if (llvm::none_of(specificProcs_, [&](const Symbol &mySymbol) {
-          return &mySymbol.GetUltimate() ==
-              &from.specificProcs_[i]->GetUltimate();
-        })) {
+    const Symbol &ultimate{from.specificProcs_[i]->GetUltimate()};
+    std::optional<SourceName> ultimateModuleName;
+    if (const Scope *ultimateModule{FindModuleContaining(ultimate.owner())}) {
+      ultimateModuleName = ultimateModule->GetName();
+    }
+    auto iter{specificProcs_.begin()};
+    for (; iter != specificProcs_.end(); ++iter) {
+      const Symbol &specificUltimate{(*iter)->GetUltimate()};
+      if (&ultimate == &specificUltimate) {
+        break;
+      }
+      if (ultimate.name() == specificUltimate.name() && ultimateModuleName) {
+        if (const Scope *specificUltimateModule{
+                FindModuleContaining(specificUltimate.owner())}) {
+          if (auto specificUltimateModuleName{
+                  specificUltimateModule->GetName()}) {
+            if (*ultimateModuleName == *specificUltimateModuleName) {
+              // same module$procedure external name
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (iter == specificProcs_.end()) {
       specificProcs_.push_back(from.specificProcs_[i]);
       bindingNames_.push_back(from.bindingNames_[i]);
     }
@@ -551,18 +567,10 @@ llvm::raw_ostream &operator<<(
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const GenericDetails &x) {
   os << ' ' << x.kind().ToString();
-  DumpBool(os, "(specific)", x.specific() != nullptr);
-  DumpBool(os, "(derivedType)", x.derivedType() != nullptr);
-  if (const auto &uses{x.uses()}; !uses.empty()) {
-    os << " (uses:";
-    char sep{' '};
-    for (const Symbol &use : uses) {
-      const Symbol &ultimate{use.GetUltimate()};
-      os << sep << ultimate.name() << "->"
-         << ultimate.owner().GetName().value();
-      sep = ',';
-    }
-    os << ')';
+  if (x.specific()) {
+    os << " (specific " << *x.specific() << ")";
+  } else if (x.derivedType()) {
+    os << " (derivedType)" << *x.derivedType() << ")";
   }
   os << " procs:";
   DumpSymbolVector(os, x.specificProcs());
@@ -592,6 +600,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             }
             if (x.isDefaultPrivate()) {
               os << " isDefaultPrivate";
+            }
+            if (x.isHermetic()) {
+              os << " isHermetic";
             }
           },
           [&](const SubprogramNameDetails &x) {

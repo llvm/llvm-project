@@ -94,6 +94,8 @@ public:
   void set_moduleFileHash(ModuleCheckSumType x) { moduleFileHash_ = x; }
   const Symbol *previous() const { return previous_; }
   void set_previous(const Symbol *p) { previous_ = p; }
+  bool isHermetic() const { return isHermetic_; }
+  void set_isHermetic(bool yes = true) { isHermetic_ = yes; }
 
 private:
   bool isSubmodule_;
@@ -101,6 +103,7 @@ private:
   const Scope *scope_{nullptr};
   std::optional<ModuleCheckSumType> moduleFileHash_;
   const Symbol *previous_{nullptr}; // same name, different module file hash
+  bool isHermetic_{false};
 };
 
 class MainProgramDetails : public WithOmpDeclarative {
@@ -690,7 +693,6 @@ public:
   const SymbolVector &specificProcs() const { return specificProcs_; }
   const std::vector<SourceName> &bindingNames() const { return bindingNames_; }
   void AddSpecificProc(const Symbol &, SourceName bindingName);
-  const SymbolVector &uses() const { return uses_; }
 
   // specific and derivedType indicate a specific procedure or derived type
   // with the same name as this generic. Only one of them may be set in
@@ -704,7 +706,10 @@ public:
   const Symbol *derivedType() const { return derivedType_; }
   void set_derivedType(Symbol &derivedType);
   void clear_derivedType();
-  void AddUse(const Symbol &);
+  const std::optional<UseDetails> originalUseDetails() const {
+    return originalUseDetails_;
+  }
+  void set_originalUseDetails(const UseDetails &x) { originalUseDetails_ = x; }
 
   // Copy in specificProcs, specific, and derivedType from another generic
   void CopyFrom(const GenericDetails &);
@@ -719,12 +724,11 @@ private:
   // all of the specific procedures for this generic
   SymbolVector specificProcs_;
   std::vector<SourceName> bindingNames_;
-  // Symbols used from other modules merged into this one
-  SymbolVector uses_;
   // a specific procedure with the same name as this generic, if any
   Symbol *specific_{nullptr};
   // a derived type with the same name as this generic, if any
   Symbol *derivedType_{nullptr};
+  std::optional<UseDetails> originalUseDetails_;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const GenericDetails &);
 

@@ -3404,18 +3404,17 @@ bool ScopeHandler::ConvertToUseError(
     ued->add_occurrence(location, used);
     return true;
   }
-  const auto *useDetails{symbol.detailsIf<UseDetails>()};
-  if (!useDetails) {
-    if (auto *genericDetails{symbol.detailsIf<GenericDetails>()}) {
-      if (!genericDetails->uses().empty()) {
-        useDetails = &genericDetails->uses().at(0)->get<UseDetails>();
-      }
-    }
-  }
-  if (useDetails) {
+  if (const auto *useDetails{symbol.detailsIf<UseDetails>()}) {
     symbol.set_details(
         UseErrorDetails{*useDetails}.add_occurrence(location, used));
     return true;
+  }
+  if (const auto *genericDetails{symbol.detailsIf<GenericDetails>()}) {
+    if (const auto &useDetails{genericDetails->originalUseDetails()}) {
+      symbol.set_details(
+          UseErrorDetails{*useDetails}.add_occurrence(location, used));
+      return true;
+    }
   }
   if (const auto *hostAssocDetails{symbol.detailsIf<HostAssocDetails>()};
       hostAssocDetails && hostAssocDetails->symbol().has<SubprogramDetails>() &&
@@ -3846,7 +3845,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
           localSymbol->name(), localSymbol->attrs(), std::move(generic))};
       newSymbol.flags() = localSymbol->flags();
       localGeneric = &newSymbol.get<GenericDetails>();
-      localGeneric->AddUse(*localSymbol);
+      localGeneric->set_originalUseDetails(localSymbol->get<UseDetails>());
       localSymbol = &newSymbol;
     }
     if (useGeneric) {
@@ -3854,7 +3853,8 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       localSymbol->attrs() =
           useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE};
       localSymbol->flags() = useSymbol.flags();
-      AddGenericUse(*localGeneric, localName, useUltimate);
+      // Resolved to ultimate during module file emission
+      AddGenericUse(*localGeneric, localName, useSymbol);
       localGeneric->clear_derivedType();
       localGeneric->CopyFrom(*useGeneric);
     }
@@ -3878,8 +3878,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
         std::move(generic))};
     newSymbol.flags() = useUltimate.flags();
     auto &newUseGeneric{newSymbol.get<GenericDetails>()};
-    AddGenericUse(newUseGeneric, localName, useUltimate);
-    newUseGeneric.AddUse(*localSymbol);
+    AddGenericUse(newUseGeneric, localName, useSymbol);
     if (combinedDerivedType) {
       if (const auto *oldDT{newUseGeneric.derivedType()}) {
         CHECK(&oldDT->GetUltimate() == &combinedDerivedType->GetUltimate());
@@ -3905,10 +3904,7 @@ void ModuleVisitor::AddUse(const GenericSpecInfo &info) {
 // Create a UseDetails symbol for this USE and add it to generic
 Symbol &ModuleVisitor::AddGenericUse(
     GenericDetails &generic, const SourceName &name, const Symbol &useSymbol) {
-  Symbol &newSymbol{
-      currScope().MakeSymbol(name, {}, UseDetails{name, useSymbol})};
-  generic.AddUse(newSymbol);
-  return newSymbol;
+  return currScope().MakeSymbol(name, {}, UseDetails{name, useSymbol});
 }
 
 // Enforce F'2023 C1406 as a warning
@@ -4179,7 +4175,7 @@ void GenericHandler::ResolveSpecificsInGeneric(
       Say(name->source,
           "Procedure '%s' is already specified in generic '%s'"_err_en_US,
           name->source, MakeOpName(generic.name()));
-    } else {
+    } else if (!InModuleFile()) {
       Say(name->source,
           "Procedure '%s' from module '%s' is already specified in generic '%s'"_err_en_US,
           ultimate->name(), ultimate->owner().GetName().value(),

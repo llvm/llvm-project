@@ -21,7 +21,6 @@ end
 !Expect: m2.mod
 !module m2
 !use m1,only:bar=>foo
-!use m1,only:bar=>foo
 !interface bar
 !end interface
 !end

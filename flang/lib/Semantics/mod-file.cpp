@@ -48,7 +48,7 @@ struct ModHeader {
 
 static std::optional<SourceName> GetSubmoduleParent(const parser::Program &);
 static void CollectSymbols(
-    const Scope &, SymbolVector &, SymbolVector &, SourceOrderedSymbolSet &);
+    const Scope &, SymbolVector &, SourceOrderedSymbolSet &);
 static void PutPassName(llvm::raw_ostream &, const std::optional<SourceName> &);
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &,
     const parser::Expr *, SemanticsContext &);
@@ -142,23 +142,7 @@ void ModFileWriter::Write(const Symbol &symbol) {
   auto ancestorName{ancestor ? ancestor->GetName().value().ToString() : ""s};
   std::string path{context_.moduleDirectory() + '/' +
       ModFileName(symbol.name(), ancestorName, context_.moduleFileSuffix())};
-
-  UnorderedSymbolSet hermeticModules;
-  hermeticModules.insert(symbol);
-  UnorderedSymbolSet additionalModules;
-  PutSymbols(DEREF(symbol.scope()),
-      hermeticModuleFileOutput_ ? &additionalModules : nullptr);
-  auto asStr{GetAsString(symbol)};
-  while (!additionalModules.empty()) {
-    for (auto ref : UnorderedSymbolSet{std::move(additionalModules)}) {
-      if (hermeticModules.insert(*ref).second &&
-          !ref->owner().IsIntrinsicModules()) {
-        PutSymbols(DEREF(ref->scope()), &additionalModules);
-        asStr += GetAsString(*ref);
-      }
-    }
-  }
-
+  std::string asStr{WriteModuleAndDependents(symbol)};
   ModuleCheckSumType checkSum;
   if (std::error_code error{
           WriteFile(path, asStr, checkSum, context_.debugModuleWriter())}) {
@@ -166,6 +150,31 @@ void ModFileWriter::Write(const Symbol &symbol) {
         symbol.name(), "Error writing %s: %s"_err_en_US, path, error.message());
   }
   const_cast<ModuleDetails &>(module).set_moduleFileHash(checkSum);
+}
+
+std::string ModFileWriter::WriteModuleAndDependents(const Symbol &symbol) {
+  UnorderedSymbolSet done, more;
+  done.insert(symbol);
+  PutSymbols(
+      DEREF(symbol.scope()), hermeticModuleFileOutput_ ? &more : nullptr);
+  auto asStr{GetAsString(symbol)};
+  while (!more.empty()) {
+    UnorderedSymbolSet toProcess{std::move(more)};
+    more.clear();
+    for (auto ref : toProcess) {
+      if (done.insert(*ref).second && !ref->owner().IsIntrinsicModules()) {
+        if (ref->get<ModuleDetails>().isHermetic()) {
+          asStr += "!dir$ begin_nested_hermetic_module\n";
+          asStr += WriteModuleAndDependents(*ref);
+          asStr += "!dir$ end_nested_hermetic_module\n";
+        } else {
+          PutSymbols(DEREF(ref->scope()), &more);
+          asStr += GetAsString(*ref);
+        }
+      }
+    }
+  }
+  return asStr;
 }
 
 void ModFileWriter::WriteClosure(llvm::raw_ostream &out, const Symbol &symbol,
@@ -245,15 +254,18 @@ static void HarvestSymbolsNeededFromOtherModules(
     if (symbol.scope()) {
       HarvestSymbolsNeededFromOtherModules(set, *symbol.scope());
     }
-  } else if (const auto &generic{symbol.detailsIf<GenericDetails>()};
-             generic && generic->derivedType()) {
-    const Symbol &dtSym{*generic->derivedType()};
-    if (dtSym.has<DerivedTypeDetails>()) {
-      if (dtSym.scope()) {
-        HarvestSymbolsNeededFromOtherModules(set, *dtSym.scope());
+  } else if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
+    if (const Symbol *dtSym{generic->derivedType()}) {
+      if (dtSym->has<DerivedTypeDetails>()) {
+        if (dtSym->scope()) {
+          HarvestSymbolsNeededFromOtherModules(set, *dtSym->scope());
+        }
+      } else {
+        CHECK(dtSym->has<UseDetails>() || dtSym->has<UseErrorDetails>());
       }
-    } else {
-      CHECK(dtSym.has<UseDetails>() || dtSym.has<UseErrorDetails>());
+    }
+    for (const Symbol &specific : generic->specificProcs()) {
+      set.emplace(specific);
     }
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     HarvestArraySpec(object->shape());
@@ -306,38 +318,34 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   // Establish any necessary renamings of symbols in other modules
   // to their names in this scope, creating those new names when needed.
   auto &renamings{context_.moduleFileOutputRenamings()};
-  for (SymbolRef s : symbolsNeeded) {
-    if (s->owner().kind() != Scope::Kind::Module) {
+  for (const Symbol &s : symbolsNeeded) {
+    if (s.owner().kind() != Scope::Kind::Module) {
       // Not a USE'able name from a module's top scope;
       // component, binding, dummy argument, &c.
       continue;
     }
-    const Scope *sMod{FindModuleContaining(s->owner())};
+    const Scope *sMod{FindModuleContaining(s.owner())};
     if (!sMod || sMod == &scope) {
       continue;
     }
-    if (auto iter{useMap.find(&*s)}; iter != useMap.end()) {
-      renamings.emplace(&*s, iter->second->name());
+    if (auto iter{useMap.find(&s)}; iter != useMap.end()) {
+      renamings.emplace(&s, iter->second->name());
       continue;
     }
-    SourceName rename{s->name()};
-    if (const Symbol * found{scope.FindSymbol(s->name())}) {
-      if (found == &*s) {
+    SourceName rename{s.name()};
+    if (const Symbol *found{scope.FindSymbol(s.name())}) {
+      if (found == &s) {
         continue; // available in scope
       }
-      if (const auto *generic{found->detailsIf<GenericDetails>()}) {
-        if (generic->derivedType() == &*s || generic->specific() == &*s) {
-          continue;
-        }
-      } else if (found->has<UseDetails>()) {
-        if (&found->GetUltimate() == &*s) {
+      if (found->has<UseDetails>()) {
+        if (&found->GetUltimate() == &s) {
           continue; // already use-associated with same name
         }
       }
-      if (&s->owner() != &found->owner()) { // Symbol needs renaming
+      if (&s.owner() != &found->owner()) { // Symbol needs renaming
         rename = scope.context().SaveTempName(
             DEREF(sMod->symbol()).name().ToString() + "$" +
-            s->name().ToString());
+            s.name().ToString());
       }
     }
     // Symbol is used in this scope but not visible under its name
@@ -347,11 +355,11 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
       uses_ << "use ";
     }
     uses_ << DEREF(sMod->symbol()).name() << ",only:";
-    if (rename != s->name()) {
+    if (rename != s.name()) {
       uses_ << rename << "=>";
-      renamings.emplace(&s->GetUltimate(), rename);
+      renamings.emplace(&s.GetUltimate(), rename);
     }
-    uses_ << s->name() << '\n';
+    uses_ << s.name() << '\n';
     useExtraAttrs_ << "private::" << rename << '\n';
   }
 }
@@ -360,12 +368,11 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
 void ModFileWriter::PutSymbols(
     const Scope &scope, UnorderedSymbolSet *hermeticModules) {
   SymbolVector sorted;
-  SymbolVector uses;
   auto &renamings{context_.moduleFileOutputRenamings()};
   auto previousRenamings{std::move(renamings)};
   PrepareRenamings(scope);
   SourceOrderedSymbolSet modules;
-  CollectSymbols(scope, sorted, uses, modules);
+  CollectSymbols(scope, sorted, modules);
   // Write module files for dependencies first so that their
   // hashes are known.
   for (auto ref : modules) {
@@ -386,9 +393,6 @@ void ModFileWriter::PutSymbols(
     if (!symbol.test(Symbol::Flag::CompilerCreated)) {
       PutSymbol(typeBindings, symbol);
     }
-  }
-  for (const Symbol &symbol : uses) {
-    PutUse(symbol);
   }
   for (const auto &set : scope.equivalenceSets()) {
     if (!set.empty() &&
@@ -794,11 +798,13 @@ static bool IsIntrinsicOp(const Symbol &symbol) {
 }
 
 void ModFileWriter::PutGeneric(const Symbol &symbol) {
-  const auto &genericOwner{symbol.owner()};
   auto &details{symbol.get<GenericDetails>()};
   PutGenericName(decls_ << "interface ", symbol) << '\n';
+  const auto &renamings{context_.moduleFileOutputRenamings()};
   for (const Symbol &specific : details.specificProcs()) {
-    if (specific.owner() == genericOwner) {
+    if (auto iter{renamings.find(&specific)}; iter != renamings.end()) {
+      decls_ << "procedure::" << iter->second << '\n';
+    } else {
       decls_ << "procedure::" << specific.name() << '\n';
     }
   }
@@ -845,31 +851,25 @@ void ModFileWriter::PutUseExtraAttr(
 
 // Collect the symbols of this scope sorted by their original order, not name.
 // Generics and namelists are exceptions: they are sorted after other symbols.
-void CollectSymbols(const Scope &scope, SymbolVector &sorted,
-    SymbolVector &uses, SourceOrderedSymbolSet &modules) {
+void CollectSymbols(
+    const Scope &scope, SymbolVector &sorted, SourceOrderedSymbolSet &modules) {
   SymbolVector namelist, generics;
   auto symbols{scope.GetSymbols()};
   std::size_t commonSize{scope.commonBlocks().size()};
   sorted.reserve(symbols.size() + commonSize);
-  for (SymbolRef symbol : symbols) {
-    const auto *generic{symbol->detailsIf<GenericDetails>()};
-    if (generic) {
-      uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
-      for (auto ref : generic->uses()) {
-        modules.insert(GetUsedModule(ref->get<UseDetails>()));
-      }
-    } else if (const auto *use{symbol->detailsIf<UseDetails>()}) {
+  for (const Symbol &symbol : symbols) {
+    if (const auto *use{symbol.detailsIf<UseDetails>()}) {
       modules.insert(GetUsedModule(*use));
     }
-    if (symbol->test(Symbol::Flag::ParentComp)) {
-    } else if (symbol->has<NamelistDetails>()) {
+    if (symbol.test(Symbol::Flag::ParentComp)) {
+    } else if (symbol.has<NamelistDetails>()) {
       namelist.push_back(symbol);
-    } else if (generic) {
+    } else if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
       if (generic->specific() &&
-          &generic->specific()->owner() == &symbol->owner()) {
+          &generic->specific()->owner() == &symbol.owner()) {
         sorted.push_back(*generic->specific());
       } else if (generic->derivedType() &&
-          &generic->derivedType()->owner() == &symbol->owner()) {
+          &generic->derivedType()->owner() == &symbol.owner()) {
         sorted.push_back(*generic->derivedType());
       }
       generics.push_back(symbol);
@@ -1342,6 +1342,114 @@ static void GetModuleDependences(
   }
 }
 
+// Given a list of program units (modules or compiler directives) parsed from
+// a module file, read the first module and the dependent modules that were
+// packaged with it.  The dependent modules can themselves be hermetic,
+// so this routine is recursive.  The list of program units is broken apart
+// and later stitched back together to make these recursive calls possible.
+static void ReadHermeticModule(SemanticsContext &context, Scope &scope,
+    std::list<parser::ProgramUnit> &progUnits) {
+  // Extract the first module into its own Program.
+  std::list<parser::ProgramUnit> justFirst;
+  CHECK(!progUnits.empty() &&
+      std::holds_alternative<common::Indirection<parser::Module>>(
+          progUnits.front().u));
+  justFirst.emplace_back(std::move(progUnits.front()));
+  progUnits.pop_front();
+  // The following modules are read into a new scope that's visible to name
+  // resolution only via a pointer in the SemanticsContext.
+  Scope &hermeticScope{scope.MakeScope(Scope::Kind::Global)};
+  // Handle nested hermetic modules recursively first; put non-hermetic nested
+  // modules on a "normals" list to be handled later.
+  std::list<parser::ProgramUnit> normals, hermetics;
+  while (!progUnits.empty()) {
+    if (const auto *dir{
+            std::get_if<common::Indirection<parser::CompilerDirective>>(
+                &progUnits.front().u)};
+        dir &&
+        std::holds_alternative<
+            parser::CompilerDirective::BeginNestedHermeticModule>(
+            dir->value().u)) {
+      // There's a nested hermetic module sequence delimited by directives.
+      //   !DIR$ BEGIN_NESTED_HERMETIC_MODULE
+      //   module nested
+      //     use dependency1
+      //     use dependency2
+      //   end
+      //   module dependency1; end
+      //   module dependency2; end
+      //   !DIR$ NESTED_NESTED_HERMETIC_MODULE
+      int nesting{1};
+      hermetics.emplace_back(std::move(progUnits.front())); // !DIR$ BEGIN
+      progUnits.pop_front();
+      std::list<parser::ProgramUnit> nested;
+      while (!progUnits.empty()) {
+        if (auto *dir{
+                std::get_if<common::Indirection<parser::CompilerDirective>>(
+                    &progUnits.front().u)}) {
+          if (std::holds_alternative<
+                  parser::CompilerDirective::BeginNestedHermeticModule>(
+                  dir->value().u)) {
+            ++nesting;
+          } else if (std::holds_alternative<
+                         parser::CompilerDirective::EndNestedHermeticModule>(
+                         dir->value().u)) {
+            CHECK(nesting > 0);
+            if (nesting-- == 1) {
+              // "nested" contains the nested hermetic module and its
+              // dependences, which may also be nested.
+              CHECK(!nested.empty());
+              ReadHermeticModule(context, hermeticScope, nested);
+              for (; !nested.empty(); nested.pop_front()) {
+                hermetics.emplace_back(std::move(nested.front()));
+              }
+              hermetics.emplace_back(std::move(progUnits.front())); // !DIR$ END
+              progUnits.pop_front();
+              break;
+            }
+          }
+        }
+        nested.emplace_back(std::move(progUnits.front()));
+        progUnits.pop_front();
+      }
+      CHECK(nesting == 0);
+      CHECK(nested.empty());
+    } else {
+      normals.emplace_back(std::move(progUnits.front()));
+      progUnits.pop_front();
+    }
+  }
+  // Mark the nested hermetic modules as being such.
+  for (auto &[_, ref] : hermeticScope) {
+    ref->get<ModuleDetails>().set_isHermetic(true);
+  }
+  // Handle non-hermetic nested modules now
+  Scope *previousHermeticScope{context.currentHermeticModuleFileScope()};
+  context.set_currentHermeticModuleFileScope(&hermeticScope);
+  if (!normals.empty()) {
+    parser::Program program{std::move(normals)};
+    ResolveNames(context, program, hermeticScope);
+    normals = std::move(program.v);
+  }
+  for (auto &[_, ref] : hermeticScope) {
+    CHECK(ref->has<ModuleDetails>());
+    ref->set(Symbol::Flag::ModFile);
+  }
+  // Now finally process the first module in the original list.
+  parser::Program firstModuleOnly{std::move(justFirst)};
+  ResolveNames(context, firstModuleOnly, scope);
+  context.set_currentHermeticModuleFileScope(previousHermeticScope);
+  // Reconstruct the progUnits list so parse tree dumps don't look weird.
+  progUnits.clear();
+  progUnits.emplace_back(std::move(firstModuleOnly.v.front()));
+  for (; !hermetics.empty(); hermetics.pop_front()) {
+    progUnits.emplace_back(std::move(hermetics.front()));
+  }
+  for (; !normals.empty(); normals.pop_front()) {
+    progUnits.emplace_back(std::move(normals.front()));
+  }
+}
+
 Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     Scope *ancestor, bool silent) {
   std::string ancestorName; // empty for module
@@ -1548,23 +1656,14 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
   // created under -fhermetic-module-files?  If so, process them first in
   // their own nested scope that will be visible only to USE statements
   // within the module file.
-  Scope *previousHermetic{context_.currentHermeticModuleFileScope()};
-  if (parseTree.v.size() > 1) {
-    parser::Program hermeticModules{std::move(parseTree.v)};
-    parseTree.v.emplace_back(std::move(hermeticModules.v.front()));
-    hermeticModules.v.pop_front();
-    Scope &hermeticScope{topScope.MakeScope(Scope::Kind::Global)};
-    context_.set_currentHermeticModuleFileScope(&hermeticScope);
-    ResolveNames(context_, hermeticModules, hermeticScope);
-    for (auto &[_, ref] : hermeticScope) {
-      CHECK(ref->has<ModuleDetails>());
-      ref->set(Symbol::Flag::ModFile);
-    }
+  bool isHermetic{parseTree.v.size() > 1};
+  if (isHermetic) {
+    ReadHermeticModule(context_, topScope, parseTree.v);
+  } else {
+    GetModuleDependences(context_.moduleDependences(), sourceFile->content());
+    ResolveNames(context_, parseTree, topScope);
   }
-  GetModuleDependences(context_.moduleDependences(), sourceFile->content());
-  ResolveNames(context_, parseTree, topScope);
   context_.foldingContext().set_moduleFileName(wasModuleFileName);
-  context_.set_currentHermeticModuleFileScope(previousHermetic);
   if (!moduleSymbol) {
     // Submodule symbols' storage are owned by their parents' scopes,
     // but their names are not in their parents' dictionaries -- we
@@ -1582,6 +1681,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     auto &details{moduleSymbol->get<ModuleDetails>()};
     details.set_moduleFileHash(checkSum.value());
     details.set_previous(previousModuleSymbol);
+    details.set_isHermetic(isHermetic);
     if (isIntrinsic.value_or(false)) {
       moduleSymbol->attrs().set(Attr::INTRINSIC);
     }

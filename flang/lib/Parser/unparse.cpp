@@ -1867,6 +1867,12 @@ public:
             [&](const CompilerDirective::NoUnrollAndJam &) {
               Word("!DIR$ NOUNROLL_AND_JAM");
             },
+            [&](const CompilerDirective::BeginNestedHermeticModule &) {
+              Word("!DIR$ BEGIN_NESTED_HERMETIC_MODULE");
+            },
+            [&](const CompilerDirective::EndNestedHermeticModule &) {
+              Word("!DIR$ END_NESTED_HERMETIC_MODULE");
+            },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());

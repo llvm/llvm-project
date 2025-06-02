@@ -172,6 +172,11 @@ When the compiler reads a hermetic module file, the copies of the dependent
 modules are read into their own scope, and will not conflict with other modules
 of the same name that client code might `USE`.
 
+The copies of the module files can be copies of hermetic modules as well,
+in which case they and their dependencies are surrounded by compiler directives
+(`!DIR$ BEGIN_NESTED_HERMETIC_MODULE` and `!DIR$ END_NESTED_HERMETIC_MODULE`)
+to represent the nesting.
+
 One can use the `-fhermetic-module-files` option when building the top-level
 module files of a library for which not all of the implementation modules
 will (or can) be shipped.
