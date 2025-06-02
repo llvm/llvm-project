@@ -602,22 +602,21 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
         const mcdxbc::DescriptorTable &Table =
             RS.ParametersContainer.getDescriptorTable(Loc);
-        OS << indent(Space+ 2) << "NumRanges: " << Table.Ranges.size() << "\n";  
+        OS << indent(Space + 2) << "NumRanges: " << Table.Ranges.size() << "\n";
 
-        for(const dxbc::RTS0::v2::DescriptorRange Range : Table){
-        OS << indent(Space + 2) << "- Range Type: " << Range.RangeType
-           << "\n";        
-        OS << indent(Space + 4) << "Register Space: " << Range.RegisterSpace
-           << "\n";
-        OS << indent(Space + 4) << "Base Shader Register: " << Range.BaseShaderRegister
-           << "\n";
-        OS << indent(Space + 4) << "Num Descriptors: " << Range.NumDescriptors
-           << "\n";  
-        OS << indent(Space + 4) << "Offset In Descriptors From Table Start: " << Range.OffsetInDescriptorsFromTableStart
-           << "\n";  
-        if(RS.Version > 1)
-          OS << indent(Space + 4) << "Flags: " << Range.Flags
-            << "\n";                         
+        for (const dxbc::RTS0::v2::DescriptorRange Range : Table) {
+          OS << indent(Space + 2) << "- Range Type: " << Range.RangeType
+             << "\n";
+          OS << indent(Space + 4) << "Register Space: " << Range.RegisterSpace
+             << "\n";
+          OS << indent(Space + 4)
+             << "Base Shader Register: " << Range.BaseShaderRegister << "\n";
+          OS << indent(Space + 4) << "Num Descriptors: " << Range.NumDescriptors
+             << "\n";
+          OS << indent(Space + 4) << "Offset In Descriptors From Table Start: "
+             << Range.OffsetInDescriptorsFromTableStart << "\n";
+          if (RS.Version > 1)
+            OS << indent(Space + 4) << "Flags: " << Range.Flags << "\n";
         }
         break;
       }
