@@ -16,6 +16,9 @@ using LlvmLibcExp10m1fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 TEST_F(LlvmLibcExp10m1fTest, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
 
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::exp10m1f(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_EQ(FPBits(aNaN).uintval(),
             FPBits(LIBC_NAMESPACE::exp10m1f(aNaN)).uintval());
   EXPECT_EQ(FPBits(neg_aNaN).uintval(),

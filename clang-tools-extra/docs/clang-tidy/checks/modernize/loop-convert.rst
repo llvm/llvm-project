@@ -140,11 +140,14 @@ however the check can be configured to work without C++20 by specifying a
 function to reverse a range and optionally the header file where that function
 lives.
 
+Options
+-------
+
 .. option:: UseCxx20ReverseRanges
 
    When set to true convert loops when in C++20 or later mode using
    ``std::ranges::reverse_view``.
-   Default value is ``true``.
+   Default value is `true`.
 
 .. option:: MakeReverseRangeFunction
 

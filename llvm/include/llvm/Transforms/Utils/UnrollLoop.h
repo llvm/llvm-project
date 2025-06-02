@@ -143,7 +143,7 @@ public:
   /// Whether it is legal to unroll this loop.
   bool canUnroll() const;
 
-  uint64_t getRolledLoopSize() const { return *LoopSize.getValue(); }
+  uint64_t getRolledLoopSize() const { return LoopSize.getValue(); }
 
   /// Returns loop size estimation for unrolled loop, given the unrolling
   /// configuration specified by UP.

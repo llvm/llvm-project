@@ -1354,6 +1354,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("aarch64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
+  T = Triple("x86_64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-managarm-mlibc");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Managarm, T.getOS());
+  EXPECT_EQ(Triple::Mlibc, T.getEnvironment());
+
   T = Triple("huh");
   EXPECT_EQ(Triple::UnknownArch, T.getArch());
 }
@@ -2572,6 +2590,8 @@ TEST(TripleTest, NormalizeWindows) {
   EXPECT_EQ("i686-unknown-windows-gnu", Triple::normalize("i686-mingw32-w64"));
   EXPECT_EQ("i686-pc-windows-cygnus", Triple::normalize("i686-pc-cygwin"));
   EXPECT_EQ("i686-unknown-windows-cygnus", Triple::normalize("i686-cygwin"));
+  EXPECT_EQ("i686-pc-windows-cygnus", Triple::normalize("i686-pc-msys"));
+  EXPECT_EQ("i686-unknown-windows-cygnus", Triple::normalize("i686-msys"));
 
   EXPECT_EQ("x86_64-pc-windows-msvc", Triple::normalize("x86_64-pc-win32"));
   EXPECT_EQ("x86_64-unknown-windows-msvc", Triple::normalize("x86_64-win32"));
@@ -2581,6 +2601,11 @@ TEST(TripleTest, NormalizeWindows) {
             Triple::normalize("x86_64-pc-mingw32-w64"));
   EXPECT_EQ("x86_64-unknown-windows-gnu",
             Triple::normalize("x86_64-mingw32-w64"));
+  EXPECT_EQ("x86_64-pc-windows-cygnus", Triple::normalize("x86_64-pc-cygwin"));
+  EXPECT_EQ("x86_64-unknown-windows-cygnus",
+            Triple::normalize("x86_64-cygwin"));
+  EXPECT_EQ("x86_64-pc-windows-cygnus", Triple::normalize("x86_64-pc-msys"));
+  EXPECT_EQ("x86_64-unknown-windows-cygnus", Triple::normalize("x86_64-msys"));
 
   EXPECT_EQ("i686-pc-windows-elf", Triple::normalize("i686-pc-win32-elf"));
   EXPECT_EQ("i686-unknown-windows-elf", Triple::normalize("i686-win32-elf"));

@@ -57,6 +57,22 @@ llvm.func @fold_extractvalue() -> i32 {
 
 // -----
 
+// CHECK-LABEL: fold_extractvalue(
+//  CHECK-SAME:     %[[arg1:.*]]: i32, %[[arg2:.*]]: i32, %[[arg3:.*]]: i32)
+//  CHECK-NEXT:   llvm.return %[[arg1]] : i32
+llvm.func @fold_extractvalue(%arg1: i32, %arg2: i32, %arg3: i32) -> i32{
+  %3 = llvm.mlir.undef : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  %5 = llvm.mlir.undef : !llvm.struct<(i32, i32, i32)>
+  %6 = llvm.insertvalue %arg1, %5[0] : !llvm.struct<(i32, i32, i32)>
+  %7 = llvm.insertvalue %arg1, %6[1] : !llvm.struct<(i32, i32, i32)>
+  %8 = llvm.insertvalue %arg1, %7[2] : !llvm.struct<(i32, i32, i32)>
+  %11 = llvm.insertvalue %8, %3[0] : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  %13 = llvm.extractvalue %11[0, 0] : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  llvm.return %13 : i32
+}
+
+// -----
+
 // CHECK-LABEL: no_fold_extractvalue
 llvm.func @no_fold_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
   %f0 = arith.constant 0.0 : f32
@@ -92,6 +108,28 @@ llvm.func @fold_extract_extractvalue(%arr: !llvm.struct<(i64, array<1 x ptr<1>>)
   %a = llvm.extractvalue %arr[1] : !llvm.struct<(i64, array<1 x ptr<1>>)> 
   %b = llvm.extractvalue %a[0] : !llvm.array<1 x ptr<1>> 
   llvm.return %b : !llvm.ptr<1>
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_const
+// CHECK-NOT: extractvalue
+// CHECK:  llvm.mlir.constant(5.000000e-01 : f64)
+llvm.func @fold_extract_const() -> f64 {
+  %a = llvm.mlir.constant(dense<[-8.900000e+01, 5.000000e-01]> : tensor<2xf64>) : !llvm.array<2 x f64>
+  %b = llvm.extractvalue %a[1] : !llvm.array<2 x f64>
+  llvm.return %b : f64
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_splat
+// CHECK-NOT: extractvalue
+// CHECK: llvm.mlir.constant(-8.900000e+01 : f64)
+llvm.func @fold_extract_splat() -> f64 {
+  %a = llvm.mlir.constant(dense<-8.900000e+01> : tensor<2xf64>) : !llvm.array<2 x f64>
+  %b = llvm.extractvalue %a[1] : !llvm.array<2 x f64>
+  llvm.return %b : f64
 }
 
 // -----

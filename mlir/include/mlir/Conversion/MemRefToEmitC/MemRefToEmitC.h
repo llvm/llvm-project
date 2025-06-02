@@ -9,6 +9,7 @@
 #define MLIR_CONVERSION_MEMREFTOEMITC_MEMREFTOEMITC_H
 
 namespace mlir {
+class DialectRegistry;
 class RewritePatternSet;
 class TypeConverter;
 
@@ -16,6 +17,8 @@ void populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter);
 
 void populateMemRefToEmitCConversionPatterns(RewritePatternSet &patterns,
                                              const TypeConverter &converter);
+
+void registerConvertMemRefToEmitCInterface(DialectRegistry &registry);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MEMREFTOEMITC_MEMREFTOEMITC_H

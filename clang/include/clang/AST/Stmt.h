@@ -531,7 +531,7 @@ protected:
     unsigned : NumExprBits;
 
     LLVM_PREFERRED_TYPE(UnaryExprOrTypeTrait)
-    unsigned Kind : 3;
+    unsigned Kind : 4;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsType : 1; // true if operand is a type, false if an expression.
   };
@@ -563,17 +563,21 @@ protected:
     unsigned HasFPFeatures : 1;
 
     /// True if the call expression is a must-elide call to a coroutine.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsCoroElideSafe : 1;
 
-    /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-    unsigned : 24 - 4 - NumExprBits;
+    /// Tracks when CallExpr is used to represent an explicit object
+    /// member function, in order to adjust the begin location.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExplicitObjectMemFunUsingMemberSyntax : 1;
 
-    /// The offset in bytes from the this pointer to the start of the
-    /// trailing objects belonging to CallExpr. Intentionally byte sized
-    /// for faster access.
-    unsigned OffsetToTrailingObjects : 8;
+    /// Indicates that SourceLocations are cached as
+    /// Trailing objects. See the definition of CallExpr.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasTrailingSourceLoc : 1;
   };
-  enum { NumCallExprBits = 32 };
+
+  enum { NumCallExprBits = 25 };
 
   class MemberExprBitfields {
     friend class ASTStmtReader;
@@ -891,6 +895,10 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned ShouldPassAlignment : 1;
 
+    /// Should the type identity be passed to the allocation function?
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ShouldPassTypeIdentity : 1;
+
     /// If this is an array allocation, does the usual deallocation
     /// function for the allocated type want to know the allocated size?
     LLVM_PREFERRED_TYPE(bool)
@@ -954,11 +962,13 @@ protected:
     LLVM_PREFERRED_TYPE(TypeTrait)
     unsigned Kind : 8;
 
-    /// If this expression is not value-dependent, this indicates whether
-    /// the trait evaluated true or false.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsBooleanTypeTrait : 1;
+
+    /// If this expression is a non value-dependent boolean trait,
+    /// this indicates whether the trait evaluated true or false.
     LLVM_PREFERRED_TYPE(bool)
     unsigned Value : 1;
-
     /// The number of arguments to this type trait. According to [implimits]
     /// 8 bits would be enough, but we require (and test for) at least 16 bits
     /// to mirror FunctionType.
@@ -1215,6 +1225,20 @@ protected:
     SourceLocation Loc;
   };
 
+  class ConvertVectorExprBitfields {
+    friend class ConvertVectorExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    //
+    /// This is only meaningful for operations on floating point
+    /// types when additional values need to be in trailing storage.
+    /// It is 0 otherwise.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasFPFeatures : 1;
+  };
+
   union {
     // Same order as in StmtNodes.td.
     // Statements
@@ -1293,6 +1317,7 @@ protected:
 
     // Clang Extensions
     OpaqueValueExprBitfields OpaqueValueExprBits;
+    ConvertVectorExprBitfields ConvertVectorExprBits;
   };
 
 public:
@@ -3178,7 +3203,7 @@ public:
   /// getOutputConstraint - Return the constraint string for the specified
   /// output operand.  All output constraints are known to be non-empty (either
   /// '=' or '+').
-  StringRef getOutputConstraint(unsigned i) const;
+  std::string getOutputConstraint(unsigned i) const;
 
   /// isOutputPlusConstraint - Return true if the specified output constraint
   /// is a "+" constraint (which is both an input and an output) or false if it
@@ -3199,14 +3224,14 @@ public:
 
   /// getInputConstraint - Return the specified input constraint.  Unlike output
   /// constraints, these can be empty.
-  StringRef getInputConstraint(unsigned i) const;
+  std::string getInputConstraint(unsigned i) const;
 
   const Expr *getInputExpr(unsigned i) const;
 
   //===--- Other ---===//
 
   unsigned getNumClobbers() const { return NumClobbers; }
-  StringRef getClobber(unsigned i) const;
+  std::string getClobber(unsigned i) const;
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == GCCAsmStmtClass ||
@@ -3287,21 +3312,20 @@ class GCCAsmStmt : public AsmStmt {
   friend class ASTStmtReader;
 
   SourceLocation RParenLoc;
-  StringLiteral *AsmStr;
+  Expr *AsmStr;
 
   // FIXME: If we wanted to, we could allocate all of these in one big array.
-  StringLiteral **Constraints = nullptr;
-  StringLiteral **Clobbers = nullptr;
+  Expr **Constraints = nullptr;
+  Expr **Clobbers = nullptr;
   IdentifierInfo **Names = nullptr;
   unsigned NumLabels = 0;
 
 public:
   GCCAsmStmt(const ASTContext &C, SourceLocation asmloc, bool issimple,
              bool isvolatile, unsigned numoutputs, unsigned numinputs,
-             IdentifierInfo **names, StringLiteral **constraints, Expr **exprs,
-             StringLiteral *asmstr, unsigned numclobbers,
-             StringLiteral **clobbers, unsigned numlabels,
-             SourceLocation rparenloc);
+             IdentifierInfo **names, Expr **constraints, Expr **exprs,
+             Expr *asmstr, unsigned numclobbers, Expr **clobbers,
+             unsigned numlabels, SourceLocation rparenloc);
 
   /// Build an empty inline-assembly statement.
   explicit GCCAsmStmt(EmptyShell Empty) : AsmStmt(GCCAsmStmtClass, Empty) {}
@@ -3311,9 +3335,11 @@ public:
 
   //===--- Asm String Analysis ---===//
 
-  const StringLiteral *getAsmString() const { return AsmStr; }
-  StringLiteral *getAsmString() { return AsmStr; }
-  void setAsmString(StringLiteral *E) { AsmStr = E; }
+  const Expr *getAsmStringExpr() const { return AsmStr; }
+  Expr *getAsmStringExpr() { return AsmStr; }
+  void setAsmStringExpr(Expr *E) { AsmStr = E; }
+
+  std::string getAsmString() const;
 
   /// AsmStringPiece - this is part of a decomposed asm string specification
   /// (for use with the AnalyzeAsmString function below).  An asm string is
@@ -3382,14 +3408,12 @@ public:
     return {};
   }
 
-  StringRef getOutputConstraint(unsigned i) const;
+  std::string getOutputConstraint(unsigned i) const;
 
-  const StringLiteral *getOutputConstraintLiteral(unsigned i) const {
+  const Expr *getOutputConstraintExpr(unsigned i) const {
     return Constraints[i];
   }
-  StringLiteral *getOutputConstraintLiteral(unsigned i) {
-    return Constraints[i];
-  }
+  Expr *getOutputConstraintExpr(unsigned i) { return Constraints[i]; }
 
   Expr *getOutputExpr(unsigned i);
 
@@ -3410,12 +3434,12 @@ public:
     return {};
   }
 
-  StringRef getInputConstraint(unsigned i) const;
+  std::string getInputConstraint(unsigned i) const;
 
-  const StringLiteral *getInputConstraintLiteral(unsigned i) const {
+  const Expr *getInputConstraintExpr(unsigned i) const {
     return Constraints[i + NumOutputs];
   }
-  StringLiteral *getInputConstraintLiteral(unsigned i) {
+  Expr *getInputConstraintExpr(unsigned i) {
     return Constraints[i + NumOutputs];
   }
 
@@ -3425,6 +3449,8 @@ public:
   const Expr *getInputExpr(unsigned i) const {
     return const_cast<GCCAsmStmt*>(this)->getInputExpr(i);
   }
+
+  static std::string ExtractStringFromGCCAsmStmtComponent(const Expr *E);
 
   //===--- Labels ---===//
 
@@ -3474,12 +3500,9 @@ public:
 private:
   void setOutputsAndInputsAndClobbers(const ASTContext &C,
                                       IdentifierInfo **Names,
-                                      StringLiteral **Constraints,
-                                      Stmt **Exprs,
-                                      unsigned NumOutputs,
-                                      unsigned NumInputs,
-                                      unsigned NumLabels,
-                                      StringLiteral **Clobbers,
+                                      Expr **Constraints, Stmt **Exprs,
+                                      unsigned NumOutputs, unsigned NumInputs,
+                                      unsigned NumLabels, Expr **Clobbers,
                                       unsigned NumClobbers);
 
 public:
@@ -3490,12 +3513,10 @@ public:
   /// This returns -1 if the operand name is invalid.
   int getNamedOperand(StringRef SymbolicName) const;
 
-  StringRef getClobber(unsigned i) const;
+  std::string getClobber(unsigned i) const;
 
-  StringLiteral *getClobberStringLiteral(unsigned i) { return Clobbers[i]; }
-  const StringLiteral *getClobberStringLiteral(unsigned i) const {
-    return Clobbers[i];
-  }
+  Expr *getClobberExpr(unsigned i) { return Clobbers[i]; }
+  const Expr *getClobberExpr(unsigned i) const { return Clobbers[i]; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return AsmLoc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }

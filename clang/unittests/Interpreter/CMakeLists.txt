@@ -1,13 +1,4 @@
-set(LLVM_LINK_COMPONENTS
-  ${LLVM_TARGETS_TO_BUILD}
-  Core
-  MC
-  OrcJIT
-  Support
-  TargetParser
-  )
-
-add_clang_unittest(ClangReplInterpreterTests
+add_distinct_clang_unittest(ClangReplInterpreterTests
   IncrementalCompilerBuilderTest.cpp
   IncrementalProcessingTest.cpp
   InterpreterTest.cpp
@@ -15,16 +6,24 @@ add_clang_unittest(ClangReplInterpreterTests
   CodeCompletionTest.cpp
 
   EXPORT_SYMBOLS
-  )
-  
-target_link_libraries(ClangReplInterpreterTests PUBLIC LLVMTestingSupport)
 
-clang_target_link_libraries(ClangReplInterpreterTests PRIVATE
+  CLANG_LIBS
   clangAST
   clangBasic
   clangInterpreter
   clangFrontend
   clangSema
+
+  LINK_LIBS
+  LLVMTestingSupport
+
+  LLVM_COMPONENTS
+  ${LLVM_TARGETS_TO_BUILD}
+  Core
+  MC
+  OrcJIT
+  Support
+  TargetParser
   )
 
 # Exceptions on Windows are not yet supported.

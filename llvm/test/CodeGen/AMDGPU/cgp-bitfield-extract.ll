@@ -1,7 +1,7 @@
 ; RUN: opt -S -mtriple=amdgcn-- -codegenprepare < %s | FileCheck -check-prefix=OPT %s
 ; RUN: opt -S -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -codegenprepare < %s | FileCheck -check-prefix=OPT %s
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; This particular case will actually be worse in terms of code size
 ; from sinking into both.
@@ -35,19 +35,19 @@
 
 ; GCN: buffer_store_dword
 ; GCN: s_endpgm
-define amdgpu_kernel void @sink_ubfe_i32(ptr addrspace(1) %out, i32 %arg1) #0 {
+define amdgpu_kernel void @sink_ubfe_i32(ptr addrspace(1) %out, i32 %arg1, i1 %arg) #0 {
 entry:
   %shr = lshr i32 %arg1, 8
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
   %val0 = and i32 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i32 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -75,19 +75,19 @@ ret:
 ; OPT: ret
 
 ; GCN-LABEL: {{^}}sink_sbfe_i32:
-define amdgpu_kernel void @sink_sbfe_i32(ptr addrspace(1) %out, i32 %arg1) #0 {
+define amdgpu_kernel void @sink_sbfe_i32(ptr addrspace(1) %out, i32 %arg1, i1 %arg) #0 {
 entry:
   %shr = ashr i32 %arg1, 8
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
   %val0 = and i32 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i32 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -99,52 +99,49 @@ ret:
 
 ; OPT-LABEL: @sink_ubfe_i16(
 ; OPT: entry:
+; OPT-NEXT: icmp
 ; OPT-NEXT: br i1
 
 ; OPT: bb0:
-; OPT: %0 = lshr i16 %arg1, 4
-; OPT-NEXT: %val0 = and i16 %0, 255
+; OPT: [[LSHR0:%[0-9]+]] = lshr i16 %arg1, 4
+; OPT-NEXT: %val0 = and i16 [[LSHR0]], 255
 ; OPT: br label
 
 ; OPT: bb1:
-; OPT: %1 = lshr i16 %arg1, 4
-; OPT-NEXT: %val1 = and i16 %1, 127
+; OPT: [[LSHR1:%[0-9]+]] = lshr i16 %arg1, 4
+; OPT-NEXT: %val1 = and i16 [[LSHR1]], 127
 ; OPT: br label
 
 ; OPT: ret:
 ; OPT: store
 ; OPT: ret
 
-; For GFX8: since i16 is legal type, we cannot sink lshr into .LBBs.
-
 ; GCN-LABEL: {{^}}sink_ubfe_i16:
 ; GCN-NOT: lshr
-; VI: s_load_dword [[ARG:s[0-9]+]], s[4:5], 0x2c
-; VI: s_bfe_u32 [[BFE:s[0-9]+]], [[ARG]], 0xc0004
 ; GCN: s_cbranch_scc{{[0-1]}}
 
-; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70004
-; VI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7f
+; GCN: ; %bb.1:
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70004
 
-; GCN: .LBB2_3:
-; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
-; VI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0xff
+; GCN: .LBB2_2:
+; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
 
 ; GCN: buffer_store_short
 ; GCN: s_endpgm
-define amdgpu_kernel void @sink_ubfe_i16(ptr addrspace(1) %out, i16 %arg1) #0 {
+define amdgpu_kernel void @sink_ubfe_i16(ptr addrspace(1) %out, i16 %arg1, [8 x i32], i32 %arg2) #0 {
 entry:
   %shr = lshr i16 %arg1, 4
-  br i1 undef, label %bb0, label %bb1
+  %cond = icmp eq i32 %arg2, 0
+  br i1 %cond, label %bb0, label %bb1
 
 bb0:
   %val0 = and i16 %shr, 255
-  store volatile i16 0, ptr addrspace(1) undef
+  store volatile i16 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i16 %shr, 127
-  store volatile i16 0, ptr addrspace(1) undef
+  store volatile i16 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -183,19 +180,19 @@ ret:
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xff, v[[LO]]
 
 ; GCN: buffer_store_dwordx2
-define amdgpu_kernel void @sink_ubfe_i64_span_midpoint(ptr addrspace(1) %out, i64 %arg1) #0 {
+define amdgpu_kernel void @sink_ubfe_i64_span_midpoint(ptr addrspace(1) %out, i64 %arg1, i1 %arg) #0 {
 entry:
   %shr = lshr i64 %arg1, 30
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
   %val0 = and i64 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i64 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -231,19 +228,19 @@ ret:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000f
 
 ; GCN: buffer_store_dwordx2
-define amdgpu_kernel void @sink_ubfe_i64_low32(ptr addrspace(1) %out, i64 %arg1) #0 {
+define amdgpu_kernel void @sink_ubfe_i64_low32(ptr addrspace(1) %out, i64 %arg1, i1 %arg) #0 {
 entry:
   %shr = lshr i64 %arg1, 15
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
   %val0 = and i64 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i64 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -277,19 +274,19 @@ ret:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80003
 
 ; GCN: buffer_store_dwordx2
-define amdgpu_kernel void @sink_ubfe_i64_high32(ptr addrspace(1) %out, i64 %arg1) #0 {
+define amdgpu_kernel void @sink_ubfe_i64_high32(ptr addrspace(1) %out, i64 %arg1, i1 %arg) #0 {
 entry:
   %shr = lshr i64 %arg1, 35
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
   %val0 = and i64 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i64 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:

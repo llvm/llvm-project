@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s 
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 int f(double); // expected-note{{candidate function}}
 int f(int); // expected-note{{candidate function}}
 
@@ -139,7 +139,7 @@ namespace PR8196 {
   template <typename T> struct mcdata {
     typedef int result_type;
   };
-  template <class T> 
+  template <class T>
     typename mcdata<T>::result_type wrap_mean(mcdata<T> const&);
   void add_property(double(*)(mcdata<double> const &)); // expected-note{{candidate function not viable: no overload of 'wrap_mean' matching}}
   void f() {
@@ -204,7 +204,7 @@ namespace test1 {
   double foo(int x, float y) {return 0;} // expected-note {{candidate function has different number of parameters (expected 1 but has 2)}}
   double foo(float x) {return 0;} // expected-note {{candidate function has type mismatch at 1st parameter (expected 'int' but has 'float')}}
   double foo(int x) {return 0;} // expected-note {{candidate function has different return type ('int' expected but has 'double')}}
-  
+
   int (*ptr)(int) = &foo; // expected-error {{address of overloaded function 'foo' does not match required type 'int (int)'}}
 
   struct Qualifiers {
@@ -221,20 +221,20 @@ namespace test1 {
 
   void QualifierTest() {
     void (Qualifiers::*X)();
-    X = &Qualifiers::C; // expected-error-re {{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const': different qualifiers (unqualified vs 'const')}}
-    X = &Qualifiers::V; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} volatile': different qualifiers (unqualified vs 'volatile')}}
-    X = &Qualifiers::R; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} __restrict': different qualifiers (unqualified vs '__restrict')}}
-    X = &Qualifiers::CV; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const volatile': different qualifiers (unqualified vs 'const volatile')}}
-    X = &Qualifiers::CR; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const __restrict': different qualifiers (unqualified vs 'const __restrict')}}
-    X = &Qualifiers::VR; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} volatile __restrict': different qualifiers (unqualified vs 'volatile __restrict')}}
-    X = &Qualifiers::CVR; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (test1::Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const volatile __restrict': different qualifiers (unqualified vs 'const volatile __restrict')}}
+    X = &Qualifiers::C; // expected-error-re {{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const': different qualifiers (unqualified vs 'const')}}
+    X = &Qualifiers::V; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} volatile': different qualifiers (unqualified vs 'volatile')}}
+    X = &Qualifiers::R; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} __restrict': different qualifiers (unqualified vs '__restrict')}}
+    X = &Qualifiers::CV; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const volatile': different qualifiers (unqualified vs 'const volatile')}}
+    X = &Qualifiers::CR; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const __restrict': different qualifiers (unqualified vs 'const __restrict')}}
+    X = &Qualifiers::VR; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} volatile __restrict': different qualifiers (unqualified vs 'volatile __restrict')}}
+    X = &Qualifiers::CVR; // expected-error-re{{assigning to 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' from incompatible type 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}} const volatile __restrict': different qualifiers (unqualified vs 'const volatile __restrict')}}
   }
 
   struct Dummy {
     void N() {};
   };
 
-  void (Qualifiers::*X)() = &Dummy::N; // expected-error-re{{cannot initialize a variable of type 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' with an rvalue of type 'void (test1::Dummy::*)(){{( __attribute__\(\(thiscall\)\))?}}': different classes ('Qualifiers' vs 'test1::Dummy')}}
+  void (Qualifiers::*X)() = &Dummy::N; // expected-error-re{{cannot initialize a variable of type 'void (Qualifiers::*)(){{( __attribute__\(\(thiscall\)\))?}}' with an rvalue of type 'void (Dummy::*)(){{( __attribute__\(\(thiscall\)\))?}}': different classes ('Qualifiers' vs 'Dummy')}}
 }
 
 template <typename T> class PR16561 {

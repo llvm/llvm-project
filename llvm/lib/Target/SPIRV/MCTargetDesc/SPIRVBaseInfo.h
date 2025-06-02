@@ -57,6 +57,11 @@ namespace MemoryModel {
 #include "SPIRVGenTables.inc"
 } // namespace MemoryModel
 
+namespace MatrixMultiplyAccumulateOperands {
+#define GET_MatrixMultiplyAccumulateOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace MatrixMultiplyAccumulateOperands
+
 namespace ExecutionMode {
 #define GET_ExecutionMode_DECL
 #include "SPIRVGenTables.inc"
@@ -221,6 +226,11 @@ struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;
   uint32_t Number;
+};
+
+enum InstFlags {
+  // It is a half type
+  INST_PRINTER_WIDTH16 = 1
 };
 } // namespace SPIRV
 

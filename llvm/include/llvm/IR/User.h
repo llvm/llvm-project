@@ -79,8 +79,10 @@ protected:
   struct AllocInfo {
   public:
     const unsigned NumOps : NumUserOperandsBits;
-    const bool HasHungOffUses : 1;
-    const bool HasDescriptor : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    const unsigned HasHungOffUses : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    const unsigned HasDescriptor : 1;
 
     AllocInfo() = delete;
 

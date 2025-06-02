@@ -114,8 +114,6 @@ protected:
 
     bool isFirst() const {
       return isa<KnownLatest>(Link) ||
-             // FIXME: 'template' is required on the next line due to an
-             // apparent clang bug.
              isa<UninitializedLatest>(cast<NotKnownLatest>(Link));
     }
 

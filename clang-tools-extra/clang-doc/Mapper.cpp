@@ -19,13 +19,24 @@ namespace clang {
 namespace doc {
 
 static llvm::StringSet<> USRVisited;
-static llvm::sys::Mutex USRVisitedGuard;
+static llvm::sys::SmartMutex<true> USRVisitedGuard;
 
-template <typename T> bool isTypedefAnonRecord(const T *D) {
+template <typename T> static bool isTypedefAnonRecord(const T *D) {
   if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
     return C->getTypedefNameForAnonDecl();
   }
   return false;
+}
+
+Location MapASTVisitor::getDeclLocation(const NamedDecl *D) const {
+  bool IsFileInRootDir;
+  llvm::SmallString<128> File =
+      getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
+  SourceManager &SM = D->getASTContext().getSourceManager();
+  int Start = SM.getPresumedLoc(D->getBeginLoc()).getLine();
+  int End = SM.getPresumedLoc(D->getEndLoc()).getLine();
+
+  return Location(Start, End, File, IsFileInRootDir);
 }
 
 void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
@@ -48,7 +59,7 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
     return true;
   // Prevent Visiting USR twice
   {
-    std::lock_guard<llvm::sys::Mutex> Guard(USRVisitedGuard);
+    llvm::sys::SmartScopedLock<true> Guard(USRVisitedGuard);
     StringRef Visited = USR.str();
     if (USRVisited.count(Visited) && !isTypedefAnonRecord<T>(D))
       return true;
@@ -59,18 +70,18 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
   bool IsFileInRootDir;
   llvm::SmallString<128> File =
       getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
-  auto I = serialize::emitInfo(D, getComment(D, D->getASTContext()),
-                               getLine(D, D->getASTContext()), File,
-                               IsFileInRootDir, CDCtx.PublicOnly);
+  auto [Child, Parent] =
+      serialize::emitInfo(D, getComment(D, D->getASTContext()),
+                          getDeclLocation(D), CDCtx.PublicOnly);
 
-  // A null in place of I indicates that the serializer is skipping this decl
-  // for some reason (e.g. we're only reporting public decls).
-  if (I.first)
-    CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(I.first->USR)),
-                             serialize::serialize(I.first));
-  if (I.second)
-    CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(I.second->USR)),
-                             serialize::serialize(I.second));
+  // A null in place of a valid Info indicates that the serializer is skipping
+  // this decl for some reason (e.g. we're only reporting public decls).
+  if (Child)
+    CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(Child->USR)),
+                             serialize::serialize(Child));
+  if (Parent)
+    CDCtx.ECtx->reportResult(llvm::toHex(llvm::toStringRef(Parent->USR)),
+                             serialize::serialize(Parent));
   return true;
 }
 

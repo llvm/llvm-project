@@ -84,7 +84,7 @@ ValueObjectRegisterSet::CalculateNumChildren(uint32_t max) {
   return 0;
 }
 
-std::optional<uint64_t> ValueObjectRegisterSet::GetByteSize() { return 0; }
+llvm::Expected<uint64_t> ValueObjectRegisterSet::GetByteSize() { return 0; }
 
 bool ValueObjectRegisterSet::UpdateValue() {
   m_error.Clear();
@@ -139,13 +139,15 @@ ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
     return ValueObjectSP();
 }
 
-size_t ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
+llvm::Expected<size_t>
+ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
   if (m_reg_ctx_sp && m_reg_set) {
     const RegisterInfo *reg_info = m_reg_ctx_sp->GetRegisterInfoByName(name);
     if (reg_info != nullptr)
       return reg_info->kinds[eRegisterKindLLDB];
   }
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.str().c_str());
 }
 
 #pragma mark -
@@ -226,7 +228,7 @@ ValueObjectRegister::CalculateNumChildren(uint32_t max) {
   return *children_count <= max ? *children_count : max;
 }
 
-std::optional<uint64_t> ValueObjectRegister::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectRegister::GetByteSize() {
   return m_reg_info.byte_size;
 }
 

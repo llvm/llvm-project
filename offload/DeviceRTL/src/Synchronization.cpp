@@ -69,7 +69,7 @@ uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
   }
 }
 
-uint32_t SHARED(namedBarrierTracker);
+[[clang::loader_uninitialized]] Local<uint32_t> namedBarrierTracker;
 
 void namedBarrierInit() {
   // Don't have global ctors, and shared memory is not zero init
@@ -303,11 +303,13 @@ int32_t __kmpc_cancel_barrier(IdentTy *Loc, int32_t TId) {
 }
 
 void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
-  if (mapping::isMainThreadInGenericMode())
-    return __kmpc_flush(Loc);
-
   if (mapping::isSPMDMode())
     return __kmpc_barrier_simple_spmd(Loc, TId);
+
+  // Generic parallel regions are run with multiple of the warp size or single
+  // threaded, in the latter case we need to stop here.
+  if (omp_get_num_threads() == 1)
+    return __kmpc_flush(Loc);
 
   impl::namedBarrier();
 }

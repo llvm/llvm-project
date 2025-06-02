@@ -255,79 +255,105 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
     BlockArgListType getArguments() { return getFunctionBody().getArguments(); }
 
     /// Insert a single argument of type `argType` with attributes `argAttrs` and
-    /// location `argLoc` at `argIndex`.
-    void insertArgument(unsigned argIndex, ::mlir::Type argType, ::mlir::DictionaryAttr argAttrs,
-                        ::mlir::Location argLoc) {
-      insertArguments({argIndex}, {argType}, {argAttrs}, {argLoc});
+    /// location `argLoc` at `argIndex`. Returns failure if the function cannot be
+    /// updated to have the new signature.
+    ::llvm::LogicalResult insertArgument(
+        unsigned argIndex, ::mlir::Type argType, ::mlir::DictionaryAttr argAttrs,
+        ::mlir::Location argLoc) {
+      return insertArguments({argIndex}, {argType}, {argAttrs}, {argLoc});
     }
 
     /// Inserts arguments with the listed types, attributes, and locations at the
     /// listed indices. `argIndices` must be sorted. Arguments are inserted in the
     /// order they are listed, such that arguments with identical index will
-    /// appear in the same order that they were listed here.
-    void insertArguments(::llvm::ArrayRef<unsigned> argIndices, ::mlir::TypeRange argTypes,
-                        ::llvm::ArrayRef<::mlir::DictionaryAttr> argAttrs,
-                        ::llvm::ArrayRef<::mlir::Location> argLocs) {
+    /// appear in the same order that they were listed here. Returns failure if
+    /// the function cannot be updated to have the new signature.
+    ::llvm::LogicalResult insertArguments(
+        ::llvm::ArrayRef<unsigned> argIndices, ::mlir::TypeRange argTypes,
+        ::llvm::ArrayRef<::mlir::DictionaryAttr> argAttrs,
+        ::llvm::ArrayRef<::mlir::Location> argLocs) {
       unsigned originalNumArgs = $_op.getNumArguments();
       ::mlir::Type newType = $_op.getTypeWithArgsAndResults(
           argIndices, argTypes, /*resultIndices=*/{}, /*resultTypes=*/{});
+      if (!newType)
+        return ::llvm::failure();
       ::mlir::function_interface_impl::insertFunctionArguments(
           $_op, argIndices, argTypes, argAttrs, argLocs,
           originalNumArgs, newType);
+      return ::llvm::success();
     }
 
-    /// Insert a single result of type `resultType` at `resultIndex`.
-    void insertResult(unsigned resultIndex, ::mlir::Type resultType,
-                      ::mlir::DictionaryAttr resultAttrs) {
-      insertResults({resultIndex}, {resultType}, {resultAttrs});
+    /// Insert a single result of type `resultType` at `resultIndex`.Returns
+    /// failure if the function cannot be updated to have the new signature.
+    ::llvm::LogicalResult insertResult(
+        unsigned resultIndex, ::mlir::Type resultType,
+        ::mlir::DictionaryAttr resultAttrs) {
+      return insertResults({resultIndex}, {resultType}, {resultAttrs});
     }
 
     /// Inserts results with the listed types at the listed indices.
     /// `resultIndices` must be sorted. Results are inserted in the order they are
     /// listed, such that results with identical index will appear in the same
-    /// order that they were listed here.
-    void insertResults(::llvm::ArrayRef<unsigned> resultIndices, ::mlir::TypeRange resultTypes,
-                       ::llvm::ArrayRef<::mlir::DictionaryAttr> resultAttrs) {
+    /// order that they were listed here. Returns failure if the function
+    /// cannot be updated to have the new signature.
+    ::llvm::LogicalResult insertResults(
+        ::llvm::ArrayRef<unsigned> resultIndices,
+        ::mlir::TypeRange resultTypes,
+        ::llvm::ArrayRef<::mlir::DictionaryAttr> resultAttrs) {
       unsigned originalNumResults = $_op.getNumResults();
       ::mlir::Type newType = $_op.getTypeWithArgsAndResults(
         /*argIndices=*/{}, /*argTypes=*/{}, resultIndices, resultTypes);
+      if (!newType)
+        return ::llvm::failure();
       ::mlir::function_interface_impl::insertFunctionResults(
           $_op, resultIndices, resultTypes, resultAttrs,
           originalNumResults, newType);
+      return ::llvm::success();
     }
 
-    /// Erase a single argument at `argIndex`.
-    void eraseArgument(unsigned argIndex) {
+    /// Erase a single argument at `argIndex`. Returns failure if the function
+    /// cannot be updated to have the new signature.
+    ::llvm::LogicalResult eraseArgument(unsigned argIndex) {
       ::llvm::BitVector argsToErase($_op.getNumArguments());
       argsToErase.set(argIndex);
-      eraseArguments(argsToErase);
+      return eraseArguments(argsToErase);
     }
 
-    /// Erases the arguments listed in `argIndices`.
-    void eraseArguments(const ::llvm::BitVector &argIndices) {
+    /// Erases the arguments listed in `argIndices`. Returns failure if the
+    /// function cannot be updated to have the new signature.
+    ::llvm::LogicalResult eraseArguments(const ::llvm::BitVector &argIndices) {
       ::mlir::Type newType = $_op.getTypeWithoutArgs(argIndices);
+      if (!newType)
+        return ::llvm::failure();
       ::mlir::function_interface_impl::eraseFunctionArguments(
         $_op, argIndices, newType);
+      return ::llvm::success();
     }
 
-    /// Erase a single result at `resultIndex`.
-    void eraseResult(unsigned resultIndex) {
+    /// Erase a single result at `resultIndex`. Returns failure if the function
+    /// cannot be updated to have the new signature.
+    ::llvm::LogicalResult eraseResult(unsigned resultIndex) {
       ::llvm::BitVector resultsToErase($_op.getNumResults());
       resultsToErase.set(resultIndex);
-      eraseResults(resultsToErase);
+      return eraseResults(resultsToErase);
     }
 
-    /// Erases the results listed in `resultIndices`.
-    void eraseResults(const ::llvm::BitVector &resultIndices) {
+    /// Erases the results listed in `resultIndices`.  Returns failure if the
+    /// function cannot be updated to have the new signature.
+    ::llvm::LogicalResult eraseResults(const ::llvm::BitVector &resultIndices) {
       ::mlir::Type newType = $_op.getTypeWithoutResults(resultIndices);
+      if (!newType)
+        return ::llvm::failure();
       ::mlir::function_interface_impl::eraseFunctionResults(
           $_op, resultIndices, newType);
+      return ::llvm::success();
     }
 
     /// Return the type of this function with the specified arguments and
     /// results inserted. This is used to update the function's signature in
     /// the `insertArguments` and `insertResults` methods. The arrays must be
-    /// sorted by increasing index.
+    /// sorted by increasing index. Return nullptr if the updated type would
+    /// not be valid.
     ::mlir::Type getTypeWithArgsAndResults(
       ::llvm::ArrayRef<unsigned> argIndices, ::mlir::TypeRange argTypes,
       ::llvm::ArrayRef<unsigned> resultIndices, ::mlir::TypeRange resultTypes) {
@@ -341,7 +367,8 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
 
     /// Return the type of this function without the specified arguments and
     /// results. This is used to update the function's signature in the
-    /// `eraseArguments` and `eraseResults` methods.
+    /// `eraseArguments` and `eraseResults` methods. Return nullptr if the
+    /// updated type would not be valid.
     ::mlir::Type getTypeWithoutArgsAndResults(
       const ::llvm::BitVector &argIndices, const ::llvm::BitVector &resultIndices) {
       ::llvm::SmallVector<::mlir::Type> argStorage, resultStorage;
@@ -538,6 +565,10 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface", [
     /// such name.
     ::mlir::Attribute removeResultAttr(unsigned index, ::mlir::StringAttr name) {
       return ::mlir::function_interface_impl::removeResultAttr($_op, index, name);
+    }
+    ::mlir::Attribute removeResultAttr(unsigned index, ::llvm::StringRef name) {
+      return removeResultAttr(
+          index, ::mlir::StringAttr::get(this->getOperation()->getContext(), name));
     }
 
     /// Returns the dictionary attribute corresponding to the argument at

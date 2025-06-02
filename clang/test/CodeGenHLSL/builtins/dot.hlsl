@@ -158,3 +158,11 @@ float test_dot_float4(float4 p0, float4 p1) { return dot(p0, p1); }
 // CHECK: %hlsl.dot = fmul reassoc nnan ninf nsz arcp afn double
 // CHECK: ret double %hlsl.dot
 double test_dot_double(double p0, double p1) { return dot(p0, p1); }
+
+// CHECK-LABEL: test_dot_literal
+// CHECK: [[X:%.*]] = shufflevector <1 x i32> {{.*}}, <1 x i32> poison, <4 x i32> zeroinitializer
+// CHECK-NEXT: %hlsl.dot = call i32 @llvm.[[ICF]].udot.v4i32(<4 x i32> {{.*}}, <4 x i32> [[X]])
+// CHECK-NEXT: [[S1:%.*]] = insertelement <4 x i32> poison, i32 %hlsl.dot, i64 0
+// CHECK-NEXT: [[S2:%.*]] = shufflevector <4 x i32> [[S1]], <4 x i32> poison, <4 x i32> zeroinitializer
+// CHECK-NEXT: ret <4 x i32> [[S2]]
+uint4 test_dot_literal( uint4 p0) { return dot(p0, 1u.xxxx); }

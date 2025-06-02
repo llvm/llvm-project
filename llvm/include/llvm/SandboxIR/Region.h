@@ -87,16 +87,23 @@ public:
 //  |    |
 //  |Rgn3| -> Transform1 ->  ... -> TransformN -> Check Cost
 //  +----+
+//
+// The region can also hold an ordered sequence of "auxiliary" instructions.
+// This can be used to pass auxiliary information across region passes, like for
+// example the initial seed slice used by the bottom-up vectorizer.
 
 class Region {
   /// All the instructions in the Region. Only new instructions generated during
   /// vectorization are part of the Region.
   SetVector<Instruction *> Insts;
+  /// An auxiliary sequence of Instruction-Index pairs.
+  SmallVector<Instruction *> Aux;
 
   /// MDNode that we'll use to mark instructions as being part of the region.
   MDNode *RegionMDN;
   static constexpr const char *MDKind = "sandboxvec";
   static constexpr const char *RegionStr = "sandboxregion";
+  static constexpr const char *AuxMDKind = "sandboxaux";
 
   Context &Ctx;
   /// Keeps track of cost of instructions added and removed.
@@ -107,23 +114,47 @@ class Region {
   /// ID (for later deregistration) of the "erase instruction" callback.
   Context::CallbackID EraseInstCB;
 
-  // TODO: Add cost modeling.
-  // TODO: Add a way to encode/decode region info to/from metadata.
+  /// Adds \p I to the set but also don't track the instruction's score if \p
+  /// IgnoreCost is true. Only to be used when adding an instruction to the
+  /// auxiliary vector.
+  /// NOTE: When an instruction is added to the region we track it cost in the
+  /// scoreboard, which currently resides in the region class. However, when we
+  /// add an instruction to the auxiliary vector it does get tagged as being a
+  /// member of the region (for ownership reasons), but its cost does not get
+  /// counted because the instruction hasn't been added in the "normal" way.
+  void addImpl(Instruction *I, bool IgnoreCost);
+  /// Adds I to the set. This is the main API for adding an instruction to the
+  /// region.
+  void add(Instruction *I) { addImpl(I, /*IgnoreCost=*/false); }
+  /// Removes I from the set.
+  void remove(Instruction *I);
+  friend class Context; // The callbacks need to call add() and remove().
+  friend class RegionInternalsAttorney; // For unit tests.
+  friend class RegionsFromBBs;          // For add().
+
+  /// Set \p I as the \p Idx'th element in the auxiliary vector.
+  /// NOTE: This is for internal use, it does not set the metadata.
+  void setAux(unsigned Idx, Instruction *I);
+  /// Helper for dropping Aux metadata for \p I.
+  void dropAuxMetadata(Instruction *I);
+  /// Remove instruction \p I from Aux and drop metadata.
+  void removeFromAux(Instruction *I);
 
 public:
   Region(Context &Ctx, TargetTransformInfo &TTI);
   ~Region();
 
   Context &getContext() const { return Ctx; }
-
-  /// Adds I to the set.
-  void add(Instruction *I);
-  /// Removes I from the set.
-  void remove(Instruction *I);
   /// Returns true if I is in the Region.
   bool contains(Instruction *I) const { return Insts.contains(I); }
   /// Returns true if the Region has no instructions.
   bool empty() const { return Insts.empty(); }
+  /// Set the auxiliary vector.
+  void setAux(ArrayRef<Instruction *> Aux);
+  /// \Returns the auxiliary vector.
+  const SmallVector<Instruction *> &getAux() const { return Aux; }
+  /// Clears all auxiliary data.
+  void clearAux();
 
   using iterator = decltype(Insts.begin());
   iterator begin() { return Insts.begin(); }
@@ -147,6 +178,13 @@ public:
     return OS;
   }
 #endif
+};
+
+/// A helper client-attorney class for unit tests.
+class RegionInternalsAttorney {
+public:
+  static void add(Region &Rgn, Instruction *I) { Rgn.add(I); }
+  static void remove(Region &Rgn, Instruction *I) { Rgn.remove(I); }
 };
 
 } // namespace llvm::sandboxir

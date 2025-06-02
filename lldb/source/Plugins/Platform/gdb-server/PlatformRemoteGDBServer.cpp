@@ -206,11 +206,7 @@ bool PlatformRemoteGDBServer::SetRemoteWorkingDirectory(
 }
 
 bool PlatformRemoteGDBServer::IsConnected() const {
-  if (m_gdb_client_up) {
-    assert(m_gdb_client_up->IsConnected());
-    return true;
-  }
-  return false;
+  return m_gdb_client_up && m_gdb_client_up->IsConnected();
 }
 
 Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {

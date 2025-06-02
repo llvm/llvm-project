@@ -20,6 +20,16 @@ namespace {
 struct ForOpInterface
     : public ValueBoundsOpInterface::ExternalModel<ForOpInterface, ForOp> {
 
+  static AffineExpr getTripCountExpr(scf::ForOp forOp,
+                                     ValueBoundsConstraintSet &cstr) {
+    AffineExpr lbExpr = cstr.getExpr(forOp.getLowerBound());
+    AffineExpr ubExpr = cstr.getExpr(forOp.getUpperBound());
+    AffineExpr stepExpr = cstr.getExpr(forOp.getStep());
+    AffineExpr tripCountExpr =
+        AffineExpr(ubExpr - lbExpr).ceilDiv(stepExpr); // (ub - lb) / step
+    return tripCountExpr;
+  }
+
   /// Populate bounds of values/dimensions for iter_args/OpResults. If the
   /// value/dimension size does not change in an iteration, we can deduce that
   /// it the same as the initial value/dimension.
@@ -77,11 +87,7 @@ struct ForOpInterface
     // `value` is result of `forOp`, we can prove that:
     // %result == %init_arg + trip_count * (%yielded_value - %iter_arg).
     // Where trip_count is (ub - lb) / step.
-    AffineExpr lbExpr = cstr.getExpr(forOp.getLowerBound());
-    AffineExpr ubExpr = cstr.getExpr(forOp.getUpperBound());
-    AffineExpr stepExpr = cstr.getExpr(forOp.getStep());
-    AffineExpr tripCountExpr =
-        AffineExpr(ubExpr - lbExpr).ceilDiv(stepExpr); // (ub - lb) / step
+    AffineExpr tripCountExpr = getTripCountExpr(forOp, cstr);
     AffineExpr oneIterAdvanceExpr =
         cstr.getExpr(yieldedValue) - cstr.getExpr(iterArg);
     cstr.bound(value) ==
@@ -93,9 +99,18 @@ struct ForOpInterface
     auto forOp = cast<ForOp>(op);
 
     if (value == forOp.getInductionVar()) {
-      // TODO: Take into account step size.
       cstr.bound(value) >= forOp.getLowerBound();
       cstr.bound(value) < forOp.getUpperBound();
+      // iv <= lb + ((ub-lb)/step - 1) * step
+      // This bound does not replace the `iv < ub` constraint mentioned above,
+      // since constraints involving the multiplication of two constraint set
+      // dimensions are not supported.
+      AffineExpr tripCountMinusOne =
+          getTripCountExpr(forOp, cstr) - cstr.getExpr(1);
+      AffineExpr computedUpperBound =
+          cstr.getExpr(forOp.getLowerBound()) +
+          AffineExpr(tripCountMinusOne * cstr.getExpr(forOp.getStep()));
+      cstr.bound(value) <= computedUpperBound;
       return;
     }
 

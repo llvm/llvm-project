@@ -173,8 +173,8 @@ public:
 
       auto Dest = TRI.regunits(CopyOperands->Destination->getReg().asMCReg());
       auto Src = TRI.regunits(CopyOperands->Source->getReg().asMCReg());
-      RegUnitsToInvalidate.insert(Dest.begin(), Dest.end());
-      RegUnitsToInvalidate.insert(Src.begin(), Src.end());
+      RegUnitsToInvalidate.insert_range(Dest);
+      RegUnitsToInvalidate.insert_range(Src);
     };
 
     for (MCRegUnit Unit : TRI.regunits(Reg)) {
@@ -514,8 +514,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 };
 
@@ -553,9 +552,12 @@ void MachineCopyPropagation::readSuccessorLiveIns(
   // If a copy result is livein to a successor, it is not dead.
   for (const MachineBasicBlock *Succ : MBB.successors()) {
     for (const auto &LI : Succ->liveins()) {
-      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
-        if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
-          MaybeDeadCopies.remove(Copy);
+      for (MCRegUnitMaskIterator U(LI.PhysReg, TRI); U.isValid(); ++U) {
+        auto [Unit, Mask] = *U;
+        if ((Mask & LI.LaneMask).any()) {
+          if (MachineInstr *Copy = Tracker.findCopyForUnit(Unit, *TRI))
+            MaybeDeadCopies.remove(Copy);
+        }
       }
     }
   }
@@ -870,6 +872,12 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     ++NumCopyForwards;
     Changed = true;
   }
+  // Attempt to canonicalize/optimize the instruction now its arguments have
+  // been mutated.
+  if (TII->simplifyInstruction(MI)) {
+    Changed = true;
+    LLVM_DEBUG(dbgs() << "MCP: After optimizeInstruction: " << MI);
+  }
 }
 
 void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
@@ -971,6 +979,19 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 
     forwardUses(MI);
 
+    // It's possible that the previous transformation has resulted in a no-op
+    // register move (i.e. one where source and destination registers are the
+    // same and are not referring to a reserved register). If so, delete it.
+    CopyOperands = isCopyInstr(MI, *TII, UseCopyInstr);
+    if (CopyOperands &&
+        CopyOperands->Source->getReg() == CopyOperands->Destination->getReg() &&
+        !MRI->isReserved(CopyOperands->Source->getReg())) {
+      MI.eraseFromParent();
+      NumDeletes++;
+      Changed = true;
+      continue;
+    }
+
     // Not a copy.
     SmallVector<Register, 4> Defs;
     const MachineOperand *RegMask = nullptr;
@@ -1018,18 +1039,30 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
           continue;
         }
 
-        LLVM_DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: ";
-                   MaybeDead->dump());
-
         // Invalidate all entries in the copy map which are not preserved by
         // this register mask.
-        for (unsigned RegUnit : TRI->regunits(Reg))
+        bool MIRefedinCopyInfo = false;
+        for (unsigned RegUnit : TRI->regunits(Reg)) {
           if (!PreservedRegUnits.test(RegUnit))
             Tracker.clobberRegUnit(RegUnit, *TRI, *TII, UseCopyInstr);
+          else {
+            if (MaybeDead == Tracker.findCopyForUnit(RegUnit, *TRI)) {
+              MIRefedinCopyInfo = true;
+            }
+          }
+        }
 
         // erase() will return the next valid iterator pointing to the next
         // element after the erased one.
         DI = MaybeDeadCopies.erase(DI);
+
+        // Preserved by RegMask, DO NOT remove copy
+        if (MIRefedinCopyInfo)
+          continue;
+
+        LLVM_DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: "
+                          << *MaybeDead);
+
         MaybeDead->eraseFromParent();
         Changed = true;
         ++NumDeletes;
@@ -1065,8 +1098,9 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       assert(!MRI->isReserved(DestReg));
 
       // Update matching debug values, if any.
-      SmallVector<MachineInstr *> MaybeDeadDbgUsers(
-          CopyDbgUsers[MaybeDead].begin(), CopyDbgUsers[MaybeDead].end());
+      const auto &DbgUsers = CopyDbgUsers[MaybeDead];
+      SmallVector<MachineInstr *> MaybeDeadDbgUsers(DbgUsers.begin(),
+                                                    DbgUsers.end());
       MRI->updateDbgUsersToReg(DestReg.asMCReg(), SrcReg.asMCReg(),
                                MaybeDeadDbgUsers);
 
@@ -1174,7 +1208,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
     // Ignore non-trivial COPYs.
     std::optional<DestSourcePair> CopyOperands =
         isCopyInstr(MI, *TII, UseCopyInstr);
-    if (CopyOperands) {
+    if (CopyOperands && MI.getNumImplicitOperands() == 0) {
       Register DefReg = CopyOperands->Destination->getReg();
       Register SrcReg = CopyOperands->Source->getReg();
 
@@ -1238,8 +1272,9 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
         isCopyInstr(*Copy, *TII, UseCopyInstr);
     Register Src = CopyOperands->Source->getReg();
     Register Def = CopyOperands->Destination->getReg();
-    SmallVector<MachineInstr *> MaybeDeadDbgUsers(CopyDbgUsers[Copy].begin(),
-                                                  CopyDbgUsers[Copy].end());
+    const auto &DbgUsers = CopyDbgUsers[Copy];
+    SmallVector<MachineInstr *> MaybeDeadDbgUsers(DbgUsers.begin(),
+                                                  DbgUsers.end());
 
     MRI->updateDbgUsersToReg(Src.asMCReg(), Def.asMCReg(), MaybeDeadDbgUsers);
     Copy->eraseFromParent();

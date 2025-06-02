@@ -393,10 +393,10 @@ end subroutine
 ! CHECK:           %[[VAL_12:.*]] = fir.alloca tuple<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<i64>>
 ! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_12]], %[[VAL_13]] : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<i64>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>>
-! CHECK:           fir.store %[[VAL_9]]#1 to %[[VAL_14]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>>
+! CHECK:           fir.store %[[VAL_9]]#0 to %[[VAL_14]] : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>>
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_16:.*]] = fir.coordinate_of %[[VAL_12]], %[[VAL_15]] : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<i64>>>, i32) -> !fir.llvm_ptr<!fir.ref<i64>>
-! CHECK:           fir.store %[[VAL_4]]#1 to %[[VAL_16]] : !fir.llvm_ptr<!fir.ref<i64>>
+! CHECK:           fir.store %[[VAL_4]]#0 to %[[VAL_16]] : !fir.llvm_ptr<!fir.ref<i64>>
 ! CHECK:           fir.call @_QFtest_craypointer_capturePinternal(%[[VAL_12]]) fastmath<contract> : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>, !fir.ref<i64>>>) -> ()
 ! CHECK:           return
 ! CHECK:         }

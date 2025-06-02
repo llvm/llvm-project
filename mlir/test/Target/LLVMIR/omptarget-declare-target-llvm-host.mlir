@@ -133,7 +133,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_targe
     llvm.return %0 : i32
   }
 
-  // CHECK-DAG: @_QMtest_0Ept1 = global { ptr, i64, i32, i8, i8, i8, i8 } { ptr null, i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 9, i8 1, i8 0 }
+  // CHECK-DAG: @_QMtest_0Ept1 = global { ptr, i64, i32, i8, i8, i8, i8 } { ptr null, i64 4, i32 20180515, i8 0, i8 9, i8 1, i8 0 }
   // CHECK-DAG: @_QMtest_0Ept1_decl_tgt_ref_ptr = weak global ptr @_QMtest_0Ept1
   // CHECK-DAG: @.offloading.entry_name{{.*}} = internal unnamed_addr constant [31 x i8] c"_QMtest_0Ept1_decl_tgt_ref_ptr\00"
   // CHECK-DAG: @.offloading.entry._QMtest_0Ept1_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 1, ptr @_QMtest_0Ept1_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i64 0, ptr null }, section "llvm_offload_entries"

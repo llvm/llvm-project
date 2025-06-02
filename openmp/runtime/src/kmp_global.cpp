@@ -172,7 +172,7 @@ int __kmp_ncores = 0;
 int __kmp_chunk = 0;
 int __kmp_force_monotonic = 0;
 int __kmp_abort_delay = 0;
-#if (KMP_OS_LINUX || KMP_OS_AIX) && defined(KMP_TDATA_GTID)
+#if (KMP_OS_LINUX || KMP_OS_AIX || KMP_OS_SOLARIS) && defined(KMP_TDATA_GTID)
 int __kmp_gtid_mode = 3; /* use __declspec(thread) TLS to store gtid */
 int __kmp_adjust_gtid_mode = FALSE;
 #elif KMP_OS_WINDOWS
@@ -242,11 +242,6 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     // of public intel extension schedules
 };
 
-#if KMP_OS_LINUX
-enum clock_function_type __kmp_clock_function;
-int __kmp_clock_function_param;
-#endif /* KMP_OS_LINUX */
-
 #if KMP_MIC_SUPPORTED
 enum mic_type __kmp_mic_type = non_mic;
 #endif
@@ -301,6 +296,7 @@ kmp_int32 __kmp_max_task_priority = 0;
 kmp_uint64 __kmp_taskloop_min_tasks = 0;
 
 int __kmp_memkind_available = 0;
+bool __kmp_hwloc_available = false;
 omp_allocator_handle_t const omp_null_allocator = NULL;
 omp_allocator_handle_t const omp_default_mem_alloc =
     (omp_allocator_handle_t const)1;
@@ -328,8 +324,9 @@ omp_allocator_handle_t const kmp_max_mem_alloc =
     (omp_allocator_handle_t const)1024;
 omp_allocator_handle_t __kmp_def_allocator = omp_default_mem_alloc;
 
+omp_memspace_handle_t const omp_null_mem_space = (omp_memspace_handle_t const)0;
 omp_memspace_handle_t const omp_default_mem_space =
-    (omp_memspace_handle_t const)0;
+    (omp_memspace_handle_t const)99;
 omp_memspace_handle_t const omp_large_cap_mem_space =
     (omp_memspace_handle_t const)1;
 omp_memspace_handle_t const omp_const_mem_space =
@@ -344,6 +341,8 @@ omp_memspace_handle_t const llvm_omp_target_shared_mem_space =
     (omp_memspace_handle_t const)101;
 omp_memspace_handle_t const llvm_omp_target_device_mem_space =
     (omp_memspace_handle_t const)102;
+omp_memspace_handle_t const kmp_max_mem_space =
+    (omp_memspace_handle_t const)1024;
 
 /* This check ensures that the compiler is passing the correct data type for the
    flags formal parameter of the function kmpc_omp_task_alloc(). If the type is
@@ -492,10 +491,6 @@ KMP_BOOTSTRAP_LOCK_INIT(__kmp_tp_cached_lock);
 
 KMP_ALIGN_CACHE_INTERNODE
 KMP_LOCK_INIT(__kmp_global_lock); /* Control OS/global access */
-KMP_ALIGN_CACHE_INTERNODE
-kmp_queuing_lock_t __kmp_dispatch_lock; /* Control dispatch access  */
-KMP_ALIGN_CACHE_INTERNODE
-KMP_LOCK_INIT(__kmp_debug_lock); /* Control I/O access for KMP_DEBUG */
 #else
 KMP_ALIGN_CACHE
 
@@ -512,10 +507,6 @@ KMP_BOOTSTRAP_LOCK_INIT(__kmp_tp_cached_lock);
 
 KMP_ALIGN(128)
 KMP_LOCK_INIT(__kmp_global_lock); /* Control OS/global access */
-KMP_ALIGN(128)
-kmp_queuing_lock_t __kmp_dispatch_lock; /* Control dispatch access  */
-KMP_ALIGN(128)
-KMP_LOCK_INIT(__kmp_debug_lock); /* Control I/O access for KMP_DEBUG */
 #endif
 
 /* ----------------------------------------------- */

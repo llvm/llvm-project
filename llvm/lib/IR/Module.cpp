@@ -250,12 +250,9 @@ GlobalVariable *Module::getGlobalVariable(StringRef Name,
 }
 
 /// getOrInsertGlobal - Look up the specified global in the module symbol table.
-///   1. If it does not exist, add a declaration of the global and return it.
-///   2. Else, the global exists but has the wrong type: return the function
-///      with a constantexpr cast to the right type.
-///   3. Finally, if the existing global is the correct declaration, return the
-///      existing global.
-Constant *Module::getOrInsertGlobal(
+/// If it does not exist, add a declaration of the global and return it.
+/// Otherwise, return the existing global.
+GlobalVariable *Module::getOrInsertGlobal(
     StringRef Name, Type *Ty,
     function_ref<GlobalVariable *()> CreateGlobalCallback) {
   // See if we have a definition for the specified global already.
@@ -269,7 +266,7 @@ Constant *Module::getOrInsertGlobal(
 }
 
 // Overload to construct a global variable using its constructor's defaults.
-Constant *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
+GlobalVariable *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
   return getOrInsertGlobal(Name, Ty, [&] {
     return new GlobalVariable(*this, Ty, false, GlobalVariable::ExternalLinkage,
                               nullptr, Name);
@@ -914,4 +911,12 @@ VersionTuple Module::getDarwinTargetVariantSDKVersion() const {
 
 void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
   addSDKVersionMD(Version, *this, "darwin.target_variant.SDK Version");
+}
+
+StringRef Module::getTargetABIFromMD() {
+  StringRef TargetABI;
+  if (auto *TargetABIMD =
+          dyn_cast_or_null<MDString>(getModuleFlag("target-abi")))
+    TargetABI = TargetABIMD->getString();
+  return TargetABI;
 }

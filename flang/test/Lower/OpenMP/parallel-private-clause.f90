@@ -166,8 +166,8 @@ end subroutine
 !FIRDialect: func @_QPprivate_clause_real_call_allocatable() {
 !FIRDialect-DAG: %[[X5:.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "x5", uniq_name = "{{.*}}Ex5"}
 !FIRDialect-DAG: {{.*}} = fir.zero_bits !fir.heap<f32>
-!FIRDialect-DAG: {{.*}} = fir.embox %1 : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
-!FIRDialect-DAG: fir.store %2 to %[[X5]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+!FIRDialect-DAG: {{.*}} = fir.embox %{{.*}} : (!fir.heap<f32>) -> !fir.box<!fir.heap<f32>>
+!FIRDialect-DAG: fir.store %{{.*}} to %[[X5]] : !fir.ref<!fir.box<!fir.heap<f32>>>
 !FIRDialect-DAG: %[[X5_DECL:.*]]:2 = hlfir.declare %[[X5]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFprivate_clause_real_call_allocatableEx5"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 !FIRDialect-DAG: omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[X5_PVT:.*]] : {{.*}}) {
 
@@ -223,24 +223,24 @@ end subroutine increment_list_items
 
 !FIRDialect:  func.func @_QPparallel_pointer() {
 !FIRDialect-DAG: %[[Y1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = "y1", uniq_name = "_QFparallel_pointerEy1"}
-!FIRDialect:     fir.store %2 to %[[Y1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!FIRDialect:     fir.store %{{.*}} to %[[Y1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !FIRDialect-DAG: %[[Y1_DECL:.*]]:2 = hlfir.declare %[[Y1]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy1"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !FIRDialect-DAG: %[[Y2:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>> {bindc_name = "y2", uniq_name = "_QFparallel_pointerEy2"}
 
-!FIRDialect:     fir.store %7 to %[[Y2]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+!FIRDialect:     fir.store %{{.*}} to %[[Y2]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 !FIRDialect-DAG: %[[Y2_DECL:.*]]:2 = hlfir.declare %[[Y2]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 !FIRDialect-DAG: %[[Z1:.*]] = fir.alloca i32 {bindc_name = "z1", fir.target, uniq_name = "_QFparallel_pointerEz1"}
 !FIRDialect-DAG: %[[Z1_DECL:.*]]:2 = hlfir.declare %[[Z1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFparallel_pointerEz1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !FIRDialect-DAG:  %[[Z2:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "z2", fir.target, uniq_name = "_QFparallel_pointerEz2"}
-!FIRDialect-DAG:  %[[Z2_DECL:.*]]:2 = hlfir.declare %[[Z2]](%12) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFparallel_pointerEz2"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+!FIRDialect-DAG:  %[[Z2_DECL:.*]]:2 = hlfir.declare %[[Z2]](%{{.*}}) {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFparallel_pointerEz2"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 !FIRDialect:      omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[Y1_PVT:.*]], @{{.*}} %{{.*}}#0 -> %[[Y2_PVT:.*]] : {{.*}}) {
 !FIRDialect-DAG:    %[[Y1_PVT_DECL:.*]]:2 = hlfir.declare %[[Y1_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy1"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !FIRDialect-DAG:    %[[Y2_PVT_DECL:.*]]:2 = hlfir.declare %[[Y2_PVT]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFparallel_pointerEy2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
-!FIRDialect-DAG:    %[[PP18:.*]] = fir.embox %[[Z1_DECL]]#1 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
-!FIRDialect:       fir.store %[[PP18]] to %[[Y1_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+!FIRDialect-DAG:    %[[PP18:.*]] = fir.embox %[[Z1_DECL]]#0 : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
+!FIRDialect:       fir.store %[[PP18]] to %[[Y1_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 !FIRDialect-DAG:    %[[PP19:.*]] = fir.shape %c10 : (index) -> !fir.shape<1>
-!FIRDialect-DAG:    %[[PP20:.*]] = fir.embox %[[Z2_DECL]]#1(%[[PP19]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
-!FIRDialect:        fir.store %[[PP20]] to %[[Y2_PVT_DECL]]#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+!FIRDialect-DAG:    %[[PP20:.*]] = fir.embox %[[Z2_DECL]]#0(%[[PP19]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+!FIRDialect:        fir.store %[[PP20]] to %[[Y2_PVT_DECL]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 !FIRDialect:       omp.terminator
 !FIRDialect:     }
 !FIRDialect:   return
@@ -264,18 +264,17 @@ subroutine simple_loop_1
   !$OMP PARALLEL PRIVATE(r)
   ! FIRDialect:      %[[R_DECL:.*]]:2 = hlfir.declare %[[R]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFsimple_loop_1Er"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
 
-  ! FIRDialect:      %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
-  ! FIRDialect:      %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "_QFsimple_loop_1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
   ! FIRDialect:      %[[WS_LB:.*]] = arith.constant 1 : i32
   ! FIRDialect:      %[[WS_UB:.*]] = arith.constant 9 : i32
   ! FIRDialect:      %[[WS_STEP:.*]] = arith.constant 1 : i32
 
-  ! FIRDialect:      omp.wsloop {
+  ! FIRDialect:      omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_IV:.*]] : !fir.ref<i32>) {
   ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP DO
   do i=1, 9
-  ! FIRDialect:      fir.store %[[I]] to %[[ALLOCA_IV_DECL]]#1 : !fir.ref<i32>
+  ! FIRDialect:      %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "_QFsimple_loop_1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! FIRDialect:      hlfir.assign %[[I]] to %[[ALLOCA_IV_DECL]]#0 : i32, !fir.ref<i32>
   ! FIRDialect:      %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV_DECL]]#0 : !fir.ref<i32>
   ! FIRDialect:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}} : (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -292,34 +291,23 @@ subroutine simple_loop_2
   real, allocatable :: r;
   ! FIRDialect:  omp.parallel
   !$OMP PARALLEL
-  ! FIRDialect:      [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
-  ! FIRDialect:      fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:      fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:      %[[R_DECL:.*]]:2 = hlfir.declare [[R]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Er"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
-
-  ! FIRDialect:      %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
-  ! FIRDialect:      %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "{{.*}}Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
   ! FIRDialect:      %[[WS_LB:.*]] = arith.constant 1 : i32
   ! FIRDialect:      %[[WS_UB:.*]] = arith.constant 9 : i32
   ! FIRDialect:      %[[WS_STEP:.*]] = arith.constant 1 : i32
 
-  ! FIRDialect:      omp.wsloop {
+  ! FIRDialect:      omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[R:.*]], @{{.*}} %{{.*}}#0 -> %[[ALLOCA_IV:.*]] : !fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<i32>) {
   ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP DO PRIVATE(r)
   do i=1, 9
-  ! FIRDialect:     fir.store %[[I]] to %[[ALLOCA_IV_DECL]]#1 : !fir.ref<i32>
+  ! FIRDialect:     %[[R_DECL:.*]]:2 = hlfir.declare %[[R]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Er"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  ! FIRDialect:     %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "{{.*}}Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! FIRDialect:     hlfir.assign %[[I]] to %[[ALLOCA_IV_DECL]]#0 : i32, !fir.ref<i32>
   ! FIRDialect:     %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV_DECL]]#0 : !fir.ref<i32>
   ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! FIRDialect:     omp.yield
-  ! FIRDialect:     {{%.*}} = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:     fir.if {{%.*}} {
-  ! FIRDialect:     [[LD:%.*]] = fir.load %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:     [[AD:%.*]] = fir.box_addr [[LD]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
-  ! FIRDialect:     fir.freemem [[AD]] : !fir.heap<f32>
-  ! FIRDialect:     fir.store {{%.*}} to %[[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   !$OMP END DO
   ! FIRDialect:  omp.terminator
   !$OMP END PARALLEL
@@ -330,35 +318,24 @@ subroutine simple_loop_3
   integer :: i
   real, allocatable :: r;
   ! FIRDialect:  omp.parallel
-
-  ! FIRDialect:      [[R:%.*]] = fir.alloca !fir.box<!fir.heap<f32>> {bindc_name = "r", pinned, uniq_name = "{{.*}}Er"}
-  ! FIRDialect:      fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:      fir.store {{%.*}} to [[R]] : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:      [[R_DECL:%.*]]:2 = hlfir.declare [[R]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Er"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
-
-  ! FIRDialect:      %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
-  ! FIRDialect:      %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "{{.*}}Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-
   ! FIRDialect:      %[[WS_LB:.*]] = arith.constant 1 : i32
   ! FIRDialect:      %[[WS_UB:.*]] = arith.constant 9 : i32
   ! FIRDialect:      %[[WS_STEP:.*]] = arith.constant 1 : i32
 
-  ! FIRDialect:      omp.wsloop {
+  ! FIRDialect:      omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[R:.*]], @{{.*}} %{{.*}}#0 -> %[[ALLOCA_IV:.*]] : !fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<i32>) {
   ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]]) {
   !$OMP PARALLEL DO PRIVATE(r)
   do i=1, 9
-  ! FIRDialect:      fir.store %[[I]] to %[[ALLOCA_IV_DECL:.*]]#1 : !fir.ref<i32>
+  ! FIRDialect:      [[R_DECL:%.*]]:2 = hlfir.declare %[[R]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "{{.*}}Er"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+
+  ! FIRDialect:      %[[ALLOCA_IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "{{.*}}Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+  ! FIRDialect:      hlfir.assign %[[I]] to %[[ALLOCA_IV_DECL:.*]]#0 : i32, !fir.ref<i32>
   ! FIRDialect:      %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV_DECL]]#0 : !fir.ref<i32>
   ! FIRDialect:      fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! FIRDialect:      omp.yield
-  ! FIRDialect:      {{%.*}} = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:      fir.if {{%.*}} {
-  ! FIRDialect:      [[LD:%.*]] = fir.load [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
-  ! FIRDialect:      [[AD:%.*]] = fir.box_addr [[LD]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
-  ! FIRDialect:      fir.freemem [[AD]] : !fir.heap<f32>
-  ! FIRDialect:      fir.store {{%.*}} to [[R_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<f32>>>
   !$OMP END PARALLEL DO
   ! FIRDialect:  omp.terminator
 end subroutine
@@ -377,7 +354,7 @@ subroutine simd_loop_1
   ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   !$OMP SIMD PRIVATE(r)
   do i=1, 9
-  ! FIRDialect:     fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+  ! FIRDialect:     hlfir.assign %[[I]] to %[[LOCAL:.*]]#0 : i32, !fir.ref<i32>
   ! FIRDialect:     %[[LOAD_IV:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
   ! FIRDialect:     fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i

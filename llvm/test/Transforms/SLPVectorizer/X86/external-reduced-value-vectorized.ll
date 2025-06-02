@@ -8,10 +8,11 @@ define i32 @test(ptr %c, i16 %a, i16 %0) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <4 x i16> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i1> [[TMP3]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = zext <4 x i1> [[TMP3]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[TMP2]], <4 x i16> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> [[TMP5]], i16 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i16> [[TMP6]], <2 x i16> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP16]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt <4 x i16> [[TMP7]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i16 [[A]], -2
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 1, i32 2, i32 poison>

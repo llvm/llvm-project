@@ -62,27 +62,57 @@ def : Handle {
   let desc = "Handle of context object";
 }
 
-def : Enum {
+def : Handle {
+  let name = "ol_queue_handle_t";
+  let desc = "Handle of queue object";
+}
+
+def : Handle {
+  let name = "ol_event_handle_t";
+  let desc = "Handle of event object";
+}
+
+def : Handle {
+  let name = "ol_program_handle_t";
+  let desc = "Handle of program object";
+}
+
+def : Typedef {
+  let name = "ol_kernel_handle_t";
+  let desc = "Handle of kernel object";
+  let value = "void *";
+}
+
+def ErrorCode : Enum {
   let name = "ol_errc_t";
   let desc = "Defines Return/Error codes";
   let etors =[
-    Etor<"SUCCESS", "Success">,
-    Etor<"INVALID_VALUE", "Invalid Value">,
-    Etor<"INVALID_PLATFORM", "Invalid platform">,
-    Etor<"DEVICE_NOT_FOUND", "Device not found">,
-    Etor<"INVALID_DEVICE", "Invalid device">,
-    Etor<"DEVICE_LOST", "Device hung, reset, was removed, or driver update occurred">,
-    Etor<"UNINITIALIZED", "plugin is not initialized or specific entry-point is not implemented">,
-    Etor<"OUT_OF_RESOURCES", "Out of resources">,
-    Etor<"UNSUPPORTED_VERSION", "generic error code for unsupported versions">,
-    Etor<"UNSUPPORTED_FEATURE", "generic error code for unsupported features">,
-    Etor<"INVALID_ARGUMENT", "generic error code for invalid arguments">,
-    Etor<"INVALID_NULL_HANDLE", "handle argument is not valid">,
-    Etor<"INVALID_NULL_POINTER", "pointer argument may not be nullptr">,
+    Etor<"SUCCESS", "success">,
+
+    // Universal errors
+    Etor<"UNKNOWN", "unknown or internal error">,
+    Etor<"HOST_IO", "I/O error on host">,
+    Etor<"INVALID_BINARY", "a provided binary image is malformed">,
+    Etor<"INVALID_NULL_POINTER", "a pointer argument is null when it should not be">,
+    Etor<"INVALID_ARGUMENT", "an argument is invalid">,
+    Etor<"NOT_FOUND", "requested object was not found in the binary image">,
+    Etor<"OUT_OF_RESOURCES", "out of resources">,
     Etor<"INVALID_SIZE", "invalid size or dimensions (e.g., must not be zero, or is out of bounds)">,
     Etor<"INVALID_ENUMERATION", "enumerator argument is not valid">,
-    Etor<"UNSUPPORTED_ENUMERATION", "enumerator argument is not supported by the device">,
-    Etor<"UNKNOWN", "Unknown or internal error">
+    Etor<"HOST_TOOL_NOT_FOUND", "a required binary (linker, etc.) was not found on the host">,
+    Etor<"INVALID_VALUE", "invalid value">,
+    Etor<"UNIMPLEMENTED", "generic error code for features currently unimplemented by the device/backend">,
+    Etor<"UNSUPPORTED", "generic error code for features unsupported by the device/backend">,
+    Etor<"ASSEMBLE_FAILURE", "assembler failure while processing binary image">,
+    Etor<"LINK_FAILURE", "linker failure while processing binary image">,
+    Etor<"BACKEND_FAILURE", "the plugin backend is in an invalid or unsupported state">,
+
+    // Handle related errors - only makes sense for liboffload
+    Etor<"INVALID_NULL_HANDLE", "a handle argument is null when it should not be">,
+    Etor<"INVALID_PLATFORM", "invalid platform">,
+    Etor<"INVALID_DEVICE", "invalid device">,
+    Etor<"INVALID_QUEUE", "invalid queue">,
+    Etor<"INVALID_EVENT", "invalid event">,
   ];
 }
 

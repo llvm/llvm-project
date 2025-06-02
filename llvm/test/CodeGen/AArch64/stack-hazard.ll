@@ -392,11 +392,10 @@ define i32 @csr_d8_allocnxv4i32(i64 %d) "aarch64_pstate_sm_compatible" {
 ; CHECK0-NEXT:    .cfi_offset w29, -8
 ; CHECK0-NEXT:    .cfi_offset b8, -16
 ; CHECK0-NEXT:    mov z0.s, #0 // =0x0
-; CHECK0-NEXT:    ptrue p0.s
 ; CHECK0-NEXT:    mov w0, wzr
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    st1w { z0.s }, p0, [sp]
+; CHECK0-NEXT:    str z0, [sp]
 ; CHECK0-NEXT:    addvl sp, sp, #1
 ; CHECK0-NEXT:    ldr x29, [sp, #8] // 8-byte Folded Reload
 ; CHECK0-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
@@ -412,12 +411,11 @@ define i32 @csr_d8_allocnxv4i32(i64 %d) "aarch64_pstate_sm_compatible" {
 ; CHECK64-NEXT:    .cfi_offset w29, -8
 ; CHECK64-NEXT:    .cfi_offset b8, -80
 ; CHECK64-NEXT:    mov z0.s, #0 // =0x0
-; CHECK64-NEXT:    ptrue p0.s
 ; CHECK64-NEXT:    add x8, sp, #64
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK64-NEXT:    str z0, [x8]
 ; CHECK64-NEXT:    addvl sp, sp, #1
 ; CHECK64-NEXT:    add sp, sp, #64
 ; CHECK64-NEXT:    ldr x29, [sp, #72] // 8-byte Folded Reload
@@ -435,12 +433,11 @@ define i32 @csr_d8_allocnxv4i32(i64 %d) "aarch64_pstate_sm_compatible" {
 ; CHECK1024-NEXT:    .cfi_offset w29, -8
 ; CHECK1024-NEXT:    .cfi_offset b8, -1040
 ; CHECK1024-NEXT:    mov z0.s, #0 // =0x0
-; CHECK1024-NEXT:    ptrue p0.s
 ; CHECK1024-NEXT:    add x8, sp, #1024
 ; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK1024-NEXT:    str z0, [x8]
 ; CHECK1024-NEXT:    addvl sp, sp, #1
 ; CHECK1024-NEXT:    add sp, sp, #1024
 ; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Folded Reload
@@ -1231,11 +1228,10 @@ define i32 @svecc_csr_d8_allocnxv4i32(i64 %d, <vscale x 4 x i32> %vs) "aarch64_p
 ; CHECK0-NEXT:    .cfi_offset w29, -16
 ; CHECK0-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
 ; CHECK0-NEXT:    mov z0.s, #0 // =0x0
-; CHECK0-NEXT:    ptrue p0.s
 ; CHECK0-NEXT:    mov w0, wzr
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    st1w { z0.s }, p0, [sp]
+; CHECK0-NEXT:    str z0, [sp]
 ; CHECK0-NEXT:    addvl sp, sp, #1
 ; CHECK0-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK0-NEXT:    addvl sp, sp, #1
@@ -1254,12 +1250,11 @@ define i32 @svecc_csr_d8_allocnxv4i32(i64 %d, <vscale x 4 x i32> %vs) "aarch64_p
 ; CHECK64-NEXT:    .cfi_offset w29, -16
 ; CHECK64-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xb0, 0x7f, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 80 - 8 * VG
 ; CHECK64-NEXT:    mov z0.s, #0 // =0x0
-; CHECK64-NEXT:    ptrue p0.s
 ; CHECK64-NEXT:    add x8, sp, #64
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK64-NEXT:    str z0, [x8]
 ; CHECK64-NEXT:    add sp, sp, #64
 ; CHECK64-NEXT:    addvl sp, sp, #1
 ; CHECK64-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
@@ -1280,12 +1275,11 @@ define i32 @svecc_csr_d8_allocnxv4i32(i64 %d, <vscale x 4 x i32> %vs) "aarch64_p
 ; CHECK1024-NEXT:    .cfi_offset w29, -16
 ; CHECK1024-NEXT:    .cfi_escape 0x10, 0x48, 0x0b, 0x11, 0xf0, 0x77, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 1040 - 8 * VG
 ; CHECK1024-NEXT:    mov z0.s, #0 // =0x0
-; CHECK1024-NEXT:    ptrue p0.s
 ; CHECK1024-NEXT:    add x8, sp, #1024
 ; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK1024-NEXT:    str z0, [x8]
 ; CHECK1024-NEXT:    add sp, sp, #1024
 ; CHECK1024-NEXT:    addvl sp, sp, #1
 ; CHECK1024-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
@@ -2911,12 +2905,13 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    mov x9, sp
 ; CHECK64-NEXT:    mov w20, w0
 ; CHECK64-NEXT:    msub x9, x8, x8, x9
+; CHECK64-NEXT:    mov x19, sp
 ; CHECK64-NEXT:    mov sp, x9
-; CHECK64-NEXT:    stur x9, [x29, #-208]
-; CHECK64-NEXT:    sub x9, x29, #208
-; CHECK64-NEXT:    sturh wzr, [x29, #-198]
-; CHECK64-NEXT:    stur wzr, [x29, #-196]
-; CHECK64-NEXT:    sturh w8, [x29, #-200]
+; CHECK64-NEXT:    str x9, [x19]
+; CHECK64-NEXT:    add x9, x19, #0
+; CHECK64-NEXT:    strh wzr, [x19, #10]
+; CHECK64-NEXT:    str wzr, [x19, #12]
+; CHECK64-NEXT:    strh w8, [x19, #8]
 ; CHECK64-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK64-NEXT:    .cfi_offset vg, -32
 ; CHECK64-NEXT:    smstop sm
@@ -2925,7 +2920,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    smstart za
 ; CHECK64-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK64-NEXT:    sub x0, x29, #208
+; CHECK64-NEXT:    add x0, x19, #0
 ; CHECK64-NEXT:    cbnz x8, .LBB33_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
 ; CHECK64-NEXT:    bl __arm_tpidr2_restore
@@ -2991,16 +2986,13 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    mov x9, sp
 ; CHECK1024-NEXT:    mov w20, w0
 ; CHECK1024-NEXT:    msub x9, x8, x8, x9
+; CHECK1024-NEXT:    mov x19, sp
 ; CHECK1024-NEXT:    mov sp, x9
-; CHECK1024-NEXT:    sub x10, x29, #1872
-; CHECK1024-NEXT:    stur x9, [x10, #-256]
-; CHECK1024-NEXT:    sub x9, x29, #1862
-; CHECK1024-NEXT:    sub x10, x29, #1860
-; CHECK1024-NEXT:    sturh wzr, [x9, #-256]
-; CHECK1024-NEXT:    sub x9, x29, #2128
-; CHECK1024-NEXT:    stur wzr, [x10, #-256]
-; CHECK1024-NEXT:    sub x10, x29, #1864
-; CHECK1024-NEXT:    sturh w8, [x10, #-256]
+; CHECK1024-NEXT:    str x9, [x19]
+; CHECK1024-NEXT:    add x9, x19, #0
+; CHECK1024-NEXT:    strh wzr, [x19, #10]
+; CHECK1024-NEXT:    str wzr, [x19, #12]
+; CHECK1024-NEXT:    strh w8, [x19, #8]
 ; CHECK1024-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK1024-NEXT:    .cfi_offset vg, -32
 ; CHECK1024-NEXT:    smstop sm
@@ -3009,7 +3001,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    smstart za
 ; CHECK1024-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK1024-NEXT:    sub x0, x29, #2128
+; CHECK1024-NEXT:    add x0, x19, #0
 ; CHECK1024-NEXT:    cbnz x8, .LBB33_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry
 ; CHECK1024-NEXT:    bl __arm_tpidr2_restore
@@ -3071,8 +3063,7 @@ define i32 @sve_stack_object_and_vla(double %d, i64 %sz) "aarch64_pstate_sm_comp
 ; CHECK0-NEXT:    sub x0, x8, x9
 ; CHECK0-NEXT:    mov sp, x0
 ; CHECK0-NEXT:    mov z0.s, #0 // =0x0
-; CHECK0-NEXT:    ptrue p0.s
-; CHECK0-NEXT:    st1w { z0.s }, p0, [x29, #-1, mul vl]
+; CHECK0-NEXT:    str z0, [x29, #-1, mul vl]
 ; CHECK0-NEXT:    bl bar
 ; CHECK0-NEXT:    mov w0, wzr
 ; CHECK0-NEXT:    mov sp, x29
@@ -3101,9 +3092,8 @@ define i32 @sve_stack_object_and_vla(double %d, i64 %sz) "aarch64_pstate_sm_comp
 ; CHECK64-NEXT:    sub x0, x8, x9
 ; CHECK64-NEXT:    mov sp, x0
 ; CHECK64-NEXT:    mov z0.s, #0 // =0x0
-; CHECK64-NEXT:    ptrue p0.s
 ; CHECK64-NEXT:    sub x8, x29, #64
-; CHECK64-NEXT:    st1w { z0.s }, p0, [x8, #-1, mul vl]
+; CHECK64-NEXT:    str z0, [x8, #-1, mul vl]
 ; CHECK64-NEXT:    bl bar
 ; CHECK64-NEXT:    mov w0, wzr
 ; CHECK64-NEXT:    sub sp, x29, #64
@@ -3135,9 +3125,8 @@ define i32 @sve_stack_object_and_vla(double %d, i64 %sz) "aarch64_pstate_sm_comp
 ; CHECK1024-NEXT:    sub x0, x8, x9
 ; CHECK1024-NEXT:    mov sp, x0
 ; CHECK1024-NEXT:    mov z0.s, #0 // =0x0
-; CHECK1024-NEXT:    ptrue p0.s
 ; CHECK1024-NEXT:    sub x8, x29, #1024
-; CHECK1024-NEXT:    st1w { z0.s }, p0, [x8, #-1, mul vl]
+; CHECK1024-NEXT:    str z0, [x8, #-1, mul vl]
 ; CHECK1024-NEXT:    bl bar
 ; CHECK1024-NEXT:    mov w0, wzr
 ; CHECK1024-NEXT:    sub sp, x29, #1024

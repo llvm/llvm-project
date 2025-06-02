@@ -11,16 +11,16 @@
 define i8 @test_fixed_i8(i8 %a0, i8 %a1) nounwind {
 ; RV32I-LABEL: test_fixed_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a1, a1, 255
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a1, a1
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_fixed_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a1, a1, 255
-; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    zext.b a1, a1
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    ret
@@ -34,16 +34,16 @@ define i8 @test_fixed_i8(i8 %a0, i8 %a1) nounwind {
 define i8 @test_ext_i8(i8 %a0, i8 %a1) nounwind {
 ; RV32I-LABEL: test_ext_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a1, a1, 255
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a1, a1
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_ext_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a1, a1, 255
-; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    zext.b a1, a1
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    ret

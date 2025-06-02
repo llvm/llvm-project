@@ -13,7 +13,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
-#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <string>
@@ -321,8 +320,8 @@ bool MacroToEnumCallbacks::isInitializer(ArrayRef<Token> MacroTokens)
 {
   IntegralLiteralExpressionMatcher Matcher(MacroTokens, LangOpts.C99 == 0);
   bool Matched = Matcher.match();
-  bool isC = !LangOpts.CPlusPlus;
-  if (isC && (Matcher.largestLiteralSize() != LiteralSize::Int &&
+  bool IsC = !LangOpts.CPlusPlus;
+  if (IsC && (Matcher.largestLiteralSize() != LiteralSize::Int &&
               Matcher.largestLiteralSize() != LiteralSize::UnsignedInt))
     return false;
 
@@ -375,7 +374,7 @@ void MacroToEnumCallbacks::MacroUndefined(const Token &MacroNameTok,
     return getTokenName(Macro.Name) == getTokenName(MacroNameTok);
   };
 
-  auto It = llvm::find_if(Enums, [MatchesToken](const MacroList &MacroList) {
+  auto *It = llvm::find_if(Enums, [MatchesToken](const MacroList &MacroList) {
     return llvm::any_of(MacroList, MatchesToken);
   });
   if (It != Enums.end())

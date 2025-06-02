@@ -348,6 +348,5 @@ struct X {
 };
 struct Y : X {};
 B Y::*pm = &X::d;
-// expected-error@-1 {{cannot initialize a variable of type 'B Y::*' with an rvalue of type 'D cwg794::X::*': different classes ('Y' vs 'cwg794::X')}}
-// FIXME: why diagnostic says just `Y` and not `cwg794::Y`, like `cwg794::X`?
+// expected-error@-1 {{cannot initialize a variable of type 'B Y::*' with an rvalue of type 'D X::*': different classes ('Y' vs 'X')}}
 } // namespace cwg794

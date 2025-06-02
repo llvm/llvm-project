@@ -10,7 +10,6 @@
 
 @add = global ptr inttoptr (i64 add (i64 ptrtoint (ptr @A to i64), i64 0) to ptr) ; X + 0 == X
 @sub = global ptr inttoptr (i64 sub (i64 ptrtoint (ptr @A to i64), i64 0) to ptr) ; X - 0 == X
-@mul = global ptr inttoptr (i64 mul (i64 ptrtoint (ptr @A to i64), i64 0) to ptr) ; X * 0 == 0
 @xor = global ptr inttoptr (i64 xor (i64 ptrtoint (ptr @A to i64), i64 0) to ptr) ; X ^ 0 == X
 
 %Ty = type { i32, i32 }
@@ -33,7 +32,6 @@
 ; CHECK: @A = global i64 0
 ; CHECK: @add = global ptr @A
 ; CHECK: @sub = global ptr @A
-; CHECK: @mul = global ptr null
 ; CHECK: @xor = global ptr @A
 ; CHECK: @B = external global %Ty
 ; CHECK: @cons = weak global i32 0, align 8

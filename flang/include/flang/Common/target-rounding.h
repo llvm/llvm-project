@@ -9,8 +9,8 @@
 #ifndef FORTRAN_COMMON_TARGET_ROUNDING_H_
 #define FORTRAN_COMMON_TARGET_ROUNDING_H_
 
-#include "flang/Common/Fortran-consts.h"
-#include "flang/Common/enum-set.h"
+#include "Fortran-consts.h"
+#include "enum-set.h"
 
 namespace Fortran::common {
 

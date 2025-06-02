@@ -185,6 +185,10 @@ void CompileUnit::noteLocationAttribute(PatchLocation Attr) {
   LocationAttributes.emplace_back(Attr);
 }
 
+void CompileUnit::noteStmtSeqListAttribute(PatchLocation Attr) {
+  StmtSeqListAttributes.emplace_back(Attr);
+}
+
 void CompileUnit::addNamespaceAccelerator(const DIE *Die,
                                           DwarfStringPoolEntryRef Name) {
   Namespaces.emplace_back(Name, Die);

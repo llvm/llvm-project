@@ -1,8 +1,6 @@
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT160K %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-4-generic -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx941 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s
 ; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERROR-LIMIT64K %s

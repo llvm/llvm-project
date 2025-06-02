@@ -44,7 +44,7 @@ public:
       std::string Text;
       llvm::raw_string_ostream OS(Text);
       TextDiagnostic Renderer(OS, LangOpts,
-                              &Info.getDiags()->getDiagnosticOptions());
+                              Info.getDiags()->getDiagnosticOptions());
       Renderer.emitStoredDiagnostic(Out.back());
       ADD_FAILURE() << Text;
     }
@@ -75,8 +75,7 @@ void createMissingComponents(CompilerInstance &Clang) {
 } // namespace
 
 TestAST::TestAST(const TestInputs &In) {
-  Clang = std::make_unique<CompilerInstance>(
-      std::make_shared<PCHContainerOperations>());
+  Clang = std::make_unique<CompilerInstance>();
   // If we don't manage to finish parsing, create CompilerInstance components
   // anyway so that the test will see an empty AST instead of crashing.
   auto RecoverFromEarlyExit =
@@ -109,7 +108,6 @@ TestAST::TestAST(const TestInputs &In) {
   for (const auto &S : In.ExtraArgs)
     Argv.push_back(S.c_str());
   Argv.push_back(Filename.c_str());
-  Clang->setInvocation(std::make_unique<CompilerInvocation>());
   if (!CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv,
                                           Clang->getDiagnostics(), "clang")) {
     ADD_FAILURE() << "Failed to create invocation";

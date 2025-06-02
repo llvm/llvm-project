@@ -13,12 +13,13 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/AllDiagnostics.h"
 #include "clang/Basic/DiagnosticCategories.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Path.h"
 #include <map>
 #include <optional>
 using namespace clang;
@@ -73,19 +74,21 @@ enum DiagnosticClass {
 struct StaticDiagInfoRec {
   uint16_t DiagID;
   LLVM_PREFERRED_TYPE(diag::Severity)
-  uint8_t DefaultSeverity : 3;
+  uint16_t DefaultSeverity : 3;
   LLVM_PREFERRED_TYPE(DiagnosticClass)
-  uint8_t Class : 3;
+  uint16_t Class : 3;
   LLVM_PREFERRED_TYPE(DiagnosticIDs::SFINAEResponse)
-  uint8_t SFINAE : 2;
-  uint8_t Category : 6;
+  uint16_t SFINAE : 2;
+  LLVM_PREFERRED_TYPE(diag::DiagCategory)
+  uint16_t Category : 6;
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t WarnNoWerror : 1;
+  uint16_t WarnNoWerror : 1;
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t WarnShowInSystemHeader : 1;
+  uint16_t WarnShowInSystemHeader : 1;
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t WarnShowInSystemMacro : 1;
+  uint16_t WarnShowInSystemMacro : 1;
 
+  LLVM_PREFERRED_TYPE(diag::Group)
   uint16_t OptionGroupIndex : 15;
   LLVM_PREFERRED_TYPE(bool)
   uint16_t Deferrable : 1;
@@ -539,26 +542,32 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
     return Result;
 
   const auto &SM = Diag.getSourceManager();
-
-  bool ShowInSystemHeader =
-      IsCustomDiag
-          ? CustomDiagInfo->getDescription(DiagID).ShouldShowInSystemHeader()
-          : !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemHeader;
-
   // If we are in a system header, we ignore it. We look at the diagnostic class
   // because we also want to ignore extensions and warnings in -Werror and
   // -pedantic-errors modes, which *map* warnings/extensions to errors.
-  if (State->SuppressSystemWarnings && !ShowInSystemHeader && Loc.isValid() &&
-      SM.isInSystemHeader(SM.getExpansionLoc(Loc)))
-    return diag::Severity::Ignored;
+  if (State->SuppressSystemWarnings && Loc.isValid() &&
+      SM.isInSystemHeader(SM.getExpansionLoc(Loc))) {
+    bool ShowInSystemHeader = true;
+    if (IsCustomDiag)
+      ShowInSystemHeader =
+          CustomDiagInfo->getDescription(DiagID).ShouldShowInSystemHeader();
+    else if (const StaticDiagInfoRec *Rec = GetDiagInfo(DiagID))
+      ShowInSystemHeader = Rec->WarnShowInSystemHeader;
 
+    if (!ShowInSystemHeader)
+      return diag::Severity::Ignored;
+  }
   // We also ignore warnings due to system macros
-  bool ShowInSystemMacro =
-      !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemMacro;
-  if (State->SuppressSystemWarnings && !ShowInSystemMacro && Loc.isValid() &&
-      SM.isInSystemMacro(Loc))
-    return diag::Severity::Ignored;
+  if (State->SuppressSystemWarnings && Loc.isValid() &&
+      SM.isInSystemMacro(Loc)) {
 
+    bool ShowInSystemMacro = true;
+    if (const StaticDiagInfoRec *Rec = GetDiagInfo(DiagID))
+      ShowInSystemMacro = Rec->WarnShowInSystemMacro;
+
+    if (!ShowInSystemMacro)
+      return diag::Severity::Ignored;
+  }
   // Clang-diagnostics pragmas always take precedence over suppression mapping.
   if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
     return diag::Severity::Ignored;
@@ -704,7 +713,7 @@ static void forEachSubGroupImpl(const WarningOption *Group, Func func) {
   for (const int16_t *SubGroups = DiagSubGroups + Group->SubGroups;
        *SubGroups != -1; ++SubGroups) {
     func(static_cast<size_t>(*SubGroups));
-    forEachSubGroupImpl(&OptionTable[*SubGroups], std::move(func));
+    forEachSubGroupImpl(&OptionTable[*SubGroups], func);
   }
 }
 
@@ -767,6 +776,51 @@ StringRef DiagnosticIDs::getNearestOption(diag::Flavor Flavor,
   }
 
   return Best;
+}
+
+unsigned DiagnosticIDs::getCXXCompatDiagId(const LangOptions &LangOpts,
+                                           unsigned CompatDiagId) {
+  struct CompatDiag {
+    unsigned StdVer;
+    unsigned DiagId;
+    unsigned PreDiagId;
+  };
+
+  // We encode the standard version such that C++98 < C++11 < C++14 etc. The
+  // actual numbers don't really matter for this, but the definitions of the
+  // compat diags in the Tablegen file use the standard version number (i.e.
+  // 98, 11, 14, etc.), so we base the encoding here on that.
+#define DIAG_COMPAT_IDS_BEGIN()
+#define DIAG_COMPAT_IDS_END()
+#define DIAG_COMPAT_ID(Value, Name, Std, Diag, DiagPre)                        \
+  {Std == 98 ? 1998 : 2000 + Std, diag::Diag, diag::DiagPre},
+  static constexpr CompatDiag Diags[]{
+#include "clang/Basic/DiagnosticAllCompatIDs.inc"
+  };
+#undef DIAG_COMPAT_ID
+#undef DIAG_COMPAT_IDS_BEGIN
+#undef DIAG_COMPAT_IDS_END
+
+  assert(CompatDiagId < std::size(Diags) && "Invalid compat diag id");
+
+  unsigned StdVer = [&] {
+    if (LangOpts.CPlusPlus26)
+      return 2026;
+    if (LangOpts.CPlusPlus23)
+      return 2023;
+    if (LangOpts.CPlusPlus20)
+      return 2020;
+    if (LangOpts.CPlusPlus17)
+      return 2017;
+    if (LangOpts.CPlusPlus14)
+      return 2014;
+    if (LangOpts.CPlusPlus11)
+      return 2011;
+    return 1998;
+  }();
+
+  const CompatDiag &D = Diags[CompatDiagId];
+  return StdVer >= D.StdVer ? D.DiagId : D.PreDiagId;
 }
 
 /// ProcessDiag - This is the method used to report a diagnostic that is

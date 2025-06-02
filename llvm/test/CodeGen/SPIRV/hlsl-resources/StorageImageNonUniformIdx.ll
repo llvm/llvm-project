@@ -1,10 +1,10 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.5-vulkan-library %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-vulkan-library %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: OpCapability Shader
-; CHECK: OpCapability ShaderNonUniformEXT
-; CHECK-NEXT: OpCapability StorageImageArrayNonUniformIndexing
-; CHECK-NEXT: OpCapability Image1D
+; CHECK-DAG: OpCapability Shader
+; CHECK-DAG: OpCapability ShaderNonUniformEXT
+; CHECK-DAG: OpCapability StorageImageArrayNonUniformIndexing
+; CHECK-DAG: OpCapability Image1D
 ; CHECK-NOT: OpCapability
 
 ; CHECK-DAG: OpDecorate [[Var:%[0-9]+]] DescriptorSet 3
@@ -21,7 +21,7 @@
 ; CHECK-DAG: [[BufferPtrType:%[0-9]+]] = OpTypePointer UniformConstant [[BufferType]]
 ; CHECK-DAG: [[ArraySize:%[0-9]+]] = OpConstant [[int]] 3
 ; CHECK-DAG: [[One]] = OpConstant [[int]] 1
-; CHECK-DAG: [[Zero]] = OpConstant [[int]] 0
+; CHECK-DAG: [[Zero]] = OpConstant [[int]] 0{{$}}
 ; CHECK-DAG: [[BufferArrayType:%[0-9]+]] = OpTypeArray [[BufferType]] [[ArraySize]]
 ; CHECK-DAG: [[ArrayPtrType:%[0-9]+]] = OpTypePointer UniformConstant [[BufferArrayType]]
 ; CHECK-DAG: [[Var]] = OpVariable [[ArrayPtrType]] UniformConstant

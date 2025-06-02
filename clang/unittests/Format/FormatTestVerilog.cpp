@@ -160,6 +160,8 @@ TEST_F(FormatTestVerilog, Block) {
   // Test that 'disable fork' and 'rand join' don't get mistaken as blocks.
   verifyFormat("disable fork;\n"
                "x = x;");
+  verifyFormat("wait fork;\n"
+               "x = x;");
   verifyFormat("rand join x x;\n"
                "x = x;");
   // The begin keyword should not be indented if it is too long to fit on the

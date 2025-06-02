@@ -44,7 +44,9 @@
 #include <pthread.h>
 #include <stdio.h>
 #if SANITIZER_LINUX
+#include <sys/eventfd.h>
 #include <sys/inotify.h>
+#include <sys/timerfd.h>
 #endif
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -302,6 +304,14 @@ TEST(TestRtsanInterceptors, ShmUnlinkDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+#if !SANITIZER_APPLE
+TEST(TestRtsanInterceptors, MemfdCreateDiesWhenRealtime) {
+  auto Func = []() { memfd_create("/rtsan_test_memfd_create", MFD_CLOEXEC); };
+  ExpectRealtimeDeath(Func, "memfd_create");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
 /*
     Sleeping
 */
@@ -401,7 +411,7 @@ TEST_F(RtsanFileTest, FcntlFlockDiesWhenRealtime) {
   ASSERT_THAT(fd, Ne(-1));
 
   auto Func = [fd]() {
-    struct flock lock {};
+    struct flock lock{};
     lock.l_type = F_RDLCK;
     lock.l_whence = SEEK_SET;
     lock.l_start = 0;
@@ -456,6 +466,24 @@ TEST(TestRtsanInterceptors, FchdirDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "fchdir");
   ExpectNonRealtimeSurvival(Func);
 }
+
+#if SANITIZER_INTERCEPT_READLINK
+TEST(TestRtsanInterceptors, ReadlinkDiesWhenRealtime) {
+  char buf[1024];
+  auto Func = [&buf]() { readlink("/proc/self", buf, sizeof(buf)); };
+  ExpectRealtimeDeath(Func, "readlink");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
+
+#if SANITIZER_INTERCEPT_READLINKAT
+TEST(TestRtsanInterceptors, ReadlinkatDiesWhenRealtime) {
+  char buf[1024];
+  auto Func = [&buf]() { readlinkat(0, "/proc/self", buf, sizeof(buf)); };
+  ExpectRealtimeDeath(Func, "readlinkat");
+  ExpectNonRealtimeSurvival(Func);
+}
+#endif
 
 TEST_F(RtsanFileTest, FopenDiesWhenRealtime) {
   auto Func = [this]() {
@@ -717,7 +745,7 @@ TEST(TestRtsanInterceptors, IoctlBehavesWithOutputPointer) {
     GTEST_SKIP();
   }
 
-  struct ifreq ifr {};
+  struct ifreq ifr{};
   strncpy(ifr.ifr_name, ifaddr->ifa_name, IFNAMSIZ - 1);
 
   int retval = ioctl(sock, SIOCGIFADDR, &ifr);
@@ -842,6 +870,46 @@ TEST_F(RtsanOpenedFileTest, FwriteDiesWhenRealtime) {
   const char *message = "Hello, world!";
   auto Func = [&]() { fwrite(&message, 1, 4, GetOpenFile()); };
   ExpectRealtimeDeath(Func, "fwrite");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, UnlinkDiesWhenRealtime) {
+  auto Func = [&]() { unlink(GetTemporaryFilePath()); };
+  ExpectRealtimeDeath(Func, "unlink");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, UnlinkatDiesWhenRealtime) {
+  auto Func = [&]() { unlinkat(0, GetTemporaryFilePath(), 0); };
+  ExpectRealtimeDeath(Func, "unlinkat");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, TruncateDiesWhenRealtime) {
+  auto Func = [&]() { truncate(GetTemporaryFilePath(), 16); };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("truncate"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, FtruncateDiesWhenRealtime) {
+  auto Func = [&]() { ftruncate(GetOpenFd(), 16); };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("ftruncate"));
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, SymlinkDiesWhenRealtime) {
+  auto Func = [&]() {
+    symlink("/tmp/rtsan_symlink_test", GetTemporaryFilePath());
+  };
+  ExpectRealtimeDeath(Func, "symlink");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, SymlinkatDiesWhenRealtime) {
+  auto Func = [&]() {
+    symlinkat("/tmp/rtsan_symlinkat_test", AT_FDCWD, GetTemporaryFilePath());
+  };
+  ExpectRealtimeDeath(Func, "symlinkat");
   ExpectNonRealtimeSurvival(Func);
 }
 
@@ -1058,10 +1126,18 @@ TEST(TestRtsanInterceptors, PthreadJoinDiesWhenRealtime) {
 }
 
 #if SANITIZER_APPLE
-
 #pragma clang diagnostic push
 // OSSpinLockLock is deprecated, but still in use in libc++
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#undef OSSpinLockLock
+extern "C" {
+typedef int32_t OSSpinLock;
+void OSSpinLockLock(volatile OSSpinLock *__lock);
+// _os_nospin_lock_lock may replace OSSpinLockLock due to deprecation macro.
+typedef volatile OSSpinLock *_os_nospin_lock_t;
+void _os_nospin_lock_lock(_os_nospin_lock_t lock);
+}
+
 TEST(TestRtsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
   auto Func = []() {
     OSSpinLock spin_lock{};
@@ -1070,7 +1146,14 @@ TEST(TestRtsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "OSSpinLockLock");
   ExpectNonRealtimeSurvival(Func);
 }
-#pragma clang diagnostic pop
+
+TEST(TestRtsanInterceptors, OsNoSpinLockLockDiesWhenRealtime) {
+  OSSpinLock lock{};
+  auto Func = [&]() { _os_nospin_lock_lock(&lock); };
+  ExpectRealtimeDeath(Func, "_os_nospin_lock_lock");
+  ExpectNonRealtimeSurvival(Func);
+}
+#pragma clang diagnostic pop //"-Wdeprecated-declarations"
 
 TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
   auto Func = []() {
@@ -1080,7 +1163,7 @@ TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "os_unfair_lock_lock");
   ExpectNonRealtimeSurvival(Func);
 }
-#endif
+#endif // SANITIZER_APPLE
 
 #if SANITIZER_LINUX
 TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {
@@ -1581,6 +1664,36 @@ TEST(TestRtsanInterceptors, InotifyRmWatchDiesWhenRealtime) {
   EXPECT_THAT(fd, Ne(-1));
   auto Func = [fd]() { inotify_rm_watch(fd, -1); };
   ExpectRealtimeDeath(Func, "inotify_rm_watch");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, TimerfdCreateDiesWhenRealtime) {
+  auto Func = []() { timerfd_create(CLOCK_MONOTONIC, 0); };
+  ExpectRealtimeDeath(Func, "timerfd_create");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, TimerfdSettimeDiesWhenRealtime) {
+  int fd = timerfd_create(CLOCK_MONOTONIC, 0);
+  EXPECT_THAT(fd, Ne(-1));
+  auto ts = itimerspec{{0, 0}, {0, 0}};
+  auto Func = [fd, ts]() { timerfd_settime(fd, 0, &ts, NULL); };
+  ExpectRealtimeDeath(Func, "timerfd_settime");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, TimerfdGettimeDiesWhenRealtime) {
+  int fd = timerfd_create(CLOCK_MONOTONIC, 0);
+  EXPECT_THAT(fd, Ne(-1));
+  itimerspec ts{};
+  auto Func = [fd, &ts]() { timerfd_gettime(fd, &ts); };
+  ExpectRealtimeDeath(Func, "timerfd_gettime");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST(TestRtsanInterceptors, EventfdDiesWhenRealtime) {
+  auto Func = []() { eventfd(EFD_CLOEXEC, 0); };
+  ExpectRealtimeDeath(Func, "eventfd");
   ExpectNonRealtimeSurvival(Func);
 }
 #endif

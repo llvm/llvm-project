@@ -21,18 +21,6 @@
 #include "rtsan/rtsan.h"
 
 #if SANITIZER_APPLE
-
-#if TARGET_OS_MAC
-// On MacOS OSSpinLockLock is deprecated and no longer present in the headers,
-// but the symbol still exists on the system. Forward declare here so we
-// don't get compilation errors.
-#include <stdint.h>
-extern "C" {
-typedef int32_t OSSpinLock;
-void OSSpinLockLock(volatile OSSpinLock *__lock);
-}
-#endif // TARGET_OS_MAC
-
 #include <libkern/OSAtomic.h>
 #include <os/lock.h>
 #endif // SANITIZER_APPLE
@@ -196,7 +184,11 @@ INTERCEPTOR(int, fcntl, int filedes, int cmd, ...) {
   return REAL(fcntl)(filedes, cmd, arg);
 }
 
+#if SANITIZER_MUSL
+INTERCEPTOR(int, ioctl, int filedes, int request, ...) {
+#else
 INTERCEPTOR(int, ioctl, int filedes, unsigned long request, ...) {
+#endif
   __rtsan_notify_intercepted_call("ioctl");
 
   // See fcntl for discussion on why we use intptr_t
@@ -252,6 +244,75 @@ INTERCEPTOR(int, chdir, const char *path) {
 INTERCEPTOR(int, fchdir, int fd) {
   __rtsan_notify_intercepted_call("fchdir");
   return REAL(fchdir)(fd);
+}
+
+#if SANITIZER_INTERCEPT_READLINK
+INTERCEPTOR(ssize_t, readlink, const char *pathname, char *buf, size_t size) {
+  __rtsan_notify_intercepted_call("readlink");
+  return REAL(readlink)(pathname, buf, size);
+}
+#define RTSAN_MAYBE_INTERCEPT_READLINK INTERCEPT_FUNCTION(readlink)
+#else
+#define RTSAN_MAYBE_INTERCEPT_READLINK
+#endif
+
+#if SANITIZER_INTERCEPT_READLINKAT
+INTERCEPTOR(ssize_t, readlinkat, int dirfd, const char *pathname, char *buf,
+            size_t size) {
+  __rtsan_notify_intercepted_call("readlinkat");
+  return REAL(readlinkat)(dirfd, pathname, buf, size);
+}
+#define RTSAN_MAYBE_INTERCEPT_READLINKAT INTERCEPT_FUNCTION(readlinkat)
+#else
+#define RTSAN_MAYBE_INTERCEPT_READLINKAT
+#endif
+
+INTERCEPTOR(int, unlink, const char *pathname) {
+  __rtsan_notify_intercepted_call("unlink");
+  return REAL(unlink)(pathname);
+}
+
+INTERCEPTOR(int, unlinkat, int fd, const char *pathname, int flag) {
+  __rtsan_notify_intercepted_call("unlinkat");
+  return REAL(unlinkat)(fd, pathname, flag);
+}
+
+INTERCEPTOR(int, truncate, const char *pathname, off_t length) {
+  __rtsan_notify_intercepted_call("truncate");
+  return REAL(truncate)(pathname, length);
+}
+
+INTERCEPTOR(int, ftruncate, int fd, off_t length) {
+  __rtsan_notify_intercepted_call("ftruncate");
+  return REAL(ftruncate)(fd, length);
+}
+
+#if SANITIZER_LINUX && !SANITIZER_MUSL
+INTERCEPTOR(int, truncate64, const char *pathname, off64_t length) {
+  __rtsan_notify_intercepted_call("truncate64");
+  return REAL(truncate64)(pathname, length);
+}
+
+INTERCEPTOR(int, ftruncate64, int fd, off64_t length) {
+  __rtsan_notify_intercepted_call("ftruncate64");
+  return REAL(ftruncate64)(fd, length);
+}
+#define RTSAN_MAYBE_INTERCEPT_TRUNCATE64 INTERCEPT_FUNCTION(truncate64)
+#define RTSAN_MAYBE_INTERCEPT_FTRUNCATE64 INTERCEPT_FUNCTION(ftruncate64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_TRUNCATE64
+#define RTSAN_MAYBE_INTERCEPT_FTRUNCATE64
+#endif
+
+INTERCEPTOR(int, symlink, const char *target, const char *linkpath) {
+  __rtsan_notify_intercepted_call("symlink");
+  return REAL(symlink)(target, linkpath);
+}
+
+INTERCEPTOR(int, symlinkat, const char *target, int newdirfd,
+            const char *linkpath) {
+  __rtsan_notify_intercepted_call("symlinkat");
+  return REAL(symlinkat)(target, newdirfd, linkpath);
 }
 
 // Streams
@@ -638,21 +699,35 @@ INTERCEPTOR(mode_t, umask, mode_t cmask) {
 #pragma clang diagnostic push
 // OSSpinLockLock is deprecated, but still in use in libc++
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#undef OSSpinLockLock
+
 INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
   __rtsan_notify_intercepted_call("OSSpinLockLock");
   return REAL(OSSpinLockLock)(lock);
 }
-#pragma clang diagnostic pop
+
 #define RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK INTERCEPT_FUNCTION(OSSpinLockLock)
 #else
 #define RTSAN_MAYBE_INTERCEPT_OSSPINLOCKLOCK
 #endif // SANITIZER_APPLE
 
 #if SANITIZER_APPLE
+// _os_nospin_lock_lock may replace OSSpinLockLock due to deprecation macro.
+typedef volatile OSSpinLock *_os_nospin_lock_t;
+
+INTERCEPTOR(void, _os_nospin_lock_lock, _os_nospin_lock_t lock) {
+  __rtsan_notify_intercepted_call("_os_nospin_lock_lock");
+  return REAL(_os_nospin_lock_lock)(lock);
+}
+#pragma clang diagnostic pop // "-Wdeprecated-declarations"
+#endif                       // SANITIZER_APPLE
+
+#if SANITIZER_APPLE
 INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {
   __rtsan_notify_intercepted_call("os_unfair_lock_lock");
   return REAL(os_unfair_lock_lock)(lock);
 }
+
 #define RTSAN_MAYBE_INTERCEPT_OS_UNFAIR_LOCK_LOCK                              \
   INTERCEPT_FUNCTION(os_unfair_lock_lock)
 #else
@@ -958,6 +1033,17 @@ INTERCEPTOR(int, shm_unlink, const char *name) {
   return REAL(shm_unlink)(name);
 }
 
+#if !SANITIZER_APPLE
+// is supported by freebsd too
+INTERCEPTOR(int, memfd_create, const char *path, unsigned int flags) {
+  __rtsan_notify_intercepted_call("memfd_create");
+  return REAL(memfd_create)(path, flags);
+}
+#define RTSAN_MAYBE_INTERCEPT_MEMFD_CREATE INTERCEPT_FUNCTION(memfd_create)
+#else
+#define RTSAN_MAYBE_INTERCEPT_MEMFD_CREATE
+#endif
+
 // Sockets
 INTERCEPTOR(int, getaddrinfo, const char *node, const char *service,
             const struct addrinfo *hints, struct addrinfo **res) {
@@ -1259,17 +1345,49 @@ INTERCEPTOR(int, inotify_rm_watch, int fd, int wd) {
   __rtsan_notify_intercepted_call("inotify_rm_watch");
   return REAL(inotify_rm_watch)(fd, wd);
 }
+
+INTERCEPTOR(int, timerfd_create, int clockid, int flags) {
+  __rtsan_notify_intercepted_call("timerfd_create");
+  return REAL(timerfd_create)(clockid, flags);
+}
+
+INTERCEPTOR(int, timerfd_settime, int fd, int flags, const itimerspec *newval,
+            struct itimerspec *oldval) {
+  __rtsan_notify_intercepted_call("timerfd_settime");
+  return REAL(timerfd_settime)(fd, flags, newval, oldval);
+}
+
+INTERCEPTOR(int, timerfd_gettime, int fd, struct itimerspec *val) {
+  __rtsan_notify_intercepted_call("timerfd_gettime");
+  return REAL(timerfd_gettime)(fd, val);
+}
+
+/* eventfd wrappers calls SYS_eventfd2 down the line */
+INTERCEPTOR(int, eventfd, unsigned int count, int flags) {
+  __rtsan_notify_intercepted_call("eventfd");
+  return REAL(eventfd)(count, flags);
+}
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT INTERCEPT_FUNCTION(inotify_init)
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1 INTERCEPT_FUNCTION(inotify_init1)
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH                                \
   INTERCEPT_FUNCTION(inotify_add_watch)
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH                                 \
   INTERCEPT_FUNCTION(inotify_rm_watch)
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_CREATE INTERCEPT_FUNCTION(timerfd_create)
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_SETTIME                                  \
+  INTERCEPT_FUNCTION(timerfd_settime)
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_GETTIME                                  \
+  INTERCEPT_FUNCTION(timerfd_gettime)
+#define RTSAN_MAYBE_INTERCEPT_EVENTFD INTERCEPT_FUNCTION(eventfd)
 #else
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH
 #define RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_CREATE
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_SETTIME
+#define RTSAN_MAYBE_INTERCEPT_TIMERFD_GETTIME
+#define RTSAN_MAYBE_INTERCEPT_EVENTFD
 #endif
 
 INTERCEPTOR(int, pipe, int pipefd[2]) {
@@ -1392,6 +1510,7 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(mincore);
   INTERCEPT_FUNCTION(shm_open);
   INTERCEPT_FUNCTION(shm_unlink);
+  RTSAN_MAYBE_INTERCEPT_MEMFD_CREATE;
   RTSAN_MAYBE_INTERCEPT_MEMALIGN;
   RTSAN_MAYBE_INTERCEPT_PVALLOC;
 
@@ -1402,6 +1521,16 @@ void __rtsan::InitializeInterceptors() {
   INTERCEPT_FUNCTION(close);
   INTERCEPT_FUNCTION(chdir);
   INTERCEPT_FUNCTION(fchdir);
+  RTSAN_MAYBE_INTERCEPT_READLINK;
+  RTSAN_MAYBE_INTERCEPT_READLINKAT;
+  INTERCEPT_FUNCTION(unlink);
+  INTERCEPT_FUNCTION(unlinkat);
+  INTERCEPT_FUNCTION(symlink);
+  INTERCEPT_FUNCTION(symlinkat);
+  INTERCEPT_FUNCTION(truncate);
+  INTERCEPT_FUNCTION(ftruncate);
+  RTSAN_MAYBE_INTERCEPT_TRUNCATE64;
+  RTSAN_MAYBE_INTERCEPT_FTRUNCATE64;
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
   RTSAN_MAYBE_INTERCEPT_FREOPEN64;
@@ -1523,6 +1652,11 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_INOTIFY_INIT1;
   RTSAN_MAYBE_INTERCEPT_INOTIFY_ADD_WATCH;
   RTSAN_MAYBE_INTERCEPT_INOTIFY_RM_WATCH;
+
+  RTSAN_MAYBE_INTERCEPT_TIMERFD_CREATE;
+  RTSAN_MAYBE_INTERCEPT_TIMERFD_SETTIME;
+  RTSAN_MAYBE_INTERCEPT_TIMERFD_GETTIME;
+  RTSAN_MAYBE_INTERCEPT_EVENTFD;
 
   INTERCEPT_FUNCTION(pipe);
   INTERCEPT_FUNCTION(mkfifo);

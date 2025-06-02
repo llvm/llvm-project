@@ -56,8 +56,8 @@ getStableFunctionEntries(const StableFunctionMap &SFM) {
     for (auto &Func : P.second)
       FuncEntries.emplace_back(Func.get());
 
-  std::stable_sort(
-      FuncEntries.begin(), FuncEntries.end(), [&](auto &A, auto &B) {
+  llvm::stable_sort(
+      FuncEntries, [&](auto &A, auto &B) {
         return std::tuple(A->Hash, SFM.getNameForId(A->ModuleNameId),
                           SFM.getNameForId(A->FunctionNameId)) <
                std::tuple(B->Hash, SFM.getNameForId(B->ModuleNameId),
@@ -86,7 +86,7 @@ void StableFunctionMapRecord::serialize(raw_ostream &OS,
   support::endian::Writer Writer(OS, endianness::little);
 
   // Write Names.
-  auto &Names = FunctionMap->getNames();
+  ArrayRef<std::string> Names = FunctionMap->getNames();
   uint32_t ByteSize = 4;
   Writer.write<uint32_t>(Names.size());
   for (auto &Name : Names) {
