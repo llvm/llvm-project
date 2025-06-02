@@ -1281,7 +1281,36 @@ bool PPCMIPeephole::simplifyCode() {
         Simplified = true;
         break;
       }
-      case PPC::RLWINM:
+      case PPC::RLWINM: {
+        Register SrcReg = MI.getOperand(1).getReg();
+        MachineInstr *DefMI = MRI->getVRegDef(SrcReg);
+
+        if (DefMI) {
+          unsigned Opcode = DefMI->getOpcode();
+          if (Opcode == PPC::LBARX || Opcode == PPC::LHARX) {
+            unsigned SH = MI.getOperand(2).getImm();
+            unsigned MB = MI.getOperand(3).getImm();
+            unsigned ME = MI.getOperand(4).getImm();
+
+            if (SH == 0 && ME == 31 &&
+                ((MB == 24 && Opcode == PPC::LBARX) ||
+                 (MB == 16 && Opcode == PPC::LHARX))) {
+              Register SrcReg = MI.getOperand(0).getReg();
+              Register DstReg =
+                  DefMI->getOperand(0).getReg();
+
+              // Replace all uses of RLWINM's result with LBARX result
+              MRI->replaceRegWith(DstReg, SrcReg);
+	      addRegToUpdate(DstReg);
+	      addRegToUpdate(SrcReg);
+              ToErase = &MI;
+              Simplified = true;
+              break;
+            }
+          }
+        }
+        [[fall_through]];
+      }
       case PPC::RLWINM_rec:
       case PPC::RLWINM8:
       case PPC::RLWINM8_rec: {
