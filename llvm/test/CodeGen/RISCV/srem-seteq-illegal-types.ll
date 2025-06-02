@@ -63,7 +63,7 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV64-NEXT:    subw a1, a1, a0
 ; RV64-NEXT:    slli a1, a1, 35
 ; RV64-NEXT:    srli a1, a1, 35
-; RV64-NEXT:    addiw a0, a3, -165
+; RV64-NEXT:    addi a0, a3, -165
 ; RV64-NEXT:    sltu a0, a1, a0
 ; RV64-NEXT:    ret
 ;
@@ -93,7 +93,7 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV64M-NEXT:    lui a1, 1324
 ; RV64M-NEXT:    slli a0, a0, 35
 ; RV64M-NEXT:    srli a0, a0, 35
-; RV64M-NEXT:    addiw a1, a1, -165
+; RV64M-NEXT:    addi a1, a1, -165
 ; RV64M-NEXT:    sltu a0, a0, a1
 ; RV64M-NEXT:    ret
 ;
@@ -123,7 +123,7 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; RV64MV-NEXT:    lui a1, 1324
 ; RV64MV-NEXT:    slli a0, a0, 35
 ; RV64MV-NEXT:    srli a0, a0, 35
-; RV64MV-NEXT:    addiw a1, a1, -165
+; RV64MV-NEXT:    addi a1, a1, -165
 ; RV64MV-NEXT:    sltu a0, a0, a1
 ; RV64MV-NEXT:    ret
   %srem = srem i29 %X, 99
@@ -612,7 +612,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64M-NEXT:    lbu a3, 12(a0)
 ; RV64M-NEXT:    lui a4, %hi(.LCPI3_0)
 ; RV64M-NEXT:    lui a5, 699051
-; RV64M-NEXT:    addiw a5, a5, -1365
+; RV64M-NEXT:    addi a5, a5, -1365
 ; RV64M-NEXT:    slli a6, a5, 32
 ; RV64M-NEXT:    add a5, a5, a6
 ; RV64M-NEXT:    srli a6, a1, 2
