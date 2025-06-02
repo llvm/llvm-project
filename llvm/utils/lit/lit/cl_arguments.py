@@ -107,7 +107,8 @@ def parse_args():
     format_group.add_argument(
         "--show-attempts-count",
         dest="showAttemptsCount",
-        help="Show number of attempts and maximum attempts for flaky tests.",
+        help="Show number of attempts and maximum attempts for tests"
+        "which are allowed to run more than once.",
         action="store_true",
     )
 
