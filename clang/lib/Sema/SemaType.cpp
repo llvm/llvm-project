@@ -9030,21 +9030,45 @@ public:
       }
     }
 
-    // In attribute-only mode, represent __single and __unsafe_indexable as
-    // sugars.
-    if (S.getLangOpts().BoundsSafetyAttributes &&
-        !S.getLangOpts().BoundsSafety &&
-        (Kind == ParsedAttr::AT_PtrSingle ||
-         Kind == ParsedAttr::AT_PtrUnsafeIndexable)) {
-      const Attr *A;
-      if (Kind == ParsedAttr::AT_PtrSingle)
-        A = createSimpleAttr<PtrSingleAttr>(Ctx, PAttr);
-      else
-        A = createSimpleAttr<PtrUnsafeIndexableAttr>(Ctx, PAttr);
-      return state.getAttributedType(A, PTy, PTy);
+    // In attribute-only mode some attributes are represented as sugar types.
+    QualType AttrOnlyModeType = GetTypeWithAttrForAttributeOnlyMode(PTy);
+    if (!AttrOnlyModeType.isNull()) {
+      return AttrOnlyModeType;
     }
 
     return Ctx.getPointerType(PTy->getPointeeType(), FAttr);
+  }
+
+  QualType GetTypeWithAttrForAttributeOnlyMode(QualType T) const {
+    if (!S.getLangOpts().isBoundsSafetyAttributeOnlyMode())
+      return QualType();
+    // In Attribute only mode represent __single, and __unsafe_indexable as
+    // sugars.
+    const Attr *A = nullptr;
+    switch (PAttr.getKind()) {
+    case ParsedAttr::AT_PtrSingle:
+      A = createSimpleAttr<PtrSingleAttr>(Ctx, PAttr);
+      break;
+    case ParsedAttr::AT_PtrUnsafeIndexable:
+      A = createSimpleAttr<PtrUnsafeIndexableAttr>(Ctx, PAttr);
+      break;
+    default:
+      return QualType();
+    }
+    return state.getAttributedType(A, T, T);
+  }
+
+  QualType VisitTemplateTypeParmTypeLoc(const TemplateTypeParmTypeLoc TTPTL) {
+    // In attribute only mode optimistically apply some attributes to the
+    // `TemplateTypeParmType` even though we don't know if it's a pointer yet.
+    // Later in `TreeTransform<Derived>::TransformAttributedType` if the type
+    // gets instantiated we'll check if the instantiated type is a pointer.
+    QualType AttributedType =
+        GetTypeWithAttrForAttributeOnlyMode(TTPTL.getType());
+    if (AttributedType.isNull()) {
+      return BaseClass::VisitTemplateTypeParmTypeLoc(TTPTL);
+    }
+    return AttributedType;
   }
 
   QualType
@@ -9260,7 +9284,17 @@ static void HandleBoundsSafetyPointerTypeAttr(TypeProcessingState &state,
   if (auto AT = T->getAs<AtomicType>())
     T = AT->getValueType();
 
-  if (!T->isPointerType() && !T->getAs<AutoType>()) {
+  // In attribute-only mode we lift the restriction that `T` must be a pointer
+  // type to allow something like:
+  //
+  // ```
+  // template <class T> class Ref { T __single ptr };
+  // ```
+  // For classes like this the check for pointer type is delayed until template
+  // instantiation in `TreeTransform<Derived>::TransformAttributedType`.
+  if (!T->isPointerType() && !T->getAs<AutoType>() &&
+      !(T->isTemplateTypeParmType() &&
+        S.getLangOpts().isBoundsSafetyAttributeOnlyMode())) {
     S.Diag(PAttr.getLoc(), diag::err_attribute_pointers_only) << PAttr << 0;
     PAttr.setInvalid();
     return;

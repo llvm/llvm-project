@@ -7668,6 +7668,35 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
       }
     }
 
+    /* TO_UPSTREAM(BoundsSafety) ON*/
+    // This is primarily here for the `TemplateInstantiator` subclass
+    // where we want to check that after template instantiation the
+    // bounds-safety attributes are being applied to pointer types.
+    if (SemaRef.LangOpts.isBoundsSafetyAttributeOnlyMode()) {
+      const char *AttrName = nullptr;
+      switch (TL.getAttrKind()) {
+      case attr::PtrSingle:
+        AttrName = "__single";
+        break;
+      case attr::PtrUnsafeIndexable:
+        AttrName = AttrName ? AttrName : "__unsafe_indexable";
+        break;
+      default:
+        break; // Nothing to do
+      }
+      if (AttrName && !modifiedType->getAs<PointerType>()) {
+        const auto *Attr = TL.getAttr();
+        // Use the attribute spelling if it's available.
+        AttrName = Attr ? Attr->getSpelling() : AttrName;
+        SemaRef.Diag(Attr ? Attr->getLocation()
+                          : TL.getModifiedLoc().getBeginLoc(),
+                     diag::err_attribute_pointers_only)
+            << AttrName << 0;
+        return QualType();
+      }
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF*/
+
     result = SemaRef.Context.getAttributedType(TL.getAttrKind(),
                                                modifiedType,
                                                equivalentType,
