@@ -28988,7 +28988,7 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
     return LowerVectorCTLZ_AVX512CDI(Op, DAG, Subtarget);
 
   // Decompose 256-bit ops into smaller 128-bit ops.
-  if (VT.is256BitVector() && !Subtarget.hasInt256()) 
+  if (VT.is256BitVector() && !Subtarget.hasInt256())
     return splitVectorIntUnary(Op, DAG, DL);
 
   // Decompose 512-bit ops into smaller 256-bit ops.
@@ -28998,6 +28998,7 @@ static SDValue LowerVectorCTLZ(SDValue Op, const SDLoc &DL,
   assert(Subtarget.hasSSSE3() && "Expected SSSE3 support for PSHUFB");
   return LowerVectorCTLZInRegLUT(Op, DL, Subtarget, DAG);
 }
+
 static SDValue LowerVectorCTLZ_GFNI(SDValue Op, const SDLoc &DL,
                                     SelectionDAG &DAG,
                                     const X86Subtarget &Subtarget) {
@@ -29007,20 +29008,11 @@ static SDValue LowerVectorCTLZ_GFNI(SDValue Op, const SDLoc &DL,
   assert(VT.isVector() && VT.getVectorElementType() == MVT::i8 &&
          "Expected vXi8 input for GFNI-based CTLZ lowering");
 
-  // Step 1: Bit-reverse input
   SDValue Reversed = DAG.getNode(ISD::BITREVERSE, DL, VT, Input);
 
-  // Step 2: Add 0xFF
-  SDValue AddVec = DAG.getAllOnesConstant(DL, VT);
-  SDValue Summed = DAG.getNode(ISD::ADD, DL, VT, Reversed, AddVec);
+  SDValue Neg = DAG.getNegative(Reversed, DL, VT);
+  SDValue Filtered = DAG.getNode(ISD::AND, DL, VT, Reversed, Neg);
 
-  // Step 3: Not(Summed)
-  SDValue NotSummed = DAG.getNOT(DL, Summed, VT);
-
-  // Step 4: AND with Reversed
-  SDValue Filtered = DAG.getNode(ISD::AND, DL, VT, NotSummed, Reversed);
-
-  // Step 5: Apply CTTZ LUT using GF2P8AFFINEQB
   MVT VT64 = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
   SDValue CTTZConst = DAG.getConstant(0xAACCF0FF00000000ULL, DL, VT64);
   SDValue CTTZMatrix = DAG.getBitcast(VT, CTTZConst);
@@ -29030,7 +29022,6 @@ static SDValue LowerVectorCTLZ_GFNI(SDValue Op, const SDLoc &DL,
                   DAG.getTargetConstant(8, DL, MVT::i8));
   return LZCNT;
 }
-
 
 static SDValue LowerCTLZ(SDValue Op, const X86Subtarget &Subtarget,
                          SelectionDAG &DAG) {
