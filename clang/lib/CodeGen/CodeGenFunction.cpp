@@ -2765,8 +2765,8 @@ CodeGenFunction::SanitizerScope::SanitizerScope(
     CodeGenFunction *CGF, ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
     SanitizerHandler Handler)
     : SanitizerScope(CGF) {
-  ApplyTrapDI = std::unique_ptr<ApplyDebugLocation>(new ApplyDebugLocation(
-      *CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler)));
+  ApplyTrapDI = std::make_unique<ApplyDebugLocation>(
+      *CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler));
 }
 
 CodeGenFunction::SanitizerScope::~SanitizerScope() {
