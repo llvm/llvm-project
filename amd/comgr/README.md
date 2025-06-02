@@ -198,13 +198,11 @@ improving performance by reducing on-disk file I/O. Currently, VFS is only suppo
 for the device library link step, but we aim to progressively add support for
 more actions.
 
-By default, VFS is turned off. Set the environment variable `AMD_COMGR_USE_VFS=1` to 
-enable it.
+By default, VFS is turned on.
 
-* `AMD_COMGR_USE_VFS`: When unset or "0", VFS support is turned off.
-* Users may use the API `amd_comgr_action_info_set_vfs` to enable VFS for individual actions
-  without having to modify system-wide environment variables. Note that API is effective only 
-  if `AMD_COMGR_USE_VFS` is unset.
+* `AMD_COMGR_USE_VFS`: When set to "0", VFS support is turned off.
+* Users may use the API `amd_comgr_action_info_set_vfs` to disable VFS for individual actions
+  without having to modify system-wide environment variables.
 * If `AMD_COMGR_SAVE_TEMPS` is set and not "0", VFS support is turned off irrespective
   of `AMD_COMGR_USE_VFS` or the use of `amd_comgr_action_info_set_vfs`.
 

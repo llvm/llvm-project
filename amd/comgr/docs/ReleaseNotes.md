@@ -38,8 +38,9 @@ Bug Fixes
 New APIs
 --------
 - amd\_comgr\_info\_set\_vfs\_() (v3.1)
-    - By setting this ActionInfo property, a user can explicitly dictate if
-    device libraries should be linked using a Virtual File System (VFS).
+    - By setting this ActionInfo property, users can explicitly dictate if
+    device libraries should be linked using the real file system or a
+    Virtual File System (VFS).
 
 Deprecated APIs
 ---------------
