@@ -306,7 +306,10 @@ public:
     Vals[Idx] = Val;
   }
 
-  void init(size_t Idx, const T &Val) { Vals[Idx] = Val; }
+  void init(size_t Idx, const T &Val) {
+    assert(Undo.empty());
+    Vals[Idx] = Val;
+  }
 };
 
 /// Data package used by RenamePass().
