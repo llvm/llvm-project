@@ -9,7 +9,7 @@ set(generate_vcs_version_script "${LLVM_CMAKE_DIR}/GenerateVersionFromVCS.cmake"
 if(llvm_vc AND LLVM_APPEND_VC_REV)
   set(llvm_source_dir ${LLVM_MAIN_SRC_DIR})
 endif()
-if (LLVM_VC_REPOSITORY AND LLVM_VC_REVISION)
+if(LLVM_VC_REPOSITORY AND LLVM_VC_REVISION)
   set(llvm_source_dir ${LLVM_SOURCE_DIR})
   set(llvm_vc_repository ${LLVM_VC_REPOSITORY})
   set(llvm_vc_revision ${LLVM_VC_REVISION})
