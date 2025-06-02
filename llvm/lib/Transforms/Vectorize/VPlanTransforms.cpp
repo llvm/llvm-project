@@ -993,13 +993,13 @@ static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
+  VPlan *Plan = R.getParent()->getPlan();
 
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
   if (TypeSwitch<VPRecipeBase *, bool>(&R)
           .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
                 VPReplicateRecipe>([&](auto *I) {
-            VPlan *Plan = R.getParent()->getPlan();
             const DataLayout &DL =
                 Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
             Value *V = tryToFoldLiveIns(*I, I->getOpcode(), I->operands(), DL,
@@ -1013,23 +1013,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
   // Fold PredPHI constant -> constant.
   if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&R)) {
-    VPlan *Plan = R.getParent()->getPlan();
     VPValue *Op = PredPHI->getOperand(0);
     if (!Op->isLiveIn() || !Op->getLiveInIRValue())
       return;
     if (auto *C = dyn_cast<Constant>(Op->getLiveInIRValue()))
       PredPHI->replaceAllUsesWith(Plan->getOrAddLiveIn(C));
-  }
-
-  // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
-  // part 0 can be replaced by their start value, if only the first lane is
-  // demanded.
-  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
-    if (Steps->getParent()->getPlan()->isUnrolled() && Steps->isPart0() &&
-        vputils::onlyFirstLaneUsed(Steps)) {
-      Steps->replaceAllUsesWith(Steps->getOperand(0));
-      return;
-    }
   }
 
   VPValue *A;
@@ -1065,8 +1053,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 #ifndef NDEBUG
     // Verify that the cached type info is for both A and its users is still
     // accurate by comparing it to freshly computed types.
-    VPTypeAnalysis TypeInfo2(
-        R.getParent()->getPlan()->getCanonicalIV()->getScalarType());
+    VPTypeAnalysis TypeInfo2(Plan->getCanonicalIV()->getScalarType());
     assert(TypeInfo.inferScalarType(A) == TypeInfo2.inferScalarType(A));
     for (VPUser *U : A->users()) {
       auto *R = cast<VPRecipeBase>(U);
@@ -1150,6 +1137,20 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     R.setOperand(1, R.getOperand(0));
     R.setOperand(0, Y);
     return;
+  }
+
+  // Some simplifications can only be applied after unrolling. Perform them
+  // below.
+  if (!Plan->isUnrolled())
+    return;
+
+  // VPScalarIVSteps for part 0 can be replaced by their start value, if only
+  // the first lane is demanded.
+  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
+    if (Steps->isPart0() && vputils::onlyFirstLaneUsed(Steps)) {
+      Steps->replaceAllUsesWith(Steps->getOperand(0));
+      return;
+    }
   }
 }
 
