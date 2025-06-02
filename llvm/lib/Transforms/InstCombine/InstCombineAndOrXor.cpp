@@ -3602,6 +3602,11 @@ struct DecomposedBitMaskMul {
   APInt Mask;
   bool NUW;
   bool NSW;
+
+  bool isCombineableWith(DecomposedBitMaskMul Other) {
+    return X == Other.X && (Mask & Other.Mask).isZero() &&
+           Factor == Other.Factor;
+  }
 };
 
 static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
@@ -3657,6 +3662,34 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
   }
 
   return std::nullopt;
+}
+
+using CombinedBitmaskMul =
+    std::pair<std::optional<DecomposedBitMaskMul>, Value *>;
+
+static CombinedBitmaskMul matchCombinedBitmaskMul(Value *V) {
+  auto DecompBitMaskMul = matchBitmaskMul(V);
+  if (DecompBitMaskMul)
+    return {DecompBitMaskMul, nullptr};
+
+  // Otherwise, check the operands of V for bitmaskmul pattern
+  auto BOp = dyn_cast<BinaryOperator>(V);
+  if (!BOp)
+    return {std::nullopt, nullptr};
+
+  auto Disj = dyn_cast<PossiblyDisjointInst>(BOp);
+  if (!Disj || !Disj->isDisjoint())
+    return {std::nullopt, nullptr};
+
+  auto DecompBitMaskMul0 = matchBitmaskMul(BOp->getOperand(0));
+  if (DecompBitMaskMul0)
+    return {DecompBitMaskMul0, BOp->getOperand(1)};
+
+  auto DecompBitMaskMul1 = matchBitmaskMul(BOp->getOperand(1));
+  if (DecompBitMaskMul1)
+    return {DecompBitMaskMul1, BOp->getOperand(0)};
+
+  return {std::nullopt, nullptr};
 }
 
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
@@ -3741,25 +3774,46 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
 
-    // (A & N) * C + (A & M) * C -> (A & (N + M)) & C
-    // This also accepts the equivalent select form of (A & N) * C
-    // expressions i.e. !(A & N) ? 0 : N * C)
-    auto Decomp1 = matchBitmaskMul(I.getOperand(1));
-    if (Decomp1) {
-      auto Decomp0 = matchBitmaskMul(I.getOperand(0));
-      if (Decomp0 && Decomp0->X == Decomp1->X &&
-          (Decomp0->Mask & Decomp1->Mask).isZero() &&
-          Decomp0->Factor == Decomp1->Factor) {
+    // (!(A & N) ? 0 : N * C) + (!(A & M) ? 0 : M * C) -> A & (N + M) * C
+    // This also accepts the equivalent mul form of (A & N) ? 0 : N * C)
+    // expressions i.e. (A & N) * C
+    CombinedBitmaskMul Decomp1 = matchCombinedBitmaskMul(I.getOperand(1));
+    auto BMDecomp1 = Decomp1.first;
 
-        Value *NewAnd = Builder.CreateAnd(
-            Decomp0->X, ConstantInt::get(Decomp0->X->getType(),
-                                         (Decomp0->Mask + Decomp1->Mask)));
+    if (BMDecomp1) {
+      CombinedBitmaskMul Decomp0 = matchCombinedBitmaskMul(I.getOperand(0));
+      auto BMDecomp0 = Decomp0.first;
 
-        auto *Combined = BinaryOperator::CreateMul(
-            NewAnd, ConstantInt::get(NewAnd->getType(), Decomp1->Factor));
+      if (BMDecomp0 && BMDecomp0->isCombineableWith(*BMDecomp1)) {
+        auto NewAnd = Builder.CreateAnd(
+            BMDecomp0->X,
+            ConstantInt::get(BMDecomp0->X->getType(),
+                             (BMDecomp0->Mask + BMDecomp1->Mask)));
 
-        Combined->setHasNoUnsignedWrap(Decomp0->NUW && Decomp1->NUW);
-        Combined->setHasNoSignedWrap(Decomp0->NSW && Decomp1->NSW);
+        BinaryOperator *Combined = cast<BinaryOperator>(Builder.CreateMul(
+            NewAnd, ConstantInt::get(NewAnd->getType(), BMDecomp1->Factor)));
+
+        Combined->setHasNoUnsignedWrap(BMDecomp0->NUW && BMDecomp1->NUW);
+        Combined->setHasNoSignedWrap(BMDecomp0->NSW && BMDecomp1->NSW);
+
+        // If our tree has indepdent or-disjoint operands, bring them in.
+        auto OtherOp0 = Decomp0.second;
+        auto OtherOp1 = Decomp1.second;
+
+        if (OtherOp0 || OtherOp1) {
+          Value *OtherOp;
+          if (OtherOp0 && OtherOp1) {
+            OtherOp = Builder.CreateOr(OtherOp0, OtherOp1);
+            cast<PossiblyDisjointInst>(OtherOp)->setIsDisjoint(true);
+          } else {
+            OtherOp = OtherOp0 ? OtherOp0 : OtherOp1;
+          }
+          Combined = cast<BinaryOperator>(Builder.CreateOr(Combined, OtherOp));
+          cast<PossiblyDisjointInst>(Combined)->setIsDisjoint(true);
+        }
+
+        // Caller expects detached instruction
+        Combined->removeFromParent();
         return Combined;
       }
     }
