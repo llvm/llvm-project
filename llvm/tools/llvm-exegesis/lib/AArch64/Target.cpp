@@ -237,6 +237,8 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     const Instruction &Instr, const Variable &Var, MCOperand &AssignedValue,
     const BitVector &ForbiddenRegs) const {
   const Operand &Op = Instr.getPrimaryOperand(Var);
+  // Introducing some illegal instructions for (15) a few opcodes
+  // TODO: Look into immediate values to be opcode specific
   switch (Op.getExplicitOperandInfo().OperandType) {
   case MCOI::OperandType::OPERAND_UNKNOWN: {
     unsigned Opcode = Instr.getOpcode();
