@@ -7532,8 +7532,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
 
   // Fold (and X, (add (not Y), Z)) -> (and X, (not (sub Y, Z)))
   // Fold (and X, (sub (not Y), Z)) -> (and X, (not (add Y, Z)))
-  if (SDValue Folded = foldBitwiseOpWithNeg(N, DL, VT))
-    return Folded;
+  if (TLI.hasAndNot(SDValue(N, 0)))
+    if (SDValue Folded = foldBitwiseOpWithNeg(N, DL, VT))
+      return Folded;
 
   // Fold (and (srl X, C), 1) -> (srl X, BW-1) for signbit extraction
   // If we are shifting down an extended sign bit, see if we can simplify
@@ -8211,11 +8212,6 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       }
     }
   }
-
-  // Fold (or X, (add (not Y), Z)) -> (or X, (not (sub Y, Z)))
-  // Fold (or X, (sub (not Y), Z)) -> (or X, (not (add Y, Z)))
-  if (SDValue Folded = foldBitwiseOpWithNeg(N, DL, VT))
-    return Folded;
 
   // fold (or x, 0) -> x
   if (isNullConstant(N1))
@@ -9868,10 +9864,6 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     return DAG.getNode(ISD::ROTL, DL, VT, DAG.getSignedConstant(~1, DL, VT),
                        N0.getOperand(1));
   }
-  // Fold (xor X, (add (not Y), Z)) -> (xor X, (not (sub Y, Z)))
-  // Fold (xor X, (sub (not Y), Z)) -> (xor X, (not (add Y, Z)))
-  if (SDValue Folded = foldBitwiseOpWithNeg(N, DL, VT))
-    return Folded;
 
   // Simplify: xor (op x...), (op y...)  -> (op (xor x, y))
   if (N0Opcode == N1.getOpcode())
@@ -11626,9 +11618,6 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N) {
 }
 
 SDValue DAGCombiner::foldBitwiseOpWithNeg(SDNode *N, const SDLoc &DL, EVT VT) {
-  if (!TLI.hasAndNot(SDValue(N, 0)))
-    return SDValue();
-
   unsigned Opc = N->getOpcode();
   SDValue X, Y, Z, NotY;
   if (sd_match(N, m_BitwiseLogic(m_Value(X), m_Add(m_AllOf(m_Value(NotY),
