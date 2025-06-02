@@ -80,6 +80,17 @@ static void warnAboutLeftoverTransformations(Loop *L,
            "requested transformation; the transformation might be disabled or "
            "specified as part of an unsupported transformation ordering");
   }
+
+  if (hasInterchangeTransformation(L) == TM_ForcedByUser) {
+    LLVM_DEBUG(dbgs() << "Leftover interchange transformation\n");
+    ORE->emit(
+        DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
+                                          "FailedRequestedInterchange",
+                                          L->getStartLoc(), L->getHeader())
+        << "loop not interchanged: the optimizer was unable to perform the "
+           "requested transformation; the transformation might be disabled or "
+           "specified as part of an unsupported transformation ordering");
+  }
 }
 
 static void warnAboutLeftoverTransformations(Function *F, LoopInfo *LI,

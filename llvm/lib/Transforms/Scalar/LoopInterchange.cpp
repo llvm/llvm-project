@@ -52,6 +52,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-interchange"
 
+/// @{
+/// Metadata attribute names
+static const char *const LLVMLoopInterchangeFollowupAll =
+    "llvm.loop.interchange.followup_all";
+static const char *const LLVMLoopInterchangeFollowupNextOuter =
+    "llvm.loop.interchange.followup_next_outer";
+static const char *const LLVMLoopInterchangeFollowupOuter =
+    "llvm.loop.interchange.followup_outer";
+static const char *const LLVMLoopInterchangeFollowupInner =
+    "llvm.loop.interchange.followup_inner";
+/// @}
+
 STATISTIC(LoopsInterchanged, "Number of loops interchanged");
 
 static cl::opt<int> LoopInterchangeCostThreshold(
@@ -65,6 +77,14 @@ static cl::opt<unsigned int> MaxMemInstrCount(
         "Maximum number of load-store instructions that should be handled "
         "in the dependency matrix. Higher value may lead to more interchanges "
         "at the cost of compile-time"));
+
+// Whether to apply by default.
+// TODO: Once this pass is enabled by default, remove this option and use the
+// value of PipelineTuningOptions.
+static cl::opt<bool> OnlyWhenForced(
+    "loop-interchange-only-when-forced", cl::init(false), cl::ReallyHidden,
+    cl::desc(
+        "Apply interchanges only when explicitly specified metadata exists"));
 
 namespace {
 
@@ -342,6 +362,16 @@ static bool isComputableLoopNest(ScalarEvolution *SE,
   return true;
 }
 
+static std::optional<bool> findMetadata(Loop *L) {
+  auto Value = findStringMetadataForLoop(L, "llvm.loop.interchange.enable");
+  if (!Value)
+    return std::nullopt;
+
+  const MDOperand *Op = *Value;
+  assert(Op && mdconst::hasa<ConstantInt>(*Op) && "invalid metadata");
+  return mdconst::extract<ConstantInt>(*Op)->getZExtValue();
+}
+
 namespace {
 
 /// LoopInterchangeLegality checks if it is legal to interchange the loop.
@@ -549,6 +579,12 @@ struct LoopInterchange {
         CostMap[LoopCosts[i].first] = i;
       }
     }
+
+    // If OnlyWhenForced is true, only process loops for which interchange is
+    // explicitly enabled.
+    if (OnlyWhenForced)
+      return processEnabledLoop(LoopList, DependencyMatrix, CostMap);
+
     // We try to achieve the globally optimal memory access for the loopnest,
     // and do interchange based on a bubble-sort fasion. We start from
     // the innermost loop, move it outwards to the best possible position
@@ -575,19 +611,30 @@ struct LoopInterchange {
                    const DenseMap<const Loop *, unsigned> &CostMap) {
     Loop *OuterLoop = LoopList[OuterLoopId];
     Loop *InnerLoop = LoopList[InnerLoopId];
+    MDNode *LoopID = OuterLoop->getLoopID();
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
+    std::optional<bool> OuterLoopEnabled = findMetadata(OuterLoop);
+    std::optional<bool> InnerLoopEnabled = findMetadata(InnerLoop);
+    if (OuterLoopEnabled == false || InnerLoopEnabled == false) {
+      LLVM_DEBUG(dbgs() << "Not interchanging loops. It is disabled.\n");
+      return false;
+    }
     LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {
       LLVM_DEBUG(dbgs() << "Not interchanging loops. Cannot prove legality.\n");
       return false;
     }
     LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
-    LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
-    if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
-                          DependencyMatrix, CostMap, CC)) {
-      LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
-      return false;
+
+    // If the interchange is explicitly enabled, skip the profitability check.
+    if (OuterLoopEnabled != true) {
+      LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
+      if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
+                            DependencyMatrix, CostMap, CC)) {
+        LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
+        return false;
+      }
     }
 
     ORE->emit([&]() {
@@ -612,7 +659,160 @@ struct LoopInterchange {
     LLVM_DEBUG(dbgs() << "Dependency matrix after interchange:\n";
                printDepMatrix(DependencyMatrix));
 
+    // The next outer loop, or nullptr if TargetLoop is the outermost one.
+    Loop *NextOuterLoop = nullptr;
+    if (0 < OuterLoopId)
+      NextOuterLoop = LoopList[OuterLoopId - 1];
+
+    // Update the metadata.
+    std::optional<MDNode *> MDNextOuterLoopID =
+        makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
+                                    LLVMLoopInterchangeFollowupNextOuter});
+    std::optional<MDNode *> MDOuterLoopID =
+        makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
+                                    LLVMLoopInterchangeFollowupOuter});
+    std::optional<MDNode *> MDInnerLoopID =
+        makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
+                                    LLVMLoopInterchangeFollowupInner});
+    if (MDNextOuterLoopID) {
+      if (NextOuterLoop) {
+        NextOuterLoop->setLoopID(*MDNextOuterLoopID);
+      } else {
+        LLVM_DEBUG(
+            dbgs() << "New metadata for the next outer loop is ignored.\n");
+      }
+    }
+    if (MDOuterLoopID)
+      OuterLoop->setLoopID(*MDOuterLoopID);
+    if (MDInnerLoopID)
+      InnerLoop->setLoopID(*MDInnerLoopID);
+
     return true;
+  }
+
+  bool processEnabledLoop(SmallVectorImpl<Loop *> &LoopList,
+                          std::vector<std::vector<char>> &DependencyMatrix,
+                          const DenseMap<const Loop *, unsigned> &CostMap) {
+    bool Changed = false;
+
+    // Manage the index so that LoopList[Loop2Index[L]] == L for each loop L.
+    DenseMap<Loop *, unsigned> Loop2Index;
+    for (unsigned I = 0; I != LoopList.size(); I++)
+      Loop2Index[LoopList[I]] = I;
+
+    // Hold outer loops to be exchanged (i.e., loops that have
+    // "llvm.loop.interchange.enable" is true), in the current nest order.
+    SmallVector<Loop *, 4> Worklist;
+
+    // Helper funciton to try to add a new loop into the Worklist. Return false
+    // if there is a duplicate in the loop to be interchanged.
+    auto AddLoopIfEnabled = [&](Loop *L) {
+      if (findMetadata(L) == true) {
+        if (!Worklist.empty()) {
+          // Because the loops are sorted in the order of the current nest, it
+          // is sufficient to compare with the last element.
+          unsigned InnerLoopId = Loop2Index[Worklist.back()] + 1;
+          unsigned OuterLoopId = Loop2Index[L];
+          if (OuterLoopId <= InnerLoopId) {
+            ORE->emit([&]() {
+              return OptimizationRemarkMissed(DEBUG_TYPE, "AmbiguousOrder",
+                                              L->getStartLoc(), L->getHeader())
+                     << "The loops to be interchanged are overlapping.";
+            });
+            return false;
+          }
+        }
+        Worklist.push_back(L);
+      }
+      return true;
+    };
+
+    // Initialize Worklist. To process the loops in inner-loop-first order, add
+    // them to the worklist in the outer-loop-first order.
+    for (unsigned I = 0; I != LoopList.size(); I++)
+      if (!AddLoopIfEnabled(LoopList[I]))
+        return Changed;
+
+    // The number of attempts of exchanges. Used for debug build.
+    [[maybe_unused]] unsigned Attempts = 0;
+
+    // Process the loops. An exchange is applied to two loops, but a metadata
+    // replacement can be applied to three loops: the two loops plus the next
+    // outer loop, if it exists. This is because it's necessary to express the
+    // information about the order of the application of interchanges in cases
+    // where the target loops to be exchanged are overlapping, e.g.,
+    //
+    // #pragma clang loop interchange(enable)
+    // for(int i=0;i<N;i++)
+    //   #pragma clang loop interchange(enable)
+    //   for (int j=0;j<N;j++)
+    //     for (int k=0;k<N;k++)
+    //       ...
+    //
+    // In this case we will exchange the innermost two loops at first, the
+    // follow-up metadata including enabling interchange is attached on the
+    // outermost loop, and it is enqueued as the next candidate to be processed.
+    while (!Worklist.empty()) {
+      Loop *TargetLoop = Worklist.pop_back_val();
+      assert(findMetadata(TargetLoop) == true &&
+             "Some metadata was unexpectedlly removed");
+      unsigned OuterLoopId = Loop2Index[TargetLoop];
+      unsigned InnerLoopId = OuterLoopId + 1;
+      if (InnerLoopId >= LoopList.size()) {
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "InnermostLoop",
+                                          TargetLoop->getStartLoc(),
+                                          TargetLoop->getHeader())
+                 << "The metadata is invalid with an innermost loop.";
+        });
+        break;
+      }
+      bool Interchanged = processLoop(LoopList, InnerLoopId, OuterLoopId,
+                                      DependencyMatrix, CostMap);
+      if (!Interchanged) {
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "NotInterchanged",
+                                          TargetLoop->getStartLoc(),
+                                          TargetLoop->getHeader())
+                 << "Failed to perform explicitly specified loop interchange.";
+        });
+        break;
+      }
+
+      // The next outer loop, or nullptr if TargetLoop is the outermost one.
+      Loop *NextOuterLoop = nullptr;
+      if (0 < OuterLoopId)
+        NextOuterLoop = LoopList[OuterLoopId - 1];
+      Loop *OuterLoop = LoopList[OuterLoopId];
+      Loop *InnerLoop = LoopList[InnerLoopId];
+      Changed = true;
+      Loop2Index[OuterLoop] = OuterLoopId;
+      Loop2Index[InnerLoop] = InnerLoopId;
+
+      // Add new elements, paying attention to the order.
+      bool Valid = true;
+      if (NextOuterLoop)
+        Valid &= AddLoopIfEnabled(NextOuterLoop);
+      Valid &= AddLoopIfEnabled(OuterLoop);
+      Valid &= AddLoopIfEnabled(InnerLoop);
+      if (!Valid)
+        break;
+
+      // Check that the number of attempts of interchanges hasn't exceeded the
+      // upper limit. It would lead an infinite loops.
+      LLVM_DEBUG({
+        // There is no deep meaning behind the current value (square of the size
+        // of LoopList).
+        unsigned MaxAttemptsCount = LoopList.size() * LoopList.size();
+        Attempts++;
+        assert(Attempts <= MaxAttemptsCount &&
+               "The number of attempts of interchanges exceeded the limit. An "
+               "infinite loop may have occured because the metadata was not "
+               "properly deleted after each exchange.");
+      });
+    }
+
+    return Changed;
   }
 };
 
