@@ -15,6 +15,7 @@
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Value.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
@@ -22,6 +23,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -229,7 +231,7 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
 
 static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
                                       const VarDecl *vd) {
-  QualType T = e->getType();
+  QualType t = e->getType();
 
   // If it's thread_local, emit a call to its wrapper function instead.
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
@@ -259,7 +261,7 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "emitGlobalVarDeclLValue: reference type");
   else
-    lv = cgf.makeAddrLValue(addr, T, AlignmentSource::Decl);
+    lv = cgf.makeAddrLValue(addr, t, AlignmentSource::Decl);
   assert(!cir::MissingFeatures::setObjCGCLValueClass());
   return lv;
 }
@@ -1195,6 +1197,165 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
   return Address(ptr, addr.getAlignment());
 }
 
+// Handle the case where the condition is a constant evaluatable simple integer,
+// which means we don't have to separately handle the true/false blocks.
+static std::optional<LValue> handleConditionalOperatorLValueSimpleCase(
+    CIRGenFunction &cgf, const AbstractConditionalOperator *e) {
+  const Expr *condExpr = e->getCond();
+  bool condExprBool;
+  if (cgf.constantFoldsToSimpleInteger(condExpr, condExprBool)) {
+    const Expr *live = e->getTrueExpr(), *dead = e->getFalseExpr();
+    if (!condExprBool)
+      std::swap(live, dead);
+
+    if (!cgf.containsLabel(dead)) {
+      // If the true case is live, we need to track its region.
+      if (condExprBool) {
+        assert(!cir::MissingFeatures::incrementProfileCounter());
+      }
+      // If a throw expression we emit it and return an undefined lvalue
+      // because it can't be used.
+      if (isa<CXXThrowExpr>(live->IgnoreParens())) {
+        assert(!cir::MissingFeatures::throwOp());
+        cgf.cgm.errorNYI(live->getSourceRange(),
+                         "throw expressions in conditional operator");
+        return std::nullopt;
+      }
+      return cgf.emitLValue(live);
+    }
+  }
+  return std::nullopt;
+}
+
+/// Emit the operand of a glvalue conditional operator. This is either a glvalue
+/// or a (possibly-parenthesized) throw-expression. If this is a throw, no
+/// LValue is returned and the current block has been terminated.
+static std::optional<LValue> emitLValueOrThrowExpression(CIRGenFunction &cgf,
+                                                         const Expr *operand) {
+  if (isa<CXXThrowExpr>(operand->IgnoreParens())) {
+    assert(!cir::MissingFeatures::throwOp());
+    cgf.cgm.errorNYI(operand->getSourceRange(),
+                     "throw expressions in conditional operator");
+    return std::nullopt;
+  }
+
+  return cgf.emitLValue(operand);
+}
+
+// Create and generate the 3 blocks for a conditional operator.
+// Leaves the 'current block' in the continuation basic block.
+template <typename FuncTy>
+CIRGenFunction::ConditionalInfo
+CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
+                                      const FuncTy &branchGenFunc) {
+  ConditionalInfo info;
+  CIRGenFunction &cgf = *this;
+  ConditionalEvaluation eval(cgf);
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  Expr *trueExpr = e->getTrueExpr();
+  Expr *falseExpr = e->getFalseExpr();
+
+  mlir::Value condV = cgf.emitOpOnBoolExpr(loc, e->getCond());
+  SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
+  mlir::Type yieldTy{};
+
+  auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc, Expr *expr,
+                        std::optional<LValue> &branchInfo) {
+    CIRGenFunction::LexicalScope lexScope{cgf, loc, b.getInsertionBlock()};
+    cgf.curLexScope->setAsTernary();
+
+    assert(!cir::MissingFeatures::incrementProfileCounter());
+    eval.begin(cgf);
+    branchInfo = branchGenFunc(cgf, expr);
+    mlir::Value branch = branchInfo->getPointer();
+    eval.end(cgf);
+
+    if (branch) {
+      yieldTy = branch.getType();
+      b.create<cir::YieldOp>(loc, branch);
+    } else {
+      // If LHS or RHS is a throw or void expression we need to patch
+      // arms as to properly match yield types.
+      insertPoints.push_back(b.saveInsertionPoint());
+    }
+  };
+
+  info.result = builder
+                    .create<cir::TernaryOp>(
+                        loc, condV, /*trueBuilder=*/
+                        [&](mlir::OpBuilder &b, mlir::Location loc) {
+                          emitBranch(b, loc, trueExpr, info.lhs);
+                        },
+                        /*falseBuilder=*/
+                        [&](mlir::OpBuilder &b, mlir::Location loc) {
+                          emitBranch(b, loc, falseExpr, info.rhs);
+                        })
+                    .getResult();
+
+  if (!insertPoints.empty()) {
+    // If both arms are void, so be it.
+    if (!yieldTy)
+      yieldTy = cgf.VoidTy;
+
+    // Insert required yields.
+    for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.restoreInsertionPoint(toInsert);
+
+      // Block does not return: build empty yield.
+      if (mlir::isa<cir::VoidType>(yieldTy)) {
+        builder.create<cir::YieldOp>(loc);
+      } else { // Block returns: set null yield value.
+        mlir::Value op0 = builder.getNullValue(yieldTy, loc);
+        builder.create<cir::YieldOp>(loc, op0);
+      }
+    }
+  }
+  return info;
+}
+
+LValue CIRGenFunction::emitConditionalOperatorLValue(
+    const AbstractConditionalOperator *expr) {
+  if (!expr->isGLValue()) {
+    // ?: here should be an aggregate.
+    assert(hasAggregateEvaluationKind(expr->getType()) &&
+           "Unexpected conditional operator!");
+    return emitAggExprToLValue(expr);
+  }
+
+  OpaqueValueMapping binding(*this, expr);
+  if (std::optional<LValue> res =
+          handleConditionalOperatorLValueSimpleCase(*this, expr))
+    return *res;
+
+  ConditionalInfo info =
+      emitConditionalBlocks(expr, [](CIRGenFunction &cgf, const Expr *e) {
+        return emitLValueOrThrowExpression(cgf, e);
+      });
+
+  if ((info.lhs && !info.lhs->isSimple()) ||
+      (info.rhs && !info.rhs->isSimple())) {
+    cgm.errorNYI(expr->getSourceRange(), "unsupported conditional operator");
+    return {};
+  }
+
+  if (info.lhs && info.rhs) {
+    Address lhsAddr = info.lhs->getAddress();
+    Address rhsAddr = info.rhs->getAddress();
+    Address result(info.result, lhsAddr.getElementType(),
+                   std::min(lhsAddr.getAlignment(), rhsAddr.getAlignment()));
+    AlignmentSource alignSource =
+        std::max(info.lhs->getBaseInfo().getAlignmentSource(),
+                 info.rhs->getBaseInfo().getAlignmentSource());
+    assert(!cir::MissingFeatures::opTBAA());
+    return makeAddrLValue(result, expr->getType(), LValueBaseInfo(alignSource));
+  }
+  assert((info.lhs || info.rhs) &&
+         "both operands of glvalue conditional are throw-expressions?");
+  return info.lhs ? *info.lhs : *info.rhs;
+}
+
 /// Emit an `if` on a boolean condition, filling `then` and `else` into
 /// appropriated regions.
 mlir::LogicalResult CIRGenFunction::emitIfOnBoolExpr(const Expr *cond,
@@ -1259,10 +1420,28 @@ mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
   //  cir.ternary(!x, t, f) -> cir.ternary(x, f, t)
   assert(!cir::MissingFeatures::shouldReverseUnaryCondOnBoolExpr());
 
-  if (isa<ConditionalOperator>(cond)) {
-    cgm.errorNYI(cond->getExprLoc(), "Ternary NYI");
-    assert(!cir::MissingFeatures::ternaryOp());
-    return createDummyValue(loc, cond->getType());
+  if (const ConditionalOperator *condOp = dyn_cast<ConditionalOperator>(cond)) {
+    Expr *trueExpr = condOp->getTrueExpr();
+    Expr *falseExpr = condOp->getFalseExpr();
+    mlir::Value condV = emitOpOnBoolExpr(loc, condOp->getCond());
+
+    mlir::Value ternaryOpRes =
+        builder
+            .create<cir::TernaryOp>(
+                loc, condV, /*thenBuilder=*/
+                [this, trueExpr](mlir::OpBuilder &b, mlir::Location loc) {
+                  mlir::Value lhs = emitScalarExpr(trueExpr);
+                  b.create<cir::YieldOp>(loc, lhs);
+                },
+                /*elseBuilder=*/
+                [this, falseExpr](mlir::OpBuilder &b, mlir::Location loc) {
+                  mlir::Value rhs = emitScalarExpr(falseExpr);
+                  b.create<cir::YieldOp>(loc, rhs);
+                })
+            .getResult();
+
+    return emitScalarConversion(ternaryOpRes, condOp->getType(),
+                                getContext().BoolTy, condOp->getExprLoc());
   }
 
   if (isa<CXXThrowExpr>(cond)) {
@@ -1394,13 +1573,84 @@ mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
   return builder.createDummyValue(loc, t, alignment);
 }
 
-/// This creates an alloca and inserts it into the entry block if
-/// \p insertIntoFnEntryBlock is true, otherwise it inserts it at the current
-/// insertion point of the builder.
+//===----------------------------------------------------------------------===//
+// CIR builder helpers
+//===----------------------------------------------------------------------===//
+
+Address CIRGenFunction::createMemTemp(QualType ty, mlir::Location loc,
+                                      const Twine &name, Address *alloca,
+                                      mlir::OpBuilder::InsertPoint ip) {
+  // FIXME: Should we prefer the preferred type alignment here?
+  return createMemTemp(ty, getContext().getTypeAlignInChars(ty), loc, name,
+                       alloca, ip);
+}
+
+Address CIRGenFunction::createMemTemp(QualType ty, CharUnits align,
+                                      mlir::Location loc, const Twine &name,
+                                      Address *alloca,
+                                      mlir::OpBuilder::InsertPoint ip) {
+  Address result = createTempAlloca(convertTypeForMem(ty), align, loc, name,
+                                    /*ArraySize=*/nullptr, alloca, ip);
+  if (ty->isConstantMatrixType()) {
+    assert(!cir::MissingFeatures::matrixType());
+    cgm.errorNYI(loc, "temporary matrix value");
+  }
+  return result;
+}
+
+/// This creates a alloca and inserts it into the entry block of the
+/// current region.
+Address CIRGenFunction::createTempAllocaWithoutCast(
+    mlir::Type ty, CharUnits align, mlir::Location loc, const Twine &name,
+    mlir::Value arraySize, mlir::OpBuilder::InsertPoint ip) {
+  cir::AllocaOp alloca = ip.isSet()
+                             ? createTempAlloca(ty, loc, name, ip, arraySize)
+                             : createTempAlloca(ty, loc, name, arraySize);
+  alloca.setAlignmentAttr(cgm.getSize(align));
+  return Address(alloca, ty, align);
+}
+
+/// This creates a alloca and inserts it into the entry block. The alloca is
+/// casted to default address space if necessary.
 Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
                                          mlir::Location loc, const Twine &name,
-                                         bool insertIntoFnEntryBlock) {
-  mlir::Value alloca =
-      emitAlloca(name.str(), ty, loc, align, insertIntoFnEntryBlock);
-  return Address(alloca, ty, align);
+                                         mlir::Value arraySize,
+                                         Address *allocaAddr,
+                                         mlir::OpBuilder::InsertPoint ip) {
+  Address alloca =
+      createTempAllocaWithoutCast(ty, align, loc, name, arraySize, ip);
+  if (allocaAddr)
+    *allocaAddr = alloca;
+  mlir::Value v = alloca.getPointer();
+  // Alloca always returns a pointer in alloca address space, which may
+  // be different from the type defined by the language. For example,
+  // in C++ the auto variables are in the default address space. Therefore
+  // cast alloca to the default address space when necessary.
+  assert(!cir::MissingFeatures::addressSpace());
+  return Address(v, ty, align);
+}
+
+/// This creates an alloca and inserts it into the entry block if \p ArraySize
+/// is nullptr, otherwise inserts it at the current insertion point of the
+/// builder.
+cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
+                                               mlir::Location loc,
+                                               const Twine &name,
+                                               mlir::Value arraySize,
+                                               bool insertIntoFnEntryBlock) {
+  return cast<cir::AllocaOp>(emitAlloca(name.str(), ty, loc, CharUnits(),
+                                        insertIntoFnEntryBlock, arraySize)
+                                 .getDefiningOp());
+}
+
+/// This creates an alloca and inserts it into the provided insertion point
+cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
+                                               mlir::Location loc,
+                                               const Twine &name,
+                                               mlir::OpBuilder::InsertPoint ip,
+                                               mlir::Value arraySize) {
+  assert(ip.isSet() && "Insertion point is not set");
+  return cast<cir::AllocaOp>(
+      emitAlloca(name.str(), ty, loc, CharUnits(), ip, arraySize)
+          .getDefiningOp());
 }

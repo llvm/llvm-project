@@ -50,8 +50,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   // A normal fixed sized variable becomes an alloca in the entry block,
   mlir::Type allocaTy = convertTypeForMem(ty);
   // Create the temp alloca and declare variable using it.
-  address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
-                             /*insertIntoFnEntryBlock=*/false);
+  address = createTempAlloca(allocaTy, alignment, loc, d.getName());
   declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
 
   emission.Addr = address;

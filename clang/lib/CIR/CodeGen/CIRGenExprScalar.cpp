@@ -334,6 +334,8 @@ public:
   }
 
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
+  mlir::Value
+  VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);
 
   // Unary Operators.
   mlir::Value VisitUnaryPostDec(const UnaryOperator *e) {
@@ -933,6 +935,174 @@ public:
     cgf.emitIgnoredExpr(e->getLHS());
     // NOTE: We don't need to EnsureInsertPoint() like LLVM codegen.
     return Visit(e->getRHS());
+  }
+
+  mlir::Value VisitBinLAnd(const clang::BinaryOperator *e) {
+    if (e->getType()->isVectorType()) {
+      assert(!cir::MissingFeatures::vectorType());
+      return {};
+    }
+
+    bool instrumentRegions = cgf.cgm.getCodeGenOpts().hasProfileClangInstr();
+    mlir::Type resTy = cgf.convertType(e->getType());
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+    // If we have 0 && RHS, see if we can elide RHS, if so, just return 0.
+    // If we have 1 && X, just emit X without inserting the control flow.
+    bool lhsCondVal;
+    if (cgf.constantFoldsToSimpleInteger(e->getLHS(), lhsCondVal)) {
+      if (lhsCondVal) { // If we have 1 && X, just emit X.
+
+        mlir::Value rhsCond = cgf.evaluateExprAsBool(e->getRHS());
+
+        if (instrumentRegions) {
+          assert(!cir::MissingFeatures::instrumenation());
+          cgf.cgm.errorNYI(e->getExprLoc(), "instrumenation");
+        }
+        // ZExt result to int or bool.
+        return builder.createZExtOrBitCast(rhsCond.getLoc(), rhsCond, resTy);
+      }
+      // 0 && RHS: If it is safe, just elide the RHS, and return 0/false.
+      if (!cgf.containsLabel(e->getRHS()))
+        return builder.getNullValue(resTy, loc);
+    }
+
+    CIRGenFunction::ConditionalEvaluation eval(cgf);
+
+    mlir::Value lhsCondV = cgf.evaluateExprAsBool(e->getLHS());
+    auto resOp = builder.create<cir::TernaryOp>(
+        loc, lhsCondV, /*trueBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                b.getInsertionBlock()};
+          cgf.curLexScope->setAsTernary();
+          mlir::Value rhsCondV = cgf.evaluateExprAsBool(e->getRHS());
+          auto res = b.create<cir::TernaryOp>(
+              loc, rhsCondV, /*trueBuilder*/
+              [&](mlir::OpBuilder &b, mlir::Location loc) {
+                CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                      b.getInsertionBlock()};
+                cgf.curLexScope->setAsTernary();
+                auto res =
+                    b.create<cir::ConstantOp>(loc, builder.getTrueAttr());
+                b.create<cir::YieldOp>(loc, res.getRes());
+              },
+              /*falseBuilder*/
+              [&](mlir::OpBuilder &b, mlir::Location loc) {
+                CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                      b.getInsertionBlock()};
+                cgf.curLexScope->setAsTernary();
+                auto res =
+                    b.create<cir::ConstantOp>(loc, builder.getFalseAttr());
+                b.create<cir::YieldOp>(loc, res.getRes());
+              });
+          b.create<cir::YieldOp>(loc, res.getResult());
+        },
+        /*falseBuilder*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                b.getInsertionBlock()};
+          cgf.curLexScope->setAsTernary();
+          auto res = b.create<cir::ConstantOp>(loc, builder.getFalseAttr());
+          b.create<cir::YieldOp>(loc, res.getRes());
+        });
+    return builder.createZExtOrBitCast(resOp.getLoc(), resOp.getResult(),
+                                       resTy);
+  }
+
+  mlir::Value VisitBinLOr(const clang::BinaryOperator *e) {
+    if (e->getType()->isVectorType()) {
+      assert(!cir::MissingFeatures::vectorType());
+      return {};
+    }
+
+    bool instrumentRegions = cgf.cgm.getCodeGenOpts().hasProfileClangInstr();
+    mlir::Type resTy = cgf.convertType(e->getType());
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+    // If we have 1 || RHS, see if we can elide RHS, if so, just return 1.
+    // If we have 0 || X, just emit X without inserting the control flow.
+    bool lhsCondVal;
+    if (cgf.constantFoldsToSimpleInteger(e->getLHS(), lhsCondVal)) {
+      if (!lhsCondVal) { // If we have 0 || X, just emit X.
+
+        mlir::Value rhsCond = cgf.evaluateExprAsBool(e->getRHS());
+
+        if (instrumentRegions) {
+          assert(!cir::MissingFeatures::instrumenation());
+          cgf.cgm.errorNYI(e->getExprLoc(), "instrumenation");
+        }
+        // ZExt result to int or bool.
+        return builder.createZExtOrBitCast(rhsCond.getLoc(), rhsCond, resTy);
+      }
+      // 1 || RHS: If it is safe, just elide the RHS, and return 1/true.
+      if (!cgf.containsLabel(e->getRHS())) {
+        if (auto intTy = mlir::dyn_cast<cir::IntType>(resTy))
+          return builder.getConstantInt(loc, intTy, 1);
+        return builder.getBool(true, loc);
+      }
+    }
+
+    CIRGenFunction::ConditionalEvaluation eval(cgf);
+
+    mlir::Value lhsCondV = cgf.evaluateExprAsBool(e->getLHS());
+    auto resOp = builder.create<cir::TernaryOp>(
+        loc, lhsCondV, /*trueBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                b.getInsertionBlock()};
+          cgf.curLexScope->setAsTernary();
+          auto res = b.create<cir::ConstantOp>(loc, builder.getTrueAttr());
+          b.create<cir::YieldOp>(loc, res.getRes());
+        },
+        /*falseBuilder*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                b.getInsertionBlock()};
+          cgf.curLexScope->setAsTernary();
+          mlir::Value rhsCondV = cgf.evaluateExprAsBool(e->getRHS());
+          auto res = b.create<cir::TernaryOp>(
+              loc, rhsCondV, /*trueBuilder*/
+              [&](mlir::OpBuilder &b, mlir::Location loc) {
+                SmallVector<mlir::Location, 2> locs;
+                if (mlir::isa<mlir::FileLineColLoc>(loc)) {
+                  locs.push_back(loc);
+                  locs.push_back(loc);
+                } else if (mlir::isa<mlir::FusedLoc>(loc)) {
+                  auto fusedLoc = mlir::cast<mlir::FusedLoc>(loc);
+                  locs.push_back(fusedLoc.getLocations()[0]);
+                  locs.push_back(fusedLoc.getLocations()[1]);
+                }
+                CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                      b.getInsertionBlock()};
+                cgf.curLexScope->setAsTernary();
+                auto res =
+                    b.create<cir::ConstantOp>(loc, builder.getTrueAttr());
+                b.create<cir::YieldOp>(loc, res.getRes());
+              },
+              /*falseBuilder*/
+              [&](mlir::OpBuilder &b, mlir::Location loc) {
+                SmallVector<mlir::Location, 2> locs;
+                if (mlir::isa<mlir::FileLineColLoc>(loc)) {
+                  locs.push_back(loc);
+                  locs.push_back(loc);
+                } else if (mlir::isa<mlir::FusedLoc>(loc)) {
+                  auto fusedLoc = mlir::cast<mlir::FusedLoc>(loc);
+                  locs.push_back(fusedLoc.getLocations()[0]);
+                  locs.push_back(fusedLoc.getLocations()[1]);
+                }
+                CIRGenFunction::LexicalScope lexScope{cgf, loc,
+                                                      b.getInsertionBlock()};
+                cgf.curLexScope->setAsTernary();
+                auto res =
+                    b.create<cir::ConstantOp>(loc, builder.getFalseAttr());
+                b.create<cir::YieldOp>(loc, res.getRes());
+              });
+          b.create<cir::YieldOp>(loc, res.getResult());
+        });
+
+    return builder.createZExtOrBitCast(resOp.getLoc(), resOp.getResult(),
+                                       resTy);
   }
 };
 
@@ -1826,6 +1996,170 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
   return builder.getConstant(
       loc, builder.getAttr<cir::IntAttr>(
                cgf.cgm.UInt64Ty, e->EvaluateKnownConstInt(cgf.getContext())));
+}
+
+/// Return true if the specified expression is cheap enough and side-effect-free
+/// enough to evaluate unconditionally instead of conditionally.  This is used
+/// to convert control flow into selects in some cases.
+/// TODO(cir): can be shared with LLVM codegen.
+static bool isCheapEnoughToEvaluateUnconditionally(const Expr *e,
+                                                   CIRGenFunction &cgf) {
+  // Anything that is an integer or floating point constant is fine.
+  return e->IgnoreParens()->isEvaluatable(cgf.getContext());
+
+  // Even non-volatile automatic variables can't be evaluated unconditionally.
+  // Referencing a thread_local may cause non-trivial initialization work to
+  // occur. If we're inside a lambda and one of the variables is from the scope
+  // outside the lambda, that function may have returned already. Reading its
+  // locals is a bad idea. Also, these reads may introduce races there didn't
+  // exist in the source-level program.
+}
+
+mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *e) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  ignoreResultAssign = false;
+
+  // Bind the common expression if necessary.
+  CIRGenFunction::OpaqueValueMapping binding(cgf, e);
+
+  Expr *condExpr = e->getCond();
+  Expr *lhsExpr = e->getTrueExpr();
+  Expr *rhsExpr = e->getFalseExpr();
+
+  // If the condition constant folds and can be elided, try to avoid emitting
+  // the condition and the dead arm.
+  bool condExprBool;
+  if (cgf.constantFoldsToSimpleInteger(condExpr, condExprBool)) {
+    Expr *live = lhsExpr, *dead = rhsExpr;
+    if (!condExprBool)
+      std::swap(live, dead);
+
+    // If the dead side doesn't have labels we need, just emit the Live part.
+    if (!cgf.containsLabel(dead)) {
+      if (condExprBool)
+        assert(!cir::MissingFeatures::incrementProfileCounter());
+      mlir::Value result = Visit(live);
+
+      // If the live part is a throw expression, it acts like it has a void
+      // type, so evaluating it returns a null Value.  However, a conditional
+      // with non-void type must return a non-null Value.
+      if (!result && !e->getType()->isVoidType()) {
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "throw expression in conditional operator");
+        result = {};
+      }
+
+      return result;
+    }
+  }
+
+  // OpenCL: If the condition is a vector, we can treat this condition like
+  // the select function.
+  if ((cgf.getLangOpts().OpenCL && condExpr->getType()->isVectorType()) ||
+      condExpr->getType()->isExtVectorType()) {
+    assert(!cir::MissingFeatures::vectorType());
+    cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
+  }
+
+  if (condExpr->getType()->isVectorType() ||
+      condExpr->getType()->isSveVLSBuiltinType()) {
+    assert(!cir::MissingFeatures::vecTernaryOp());
+    cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
+    return {};
+  }
+
+  // If this is a really simple expression (like x ? 4 : 5), emit this as a
+  // select instead of as control flow.  We can only do this if it is cheap and
+  // safe to evaluate the LHS and RHS unconditionally.
+  if (isCheapEnoughToEvaluateUnconditionally(lhsExpr, cgf) &&
+      isCheapEnoughToEvaluateUnconditionally(rhsExpr, cgf)) {
+    bool lhsIsVoid = false;
+    mlir::Value condV = cgf.evaluateExprAsBool(condExpr);
+    assert(!cir::MissingFeatures::incrementProfileCounter());
+
+    return builder
+        .create<cir::TernaryOp>(
+            loc, condV, /*thenBuilder=*/
+            [&](mlir::OpBuilder &b, mlir::Location loc) {
+              mlir::Value lhs = Visit(lhsExpr);
+              if (!lhs) {
+                lhs = builder.getNullValue(cgf.VoidTy, loc);
+                lhsIsVoid = true;
+              }
+              builder.create<cir::YieldOp>(loc, lhs);
+            },
+            /*elseBuilder=*/
+            [&](mlir::OpBuilder &b, mlir::Location loc) {
+              mlir::Value rhs = Visit(rhsExpr);
+              if (lhsIsVoid) {
+                assert(!rhs && "lhs and rhs types must match");
+                rhs = builder.getNullValue(cgf.VoidTy, loc);
+              }
+              builder.create<cir::YieldOp>(loc, rhs);
+            })
+        .getResult();
+  }
+
+  mlir::Value condV = cgf.emitOpOnBoolExpr(loc, condExpr);
+  CIRGenFunction::ConditionalEvaluation eval(cgf);
+  SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
+  mlir::Type yieldTy{};
+
+  auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc, Expr *expr) {
+    CIRGenFunction::LexicalScope lexScope{cgf, loc, b.getInsertionBlock()};
+    cgf.curLexScope->setAsTernary();
+
+    assert(!cir::MissingFeatures::incrementProfileCounter());
+    eval.begin(cgf);
+    mlir::Value branch = Visit(expr);
+    eval.end(cgf);
+
+    if (branch) {
+      yieldTy = branch.getType();
+      b.create<cir::YieldOp>(loc, branch);
+    } else {
+      // If LHS or RHS is a throw or void expression we need to patch
+      // arms as to properly match yield types.
+      insertPoints.push_back(b.saveInsertionPoint());
+    }
+  };
+
+  mlir::Value result = builder
+                           .create<cir::TernaryOp>(
+                               loc, condV,
+                               /*trueBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 emitBranch(b, loc, lhsExpr);
+                               },
+                               /*falseBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 emitBranch(b, loc, rhsExpr);
+                               })
+                           .getResult();
+
+  if (!insertPoints.empty()) {
+    // If both arms are void, so be it.
+    if (!yieldTy)
+      yieldTy = cgf.VoidTy;
+
+    // Insert required yields.
+    for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.restoreInsertionPoint(toInsert);
+
+      // Block does not return: build empty yield.
+      if (mlir::isa<cir::VoidType>(yieldTy)) {
+        builder.create<cir::YieldOp>(loc);
+      } else { // Block returns: set null yield value.
+        mlir::Value op0 = builder.getNullValue(yieldTy, loc);
+        builder.create<cir::YieldOp>(loc, op0);
+      }
+    }
+  }
+
+  return result;
 }
 
 mlir::Value CIRGenFunction::emitScalarPrePostIncDec(const UnaryOperator *e,
