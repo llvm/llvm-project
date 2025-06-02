@@ -123,21 +123,21 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
 static IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
 
-IntrusiveRefCntPtr<DiagnosticsEngine> GetDiagnosticsEngine() {
+IntrusiveRefCntPtr<DiagnosticsEngine>
+GetDiagnosticsEngine(DiagnosticOptions &DiagOpts) {
   if (Diags) {
     // Call reset to make sure we don't mix errors
     Diags->Reset(false);
     return Diags;
   }
 
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   TextDiagnosticPrinter *DiagClient =
-      new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+      new TextDiagnosticPrinter(llvm::errs(), DiagOpts);
   DiagClient->setPrefix("clang-extdef-mappping");
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine(
-      new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
+      new DiagnosticsEngine(DiagID, DiagOpts, DiagClient));
   Diags.swap(DiagEngine);
 
   // Retain this one time so it's not destroyed by ASTUnit::LoadFromASTFile
@@ -152,11 +152,13 @@ static bool HandleAST(StringRef AstPath) {
   if (!CI)
     CI = new CompilerInstance();
 
-  IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine = GetDiagnosticsEngine();
+  auto DiagOpts = std::make_shared<DiagnosticOptions>();
+  IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine =
+      GetDiagnosticsEngine(*DiagOpts);
 
   std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromASTFile(
       AstPath, CI->getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadASTOnly, DiagEngine, CI->getFileSystemOpts(),
+      ASTUnit::LoadASTOnly, DiagOpts, DiagEngine, CI->getFileSystemOpts(),
       CI->getHeaderSearchOpts());
 
   if (!Unit)

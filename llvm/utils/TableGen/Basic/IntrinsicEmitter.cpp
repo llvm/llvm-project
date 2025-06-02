@@ -301,7 +301,7 @@ static TypeSigTy ComputeTypeSignature(const CodeGenIntrinsic &Int) {
   const Record *TypeInfo = Int.TheDef->getValueAsDef("TypeInfo");
   const ListInit *TypeList = TypeInfo->getValueAsListInit("TypeSig");
 
-  for (const auto *TypeListEntry : TypeList->getValues())
+  for (const auto *TypeListEntry : TypeList->getElements())
     TypeSig.emplace_back(cast<IntInit>(TypeListEntry)->getValue());
   return TypeSig;
 }

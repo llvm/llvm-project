@@ -64,8 +64,8 @@ TEST(DxcModeTest, TargetProfileValidation) {
                               llvm::MemoryBuffer::getMemBuffer("\n"));
 
   auto *DiagConsumer = new SimpleDiagnosticConsumer;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagConsumer);
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer);
 
   validateTargetProfile("-Tvs_6_0", "dxilv1.0--shadermodel6.0-vertex",
                         InMemoryFileSystem, Diags);
@@ -114,8 +114,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
                               llvm::MemoryBuffer::getMemBuffer("\n"));
 
   auto *DiagConsumer = new SimpleDiagnosticConsumer;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagConsumer);
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer);
   Driver TheDriver("/bin/clang", "", Diags, "", InMemoryFileSystem);
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
       {"clang", "--driver-mode=dxc", "-Tlib_6_7", "foo.hlsl"}));
@@ -218,9 +218,9 @@ TEST(DxcModeTest, DefaultEntry) {
 
   const char *Args[] = {"clang", "--driver-mode=dxc", "-Tcs_6_7", "foo.hlsl"};
 
+  DiagnosticOptions DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*InMemoryFileSystem,
-                                          new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*InMemoryFileSystem, DiagOpts);
 
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;

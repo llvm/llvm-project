@@ -1,0 +1,36 @@
+# RUN: llvm-mc -assemble -triple riscv32 \
+# RUN:   -mattr=+experimental-xqcilb,+experimental-xqcibi \
+# RUN:   %s -filetype=obj -o - \
+# RUN:   | llvm-objdump -d -M no-aliases - \
+# RUN:   --mattr=+experimental-xqcilb,+experimental-xqcibi \
+# RUN:   | FileCheck %s
+
+.option exact
+
+# CHECK-LABEL: <label1>:
+label1:
+
+# CHECK-NEXT: qc.e.j 0x0 <label1>
+  qc.e.j label1
+# CHECK-NEXT: qc.e.j 0x2c <label2>
+  qc.e.j label2
+
+# CHECK-NEXT: qc.e.jal 0x0 <label1>
+  qc.e.jal label1
+# CHECK-NEXT: qc.e.jal 0x2c <label2>
+  qc.e.jal label2
+
+# CHECK-NEXT: qc.beqi a0, 0x1, 0x0 <label1>
+  qc.beqi a0, 1, label1
+
+# CHECK-NEXT: qc.bnei a0, 0x1, 0x2c <label2>
+  qc.bnei a0, 1, label2
+
+# CHECK-NEXT: qc.e.beqi a0, 0x2, 0x0 <label1>
+  qc.e.beqi a0, 2, label1
+
+# CHECK-NEXT: qc.e.bnei a0, 0x2, 0x2c <label2>
+  qc.e.bnei a0, 2, label2
+
+label2:
+

@@ -756,75 +756,75 @@ define <32 x i64> @llrint_v32f64(<32 x double> %x) {
 ; CHECK-NEXT:    mov z18.d, z16.d[2]
 ; CHECK-NEXT:    mov z7.d, z16.d[1]
 ; CHECK-NEXT:    fcvtzs x13, d3
-; CHECK-NEXT:    fcvtzs x14, d20
 ; CHECK-NEXT:    str x9, [sp, #128]
+; CHECK-NEXT:    fcvtzs x9, d20
 ; CHECK-NEXT:    mov z16.d, z4.d[3]
-; CHECK-NEXT:    fcvtzs x9, d18
-; CHECK-NEXT:    mov z18.d, z4.d[2]
+; CHECK-NEXT:    ldp q3, q19, [x29, #80]
 ; CHECK-NEXT:    frintx z2.d, p0/m, z2.d
 ; CHECK-NEXT:    stp x11, x10, [sp, #144]
-; CHECK-NEXT:    fcvtzs x10, d7
+; CHECK-NEXT:    fcvtzs x10, d18
+; CHECK-NEXT:    fcvtzs x11, d7
+; CHECK-NEXT:    mov z18.d, z4.d[2]
 ; CHECK-NEXT:    mov z7.d, z4.d[1]
 ; CHECK-NEXT:    str x13, [sp, #136]
-; CHECK-NEXT:    fcvtzs x11, d16
+; CHECK-NEXT:    fcvtzs x13, d16
 ; CHECK-NEXT:    mov z16.d, z6.d[3]
-; CHECK-NEXT:    fcvtzs x13, d18
-; CHECK-NEXT:    ldp q3, q19, [x29, #80]
-; CHECK-NEXT:    stp x9, x14, [sp, #176]
-; CHECK-NEXT:    fcvtzs x9, d4
-; CHECK-NEXT:    mov z4.d, z6.d[2]
-; CHECK-NEXT:    stp x12, x10, [sp, #160]
-; CHECK-NEXT:    fcvtzs x10, d7
-; CHECK-NEXT:    mov z7.d, z6.d[1]
-; CHECK-NEXT:    fcvtzs x12, d6
 ; CHECK-NEXT:    splice z3.d, p1, z3.d, z19.d
-; CHECK-NEXT:    mov z6.d, z5.d[2]
-; CHECK-NEXT:    stp x13, x11, [sp, #208]
-; CHECK-NEXT:    fcvtzs x11, d16
-; CHECK-NEXT:    fcvtzs x13, d4
-; CHECK-NEXT:    mov z4.d, z5.d[3]
 ; CHECK-NEXT:    mov z1.d, z5.d[1]
 ; CHECK-NEXT:    frintx z0.d, p0/m, z0.d
-; CHECK-NEXT:    stp x9, x10, [sp, #192]
-; CHECK-NEXT:    fcvtzs x9, d7
-; CHECK-NEXT:    frintx z3.d, p0/m, z3.d
+; CHECK-NEXT:    stp x10, x9, [sp, #176]
+; CHECK-NEXT:    fcvtzs x9, d18
 ; CHECK-NEXT:    fcvtzs x10, d4
-; CHECK-NEXT:    stp x13, x11, [sp, #240]
-; CHECK-NEXT:    fcvtzs x11, d6
-; CHECK-NEXT:    mov z4.d, z2.d[3]
-; CHECK-NEXT:    fcvtzs x13, d2
-; CHECK-NEXT:    stp x12, x9, [sp, #224]
-; CHECK-NEXT:    fcvtzs x9, d5
+; CHECK-NEXT:    stp x12, x11, [sp, #160]
+; CHECK-NEXT:    fcvtzs x11, d7
+; CHECK-NEXT:    mov z4.d, z6.d[2]
+; CHECK-NEXT:    mov z7.d, z6.d[1]
+; CHECK-NEXT:    fcvtzs x12, d6
+; CHECK-NEXT:    mov z6.d, z5.d[2]
+; CHECK-NEXT:    frintx z3.d, p0/m, z3.d
+; CHECK-NEXT:    stp x9, x13, [sp, #208]
+; CHECK-NEXT:    fcvtzs x9, d16
+; CHECK-NEXT:    fcvtzs x13, d4
+; CHECK-NEXT:    stp x10, x11, [sp, #192]
+; CHECK-NEXT:    fcvtzs x10, d7
+; CHECK-NEXT:    mov z4.d, z5.d[3]
+; CHECK-NEXT:    fcvtzs x11, d4
+; CHECK-NEXT:    stp x13, x9, [sp, #240]
+; CHECK-NEXT:    fcvtzs x9, d6
+; CHECK-NEXT:    stp x12, x10, [sp, #224]
+; CHECK-NEXT:    fcvtzs x10, d5
 ; CHECK-NEXT:    fcvtzs x12, d1
+; CHECK-NEXT:    mov z4.d, z2.d[3]
 ; CHECK-NEXT:    mov z5.d, z2.d[2]
 ; CHECK-NEXT:    mov z1.d, z2.d[1]
+; CHECK-NEXT:    fcvtzs x13, d2
 ; CHECK-NEXT:    mov z2.d, z3.d[2]
-; CHECK-NEXT:    stp x11, x10, [sp, #16]
-; CHECK-NEXT:    fcvtzs x10, d4
-; CHECK-NEXT:    mov z4.d, z3.d[3]
+; CHECK-NEXT:    stp x9, x11, [sp, #16]
+; CHECK-NEXT:    fcvtzs x9, d4
 ; CHECK-NEXT:    fcvtzs x11, d5
-; CHECK-NEXT:    stp x9, x12, [sp]
-; CHECK-NEXT:    fcvtzs x9, d1
+; CHECK-NEXT:    stp x10, x12, [sp]
+; CHECK-NEXT:    fcvtzs x10, d1
+; CHECK-NEXT:    mov z4.d, z3.d[3]
 ; CHECK-NEXT:    mov z1.d, z3.d[1]
 ; CHECK-NEXT:    fcvtzs x12, d4
-; CHECK-NEXT:    stp x11, x10, [sp, #48]
-; CHECK-NEXT:    fcvtzs x10, d2
+; CHECK-NEXT:    stp x11, x9, [sp, #48]
+; CHECK-NEXT:    fcvtzs x9, d2
 ; CHECK-NEXT:    fcvtzs x11, d3
-; CHECK-NEXT:    stp x13, x9, [sp, #32]
-; CHECK-NEXT:    fcvtzs x9, d1
+; CHECK-NEXT:    stp x13, x10, [sp, #32]
+; CHECK-NEXT:    fcvtzs x10, d1
 ; CHECK-NEXT:    mov z2.d, z0.d[3]
 ; CHECK-NEXT:    mov z3.d, z0.d[2]
 ; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    fcvtzs x13, d2
-; CHECK-NEXT:    stp x10, x12, [sp, #80]
+; CHECK-NEXT:    stp x9, x12, [sp, #80]
 ; CHECK-NEXT:    fcvtzs x12, d0
-; CHECK-NEXT:    fcvtzs x10, d3
-; CHECK-NEXT:    stp x11, x9, [sp, #64]
-; CHECK-NEXT:    fcvtzs x9, d1
-; CHECK-NEXT:    stp x10, x13, [sp, #112]
-; CHECK-NEXT:    add x10, sp, #192
-; CHECK-NEXT:    stp x12, x9, [sp, #96]
+; CHECK-NEXT:    fcvtzs x13, d2
+; CHECK-NEXT:    fcvtzs x9, d3
+; CHECK-NEXT:    stp x11, x10, [sp, #64]
+; CHECK-NEXT:    fcvtzs x10, d1
+; CHECK-NEXT:    stp x9, x13, [sp, #112]
 ; CHECK-NEXT:    add x9, sp, #128
+; CHECK-NEXT:    stp x12, x10, [sp, #96]
+; CHECK-NEXT:    add x10, sp, #192
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x9]
 ; CHECK-NEXT:    add x9, sp, #160
 ; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x10]

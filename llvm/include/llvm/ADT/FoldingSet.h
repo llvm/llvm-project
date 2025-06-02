@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/xxhash.h"
 #include <cassert>
 #include <cstddef>
@@ -126,10 +127,10 @@ protected:
   /// is greater than twice the number of buckets.
   unsigned NumNodes;
 
-  explicit FoldingSetBase(unsigned Log2InitSize = 6);
-  FoldingSetBase(FoldingSetBase &&Arg);
-  FoldingSetBase &operator=(FoldingSetBase &&RHS);
-  ~FoldingSetBase();
+  LLVM_ABI explicit FoldingSetBase(unsigned Log2InitSize = 6);
+  LLVM_ABI FoldingSetBase(FoldingSetBase &&Arg);
+  LLVM_ABI FoldingSetBase &operator=(FoldingSetBase &&RHS);
+  LLVM_ABI ~FoldingSetBase();
 
 public:
   //===--------------------------------------------------------------------===//
@@ -149,7 +150,7 @@ public:
   };
 
   /// clear - Remove all nodes from the folding set.
-  void clear();
+  LLVM_ABI void clear();
 
   /// size - Returns the number of nodes in the folding set.
   unsigned size() const { return NumNodes; }
@@ -203,27 +204,29 @@ protected:
   /// reserve - Increase the number of buckets such that adding the
   /// EltCount-th node won't cause a rebucket operation. reserve is permitted
   /// to allocate more space than requested by EltCount.
-  void reserve(unsigned EltCount, const FoldingSetInfo &Info);
+  LLVM_ABI void reserve(unsigned EltCount, const FoldingSetInfo &Info);
 
   /// RemoveNode - Remove a node from the folding set, returning true if one
   /// was removed or false if the node was not in the folding set.
-  bool RemoveNode(Node *N);
+  LLVM_ABI bool RemoveNode(Node *N);
 
   /// GetOrInsertNode - If there is an existing simple Node exactly
   /// equal to the specified node, return it.  Otherwise, insert 'N' and return
   /// it instead.
-  Node *GetOrInsertNode(Node *N, const FoldingSetInfo &Info);
+  LLVM_ABI Node *GetOrInsertNode(Node *N, const FoldingSetInfo &Info);
 
   /// FindNodeOrInsertPos - Look up the node specified by ID.  If it exists,
   /// return it.  If not, return the insertion token that will make insertion
   /// faster.
-  Node *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos,
-                            const FoldingSetInfo &Info);
+  LLVM_ABI Node *FindNodeOrInsertPos(const FoldingSetNodeID &ID,
+                                     void *&InsertPos,
+                                     const FoldingSetInfo &Info);
 
   /// InsertNode - Insert the specified node into the folding set, knowing that
   /// it is not already in the folding set.  InsertPos must be obtained from
   /// FindNodeOrInsertPos.
-  void InsertNode(Node *N, void *InsertPos, const FoldingSetInfo &Info);
+  LLVM_ABI void InsertNode(Node *N, void *InsertPos,
+                           const FoldingSetInfo &Info);
 };
 
 //===----------------------------------------------------------------------===//
@@ -308,13 +311,13 @@ public:
         reinterpret_cast<const uint8_t *>(Data), sizeof(unsigned) * Size)));
   }
 
-  bool operator==(FoldingSetNodeIDRef) const;
+  LLVM_ABI bool operator==(FoldingSetNodeIDRef) const;
 
   bool operator!=(FoldingSetNodeIDRef RHS) const { return !(*this == RHS); }
 
   /// Used to compare the "ordering" of two nodes as defined by the
   /// profiled bits and their ordering defined by memcmp().
-  bool operator<(FoldingSetNodeIDRef) const;
+  LLVM_ABI bool operator<(FoldingSetNodeIDRef) const;
 
   const unsigned *getData() const { return Data; }
   size_t getSize() const { return Size; }
@@ -364,8 +367,8 @@ public:
   }
 
   void AddBoolean(bool B) { AddInteger(B ? 1U : 0U); }
-  void AddString(StringRef String);
-  void AddNodeID(const FoldingSetNodeID &ID);
+  LLVM_ABI void AddString(StringRef String);
+  LLVM_ABI void AddNodeID(const FoldingSetNodeID &ID);
 
   template <typename T>
   inline void Add(const T &x) { FoldingSetTrait<T>::Profile(x, *this); }
@@ -388,21 +391,21 @@ public:
   }
 
   /// operator== - Used to compare two nodes to each other.
-  bool operator==(const FoldingSetNodeID &RHS) const;
-  bool operator==(const FoldingSetNodeIDRef RHS) const;
+  LLVM_ABI bool operator==(const FoldingSetNodeID &RHS) const;
+  LLVM_ABI bool operator==(const FoldingSetNodeIDRef RHS) const;
 
   bool operator!=(const FoldingSetNodeID &RHS) const { return !(*this == RHS); }
   bool operator!=(const FoldingSetNodeIDRef RHS) const { return !(*this ==RHS);}
 
   /// Used to compare the "ordering" of two nodes as defined by the
   /// profiled bits and their ordering defined by memcmp().
-  bool operator<(const FoldingSetNodeID &RHS) const;
-  bool operator<(const FoldingSetNodeIDRef RHS) const;
+  LLVM_ABI bool operator<(const FoldingSetNodeID &RHS) const;
+  LLVM_ABI bool operator<(const FoldingSetNodeIDRef RHS) const;
 
   /// Intern - Copy this node's data to a memory region allocated from the
   /// given allocator and return a FoldingSetNodeIDRef describing the
   /// interned data.
-  FoldingSetNodeIDRef Intern(BumpPtrAllocator &Allocator) const;
+  LLVM_ABI FoldingSetNodeIDRef Intern(BumpPtrAllocator &Allocator) const;
 };
 
 // Convenience type to hide the implementation of the folding set.
@@ -709,9 +712,9 @@ class FoldingSetIteratorImpl {
 protected:
   FoldingSetNode *NodePtr;
 
-  FoldingSetIteratorImpl(void **Bucket);
+  LLVM_ABI FoldingSetIteratorImpl(void **Bucket);
 
-  void advance();
+  LLVM_ABI void advance();
 
 public:
   bool operator==(const FoldingSetIteratorImpl &RHS) const {
@@ -751,7 +754,7 @@ class FoldingSetBucketIteratorImpl {
 protected:
   void *Ptr;
 
-  explicit FoldingSetBucketIteratorImpl(void **Bucket);
+  LLVM_ABI explicit FoldingSetBucketIteratorImpl(void **Bucket);
 
   FoldingSetBucketIteratorImpl(void **Bucket, bool) : Ptr(Bucket) {}
 

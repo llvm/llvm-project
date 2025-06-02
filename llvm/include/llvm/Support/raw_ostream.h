@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <cstddef>
@@ -49,7 +50,7 @@ class FileLocker;
 /// output to a stream.  It does not support seeking, reopening, rewinding, line
 /// buffered disciplines etc. It is a simple buffer that outputs
 /// a chunk at a time.
-class raw_ostream {
+class LLVM_ABI raw_ostream {
 public:
   // Class kinds to support LLVM-style RTTI.
   enum class OStreamKind {
@@ -431,7 +432,7 @@ operator<<(OStream &&OS, const T &Value) {
 /// An abstract base class for streams implementations that also support a
 /// pwrite operation. This is useful for code that can mostly stream out data,
 /// but needs to patch in a header that needs to know the output size.
-class raw_pwrite_stream : public raw_ostream {
+class LLVM_ABI raw_pwrite_stream : public raw_ostream {
   virtual void pwrite_impl(const char *Ptr, size_t Size, uint64_t Offset) = 0;
   void anchor() override;
 
@@ -457,7 +458,7 @@ public:
 
 /// A raw_ostream that writes to a file descriptor.
 ///
-class raw_fd_ostream : public raw_pwrite_stream {
+class LLVM_ABI raw_fd_ostream : public raw_pwrite_stream {
   int FD;
   bool ShouldClose;
   bool SupportsSeeking = false;
@@ -607,17 +608,17 @@ public:
 
 /// This returns a reference to a raw_fd_ostream for standard output. Use it
 /// like: outs() << "foo" << "bar";
-raw_fd_ostream &outs();
+LLVM_ABI raw_fd_ostream &outs();
 
 /// This returns a reference to a raw_ostream for standard error.
 /// Use it like: errs() << "foo" << "bar";
 /// By default, the stream is tied to stdout to ensure stdout is flushed before
 /// stderr is written, to ensure the error messages are written in their
 /// expected place.
-raw_fd_ostream &errs();
+LLVM_ABI raw_fd_ostream &errs();
 
 /// This returns a reference to a raw_ostream which simply discards output.
-raw_ostream &nulls();
+LLVM_ABI raw_ostream &nulls();
 
 //===----------------------------------------------------------------------===//
 // File Streams
@@ -630,9 +631,9 @@ public:
   /// Open the specified file for reading/writing/seeking. If an error occurs,
   /// information about the error is put into EC, and the stream should be
   /// immediately destroyed.
-  raw_fd_stream(StringRef Filename, std::error_code &EC);
+  LLVM_ABI raw_fd_stream(StringRef Filename, std::error_code &EC);
 
-  raw_fd_stream(int fd, bool shouldClose);
+  LLVM_ABI raw_fd_stream(int fd, bool shouldClose);
 
   /// This reads the \p Size bytes into a buffer pointed by \p Ptr.
   ///
@@ -643,10 +644,10 @@ public:
   /// On success, the number of bytes read is returned, and the file position is
   /// advanced by this number. On error, -1 is returned, use error() to get the
   /// error code.
-  ssize_t read(char *Ptr, size_t Size);
+  LLVM_ABI ssize_t read(char *Ptr, size_t Size);
 
   /// Check if \p OS is a pointer of type raw_fd_stream*.
-  static bool classof(const raw_ostream *OS);
+  LLVM_ABI static bool classof(const raw_ostream *OS);
 };
 
 //===----------------------------------------------------------------------===//
@@ -658,7 +659,7 @@ public:
 /// raw_string_ostream operates without a buffer, delegating all memory
 /// management to the std::string. Thus the std::string is always up-to-date,
 /// may be used directly and there is no need to call flush().
-class raw_string_ostream : public raw_ostream {
+class LLVM_ABI raw_string_ostream : public raw_ostream {
   std::string &OS;
 
   /// See raw_ostream::write_impl.
@@ -688,7 +689,7 @@ public:
 /// raw_svector_ostream operates without a buffer, delegating all memory
 /// management to the SmallString. Thus the SmallString is always up-to-date,
 /// may be used directly and there is no need to call flush().
-class raw_svector_ostream : public raw_pwrite_stream {
+class LLVM_ABI raw_svector_ostream : public raw_pwrite_stream {
   SmallVectorImpl<char> &OS;
 
   /// See raw_ostream::write_impl.
@@ -728,7 +729,7 @@ public:
 };
 
 /// A raw_ostream that discards all output.
-class raw_null_ostream : public raw_pwrite_stream {
+class LLVM_ABI raw_null_ostream : public raw_pwrite_stream {
   /// See raw_ostream::write_impl.
   void write_impl(const char *Ptr, size_t size) override;
   void pwrite_impl(const char *Ptr, size_t Size, uint64_t Offset) override;
@@ -742,7 +743,7 @@ public:
   ~raw_null_ostream() override;
 };
 
-class buffer_ostream : public raw_svector_ostream {
+class LLVM_ABI buffer_ostream : public raw_svector_ostream {
   raw_ostream &OS;
   SmallVector<char, 0> Buffer;
 
@@ -753,7 +754,7 @@ public:
   ~buffer_ostream() override { OS << str(); }
 };
 
-class buffer_unique_ostream : public raw_svector_ostream {
+class LLVM_ABI buffer_unique_ostream : public raw_svector_ostream {
   std::unique_ptr<raw_ostream> OS;
   SmallVector<char, 0> Buffer;
 
@@ -835,10 +836,10 @@ class Error;
 /// for other names. For raw_fd_ostream instances, the stream writes to
 /// a temporary file. The final output file is atomically replaced with the
 /// temporary file after the \p Write function is finished.
-Error writeToOutput(StringRef OutputFileName,
-                    std::function<Error(raw_ostream &)> Write);
+LLVM_ABI Error writeToOutput(StringRef OutputFileName,
+                             std::function<Error(raw_ostream &)> Write);
 
-raw_ostream &operator<<(raw_ostream &OS, std::nullopt_t);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, std::nullopt_t);
 
 template <typename T, typename = decltype(std::declval<raw_ostream &>()
                                           << std::declval<const T &>())>

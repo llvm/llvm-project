@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanUtils.h"
+#include "VPlanCFG.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -62,7 +63,9 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B))))
     return B == Plan.getTripCount() &&
-           (match(A, m_ScalarIVSteps(m_CanonicalIV(), m_SpecificInt(1))) ||
+           (match(A, m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()),
+                                     m_SpecificInt(1),
+                                     m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
   return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&
@@ -107,7 +110,7 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
         // VPReplicateRecipe.IsUniform. They are also uniform across UF parts if
         // all their operands are invariant.
         // TODO: Further relax the restrictions.
-        return R->isUniform() &&
+        return R->isSingleScalar() &&
                (isa<LoadInst, StoreInst>(R->getUnderlyingValue())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
@@ -123,4 +126,12 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                                           // unless proven otherwise.
         return false;
       });
+}
+
+VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
+  auto DepthFirst = vp_depth_first_shallow(Plan.getEntry());
+  auto I = find_if(DepthFirst, [&VPDT](VPBlockBase *VPB) {
+    return VPBlockUtils::isHeader(VPB, VPDT);
+  });
+  return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
 }

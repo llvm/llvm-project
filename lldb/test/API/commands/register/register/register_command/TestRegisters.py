@@ -40,7 +40,7 @@ class RegisterCommandsTestCase(TestBase):
         return None
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48371")
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
@@ -100,7 +100,7 @@ class RegisterCommandsTestCase(TestBase):
     # Writing of mxcsr register fails, presumably due to a kernel/hardware
     # problem
     @skipIfTargetAndroid(archs=["i386"])
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_register_write(self):
         """Test commands that write to registers, in particular floating-point registers."""
@@ -118,7 +118,7 @@ class RegisterCommandsTestCase(TestBase):
         self.fp_special_purpose_register_read()
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_register_expressions(self):
         """Test expression evaluation with commands related to registers."""
@@ -556,7 +556,7 @@ class RegisterCommandsTestCase(TestBase):
             self.expect("expr -- $ax == (($ah << 8) | $al)", substrs=["true"])
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     def test_invalid_invocation(self):
         self.build()
         self.common_setup()
@@ -589,7 +589,7 @@ class RegisterCommandsTestCase(TestBase):
         )
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     def test_write_unknown_register(self):
         self.build()
         self.common_setup()

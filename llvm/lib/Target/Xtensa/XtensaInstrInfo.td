@@ -987,6 +987,64 @@ let Predicates = [HasDiv32] in {
 }
 
 //===----------------------------------------------------------------------===//
+// Region Protection feature instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasRegionProtection] in {
+  def IDTLB : RRR_Inst<0x00, 0x00, 0x05, (outs), (ins AR:$s),
+                     "idtlb\t$s", []> {
+    let r = 0xC;
+	  let t = 0x0;
+  }
+
+  def IITLB : RRR_Inst<0x00, 0x00, 0x05, (outs), (ins AR:$s),
+                     "iitlb\t$s", []> {
+    let r = 0x4;
+	  let t = 0x0;
+  }
+
+  def PDTLB : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "pdtlb\t$t, $s", []> {
+    let r = 0xD;
+  }
+
+  def PITLB : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "pitlb\t$t, $s", []> {
+    let r = 0x5;
+  }
+
+  def RDTLB0 : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "rdtlb0\t$t, $s", []> {
+    let r = 0xB;
+  }
+
+  def RDTLB1 : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "rdtlb1\t$t, $s", []> {
+    let r = 0xF;
+  }
+
+  def RITLB0 : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "ritlb0\t$t, $s", []> {
+    let r = 0x3;
+  }
+
+  def RITLB1 : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "ritlb1\t$t, $s", []> {
+    let r = 0x7;
+  }
+
+  def WDTLB : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                     "wdtlb\t$t, $s", []> {
+    let r = 0xE;
+  }
+
+  def WITLB : RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+                      "witlb\t$t, $s", []> {
+    let r = 0x6;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // DSP Instructions
 //===----------------------------------------------------------------------===//
 include "XtensaDSPInstrInfo.td"

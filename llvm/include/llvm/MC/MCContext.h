@@ -259,13 +259,9 @@ private:
           SelectionKey(SelectionKey), UniqueID(UniqueID) {}
 
     bool operator<(const COFFSectionKey &Other) const {
-      if (SectionName != Other.SectionName)
-        return SectionName < Other.SectionName;
-      if (GroupName != Other.GroupName)
-        return GroupName < Other.GroupName;
-      if (SelectionKey != Other.SelectionKey)
-        return SelectionKey < Other.SelectionKey;
-      return UniqueID < Other.UniqueID;
+      return std::tie(SectionName, GroupName, SelectionKey, UniqueID) <
+             std::tie(Other.SectionName, Other.GroupName, Other.SelectionKey,
+                      Other.UniqueID);
     }
   };
 
@@ -279,11 +275,8 @@ private:
         : SectionName(SectionName), GroupName(GroupName), UniqueID(UniqueID) {}
 
     bool operator<(const WasmSectionKey &Other) const {
-      if (SectionName != Other.SectionName)
-        return SectionName < Other.SectionName;
-      if (GroupName != Other.GroupName)
-        return GroupName < Other.GroupName;
-      return UniqueID < Other.UniqueID;
+      return std::tie(SectionName, GroupName, UniqueID) <
+             std::tie(Other.SectionName, Other.GroupName, Other.UniqueID);
     }
   };
 
@@ -498,6 +491,11 @@ public:
 
   /// Get the symbol for \p Name, or null.
   MCSymbol *lookupSymbol(const Twine &Name) const;
+
+  /// Clone a symbol for the .set directive, replacing it in the symbol table.
+  /// Existing references to the original symbol remain unchanged, and the
+  /// original symbol is not emitted to the symbol table.
+  MCSymbol *cloneSymbol(MCSymbol &Sym);
 
   /// Set value for a symbol.
   void setSymbolValue(MCStreamer &Streamer, const Twine &Sym, uint64_t Val);

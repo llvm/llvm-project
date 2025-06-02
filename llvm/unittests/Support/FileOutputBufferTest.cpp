@@ -123,7 +123,7 @@ TEST(FileOutputBuffer, Test) {
   File5.append("/file5");
   {
     Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-        FileOutputBuffer::create(File5, 8000, FileOutputBuffer::F_no_mmap);
+        FileOutputBuffer::create(File5, 8000, FileOutputBuffer::F_mmap);
     ASSERT_NO_ERROR(errorToErrorCode(BufferOrErr.takeError()));
     std::unique_ptr<FileOutputBuffer> &Buffer = *BufferOrErr;
     // Start buffer with special header.

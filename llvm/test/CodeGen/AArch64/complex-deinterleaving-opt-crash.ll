@@ -4,10 +4,24 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-ni:1-p2:32:8:8:32-ni:2"
 target triple = "aarch64-arm-none-linux"
 
-; Ensure that a second reduction-like pattern doesn't override the first
-; We don't care what this IR produces, just that it produces something and doesn't cause a crash
+; Ensure that a second reduction-like pattern doesn't override the first.
 define void @reprocessing_crash() #0 {
-; CHECK-LABEL: define void @reprocessing_crash
+; CHECK-LABEL: define void @reprocessing_crash(
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double> zeroinitializer, <vscale x 2 x double> zeroinitializer)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <vscale x 4 x double> [ [[TMP0]], %[[ENTRY]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2]] = fsub <vscale x 4 x double> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    br i1 false, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 0
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd <vscale x 2 x double> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 1
+; CHECK-NEXT:    [[BIN_RDX23:%.*]] = fadd <vscale x 2 x double> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %vector.body
@@ -28,8 +42,58 @@ middle.block:                                     ; preds = %vector.body
   ret void
 }
 
+; Make sure we don't crash on floating point single reductions. For now, they
+; should be left as-is.
+define double @test_fp_single_reduction(i1 %c) #2 {
+; CHECK-LABEL: define double @test_fp_single_reduction(
+; CHECK-SAME: i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x double> @llvm.vector.interleave2.v8f64(<4 x double> zeroinitializer, <4 x double> zeroinitializer)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[VEC_PHI218:%.*]] = phi <4 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <8 x double> [ [[TMP0]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> zeroinitializer, <8 x double> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP2]] = fadd <4 x double> [[VEC_PHI218]], [[STRIDED_VEC]]
+; CHECK-NEXT:    [[TMP3]] = fadd <8 x double> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = call { <4 x double>, <4 x double> } @llvm.vector.deinterleave2.v8f64(<8 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x double>, <4 x double> } [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x double>, <4 x double> } [[TMP4]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP8]])
+; CHECK-NEXT:    [[ADD_1:%.*]] = fadd double [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[ADD_2:%.*]] = fadd double [[ADD_1]], [[TMP9]]
+; CHECK-NEXT:    ret double [[ADD_2]]
+;
+entry:
+  br label %vector.body
+
+vector.body:
+  %vec.phi216 = phi <4 x double> [ zeroinitializer, %entry ], [ %2, %vector.body ]
+  %vec.phi218 = phi <4 x double> [ zeroinitializer, %entry ], [ %1, %vector.body ]
+  %vec.phi222 = phi <4 x double> [ zeroinitializer, %entry ], [ %3, %vector.body ]
+  %strided.vec = shufflevector <8 x double> zeroinitializer, <8 x double> zeroinitializer, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %strided.vec223 = shufflevector <8 x double> zeroinitializer, <8 x double> zeroinitializer, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %1 = fadd <4 x double> %vec.phi218, %strided.vec
+  %2 = fadd <4 x double> %vec.phi216, %strided.vec
+  %3 = fadd <4 x double> %vec.phi222, %strided.vec223
+  br i1 %c, label %exit, label %vector.body
+
+exit:
+  %4 = tail call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> %2)
+  %5 = tail call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> %1)
+  %6 = tail call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> %3)
+  %add.1 = fadd double %4, %5
+  %add.2 = fadd double %add.1, %6
+  ret double %add.2
+}
+
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
 declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double>) #1
 
 attributes #0 = { "target-cpu"="neoverse-v1" }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
+attributes #2 = { "target-cpu"="apple-m1" }

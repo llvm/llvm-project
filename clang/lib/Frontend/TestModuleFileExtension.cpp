@@ -8,7 +8,6 @@
 #include "TestModuleFileExtension.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Serialization/ASTReader.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>

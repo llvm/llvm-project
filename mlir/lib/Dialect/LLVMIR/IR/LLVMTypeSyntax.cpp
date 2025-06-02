@@ -11,6 +11,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -58,7 +59,9 @@ void LLVMStructType::print(AsmPrinter &printer) const {
   if (isIdentified()) {
     cyclicPrint = printer.tryStartCyclicPrint(*this);
 
-    printer << '"' << getName() << '"';
+    printer << '"';
+    llvm::printEscapedString(getName(), printer.getStream());
+    printer << '"';
     // If we are printing a reference to one of the enclosing structs, just
     // print the name and stop to avoid infinitely long output.
     if (failed(cyclicPrint)) {

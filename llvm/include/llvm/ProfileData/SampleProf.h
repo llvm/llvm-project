@@ -15,17 +15,18 @@
 #define LLVM_PROFILEDATA_SAMPLEPROF_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/FunctionId.h"
+#include "llvm/ProfileData/HashKeyMap.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/ProfileData/HashKeyMap.h"
 #include <algorithm>
 #include <cstdint>
 #include <list>
@@ -283,6 +284,9 @@ struct LineLocation {
   void print(raw_ostream &OS) const;
   void dump() const;
 
+  // Serialize the line location to the output stream using ULEB128 encoding.
+  void serialize(raw_ostream &OS);
+
   bool operator<(const LineLocation &O) const {
     return LineOffset < O.LineOffset ||
            (LineOffset == O.LineOffset && Discriminator < O.Discriminator);
@@ -427,6 +431,11 @@ public:
   sampleprof_error merge(const SampleRecord &Other, uint64_t Weight = 1);
   void print(raw_ostream &OS, unsigned Indent) const;
   void dump() const;
+  /// Serialize the sample record to the output stream using ULEB128 encoding.
+  /// The \p NameTable is used to map function names to their IDs.
+  std::error_code
+  serialize(raw_ostream &OS,
+            const MapVector<FunctionId, uint32_t> &NameTable) const;
 
   bool operator==(const SampleRecord &Other) const {
     return NumSamples == Other.NumSamples && CallTargets == Other.CallTargets;

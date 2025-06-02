@@ -1573,7 +1573,6 @@ Expected<std::unique_ptr<MemoryBuffer>>
 ResourceFileWriter::loadFile(StringRef File) const {
   SmallString<128> Path;
   SmallString<128> Cwd;
-  std::unique_ptr<MemoryBuffer> Result;
 
   // 0. The file path is absolute or has a root directory, so we shouldn't
   // try to append it on top of other base directories. (An absolute path

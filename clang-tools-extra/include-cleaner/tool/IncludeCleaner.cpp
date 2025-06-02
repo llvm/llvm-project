@@ -312,11 +312,11 @@ std::function<bool(llvm::StringRef)> headerFilter() {
 
 // Maps absolute path of each files of each compilation commands to the
 // absolute path of the input file.
-llvm::Expected<std::map<std::string, std::string>>
+llvm::Expected<std::map<std::string, std::string, std::less<>>>
 mapInputsToAbsPaths(clang::tooling::CompilationDatabase &CDB,
                     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                     const std::vector<std::string> &Inputs) {
-  std::map<std::string, std::string> CDBToAbsPaths;
+  std::map<std::string, std::string, std::less<>> CDBToAbsPaths;
   // Factory.editedFiles()` will contain the final code, along with the
   // path given in the compilation database. That path can be
   // absolute or relative, and if it is relative, it is relative to the
@@ -344,7 +344,6 @@ mapInputsToAbsPaths(clang::tooling::CompilationDatabase &CDB,
     }
     for (const auto &Cmd : Cmds) {
       llvm::SmallString<256> CDBPath(Cmd.Filename);
-      std::string Directory(Cmd.Directory);
       llvm::sys::fs::make_absolute(Cmd.Directory, CDBPath);
       CDBToAbsPaths[std::string(CDBPath)] = std::string(AbsPath);
     }
@@ -396,8 +395,7 @@ int main(int argc, const char **argv) {
   if (Edit) {
     for (const auto &NameAndContent : Factory.editedFiles()) {
       llvm::StringRef FileName = NameAndContent.first();
-      if (auto It = CDBToAbsPaths->find(FileName.str());
-          It != CDBToAbsPaths->end())
+      if (auto It = CDBToAbsPaths->find(FileName); It != CDBToAbsPaths->end())
         FileName = It->second;
 
       const std::string &FinalCode = NameAndContent.second;

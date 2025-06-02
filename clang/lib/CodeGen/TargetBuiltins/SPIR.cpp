@@ -83,6 +83,20 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/N->getType(), Intrinsic::spv_faceforward,
         ArrayRef<Value *>{N, I, Ng}, /*FMFSource=*/nullptr, "spv.faceforward");
   }
+  case SPIRV::BI__builtin_spirv_generic_cast_to_ptr_explicit: {
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    assert(E->getArg(0)->getType()->hasPointerRepresentation() &&
+           E->getArg(1)->getType()->hasIntegerRepresentation() &&
+           "GenericCastToPtrExplicit takes a pointer and an int");
+    llvm::Type *Res = getTypes().ConvertType(E->getType());
+    assert(Res->isPointerTy() &&
+           "GenericCastToPtrExplicit doesn't return a pointer");
+    llvm::CallInst *Call = Builder.CreateIntrinsic(
+        /*ReturnType=*/Res, Intrinsic::spv_generic_cast_to_ptr_explicit,
+        ArrayRef<Value *>{Ptr}, nullptr, "spv.generic_cast");
+    Call->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
+    return Call;
+  }
   }
   return nullptr;
 }

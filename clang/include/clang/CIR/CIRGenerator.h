@@ -54,6 +54,8 @@ public:
   ~CIRGenerator() override;
   void Initialize(clang::ASTContext &astContext) override;
   bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
+  void CompleteTentativeDefinition(clang::VarDecl *d) override;
+
   mlir::ModuleOp getModule() const;
   mlir::MLIRContext &getMLIRContext() { return *mlirContext; };
   const mlir::MLIRContext &getMLIRContext() const { return *mlirContext; };

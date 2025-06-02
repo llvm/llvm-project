@@ -1237,7 +1237,7 @@ LLVM_DUMP_METHOD void AttributeSet::dump() const {
 AttributeSetNode::AttributeSetNode(ArrayRef<Attribute> Attrs)
     : NumAttrs(Attrs.size()) {
   // There's memory after the node where we can store the entries in.
-  llvm::copy(Attrs, getTrailingObjects<Attribute>());
+  llvm::copy(Attrs, getTrailingObjects());
 
   for (const auto &I : *this) {
     if (I.isStringAttribute())
@@ -1423,7 +1423,7 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
   assert(!Sets.empty() && "pointless AttributeListImpl");
 
   // There's memory after the node where we can store the entries in.
-  llvm::copy(Sets, getTrailingObjects<AttributeSet>());
+  llvm::copy(Sets, getTrailingObjects());
 
   // Initialize AvailableFunctionAttrs and AvailableSomewhereAttrs
   // summary bitsets.

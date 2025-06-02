@@ -689,7 +689,7 @@ LogicalResult OpToOpPassAdaptor::tryMergeInto(MLIRContext *ctx,
     }
     return false; // lhs(op-agnostic) > rhs(op-specific)
   };
-  std::sort(rhs.mgrs.begin(), rhs.mgrs.end(), compareFn);
+  llvm::sort(rhs.mgrs, compareFn);
   return success();
 }
 

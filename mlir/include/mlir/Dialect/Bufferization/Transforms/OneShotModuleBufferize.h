@@ -20,6 +20,7 @@ namespace bufferization {
 struct BufferizationStatistics;
 class OneShotAnalysisState;
 struct OneShotBufferizationOptions;
+class BufferizationState;
 
 /// Analyze `moduleOp` and its nested ops. Bufferization decisions are stored in
 /// `state`.
@@ -38,6 +39,7 @@ analyzeModuleOp(ModuleOp moduleOp, OneShotAnalysisState &state,
 ///   will be inserted only to these FuncOps.
 llvm::LogicalResult
 bufferizeModuleOp(ModuleOp moduleOp, const OneShotBufferizationOptions &options,
+                  BufferizationState &state,
                   BufferizationStatistics *statistics = nullptr);
 
 /// Remove bufferization attributes on every FuncOp arguments in the ModuleOp.
@@ -50,7 +52,7 @@ void removeBufferizationAttributesInModule(ModuleOp moduleOp);
 llvm::LogicalResult runOneShotModuleBufferize(
     ModuleOp moduleOp,
     const bufferization::OneShotBufferizationOptions &options,
-    BufferizationStatistics *statistics = nullptr);
+    BufferizationState &state, BufferizationStatistics *statistics = nullptr);
 
 } // namespace bufferization
 } // namespace mlir

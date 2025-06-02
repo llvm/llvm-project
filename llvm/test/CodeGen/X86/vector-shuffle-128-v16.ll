@@ -13,6 +13,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx | FileCheck %s --check-prefixes=ALL,AVX,AVX1OR2,XOP,XOPAVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx2 | FileCheck %s --check-prefixes=ALL,AVX,AVX1OR2,XOP,XOPAVX2
 
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s --check-prefixes=ALL,SSE,SSE2
+
 define <16 x i8> @shuffle_v16i8_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00(<16 x i8> %a, <16 x i8> %b) {
 ; SSE2-LABEL: shuffle_v16i8_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; SSE2:       # %bb.0:

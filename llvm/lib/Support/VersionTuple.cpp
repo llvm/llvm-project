@@ -108,3 +108,13 @@ bool VersionTuple::tryParse(StringRef input) {
   *this = VersionTuple(major, minor, micro, build);
   return false;
 }
+
+VersionTuple VersionTuple::withMajorReplaced(unsigned NewMajor) const {
+  if (HasBuild)
+    return VersionTuple(NewMajor, Minor, Subminor, Build);
+  if (HasSubminor)
+    return VersionTuple(NewMajor, Minor, Subminor);
+  if (HasMinor)
+    return VersionTuple(NewMajor, Minor);
+  return VersionTuple(NewMajor);
+}

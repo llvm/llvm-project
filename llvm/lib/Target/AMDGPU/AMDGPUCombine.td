@@ -134,6 +134,22 @@ def combine_fmul_with_select_to_fldexp : GICombineRule<
           [{ return Helper.matchCombineFmulWithSelectToFldexp(*${root}, *${sel}, ${matchinfo}); }]),
   (apply  [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
+// (shift x, (zext amt)) -> (shift x, (and (anyext amt), mask)
+//
+// The pattern is longer, but is better for matching during ISel.
+class canonicalize_zext_shift_amt<Instruction opc> : GICombineRule<
+  (defs root:$dst),
+  (match  (G_ZEXT $amt, $amtsrc):$zext,
+          (opc $dst, $src, $amt):$shift),
+  (apply  [{ applyCanonicalizeZextShiftAmt(*${shift}, *${zext}); }])>;
+
+def canonicalize_zext_lshr : canonicalize_zext_shift_amt<G_LSHR>;
+def canonicalize_zext_ashr : canonicalize_zext_shift_amt<G_ASHR>;
+def canonicalize_zext_shl : canonicalize_zext_shift_amt<G_SHL>;
+
+def zext_of_shift_amount_combines : GICombineGroup<[
+  canonicalize_zext_lshr, canonicalize_zext_ashr, canonicalize_zext_shl
+]>;
 
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
 // For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
@@ -182,5 +198,5 @@ def AMDGPURegBankCombiner : GICombiner<
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
-   cast_of_cast_combines, sext_trunc]> {
+   cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines]> {
 }

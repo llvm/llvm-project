@@ -14,6 +14,7 @@
 #include "gtest/gtest.h"
 
 using testing::HasSubstr;
+using testing::Pair;
 using testing::StartsWith;
 using namespace llvm;
 
@@ -70,13 +71,14 @@ TEST_F(SpecialCaseListTest, Basic) {
   EXPECT_FALSE(SCL->inSection("", "fun", "hello"));
   EXPECT_FALSE(SCL->inSection("", "src", "hello", "category"));
 
-  EXPECT_EQ(3u, SCL->inSectionBlame("", "src", "hello"));
-  EXPECT_EQ(4u, SCL->inSectionBlame("", "src", "bye"));
-  EXPECT_EQ(5u, SCL->inSectionBlame("", "src", "hi", "category"));
-  EXPECT_EQ(6u, SCL->inSectionBlame("", "src", "zzzz", "category"));
-  EXPECT_EQ(0u, SCL->inSectionBlame("", "src", "hi"));
-  EXPECT_EQ(0u, SCL->inSectionBlame("", "fun", "hello"));
-  EXPECT_EQ(0u, SCL->inSectionBlame("", "src", "hello", "category"));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "hello"), Pair(0u, 3u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "bye"), Pair(0u, 4u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "hi", "category"), Pair(0u, 5u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "zzzz", "category"), Pair(0u, 6u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "hi"), Pair(0u, 0u));
+  EXPECT_THAT(SCL->inSectionBlame("", "fun", "hello"), Pair(0u, 0u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "hello", "category"),
+              Pair(0u, 0u));
 }
 
 TEST_F(SpecialCaseListTest, CorrectErrorLineNumberWithBlankLine) {
@@ -306,4 +308,68 @@ TEST_F(SpecialCaseListTest, Version2) {
   EXPECT_TRUE(SCL->inSection("sect2", "fun", "bar"));
   EXPECT_FALSE(SCL->inSection("sect3", "fun", "bar"));
 }
+
+TEST_F(SpecialCaseListTest, LinesInSection) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:foo\n"
+                                                             "fun:bar\n"
+                                                             "fun:foo\n");
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "fun", "foo"), Pair(0u, 3u));
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "fun", "bar"), Pair(0u, 2u));
 }
+
+TEST_F(SpecialCaseListTest, LinesCrossSection) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("fun:foo\n"
+                                                             "fun:bar\n"
+                                                             "fun:foo\n"
+                                                             "[sect1]\n"
+                                                             "fun:bar\n");
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "fun", "foo"), Pair(0u, 3u));
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "fun", "bar"), Pair(0u, 5u));
+}
+
+TEST_F(SpecialCaseListTest, Blame) {
+  std::unique_ptr<SpecialCaseList> SCL = makeSpecialCaseList("[sect1]\n"
+                                                             "src:foo*\n"
+                                                             "[sect1]\n"
+                                                             "src:bar*\n"
+                                                             "src:def\n"
+                                                             "[sect2]\n"
+                                                             "src:def\n"
+                                                             "src:de*\n");
+  EXPECT_TRUE(SCL->inSection("sect1", "src", "fooz"));
+  EXPECT_TRUE(SCL->inSection("sect1", "src", "barz"));
+  EXPECT_FALSE(SCL->inSection("sect2", "src", "fooz"));
+
+  EXPECT_TRUE(SCL->inSection("sect2", "src", "def"));
+  EXPECT_TRUE(SCL->inSection("sect1", "src", "def"));
+
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "src", "fooz"), Pair(0u, 2u));
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "src", "barz"), Pair(0u, 4u));
+  EXPECT_THAT(SCL->inSectionBlame("sect1", "src", "def"), Pair(0u, 5u));
+  EXPECT_THAT(SCL->inSectionBlame("sect2", "src", "def"), Pair(0u, 8u));
+  EXPECT_THAT(SCL->inSectionBlame("sect2", "src", "dez"), Pair(0u, 8u));
+}
+
+TEST_F(SpecialCaseListTest, FileIdx) {
+  std::vector<std::string> Files;
+  Files.push_back(makeSpecialCaseListFile("src:bar\n"
+                                          "src:*foo*\n"
+                                          "src:ban=init\n"
+                                          "src:baz\n"
+                                          "src:*def\n"));
+  Files.push_back(makeSpecialCaseListFile("src:baz\n"
+                                          "src:car\n"
+                                          "src:def*"));
+  auto SCL = SpecialCaseList::createOrDie(Files, *vfs::getRealFileSystem());
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "bar"), Pair(0u, 1u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "fooaaaaaa"), Pair(0u, 2u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "ban", "init"), Pair(0u, 3u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "baz"), Pair(1u, 1u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "car"), Pair(1u, 2u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "aaaadef"), Pair(0u, 5u));
+  EXPECT_THAT(SCL->inSectionBlame("", "src", "defaaaaa"), Pair(1u, 3u));
+  for (auto &Path : Files)
+    sys::fs::remove(Path);
+}
+
+} // namespace

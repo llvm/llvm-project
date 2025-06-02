@@ -20,6 +20,10 @@ N: Vladislav Khmelevsky
 E: och95@yandex.ru
 D: AArch64 backend
 
+N: Paschalis Mpeis
+E: paschalis.mpeis@arm.com
+D: AArch64 backend
+
 N: Job Noorman
 E: jnoorman@igalia.com
 D: RISC-V backend

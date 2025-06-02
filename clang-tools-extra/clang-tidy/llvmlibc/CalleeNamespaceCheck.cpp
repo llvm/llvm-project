@@ -8,7 +8,6 @@
 
 #include "CalleeNamespaceCheck.h"
 #include "NamespaceConstants.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 #include "clang/ASTMatchers/ASTMatchers.h"

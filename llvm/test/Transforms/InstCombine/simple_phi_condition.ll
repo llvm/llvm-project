@@ -266,9 +266,9 @@ define i8 @test_switch(i8 %cond) {
 ; CHECK-LABEL: @test_switch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_19:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_19:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -309,9 +309,9 @@ define i8 @test_switch_direct_edge(i8 %cond) {
 ; CHECK-LABEL: @test_switch_direct_edge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[MERGE:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[MERGE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
@@ -347,9 +347,9 @@ define i8 @test_switch_duplicate_direct_edge(i8 %cond) {
 ; CHECK-LABEL: @test_switch_duplicate_direct_edge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[MERGE:%.*]]
-; CHECK-NEXT:    i8 19, label [[MERGE]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[MERGE:%.*]]
+; CHECK-NEXT:      i8 19, label [[MERGE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
@@ -381,9 +381,9 @@ define i8 @test_switch_subset(i8 %cond) {
 ; CHECK-LABEL: @test_switch_subset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_19:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_19:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -424,9 +424,9 @@ define i8 @test_switch_wrong_value(i8 %cond) {
 ; CHECK-LABEL: @test_switch_wrong_value(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_19:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_19:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -468,9 +468,9 @@ define i8 @test_switch_inverted(i8 %cond) {
 ; CHECK-LABEL: @test_switch_inverted(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 0, label [[SW_0:%.*]]
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 2, label [[SW_2:%.*]]
+; CHECK-NEXT:      i8 0, label [[SW_0:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 2, label [[SW_2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.0:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -512,9 +512,9 @@ define i8 @test_switch_duplicate_edge(i8 %cond) {
 ; CHECK-LABEL: @test_switch_duplicate_edge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_7]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_7]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -551,9 +551,9 @@ define i8 @test_switch_default_edge(i8 %cond) {
 ; CHECK-LABEL: @test_switch_default_edge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[MERGE:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_19:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_19:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
@@ -590,9 +590,9 @@ define i8 @test_switch_default_edge_direct(i8 %cond) {
 ; CHECK-LABEL: @test_switch_default_edge_direct(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[MERGE:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[MERGE]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[MERGE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
@@ -621,9 +621,9 @@ define i8 @test_switch_default_edge_duplicate(i8 %cond) {
 ; CHECK-LABEL: @test_switch_default_edge_duplicate(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[SW_19:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_19]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_19]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -650,4 +650,297 @@ sw.19:
 merge:
   %ret = phi i8 [ 1, %sw.1 ], [ 7, %sw.7 ], [ 19, %sw.19 ]
   ret i8 %ret
+}
+
+define i32 @test_phi_to_zext(i8 noundef %0) {
+; CHECK-LABEL: @test_phi_to_zext(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[BB3:%.*]]
+; CHECK-NEXT:      i8 0, label [[BB4:%.*]]
+; CHECK-NEXT:      i8 1, label [[BB1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB1]] ], [ 0, [[BB4]] ], [ 255, [[BB3]] ]
+; CHECK-NEXT:    ret i32 [[DOT0]]
+;
+start:
+  switch i8 %0, label %bb2 [
+  i8 -1, label %bb3
+  i8 0, label %bb4
+  i8 1, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb3:                                              ; preds = %start
+  br label %bb5
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %bb1, %bb4, %bb3
+  %.0 = phi i32 [ 1, %bb1 ], [ 0, %bb4 ], [ 255, %bb3 ]
+  ret i32 %.0
+}
+
+define i32 @test_phi_to_sext(i8 noundef %0) {
+; CHECK-LABEL: @test_phi_to_sext(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[BB3:%.*]]
+; CHECK-NEXT:      i8 0, label [[BB4:%.*]]
+; CHECK-NEXT:      i8 1, label [[BB1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB1]] ], [ 0, [[BB4]] ], [ -1, [[BB3]] ]
+; CHECK-NEXT:    ret i32 [[DOT0]]
+;
+start:
+  switch i8 %0, label %bb2 [
+  i8 -1, label %bb3
+  i8 0, label %bb4
+  i8 1, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb3:                                              ; preds = %start
+  br label %bb5
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %bb1, %bb4, %bb3
+  %.0 = phi i32 [ 1, %bb1 ], [ 0, %bb4 ], [ -1, %bb3 ]
+  ret i32 %.0
+}
+
+define i32 @test_phi_to_sext_inverted(i8 noundef %0) {
+; CHECK-LABEL: @test_phi_to_sext_inverted(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[BB3:%.*]]
+; CHECK-NEXT:      i8 0, label [[BB4:%.*]]
+; CHECK-NEXT:      i8 1, label [[BB1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ -2, [[BB1]] ], [ -1, [[BB4]] ], [ 0, [[BB3]] ]
+; CHECK-NEXT:    ret i32 [[DOT0]]
+;
+start:
+  switch i8 %0, label %bb2 [
+  i8 -1, label %bb3
+  i8 0, label %bb4
+  i8 1, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb3:                                              ; preds = %start
+  br label %bb5
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %bb1, %bb4, %bb3
+  %.0 = phi i32 [ -2, %bb1 ], [ -1, %bb4 ], [ 0, %bb3 ]
+  ret i32 %.0
+}
+
+define i32 @test_neg_value_not_possible_to_zext_or_sext(i8 noundef %0) {
+; CHECK-LABEL: @test_neg_value_not_possible_to_zext_or_sext(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    switch i8 [[TMP0:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i8 -1, label [[BB3:%.*]]
+; CHECK-NEXT:      i8 0, label [[BB4:%.*]]
+; CHECK-NEXT:      i8 1, label [[BB1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i32 [ 1, [[BB1]] ], [ 0, [[BB4]] ], [ 511, [[BB3]] ]
+; CHECK-NEXT:    ret i32 [[DOT0]]
+;
+start:
+  switch i8 %0, label %bb2 [
+  i8 -1, label %bb3
+  i8 0, label %bb4
+  i8 1, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb3:                                              ; preds = %start
+  br label %bb5
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %bb1, %bb4, %bb3
+  %.0 = phi i32 [ 1, %bb1 ], [ 0, %bb4 ], [ 511, %bb3 ]
+  ret i32 %.0
+}
+
+define i8 @test_phi_to_trunc(i32 %0) {
+; CHECK-LABEL: @test_phi_to_trunc(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i32 0, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 255, label [[BB1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ -1, [[BB1]] ], [ 1, [[BB4]] ], [ 0, [[START:%.*]] ]
+; CHECK-NEXT:    ret i8 [[DOT0]]
+;
+start:
+  switch i32 %0, label %bb2 [
+  i32 0, label %bb5
+  i32 1, label %bb4
+  i32 255, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %start, %bb1, %bb4
+  %.0 = phi i8 [ -1, %bb1 ], [ 1, %bb4 ], [ 0, %start ]
+  ret i8 %.0
+}
+
+define i8 @test_phi_to_trunc_inverted(i32 %0) {
+; CHECK-LABEL: @test_phi_to_trunc_inverted(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i32 0, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 255, label [[BB1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ 0, [[BB1]] ], [ -2, [[BB4]] ], [ -1, [[START:%.*]] ]
+; CHECK-NEXT:    ret i8 [[DOT0]]
+;
+start:
+  switch i32 %0, label %bb2 [
+  i32 0, label %bb5
+  i32 1, label %bb4
+  i32 255, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %start, %bb1, %bb4
+  %.0 = phi i8 [ 0, %bb1 ], [ -2, %bb4 ], [ -1, %start ]
+  ret i8 %.0
+}
+
+define i8 @test_neg_value_not_possible_to_trunc(i32 %0) {
+; CHECK-LABEL: @test_neg_value_not_possible_to_trunc(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:      i32 0, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 511, label [[BB1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ -1, [[BB1]] ], [ 1, [[BB4]] ], [ 0, [[START:%.*]] ]
+; CHECK-NEXT:    ret i8 [[DOT0]]
+;
+start:
+  switch i32 %0, label %bb2 [
+  i32 0, label %bb5
+  i32 1, label %bb4
+  i32 511, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %start, %bb1, %bb4
+  %.0 = phi i8 [ 255, %bb1 ], [ 1, %bb4 ], [ 0, %start ]
+  ret i8 %.0
 }

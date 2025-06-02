@@ -86,8 +86,9 @@ public:
 TEST(CodeGenAction, GracefullyHandleLLVMConversionFailure) {
   std::string diagnosticOutput;
   llvm::raw_string_ostream diagnosticsOS(diagnosticOutput);
+  clang::DiagnosticOptions diagOpts;
   auto diagPrinter = std::make_unique<Fortran::frontend::TextDiagnosticPrinter>(
-      diagnosticsOS, new clang::DiagnosticOptions());
+      diagnosticsOS, diagOpts);
 
   CompilerInstance ci;
   ci.createDiagnostics(diagPrinter.get(), /*ShouldOwnClient=*/false);

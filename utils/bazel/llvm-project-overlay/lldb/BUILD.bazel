@@ -1022,7 +1022,7 @@ expand_template(
     substitutions = {
         "${LLDB_VERSION}": PACKAGE_VERSION,
     },
-    template = "tools/lldb-dap/lldb-dap-Info.plist.in",
+    template = "tools/lldb-dap/tool/lldb-dap-Info.plist.in",
 )
 
 gentbl_cc_library(

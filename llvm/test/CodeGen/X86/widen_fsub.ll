@@ -221,7 +221,7 @@ define void @widen_fsub_v2f32_v16f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX512F-NEXT:    vinsertf32x4 $1, %xmm3, %zmm2, %zmm2
 ; AVX512F-NEXT:    vinsertf32x4 $1, %xmm1, %zmm0, %zmm0
 ; AVX512F-NEXT:    vpermt2pd %zmm2, %zmm5, %zmm0
-; AVX512F-NEXT:    vinsertf64x4 $0, %ymm0, %zmm4, %zmm0
+; AVX512F-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3],zmm4[4,5,6,7]
 ; AVX512F-NEXT:    vmovupd %zmm0, (%rdx)
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq

@@ -417,8 +417,9 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
                       [maxStage - defStage->second];
       assert(valueVersion);
       newLoopArg.push_back(valueVersion);
-    } else
+    } else {
       newLoopArg.push_back(forOp.getInitArgs()[retVal.index()]);
+    }
   }
   for (auto escape : crossStageValues) {
     LiverangeInfo &info = escape.second;

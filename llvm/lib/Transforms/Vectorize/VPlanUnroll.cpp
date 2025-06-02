@@ -151,14 +151,14 @@ void UnrollState::unrollWidenInductionByUF(
       IV->getParent()->getEnclosingLoopRegion()->getSinglePredecessor());
   Type *IVTy = TypeInfo.inferScalarType(IV);
   auto &ID = IV->getInductionDescriptor();
-  std::optional<FastMathFlags> FMFs;
+  VPIRFlags Flags;
   if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
-    FMFs = ID.getInductionBinOp()->getFastMathFlags();
+    Flags = ID.getInductionBinOp()->getFastMathFlags();
 
   VPValue *ScalarStep = IV->getStepValue();
   VPBuilder Builder(PH);
   VPInstruction *VectorStep = Builder.createNaryOp(
-      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, FMFs,
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, Flags,
       IV->getDebugLoc());
 
   ToSkip.insert(VectorStep);
@@ -188,7 +188,7 @@ void UnrollState::unrollWidenInductionByUF(
                                                   Prev,
                                                   VectorStep,
                                               },
-                                              FMFs, IV->getDebugLoc(), Name);
+                                              Flags, IV->getDebugLoc(), Name);
     ToSkip.insert(Add);
     addRecipeForPart(IV, Add, Part);
     Prev = Add;

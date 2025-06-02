@@ -31,8 +31,8 @@ TEST_P(olGetKernelTest, InvalidNullKernelPointer) {
 }
 
 // Error code returning from plugin interface not yet supported
-TEST_F(olGetKernelTest, DISABLED_InvalidKernelName) {
+TEST_P(olGetKernelTest, InvalidKernelName) {
   ol_kernel_handle_t Kernel = nullptr;
-  ASSERT_ERROR(OL_ERRC_INVALID_KERNEL_NAME,
+  ASSERT_ERROR(OL_ERRC_NOT_FOUND,
                olGetKernel(Program, "invalid_kernel_name", &Kernel));
 }

@@ -566,6 +566,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNRegPressurePrinterPass(*PR);
   initializeAMDGPUPreloadKernArgPrologLegacyPass(*PR);
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
+  initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -687,10 +688,9 @@ static StringRef computeDataLayout(const Triple &TT) {
   // space 8) which cannot be non-trivilally accessed by LLVM memory operations
   // like getelementptr.
   return "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-         "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-"
-         "v32:32-v48:64-v96:"
-         "128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-"
-         "G1-ni:7:8:9";
+         "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-"
+         "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-"
+         "v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 }
 
 LLVM_READNONE
@@ -811,6 +811,22 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
+  PB.registerScalarOptimizerLateEPCallback(
+      [](FunctionPassManager &FPM, OptimizationLevel Level) {
+        if (Level == OptimizationLevel::O0)
+          return;
+
+        FPM.addPass(InferAddressSpacesPass());
+      });
+
+  PB.registerVectorizerEndEPCallback(
+      [](FunctionPassManager &FPM, OptimizationLevel Level) {
+        if (Level == OptimizationLevel::O0)
+          return;
+
+        FPM.addPass(InferAddressSpacesPass());
+      });
+
   PB.registerPipelineEarlySimplificationEPCallback(
       [](ModulePassManager &PM, OptimizationLevel Level,
          ThinOrFullLTOPhase Phase) {
@@ -908,6 +924,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
         if (Level != OptimizationLevel::O0) {
+          // We only want to run this with O2 or higher since inliner and SROA
+          // don't run in O1.
+          if (Level != OptimizationLevel::O1) {
+            PM.addPass(
+                createModuleToFunctionPassAdaptor(InferAddressSpacesPass()));
+          }
           // Do we really need internalization in LTO?
           if (InternalizeSymbols) {
             PM.addPass(InternalizePass(mustPreserveGV));
@@ -955,6 +977,10 @@ bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 }
 
 unsigned AMDGPUTargetMachine::getAssumedAddrSpace(const Value *V) const {
+  if (auto *Arg = dyn_cast<Argument>(V);
+      Arg && AMDGPU::isKernelCC(Arg->getParent()) && !Arg->hasByRefAttr())
+    return AMDGPUAS::GLOBAL_ADDRESS;
+
   const auto *LD = dyn_cast<LoadInst>(V);
   if (!LD) // TODO: Handle invariant load like constant.
     return AMDGPUAS::UNKNOWN_ADDRESS_SPACE;
@@ -1129,6 +1155,7 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
        getOptLevel() >= CodeGenOptLevel::Less) &&
       EnableVOPD)
     DAG->addMutation(createVOPDPairingMutation());
+  DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
   return DAG;
 }
 //===----------------------------------------------------------------------===//
@@ -1264,9 +1291,6 @@ void AMDGPUPassConfig::addIRPasses() {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(createInferAddressSpacesPass());
-
   // Run atomic optimizer before Atomic Expand
   if ((TM.getTargetTriple().isAMDGCN()) &&
       (TM.getOptLevel() >= CodeGenOptLevel::Less) &&
@@ -1321,6 +1345,10 @@ void AMDGPUPassConfig::addIRPasses() {
 }
 
 void AMDGPUPassConfig::addCodeGenPrepare() {
+  if (TM->getTargetTriple().isAMDGCN() &&
+      TM->getOptLevel() > CodeGenOptLevel::None)
+    addPass(createAMDGPUPreloadKernelArgumentsLegacyPass(TM));
+
   if (TM->getTargetTriple().isAMDGCN() && EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
 
@@ -2005,9 +2033,6 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   if (EnableLowerModuleLDS)
     addPass(AMDGPULowerModuleLDSPass(TM));
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addPass(InferAddressSpacesPass());
-
   // Run atomic optimizer before Atomic Expand
   if (TM.getOptLevel() >= CodeGenOptLevel::Less &&
       (AMDGPUAtomicOptimizerStrategy != ScanOptions::None))
@@ -2049,6 +2074,9 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
 void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
   // AMDGPUAnnotateKernelFeaturesPass is missing here, but it will hopefully be
   // deleted soon.
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(AMDGPUPreloadKernelArgumentsPass(TM));
 
   if (EnableLowerKernelArguments)
     addPass(AMDGPULowerKernelArgumentsPass(TM));

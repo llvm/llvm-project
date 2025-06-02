@@ -47,7 +47,8 @@ struct AssumingOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto assumingOp = cast<shape::AssumingOp>(op);
     assert(llvm::hasSingleElement(assumingOp.getDoRegion().getBlocks()) &&
            "only 1 block supported");
@@ -112,12 +113,13 @@ struct AssumingYieldOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto yieldOp = cast<shape::AssumingYieldOp>(op);
     SmallVector<Value> newResults;
     for (Value value : yieldOp.getOperands()) {
       if (isa<TensorType>(value.getType())) {
-        FailureOr<Value> buffer = getBuffer(rewriter, value, options);
+        FailureOr<Value> buffer = getBuffer(rewriter, value, options, state);
         if (failed(buffer))
           return failure();
         newResults.push_back(*buffer);

@@ -6,9 +6,20 @@
 # RUN:    -fuse-ld=lld -Wl,-q
 # RUN: llvm-objdump -d %t.exe | FileCheck --check-prefix=CHECK-INPUT %s
 # RUN: llvm-objcopy --remove-section .rela.mytext %t.exe
-# RUN: llvm-bolt %t.exe -o %t.bolt --elim-link-veneers=true --lite=0
+# RUN: llvm-bolt %t.exe -o %t.bolt
 # RUN: llvm-objdump -d -j .text  %t.bolt | \
 # RUN:   FileCheck --check-prefix=CHECK-OUTPUT %s
+
+## Occasionally, we see the linker not generating $d symbols for long veneers
+## causing BOLT to fail veneer elimination.
+# RUN: llvm-objcopy --remove-symbol-prefix=\$d %t.exe %t.no-marker.exe
+# RUN: llvm-bolt %t.no-marker.exe -o %t.no-marker.bolt \
+# RUN:   2>&1 | FileCheck %s --check-prefix=CHECK-BOLT
+# RUN: llvm-objdump -d -j .text  %t.no-marker.bolt | \
+# RUN:   FileCheck --check-prefix=CHECK-OUTPUT %s
+
+# CHECK-BOLT-NOT: BOLT-WARNING: unable to disassemble instruction
+# CHECK-BOLT: BOLT-WARNING: missing data marker detected in veneer __AArch64AbsLongThunk_far_function
 
 .text
 .balign 4

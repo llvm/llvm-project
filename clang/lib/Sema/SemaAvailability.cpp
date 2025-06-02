@@ -547,8 +547,13 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     return;
   }
   case AR_Deprecated:
-    diag = !ObjCPropertyAccess ? diag::warn_deprecated
-                               : diag::warn_property_method_deprecated;
+    if (ObjCPropertyAccess)
+      diag = diag::warn_property_method_deprecated;
+    else if (S.currentEvaluationContext().IsCaseExpr)
+      diag = diag::warn_deprecated_switch_case;
+    else
+      diag = diag::warn_deprecated;
+
     diag_message = diag::warn_deprecated_message;
     diag_fwdclass_message = diag::warn_deprecated_fwdclass_message;
     property_note_select = /* deprecated */ 0;

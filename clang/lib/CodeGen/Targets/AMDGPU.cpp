@@ -8,7 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "clang/Basic/TargetOptions.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 using namespace clang;
@@ -298,6 +298,7 @@ public:
   AMDGPUTargetCodeGenInfo(CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<AMDGPUABIInfo>(CGT)) {}
 
+  bool supportsLibCall() const override { return false; }
   void setFunctionDeclAttributes(const FunctionDecl *FD, llvm::Function *F,
                                  CodeGenModule &CGM) const;
 

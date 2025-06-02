@@ -45,7 +45,6 @@ function(add_lldb_library name)
     "INSTALL_PREFIX;ENTITLEMENTS"
     "EXTRA_CXXFLAGS;DEPENDS;LINK_LIBS;LINK_COMPONENTS;CLANG_LIBS"
     ${ARGN})
-  llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
   list(APPEND LLVM_LINK_COMPONENTS ${PARAM_LINK_COMPONENTS})
 
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
@@ -77,7 +76,6 @@ function(add_lldb_library name)
     list(GET split_path -1 dir)
     file(GLOB_RECURSE headers
       ../../include/lldb${dir}/*.h)
-    set(srcs ${srcs} ${headers})
   endif()
   if (PARAM_MODULE)
     set(libkind MODULE)
@@ -93,36 +91,26 @@ function(add_lldb_library name)
     set(libkind STATIC)
   endif()
 
-  #PIC not needed on Win
-  # FIXME: Setting CMAKE_CXX_FLAGS here is a no-op, use target_compile_options
-  # or omit this logic instead.
-  if (NOT WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  if(PARAM_ENTITLEMENTS)
+    set(pass_ENTITLEMENTS ENTITLEMENTS ${PARAM_ENTITLEMENTS})
   endif()
 
-  if (PARAM_OBJECT)
-    add_library(${name} ${libkind} ${srcs})
+  if(LLDB_NO_INSTALL_DEFAULT_RPATH)
+    set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
+  endif()
+
+  llvm_add_library(${name} ${libkind} ${headers}
+    ${PARAM_UNPARSED_ARGUMENTS}
+    LINK_LIBS ${PARAM_LINK_LIBS}
+    DEPENDS ${PARAM_DEPENDS}
+    ${pass_ENTITLEMENTS}
+    ${pass_NO_INSTALL_RPATH}
+  )
+
+  if(CLANG_LINK_CLANG_DYLIB)
+    target_link_libraries(${name} PRIVATE clang-cpp)
   else()
-    if(PARAM_ENTITLEMENTS)
-      set(pass_ENTITLEMENTS ENTITLEMENTS ${PARAM_ENTITLEMENTS})
-    endif()
-
-    if(LLDB_NO_INSTALL_DEFAULT_RPATH)
-      set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
-    endif()
-
-    llvm_add_library(${name} ${libkind} ${srcs}
-      LINK_LIBS ${PARAM_LINK_LIBS}
-      DEPENDS ${PARAM_DEPENDS}
-      ${pass_ENTITLEMENTS}
-      ${pass_NO_INSTALL_RPATH}
-    )
-
-    if(CLANG_LINK_CLANG_DYLIB)
-      target_link_libraries(${name} PRIVATE clang-cpp)
-    else()
-      target_link_libraries(${name} PRIVATE ${PARAM_CLANG_LIBS})
-    endif()
+    target_link_libraries(${name} PRIVATE ${PARAM_CLANG_LIBS})
   endif()
 
   # A target cannot be changed to a FRAMEWORK after calling install() because

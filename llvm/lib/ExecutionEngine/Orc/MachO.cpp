@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/FileSystem.h"
@@ -229,18 +230,29 @@ getMachOSliceRangeForTriple(MemoryBufferRef UBBuf, const Triple &TT) {
   return getMachOSliceRangeForTriple(**UB, TT);
 }
 
-Error ForceLoadMachOArchiveMembers::operator()(MemoryBufferRef MemberBuf) {
-  if (!ObjCOnly)
-    return L.add(JD, MemoryBuffer::getMemBuffer(MemberBuf));
+Expected<bool> ForceLoadMachOArchiveMembers::operator()(
+    object::Archive &A, MemoryBufferRef MemberBuf, size_t Index) {
+
+  auto LoadMember = [&]() {
+    return StaticLibraryDefinitionGenerator::createMemberBuffer(A, MemberBuf,
+                                                                Index);
+  };
+
+  if (!ObjCOnly) {
+    // If we're loading all files then just load the buffer immediately. Return
+    // false to indicate that there's no further loading to do here.
+    if (auto Err = L.add(JD, LoadMember()))
+      return Err;
+    return false;
+  }
 
   // We need to check whether this archive member contains any Objective-C
   // or Swift metadata.
-
   auto Obj = object::ObjectFile::createObjectFile(MemberBuf);
   if (!Obj) {
-    // We silently ignore invalid files.
+    // Invalid files are not loadable, but don't invalidate the archive.
     consumeError(Obj.takeError());
-    return Error::success();
+    return false;
   }
 
   if (auto *MachOObj = dyn_cast<object::MachOObjectFile>(&**Obj)) {
@@ -253,14 +265,19 @@ Error ForceLoadMachOArchiveMembers::operator()(MemoryBufferRef MemberBuf) {
             *SecName == "__objc_clsrolist" || *SecName == "__objc_catlist" ||
             *SecName == "__objc_catlist2" || *SecName == "__objc_nlcatlist" ||
             (SegName == "__TEXT" && (*SecName).starts_with("__swift") &&
-             *SecName != "__swift_modhash"))
-          return L.add(JD, MemoryBuffer::getMemBuffer(MemberBuf));
+             *SecName != "__swift_modhash")) {
+          if (auto Err = L.add(JD, LoadMember()))
+            return Err;
+          return false;
+        }
       } else
         return SecName.takeError();
     }
   }
 
-  return Error::success();
+  // This is an object file but we didn't load it, so return true to indicate
+  // that it's still loadable.
+  return true;
 }
 
 } // End namespace orc.

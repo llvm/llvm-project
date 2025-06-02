@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCExpr.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -296,7 +296,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
   const MCSymbol &SA = *A, &SB = *B;
   if (SA.isUndefined() || SB.isUndefined())
     return;
-  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(*Asm, SA, SB, InSet))
+  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(SA, SB, InSet))
     return;
 
   auto FinalizeFolding = [&]() {
@@ -320,12 +320,11 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
   // When layout is available, we can generally compute the difference using the
   // getSymbolOffset path, which also avoids the possible slow fragment walk.
   // However, linker relaxation may cause incorrect fold of A-B if A and B are
-  // separated by a linker-relaxable instruction. If the section contains
-  // instructions and InSet is false (not expressions in directive like
-  // .size/.fill), disable the fast path.
+  // separated by a linker-relaxable fragment. If the section contains
+  // linker-relaxable instruction and InSet is false (not expressions in
+  // directive like .size/.fill), disable the fast path.
   bool Layout = Asm->hasLayout();
-  if (Layout && (InSet || !SecA.hasInstructions() ||
-                 !Asm->getBackend().allowLinkerRelaxation())) {
+  if (Layout && (InSet || !SecA.isLinkerRelaxable())) {
     // If both symbols are in the same fragment, return the difference of their
     // offsets. canGetFragmentOffset(FA) may be false.
     if (FA == FB && !SA.isVariable() && !SB.isVariable()) {
@@ -390,6 +389,12 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       unsigned Count;
       if (DF) {
         Displacement += DF->getContents().size();
+      } else if (auto *RF = dyn_cast<MCRelaxableFragment>(FI);
+                 RF && Asm->hasFinalLayout()) {
+        // Before finishLayout, a relaxable fragment's size is indeterminate.
+        // After layout, during relocation generation, it can be treated as a
+        // data fragment.
+        Displacement += RF->getContents().size();
       } else if (auto *AF = dyn_cast<MCAlignFragment>(FI);
                  AF && Layout && AF->hasEmitNops() &&
                  !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
@@ -470,21 +475,6 @@ bool MCExpr::evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm) const {
 bool MCExpr::evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const {
   return evaluateAsRelocatableImpl(Res, &Asm, true);
 }
-static bool canExpand(const MCSymbol &Sym, bool InSet) {
-  if (Sym.isWeakExternal())
-    return false;
-
-  const MCExpr *Expr = Sym.getVariableValue();
-  const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
-  if (Inner) {
-    if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF)
-      return false;
-  }
-
-  if (InSet)
-    return true;
-  return !Sym.isInSection();
-}
 
 bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                        bool InSet) const {
@@ -498,17 +488,38 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
   case SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
-    const MCSymbol &Sym = SRE->getSymbol();
+    MCSymbol &Sym = const_cast<MCSymbol &>(SRE->getSymbol());
     const auto Kind = SRE->getKind();
     bool Layout = Asm && Asm->hasLayout();
 
-    // Evaluate recursively if this is a variable.
+    // If the symbol is equated, resolve the inner expression.
+    // However, when two IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY symbols reference
+    // each other, we retain the equated symbol to avoid a cyclic definition
+    // error.
+    if (Sym.isResolving()) {
+      if (Asm && Asm->hasFinalLayout()) {
+        Asm->getContext().reportError(
+            Sym.getVariableValue()->getLoc(),
+            "cyclic dependency detected for symbol '" + Sym.getName() + "'");
+        Sym.setVariableValue(MCConstantExpr::create(0, Asm->getContext()));
+      }
+      return false;
+    }
     if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&
-        canExpand(Sym, InSet)) {
+        !Sym.isWeakExternal()) {
+      Sym.setIsResolving(true);
+      auto _ = make_scope_exit([&] { Sym.setIsResolving(false); });
       bool IsMachO =
           Asm && Asm->getContext().getAsmInfo()->hasSubsectionsViaSymbols();
-      if (Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
-                                                            InSet || IsMachO)) {
+      if (!Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
+                                                             InSet || IsMachO))
+        return false;
+      // When generating relocations, if Sym resolves to a symbol relative to a
+      // section, relocations are generated against Sym. Treat label differences
+      // as constants.
+      auto *A = Res.getAddSym();
+      auto *B = Res.getSubSym();
+      if (InSet || !(A && !B && A->isInSection())) {
         if (Kind != MCSymbolRefExpr::VK_None) {
           if (Res.isAbsolute()) {
             Res = MCValue::get(&Sym, nullptr, 0, Kind);
@@ -525,8 +536,6 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         if (!IsMachO)
           return true;
 
-        auto *A = Res.getAddSym();
-        auto *B = Res.getSubSym();
         // FIXME: This is small hack. Given
         // a = b + 4
         // .long a
@@ -708,9 +717,16 @@ MCFragment *MCExpr::findAssociatedFragment() const {
     return MCSymbol::AbsolutePseudoFragment;
 
   case SymbolRef: {
-    const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
-    const MCSymbol &Sym = SRE->getSymbol();
-    return Sym.getFragment();
+    auto &Sym =
+        const_cast<MCSymbol &>(cast<MCSymbolRefExpr>(this)->getSymbol());
+    if (Sym.Fragment)
+      return Sym.Fragment;
+    if (Sym.isResolving())
+      return MCSymbol::AbsolutePseudoFragment;
+    Sym.setIsResolving(true);
+    auto *F = Sym.getFragment();
+    Sym.setIsResolving(false);
+    return F;
   }
 
   case Unary:

@@ -930,6 +930,67 @@ define <2 x i31> @fsh_unary_shuffle_ops_narrowing(<3 x i31> %x, <3 x i31> %y, <3
   ret <2 x i31> %r
 }
 
+define <2 x i32> @fsh_unary_shuffle_ops_1_const(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @fsh_unary_shuffle_ops_1_const(
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> <i32 2, i32 1>, <2 x i32> [[X:%.*]], <2 x i32> [[Y1:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <2 x i32> [[Y]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x i32> [[B]]
+;
+  %a = shufflevector <2 x i32> %x, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %b = shufflevector <2 x i32> %y, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x i32> @llvm.fshr(<2 x i32> <i32 1, i32 2>, <2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @fsh_unary_shuffle_ops_2_const(<2 x i32> %x) {
+; CHECK-LABEL: @fsh_unary_shuffle_ops_2_const(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> <i32 2, i32 1>, <2 x i32> <i32 2, i32 1>, <2 x i32> [[X1:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[X]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x i32> [[A]]
+;
+  %a = shufflevector <2 x i32> %x, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x i32> @llvm.fshr(<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 1, i32 2>, <2 x i32> %a)
+  ret <2 x i32> %r
+}
+
+define <vscale x 2 x i32> @fsh_unary_shuffle_ops_1_const_scalable(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y) {
+; CHECK-LABEL: @fsh_unary_shuffle_ops_1_const_scalable(
+; CHECK-NEXT:    [[Y:%.*]] = call <vscale x 2 x i32> @llvm.fshr.nxv2i32(<vscale x 2 x i32> splat (i32 42), <vscale x 2 x i32> [[X:%.*]], <vscale x 2 x i32> [[Y1:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <vscale x 2 x i32> [[Y]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[B]]
+;
+  %a = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %b = shufflevector <vscale x 2 x i32> %y, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %r = call <vscale x 2 x i32> @llvm.fshr(<vscale x 2 x i32> splat (i32 42), <vscale x 2 x i32> %a, <vscale x 2 x i32> %b)
+  ret <vscale x 2 x i32> %r
+}
+
+define <vscale x 2 x i32> @fsh_unary_shuffle_ops_2_const_scalable(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @fsh_unary_shuffle_ops_2_const_scalable(
+; CHECK-NEXT:    [[X:%.*]] = call <vscale x 2 x i32> @llvm.fshr.nxv2i32(<vscale x 2 x i32> splat (i32 42), <vscale x 2 x i32> splat (i32 42), <vscale x 2 x i32> [[X1:%.*]])
+; CHECK-NEXT:    [[A:%.*]] = shufflevector <vscale x 2 x i32> [[X]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[A]]
+;
+  %a = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %r = call <vscale x 2 x i32> @llvm.fshr(<vscale x 2 x i32> splat (i32 42), <vscale x 2 x i32> splat (i32 42), <vscale x 2 x i32> %a)
+  ret <vscale x 2 x i32> %r
+}
+
+define <3 x i32> @fsh_unary_shuffle_ops_widening_1_const(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @fsh_unary_shuffle_ops_widening_1_const(
+; CHECK-NEXT:    [[A:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+; CHECK-NEXT:    call void @use_v3(<3 x i32> [[A]])
+; CHECK-NEXT:    [[Y:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> splat (i32 42), <2 x i32> [[X]], <2 x i32> [[Y1:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <2 x i32> [[Y]], <2 x i32> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+; CHECK-NEXT:    ret <3 x i32> [[B]]
+;
+  %a = shufflevector <2 x i32> %x, <2 x i32> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+  call void @use_v3(<3 x i32> %a)
+  %b = shufflevector <2 x i32> %y, <2 x i32> poison, <3 x i32> <i32 1, i32 0, i32 poison>
+  %r = call <3 x i32> @llvm.fshr(<3 x i32> splat (i32 42), <3 x i32> %a, <3 x i32> %b)
+  ret <3 x i32> %r
+}
+
 ; negative test - must have 3 shuffles
 
 define <2 x i32> @fsh_unary_shuffle_ops_unshuffled(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {

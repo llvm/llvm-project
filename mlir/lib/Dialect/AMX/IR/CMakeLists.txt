@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRAMXDialect
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRLLVMCommonConversion
   MLIRLLVMDialect
   MLIRSideEffectInterfaces
   )

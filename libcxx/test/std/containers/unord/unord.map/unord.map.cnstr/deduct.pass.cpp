@@ -82,8 +82,11 @@
 #include <cassert>
 #include <climits> // INT_MAX
 #include <iterator>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
@@ -310,6 +313,26 @@ int main(int, char**) {
       std::unordered_map c(std::from_range, Range(), std::size_t(), Hash(), Alloc());
       static_assert(std::is_same_v<decltype(c), std::unordered_map<int, long, Hash, DefaultPred, Alloc>>);
     }
+  }
+  {
+    std::vector<std::pair<const int, float>> pair_vec = {{1, 1.1f}, {2, 2.2f}, {3, 3.3f}};
+    std::unordered_map um1(pair_vec.begin(), pair_vec.end());
+    ASSERT_SAME_TYPE(decltype(um1), std::unordered_map<int, float>);
+
+    std::vector<std::tuple<int, double>> tuple_vec = {{10, 1.1}, {20, 2.2}, {30, 3.3}};
+    // Note: std::tuple needs a hash specialization to be used as a key in unordered containers.
+    // This static_assert only checks the deduced type.
+    std::unordered_map um2(tuple_vec.begin(), tuple_vec.end());
+    ASSERT_SAME_TYPE(decltype(um2), std::unordered_map<int, double>);
+
+    std::vector<std::array<long, 2>> array_vec = {{100L, 101L}, {200L, 201L}, {300L, 301L}};
+    // Note: std::array needs a hash specialization.
+    std::unordered_map um3(array_vec.begin(), array_vec.end());
+    ASSERT_SAME_TYPE(decltype(um3), std::unordered_map<long, long>);
+
+    std::vector<std::pair<int, char>> non_const_key_pair_vec = {{5, 'a'}, {6, 'b'}};
+    std::unordered_map um4(non_const_key_pair_vec.begin(), non_const_key_pair_vec.end());
+    ASSERT_SAME_TYPE(decltype(um4), std::unordered_map<int, char>);
   }
 #endif
 

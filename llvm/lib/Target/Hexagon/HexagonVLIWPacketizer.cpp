@@ -101,8 +101,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
   private:
@@ -198,8 +197,7 @@ static MachineBasicBlock::iterator moveInstrOut(MachineInstr &MI,
 
 bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
   // FIXME: This pass causes verification failures.
-  MF.getProperties().set(
-      MachineFunctionProperties::Property::FailsVerification);
+  MF.getProperties().setFailsVerification();
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();

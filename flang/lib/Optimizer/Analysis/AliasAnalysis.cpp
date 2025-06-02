@@ -540,6 +540,20 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           v = op.getVar();
           defOp = v.getDefiningOp();
         })
+        .Case<hlfir::AssociateOp>([&](auto op) {
+          mlir::Value source = op.getSource();
+          if (fir::isa_trivial(source.getType())) {
+            // Trivial values will always use distinct temp memory,
+            // so we can classify this as Allocate and stop.
+            type = SourceKind::Allocate;
+            breakFromLoop = true;
+          } else {
+            // AssociateOp may reuse the expression storage,
+            // so we have to trace further.
+            v = source;
+            defOp = v.getDefiningOp();
+          }
+        })
         .Case<fir::AllocaOp, fir::AllocMemOp>([&](auto op) {
           // Unique memory allocation.
           type = SourceKind::Allocate;

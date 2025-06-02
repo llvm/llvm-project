@@ -20,6 +20,8 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -2189,4 +2191,32 @@ static bool FormatTemplateTypeDiff(ASTContext &Context, QualType FromType,
                   ElideType, ShowColors);
   TD.DiffTemplate();
   return TD.Emit();
+}
+
+std::string clang::FormatUTFCodeUnitAsCodepoint(unsigned Value, QualType T) {
+  auto IsSingleCodeUnitCP = [](unsigned Value, QualType T) {
+    if (T->isChar8Type()) {
+      assert(Value <= 0xFF && "not a valid UTF-8 code unit");
+      return Value <= 0x7F;
+    }
+    if (T->isChar16Type()) {
+      assert(Value <= 0xFFFF && "not a valid UTF-16 code unit");
+      return llvm::IsSingleCodeUnitUTF16Codepoint(Value);
+    }
+    assert(T->isChar32Type());
+    return llvm::IsSingleCodeUnitUTF32Codepoint(Value);
+  };
+  llvm::SmallVector<char, 16> Str;
+  if (!IsSingleCodeUnitCP(Value, T)) {
+    llvm::raw_svector_ostream OS(Str);
+    OS << "<" << llvm::format_hex(Value, 1, /*Upper=*/true) << ">";
+    return std::string(Str.begin(), Str.end());
+  }
+
+  char Buffer[UNI_MAX_UTF8_BYTES_PER_CODE_POINT];
+  char *Ptr = Buffer;
+  [[maybe_unused]] bool Converted = llvm::ConvertCodePointToUTF8(Value, Ptr);
+  assert(Converted && "trying to encode invalid code unit");
+  EscapeStringForDiagnostic(StringRef(Buffer, Ptr - Buffer), Str);
+  return std::string(Str.begin(), Str.end());
 }

@@ -103,7 +103,7 @@ enum class FirstCoroutineStmtKind { CoReturn, CoAwait, CoYield };
 /// currently being parsed.
 class FunctionScopeInfo {
 protected:
-  enum ScopeKind {
+  enum ScopeKind : uint8_t {
     SK_Function,
     SK_Block,
     SK_Lambda,

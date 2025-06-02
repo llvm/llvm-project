@@ -10,6 +10,7 @@
 #define LLDB_VALUEOBJECT_VALUEOBJECTCONSTRESULTIMPL_H
 
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -21,7 +22,6 @@ namespace lldb_private {
 class CompilerType;
 class DataExtractor;
 class Status;
-class ValueObject;
 } // namespace lldb_private
 
 namespace lldb_private {
@@ -58,8 +58,8 @@ public:
     m_live_address_type = address_type;
   }
 
-  virtual lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
-                                    AddressType *address_type = nullptr);
+  virtual ValueObject::AddrAndType
+  GetAddressOf(bool scalar_is_load_address = true);
 
   virtual size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                                 uint32_t item_count = 1);

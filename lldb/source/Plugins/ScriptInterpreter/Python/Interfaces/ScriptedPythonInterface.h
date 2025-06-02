@@ -463,7 +463,6 @@ protected:
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
-    return;
   }
 
   template <typename T>

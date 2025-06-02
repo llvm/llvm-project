@@ -660,8 +660,9 @@ const json::Value *ASTNode::findContext() {
       CurrentContext = CurrentValue->getAsObject();
       if (!CurrentContext)
         return nullptr;
-    } else
+    } else {
       Context = CurrentValue;
+    }
   }
   return Context;
 }

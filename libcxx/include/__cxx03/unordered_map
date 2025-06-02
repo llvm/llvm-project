@@ -620,15 +620,14 @@ template <class _Key,
           bool = is_empty<_Hash>::value && !__libcpp_is_final<_Hash>::value>
 class __unordered_map_hasher : private _Hash {
 public:
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher() _NOEXCEPT_(is_nothrow_default_constructible<_Hash>::value) : _Hash() {}
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher(const _Hash& __h) _NOEXCEPT_(is_nothrow_copy_constructible<_Hash>::value)
-      : _Hash(__h) {}
+  _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher() : _Hash() {}
+  _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher(const _Hash& __h) : _Hash(__h) {}
   _LIBCPP_HIDE_FROM_ABI const _Hash& hash_function() const _NOEXCEPT { return *this; }
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const _Cp& __x) const {
     return static_cast<const _Hash&>(*this)(__x.__get_value().first);
   }
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const _Key& __x) const { return static_cast<const _Hash&>(*this)(__x); }
-  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_hasher& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Hash>) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_hasher& __y) {
     using std::swap;
     swap(static_cast<_Hash&>(*this), static_cast<_Hash&>(__y));
   }
@@ -639,23 +638,20 @@ class __unordered_map_hasher<_Key, _Cp, _Hash, _Pred, false> {
   _Hash __hash_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher() _NOEXCEPT_(is_nothrow_default_constructible<_Hash>::value)
-      : __hash_() {}
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher(const _Hash& __h) _NOEXCEPT_(is_nothrow_copy_constructible<_Hash>::value)
-      : __hash_(__h) {}
+  _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher() : __hash_() {}
+  _LIBCPP_HIDE_FROM_ABI __unordered_map_hasher(const _Hash& __h) : __hash_(__h) {}
   _LIBCPP_HIDE_FROM_ABI const _Hash& hash_function() const _NOEXCEPT { return __hash_; }
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const _Cp& __x) const { return __hash_(__x.__get_value().first); }
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const _Key& __x) const { return __hash_(__x); }
-  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_hasher& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Hash>) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_hasher& __y) {
     using std::swap;
     swap(__hash_, __y.__hash_);
   }
 };
 
 template <class _Key, class _Cp, class _Hash, class _Pred, bool __b>
-inline _LIBCPP_HIDE_FROM_ABI void
-swap(__unordered_map_hasher<_Key, _Cp, _Hash, _Pred, __b>& __x,
-     __unordered_map_hasher<_Key, _Cp, _Hash, _Pred, __b>& __y) _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+inline _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_hasher<_Key, _Cp, _Hash, _Pred, __b>& __x,
+                                       __unordered_map_hasher<_Key, _Cp, _Hash, _Pred, __b>& __y) {
   __x.swap(__y);
 }
 
@@ -666,9 +662,8 @@ template <class _Key,
           bool = is_empty<_Pred>::value && !__libcpp_is_final<_Pred>::value>
 class __unordered_map_equal : private _Pred {
 public:
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_equal() _NOEXCEPT_(is_nothrow_default_constructible<_Pred>::value) : _Pred() {}
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_equal(const _Pred& __p) _NOEXCEPT_(is_nothrow_copy_constructible<_Pred>::value)
-      : _Pred(__p) {}
+  _LIBCPP_HIDE_FROM_ABI __unordered_map_equal() : _Pred() {}
+  _LIBCPP_HIDE_FROM_ABI __unordered_map_equal(const _Pred& __p) : _Pred(__p) {}
   _LIBCPP_HIDE_FROM_ABI const _Pred& key_eq() const _NOEXCEPT { return *this; }
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Cp& __x, const _Cp& __y) const {
     return static_cast<const _Pred&>(*this)(__x.__get_value().first, __y.__get_value().first);
@@ -679,7 +674,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _Cp& __y) const {
     return static_cast<const _Pred&>(*this)(__x, __y.__get_value().first);
   }
-  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_equal& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Pred>) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_equal& __y) {
     using std::swap;
     swap(static_cast<_Pred&>(*this), static_cast<_Pred&>(__y));
   }
@@ -690,10 +685,8 @@ class __unordered_map_equal<_Key, _Cp, _Pred, _Hash, false> {
   _Pred __pred_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_equal() _NOEXCEPT_(is_nothrow_default_constructible<_Pred>::value)
-      : __pred_() {}
-  _LIBCPP_HIDE_FROM_ABI __unordered_map_equal(const _Pred& __p) _NOEXCEPT_(is_nothrow_copy_constructible<_Pred>::value)
-      : __pred_(__p) {}
+  _LIBCPP_HIDE_FROM_ABI __unordered_map_equal() : __pred_() {}
+  _LIBCPP_HIDE_FROM_ABI __unordered_map_equal(const _Pred& __p) : __pred_(__p) {}
   _LIBCPP_HIDE_FROM_ABI const _Pred& key_eq() const _NOEXCEPT { return __pred_; }
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Cp& __x, const _Cp& __y) const {
     return __pred_(__x.__get_value().first, __y.__get_value().first);
@@ -704,16 +697,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _Cp& __y) const {
     return __pred_(__x, __y.__get_value().first);
   }
-  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_equal& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Pred>) {
+  _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_equal& __y) {
     using std::swap;
     swap(__pred_, __y.__pred_);
   }
 };
 
 template <class _Key, class _Cp, class _Pred, class _Hash, bool __b>
-inline _LIBCPP_HIDE_FROM_ABI void
-swap(__unordered_map_equal<_Key, _Cp, _Pred, _Hash, __b>& __x, __unordered_map_equal<_Key, _Cp, _Pred, _Hash, __b>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+inline _LIBCPP_HIDE_FROM_ABI void swap(__unordered_map_equal<_Key, _Cp, _Pred, _Hash, __b>& __x,
+                                       __unordered_map_equal<_Key, _Cp, _Pred, _Hash, __b>& __y) {
   __x.swap(__y);
 }
 
@@ -934,7 +926,7 @@ public:
   template <class _Key2, class _Tp2, class _Hash2, class _Pred2, class _Alloc2>
   friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
 
-  _LIBCPP_HIDE_FROM_ABI unordered_map() _NOEXCEPT_(is_nothrow_default_constructible<__table>::value) {}
+  _LIBCPP_HIDE_FROM_ABI unordered_map() {}
   explicit _LIBCPP_HIDE_FROM_ABI
   unordered_map(size_type __n, const hasher& __hf = hasher(), const key_equal& __eql = key_equal());
   _LIBCPP_HIDE_FROM_ABI
@@ -1007,9 +999,7 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __table_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(unordered_map& __u) _NOEXCEPT_(__is_nothrow_swappable_v<__table>) {
-    __table_.swap(__u.__table_);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(unordered_map& __u) { __table_.swap(__u.__table_); }
 
   _LIBCPP_HIDE_FROM_ABI hasher hash_function() const { return __table_.hash_function().hash_function(); }
   _LIBCPP_HIDE_FROM_ABI key_equal key_eq() const { return __table_.key_eq().key_eq(); }
@@ -1161,8 +1151,7 @@ const _Tp& unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::at(const key_type& __
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x, unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+swap(unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x, unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __y) {
   __x.swap(__y);
 }
 
@@ -1242,7 +1231,7 @@ public:
   template <class _Key2, class _Tp2, class _Hash2, class _Pred2, class _Alloc2>
   friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
 
-  _LIBCPP_HIDE_FROM_ABI unordered_multimap() _NOEXCEPT_(is_nothrow_default_constructible<__table>::value) {}
+  _LIBCPP_HIDE_FROM_ABI unordered_multimap() {}
   explicit _LIBCPP_HIDE_FROM_ABI
   unordered_multimap(size_type __n, const hasher& __hf = hasher(), const key_equal& __eql = key_equal());
   _LIBCPP_HIDE_FROM_ABI
@@ -1317,9 +1306,7 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __table_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(unordered_multimap& __u) _NOEXCEPT_(__is_nothrow_swappable_v<__table>) {
-    __table_.swap(__u.__table_);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(unordered_multimap& __u) { __table_.swap(__u.__table_); }
 
   _LIBCPP_HIDE_FROM_ABI hasher hash_function() const { return __table_.hash_function().hash_function(); }
   _LIBCPP_HIDE_FROM_ABI key_equal key_eq() const { return __table_.key_eq().key_eq(); }
@@ -1426,9 +1413,8 @@ inline void unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIt
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-inline _LIBCPP_HIDE_FROM_ABI void
-swap(unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x, unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+inline _LIBCPP_HIDE_FROM_ABI void swap(unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
+                                       unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __y) {
   __x.swap(__y);
 }
 

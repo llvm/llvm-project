@@ -128,12 +128,11 @@ static StringRef getAsConstantStr(Value *V) {
 }
 
 static void diagnoseInvalidFormatString(const CallBase *CI) {
-  DiagnosticInfoUnsupported UnsupportedFormatStr(
+  CI->getContext().diagnose(DiagnosticInfoUnsupported(
       *CI->getParent()->getParent(),
       "printf format string must be a trivially resolved constant string "
       "global variable",
-      CI->getDebugLoc());
-  CI->getContext().diagnose(UnsupportedFormatStr);
+      CI->getDebugLoc()));
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {

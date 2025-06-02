@@ -23,11 +23,13 @@ body:             |
     liveins: $w0, $w1, $w2
 
     ; CHECK-LABEL: name: FMADDSrrr_fpr
-    ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:fpr32 = COPY $w2
-    ; CHECK: [[FMADDSrrr:%[0-9]+]]:fpr32 = nofpexcept FMADDSrrr [[COPY]], [[COPY1]], [[COPY2]]
-    ; CHECK: $w0 = COPY [[FMADDSrrr]]
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $w2
+    ; CHECK-NEXT: [[FMADDSrrr:%[0-9]+]]:fpr32 = nofpexcept FMADDSrrr [[COPY]], [[COPY1]], [[COPY2]], implicit $fpcr
+    ; CHECK-NEXT: $w0 = COPY [[FMADDSrrr]]
     %0(s32) = COPY $w0
     %1(s32) = COPY $w1
     %2(s32) = COPY $w2

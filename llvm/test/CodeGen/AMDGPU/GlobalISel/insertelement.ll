@@ -2498,21 +2498,19 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s1, 7, v18
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, v16, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v3, v17, s0
-; GFX11-NEXT:    v_cndmask_b32_e32 v5, v5, v17, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 3, v18
-; GFX11-NEXT:    v_cndmask_b32_e32 v4, v4, v16, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v4, v4, v16 :: v_dual_cndmask_b32 v5, v5, v17
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v18
 ; GFX11-NEXT:    v_cndmask_b32_e64 v14, v14, v16, s1
-; GFX11-NEXT:    v_cndmask_b32_e64 v15, v15, v17, s1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v6, v6, v16, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v7, v7, v17, s0
-; GFX11-NEXT:    v_cndmask_b32_e32 v9, v9, v17, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 5, v18
-; GFX11-NEXT:    v_cndmask_b32_e32 v8, v8, v16, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v8, v8, v16 :: v_dual_cndmask_b32 v9, v9, v17
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v18
+; GFX11-NEXT:    v_cndmask_b32_e64 v15, v15, v17, s1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v10, v10, v16, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v11, v11, v17, s0
-; GFX11-NEXT:    v_dual_cndmask_b32 v13, v13, v17 :: v_dual_cndmask_b32 v12, v12, v16
+; GFX11-NEXT:    v_dual_cndmask_b32 v12, v12, v16 :: v_dual_cndmask_b32 v13, v13, v17
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc

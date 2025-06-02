@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -52,38 +53,41 @@ class Value;
 /// Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
-bool isAllocationFn(const Value *V, const TargetLibraryInfo *TLI);
-bool isAllocationFn(const Value *V,
-                    function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
+LLVM_ABI bool isAllocationFn(const Value *V, const TargetLibraryInfo *TLI);
+LLVM_ABI bool
+isAllocationFn(const Value *V,
+               function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory via new.
-bool isNewLikeFn(const Value *V, const TargetLibraryInfo *TLI);
+LLVM_ABI bool isNewLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
-bool isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
+LLVM_ABI bool isMallocOrCallocLikeFn(const Value *V,
+                                     const TargetLibraryInfo *TLI);
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory (either malloc, calloc, or strdup like).
-bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
+LLVM_ABI bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
 /// Tests if a function is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
-bool isReallocLikeFn(const Function *F);
+LLVM_ABI bool isReallocLikeFn(const Function *F);
 
 /// If this is a call to a realloc function, return the reallocated operand.
-Value *getReallocatedOperand(const CallBase *CB);
+LLVM_ABI Value *getReallocatedOperand(const CallBase *CB);
 
 //===----------------------------------------------------------------------===//
 //  free Call Utility Functions.
 //
 
 /// isLibFreeFunction - Returns true if the function is a builtin free()
-bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
+LLVM_ABI bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
 
 /// If this if a call to a free function, return the freed operand.
-Value *getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);
+LLVM_ABI Value *getFreedOperand(const CallBase *CB,
+                                const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
@@ -98,20 +102,21 @@ Value *getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI);
 /// Note: *Removable* really does mean removable; it does not mean observable.
 /// A language (e.g. C++) can allow removing allocations without allowing
 /// insertion or speculative execution of allocation routines.
-bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
+LLVM_ABI bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
 
 /// Gets the alignment argument for an aligned_alloc-like function, using either
 /// built-in knowledge based on fuction names/signatures or allocalign
 /// attributes. Note: the Value returned may not indicate a valid alignment, per
 /// the definition of the allocalign attribute.
-Value *getAllocAlignment(const CallBase *V, const TargetLibraryInfo *TLI);
+LLVM_ABI Value *getAllocAlignment(const CallBase *V,
+                                  const TargetLibraryInfo *TLI);
 
 /// Return the size of the requested allocation. With a trivial mapper, this is
 /// similar to calling getObjectSize(..., Exact), but without looking through
 /// calls that return their argument. A mapper function can be used to replace
 /// one Value* (operand to the allocation) with another. This is useful when
 /// doing abstract interpretation.
-std::optional<APInt> getAllocSize(
+LLVM_ABI std::optional<APInt> getAllocSize(
     const CallBase *CB, const TargetLibraryInfo *TLI,
     function_ref<const Value *(const Value *)> Mapper = [](const Value *V) {
       return V;
@@ -120,15 +125,15 @@ std::optional<APInt> getAllocSize(
 /// If this is a call to an allocation function that initializes memory to a
 /// fixed value, return said value in the requested type.  Otherwise, return
 /// nullptr.
-Constant *getInitialValueOfAllocation(const Value *V,
-                                      const TargetLibraryInfo *TLI,
-                                      Type *Ty);
+LLVM_ABI Constant *getInitialValueOfAllocation(const Value *V,
+                                               const TargetLibraryInfo *TLI,
+                                               Type *Ty);
 
 /// If a function is part of an allocation family (e.g.
 /// malloc/realloc/calloc/free), return the identifier for its family
 /// of functions.
-std::optional<StringRef> getAllocationFamily(const Value *I,
-                                             const TargetLibraryInfo *TLI);
+LLVM_ABI std::optional<StringRef>
+getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
@@ -172,16 +177,19 @@ struct ObjectSizeOpts {
 /// WARNING: The object size returned is the allocation size.  This does not
 /// imply dereferenceability at site of use since the object may be freeed in
 /// between.
-bool getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
-                   const TargetLibraryInfo *TLI, ObjectSizeOpts Opts = {});
+LLVM_ABI bool getObjectSize(const Value *Ptr, uint64_t &Size,
+                            const DataLayout &DL, const TargetLibraryInfo *TLI,
+                            ObjectSizeOpts Opts = {});
 
 /// Try to turn a call to \@llvm.objectsize into an integer value of the given
 /// Type. Returns null on failure. If MustSucceed is true, this function will
 /// not return null, and may return conservative values governed by the second
 /// argument of the call to objectsize.
-Value *lowerObjectSizeCall(IntrinsicInst *ObjectSize, const DataLayout &DL,
-                           const TargetLibraryInfo *TLI, bool MustSucceed);
-Value *lowerObjectSizeCall(
+LLVM_ABI Value *lowerObjectSizeCall(IntrinsicInst *ObjectSize,
+                                    const DataLayout &DL,
+                                    const TargetLibraryInfo *TLI,
+                                    bool MustSucceed);
+LLVM_ABI Value *lowerObjectSizeCall(
     IntrinsicInst *ObjectSize, const DataLayout &DL,
     const TargetLibraryInfo *TLI, AAResults *AA, bool MustSucceed,
     SmallVectorImpl<Instruction *> *InsertedInstructions = nullptr);
@@ -264,27 +272,29 @@ class ObjectSizeOffsetVisitor
   static OffsetSpan unknown() { return OffsetSpan(); }
 
 public:
-  ObjectSizeOffsetVisitor(const DataLayout &DL, const TargetLibraryInfo *TLI,
-                          LLVMContext &Context, ObjectSizeOpts Options = {});
+  LLVM_ABI ObjectSizeOffsetVisitor(const DataLayout &DL,
+                                   const TargetLibraryInfo *TLI,
+                                   LLVMContext &Context,
+                                   ObjectSizeOpts Options = {});
 
-  SizeOffsetAPInt compute(Value *V);
+  LLVM_ABI SizeOffsetAPInt compute(Value *V);
 
   // These are "private", except they can't actually be made private. Only
   // compute() should be used by external users.
-  OffsetSpan visitAllocaInst(AllocaInst &I);
-  OffsetSpan visitArgument(Argument &A);
-  OffsetSpan visitCallBase(CallBase &CB);
-  OffsetSpan visitConstantPointerNull(ConstantPointerNull &);
-  OffsetSpan visitExtractElementInst(ExtractElementInst &I);
-  OffsetSpan visitExtractValueInst(ExtractValueInst &I);
-  OffsetSpan visitGlobalAlias(GlobalAlias &GA);
-  OffsetSpan visitGlobalVariable(GlobalVariable &GV);
-  OffsetSpan visitIntToPtrInst(IntToPtrInst &);
-  OffsetSpan visitLoadInst(LoadInst &I);
-  OffsetSpan visitPHINode(PHINode &);
-  OffsetSpan visitSelectInst(SelectInst &I);
-  OffsetSpan visitUndefValue(UndefValue &);
-  OffsetSpan visitInstruction(Instruction &I);
+  LLVM_ABI OffsetSpan visitAllocaInst(AllocaInst &I);
+  LLVM_ABI OffsetSpan visitArgument(Argument &A);
+  LLVM_ABI OffsetSpan visitCallBase(CallBase &CB);
+  LLVM_ABI OffsetSpan visitConstantPointerNull(ConstantPointerNull &);
+  LLVM_ABI OffsetSpan visitExtractElementInst(ExtractElementInst &I);
+  LLVM_ABI OffsetSpan visitExtractValueInst(ExtractValueInst &I);
+  LLVM_ABI OffsetSpan visitGlobalAlias(GlobalAlias &GA);
+  LLVM_ABI OffsetSpan visitGlobalVariable(GlobalVariable &GV);
+  LLVM_ABI OffsetSpan visitIntToPtrInst(IntToPtrInst &);
+  LLVM_ABI OffsetSpan visitLoadInst(LoadInst &I);
+  LLVM_ABI OffsetSpan visitPHINode(PHINode &);
+  LLVM_ABI OffsetSpan visitSelectInst(SelectInst &I);
+  LLVM_ABI OffsetSpan visitUndefValue(UndefValue &);
+  LLVM_ABI OffsetSpan visitInstruction(Instruction &I);
 
 private:
   OffsetSpan
@@ -304,7 +314,7 @@ struct SizeOffsetWeakTrackingVH;
 struct SizeOffsetValue : public SizeOffsetType<Value *, SizeOffsetValue> {
   SizeOffsetValue() : SizeOffsetType(nullptr, nullptr) {}
   SizeOffsetValue(Value *Size, Value *Offset) : SizeOffsetType(Size, Offset) {}
-  SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT);
+  LLVM_ABI SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT);
 
   static bool known(Value *V) { return V != nullptr; }
 };
@@ -345,24 +355,26 @@ class ObjectSizeOffsetEvaluator
   SizeOffsetValue compute_(Value *V);
 
 public:
-  ObjectSizeOffsetEvaluator(const DataLayout &DL, const TargetLibraryInfo *TLI,
-                            LLVMContext &Context, ObjectSizeOpts EvalOpts = {});
+  LLVM_ABI ObjectSizeOffsetEvaluator(const DataLayout &DL,
+                                     const TargetLibraryInfo *TLI,
+                                     LLVMContext &Context,
+                                     ObjectSizeOpts EvalOpts = {});
 
   static SizeOffsetValue unknown() { return SizeOffsetValue(); }
 
-  SizeOffsetValue compute(Value *V);
+  LLVM_ABI SizeOffsetValue compute(Value *V);
 
   // The individual instruction visitors should be treated as private.
-  SizeOffsetValue visitAllocaInst(AllocaInst &I);
-  SizeOffsetValue visitCallBase(CallBase &CB);
-  SizeOffsetValue visitExtractElementInst(ExtractElementInst &I);
-  SizeOffsetValue visitExtractValueInst(ExtractValueInst &I);
-  SizeOffsetValue visitGEPOperator(GEPOperator &GEP);
-  SizeOffsetValue visitIntToPtrInst(IntToPtrInst &);
-  SizeOffsetValue visitLoadInst(LoadInst &I);
-  SizeOffsetValue visitPHINode(PHINode &PHI);
-  SizeOffsetValue visitSelectInst(SelectInst &I);
-  SizeOffsetValue visitInstruction(Instruction &I);
+  LLVM_ABI SizeOffsetValue visitAllocaInst(AllocaInst &I);
+  LLVM_ABI SizeOffsetValue visitCallBase(CallBase &CB);
+  LLVM_ABI SizeOffsetValue visitExtractElementInst(ExtractElementInst &I);
+  LLVM_ABI SizeOffsetValue visitExtractValueInst(ExtractValueInst &I);
+  LLVM_ABI SizeOffsetValue visitGEPOperator(GEPOperator &GEP);
+  LLVM_ABI SizeOffsetValue visitIntToPtrInst(IntToPtrInst &);
+  LLVM_ABI SizeOffsetValue visitLoadInst(LoadInst &I);
+  LLVM_ABI SizeOffsetValue visitPHINode(PHINode &PHI);
+  LLVM_ABI SizeOffsetValue visitSelectInst(SelectInst &I);
+  LLVM_ABI SizeOffsetValue visitInstruction(Instruction &I);
 };
 
 } // end namespace llvm

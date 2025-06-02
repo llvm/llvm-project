@@ -1,17 +1,17 @@
 // RUN: mlir-opt %s -convert-vector-to-llvm="enable-amx" | mlir-opt | FileCheck %s
 
 // CHECK-LABEL: muli(
-// CHECK: amx.tilezero
-// CHECK: amx.tileloadd64
-// CHECK: amx.tileloadd64
-// CHECK: amx.tdpbuud
-// CHECK: amx.tilestored64
-// CHECK: amx.tdpbssd
-// CHECK: amx.tilestored64
-// CHECK: amx.tdpbusd
-// CHECK: amx.tilestored64
-// CHECK: amx.tdpbsud
-// CHECK: amx.tilestored64
+// CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tdpbuud.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tdpbssd.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tdpbusd.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tdpbsud.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
 func.func @muli(%arg0: memref<?x?xi8>, %arg1: memref<?x?xi32>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_zero : !amx.tile<16x64xi8>
@@ -29,11 +29,11 @@ func.func @muli(%arg0: memref<?x?xi8>, %arg1: memref<?x?xi32>) {
 }
 
 // CHECK-LABEL: mulbf16(
-// CHECK: amx.tilezero
-// CHECK: amx.tileloadd64
-// CHECK: amx.tileloadd64
-// CHECK: amx.tdpbf16ps
-// CHECK: amx.tilestored64
+// CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tdpbf16ps.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
 func.func @mulbf16(%arg0: memref<?x?xbf16>, %arg1: memref<?x?xf32>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_zero : !amx.tile<16x32xbf16>
@@ -45,11 +45,11 @@ func.func @mulbf16(%arg0: memref<?x?xbf16>, %arg1: memref<?x?xf32>) {
 }
 
 // CHECK-LABEL: mulfp16(
-// CHECK: amx.tilezero
-// CHECK: amx.tileloadd64
-// CHECK: amx.tileloadd64
-// CHECK: amx.tdpfp16ps
-// CHECK: amx.tilestored64
+// CHECK: llvm.call_intrinsic "llvm.x86.tilezero.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tdpfp16ps.internal"
+// CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"
 func.func @mulfp16(%arg0: memref<?x?xf16>, %arg1: memref<?x?xf32>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_zero : !amx.tile<16x32xf16>
@@ -62,21 +62,21 @@ func.func @mulfp16(%arg0: memref<?x?xf16>, %arg1: memref<?x?xf32>) {
 
 // CHECK-LABEL: strides(
 // CHECK: %[[CST_64_1:.+]] = llvm.mlir.constant(64 : i64) : i64
-// CHECK: "amx.tileloadd64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_64_1]]
+// CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_64_1]]
 // CHECK: %[[CST_128_1:.+]] = llvm.mlir.constant(128 : i64) : i64
-// CHECK: "amx.tileloadd64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_128_1]]
+// CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_128_1]]
 // CHECK: llvm.mlir.constant(2 : i64) : i64
 // CHECK: llvm.extractvalue %{{.+}}[4, 0]
 // CHECK: %[[STRIDE_1:.+]] = llvm.mul
-// CHECK: "amx.tileloadd64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[STRIDE_1]]
+// CHECK: llvm.call_intrinsic "llvm.x86.tileloadd64.internal"(%{{.+}}, %{{.+}}, %{{.+}}, %[[STRIDE_1]]
 // CHECK: %[[CST_64_2:.+]] = llvm.mlir.constant(64 : i64) : i64
-// CHECK: "amx.tilestored64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_64_2]]
+// CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_64_2]]
 // CHECK: %[[CST_128_2:.+]] = llvm.mlir.constant(128 : i64) : i64
-// CHECK: "amx.tilestored64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_128_2]]
+// CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"(%{{.+}}, %{{.+}}, %{{.+}}, %[[CST_128_2]]
 // CHECK: llvm.mlir.constant(2 : i64) : i64
 // CHECK: llvm.extractvalue %{{.+}}[4, 0]
 // CHECK: %[[STRIDE_2:.+]] = llvm.mul
-// CHECK: "amx.tilestored64"(%{{.+}}, %{{.+}}, %{{.+}}, %[[STRIDE_2]]
+// CHECK: llvm.call_intrinsic "llvm.x86.tilestored64.internal"(%{{.+}}, %{{.+}}, %{{.+}}, %[[STRIDE_2]]
 func.func @strides(%arg0: memref<16x32xbf16>, %arg1: memref<16x32xbf16, strided<[64, 1]>>, %arg2: memref<16x32xbf16, strided<[?, 1]>>) {
   %0 = arith.constant 0 : index
   %1 = amx.tile_load %arg0[%0, %0] : memref<16x32xbf16> into !amx.tile<16x32xbf16>

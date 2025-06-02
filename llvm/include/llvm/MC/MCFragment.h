@@ -50,7 +50,6 @@ public:
     FT_CVInlineLines,
     FT_CVDefRange,
     FT_PseudoProbe,
-    FT_Dummy
   };
 
 private:
@@ -109,13 +108,6 @@ public:
   bool hasInstructions() const { return HasInstructions; }
 
   void dump() const;
-};
-
-class MCDummyFragment : public MCFragment {
-public:
-  explicit MCDummyFragment() : MCFragment(FT_Dummy, false) {}
-
-  static bool classof(const MCFragment *F) { return F->getKind() == FT_Dummy; }
 };
 
 /// Interface implemented by fragments that contain encoded instructions and/or
@@ -301,6 +293,7 @@ class MCFillFragment : public MCFragment {
   uint64_t Value;
   /// The number of bytes to insert.
   const MCExpr &NumValues;
+  uint64_t Size = 0;
 
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
@@ -314,6 +307,8 @@ public:
   uint64_t getValue() const { return Value; }
   uint8_t getValueSize() const { return ValueSize; }
   const MCExpr &getNumValues() const { return NumValues; }
+  uint64_t getSize() const { return Size; }
+  void setSize(uint64_t Value) { Size = Value; }
 
   SMLoc getLoc() const { return Loc; }
 

@@ -74,8 +74,9 @@ public:
 
   /// Methods to support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Value *V) {
-    return V->getValueID() >= ConstantDataFirstVal &&
-           V->getValueID() <= ConstantDataLastVal;
+    static_assert(Value::ConstantDataFirstVal == 0,
+                  "V->getValueID() >= Value::ConstantDataFirstVal");
+    return V->getValueID() <= ConstantDataLastVal;
   }
 };
 
@@ -672,7 +673,7 @@ public:
   StringRef getAsCString() const {
     assert(isCString() && "Isn't a C string");
     StringRef Str = getAsString();
-    return Str.substr(0, Str.size() - 1);
+    return Str.drop_back();
   }
 
   /// Return the raw, underlying, bytes of this data. Note that this is an

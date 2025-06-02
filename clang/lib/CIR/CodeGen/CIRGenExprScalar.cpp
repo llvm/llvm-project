@@ -171,6 +171,28 @@ public:
     return emitLoadOfLValue(e);
   }
 
+  mlir::Value VisitShuffleVectorExpr(ShuffleVectorExpr *e) {
+    if (e->getNumSubExprs() == 2) {
+      // The undocumented form of __builtin_shufflevector.
+      mlir::Value inputVec = Visit(e->getExpr(0));
+      mlir::Value indexVec = Visit(e->getExpr(1));
+      return cgf.builder.create<cir::VecShuffleDynamicOp>(
+          cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
+    }
+
+    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
+                                   "ShuffleVectorExpr with indices");
+    return {};
+  }
+
+  mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *e) {
+    // __builtin_convertvector is an element-wise cast, and is implemented as a
+    // regular cast. The back end handles casts of vectors correctly.
+    return emitScalarConversion(Visit(e->getSrcExpr()),
+                                e->getSrcExpr()->getType(), e->getType(),
+                                e->getSourceRange().getBegin());
+  }
+
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
   mlir::Value VisitInitListExpr(InitListExpr *e);
@@ -263,7 +285,12 @@ public:
            "Obsolete code. Don't use mlir::IntegerType with CIR.");
 
     mlir::Type fullDstTy = dstTy;
-    assert(!cir::MissingFeatures::vectorType());
+    if (mlir::isa<cir::VectorType>(srcTy) &&
+        mlir::isa<cir::VectorType>(dstTy)) {
+      // Use the element types of the vectors to figure out the CastKind.
+      srcTy = mlir::dyn_cast<cir::VectorType>(srcTy).getElementType();
+      dstTy = mlir::dyn_cast<cir::VectorType>(dstTy).getElementType();
+    }
 
     std::optional<cir::CastKind> castKind;
 
@@ -786,12 +813,12 @@ public:
       }
     };
 
+    cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
     if (lhsTy->getAs<MemberPointerType>()) {
       assert(!cir::MissingFeatures::dataMemberType());
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
       mlir::Value lhs = cgf.emitScalarExpr(e->getLHS());
       mlir::Value rhs = cgf.emitScalarExpr(e->getRHS());
-      cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
       result = builder.createCompare(loc, kind, lhs, rhs);
     } else if (!lhsTy->isAnyComplexType() && !rhsTy->isAnyComplexType()) {
       BinOpInfo boInfo = emitBinOps(e);
@@ -799,9 +826,17 @@ public:
       mlir::Value rhs = boInfo.rhs;
 
       if (lhsTy->isVectorType()) {
-        assert(!cir::MissingFeatures::vectorType());
-        cgf.cgm.errorNYI(loc, "vector comparisons");
-        result = builder.getBool(false, loc);
+        if (!e->getType()->isVectorType()) {
+          // If AltiVec, the comparison results in a numeric type, so we use
+          // intrinsics comparing vectors and giving 0 or 1 as a result
+          cgf.cgm.errorNYI(loc, "AltiVec comparison");
+        } else {
+          // Other kinds of vectors. Element-wise comparison returning
+          // a vector.
+          result = builder.create<cir::VecCmpOp>(
+              cgf.getLoc(boInfo.loc), cgf.convertType(boInfo.fullType), kind,
+              boInfo.lhs, boInfo.rhs);
+        }
       } else if (boInfo.isFixedPointOp()) {
         assert(!cir::MissingFeatures::fixedPointType());
         cgf.cgm.errorNYI(loc, "fixed point comparisons");

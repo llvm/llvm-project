@@ -175,7 +175,7 @@ template <size_t Bits> struct DyadicFloat {
   LIBC_INLINE constexpr cpp::enable_if_t<
       cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
   generic_as() const {
-    using FPBits = FPBits<float16>;
+    using FPBits = FPBits<T>;
     using StorageType = typename FPBits::StorageType;
 
     constexpr int EXTRA_FRACTION_LEN = Bits - 1 - FPBits::FRACTION_LEN;

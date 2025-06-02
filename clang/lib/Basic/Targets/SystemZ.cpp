@@ -188,8 +188,8 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
     std::string Str("0x");
     unsigned int Librel = 0x40000000;
     Librel |= V.getMajor() << 24;
-    Librel |= (V.getMinor() ? V.getMinor().value() : 1) << 16;
-    Librel |= V.getSubminor() ? V.getSubminor().value() : 0;
+    Librel |= V.getMinor().value_or(1) << 16;
+    Librel |= V.getSubminor().value_or(0);
     Str += llvm::utohexstr(Librel);
 
     Builder.defineMacro("__TARGET_LIB__", Str.c_str());

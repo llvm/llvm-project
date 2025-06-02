@@ -72,6 +72,11 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
         std::holds_alternative<evaluate::ProcedureRef>(assignment->u)};
     if (isDefinedAssignment) {
       flags.set(DefinabilityFlag::AllowEventLockOrNotifyType);
+    } else if (const Symbol *
+        whole{evaluate::UnwrapWholeSymbolOrComponentDataRef(lhs)}) {
+      if (IsAllocatable(whole->GetUltimate())) {
+        flags.set(DefinabilityFlag::PotentialDeallocation);
+      }
     }
     if (auto whyNot{WhyNotDefinable(lhsLoc, scope, flags, lhs)}) {
       if (whyNot->IsFatal()) {

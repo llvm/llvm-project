@@ -622,7 +622,7 @@ public:
   /// This function will union lattice anchor to same equivalent class if the
   /// analysis can determine the lattice content of lattice anchor is
   /// necessarily identical under the corrensponding lattice type.
-  virtual void initializeEquivalentLatticeAnchor(Operation *top) { return; }
+  virtual void initializeEquivalentLatticeAnchor(Operation *top) {}
 
 protected:
   /// Create a dependency between the given analysis state and lattice anchor
@@ -707,7 +707,7 @@ template <typename AnalysisT, typename... Args>
 AnalysisT *DataFlowSolver::load(Args &&...args) {
   childAnalyses.emplace_back(new AnalysisT(*this, std::forward<Args>(args)...));
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  childAnalyses.back().get()->debugName = llvm::getTypeName<AnalysisT>();
+  childAnalyses.back()->debugName = llvm::getTypeName<AnalysisT>();
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
   return static_cast<AnalysisT *>(childAnalyses.back().get());
 }

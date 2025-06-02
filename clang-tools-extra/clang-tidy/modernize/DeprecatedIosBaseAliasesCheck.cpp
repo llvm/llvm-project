@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DeprecatedIosBaseAliasesCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <optional>
 

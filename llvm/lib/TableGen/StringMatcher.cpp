@@ -26,16 +26,13 @@ using namespace llvm;
 /// string pairs that is not shared across the whole set of strings.  All
 /// strings are assumed to have the same length.
 static unsigned
-FindFirstNonCommonLetter(const std::vector<const
-                              StringMatcher::StringPair*> &Matches) {
+FindFirstNonCommonLetter(ArrayRef<const StringMatcher::StringPair *> Matches) {
   assert(!Matches.empty());
-  for (unsigned i = 0, e = Matches[0]->first.size(); i != e; ++i) {
-    // Check to see if letter i is the same across the set.
-    char Letter = Matches[0]->first[i];
-
+  for (auto [Idx, Letter] : enumerate(Matches[0]->first)) {
+    // Check to see if `Letter` is the same across the set.
     for (const StringMatcher::StringPair *Match : Matches)
-      if (Match->first[i] != Letter)
-        return i;
+      if (Match->first[Idx] != Letter)
+        return Idx;
   }
 
   return Matches[0]->first.size();
@@ -47,8 +44,8 @@ FindFirstNonCommonLetter(const std::vector<const
 ///
 /// \return - True if control can leave the emitted code fragment.
 bool StringMatcher::EmitStringMatcherForChar(
-    const std::vector<const StringPair *> &Matches, unsigned CharNo,
-    unsigned IndentCount, bool IgnoreDuplicates) const {
+    ArrayRef<const StringPair *> Matches, unsigned CharNo, unsigned IndentCount,
+    bool IgnoreDuplicates) const {
   assert(!Matches.empty() && "Must have at least one string to match!");
   std::string Indent(IndentCount * 2 + 4, ' ');
 
@@ -110,14 +107,14 @@ bool StringMatcher::EmitStringMatcherForChar(
   OS << Indent << "switch (" << StrVariableName << "[" << CharNo << "]) {\n";
   OS << Indent << "default: break;\n";
 
-  for (const auto &LI : MatchesByLetter) {
+  for (const auto &[Letter, Matches] : MatchesByLetter) {
     // TODO: escape hard stuff (like \n) if we ever care about it.
-    OS << Indent << "case '" << LI.first << "':\t // " << LI.second.size()
+    OS << Indent << "case '" << Letter << "':\t // " << Matches.size()
        << " string";
-    if (LI.second.size() != 1)
+    if (Matches.size() != 1)
       OS << 's';
     OS << " to match.\n";
-    if (EmitStringMatcherForChar(LI.second, CharNo + 1, IndentCount + 1,
+    if (EmitStringMatcherForChar(Matches, CharNo + 1, IndentCount + 1,
                                  IgnoreDuplicates))
       OS << Indent << "  break;\n";
   }
@@ -143,11 +140,11 @@ void StringMatcher::Emit(unsigned Indent, bool IgnoreDuplicates) const {
   OS.indent(Indent*2+2) << "switch (" << StrVariableName << ".size()) {\n";
   OS.indent(Indent*2+2) << "default: break;\n";
 
-  for (const auto &LI : MatchesByLength) {
+  for (const auto &[Length, Matches] : MatchesByLength) {
     OS.indent(Indent * 2 + 2)
-        << "case " << LI.first << ":\t // " << LI.second.size() << " string"
-        << (LI.second.size() == 1 ? "" : "s") << " to match.\n";
-    if (EmitStringMatcherForChar(LI.second, 0, Indent, IgnoreDuplicates))
+        << "case " << Length << ":\t // " << Matches.size() << " string"
+        << (Matches.size() == 1 ? "" : "s") << " to match.\n";
+    if (EmitStringMatcherForChar(Matches, 0, Indent, IgnoreDuplicates))
       OS.indent(Indent*2+4) << "break;\n";
   }
 

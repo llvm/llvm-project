@@ -168,8 +168,8 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; CHECK-SD-LABEL: icmpasrne:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    csel w0, w1, w2, ge
+; CHECK-SD-NEXT:    cmn w0, #1
+; CHECK-SD-NEXT:    csel w0, w1, w2, gt
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: icmpasrne:

@@ -30,7 +30,8 @@ template <typename ConcreteModel, typename ConcreteOp>
 struct SparseBufferizableOpInterfaceExternalModel
     : public BufferizableOpInterface::ExternalModel<ConcreteModel, ConcreteOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     return op->emitError(
         "sparse_tensor ops must be bufferized with the sparsifier");
   }

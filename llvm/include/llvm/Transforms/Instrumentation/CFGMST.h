@@ -305,13 +305,13 @@ public:
     uint32_t Index = BBInfos.size();
     auto Iter = BBInfos.end();
     bool Inserted;
-    std::tie(Iter, Inserted) = BBInfos.insert(std::make_pair(Src, nullptr));
+    std::tie(Iter, Inserted) = BBInfos.try_emplace(Src);
     if (Inserted) {
       // Newly inserted, update the real info.
       Iter->second = std::make_unique<BBInfo>(Index);
       Index++;
     }
-    std::tie(Iter, Inserted) = BBInfos.insert(std::make_pair(Dest, nullptr));
+    std::tie(Iter, Inserted) = BBInfos.try_emplace(Dest);
     if (Inserted)
       // Newly inserted, update the real info.
       Iter->second = std::make_unique<BBInfo>(Index);

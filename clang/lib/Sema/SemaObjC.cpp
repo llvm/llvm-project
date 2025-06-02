@@ -2314,8 +2314,8 @@ bool SemaObjC::isSignedCharBool(QualType Ty) {
 }
 
 void SemaObjC::adornBoolConversionDiagWithTernaryFixit(
-    Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder) {
-  Expr *Ignored = SourceExpr->IgnoreImplicit();
+    const Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder) {
+  const Expr *Ignored = SourceExpr->IgnoreImplicit();
   if (const auto *OVE = dyn_cast<OpaqueValueExpr>(Ignored))
     Ignored = OVE->getSourceExpr();
   bool NeedsParens = isa<AbstractConditionalOperator>(Ignored) ||

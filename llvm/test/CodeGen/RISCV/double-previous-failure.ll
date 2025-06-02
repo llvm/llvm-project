@@ -51,15 +51,17 @@ define i32 @main() nounwind {
 ; RV32IZFINXZDINX-NEXT:    li a0, 0
 ; RV32IZFINXZDINX-NEXT:    call test
 ; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI1_0)
-; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI1_0+4)(a2)
-; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI1_0)(a2)
-; RV32IZFINXZDINX-NEXT:    flt.d a2, a0, a2
+; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI1_0)(a2)
+; RV32IZFINXZDINX-NEXT:    addi a2, a2, %lo(.LCPI1_0)
+; RV32IZFINXZDINX-NEXT:    lw a5, 4(a2)
+; RV32IZFINXZDINX-NEXT:    flt.d a2, a0, a4
 ; RV32IZFINXZDINX-NEXT:    bnez a2, .LBB1_3
 ; RV32IZFINXZDINX-NEXT:  # %bb.1: # %entry
 ; RV32IZFINXZDINX-NEXT:    lui a2, %hi(.LCPI1_1)
-; RV32IZFINXZDINX-NEXT:    lw a3, %lo(.LCPI1_1+4)(a2)
-; RV32IZFINXZDINX-NEXT:    lw a2, %lo(.LCPI1_1)(a2)
-; RV32IZFINXZDINX-NEXT:    flt.d a0, a2, a0
+; RV32IZFINXZDINX-NEXT:    lw a4, %lo(.LCPI1_1)(a2)
+; RV32IZFINXZDINX-NEXT:    addi a2, a2, %lo(.LCPI1_1)
+; RV32IZFINXZDINX-NEXT:    lw a5, 4(a2)
+; RV32IZFINXZDINX-NEXT:    flt.d a0, a4, a0
 ; RV32IZFINXZDINX-NEXT:    bnez a0, .LBB1_3
 ; RV32IZFINXZDINX-NEXT:  # %bb.2: # %if.end
 ; RV32IZFINXZDINX-NEXT:    call exit

@@ -27,6 +27,8 @@ public:
     AddSignalCode(16, 2, "SIG16 with a fault address",
                   SignalCodePrintOption::Address);
     AddSignalCode(16, 3, "bounds violation", SignalCodePrintOption::Bounds);
+    AddSignalCode(16, -6, "sent by tkill system call",
+                  SignalCodePrintOption::Sender);
   }
 };
 
@@ -124,6 +126,13 @@ TEST(UnixSignalsTest, GetAsString) {
   // No address given just print the code description.
   ASSERT_EQ("SIG16: SIG16 with a fault address",
             signals.GetSignalDescription(16, 2));
+  // TKill, but with no sender
+  ASSERT_EQ("SIG16: sent by tkill system call",
+            signals.GetSignalDescription(16, -6, 0xCAFEF00D));
+  // TKill, but with no sender
+  ASSERT_EQ("SIG16: sent by tkill system call (sender pid=912, uid=99)",
+            signals.GetSignalDescription(16, -6, 0xCAFEF00D, std::nullopt,
+                                         std::nullopt, 912, 99));
 
   const char *expected = "SIG16: bounds violation";
   // Must pass all needed info to get full output.

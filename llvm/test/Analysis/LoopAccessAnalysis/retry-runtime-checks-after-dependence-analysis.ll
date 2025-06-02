@@ -8,28 +8,28 @@ define void @dependency_check_and_runtime_checks_needed_gepb_is_inbounds_iv2_ste
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds float, ptr %b, i64 %iv2
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP1]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP2]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds float, ptr %b, i64 %iv2
-; CHECK-NEXT:        Against group ([[GRP3]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %b High: (-16 + (20 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,20}<%loop>
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
@@ -69,28 +69,28 @@ define void @dependency_check_and_runtime_checks_needed_gepb_not_inbounds_iv2_st
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.b = getelementptr i8, ptr %b, i64 %iv2
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP4]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP5]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.b = getelementptr i8, ptr %b, i64 %iv2
-; CHECK-NEXT:        Against group ([[GRP6]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %b High: (-1 + (5 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,5}<%loop>
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
@@ -131,28 +131,28 @@ define void @dependency_check_and_runtime_checks_needed_gepb_is_inbounds_iv2_ste
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv2
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP7]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP9:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP8]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv2
-; CHECK-NEXT:        Against group ([[GRP9]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %b High: (3 + %n + %b))
 ; CHECK-NEXT:            Member: {%b,+,1}<%loop>
-; CHECK-NEXT:        Group [[GRP9]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
@@ -197,28 +197,28 @@ define void @dependency_check_and_runtime_checks_needed_gepb_not_inbounds_iv2_st
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP10:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP11:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv2
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP10]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP12:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP11]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv2
-; CHECK-NEXT:        Against group ([[GRP12]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP11]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %b High: (3 + %n + %b))
 ; CHECK-NEXT:            Member: {%b,+,1}<%loop>
-; CHECK-NEXT:        Group [[GRP12]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
@@ -262,28 +262,28 @@ define void @dependency_check_and_runtime_checks_needed_gepb_may_wrap(ptr %a, pt
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP13:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP14:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.b = getelementptr float, ptr %b, i64 %iv2
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP13]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP15:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP14]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.b = getelementptr float, ptr %b, i64 %iv2
-; CHECK-NEXT:        Against group ([[GRP15]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP13]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP14]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %b High: (-4 + (8 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,8}<%loop>
-; CHECK-NEXT:        Group [[GRP15]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
@@ -333,13 +333,13 @@ define void @retry_after_dep_check_with_unknown_offset(ptr %A, i32 %offset) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP16:0x[0-9a-f]+]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
 ; CHECK-NEXT:            Member: %A
-; CHECK-NEXT:        Group [[GRP17:0x[0-9a-f]+]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (100 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A) High: (96 + (16 * (zext i32 %offset to i64))<nuw><nsw> + %A))
 ; CHECK-NEXT:            Member: {(100 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A),+,8}<%loop>
-; CHECK-NEXT:        Group [[GRP18:0x[0-9a-f]+]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: (100 + %A) High: (96 + (8 * (zext i32 %offset to i64))<nuw><nsw> + %A))
 ; CHECK-NEXT:            Member: {(100 + %A),+,8}<%loop>
 ; CHECK-EMPTY:

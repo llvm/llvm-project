@@ -90,7 +90,7 @@ static void debugHWLoopFailure(const StringRef DebugMsg,
 
 static OptimizationRemarkAnalysis
 createHWLoopAnalysis(StringRef RemarkName, Loop *L, Instruction *I) {
-  Value *CodeRegion = L->getHeader();
+  BasicBlock *CodeRegion = L->getHeader();
   DebugLoc DL = L->getStartLoc();
 
   if (I) {

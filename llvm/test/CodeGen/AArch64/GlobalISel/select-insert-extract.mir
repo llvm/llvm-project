@@ -11,14 +11,16 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: insert_gprx
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
-    ; CHECK: [[BFMXri:%[0-9]+]]:gpr64 = BFMXri [[DEF]], [[SUBREG_TO_REG]], 0, 31
-    ; CHECK: [[SUBREG_TO_REG1:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
-    ; CHECK: [[BFMXri1:%[0-9]+]]:gpr64 = BFMXri [[DEF]], [[SUBREG_TO_REG1]], 51, 31
-    ; CHECK: $x0 = COPY [[BFMXri]]
-    ; CHECK: $x1 = COPY [[BFMXri1]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
+    ; CHECK-NEXT: [[BFMXri:%[0-9]+]]:gpr64 = BFMXri [[DEF]], [[SUBREG_TO_REG]], 0, 31
+    ; CHECK-NEXT: [[SUBREG_TO_REG1:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.sub_32
+    ; CHECK-NEXT: [[BFMXri1:%[0-9]+]]:gpr64 = BFMXri [[DEF]], [[SUBREG_TO_REG1]], 51, 31
+    ; CHECK-NEXT: $x0 = COPY [[BFMXri]]
+    ; CHECK-NEXT: $x1 = COPY [[BFMXri1]]
     %0:gpr(s32) = COPY $w0
 
     %1:gpr(s64) = G_IMPLICIT_DEF
@@ -40,12 +42,14 @@ body:             |
   bb.0:
     liveins: $w0, $w1
     ; CHECK-LABEL: name: insert_gprw
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; CHECK: [[BFMWri:%[0-9]+]]:gpr32 = BFMWri [[DEF]], [[COPY]], 0, 15
-    ; CHECK: [[BFMWri1:%[0-9]+]]:gpr32 = BFMWri [[BFMWri]], [[COPY]], 16, 15
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32all = COPY [[BFMWri1]]
-    ; CHECK: $w0 = COPY [[COPY1]]
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[BFMWri:%[0-9]+]]:gpr32 = BFMWri [[DEF]], [[COPY]], 0, 15
+    ; CHECK-NEXT: [[BFMWri1:%[0-9]+]]:gpr32 = BFMWri [[BFMWri]], [[COPY]], 16, 15
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[BFMWri1]]
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     %1:gpr(s32) = COPY $w0
     %2:gpr(s32) = COPY $w1
     %3:gpr(s16) = G_TRUNC %1(s32)
@@ -67,13 +71,15 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: extract_gprs
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 0, 31
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[UBFMXri]].sub_32
-    ; CHECK: [[UBFMXri1:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 13, 44
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY [[UBFMXri1]].sub_32
-    ; CHECK: $w0 = COPY [[COPY1]]
-    ; CHECK: $w1 = COPY [[COPY2]]
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 0, 31
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[UBFMXri]].sub_32
+    ; CHECK-NEXT: [[UBFMXri1:%[0-9]+]]:gpr64 = UBFMXri [[COPY]], 13, 44
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY [[UBFMXri1]].sub_32
+    ; CHECK-NEXT: $w0 = COPY [[COPY1]]
+    ; CHECK-NEXT: $w1 = COPY [[COPY2]]
     %0:gpr(s64) = COPY $x0
 
     %1:gpr(s32) = G_EXTRACT %0, 0
@@ -94,15 +100,17 @@ body:             |
     liveins: $w0
 
     ; CHECK-LABEL: name: extract_gprw
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 0, 15
-    ; CHECK: [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 15, 30
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr32 = COPY [[UBFMWri]]
-    ; CHECK: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
-    ; CHECK: $h0 = COPY [[COPY2]]
-    ; CHECK: [[COPY3:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
-    ; CHECK: [[COPY4:%[0-9]+]]:fpr16 = COPY [[COPY3]].hsub
-    ; CHECK: $h1 = COPY [[COPY4]]
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[UBFMWri:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 0, 15
+    ; CHECK-NEXT: [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri [[COPY]], 15, 30
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY [[UBFMWri]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr16 = COPY [[COPY1]].hsub
+    ; CHECK-NEXT: $h0 = COPY [[COPY2]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:fpr16 = COPY [[COPY3]].hsub
+    ; CHECK-NEXT: $h1 = COPY [[COPY4]]
     %0:gpr(s32) = COPY $w0
 
     %1:gpr(s16) = G_EXTRACT %0, 0

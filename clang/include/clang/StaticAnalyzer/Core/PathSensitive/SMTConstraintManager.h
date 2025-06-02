@@ -301,8 +301,10 @@ public:
     llvm_unreachable("Unsupported expression to reason about!");
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dumps SMT formula
   LLVM_DUMP_METHOD void dump() const { Solver->dump(); }
+#endif
 
 protected:
   // Check whether a new model is satisfiable, and update the program state.

@@ -45,7 +45,7 @@ void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
 /// for-loop iterator.
 static void populateObjCForDestinationSet(
     ExplodedNodeSet &dstLocation, SValBuilder &svalBuilder,
-    const ObjCForCollectionStmt *S, const Stmt *elem, SVal elementV,
+    const ObjCForCollectionStmt *S, ConstCFGElementRef elem, SVal elementV,
     SymbolManager &SymMgr, const NodeBuilderContext *currBldrCtx,
     StmtNodeBuilder &Bldr, bool hasElements) {
 
@@ -66,8 +66,8 @@ static void populateObjCForDestinationSet(
 
         SVal V;
         if (hasElements) {
-          SymbolRef Sym = SymMgr.conjureSymbol(elem, LCtx, T,
-                                               currBldrCtx->blockCount());
+          SymbolRef Sym =
+              SymMgr.conjureSymbol(elem, LCtx, T, currBldrCtx->blockCount());
           V = svalBuilder.makeLoc(Sym);
         } else {
           V = svalBuilder.makeIntVal(0, T);
@@ -110,6 +110,7 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
 
   const Stmt *elem = S->getElement();
   const Stmt *collection = S->getCollection();
+  const ConstCFGElementRef &elemRef = getCFGElementRef();
   ProgramStateRef state = Pred->getState();
   SVal collectionV = state->getSVal(collection, Pred->getLocationContext());
 
@@ -132,11 +133,12 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
     StmtNodeBuilder Bldr(dstLocation, Tmp, *currBldrCtx);
 
     if (!isContainerNull)
-      populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S, elem,
-                                    elementV, SymMgr, currBldrCtx, Bldr,
+      populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S,
+                                    elemRef, elementV, SymMgr, currBldrCtx,
+                                    Bldr,
                                     /*hasElements=*/true);
 
-    populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S, elem,
+    populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S, elemRef,
                                   elementV, SymMgr, currBldrCtx, Bldr,
                                   /*hasElements=*/false);
 

@@ -12,9 +12,10 @@ body: |
 
     ; CHECK-LABEL: name: sextload
     ; CHECK: liveins: $x0
-    ; CHECK: %x0:_(p0) = COPY $x0
-    ; CHECK: %sextload:_(s32) = G_SEXTLOAD %x0(p0) :: (load (s16))
-    ; CHECK: $w0 = COPY %sextload(s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x0:_(p0) = COPY $x0
+    ; CHECK-NEXT: %sextload:_(s32) = G_SEXTLOAD %x0(p0) :: (load (s16))
+    ; CHECK-NEXT: $w0 = COPY %sextload(s32)
     %x0:_(p0) = COPY $x0
     %sextload:_(s32) = G_SEXTLOAD %x0:_(p0) :: (load (s16))
     %sext_inreg:_(s32) = G_SEXT_INREG %sextload:_(s32), 24
@@ -32,9 +33,10 @@ body: |
 
     ; CHECK-LABEL: name: assert_sext
     ; CHECK: liveins: $w0
-    ; CHECK: %w0:_(s32) = COPY $w0
-    ; CHECK: %assert_sext:_(s32) = G_ASSERT_SEXT %w0, 24
-    ; CHECK: $w0 = COPY %assert_sext(s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %w0:_(s32) = COPY $w0
+    ; CHECK-NEXT: %assert_sext:_(s32) = G_ASSERT_SEXT %w0, 24
+    ; CHECK-NEXT: $w0 = COPY %assert_sext(s32)
     %w0:_(s32) = COPY $w0
     %assert_sext:_(s32) = G_ASSERT_SEXT %w0, 24
     %sext_inreg:_(s32) = G_SEXT_INREG %assert_sext:_(s32), 24
@@ -52,10 +54,11 @@ body: |
 
     ; CHECK-LABEL: name: assert_sext_greater_width
     ; CHECK: liveins: $w0
-    ; CHECK: %w0:_(s32) = COPY $w0
-    ; CHECK: %assert_sext:_(s32) = G_ASSERT_SEXT %w0, 24
-    ; CHECK: %sext_inreg:_(s32) = G_SEXT_INREG %assert_sext, 12
-    ; CHECK: $w0 = COPY %sext_inreg(s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %w0:_(s32) = COPY $w0
+    ; CHECK-NEXT: %assert_sext:_(s32) = G_ASSERT_SEXT %w0, 24
+    ; CHECK-NEXT: %sext_inreg:_(s32) = G_SEXT_INREG %assert_sext, 12
+    ; CHECK-NEXT: $w0 = COPY %sext_inreg(s32)
     %w0:_(s32) = COPY $w0
     %assert_sext:_(s32) = G_ASSERT_SEXT %w0, 24
     %sext_inreg:_(s32) = G_SEXT_INREG %assert_sext:_(s32), 12
@@ -73,9 +76,10 @@ body: |
 
     ; CHECK-LABEL: name: assert_sext_smaller_width
     ; CHECK: liveins: $w0
-    ; CHECK: %w0:_(s32) = COPY $w0
-    ; CHECK: %assert_sext:_(s32) = G_ASSERT_SEXT %w0, 8
-    ; CHECK: $w0 = COPY %assert_sext(s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %w0:_(s32) = COPY $w0
+    ; CHECK-NEXT: %assert_sext:_(s32) = G_ASSERT_SEXT %w0, 8
+    ; CHECK-NEXT: $w0 = COPY %assert_sext(s32)
     %w0:_(s32) = COPY $w0
     %assert_sext:_(s32) = G_ASSERT_SEXT %w0, 8
     %sext_inreg:_(s32) = G_SEXT_INREG %assert_sext:_(s32), 12

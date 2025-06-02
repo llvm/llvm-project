@@ -29,10 +29,6 @@ define void @test() {
 ; SSE2:  LV: Found an estimated cost of 0 for VF 4 For instruction: %v1 = load i64, ptr %in1, align 8
 ; SSE2:  LV: Found an estimated cost of 0 for VF 4 For instruction: %v2 = load i64, ptr %in2, align 8
 ; SSE2:  LV: Found an estimated cost of 0 for VF 4 For instruction: %v3 = load i64, ptr %in3, align 8
-; SSE2:  LV: Found an estimated cost of 112 for VF 8 For instruction: %v0 = load i64, ptr %in0, align 8
-; SSE2:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v1 = load i64, ptr %in1, align 8
-; SSE2:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v2 = load i64, ptr %in2, align 8
-; SSE2:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v3 = load i64, ptr %in3, align 8
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i64, ptr %in0, align 8
@@ -55,10 +51,6 @@ define void @test() {
 ; AVX1:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v1 = load i64, ptr %in1, align 8
 ; AVX1:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v2 = load i64, ptr %in2, align 8
 ; AVX1:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v3 = load i64, ptr %in3, align 8
-; AVX1:  LV: Found an estimated cost of 176 for VF 16 For instruction: %v0 = load i64, ptr %in0, align 8
-; AVX1:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v1 = load i64, ptr %in1, align 8
-; AVX1:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v2 = load i64, ptr %in2, align 8
-; AVX1:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v3 = load i64, ptr %in3, align 8
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i64, ptr %in0, align 8
@@ -81,10 +73,10 @@ define void @test() {
 ; AVX2:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v1 = load i64, ptr %in1, align 8
 ; AVX2:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v2 = load i64, ptr %in2, align 8
 ; AVX2:  LV: Found an estimated cost of 0 for VF 8 For instruction: %v3 = load i64, ptr %in3, align 8
-; AVX2:  LV: Found an estimated cost of 56 for VF 16 For instruction: %v0 = load i64, ptr %in0, align 8
-; AVX2:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v1 = load i64, ptr %in1, align 8
-; AVX2:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v2 = load i64, ptr %in2, align 8
-; AVX2:  LV: Found an estimated cost of 0 for VF 16 For instruction: %v3 = load i64, ptr %in3, align 8
+; AVX2:  LV: Found an estimated cost of 72 for VF 32 For instruction: %v0 = load i64, ptr %in0, align 8
+; AVX2:  LV: Found an estimated cost of 72 for VF 32 For instruction: %v1 = load i64, ptr %in1, align 8
+; AVX2:  LV: Found an estimated cost of 72 for VF 32 For instruction: %v2 = load i64, ptr %in2, align 8
+; AVX2:  LV: Found an estimated cost of 72 for VF 32 For instruction: %v3 = load i64, ptr %in3, align 8
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load i64, ptr %in0, align 8

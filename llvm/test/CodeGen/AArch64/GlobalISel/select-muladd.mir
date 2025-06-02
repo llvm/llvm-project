@@ -26,11 +26,13 @@ body:             |
     liveins: $x0, $w1, $w2
 
     ; CHECK-LABEL: name: SMADDLrrr_gpr
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
-    ; CHECK: [[SMADDLrrr:%[0-9]+]]:gpr64 = SMADDLrrr [[COPY1]], [[COPY2]], [[COPY]]
-    ; CHECK: $x0 = COPY [[SMADDLrrr]]
+    ; CHECK: liveins: $x0, $w1, $w2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
+    ; CHECK-NEXT: [[SMADDLrrr:%[0-9]+]]:gpr64 = SMADDLrrr [[COPY1]], [[COPY2]], [[COPY]]
+    ; CHECK-NEXT: $x0 = COPY [[SMADDLrrr]]
     %0(s64) = COPY $x0
     %1(s32) = COPY $w1
     %2(s32) = COPY $w2

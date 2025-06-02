@@ -33,6 +33,7 @@ function at-exit {
   mkdir -p artifacts
   sccache --show-stats >> artifacts/sccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
+  cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
   # If building fails there will be no results files.
   shopt -s nullglob
@@ -41,7 +42,7 @@ function at-exit {
     python "${MONOREPO_ROOT}"/.ci/generate_test_report_buildkite.py ":windows: Windows x64 Test Results" \
       "windows-x64-test-results" $retcode "${BUILD_DIR}"/test-results.*.xml
   else
-    python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":windows: Windows x64 Test Results" \
+    python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":window: Windows x64 Test Results" \
       $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
   fi
 }

@@ -200,6 +200,15 @@ def parse_args():
         type=_non_negative_int,
     )
     execution_group.add_argument(
+        "--max-retries-per-test",
+        dest="maxRetriesPerTest",
+        metavar="N",
+        help="Maximum number of allowed retry attempts per test "
+        "(NOTE: The config.test_retry_attempts test suite option and "
+        "ALLOWED_RETRIES keyword always take precedence)",
+        type=_positive_int,
+    )
+    execution_group.add_argument(
         "--max-failures",
         help="Stop execution after the given number of failures.",
         type=_positive_int,

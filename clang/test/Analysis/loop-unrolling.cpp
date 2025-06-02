@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true -verify -std=c++14 -analyzer-config exploration_strategy=unexplored_first_queue %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true,exploration_strategy=dfs -verify -std=c++14 -DDFS=1 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true -verify=expected,default -std=c++14 -analyzer-config exploration_strategy=unexplored_first_queue %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config unroll-loops=true,cfg-loopexit=true,exploration_strategy=dfs -verify=expected,dfs -std=c++14 %s
 
 void clang_analyzer_numTimesReached();
 void clang_analyzer_warnIfReached();
@@ -337,6 +337,7 @@ int nested_both_unrolled() {
 }
 
 int simple_known_bound_loop() {
+  // Iteration count visible: can be unrolled and fully executed.
   for (int i = 2; i < 12; i++) {
     // This function is inlined in nested_inlined_unroll1()
     clang_analyzer_numTimesReached(); // expected-warning {{90}}
@@ -345,27 +346,42 @@ int simple_known_bound_loop() {
 }
 
 int simple_unknown_bound_loop() {
+  // Iteration count unknown: unrolling won't happen and the execution will be
+  // split two times:
+  // (1) split between skipped loop (immediate exit) and entering the loop
+  // (2) split between exit after 1 iteration and entering the second iteration
+  // After these there is no third state split because the "don't assume third
+  // iteration" logic in `ExprEngine::processBranch` prevents it; but the
+  // `legacy-inlining-prevention` logic will put this function onto the list of
+  // functions that may not be inlined in the future.
+  // The exploration strategy apparently influences the number of times this
+  // function can be inlined before it's placed on the "don't inline" list.
   for (int i = 2; i < getNum(); i++) {
-    clang_analyzer_numTimesReached(); // expected-warning {{8}}
+    clang_analyzer_numTimesReached(); // default-warning {{4}} dfs-warning {{8}}
   }
   return 0;
 }
 
 int nested_inlined_unroll1() {
+  // Here the analyzer can unroll and fully execute both the outer loop and the
+  // inner loop within simple_known_bound_loop().
   int k;
   for (int i = 0; i < 9; i++) {
     clang_analyzer_numTimesReached(); // expected-warning {{9}}
-    k = simple_known_bound_loop();    // no reevaluation without inlining
+    k = simple_known_bound_loop();
   }
   int a = 22 / k; // expected-warning {{Division by zero}}
   return 0;
 }
 
 int nested_inlined_no_unroll1() {
+  // Here no unrolling happens and we only run `analyzer-max-loop` (= 4)
+  // iterations of the loop within this function, but some state splits happen
+  // in `simple_unknown_bound_loop()` calls.
   int k;
-  for (int i = 0; i < 9; i++) {
-    clang_analyzer_numTimesReached(); // expected-warning {{10}}
-    k = simple_unknown_bound_loop();  // reevaluation without inlining, splits the state as well
+  for (int i = 0; i < 40; i++) {
+    clang_analyzer_numTimesReached(); // default-warning {{9}} dfs-warning {{12}}
+    k = simple_unknown_bound_loop(); 
   }
   int a = 22 / k; // no-warning
   return 0;

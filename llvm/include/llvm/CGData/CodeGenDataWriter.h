@@ -16,6 +16,7 @@
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/CGData/StableFunctionMapRecord.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 
@@ -45,7 +46,7 @@ public:
   // \c patch can only be called when all data is written and flushed.
   // For raw_string_ostream, the patch is done on the target string
   // directly and it won't be reflected in the stream's internal buffer.
-  void patch(ArrayRef<CGDataPatchItem> P);
+  LLVM_ABI void patch(ArrayRef<CGDataPatchItem> P);
 
   // If \c OS is an instance of \c raw_fd_ostream, this field will be
   // true. Otherwise, \c OS will be an raw_string_ostream.
@@ -69,16 +70,16 @@ public:
   ~CodeGenDataWriter() = default;
 
   /// Add the outlined hash tree record. The input hash tree is released.
-  void addRecord(OutlinedHashTreeRecord &Record);
+  LLVM_ABI void addRecord(OutlinedHashTreeRecord &Record);
 
   /// Add the stable function map record. The input function map is released.
-  void addRecord(StableFunctionMapRecord &Record);
+  LLVM_ABI void addRecord(StableFunctionMapRecord &Record);
 
   /// Write the codegen data to \c OS
-  Error write(raw_fd_ostream &OS);
+  LLVM_ABI Error write(raw_fd_ostream &OS);
 
   /// Write the codegen data in text format to \c OS
-  Error writeText(raw_fd_ostream &OS);
+  LLVM_ABI Error writeText(raw_fd_ostream &OS);
 
   /// Return the attributes of the current CGData.
   CGDataKind getCGDataKind() const { return DataKind; }

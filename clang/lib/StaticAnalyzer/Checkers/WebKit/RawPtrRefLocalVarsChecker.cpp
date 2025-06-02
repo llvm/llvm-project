@@ -356,7 +356,7 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    if (dyn_cast<ParmVarDecl>(V)) {
+    if (isa<ParmVarDecl>(V)) {
       Os << "Assignment to an " << ptrKind() << " parameter ";
       printQuotedQualifiedName(Os, V);
       Os << " is unsafe.";

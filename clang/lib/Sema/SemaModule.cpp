@@ -942,7 +942,7 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
   // HLSL: export declaration is valid only on functions
   if (S.getLangOpts().HLSL) {
     // Export-within-export was already diagnosed in ActOnStartExportDecl
-    if (!dyn_cast<FunctionDecl>(D) && !dyn_cast<ExportDecl>(D)) {
+    if (!isa<FunctionDecl, ExportDecl>(D)) {
       S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
       D->setInvalidDecl();
       return false;

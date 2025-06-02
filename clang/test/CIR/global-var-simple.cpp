@@ -68,7 +68,7 @@ __bf16 bf16;
 // CHECK: cir.global external @bf16 = #cir.fp<0.000000e+00> : !cir.bf16
 
 float f;
-// CHECK: cir.global external @f = #cir.fp<0.000000e+00>  : !cir.float
+// CHECK: cir.global external @f = #cir.fp<0.000000e+00> : !cir.float
 
 double d = 1.25;
 // CHECK: cir.global external @d = #cir.fp<1.250000e+00> : !cir.double

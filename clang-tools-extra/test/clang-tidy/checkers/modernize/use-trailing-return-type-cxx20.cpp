@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-trailing-return-type %t
+// RUN: %check_clang_tidy -std=c++20-or-later %s modernize-use-trailing-return-type %t
 
 namespace std {
 template <typename T, typename U>

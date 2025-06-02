@@ -267,6 +267,9 @@ protected:
 
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void gbump(int __n) { __ninp_ += __n; }
 
+  // gbump takes an int, so it might not be able to represent the offset we want to add.
+  _LIBCPP_HIDE_FROM_ABI void __gbump_ptrdiff(ptrdiff_t __n) { __ninp_ += __n; }
+
   inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void setg(char_type* __gbeg, char_type* __gnext, char_type* __gend) {
     _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__is_valid_range(__gbeg, __gnext), "[gbeg, gnext) must be a valid range");
     _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__is_valid_range(__gbeg, __gend), "[gbeg, gend) must be a valid range");
@@ -370,6 +373,10 @@ private:
   char_type* __bout_ = nullptr;
   char_type* __nout_ = nullptr;
   char_type* __eout_ = nullptr;
+
+  template <class _CharT2, class _Traits2, class _Allocator>
+  _LIBCPP_HIDE_FROM_ABI friend basic_istream<_CharT2, _Traits2>&
+  getline(basic_istream<_CharT2, _Traits2>&, basic_string<_CharT2, _Traits2, _Allocator>&, _CharT2);
 };
 
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_streambuf<char>;

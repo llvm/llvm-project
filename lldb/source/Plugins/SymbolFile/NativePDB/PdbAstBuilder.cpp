@@ -1449,6 +1449,6 @@ PdbAstBuilder::FromCompilerDeclContext(CompilerDeclContext context) {
   return static_cast<clang::DeclContext *>(context.GetOpaqueDeclContext());
 }
 
-void PdbAstBuilder::Dump(Stream &stream) {
-  m_clang.Dump(stream.AsRawOstream());
+void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter) {
+  m_clang.Dump(stream.AsRawOstream(), filter);
 }

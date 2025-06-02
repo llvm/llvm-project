@@ -17,7 +17,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -29,8 +28,6 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
-
-#include "Utility/ARM64_DWARF_Registers.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -342,48 +339,6 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   }
 
   return error;
-}
-
-UnwindPlanSP ABIMacOSX_arm64::CreateFunctionEntryUnwindPlan() {
-  uint32_t lr_reg_num = arm64_dwarf::lr;
-  uint32_t sp_reg_num = arm64_dwarf::sp;
-  uint32_t pc_reg_num = arm64_dwarf::pc;
-
-  UnwindPlan::Row row;
-
-  // Our previous Call Frame Address is the stack pointer
-  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
-
-  // Our previous PC is in the LR, all other registers are the same.
-  row.SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
-
-  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(std::move(row));
-  plan_sp->SetSourceName("arm64 at-func-entry default");
-  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  return plan_sp;
-}
-
-UnwindPlanSP ABIMacOSX_arm64::CreateDefaultUnwindPlan() {
-  uint32_t fp_reg_num = arm64_dwarf::fp;
-  uint32_t pc_reg_num = arm64_dwarf::pc;
-
-  UnwindPlan::Row row;
-  const int32_t ptr_size = 8;
-
-  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
-  row.SetUnspecifiedRegistersAreUndefined(true);
-
-  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
-
-  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(std::move(row));
-  plan_sp->SetSourceName("arm64-apple-darwin default unwind plan");
-  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return plan_sp;
 }
 
 // AAPCS64 (Procedure Call Standard for the ARM 64-bit Architecture) says

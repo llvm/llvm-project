@@ -122,14 +122,6 @@ int main(int argc, char **argv) {
 // CHECK-SAME:             ){{$}}
 
 // CHECK:      ![[INT:[0-9]+]] = !DIBasicType(name: "int"
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "bar"
-// CHECK: !DICompositeType(tag: DW_TAG_union_type, name: "baz"
-// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "B"
-// CHECK-NOT:              DIFlagFwdDecl
-// CHECK-SAME:             ){{$}}
-// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "_vptr$B",
-// CHECK-SAME:           DIFlagArtificial
 
 // CHECK: [[C:![0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C",
 // CHECK-NOT:                              DIFlagFwdDecl
@@ -145,6 +137,20 @@ int main(int argc, char **argv) {
 // CHECK-SAME:                     DIFlagStaticMember
 // CHECK: [[C_DTOR]] = !DISubprogram(name: "~C"
 
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "K"
+// CHECK-SAME:             identifier: "_ZTS1K"
+// CHECK-SAME:             ){{$}}
+
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "B"
+// CHECK-NOT:              DIFlagFwdDecl
+// CHECK-SAME:             ){{$}}
+// CHECK: !DIDerivedType(tag: DW_TAG_member, name: "_vptr$B",
+// CHECK-SAME:           DIFlagArtificial
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
+// CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "bar"
+// CHECK: !DICompositeType(tag: DW_TAG_union_type, name: "baz"
+
 // CHECK: [[D:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "D"
 // CHECK-SAME:             size:
 // CHECK-SAME:             DIFlagFwdDecl
@@ -154,10 +160,6 @@ int main(int argc, char **argv) {
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "E"
 // CHECK-SAME:             DIFlagFwdDecl
 // CHECK-NOT:              identifier:
-// CHECK-SAME:             ){{$}}
-
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "K"
-// CHECK-SAME:             identifier: "_ZTS1K"
 // CHECK-SAME:             ){{$}}
 
 // CHECK: [[L:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "L"

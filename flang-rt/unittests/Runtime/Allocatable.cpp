@@ -26,7 +26,7 @@ TEST(AllocatableTest, MoveAlloc) {
   auto b{createAllocatable(TypeCategory::Integer, 4)};
   // ALLOCATE(a(20))
   a->GetDimension(0).SetBounds(1, 20);
-  a->Allocate(kNoAsyncId);
+  a->Allocate(kNoAsyncObject);
 
   EXPECT_TRUE(a->IsAllocated());
   EXPECT_FALSE(b->IsAllocated());
@@ -46,7 +46,7 @@ TEST(AllocatableTest, MoveAlloc) {
   // move_alloc with errMsg
   auto errMsg{Descriptor::Create(
       sizeof(char), 64, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-  errMsg->Allocate(kNoAsyncId);
+  errMsg->Allocate(kNoAsyncObject);
   RTNAME(MoveAlloc)(*b, *a, nullptr, false, errMsg.get(), __FILE__, __LINE__);
   EXPECT_FALSE(a->IsAllocated());
   EXPECT_TRUE(b->IsAllocated());

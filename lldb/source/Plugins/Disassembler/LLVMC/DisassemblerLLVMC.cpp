@@ -818,7 +818,7 @@ public:
             return std::make_pair(ret, osi);
           }
         case 'x':
-          if (!str.compare("0")) {
+          if (str == "0") {
             is_hex = true;
             str.push_back(*osi);
           } else {

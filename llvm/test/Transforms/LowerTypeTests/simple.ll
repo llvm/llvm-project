@@ -50,9 +50,7 @@ define i1 @foo(ptr %p) {
 
   ; CHECK: [[R1:%[^ ]*]] = ptrtoint ptr %p to i32
   ; CHECK: [[R2:%[^ ]*]] = sub i32 [[R1]], ptrtoint (ptr [[G]] to i32)
-  ; CHECK: [[R3:%[^ ]*]] = lshr i32 [[R2]], 2
-  ; CHECK: [[R4:%[^ ]*]] = shl i32 [[R2]], 30
-  ; CHECK: [[R5:%[^ ]*]] = or i32 [[R3]], [[R4]]
+  ; CHECK: [[R5:%[^ ]*]] = call i32 @llvm.fshr.i32(i32 [[R2]], i32 [[R2]], i32 2)
   ; CHECK: [[R6:%[^ ]*]] = icmp ule i32 [[R5]], 67
   ; CHECK: br i1 [[R6]]
 
@@ -75,9 +73,7 @@ define i1 @foo(ptr %p) {
 define i1 @bar(ptr %p) {
   ; CHECK: [[S1:%[^ ]*]] = ptrtoint ptr %p to i32
   ; CHECK: [[S2:%[^ ]*]] = sub i32 [[S1]], ptrtoint (ptr getelementptr (i8, ptr [[G]], i32 4) to i32)
-  ; CHECK: [[S3:%[^ ]*]] = lshr i32 [[S2]], 8
-  ; CHECK: [[S4:%[^ ]*]] = shl i32 [[S2]], 24
-  ; CHECK: [[S5:%[^ ]*]] = or i32 [[S3]], [[S4]]
+  ; CHECK: [[S5:%[^ ]*]] = call i32 @llvm.fshr.i32(i32 [[S2]], i32 [[S2]], i32 8)
   ; CHECK: [[S6:%[^ ]*]] = icmp ule i32 [[S5]], 1
   %x = call i1 @llvm.type.test(ptr %p, metadata !"typeid2")
 
@@ -89,9 +85,7 @@ define i1 @bar(ptr %p) {
 define i1 @baz(ptr %p) {
   ; CHECK: [[T1:%[^ ]*]] = ptrtoint ptr %p to i32
   ; CHECK: [[T2:%[^ ]*]] = sub i32 [[T1]], ptrtoint (ptr [[G]] to i32)
-  ; CHECK: [[T3:%[^ ]*]] = lshr i32 [[T2]], 2
-  ; CHECK: [[T4:%[^ ]*]] = shl i32 [[T2]], 30
-  ; CHECK: [[T5:%[^ ]*]] = or i32 [[T3]], [[T4]]
+  ; CHECK: [[T5:%[^ ]*]] = call i32 @llvm.fshr.i32(i32 [[T2]], i32 [[T2]], i32 2)
   ; CHECK: [[T6:%[^ ]*]] = icmp ule i32 [[T5]], 65
   ; CHECK: br i1 [[T6]]
 

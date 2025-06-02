@@ -19,9 +19,8 @@ namespace {
 
 StringRef removeFirstSuffix(StringRef Str, ArrayRef<const char *> Suffixes) {
   for (StringRef Suffix : Suffixes) {
-    if (Str.ends_with(Suffix)) {
-      return Str.substr(0, Str.size() - Suffix.size());
-    }
+    if (Str.consume_back(Suffix))
+      return Str;
   }
   return Str;
 }

@@ -10,8 +10,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallVector.h"
 
 using namespace clang::ast_matchers;
 

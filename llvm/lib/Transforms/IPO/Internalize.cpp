@@ -19,7 +19,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Internalize.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/CallGraph.h"

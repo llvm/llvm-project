@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_MACHINEVERIFIER_H
 
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {
@@ -19,8 +20,8 @@ class MachineVerifierPass : public PassInfoMixin<MachineVerifierPass> {
 public:
   MachineVerifierPass(const std::string &Banner = std::string())
       : Banner(Banner) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
 };
 

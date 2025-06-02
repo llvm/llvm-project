@@ -11,6 +11,7 @@ unittest("VectorizeTests") {
   sources = [
     "VPDomTreeTest.cpp",
     "VPlanHCFGTest.cpp",
+    "VPlanPatternMatchTest.cpp",
     "VPlanSlpTest.cpp",
     "VPlanTest.cpp",
     "VPlanVerifierTest.cpp",

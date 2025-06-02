@@ -294,7 +294,7 @@ bool WebAssemblyTTIImpl::isProfitableToSinkOperands(
 
   Value *V = I->getOperand(1);
   // We dont need to sink constant splat.
-  if (dyn_cast<Constant>(V))
+  if (isa<Constant>(V))
     return false;
 
   if (match(V, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),

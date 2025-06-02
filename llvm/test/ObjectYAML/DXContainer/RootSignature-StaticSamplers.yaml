@@ -1,0 +1,63 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 60 ]
+Parts:
+  - Name:            RTS0
+    Size:            76
+    RootSignature:
+      Version: 2
+      NumRootParameters: 0
+      RootParametersOffset: 0
+      NumStaticSamplers: 1
+      StaticSamplersOffset: 24
+      Parameters: []
+      Samplers: 
+        - Filter: 10 
+          AddressU: 1
+          AddressV: 2
+          AddressW: 5
+          MipLODBias: 1.23
+          MaxAnisotropy: 20
+          ComparisonFunc: 4
+          BorderColor: 0
+          MinLOD: 4.56
+          MaxLOD: 8.90
+          ShaderRegister: 31 
+          RegisterSpace: 32
+          ShaderVisibility:  7
+      AllowInputAssemblerInputLayout: true
+      DenyGeometryShaderRootAccess: true
+
+#CHECK:  - Name:            RTS0
+#CHECK-NEXT:    Size:            76
+#CHECK-NEXT:    RootSignature:
+#CHECK-NEXT:      Version:         2
+#CHECK-NEXT:      NumRootParameters: 0
+#CHECK-NEXT:      RootParametersOffset: 0
+#CHECK-NEXT:      NumStaticSamplers: 1
+#CHECK-NEXT:      StaticSamplersOffset: 24
+#CHECK-NEXT:      Parameters:      []
+#CHECK-NEXT:      Samplers:
+#CHECK-NEXT:        - Filter:          10
+#CHECK-NEXT:          AddressU:        1
+#CHECK-NEXT:          AddressV:        2
+#CHECK-NEXT:          AddressW:        5
+#CHECK-NEXT:          MipLODBias:      1.23
+#CHECK-NEXT:          MaxAnisotropy:   20
+#CHECK-NEXT:          ComparisonFunc:  4
+#CHECK-NEXT:          BorderColor:     0
+#CHECK-NEXT:          MinLOD:          4.56
+#CHECK-NEXT:          MaxLOD:          8.9
+#CHECK-NEXT:          ShaderRegister:  31
+#CHECK-NEXT:          RegisterSpace:   32
+#CHECK-NEXT:          ShaderVisibility: 7
+#CHECK-NEXT:      AllowInputAssemblerInputLayout: true
+#CHECK-NEXT:      DenyGeometryShaderRootAccess: true

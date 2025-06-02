@@ -18,8 +18,6 @@
 #include "TestRunner.h"
 #include "Utils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/ModuleSummaryAnalysis.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -31,7 +29,6 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/WithColor.h"
-#include <fstream>
 
 using namespace llvm;
 

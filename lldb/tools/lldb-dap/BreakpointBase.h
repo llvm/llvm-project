@@ -10,7 +10,8 @@
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINTBASE_H
 
 #include "DAPForward.h"
-#include "llvm/ADT/StringRef.h"
+#include "Protocol/ProtocolTypes.h"
+#include <optional>
 #include <string>
 
 namespace lldb_dap {
@@ -18,12 +19,13 @@ namespace lldb_dap {
 class BreakpointBase {
 public:
   explicit BreakpointBase(DAP &d) : m_dap(d) {}
-  BreakpointBase(DAP &d, const llvm::json::Object &obj);
+  BreakpointBase(DAP &d, const std::optional<std::string> &condition,
+                 const std::optional<std::string> &hit_condition);
   virtual ~BreakpointBase() = default;
 
   virtual void SetCondition() = 0;
   virtual void SetHitCondition() = 0;
-  virtual void CreateJsonObject(llvm::json::Object &object) = 0;
+  virtual protocol::Breakpoint ToProtocolBreakpoint() = 0;
 
   void UpdateBreakpoint(const BreakpointBase &request_bp);
 

@@ -86,8 +86,8 @@ mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRLinalgTransforms
   MLIRPtrDialect
   MLIRLLVMDialect
+  MLIRNVVMDialect
   MLIRPass
-  MLIRPolynomialDialect
   MLIRReduce
   MLIRTensorDialect
   MLIRTransformUtils

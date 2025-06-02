@@ -15,7 +15,7 @@ class IOHandlerCompletionTest(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_resize(self):
         # Start with a small window
         self.launch(dimensions=(10, 10))

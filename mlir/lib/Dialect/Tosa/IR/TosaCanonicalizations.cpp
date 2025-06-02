@@ -399,7 +399,7 @@ struct TransposeIsReshape : public OpRewritePattern<tosa::TransposeOp> {
 
     Value result = op.getResult();
     for (Operation *subop : result.getUsers()) {
-      if (dyn_cast_or_null<tosa::TransposeOp>(subop))
+      if (isa_and_nonnull<tosa::TransposeOp>(subop))
         return rewriter.notifyMatchFailure(
             op, "Dest is used by transpose, can compose transposes");
     }

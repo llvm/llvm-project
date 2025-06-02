@@ -107,8 +107,8 @@ void RISCVPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
-  AU.addRequired<GISelValueTrackingAnalysis>();
-  AU.addPreserved<GISelValueTrackingAnalysis>();
+  AU.addRequired<GISelValueTrackingAnalysisLegacy>();
+  AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
@@ -123,12 +123,9 @@ RISCVPostLegalizerCombiner::RISCVPostLegalizerCombiner()
 }
 
 bool RISCVPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
-  assert(MF.getProperties().hasProperty(
-             MachineFunctionProperties::Property::Legalized) &&
-         "Expected a legalized function?");
+  assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
   bool EnableOpt =
@@ -137,7 +134,8 @@ bool RISCVPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   const auto *LI = ST.getLegalizerInfo();
 
-  GISelValueTracking *VT = &getAnalysis<GISelValueTrackingAnalysis>().get(MF);
+  GISelValueTracking *VT =
+      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   GISelCSEAnalysisWrapper &Wrapper =
@@ -157,7 +155,7 @@ INITIALIZE_PASS_BEGIN(RISCVPostLegalizerCombiner, DEBUG_TYPE,
                       "Combine RISC-V MachineInstrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysis)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(RISCVPostLegalizerCombiner, DEBUG_TYPE,
                     "Combine RISC-V MachineInstrs after legalization", false,
                     false)

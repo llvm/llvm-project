@@ -42,8 +42,8 @@ public:
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
 
-  virtual void RenderExtraToolArgs(const JobAction &JA,
-                                   llvm::opt::ArgStringList &CmdArgs) const;
+  void RenderExtraToolArgs(const JobAction &JA,
+                           llvm::opt::ArgStringList &CmdArgs) const;
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,

@@ -199,6 +199,7 @@ multiclass SCR3_Unsupported :
 
 multiclass SCR4_SCR5_Unsupported :
   SCR_Unsupported,
+  UnsupportedSchedQ,
   UnsupportedSchedZfhmin;
 
 // Bypasses (none)

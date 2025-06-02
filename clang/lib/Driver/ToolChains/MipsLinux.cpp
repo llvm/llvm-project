@@ -8,9 +8,7 @@
 
 #include "MipsLinux.h"
 #include "Arch/Mips.h"
-#include "CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"

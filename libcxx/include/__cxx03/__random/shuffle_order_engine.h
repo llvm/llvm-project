@@ -31,22 +31,22 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <uint64_t _Xp, uint64_t _Yp>
 struct __ugcd {
-  static _LIBCPP_CONSTEXPR const uint64_t value = __ugcd<_Yp, _Xp % _Yp>::value;
+  static const uint64_t value = __ugcd<_Yp, _Xp % _Yp>::value;
 };
 
 template <uint64_t _Xp>
 struct __ugcd<_Xp, 0> {
-  static _LIBCPP_CONSTEXPR const uint64_t value = _Xp;
+  static const uint64_t value = _Xp;
 };
 
 template <uint64_t _Np, uint64_t _Dp>
 class __uratio {
   static_assert(_Dp != 0, "__uratio divide by 0");
-  static _LIBCPP_CONSTEXPR const uint64_t __gcd = __ugcd<_Np, _Dp>::value;
+  static const uint64_t __gcd = __ugcd<_Np, _Dp>::value;
 
 public:
-  static _LIBCPP_CONSTEXPR const uint64_t num = _Np / __gcd;
-  static _LIBCPP_CONSTEXPR const uint64_t den = _Dp / __gcd;
+  static const uint64_t num = _Np / __gcd;
+  static const uint64_t den = _Dp / __gcd;
 
   typedef __uratio<num, den> type;
 };
@@ -66,15 +66,15 @@ private:
 
 public:
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const size_t table_size = __k;
+  static const size_t table_size = __k;
 
   static const result_type _Min = _Engine::_Min;
   static const result_type _Max = _Engine::_Max;
   static_assert(_Min < _Max, "shuffle_order_engine invalid parameters");
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  _LIBCPP_HIDE_FROM_ABI static result_type min() { return _Min; }
+  _LIBCPP_HIDE_FROM_ABI static result_type max() { return _Max; }
 
-  static _LIBCPP_CONSTEXPR const unsigned long long _Rp = _Max - _Min + 1ull;
+  static const unsigned long long _Rp = _Max - _Min + 1ull;
 
   // constructors and seeding functions
   _LIBCPP_HIDE_FROM_ABI shuffle_order_engine() { __init(); }
@@ -166,7 +166,7 @@ private:
 };
 
 template <class _Engine, size_t __k>
-_LIBCPP_CONSTEXPR const size_t shuffle_order_engine<_Engine, __k>::table_size;
+const size_t shuffle_order_engine<_Engine, __k>::table_size;
 
 template <class _Eng, size_t _Kp>
 _LIBCPP_HIDE_FROM_ABI bool

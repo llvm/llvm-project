@@ -10,8 +10,8 @@ define i32 @test_addr_mode_i64(ptr %x) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_addr_mode_i64_param_0];
-; CHECK-NEXT:    ld.u32 %r1, [%rd1+-4];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_addr_mode_i64_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1+-4];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %addr = getelementptr i32, ptr %x, i64 -1
@@ -26,8 +26,8 @@ define i32 @test_addr_mode_i32(ptr %x) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_addr_mode_i32_param_0];
-; CHECK-NEXT:    ld.u32 %r1, [%rd1+-4];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_addr_mode_i32_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1+-4];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %addr = getelementptr i32, ptr %x, i32 -1
@@ -42,8 +42,8 @@ define i32 @test_addr_mode_i16(ptr %x) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_addr_mode_i16_param_0];
-; CHECK-NEXT:    ld.u32 %r1, [%rd1+-4];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_addr_mode_i16_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1+-4];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %addr = getelementptr i32, ptr %x, i16 -1
@@ -58,8 +58,8 @@ define i32 @test_addr_mode_i8(ptr %x) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_addr_mode_i8_param_0];
-; CHECK-NEXT:    ld.u32 %r1, [%rd1+-4];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_addr_mode_i8_param_0];
+; CHECK-NEXT:    ld.b32 %r1, [%rd1+-4];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %addr = getelementptr i32, ptr %x, i8 -1
@@ -74,9 +74,9 @@ define i32 @test_addr_mode_i64_large(ptr %x) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_addr_mode_i64_large_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_addr_mode_i64_large_param_0];
 ; CHECK-NEXT:    add.s64 %rd2, %rd1, 17179869172;
-; CHECK-NEXT:    ld.u32 %r1, [%rd2];
+; CHECK-NEXT:    ld.b32 %r1, [%rd2];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %addr = getelementptr i32, ptr %x, i64 4294967293

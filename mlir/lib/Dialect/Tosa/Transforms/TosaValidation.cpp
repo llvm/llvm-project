@@ -463,7 +463,6 @@ private:
 
     depth++;
     getMaxNestedDepth(op, depth);
-    return;
   }
 
   bool levelCheckMaxNesting(Operation *op) {
@@ -758,6 +757,10 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return success();
   }
 
+  // check rank and sizes early so later checks can assume shaped operands
+  if (!levelCheckRanksAndSizes(op))
+    return failure();
+
   // additional level checks from spec 0.70
   if (!levelCheckPool<tosa::AvgPool2dOp>(op) ||
       !levelCheckConv<tosa::Conv2DOp>(op) ||
@@ -767,10 +770,6 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
       !levelCheckPool<tosa::MaxPool2dOp>(op) ||
       !levelCheckFFT<tosa::RFFT2dOp>(op) || !levelCheckTransposeConv2d(op) ||
       !levelCheckResize(op)) {
-    return failure();
-  }
-
-  if (!levelCheckRanksAndSizes(op)) {
     return failure();
   }
 
@@ -1168,10 +1167,61 @@ bool checkErrorIfPad(Operation *op) {
   return true;
 }
 
+// Returns true if the operation takes no input operands, excluding attributes.
+static bool isNullaryOperation(Operation *op) {
+  if (isa<tosa::ConstOp>(op) || isa<tosa::ConstShapeOp>(op) ||
+      isa<tosa::YieldOp>(op) || isa<tosa::VariableOp>(op))
+    return true;
+  return false;
+}
+
+bool checkErrorIfCondIf(Operation *op) {
+  auto ifOp = dyn_cast<tosa::IfOp>(op);
+  if (!ifOp)
+    return true;
+
+  // Whether the types and shapes of operands between the input/output list and
+  // internal regions are validated by the operation verifier. However, with
+  // support for the simplified form - where redundant operand notations are
+  // omitted - is not conformant to the specification. According to the
+  // specification, all operands passed into an operation must be explicitly
+  // declared at each operation's structure. This code section verify that the
+  // operation's form complies with this requirement.
+
+  // Returns true if the region uses no external input operands.
+  auto isNullaryRegion = [](Region &region) -> bool {
+    bool noLiveInValue = true;
+    region.walk([&noLiveInValue](Operation *op) {
+      if (!isNullaryOperation(op)) {
+        noLiveInValue = false;
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
+    });
+    return noLiveInValue;
+  };
+
+  mlir::Region &thenGraph = ifOp.getThenGraph();
+  mlir::Region &elseGraph = ifOp.getElseGraph();
+  bool isThenGraphNullaryRegion = isNullaryRegion(thenGraph);
+  bool isElseGraphNullaryRegion = isNullaryRegion(elseGraph);
+  bool isInputListEmpty = ifOp.getInputList().size() == 0;
+
+  if ((isInputListEmpty != isThenGraphNullaryRegion) ||
+      (isInputListEmpty != isElseGraphNullaryRegion)) {
+    op->emitOpError()
+        << "the current simplified form is not strictly conformant to the "
+           "spec, please use the generic format\n";
+    return false;
+  }
+
+  return true;
+}
+
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (!checkErrorIfResize(op) || !checkErrorIfMul(op) ||
       !checkErrorIfTable(op) || !checkErrorIfRescale(op) ||
-      !checkErrorIfPad(op))
+      !checkErrorIfPad(op) || !checkErrorIfCondIf(op))
     return failure();
   return success();
 }
@@ -1248,10 +1298,8 @@ void TosaValidation::runOnOperation() {
       return signalPassFailure();
 
     if (!allowInvalidOpDatatypeCombinations &&
-        failed(profileComp.checkInvalid(op))) {
-      op->emitOpError("illegal: operand/result data types not supported");
+        failed(profileComp.checkInvalid(op)))
       return signalPassFailure();
-    }
 
     // Some uses of TOSA rely on the constant operands of particular
     // operations.

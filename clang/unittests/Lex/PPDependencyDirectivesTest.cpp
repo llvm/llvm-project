@@ -32,7 +32,7 @@ class PPDependencyDirectivesTest : public ::testing::Test {
 protected:
   PPDependencyDirectivesTest()
       : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-macos12";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
@@ -41,6 +41,7 @@ protected:
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;

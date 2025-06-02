@@ -42,10 +42,10 @@ int main()
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // master thread implicit barrier at parallel end
-  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_barrier_implicit_parallel_begin: parallel_id=0, task_id=[[TASK_ID:[0-9]+]], codeptr_ra={{0x[0-f]*}}
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_implicit_parallel_begin: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{0x[0-f]*}}
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_implicit_parallel_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{0x[0-f]*}}
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{0x[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_barrier_implicit_parallel_begin: parallel_id=0, task_id=[[TASK_ID:[0-9]+]], codeptr_ra={{(0x)?[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_implicit_parallel_begin: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{(0x)?[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_barrier_implicit_parallel_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{(0x)?[0-f]*}}
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_barrier_implicit_parallel_end: parallel_id=0, task_id=[[TASK_ID]], codeptr_ra={{(0x)?[0-f]*}}
 
 
   // worker thread implicit barrier at parallel end

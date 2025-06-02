@@ -73,10 +73,8 @@ bool WatchpointResource::ConstituentsContains(const WatchpointSP &wp_sp) {
 
 bool WatchpointResource::ConstituentsContains(const Watchpoint *wp) {
   std::lock_guard<std::mutex> guard(m_constituents_mutex);
-  WatchpointCollection::const_iterator match =
-      std::find_if(m_constituents.begin(), m_constituents.end(),
-                   [&wp](const WatchpointSP &x) { return x.get() == wp; });
-  return match != m_constituents.end();
+  return llvm::any_of(m_constituents,
+                      [&wp](const WatchpointSP &x) { return x.get() == wp; });
 }
 
 WatchpointSP WatchpointResource::GetConstituentAtIndex(size_t idx) {

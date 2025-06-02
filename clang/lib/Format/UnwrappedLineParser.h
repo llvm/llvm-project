@@ -177,7 +177,7 @@ private:
   // Parses a record (aka class) as a top level element. If ParseAsExpr is true,
   // parses the record as a child block, i.e. if the class declaration is an
   // expression.
-  void parseRecord(bool ParseAsExpr = false);
+  void parseRecord(bool ParseAsExpr = false, bool IsJavaRecord = false);
   void parseObjCLightweightGenerics();
   void parseObjCMethod();
   void parseObjCProtocolList();

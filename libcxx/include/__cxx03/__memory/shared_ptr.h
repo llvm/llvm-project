@@ -401,9 +401,9 @@ private:
   __shared_weak_count* __cntrl_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR shared_ptr() _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI shared_ptr() _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR shared_ptr(nullptr_t) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI shared_ptr(nullptr_t) _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
 
   template <class _Yp, __enable_if_t< _And< __raw_pointer_compatible_with<_Yp, _Tp> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit shared_ptr(_Yp* __p) : __ptr_(__p) {
@@ -661,7 +661,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI long use_count() const _NOEXCEPT { return __cntrl_ ? __cntrl_->use_count() : 0; }
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI bool unique() const _NOEXCEPT { return use_count() == 1; }
+  _LIBCPP_HIDE_FROM_ABI bool unique() const _NOEXCEPT { return use_count() == 1; }
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return get() != nullptr; }
 
@@ -892,7 +892,7 @@ private:
   __shared_weak_count* __cntrl_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR weak_ptr() _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI weak_ptr() _NOEXCEPT;
 
   template <class _Yp, __enable_if_t<__compatible_with<_Yp, _Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI weak_ptr(shared_ptr<_Yp> const& __r) _NOEXCEPT;
@@ -942,7 +942,7 @@ public:
 };
 
 template <class _Tp>
-inline _LIBCPP_CONSTEXPR weak_ptr<_Tp>::weak_ptr() _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
+inline weak_ptr<_Tp>::weak_ptr() _NOEXCEPT : __ptr_(nullptr), __cntrl_(nullptr) {}
 
 template <class _Tp>
 inline weak_ptr<_Tp>::weak_ptr(weak_ptr const& __r) _NOEXCEPT : __ptr_(__r.__ptr_), __cntrl_(__r.__cntrl_) {
@@ -1076,7 +1076,7 @@ class _LIBCPP_TEMPLATE_VIS enable_shared_from_this {
   mutable weak_ptr<_Tp> __weak_this_;
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR enable_shared_from_this() _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI enable_shared_from_this() _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI enable_shared_from_this(enable_shared_from_this const&) _NOEXCEPT {}
   _LIBCPP_HIDE_FROM_ABI enable_shared_from_this& operator=(enable_shared_from_this const&) _NOEXCEPT { return *this; }
   _LIBCPP_HIDE_FROM_ABI ~enable_shared_from_this() {}
@@ -1094,8 +1094,8 @@ struct _LIBCPP_TEMPLATE_VIS hash;
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS hash<shared_ptr<_Tp> > {
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef shared_ptr<_Tp> argument_type;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t result_type;
+  typedef shared_ptr<_Tp> argument_type;
+  typedef size_t result_type;
 
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const shared_ptr<_Tp>& __ptr) const _NOEXCEPT {
     return hash<typename shared_ptr<_Tp>::element_type*>()(__ptr.get());
@@ -1116,7 +1116,7 @@ public:
   void unlock() _NOEXCEPT;
 
 private:
-  _LIBCPP_CONSTEXPR __sp_mut(void*) _NOEXCEPT;
+  __sp_mut(void*) _NOEXCEPT;
   __sp_mut(const __sp_mut&);
   __sp_mut& operator=(const __sp_mut&);
 

@@ -767,7 +767,7 @@ void USRGenerator::VisitType(QualType T) {
   case BuiltinType::Id:                                                        \
     Out << "@BT@" << #Name;                                                    \
     break;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
         case BuiltinType::Id: \
           Out << "@BT@" << #Name; break;

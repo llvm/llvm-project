@@ -27,8 +27,10 @@ module m
     !PORTABILITY: CONTIGUOUS entity 'scalar' should be an array pointer, assumed-shape, or assumed-rank
     real, contiguous :: scalar
     call s01(a03) ! ok
-    !WARNING: Target of CONTIGUOUS pointer association is not known to be contiguous
+    !ERROR: CONTIGUOUS pointer dummy argument may not be associated with non-CONTIGUOUS pointer actual argument
     call s01(a02)
+    !WARNING: Target of CONTIGUOUS pointer association is not known to be contiguous
+    call s01(a02(:))
     !ERROR: CONTIGUOUS pointer may not be associated with a discontiguous target
     call s01(a03(::2))
     call s02(a02) ! ok

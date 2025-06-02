@@ -382,7 +382,7 @@ using RepeatedValue = std::pair<Value *, uint64_t>;
 static bool LinearizeExprTree(Instruction *I,
                               SmallVectorImpl<RepeatedValue> &Ops,
                               ReassociatePass::OrderedSet &ToRedo,
-                              reassociate::OverflowTracking &Flags) {
+                              OverflowTracking &Flags) {
   assert((isa<UnaryOperator>(I) || isa<BinaryOperator>(I)) &&
          "Expected a UnaryOperator or BinaryOperator!");
   LLVM_DEBUG(dbgs() << "LINEARIZE: " << *I << '\n');
@@ -431,10 +431,7 @@ static bool LinearizeExprTree(Instruction *I,
     // We examine the operands of this binary operator.
     auto [I, Weight] = Worklist.pop_back_val();
 
-    if (isa<OverflowingBinaryOperator>(I)) {
-      Flags.HasNUW &= I->hasNoUnsignedWrap();
-      Flags.HasNSW &= I->hasNoSignedWrap();
-    }
+    Flags.mergeFlags(*I);
 
     for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) { // Visit operands.
       Value *Op = I->getOperand(OpIdx);
@@ -734,15 +731,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
           ExpressionChangedStart->clearSubclassOptionalData();
           ExpressionChangedStart->setFastMathFlags(Flags);
         } else {
-          ExpressionChangedStart->clearSubclassOptionalData();
-          if (ExpressionChangedStart->getOpcode() == Instruction::Add ||
-              (ExpressionChangedStart->getOpcode() == Instruction::Mul &&
-               Flags.AllKnownNonZero)) {
-            if (Flags.HasNUW)
-              ExpressionChangedStart->setHasNoUnsignedWrap();
-            if (Flags.HasNSW && (Flags.AllKnownNonNegative || Flags.HasNUW))
-              ExpressionChangedStart->setHasNoSignedWrap();
-          }
+          Flags.applyFlags(*ExpressionChangedStart);
         }
       }
 

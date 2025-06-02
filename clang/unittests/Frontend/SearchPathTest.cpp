@@ -40,17 +40,18 @@ namespace {
 class SearchPathTest : public ::testing::Test {
 protected:
   SearchPathTest()
-      : Diags(new DiagnosticIDs(), new DiagnosticOptions,
-              new IgnoringDiagConsumer()),
+      : Diags(new DiagnosticIDs(), DiagOpts, new IgnoringDiagConsumer()),
         VFS(new llvm::vfs::InMemoryFileSystem),
         FileMgr(FileSystemOptions(), VFS), SourceMgr(Diags, FileMgr),
         Invocation(std::make_unique<CompilerInvocation>()) {}
 
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
   FileManager FileMgr;
   SourceManager SourceMgr;
   std::unique_ptr<CompilerInvocation> Invocation;
+  IntrusiveRefCntPtr<TargetInfo> Target;
 
   void addDirectories(ArrayRef<StringRef> Dirs) {
     for (StringRef Dir : Dirs) {
@@ -65,10 +66,9 @@ protected:
     CompilerInvocation::CreateFromArgs(*Invocation, Args, Diags);
     HeaderSearchOptions HSOpts = Invocation->getHeaderSearchOpts();
     LangOptions LangOpts = Invocation->getLangOpts();
-    TargetInfo *Target =
-        TargetInfo::CreateTargetInfo(Diags, Invocation->getTargetOpts());
+    Target = TargetInfo::CreateTargetInfo(Diags, Invocation->getTargetOpts());
     auto HeaderInfo = std::make_unique<HeaderSearch>(HSOpts, SourceMgr, Diags,
-                                                     LangOpts, Target);
+                                                     LangOpts, Target.get());
     ApplyHeaderSearchOptions(*HeaderInfo, HSOpts, LangOpts,
                              Target->getTriple());
     return HeaderInfo;

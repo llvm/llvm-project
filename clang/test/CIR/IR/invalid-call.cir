@@ -68,3 +68,15 @@ cir.func @f11() {
   cir.call @f10(%0, %1) : (!s32i, !u32i) -> ()
   cir.return
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @f12(!s32i, !s32i, ...)
+cir.func @f13() {
+  %0 = cir.const #cir.int<1> : !s32i
+  // expected-error @below {{too few operands for callee}}
+  cir.call @f12(%0) : (!s32i) -> ()
+  cir.return
+}

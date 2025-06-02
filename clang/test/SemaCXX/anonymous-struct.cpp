@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98 -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s
 
@@ -206,3 +206,18 @@ A GetA() {
 }
 }
 #endif
+
+namespace ForwardDeclaredMember {
+  struct A;
+  struct A {
+    int x = 0;
+    // cxx98-warning@-1 {{default member initializer for non-static data member is a C++11 extension}}
+    // cxx98-note@-2 {{because field 'x' has an initializer}}
+  };
+  struct B {
+    struct {
+      A y;
+      // cxx98-error@-1 {{anonymous struct member 'y' has a non-trivial default constructor}}
+    };
+  };
+}

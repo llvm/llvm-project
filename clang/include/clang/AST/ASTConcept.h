@@ -93,11 +93,11 @@ struct ASTConstraintSatisfaction final :
   bool ContainsErrors : 1;
 
   const UnsatisfiedConstraintRecord *begin() const {
-    return getTrailingObjects<UnsatisfiedConstraintRecord>();
+    return getTrailingObjects();
   }
 
   const UnsatisfiedConstraintRecord *end() const {
-    return getTrailingObjects<UnsatisfiedConstraintRecord>() + NumRecords;
+    return getTrailingObjects() + NumRecords;
   }
 
   ASTConstraintSatisfaction(const ASTContext &C,

@@ -94,20 +94,20 @@ subroutine acc_enter_data
   !$acc enter data create(a) async
 !CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[C10]] : index) stride(%c1{{.*}} : index) startIdx(%{{.*}} : index)
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[EXTENT_C10]] : index) stride(%c1{{.*}} : index) startIdx(%{{.*}} : index)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<none>], name = "a", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {async}
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) async -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: acc.enter_data async dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) wait
 !CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[C10]] : index) stride(%c1{{.*}} : index) startIdx(%{{.*}} : index)
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[EXTENT_C10]] : index) stride(%c1{{.*}} : index) startIdx(%{{.*}} : index)
 !CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {wait}
+!CHECK: acc.enter_data wait dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) async wait
 !CHECK: %[[BOUND0:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[C10]] : index) stride(%c1{{.*}} : index) startIdx(%{{.*}} : index)
 !CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%[[EXTENT_C10]] : index) stride(%c1{{.*}} : index) startIdx(%{{.*}} : index)
-!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) -> !fir.ref<!fir.array<10x10xf32>> {asyncOnly = [#acc.device_type<none>], name = "a", structured = false}
-!CHECK: acc.enter_data dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) attributes {async, wait}
+!CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10x10xf32>>) bounds(%[[BOUND0]], %[[BOUND1]]) async -> !fir.ref<!fir.array<10x10xf32>> {name = "a", structured = false}
+!CHECK: acc.enter_data async wait dataOperands(%[[CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>)
 
   !$acc enter data create(a) async(1)
 !CHECK: %[[ASYNC1:.*]] = arith.constant 1 : i32

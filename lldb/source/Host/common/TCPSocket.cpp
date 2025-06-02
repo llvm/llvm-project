@@ -169,7 +169,8 @@ Status TCPSocket::Connect(llvm::StringRef name) {
     return error;
   }
 
-  error = Status::FromErrorString("Failed to connect port");
+  error = Status::FromErrorStringWithFormatv(
+      "Failed to connect to {0}:{1}", host_port->hostname, host_port->port);
   return error;
 }
 

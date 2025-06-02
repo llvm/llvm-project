@@ -58,8 +58,7 @@ struct X86TileConfig : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &mf) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   static char ID;

@@ -989,7 +989,9 @@ llvm::SMTSolverRef llvm::CreateZ3Solver() {
 #endif
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SMTSort::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTExpr::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTSolver::dump() const { print(llvm::errs()); }
 LLVM_DUMP_METHOD void SMTSolverStatistics::dump() const { print(llvm::errs()); }
+#endif

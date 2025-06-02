@@ -35,7 +35,7 @@ produced the trace file.
 Header Section
 ==============
 
-A trace file begins with a 32 byte header.
+A trace file begins with a 32-byte header.
 
 +-------------------+-----------------+----------------------------------------+
 | Field             | Size (bytes)    | Description                            |
@@ -119,7 +119,7 @@ attempt to pad for alignment, and it is not seekable.
 Function Records
 ----------------
 
-Function Records have an 8 byte layout. This layout encodes information to
+Function Records have an 8-byte layout. This layout encodes information to
 reconstruct a call stack of instrumented function and their durations.
 
 +---------------+--------------+-----------------------------------------------+
@@ -178,7 +178,7 @@ records for each of the logged args follow the function record in the stream.
 Metadata Records
 ----------------
 
-Interspersed throughout the buffer are 16 byte Metadata records. For typically
+Interspersed throughout the buffer are 16-byte Metadata records. For typically
 instrumented binaries, they will be sparser than Function records, and they
 provide a fuller picture of the binary execution state.
 

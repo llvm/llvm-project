@@ -581,14 +581,9 @@ public:
   template <class _Key2, class _Compare2, class _Alloc2>
   friend class _LIBCPP_TEMPLATE_VIS multiset;
 
-  _LIBCPP_HIDE_FROM_ABI set() _NOEXCEPT_(
-      is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_default_constructible<key_compare>::value&&
-          is_nothrow_copy_constructible<key_compare>::value)
-      : __tree_(value_compare()) {}
+  _LIBCPP_HIDE_FROM_ABI set() : __tree_(value_compare()) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit set(const value_compare& __comp) _NOEXCEPT_(
-      is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_copy_constructible<key_compare>::value)
-      : __tree_(__comp) {}
+  _LIBCPP_HIDE_FROM_ABI explicit set(const value_compare& __comp) : __tree_(__comp) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit set(const value_compare& __comp, const allocator_type& __a) : __tree_(__comp, __a) {}
   template <class _InputIterator>
@@ -655,7 +650,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __f, const_iterator __l) { return __tree_.erase(__f, __l); }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __tree_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(set& __s) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) { __tree_.swap(__s.__tree_); }
+  _LIBCPP_HIDE_FROM_ABI void swap(set& __s) { __tree_.swap(__s.__tree_); }
 
   _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const _NOEXCEPT { return __tree_.__alloc(); }
   _LIBCPP_HIDE_FROM_ABI key_compare key_comp() const { return __tree_.value_comp(); }
@@ -719,8 +714,7 @@ operator<=(const set<_Key, _Compare, _Allocator>& __x, const set<_Key, _Compare,
 
 // specialized algorithms:
 template <class _Key, class _Compare, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI void swap(set<_Key, _Compare, _Allocator>& __x, set<_Key, _Compare, _Allocator>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+inline _LIBCPP_HIDE_FROM_ABI void swap(set<_Key, _Compare, _Allocator>& __x, set<_Key, _Compare, _Allocator>& __y) {
   __x.swap(__y);
 }
 
@@ -763,14 +757,9 @@ public:
   friend class _LIBCPP_TEMPLATE_VIS multiset;
 
   // construct/copy/destroy:
-  _LIBCPP_HIDE_FROM_ABI multiset() _NOEXCEPT_(
-      is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_default_constructible<key_compare>::value&&
-          is_nothrow_copy_constructible<key_compare>::value)
-      : __tree_(value_compare()) {}
+  _LIBCPP_HIDE_FROM_ABI multiset() : __tree_(value_compare()) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit multiset(const value_compare& __comp) _NOEXCEPT_(
-      is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_copy_constructible<key_compare>::value)
-      : __tree_(__comp) {}
+  _LIBCPP_HIDE_FROM_ABI explicit multiset(const value_compare& __comp) : __tree_(__comp) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit multiset(const value_compare& __comp, const allocator_type& __a)
       : __tree_(__comp, __a) {}
@@ -842,9 +831,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __f, const_iterator __l) { return __tree_.erase(__f, __l); }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __tree_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(multiset& __s) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) {
-    __tree_.swap(__s.__tree_);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(multiset& __s) { __tree_.swap(__s.__tree_); }
 
   _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const _NOEXCEPT { return __tree_.__alloc(); }
   _LIBCPP_HIDE_FROM_ABI key_compare key_comp() const { return __tree_.value_comp(); }
@@ -908,8 +895,7 @@ operator<=(const multiset<_Key, _Compare, _Allocator>& __x, const multiset<_Key,
 
 template <class _Key, class _Compare, class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI void
-swap(multiset<_Key, _Compare, _Allocator>& __x, multiset<_Key, _Compare, _Allocator>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+swap(multiset<_Key, _Compare, _Allocator>& __x, multiset<_Key, _Compare, _Allocator>& __y) {
   __x.swap(__y);
 }
 

@@ -56,6 +56,9 @@ class LVType : public LVElement {
   LVProperties<Property> Properties;
   static LVTypeDispatch Dispatch;
 
+  // Size in bits of a symbol of this type.
+  uint32_t BitSize = 0;
+
   // Find the current type in the given 'Targets'.
   LVType *findIn(const LVTypes *Targets) const;
 
@@ -108,6 +111,10 @@ public:
   // Return the underlying type for a type definition.
   virtual LVElement *getUnderlyingType() { return nullptr; }
   virtual void setUnderlyingType(LVElement *Element) {}
+
+  // Return the size in bits of an entity of this type.
+  uint32_t getBitSize() const override { return BitSize; }
+  void setBitSize(uint32_t Size) override { BitSize = Size; }
 
   void resolveName() override;
   void resolveReferences() override;

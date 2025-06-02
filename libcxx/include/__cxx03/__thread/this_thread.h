@@ -37,7 +37,7 @@ _LIBCPP_HIDE_FROM_ABI void sleep_for(const chrono::duration<_Rep, _Period>& __d)
     // The standard guarantees a 64bit signed integer resolution for nanoseconds,
     // so use INT64_MAX / 1e9 as cut-off point. Use a constant to avoid <climits>
     // and issues with long double folding on PowerPC with GCC.
-    _LIBCPP_CONSTEXPR chrono::duration<long double> __max = chrono::duration<long double>(9223372036.0L);
+    chrono::duration<long double> __max = chrono::duration<long double>(9223372036.0L);
     chrono::nanoseconds __ns;
     if (__d < __max) {
       __ns = chrono::duration_cast<chrono::nanoseconds>(__d);

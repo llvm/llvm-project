@@ -34,13 +34,6 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
                                           MAB.getTargetOptions().getABIName()));
   setFlagsFromFeatures(STI);
-  // `j label` in `.option norelax; j label; .option relax; ...; label:` needs a
-  // relocation to ensure the jump target is correct after linking. This is due
-  // to a limitation that shouldForceRelocation has to make the decision upfront
-  // without knowing a possibly future .option relax. When RISCVAsmParser is used,
-  // its ParseInstruction may call setForceRelocs as well.
-  if (STI.hasFeature(RISCV::FeatureRelax))
-    static_cast<RISCVAsmBackend &>(MAB).setForceRelocs();
 }
 
 RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {

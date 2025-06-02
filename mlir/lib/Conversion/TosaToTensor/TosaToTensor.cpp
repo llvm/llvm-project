@@ -362,7 +362,8 @@ public:
     // Setup the default constantAttr.
 
     Value padConstant = rewriter.createOrFold<tensor::ExtractOp>(
-        loc, padOp.getPadConst(), ValueRange({}));
+        loc, padOp.getPadConst(),
+        ValueRange({rewriter.create<arith::ConstantIndexOp>(loc, 0)}));
 
     if (!padConstant) {
       return rewriter.notifyMatchFailure(

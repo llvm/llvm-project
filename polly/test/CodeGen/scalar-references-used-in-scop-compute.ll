@@ -3,7 +3,7 @@
 ; Test the code generation in the presence of a scalar out-of-scop value being
 ; used from within the SCoP.
 
-; CHECH-LABEL: @scalar-function-argument
+; CHECK-LABEL: @scalar-function-argument
 ; CHECK: polly.split_new_and_old
 
 
@@ -26,7 +26,7 @@ for.end:
   ret void
 }
 
-; CHECH-LABEL: @scalar-outside-of-scop
+; CHECK-LABEL: @scalar-outside-of-scop
 ; CHECK: polly.split_new_and_old
 
 define void @scalar-outside-of-scop(ptr %A) {

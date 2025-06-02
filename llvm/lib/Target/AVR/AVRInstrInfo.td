@@ -32,46 +32,67 @@ def SDT_AVRSelectCC
 // AVR Specific Node Definitions
 //===----------------------------------------------------------------------===//
 
+// Return from subroutine.
 def AVRretglue : SDNode<"AVRISD::RET_GLUE", SDTNone,
                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+// Return from ISR.
 def AVRretiglue : SDNode<"AVRISD::RETI_GLUE", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 
 def AVRcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_AVRCallSeqStart,
                               [SDNPHasChain, SDNPOutGlue]>;
 def AVRcallseq_end : SDNode<"ISD::CALLSEQ_END", SDT_AVRCallSeqEnd,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+// Represents an abstract call instruction,
+// which includes a bunch of information.
 def AVRcall : SDNode<"AVRISD::CALL", SDT_AVRCall,
                      [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
 
+// A wrapper node for TargetConstantPool,
+// TargetExternalSymbol, and TargetGlobalAddress.
 def AVRWrapper : SDNode<"AVRISD::WRAPPER", SDT_AVRWrapper>;
 
+// AVR conditional branches. Operand 0 is the chain operand, operand 1
+// is the block to branch if condition is true, operand 2 is the
+// condition code, and operand 3 is the flag operand produced by a CMP
+// or TEST instruction.
 def AVRbrcond
     : SDNode<"AVRISD::BRCOND", SDT_AVRBrcond, [SDNPHasChain, SDNPInGlue]>;
+
+// Compare instruction.
 def AVRcmp : SDNode<"AVRISD::CMP", SDT_AVRCmp, [SDNPOutGlue]>;
+
+// Compare with carry instruction.
 def AVRcmpc : SDNode<"AVRISD::CMPC", SDT_AVRCmp, [SDNPInGlue, SDNPOutGlue]>;
+
+// Test for zero or minus instruction.
 def AVRtst : SDNode<"AVRISD::TST", SDT_AVRTst, [SDNPOutGlue]>;
+
+// Operand 0 and operand 1 are selection variable, operand 2
+// is condition code and operand 3 is flag operand.
 def AVRselectcc : SDNode<"AVRISD::SELECT_CC", SDT_AVRSelectCC, [SDNPInGlue]>;
 
 // Shift nodes.
-def AVRlsl : SDNode<"AVRISD::LSL", SDTIntUnaryOp>;
-def AVRlsr : SDNode<"AVRISD::LSR", SDTIntUnaryOp>;
-def AVRrol : SDNode<"AVRISD::ROL", SDTIntUnaryOp>;
-def AVRror : SDNode<"AVRISD::ROR", SDTIntUnaryOp>;
-def AVRasr : SDNode<"AVRISD::ASR", SDTIntUnaryOp>;
-def AVRlslhi : SDNode<"AVRISD::LSLHI", SDTIntUnaryOp>;
-def AVRlsrlo : SDNode<"AVRISD::LSRLO", SDTIntUnaryOp>;
-def AVRasrlo : SDNode<"AVRISD::ASRLO", SDTIntUnaryOp>;
-def AVRlslbn : SDNode<"AVRISD::LSLBN", SDTIntBinOp>;
-def AVRlsrbn : SDNode<"AVRISD::LSRBN", SDTIntBinOp>;
-def AVRasrbn : SDNode<"AVRISD::ASRBN", SDTIntBinOp>;
-def AVRlslwn : SDNode<"AVRISD::LSLWN", SDTIntBinOp>;
-def AVRlsrwn : SDNode<"AVRISD::LSRWN", SDTIntBinOp>;
-def AVRasrwn : SDNode<"AVRISD::ASRWN", SDTIntBinOp>;
-def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftPairOp>;
-def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftPairOp>;
-def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftPairOp>;
+def AVRlsl : SDNode<"AVRISD::LSL", SDTIntUnaryOp>;       // Logical shift left.
+def AVRlsr : SDNode<"AVRISD::LSR", SDTIntUnaryOp>;       // Logical shift right.
+def AVRrol : SDNode<"AVRISD::ROL", SDTIntUnaryOp>;       // Bit rotate left.
+def AVRror : SDNode<"AVRISD::ROR", SDTIntUnaryOp>;       // Bit rotate right.
+def AVRasr : SDNode<"AVRISD::ASR", SDTIntUnaryOp>;       // Arithmetic shift right.
+def AVRlslhi : SDNode<"AVRISD::LSLHI", SDTIntUnaryOp>;   // Higher 8-bit of word logical shift left.
+def AVRlsrlo : SDNode<"AVRISD::LSRLO", SDTIntUnaryOp>;   // Lower 8-bit of word logical shift right.
+def AVRasrlo : SDNode<"AVRISD::ASRLO", SDTIntUnaryOp>;   // Lower 8-bit of word arithmetic shift right.
+def AVRlslbn : SDNode<"AVRISD::LSLBN", SDTIntBinOp>;     // Byte logical shift left N bits.
+def AVRlsrbn : SDNode<"AVRISD::LSRBN", SDTIntBinOp>;     // Byte logical shift right N bits.
+def AVRasrbn : SDNode<"AVRISD::ASRBN", SDTIntBinOp>;     // Byte arithmetic shift right N bits.
+def AVRlslwn : SDNode<"AVRISD::LSLWN", SDTIntBinOp>;     // Higher 8-bit of word logical shift left.
+def AVRlsrwn : SDNode<"AVRISD::LSRWN", SDTIntBinOp>;     // Word logical shift right N bits.
+def AVRasrwn : SDNode<"AVRISD::ASRWN", SDTIntBinOp>;     // Word arithmetic shift right N bits.
+def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftPairOp>; // Wide logical shift left.
+def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftPairOp>; // Wide logical shift right.
+def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftPairOp>; // Wide arithmetic shift right.
 
 // Pseudo shift nodes for non-constant shift amounts.
 def AVRlslLoop : SDNode<"AVRISD::LSLLOOP", SDTIntShiftOp>;
@@ -1467,208 +1488,106 @@ def WDR : F16<0b1001010110101000, (outs), (ins), "wdr", []>;
 //: TODO: Optimize this for wider types AND optimize the following code
 //       compile int foo(char a, char b, char c, char d) {return d+b;}
 //       looks like a missed sext_inreg opportunity.
-def SEXT
-    : ExtensionPseudo<(outs DREGS
-                       : $dst),
-                      (ins GPR8
-                       : $src),
-                      "sext\t$dst, $src",
-                      [(set i16
-                        : $dst, (sext i8
-                                 : $src))]>;
+def SEXT : ExtensionPseudo<(outs DREGS:$dt), (ins GPR8:$src), "sext\t$dt, $src",
+                           [(set i16:$dt, (sext i8:$src))]>;
 
-def ZEXT
-    : ExtensionPseudo<(outs DREGS
-                       : $dst),
-                      (ins GPR8
-                       : $src),
-                      "zext\t$dst, $src",
-                      [(set i16
-                        : $dst, (zext i8
-                                 : $src))]>;
+def ZEXT : ExtensionPseudo<(outs DREGS:$dt), (ins GPR8:$src), "zext\t$dt, $src",
+                           [(set i16:$dt, (zext i8:$src))]>;
 
 // This pseudo gets expanded into a movw+adiw thus it clobbers SREG.
-let Defs = [SREG],
-    hasSideEffects = 0 in def FRMIDX : Pseudo<(outs DLDREGS
-                                               : $dst),
-                                              (ins DLDREGS
-                                               : $src, i16imm
-                                               : $src2),
-                                              "frmidx\t$dst, $src, $src2", []>;
+let Defs = [SREG], hasSideEffects = 0 in
+def FRMIDX : Pseudo<(outs DLDREGS:$dst), (ins DLDREGS:$src, i16imm:$src2),
+                    "frmidx\t$dst, $src, $src2", []>;
 
 // This pseudo is either converted to a regular store or a push which clobbers
 // SP.
-def STDSPQRr : StorePseudo<(outs),
-                           (ins memspi
-                            : $dst, GPR8
-                            : $src),
-                           "stdstk\t$dst, $src", [(store i8
-                                                   : $src, addr
-                                                   : $dst)]>;
+def STDSPQRr : StorePseudo<(outs), (ins memspi:$dst, GPR8:$src),
+                           "stdstk\t$dst, $src", [(store i8:$src, addr:$dst)]>;
 
 // This pseudo is either converted to a regular store or a push which clobbers
 // SP.
-def STDWSPQRr : StorePseudo<(outs),
-                            (ins memspi
-                             : $dst, DREGS
-                             : $src),
-                            "stdwstk\t$dst, $src", [(store i16
-                                                     : $src, addr
-                                                     : $dst)]>;
+def STDWSPQRr : StorePseudo<(outs), (ins memspi:$dt, DREGS:$src),
+                            "stdwstk\t$dt, $src", [(store i16:$src, addr:$dt)]>;
 
 // SP read/write pseudos.
-let hasSideEffects = 0 in {
-  let Uses = [SP] in def SPREAD : Pseudo<(outs DREGS
-                                          : $dst),
-                                         (ins GPRSP
-                                          : $src),
-                                         "spread\t$dst, $src", []>;
-
-  let Defs = [SP] in def SPWRITE : Pseudo<(outs GPRSP
-                                           : $dst),
-                                          (ins DREGS
-                                           : $src),
-                                          "spwrite\t$dst, $src", []>;
+let hasSideEffects = 0  in {
+  let Uses = [SP] in
+  def SPREAD : Pseudo<(outs DREGS:$dst), (ins GPRSP:$src), "spread\t$dst, $src",
+                      []>;
+  let Defs = [SP] in
+  def SPWRITE : Pseudo<(outs GPRSP:$dst), (ins DREGS:$src),
+                       "spwrite\t$dst, $src", []>;
 }
 
-def Select8 : SelectPseudo<(outs GPR8
-                            : $dst),
-                           (ins GPR8
-                            : $src, GPR8
-                            : $src2, i8imm
-                            : $cc),
-                           "# Select8 PSEUDO", [(set i8
-                                                 : $dst, (AVRselectcc i8
-                                                          : $src, i8
-                                                          : $src2, imm
-                                                          : $cc))]>;
+def Select8 : SelectPseudo<(outs GPR8:$dst),
+                           (ins GPR8:$src, GPR8:$src2, i8imm:$cc),
+                           "# Select8 PSEUDO",
+                           [(set i8:$dst,
+                             (AVRselectcc i8:$src, i8:$src2, imm:$cc))]>;
 
-def Select16 : SelectPseudo<(outs DREGS
-                             : $dst),
-                            (ins DREGS
-                             : $src, DREGS
-                             : $src2, i8imm
-                             : $cc),
-                            "# Select16 PSEUDO", [(set i16
-                                                   : $dst, (AVRselectcc i16
-                                                            : $src, i16
-                                                            : $src2, imm
-                                                            : $cc))]>;
+def Select16 : SelectPseudo<(outs DREGS:$dst),
+                            (ins DREGS:$src, DREGS:$src2, i8imm:$cc),
+                            "# Select16 PSEUDO",
+                            [(set i16:$dst,
+                              (AVRselectcc i16:$src, i16:$src2, imm:$cc))]>;
 
-def Lsl8 : ShiftPseudo<(outs GPR8
-                        : $dst),
-                       (ins GPR8
-                        : $src, GPR8
-                        : $cnt),
-                       "# Lsl8 PSEUDO", [(set i8
-                                          : $dst, (AVRlslLoop i8
-                                                   : $src, i8
-                                                   : $cnt))]>;
+def Lsl8 : ShiftPseudo<(outs GPR8:$dst), (ins GPR8:$src, GPR8:$cnt),
+                       "# Lsl8 PSEUDO",
+                       [(set i8:$dst, (AVRlslLoop i8:$src, i8:$cnt))]>;
 
-def Lsl16 : ShiftPseudo<(outs DREGS
-                         : $dst),
-                        (ins DREGS
-                         : $src, GPR8
-                         : $cnt),
-                        "# Lsl16 PSEUDO", [(set i16
-                                            : $dst, (AVRlslLoop i16
-                                                     : $src, i8
-                                                     : $cnt))]>;
+def Lsl16 : ShiftPseudo<(outs DREGS:$dst), (ins DREGS:$src, GPR8:$cnt),
+                        "# Lsl16 PSEUDO",
+                        [(set i16:$dst, (AVRlslLoop i16:$src, i8:$cnt))]>;
 
 def Lsl32 : ShiftPseudo<(outs DREGS:$dstlo, DREGS:$dsthi),
                         (ins DREGS:$srclo, DREGS:$srchi, i8imm:$cnt),
                         "# Lsl32 PSEUDO",
-                        [(set i16:$dstlo, i16:$dsthi, (AVRlslw i16:$srclo, i16:$srchi, i8:$cnt))]>;
+                        [(set i16:$dstlo, i16:$dsthi,
+                          (AVRlslw i16:$srclo, i16:$srchi, i8:$cnt))]>;
 
-def Lsr8 : ShiftPseudo<(outs GPR8
-                        : $dst),
-                       (ins GPR8
-                        : $src, GPR8
-                        : $cnt),
-                       "# Lsr8 PSEUDO", [(set i8
-                                          : $dst, (AVRlsrLoop i8
-                                                   : $src, i8
-                                                   : $cnt))]>;
+def Lsr8 : ShiftPseudo<(outs GPR8:$dst), (ins GPR8:$src, GPR8:$cnt),
+                       "# Lsr8 PSEUDO",
+                       [(set i8:$dst, (AVRlsrLoop i8:$src, i8:$cnt))]>;
 
-def Lsr16 : ShiftPseudo<(outs DREGS
-                         : $dst),
-                        (ins DREGS
-                         : $src, GPR8
-                         : $cnt),
-                        "# Lsr16 PSEUDO", [(set i16
-                                            : $dst, (AVRlsrLoop i16
-                                                     : $src, i8
-                                                     : $cnt))]>;
+def Lsr16 : ShiftPseudo<(outs DREGS:$dst), (ins DREGS:$src, GPR8:$cnt),
+                        "# Lsr16 PSEUDO",
+                        [(set i16:$dst, (AVRlsrLoop i16:$src, i8:$cnt))]>;
 
 def Lsr32 : ShiftPseudo<(outs DREGS:$dstlo, DREGS:$dsthi),
                         (ins DREGS:$srclo, DREGS:$srchi, i8imm:$cnt),
                         "# Lsr32 PSEUDO",
-                        [(set i16:$dstlo, i16:$dsthi, (AVRlsrw i16:$srclo, i16:$srchi, i8:$cnt))]>;
+                        [(set i16:$dstlo, i16:$dsthi,
+                          (AVRlsrw i16:$srclo, i16:$srchi, i8:$cnt))]>;
 
-def Rol8 : ShiftPseudo<(outs GPR8
-                        : $dst),
-                       (ins GPR8
-                        : $src, GPR8
-                        : $cnt),
-                       "# Rol8 PSEUDO", [(set i8
-                                          : $dst, (AVRrolLoop i8
-                                                   : $src, i8
-                                                   : $cnt))]>;
+def Rol8 : ShiftPseudo<(outs GPR8:$dst), (ins GPR8:$src, GPR8:$cnt),
+                       "# Rol8 PSEUDO",
+                       [(set i8:$dst, (AVRrolLoop i8:$src, i8:$cnt))]>;
 
-def Rol16 : ShiftPseudo<(outs DREGS
-                         : $dst),
-                        (ins DREGS
-                         : $src, GPR8
-                         : $cnt),
-                        "# Rol16 PSEUDO", [(set i16
-                                            : $dst, (AVRrolLoop i16
-                                                     : $src, i8
-                                                     : $cnt))]>;
+def Rol16 : ShiftPseudo<(outs DREGS:$dst), (ins DREGS:$src, GPR8:$cnt),
+                        "# Rol16 PSEUDO",
+                        [(set i16:$dst, (AVRrolLoop i16:$src, i8:$cnt))]>;
 
-def Ror8 : ShiftPseudo<(outs GPR8
-                        : $dst),
-                       (ins GPR8
-                        : $src, GPR8
-                        : $cnt),
-                       "# Ror8 PSEUDO", [(set i8
-                                          : $dst, (AVRrorLoop i8
-                                                   : $src, i8
-                                                   : $cnt))]>;
+def Ror8 : ShiftPseudo<(outs GPR8:$dst), (ins GPR8:$src, GPR8:$cnt),
+                       "# Ror8 PSEUDO",
+                       [(set i8:$dst, (AVRrorLoop i8:$src, i8:$cnt))]>;
 
-def Ror16 : ShiftPseudo<(outs DREGS
-                         : $dst),
-                        (ins DREGS
-                         : $src, GPR8
-                         : $cnt),
-                        "# Ror16 PSEUDO", [(set i16
-                                            : $dst, (AVRrorLoop i16
-                                                     : $src, i8
-                                                     : $cnt))]>;
+def Ror16 : ShiftPseudo<(outs DREGS:$dst), (ins DREGS:$src, GPR8:$cnt),
+                        "# Ror16 PSEUDO",
+                        [(set i16:$dst, (AVRrorLoop i16:$src, i8:$cnt))]>;
 
-def Asr8 : ShiftPseudo<(outs GPR8
-                        : $dst),
-                       (ins GPR8
-                        : $src, GPR8
-                        : $cnt),
-                       "# Asr8 PSEUDO", [(set i8
-                                          : $dst, (AVRasrLoop i8
-                                                   : $src, i8
-                                                   : $cnt))]>;
+def Asr8 : ShiftPseudo<(outs GPR8:$dst), (ins GPR8:$src, GPR8:$cnt),
+                       "# Asr8 PSEUDO",
+                       [(set i8:$dst, (AVRasrLoop i8:$src, i8:$cnt))]>;
 
-def Asr16 : ShiftPseudo<(outs DREGS
-                         : $dst),
-                        (ins DREGS
-                         : $src, GPR8
-                         : $cnt),
-                        "# Asr16 PSEUDO", [(set i16
-                                            : $dst, (AVRasrLoop i16
-                                                     : $src, i8
-                                                     : $cnt))]>;
+def Asr16 : ShiftPseudo<(outs DREGS:$dst), (ins DREGS:$src, GPR8:$cnt),
+                        "# Asr16 PSEUDO",
+                        [(set i16:$dst, (AVRasrLoop i16:$src, i8:$cnt))]>;
 
 def Asr32 : ShiftPseudo<(outs DREGS:$dstlo, DREGS:$dsthi),
                         (ins DREGS:$srclo, DREGS:$srchi, i8imm:$cnt),
                         "# Asr32 PSEUDO",
-                        [(set i16:$dstlo, i16:$dsthi, (AVRasrw i16:$srclo, i16:$srchi, i8:$cnt))]>;
+                        [(set i16:$dstlo, i16:$dsthi,
+                          (AVRasrw i16:$srclo, i16:$srchi, i8:$cnt))]>;
 
 // lowered to a copy from the zero register.
 let usesCustomInserter=1 in
@@ -1683,12 +1602,7 @@ def CopyZero : Pseudo<(outs GPR8:$rd), (ins), "clrz\t$rd", [(set i8:$rd, 0)]>;
 
 // the add instruction always writes the carry flag
 def : Pat<(addc i8 : $src, i8 : $src2), (ADDRdRr i8 : $src, i8 : $src2)>;
-def : Pat<(addc DREGS
-           : $src, DREGS
-           : $src2),
-          (ADDWRdRr DREGS
-           : $src, DREGS
-           : $src2)>;
+def : Pat<(addc DREGS:$src, DREGS:$src2), (ADDWRdRr DREGS:$src, DREGS:$src2)>;
 
 // all sub instruction variants always writes the carry flag
 def : Pat<(subc i8 : $src, i8 : $src2), (SUBRdRr i8 : $src, i8 : $src2)>;
@@ -1698,48 +1612,26 @@ def : Pat<(subc i16 : $src, imm : $src2), (SUBIWRdK i16 : $src, imm : $src2)>;
 
 // These patterns convert add (x, -imm) to sub (x, imm) since we dont have
 // any add with imm instructions. Also take care of the adiw/sbiw instructions.
-def : Pat<(add i16
-           : $src1, imm0_63_neg
-           : $src2),
-          (SBIWRdK i16
-           : $src1, (imm0_63_neg
-                     : $src2))>,
-          Requires<[HasADDSUBIW]>;
-def : Pat<(add i16
-           : $src1, imm
-           : $src2),
-          (SUBIWRdK i16
-           : $src1, (imm16_neg_XFORM imm
-                     : $src2))>;
-def : Pat<(addc i16
-           : $src1, imm
-           : $src2),
-          (SUBIWRdK i16
-           : $src1, (imm16_neg_XFORM imm
-                     : $src2))>;
+def : Pat<(add i16:$s1, imm0_63_neg:$s2), (SBIWRdK i16:$s1, (imm0_63_neg:$s2))>,
+      Requires<[HasADDSUBIW]>;
 
-def : Pat<(add i8
-           : $src1, imm
-           : $src2),
-          (SUBIRdK i8
-           : $src1, (imm8_neg_XFORM imm
-                     : $src2))>;
-def : Pat<(addc i8
-           : $src1, imm
-           : $src2),
-          (SUBIRdK i8
-           : $src1, (imm8_neg_XFORM imm
-                     : $src2))>;
-def : Pat<(adde i8
-           : $src1, imm
-           : $src2),
-          (SBCIRdK i8
-           : $src1, (imm8_neg_XFORM imm
-                     : $src2))>;
+def : Pat<(add i16:$src1, imm:$src2),
+          (SUBIWRdK i16:$src1, (imm16_neg_XFORM imm:$src2))>;
+
+def : Pat<(addc i16:$src1, imm:$src2),
+          (SUBIWRdK i16:$src1, (imm16_neg_XFORM imm:$src2))>;
+
+def : Pat<(add i8:$src1, imm:$src2),
+          (SUBIRdK i8:$src1, (imm8_neg_XFORM imm:$src2))>;
+
+def : Pat<(addc i8:$src1, imm:$src2),
+          (SUBIRdK i8:$src1, (imm8_neg_XFORM imm:$src2))>;
+
+def : Pat<(adde i8:$src1, imm:$src2),
+          (SBCIRdK i8:$src1, (imm8_neg_XFORM imm:$src2))>;
 
 // Emit NEGWRd with an extra zero register operand.
-def : Pat<(ineg i16:$src),
-          (NEGWRd i16:$src, (CopyZero))>;
+def : Pat<(ineg i16:$src), (NEGWRd i16:$src, (CopyZero))>;
 
 // Calls.
 let Predicates = [HasJMPCALL] in {
@@ -1759,48 +1651,36 @@ def : Pat<(i16(anyext i8:$src)),
 def : Pat<(i8(trunc i16 : $src)), (EXTRACT_SUBREG i16 : $src, sub_lo)>;
 
 // sext_inreg
-def : Pat<(sext_inreg i16
-           : $src, i8),
-          (SEXT(i8(EXTRACT_SUBREG i16
-                   : $src, sub_lo)))>;
+def : Pat<(sext_inreg i16:$s, i8), (SEXT(i8(EXTRACT_SUBREG i16:$s, sub_lo)))>;
 
 // GlobalAddress
 def : Pat<(i16(AVRWrapper tglobaladdr : $dst)), (LDIWRdK tglobaladdr : $dst)>;
-def : Pat<(add i16
-           : $src, (AVRWrapper tglobaladdr
-                    : $src2)),
-          (SUBIWRdK i16
-           : $src, tglobaladdr
-           : $src2)>;
+def : Pat<(add i16:$src, (AVRWrapper tglobaladdr:$src2)),
+          (SUBIWRdK i16:$src, tglobaladdr:$src2)>;
 def : Pat<(i8(load(AVRWrapper tglobaladdr:$dst))),
           (LDSRdK tglobaladdr:$dst)>,
-          Requires<[HasSRAM, HasNonTinyEncoding]>;
+      Requires<[HasSRAM, HasNonTinyEncoding]>;
 def : Pat<(i8(load(AVRWrapper tglobaladdr:$dst))),
           (LDSRdKTiny tglobaladdr:$dst)>,
-          Requires<[HasSRAM, HasTinyEncoding]>;
+      Requires<[HasSRAM, HasTinyEncoding]>;
 def : Pat<(i16(load(AVRWrapper tglobaladdr:$dst))),
           (LDSWRdK tglobaladdr:$dst)>,
-          Requires<[HasSRAM, HasNonTinyEncoding]>;
+      Requires<[HasSRAM, HasNonTinyEncoding]>;
 def : Pat<(store i8:$src, (i16(AVRWrapper tglobaladdr:$dst))),
           (STSKRr tglobaladdr:$dst, i8:$src)>,
-          Requires<[HasSRAM, HasNonTinyEncoding]>;
+      Requires<[HasSRAM, HasNonTinyEncoding]>;
 def : Pat<(store i8:$src, (i16(AVRWrapper tglobaladdr:$dst))),
           (STSKRrTiny tglobaladdr:$dst, i8:$src)>,
-          Requires<[HasSRAM, HasTinyEncoding]>;
+      Requires<[HasSRAM, HasTinyEncoding]>;
 def : Pat<(store i16:$src, (i16(AVRWrapper tglobaladdr:$dst))),
           (STSWKRr tglobaladdr:$dst, i16:$src)>,
-          Requires<[HasSRAM, HasNonTinyEncoding]>;
+      Requires<[HasSRAM, HasNonTinyEncoding]>;
 
 // BlockAddress
-def : Pat<(i16(AVRWrapper tblockaddress
-               : $dst)),
-          (LDIWRdK tblockaddress
-           : $dst)>;
+def : Pat<(i16(AVRWrapper tblockaddress :$dst)), (LDIWRdK tblockaddress:$dst)>;
 
-def : Pat<(i8(trunc(AVRlsrwn DLDREGS
-                    : $src, (i16 8)))),
-          (EXTRACT_SUBREG DREGS
-           : $src, sub_hi)>;
+def : Pat<(i8(trunc(AVRlsrwn DLDREGS:$src, (i16 8)))),
+          (EXTRACT_SUBREG DREGS:$src, sub_hi)>;
 
 // :FIXME: DAGCombiner produces an shl node after legalization from these seq:
 // BR_JT -> (mul x, 2) -> (shl x, 1)

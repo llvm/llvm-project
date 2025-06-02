@@ -180,7 +180,7 @@ def _llvm_configure_impl(repository_ctx):
     )
 
     # Create a starlark file with the requested BOLT targets.
-    bolt_targets = ["AArch64","X86","RISCV"]  # Supported targets.
+    bolt_targets = ["AArch64", "X86", "RISCV"]  # Supported targets.
     bolt_targets = [t for t in llvm_targets if t in bolt_targets]
     repository_ctx.file(
         "bolt/targets.bzl",

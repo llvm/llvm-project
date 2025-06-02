@@ -201,7 +201,7 @@ std::string ReportInvalidTerminator::getRemarkName() const {
   return "InvalidTerminator";
 }
 
-const Value *ReportInvalidTerminator::getRemarkBB() const { return BB; }
+const BasicBlock *ReportInvalidTerminator::getRemarkBB() const { return BB; }
 
 std::string ReportInvalidTerminator::getMessage() const {
   return ("Invalid instruction terminates BB: " + BB->getName()).str();
@@ -222,7 +222,7 @@ std::string ReportUnreachableInExit::getRemarkName() const {
   return "UnreachableInExit";
 }
 
-const Value *ReportUnreachableInExit::getRemarkBB() const { return BB; }
+const BasicBlock *ReportUnreachableInExit::getRemarkBB() const { return BB; }
 
 std::string ReportUnreachableInExit::getMessage() const {
   std::string BBName = BB->getName().str();
@@ -246,7 +246,7 @@ std::string ReportIndirectPredecessor::getRemarkName() const {
   return "IndirectPredecessor";
 }
 
-const Value *ReportIndirectPredecessor::getRemarkBB() const {
+const BasicBlock *ReportIndirectPredecessor::getRemarkBB() const {
   if (Inst)
     return Inst->getParent();
   return nullptr;
@@ -277,7 +277,7 @@ std::string ReportIrreducibleRegion::getRemarkName() const {
   return "IrreducibleRegion";
 }
 
-const Value *ReportIrreducibleRegion::getRemarkBB() const {
+const BasicBlock *ReportIrreducibleRegion::getRemarkBB() const {
   return R->getEntry();
 }
 
@@ -311,7 +311,7 @@ bool ReportAffFunc::classof(const RejectReason *RR) {
 
 std::string ReportUndefCond::getRemarkName() const { return "UndefCond"; }
 
-const Value *ReportUndefCond::getRemarkBB() const { return BB; }
+const BasicBlock *ReportUndefCond::getRemarkBB() const { return BB; }
 
 std::string ReportUndefCond::getMessage() const {
   return ("Condition based on 'undef' value in BB: " + BB->getName()).str();
@@ -326,7 +326,7 @@ bool ReportUndefCond::classof(const RejectReason *RR) {
 
 std::string ReportInvalidCond::getRemarkName() const { return "InvalidCond"; }
 
-const Value *ReportInvalidCond::getRemarkBB() const { return BB; }
+const BasicBlock *ReportInvalidCond::getRemarkBB() const { return BB; }
 
 std::string ReportInvalidCond::getMessage() const {
   return ("Condition in BB '" + BB->getName()).str() +
@@ -342,7 +342,7 @@ bool ReportInvalidCond::classof(const RejectReason *RR) {
 
 std::string ReportUndefOperand::getRemarkName() const { return "UndefOperand"; }
 
-const Value *ReportUndefOperand::getRemarkBB() const { return BB; }
+const BasicBlock *ReportUndefOperand::getRemarkBB() const { return BB; }
 
 std::string ReportUndefOperand::getMessage() const {
   return ("undef operand in branch at BB: " + BB->getName()).str();
@@ -357,7 +357,7 @@ bool ReportUndefOperand::classof(const RejectReason *RR) {
 
 std::string ReportNonAffBranch::getRemarkName() const { return "NonAffBranch"; }
 
-const Value *ReportNonAffBranch::getRemarkBB() const { return BB; }
+const BasicBlock *ReportNonAffBranch::getRemarkBB() const { return BB; }
 
 std::string ReportNonAffBranch::getMessage() const {
   return ("Non affine branch in BB '" + BB->getName()).str() +
@@ -373,7 +373,9 @@ bool ReportNonAffBranch::classof(const RejectReason *RR) {
 
 std::string ReportNoBasePtr::getRemarkName() const { return "NoBasePtr"; }
 
-const Value *ReportNoBasePtr::getRemarkBB() const { return Inst->getParent(); }
+const BasicBlock *ReportNoBasePtr::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportNoBasePtr::getMessage() const { return "No base pointer"; }
 
@@ -386,7 +388,7 @@ bool ReportNoBasePtr::classof(const RejectReason *RR) {
 
 std::string ReportUndefBasePtr::getRemarkName() const { return "UndefBasePtr"; }
 
-const Value *ReportUndefBasePtr::getRemarkBB() const {
+const BasicBlock *ReportUndefBasePtr::getRemarkBB() const {
   return Inst->getParent();
 }
 
@@ -405,7 +407,7 @@ std::string ReportVariantBasePtr::getRemarkName() const {
   return "VariantBasePtr";
 }
 
-const Value *ReportVariantBasePtr::getRemarkBB() const {
+const BasicBlock *ReportVariantBasePtr::getRemarkBB() const {
   return Inst->getParent();
 }
 
@@ -428,7 +430,7 @@ std::string ReportDifferentArrayElementSize::getRemarkName() const {
   return "DifferentArrayElementSize";
 }
 
-const Value *ReportDifferentArrayElementSize::getRemarkBB() const {
+const BasicBlock *ReportDifferentArrayElementSize::getRemarkBB() const {
   return Inst->getParent();
 }
 
@@ -455,7 +457,7 @@ std::string ReportNonAffineAccess::getRemarkName() const {
   return "NonAffineAccess";
 }
 
-const Value *ReportNonAffineAccess::getRemarkBB() const {
+const BasicBlock *ReportNonAffineAccess::getRemarkBB() const {
   return Inst->getParent();
 }
 
@@ -482,7 +484,9 @@ ReportLoopBound::ReportLoopBound(Loop *L, const SCEV *LoopCount)
 
 std::string ReportLoopBound::getRemarkName() const { return "LoopBound"; }
 
-const Value *ReportLoopBound::getRemarkBB() const { return L->getHeader(); }
+const BasicBlock *ReportLoopBound::getRemarkBB() const {
+  return L->getHeader();
+}
 
 std::string ReportLoopBound::getMessage() const {
   return "Non affine loop bound '" + *LoopCount +
@@ -506,7 +510,9 @@ std::string ReportLoopHasNoExit::getRemarkName() const {
   return "LoopHasNoExit";
 }
 
-const Value *ReportLoopHasNoExit::getRemarkBB() const { return L->getHeader(); }
+const BasicBlock *ReportLoopHasNoExit::getRemarkBB() const {
+  return L->getHeader();
+}
 
 std::string ReportLoopHasNoExit::getMessage() const {
   return "Loop " + L->getHeader()->getName() + " has no exit.";
@@ -529,7 +535,7 @@ std::string ReportLoopHasMultipleExits::getRemarkName() const {
   return "ReportLoopHasMultipleExits";
 }
 
-const Value *ReportLoopHasMultipleExits::getRemarkBB() const {
+const BasicBlock *ReportLoopHasMultipleExits::getRemarkBB() const {
   return L->getHeader();
 }
 
@@ -554,7 +560,7 @@ std::string ReportLoopOnlySomeLatches::getRemarkName() const {
   return "LoopHasNoExit";
 }
 
-const Value *ReportLoopOnlySomeLatches::getRemarkBB() const {
+const BasicBlock *ReportLoopOnlySomeLatches::getRemarkBB() const {
   return L->getHeader();
 }
 
@@ -582,7 +588,9 @@ ReportFuncCall::ReportFuncCall(Instruction *Inst)
 
 std::string ReportFuncCall::getRemarkName() const { return "FuncCall"; }
 
-const Value *ReportFuncCall::getRemarkBB() const { return Inst->getParent(); }
+const BasicBlock *ReportFuncCall::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportFuncCall::getMessage() const {
   return "Call instruction: " + *Inst;
@@ -611,7 +619,7 @@ std::string ReportNonSimpleMemoryAccess::getRemarkName() const {
   return "NonSimpleMemoryAccess";
 }
 
-const Value *ReportNonSimpleMemoryAccess::getRemarkBB() const {
+const BasicBlock *ReportNonSimpleMemoryAccess::getRemarkBB() const {
   return Inst->getParent();
 }
 
@@ -673,7 +681,7 @@ std::string ReportAlias::formatInvalidAlias(std::string Prefix,
 
 std::string ReportAlias::getRemarkName() const { return "Alias"; }
 
-const Value *ReportAlias::getRemarkBB() const { return Inst->getParent(); }
+const BasicBlock *ReportAlias::getRemarkBB() const { return Inst->getParent(); }
 
 std::string ReportAlias::getMessage() const {
   return formatInvalidAlias("Possible aliasing: ");
@@ -711,7 +719,7 @@ ReportIntToPtr::ReportIntToPtr(Instruction *BaseValue)
 
 std::string ReportIntToPtr::getRemarkName() const { return "IntToPtr"; }
 
-const Value *ReportIntToPtr::getRemarkBB() const {
+const BasicBlock *ReportIntToPtr::getRemarkBB() const {
   return BaseValue->getParent();
 }
 
@@ -735,7 +743,9 @@ ReportAlloca::ReportAlloca(Instruction *Inst)
 
 std::string ReportAlloca::getRemarkName() const { return "Alloca"; }
 
-const Value *ReportAlloca::getRemarkBB() const { return Inst->getParent(); }
+const BasicBlock *ReportAlloca::getRemarkBB() const {
+  return Inst->getParent();
+}
 
 std::string ReportAlloca::getMessage() const {
   return "Alloca instruction: " + *Inst;
@@ -757,7 +767,7 @@ ReportUnknownInst::ReportUnknownInst(Instruction *Inst)
 
 std::string ReportUnknownInst::getRemarkName() const { return "UnknownInst"; }
 
-const Value *ReportUnknownInst::getRemarkBB() const {
+const BasicBlock *ReportUnknownInst::getRemarkBB() const {
   return Inst->getParent();
 }
 
@@ -781,7 +791,7 @@ ReportEntry::ReportEntry(BasicBlock *BB)
 
 std::string ReportEntry::getRemarkName() const { return "Entry"; }
 
-const Value *ReportEntry::getRemarkBB() const { return BB; }
+const BasicBlock *ReportEntry::getRemarkBB() const { return BB; }
 
 std::string ReportEntry::getMessage() const {
   return "Region containing entry block of function is invalid!";
@@ -807,7 +817,9 @@ ReportUnprofitable::ReportUnprofitable(Region *R)
 
 std::string ReportUnprofitable::getRemarkName() const { return "Unprofitable"; }
 
-const Value *ReportUnprofitable::getRemarkBB() const { return R->getEntry(); }
+const BasicBlock *ReportUnprofitable::getRemarkBB() const {
+  return R->getEntry();
+}
 
 std::string ReportUnprofitable::getMessage() const {
   return "Region can not profitably be optimized!";

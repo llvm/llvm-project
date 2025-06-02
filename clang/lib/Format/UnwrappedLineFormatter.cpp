@@ -314,8 +314,8 @@ private:
           const AnnotatedLine *Line = nullptr;
           for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
             assert(*J);
-            if ((*J)->InPPDirective || (*J)->isComment() ||
-                (*J)->Level > TheLine->Level) {
+            if (((*J)->InPPDirective && !(*J)->InMacroBody) ||
+                (*J)->isComment() || (*J)->Level > TheLine->Level) {
               continue;
             }
             if ((*J)->Level < TheLine->Level ||

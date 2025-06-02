@@ -390,6 +390,16 @@ std::optional<bool> OmpStructureChecker::IsContiguous(
       object.u);
 }
 
+void OmpStructureChecker::CheckVariableListItem(
+    const SymbolSourceMap &symbols) {
+  for (auto &[symbol, source] : symbols) {
+    if (!IsVariableListItem(*symbol)) {
+      context_.SayWithDecl(
+          *symbol, source, "'%s' must be a variable"_err_en_US, symbol->name());
+    }
+  }
+}
+
 void OmpStructureChecker::CheckMultipleOccurrence(
     semantics::UnorderedSymbolSet &listVars,
     const std::list<parser::Name> &nameList, const parser::CharBlock &item,
@@ -2303,9 +2313,15 @@ void OmpStructureChecker::Enter(const parser::OpenMPFlushConstruct &x) {
 void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
   auto &flushList{std::get<std::optional<parser::OmpArgumentList>>(x.v.t)};
 
+  auto isVariableListItemOrCommonBlock{[this](const Symbol &sym) {
+    return IsVariableListItem(sym) ||
+        sym.detailsIf<semantics::CommonBlockDetails>();
+  }};
+
   if (flushList) {
     for (const parser::OmpArgument &arg : flushList->v) {
-      if (auto *sym{GetArgumentSymbol(arg)}; sym && !IsVariableListItem(*sym)) {
+      if (auto *sym{GetArgumentSymbol(arg)};
+          sym && !isVariableListItemOrCommonBlock(*sym)) {
         context_.Say(arg.source,
             "FLUSH argument must be a variable list item"_err_en_US);
       }
@@ -2422,20 +2438,30 @@ void OmpStructureChecker::Leave(const parser::OpenMPCriticalConstruct &) {
 
 void OmpStructureChecker::Enter(
     const parser::OmpClause::CancellationConstructType &x) {
-  // Do not call CheckAllowed/CheckAllowedClause, because in case of an error
-  // it will print "CANCELLATION_CONSTRUCT_TYPE" as the clause name instead of
-  // the contained construct name.
+  llvm::omp::Directive dir{GetContext().directive};
   auto &dirName{std::get<parser::OmpDirectiveName>(x.v.t)};
-  switch (dirName.v) {
-  case llvm::omp::Directive::OMPD_do:
-  case llvm::omp::Directive::OMPD_parallel:
-  case llvm::omp::Directive::OMPD_sections:
-  case llvm::omp::Directive::OMPD_taskgroup:
-    break;
-  default:
-    context_.Say(dirName.source, "%s is not a cancellable construct"_err_en_US,
-        parser::ToUpperCaseLetters(getDirectiveName(dirName.v).str()));
-    break;
+
+  if (dir != llvm::omp::Directive::OMPD_cancel &&
+      dir != llvm::omp::Directive::OMPD_cancellation_point) {
+    // Do not call CheckAllowed/CheckAllowedClause, because in case of an error
+    // it will print "CANCELLATION_CONSTRUCT_TYPE" as the clause name instead
+    // of the contained construct name.
+    context_.Say(dirName.source, "%s cannot follow %s"_err_en_US,
+        parser::ToUpperCaseLetters(getDirectiveName(dirName.v)),
+        parser::ToUpperCaseLetters(getDirectiveName(dir)));
+  } else {
+    switch (dirName.v) {
+    case llvm::omp::Directive::OMPD_do:
+    case llvm::omp::Directive::OMPD_parallel:
+    case llvm::omp::Directive::OMPD_sections:
+    case llvm::omp::Directive::OMPD_taskgroup:
+      break;
+    default:
+      context_.Say(dirName.source,
+          "%s is not a cancellable construct"_err_en_US,
+          parser::ToUpperCaseLetters(getDirectiveName(dirName.v)));
+      break;
+    }
   }
 }
 
@@ -2559,8 +2585,8 @@ void OmpStructureChecker::CheckCancellationNest(
       }
       break;
     default:
-      // This should have been diagnosed by this point.
-      llvm_unreachable("Unexpected directive");
+      // This is diagnosed later.
+      return;
     }
     if (!eligibleCancellation) {
       context_.Say(source,
@@ -2598,8 +2624,8 @@ void OmpStructureChecker::CheckCancellationNest(
           parser::ToUpperCaseLetters(typeName.str()));
       break;
     default:
-      // This should have been diagnosed by this point.
-      llvm_unreachable("Unexpected directive");
+      // This is diagnosed later.
+      return;
     }
   }
 }
@@ -2894,45 +2920,47 @@ void OmpStructureChecker::CheckAtomicCaptureConstruct(
           .v.statement;
   const auto &stmt1Var{std::get<parser::Variable>(stmt1.t)};
   const auto &stmt1Expr{std::get<parser::Expr>(stmt1.t)};
+  const auto *v1 = GetExpr(context_, stmt1Var);
+  const auto *e1 = GetExpr(context_, stmt1Expr);
 
   const parser::AssignmentStmt &stmt2 =
       std::get<parser::OmpAtomicCapture::Stmt2>(atomicCaptureConstruct.t)
           .v.statement;
   const auto &stmt2Var{std::get<parser::Variable>(stmt2.t)};
   const auto &stmt2Expr{std::get<parser::Expr>(stmt2.t)};
+  const auto *v2 = GetExpr(context_, stmt2Var);
+  const auto *e2 = GetExpr(context_, stmt2Expr);
 
-  if (semantics::checkForSingleVariableOnRHS(stmt1)) {
-    CheckAtomicCaptureStmt(stmt1);
-    if (semantics::checkForSymbolMatch(stmt2)) {
-      // ATOMIC CAPTURE construct is of the form [capture-stmt, update-stmt]
-      CheckAtomicUpdateStmt(stmt2);
+  if (e1 && v1 && e2 && v2) {
+    if (semantics::checkForSingleVariableOnRHS(stmt1)) {
+      CheckAtomicCaptureStmt(stmt1);
+      if (semantics::checkForSymbolMatch(v2, e2)) {
+        // ATOMIC CAPTURE construct is of the form [capture-stmt, update-stmt]
+        CheckAtomicUpdateStmt(stmt2);
+      } else {
+        // ATOMIC CAPTURE construct is of the form [capture-stmt, write-stmt]
+        CheckAtomicWriteStmt(stmt2);
+      }
+      if (!(*e1 == *v2)) {
+        context_.Say(stmt1Expr.source,
+            "Captured variable/array element/derived-type component %s expected to be assigned in the second statement of ATOMIC CAPTURE construct"_err_en_US,
+            stmt1Expr.source);
+      }
+    } else if (semantics::checkForSymbolMatch(v1, e1) &&
+        semantics::checkForSingleVariableOnRHS(stmt2)) {
+      // ATOMIC CAPTURE construct is of the form [update-stmt, capture-stmt]
+      CheckAtomicUpdateStmt(stmt1);
+      CheckAtomicCaptureStmt(stmt2);
+      // Variable updated in stmt1 should be captured in stmt2
+      if (!(*v1 == *e2)) {
+        context_.Say(stmt1Var.GetSource(),
+            "Updated variable/array element/derived-type component %s expected to be captured in the second statement of ATOMIC CAPTURE construct"_err_en_US,
+            stmt1Var.GetSource());
+      }
     } else {
-      // ATOMIC CAPTURE construct is of the form [capture-stmt, write-stmt]
-      CheckAtomicWriteStmt(stmt2);
-    }
-    auto *v{stmt2Var.typedExpr.get()};
-    auto *e{stmt1Expr.typedExpr.get()};
-    if (v && e && !(v->v == e->v)) {
       context_.Say(stmt1Expr.source,
-          "Captured variable/array element/derived-type component %s expected to be assigned in the second statement of ATOMIC CAPTURE construct"_err_en_US,
-          stmt1Expr.source);
+          "Invalid ATOMIC CAPTURE construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]"_err_en_US);
     }
-  } else if (semantics::checkForSymbolMatch(stmt1) &&
-      semantics::checkForSingleVariableOnRHS(stmt2)) {
-    // ATOMIC CAPTURE construct is of the form [update-stmt, capture-stmt]
-    CheckAtomicUpdateStmt(stmt1);
-    CheckAtomicCaptureStmt(stmt2);
-    // Variable updated in stmt1 should be captured in stmt2
-    auto *v{stmt1Var.typedExpr.get()};
-    auto *e{stmt2Expr.typedExpr.get()};
-    if (v && e && !(v->v == e->v)) {
-      context_.Say(stmt1Var.GetSource(),
-          "Updated variable/array element/derived-type component %s expected to be captured in the second statement of ATOMIC CAPTURE construct"_err_en_US,
-          stmt1Var.GetSource());
-    }
-  } else {
-    context_.Say(stmt1Expr.source,
-        "Invalid ATOMIC CAPTURE construct statements. Expected one of [update-stmt, capture-stmt], [capture-stmt, update-stmt], or [capture-stmt, write-stmt]"_err_en_US);
   }
 }
 
@@ -3545,8 +3573,7 @@ void OmpStructureChecker::CheckReductionObjects(
   // names into the lists of their members.
   for (const parser::OmpObject &object : objects.v) {
     auto *symbol{GetObjectSymbol(object)};
-    assert(symbol && "Expecting a symbol for object");
-    if (IsCommonBlock(*symbol)) {
+    if (symbol && IsCommonBlock(*symbol)) {
       auto source{GetObjectSource(object)};
       context_.Say(source ? *source : GetContext().clauseSource,
           "Common block names are not allowed in %s clause"_err_en_US,
@@ -4570,6 +4597,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_copyprivate);
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(x.v, symbols);
+  CheckVariableListItem(symbols);
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_copyprivate);
   CheckCopyingPolymorphicAllocatable(
       symbols, llvm::omp::Clause::OMPC_copyprivate);
@@ -4842,12 +4870,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::From &x) {
   const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objList, symbols);
-  for (const auto &[symbol, source] : symbols) {
-    if (!IsVariableListItem(*symbol)) {
-      context_.SayWithDecl(
-          *symbol, source, "'%s' must be a variable"_err_en_US, symbol->name());
-    }
-  }
+  CheckVariableListItem(symbols);
 
   // Ref: [4.5:109:19]
   // If a list item is an array section it must specify contiguous storage.
@@ -4887,12 +4910,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::To &x) {
   const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objList, symbols);
-  for (const auto &[symbol, source] : symbols) {
-    if (!IsVariableListItem(*symbol)) {
-      context_.SayWithDecl(
-          *symbol, source, "'%s' must be a variable"_err_en_US, symbol->name());
-    }
-  }
+  CheckVariableListItem(symbols);
 
   // Ref: [4.5:109:19]
   // If a list item is an array section it must specify contiguous storage.
@@ -5476,12 +5494,8 @@ void OmpStructureChecker::CheckDependList(const parser::DataRef &d) {
             // Check if the base element is valid on Depend Clause
             CheckDependList(elem.value().base);
           },
-          [&](const common::Indirection<parser::StructureComponent> &) {
-            context_.Say(GetContext().clauseSource,
-                "A variable that is part of another variable "
-                "(such as an element of a structure) but is not an array "
-                "element or an array section cannot appear in a DEPEND "
-                "clause"_err_en_US);
+          [&](const common::Indirection<parser::StructureComponent> &comp) {
+            CheckDependList(comp.value().base);
           },
           [&](const common::Indirection<parser::CoindexedNamedObject> &) {
             context_.Say(GetContext().clauseSource,

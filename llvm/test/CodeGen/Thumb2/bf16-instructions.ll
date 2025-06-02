@@ -2373,7 +2373,7 @@ define bfloat @test_roundeven(bfloat %a) {
 ; CHECK-FP-NEXT:    vmov r0, s0
 ; CHECK-FP-NEXT:    lsls r0, r0, #16
 ; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    bl roundevenf
+; CHECK-FP-NEXT:    vrintn.f32 s0, s0
 ; CHECK-FP-NEXT:    bl __truncsfbf2
 ; CHECK-FP-NEXT:    vmov.f16 r0, s0
 ; CHECK-FP-NEXT:    vmov s0, r0

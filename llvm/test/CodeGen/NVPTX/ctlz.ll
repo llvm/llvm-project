@@ -17,7 +17,7 @@ define i32 @myctlz(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [myctlz_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [myctlz_param_0];
 ; CHECK-NEXT:    clz.b32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -30,7 +30,7 @@ define i32 @myctlz_2(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [myctlz_2_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [myctlz_2_param_0];
 ; CHECK-NEXT:    clz.b32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -47,7 +47,7 @@ define i64 @myctlz64(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [myctlz64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [myctlz64_param_0];
 ; CHECK-NEXT:    clz.b64 %r1, %rd1;
 ; CHECK-NEXT:    cvt.u64.u32 %rd2, %r1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
@@ -62,7 +62,7 @@ define i64 @myctlz64_2(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [myctlz64_2_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [myctlz64_2_param_0];
 ; CHECK-NEXT:    clz.b64 %r1, %rd1;
 ; CHECK-NEXT:    cvt.u64.u32 %rd2, %r1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
@@ -81,7 +81,7 @@ define i32 @myctlz64_as_32(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [myctlz64_as_32_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [myctlz64_as_32_param_0];
 ; CHECK-NEXT:    clz.b64 %r1, %rd1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -96,7 +96,7 @@ define i32 @myctlz64_as_32_2(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [myctlz64_as_32_2_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [myctlz64_as_32_2_param_0];
 ; CHECK-NEXT:    clz.b64 %r1, %rd1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -115,7 +115,7 @@ define i16 @myctlz_ret16(i16 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %r1, [myctlz_ret16_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [myctlz_ret16_param_0];
 ; CHECK-NEXT:    clz.b32 %r2, %r1;
 ; CHECK-NEXT:    add.s32 %r3, %r2, -16;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -129,7 +129,7 @@ define i16 @myctlz_ret16_2(i16 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %r1, [myctlz_ret16_2_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [myctlz_ret16_2_param_0];
 ; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
 ; CHECK-NEXT:    clz.b32 %r3, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -147,11 +147,11 @@ define void @myctlz_store16(i16 %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %r1, [myctlz_store16_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [myctlz_store16_param_0];
 ; CHECK-NEXT:    clz.b32 %r2, %r1;
 ; CHECK-NEXT:    add.s32 %r3, %r2, -16;
-; CHECK-NEXT:    ld.param.u64 %rd1, [myctlz_store16_param_1];
-; CHECK-NEXT:    st.u16 [%rd1], %r3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [myctlz_store16_param_1];
+; CHECK-NEXT:    st.b16 [%rd1], %r3;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.ctlz.i16(i16 %a, i1 false) readnone
   store i16 %val, ptr %b
@@ -164,11 +164,11 @@ define void @myctlz_store16_2(i16 %a, ptr %b) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %r1, [myctlz_store16_2_param_0];
+; CHECK-NEXT:    ld.param.b16 %r1, [myctlz_store16_2_param_0];
 ; CHECK-NEXT:    clz.b32 %r2, %r1;
 ; CHECK-NEXT:    add.s32 %r3, %r2, -16;
-; CHECK-NEXT:    ld.param.u64 %rd1, [myctlz_store16_2_param_1];
-; CHECK-NEXT:    st.u16 [%rd1], %r3;
+; CHECK-NEXT:    ld.param.b64 %rd1, [myctlz_store16_2_param_1];
+; CHECK-NEXT:    st.b16 [%rd1], %r3;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.ctlz.i16(i16 %a, i1 false) readnone
   store i16 %val, ptr %b

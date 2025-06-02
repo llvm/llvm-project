@@ -109,3 +109,11 @@ func.func @apply() -> !emitc.ptr<i32> {
 func.func @array_type(%arg0: !emitc.array<3xi32>, %arg1: !emitc.array<10x20xf32>) {
   return
 }
+
+// CHECK: call_opaque_with_template_arg
+func.func @call_opaque_with_template_arg() {
+  emitc.call_opaque "init_tile"() {template_args = [512 : index]} : () -> ()
+  // CHECK-NEXT: init_tile<512>();
+  // CHECK-NEXT: return
+  return
+}

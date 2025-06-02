@@ -82,9 +82,9 @@ define void @test_addr_only_capture(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META6:![0-9]+]])
 ; CHECK-NEXT:    call void @capture(ptr captures(address) [[P]])
-; CHECK-NEXT:    [[P2_I:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    [[P2_I:%.*]] = call ptr @get_ptr(), !noalias [[META6]]
 ; CHECK-NEXT:    [[V_I:%.*]] = load i32, ptr [[P]], align 4, !alias.scope [[META6]]
-; CHECK-NEXT:    store i32 [[V_I]], ptr [[P2_I]], align 4
+; CHECK-NEXT:    store i32 [[V_I]], ptr [[P2_I]], align 4, !noalias [[META6]]
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_addr_only_capture(ptr %p)

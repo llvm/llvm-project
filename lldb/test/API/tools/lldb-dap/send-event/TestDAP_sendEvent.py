@@ -24,7 +24,6 @@ class TestDAP_sendEvent(lldbdap_testcase.DAPTestCaseBase):
         }
         self.build_and_launch(
             program,
-            sourceBreakpoints=[(source, [breakpoint_line])],
             stopCommands=[
                 "lldb-dap send-event my-custom-event-no-body",
                 "lldb-dap send-event my-custom-event '{}'".format(
@@ -32,6 +31,8 @@ class TestDAP_sendEvent(lldbdap_testcase.DAPTestCaseBase):
                 ),
             ],
         )
+        self.set_source_breakpoints(source, [breakpoint_line])
+        self.continue_to_next_stop()
 
         custom_event = self.dap_server.wait_for_event(
             filter=["my-custom-event-no-body"]

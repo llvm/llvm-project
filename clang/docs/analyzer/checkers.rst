@@ -773,7 +773,11 @@ enumerators at all.
 **Limitations**
 
 This checker does not accept the coding pattern where an enum type is used to
-store combinations of flag values:
+store combinations of flag values.
+Such enums should be annotated with the `__attribute__((flag_enum))` or by the
+`[[clang::flag_enum]]` attribute to signal this intent. Refer to the
+`documentation <https://clang.llvm.org/docs/AttributeReference.html#flag-enum>`_
+of this Clang attribute.
 
 .. code-block:: cpp
 
@@ -1460,7 +1464,7 @@ overflow occurs), the checker assumes that the the index (more precisely, the
 memory offeset) is within bounds.
 
 However, if :ref:`optin-taint-GenericTaint` is enabled and the index/offset is
-tainted (i.e. it is influenced by an untrusted souce), then this checker
+tainted (i.e. it is influenced by an untrusted source), then this checker
 reports the potential out of bounds access:
 
 .. code-block:: c
@@ -2710,7 +2714,7 @@ Check for proper uses of CFNumber APIs.
 
  CFNumberRef test(unsigned char x) {
    return CFNumberCreate(0, kCFNumberSInt16Type, &x);
-    // warn: 8 bit integer is used to initialize a 16 bit integer
+    // warn: 8-bit integer is used to initialize a 16-bit integer
  }
 
 .. _osx-coreFoundation-CFRetainRelease:

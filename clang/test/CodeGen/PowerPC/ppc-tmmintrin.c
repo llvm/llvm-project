@@ -71,7 +71,7 @@ test_alignr() {
 // CHECK-BE: call <16 x i8> @vec_sld(unsigned char vector[16], unsigned char vector[16], unsigned int)
 // CHECK-LE: call <16 x i8> @vec_reve(unsigned char vector[16])
 // CHECK-LE: call <16 x i8> @vec_reve(unsigned char vector[16])
-// CHECk-LE: call <16 x i8> @vec_sld(unsigned char vector[16], unsigned char vector[16], unsigned int)
+// CHECK-LE: call <16 x i8> @vec_sld(unsigned char vector[16], unsigned char vector[16], unsigned int)
 // CHECK-LE: call <16 x i8> @vec_reve(unsigned char vector[16])
 // CHECK: store <16 x i8> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: store <2 x i64> zeroinitializer, ptr %{{[0-9a-zA-Z_.]+}}, align 16

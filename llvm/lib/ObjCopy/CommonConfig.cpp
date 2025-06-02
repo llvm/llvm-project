@@ -9,8 +9,8 @@
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/Support/Errc.h"
 
-namespace llvm {
-namespace objcopy {
+using namespace llvm;
+using namespace llvm::objcopy;
 
 Expected<NameOrPattern>
 NameOrPattern::create(StringRef Pattern, MatchStyle MS,
@@ -47,6 +47,3 @@ NameOrPattern::create(StringRef Pattern, MatchStyle MS,
   }
   llvm_unreachable("Unhandled llvm.objcopy.MatchStyle enum");
 }
-
-} // end namespace objcopy
-} // end namespace llvm

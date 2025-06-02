@@ -1529,6 +1529,15 @@ public:
     return Filename == "<scratch space>";
   }
 
+  /// Returns whether \p Loc is located in a built-in or command line source.
+  bool isInPredefinedFile(SourceLocation Loc) const {
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
+    return Filename == "<built-in>" || Filename == "<command line>";
+  }
+
   /// Returns if a SourceLocation is in a system header.
   bool isInSystemHeader(SourceLocation Loc) const {
     if (Loc.isInvalid())
@@ -2032,6 +2041,7 @@ private:
   // as they are created in `createSourceManagerForFile` so that they can be
   // deleted in the reverse order as they are created.
   std::unique_ptr<FileManager> FileMgr;
+  std::unique_ptr<DiagnosticOptions> DiagOpts;
   std::unique_ptr<DiagnosticsEngine> Diagnostics;
   std::unique_ptr<SourceManager> SourceMgr;
 };

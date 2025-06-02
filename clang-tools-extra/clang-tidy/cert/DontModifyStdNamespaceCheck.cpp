@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DontModifyStdNamespaceCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 

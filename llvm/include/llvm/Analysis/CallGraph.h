@@ -49,6 +49,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <map>
 #include <memory>
@@ -86,12 +87,12 @@ class CallGraph {
   std::unique_ptr<CallGraphNode> CallsExternalNode;
 
 public:
-  explicit CallGraph(Module &M);
-  CallGraph(CallGraph &&Arg);
-  ~CallGraph();
+  LLVM_ABI explicit CallGraph(Module &M);
+  LLVM_ABI CallGraph(CallGraph &&Arg);
+  LLVM_ABI ~CallGraph();
 
-  void print(raw_ostream &OS) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
 
   using iterator = FunctionMapTy::iterator;
   using const_iterator = FunctionMapTy::const_iterator;
@@ -99,8 +100,8 @@ public:
   /// Returns the module the call graph corresponds to.
   Module &getModule() const { return M; }
 
-  bool invalidate(Module &, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Module &, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &);
 
   inline iterator begin() { return FunctionMap.begin(); }
   inline iterator end() { return FunctionMap.end(); }
@@ -140,18 +141,18 @@ public:
   /// destroyed.  This is only valid if the function does not call any other
   /// functions (ie, there are no edges in it's CGN).  The easiest way to do
   /// this is to dropAllReferences before calling this.
-  Function *removeFunctionFromModule(CallGraphNode *CGN);
+  LLVM_ABI Function *removeFunctionFromModule(CallGraphNode *CGN);
 
   /// Similar to operator[], but this will insert a new CallGraphNode for
   /// \c F if one does not already exist.
-  CallGraphNode *getOrInsertFunction(const Function *F);
+  LLVM_ABI CallGraphNode *getOrInsertFunction(const Function *F);
 
   /// Populate \p CGN based on the calls inside the associated function.
-  void populateCallGraphNode(CallGraphNode *CGN);
+  LLVM_ABI void populateCallGraphNode(CallGraphNode *CGN);
 
   /// Add a function to the call graph, and link the node to all of the
   /// functions that it calls.
-  void addToCallGraph(Function *F);
+  LLVM_ABI void addToCallGraph(Function *F);
 };
 
 /// A node in the call graph for a module.
@@ -209,8 +210,8 @@ public:
   }
 
   /// Print out this call graph node.
-  void dump() const;
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   //===---------------------------------------------------------------------
   // Methods to keep a call graph up to date with a function that has been
@@ -249,14 +250,14 @@ public:
 
   /// Removes one edge associated with a null callsite from this node to
   /// the specified callee function.
-  void removeOneAbstractEdgeTo(CallGraphNode *Callee);
+  LLVM_ABI void removeOneAbstractEdgeTo(CallGraphNode *Callee);
 
   /// Replaces the edge in the node for the specified call site with a
   /// new one.
   ///
   /// Note that this method takes linear time, so it should be used sparingly.
-  void replaceCallEdge(CallBase &Call, CallBase &NewCall,
-                       CallGraphNode *NewNode);
+  LLVM_ABI void replaceCallEdge(CallBase &Call, CallBase &NewCall,
+                                CallGraphNode *NewNode);
 
 private:
   friend class CallGraph;
@@ -285,7 +286,7 @@ private:
 class CallGraphAnalysis : public AnalysisInfoMixin<CallGraphAnalysis> {
   friend AnalysisInfoMixin<CallGraphAnalysis>;
 
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   /// A formulaic type to inform clients of the result type.
@@ -304,7 +305,7 @@ class CallGraphPrinterPass : public PassInfoMixin<CallGraphPrinterPass> {
 public:
   explicit CallGraphPrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
@@ -317,7 +318,7 @@ class CallGraphSCCsPrinterPass
 public:
   explicit CallGraphSCCsPrinterPass(raw_ostream &OS) : OS(OS) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
@@ -329,7 +330,7 @@ public:
 /// module pass which runs over a module of IR and produces the call graph. The
 /// call graph interface is entirelly a wrapper around a \c CallGraph object
 /// which is stored internally for each module.
-class CallGraphWrapperPass : public ModulePass {
+class LLVM_ABI CallGraphWrapperPass : public ModulePass {
   std::unique_ptr<CallGraph> G;
 
 public:

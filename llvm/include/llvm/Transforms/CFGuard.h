@@ -16,6 +16,7 @@
 namespace llvm {
 
 class FunctionPass;
+class GlobalValue;
 
 class CFGuardPass : public PassInfoMixin<CFGuardPass> {
 public:
@@ -33,6 +34,8 @@ FunctionPass *createCFGuardCheckPass();
 
 /// Insert Control FLow Guard dispatches on indirect function calls.
 FunctionPass *createCFGuardDispatchPass();
+
+bool isCFGuardFunction(const GlobalValue *GV);
 
 } // namespace llvm
 

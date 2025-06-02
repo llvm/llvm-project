@@ -145,14 +145,12 @@ def G_VMSET_VL : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_VMSET_VL, riscv_vmset_vl>;
 
-// Pseudo equivalent to a RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL. There is no
-// record to mark as equivalent to using GINodeEquiv because it gets lowered
-// before instruction selection.
 def G_SPLAT_VECTOR_SPLIT_I64_VL : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$passthru, type1:$hi, type1:$lo, type2:$vl);
   let hasSideEffects = false;
 }
+def : GINodeEquiv<G_SPLAT_VECTOR_SPLIT_I64_VL, riscv_splat_vector_split_i64_vl>;
 
 // Pseudo equivalent to a RISCVISD::VSLIDEDOWN_VL
 def G_VSLIDEDOWN_VL : RISCVGenericInstruction {

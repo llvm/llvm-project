@@ -175,7 +175,7 @@ CGPointerAuthInfo CodeGenModule::getPointerAuthInfoForPointeeType(QualType T) {
 /// pointer type.
 static CGPointerAuthInfo getPointerAuthInfoForType(CodeGenModule &CGM,
                                                    QualType PointerType) {
-  assert(PointerType->isSignableType());
+  assert(PointerType->isSignableType(CGM.getContext()));
 
   // Block pointers are currently not signed.
   if (PointerType->isBlockPointerType())
@@ -209,7 +209,7 @@ emitLoadOfOrigPointerRValue(CodeGenFunction &CGF, const LValue &LV,
 /// needlessly resigning the pointer.
 std::pair<llvm::Value *, CGPointerAuthInfo>
 CodeGenFunction::EmitOrigPointerRValue(const Expr *E) {
-  assert(E->getType()->isSignableType());
+  assert(E->getType()->isSignableType(getContext()));
 
   E = E->IgnoreParens();
   if (const auto *Load = dyn_cast<ImplicitCastExpr>(E)) {
@@ -291,7 +291,10 @@ static bool equalAuthPolicies(const CGPointerAuthInfo &Left,
   if (Left.isSigned() != Right.isSigned())
     return false;
   return Left.getKey() == Right.getKey() &&
-         Left.getAuthenticationMode() == Right.getAuthenticationMode();
+         Left.getAuthenticationMode() == Right.getAuthenticationMode() &&
+         Left.isIsaPointer() == Right.isIsaPointer() &&
+         Left.authenticatesNullValues() == Right.authenticatesNullValues() &&
+         Left.getDiscriminator() == Right.getDiscriminator();
 }
 
 // Return the discriminator or return zero if the discriminator is null.
@@ -642,10 +645,10 @@ llvm::Value *CodeGenFunction::authPointerToPointerCast(llvm::Value *ResultPtr,
                                                        QualType SourceType,
                                                        QualType DestType) {
   CGPointerAuthInfo CurAuthInfo, NewAuthInfo;
-  if (SourceType->isSignableType())
+  if (SourceType->isSignableType(getContext()))
     CurAuthInfo = getPointerAuthInfoForType(CGM, SourceType);
 
-  if (DestType->isSignableType())
+  if (DestType->isSignableType(getContext()))
     NewAuthInfo = getPointerAuthInfoForType(CGM, DestType);
 
   if (!CurAuthInfo && !NewAuthInfo)
@@ -667,10 +670,10 @@ Address CodeGenFunction::authPointerToPointerCast(Address Ptr,
                                                   QualType SourceType,
                                                   QualType DestType) {
   CGPointerAuthInfo CurAuthInfo, NewAuthInfo;
-  if (SourceType->isSignableType())
+  if (SourceType->isSignableType(getContext()))
     CurAuthInfo = getPointerAuthInfoForType(CGM, SourceType);
 
-  if (DestType->isSignableType())
+  if (DestType->isSignableType(getContext()))
     NewAuthInfo = getPointerAuthInfoForType(CGM, DestType);
 
   if (!CurAuthInfo && !NewAuthInfo)

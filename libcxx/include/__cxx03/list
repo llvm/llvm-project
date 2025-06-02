@@ -487,7 +487,7 @@ protected:
   }
   _LIBCPP_HIDE_FROM_ABI static void __unlink_nodes(__link_pointer __f, __link_pointer __l) _NOEXCEPT;
 
-  _LIBCPP_HIDE_FROM_ABI __list_imp() _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value);
+  _LIBCPP_HIDE_FROM_ABI __list_imp();
   _LIBCPP_HIDE_FROM_ABI __list_imp(const allocator_type& __a);
   _LIBCPP_HIDE_FROM_ABI __list_imp(const __node_allocator& __a);
   _LIBCPP_HIDE_FROM_ABI ~__list_imp();
@@ -499,17 +499,14 @@ protected:
   _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT { return iterator(__end_as_link()); }
   _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT { return const_iterator(__end_as_link()); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(__list_imp& __c)
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
+  _LIBCPP_HIDE_FROM_ABI void swap(__list_imp& __c);
 
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __list_imp& __c) {
     __copy_assign_alloc(
         __c, integral_constant<bool, __node_alloc_traits::propagate_on_container_copy_assignment::value>());
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp& __c)
-      _NOEXCEPT_(!__node_alloc_traits::propagate_on_container_move_assignment::value ||
-                 is_nothrow_move_assignable<__node_allocator>::value) {
+  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp& __c) {
     __move_assign_alloc(
         __c, integral_constant<bool, __node_alloc_traits::propagate_on_container_move_assignment::value>());
   }
@@ -550,8 +547,7 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __list_imp&, false_type) {}
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp& __c, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value) {
+  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__list_imp& __c, true_type) {
     __node_alloc() = std::move(__c.__node_alloc());
   }
 
@@ -566,8 +562,7 @@ inline void __list_imp<_Tp, _Alloc>::__unlink_nodes(__link_pointer __f, __link_p
 }
 
 template <class _Tp, class _Alloc>
-inline __list_imp<_Tp, _Alloc>::__list_imp() _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value)
-    : __size_alloc_(0, __default_init_tag()) {}
+inline __list_imp<_Tp, _Alloc>::__list_imp() : __size_alloc_(0, __default_init_tag()) {}
 
 template <class _Tp, class _Alloc>
 inline __list_imp<_Tp, _Alloc>::__list_imp(const allocator_type& __a) : __size_alloc_(0, __node_allocator(__a)) {}
@@ -596,8 +591,7 @@ void __list_imp<_Tp, _Alloc>::clear() _NOEXCEPT {
 }
 
 template <class _Tp, class _Alloc>
-void __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>) {
+void __list_imp<_Tp, _Alloc>::swap(__list_imp& __c) {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
       __alloc_traits::propagate_on_container_swap::value || this->__node_alloc() == __c.__node_alloc(),
       "list::swap: Either propagate_on_container_swap must be true"
@@ -645,7 +639,7 @@ public:
   typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
   typedef void __remove_return_type;
 
-  _LIBCPP_HIDE_FROM_ABI list() _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value) {}
+  _LIBCPP_HIDE_FROM_ABI list() {}
   _LIBCPP_HIDE_FROM_ABI explicit list(const allocator_type& __a) : base(__a) {}
   _LIBCPP_HIDE_FROM_ABI explicit list(size_type __n);
   _LIBCPP_HIDE_FROM_ABI list(size_type __n, const value_type& __x);
@@ -720,11 +714,7 @@ public:
   template <class _InpIter, __enable_if_t<__has_input_iterator_category<_InpIter>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _InpIter __f, _InpIter __l);
 
-  _LIBCPP_HIDE_FROM_ABI void swap(list& __c)
-      _NOEXCEPT_(!__node_alloc_traits::propagate_on_container_swap::value ||
-                 __is_nothrow_swappable_v<__node_allocator>) {
-    base::swap(__c);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(list& __c) { base::swap(__c); }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { base::clear(); }
 
   _LIBCPP_HIDE_FROM_ABI void pop_front();
@@ -773,8 +763,7 @@ private:
   template <class _Comp>
   _LIBCPP_HIDDEN static iterator __sort(iterator __f1, iterator __e2, size_type __n, _Comp& __comp);
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign(list& __c, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value);
+  _LIBCPP_HIDE_FROM_ABI void __move_assign(list& __c, true_type);
   _LIBCPP_HIDE_FROM_ABI void __move_assign(list& __c, false_type);
 };
 
@@ -1355,8 +1344,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const list<_Tp, _Alloc>& __x, const
 }
 
 template <class _Tp, class _Alloc>
-inline _LIBCPP_HIDE_FROM_ABI void swap(list<_Tp, _Alloc>& __x, list<_Tp, _Alloc>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+inline _LIBCPP_HIDE_FROM_ABI void swap(list<_Tp, _Alloc>& __x, list<_Tp, _Alloc>& __y) {
   __x.swap(__y);
 }
 

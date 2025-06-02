@@ -757,11 +757,12 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
                    !OriginalBaseTy->isConstantArrayType() &&
                    !OriginalBaseTy->isDependentSizedArrayType()))) {
     bool IsArray = !OriginalBaseTy.isNull() && OriginalBaseTy->isArrayType();
-    Diag(ColonLoc, diag::err_acc_subarray_no_length) << IsArray;
+    SourceLocation DiagLoc = ColonLoc.isInvalid() ? LBLoc : ColonLoc;
+    Diag(DiagLoc, diag::err_acc_subarray_no_length) << IsArray;
     // Fill in a dummy 'length' so that when we instantiate this we don't
     // double-diagnose here.
     ExprResult Recovery = SemaRef.CreateRecoveryExpr(
-        ColonLoc, SourceLocation(), ArrayRef<Expr *>(), Context.IntTy);
+        DiagLoc, SourceLocation(), ArrayRef<Expr *>(), Context.IntTy);
     Length = Recovery.isUsable() ? Recovery.get() : nullptr;
   }
 
@@ -1755,7 +1756,7 @@ ExprResult SemaOpenACC::ActOnRoutineName(Expr *RoutineName) {
   return ExprError();
 }
 void SemaOpenACC::ActOnVariableDeclarator(VarDecl *VD) {
-  if (!VD->isStaticLocal() || !getLangOpts().OpenACC)
+  if (!getLangOpts().OpenACC || VD->isInvalidDecl() || !VD->isStaticLocal())
     return;
 
   // This cast should be safe, since a static-local can only happen in a

@@ -253,7 +253,7 @@ public:
   Type *getType(llvm::Type *LLVMTy) {
     if (LLVMTy == nullptr)
       return nullptr;
-    auto Pair = LLVMTypeToTypeMap.insert({LLVMTy, nullptr});
+    auto Pair = LLVMTypeToTypeMap.try_emplace(LLVMTy);
     auto It = Pair.first;
     if (Pair.second)
       It->second = std::unique_ptr<Type, TypeDeleter>(new Type(LLVMTy, *this));

@@ -27,9 +27,7 @@ FailureOr<TilingResult> tensor::replaceExtractSliceWithTiledProducer(
     return failure();
 
   // `TilingInterface` currently only supports strides being 1.
-  if (llvm::any_of(sliceOp.getMixedStrides(), [](OpFoldResult ofr) {
-        return !isConstantIntValue(ofr, 1);
-      }))
+  if (!llvm::all_of(sliceOp.getMixedStrides(), isOneInteger))
     return failure();
 
   FailureOr<TilingResult> tiledResult = producerOp.generateResultTileValue(
@@ -49,9 +47,7 @@ FailureOr<TilingResult> tensor::replaceInsertSliceWithTiledConsumer(
     return failure();
 
   // `TilingInterface` currently only supports strides being 1.
-  if (llvm::any_of(sliceOp.getMixedStrides(), [](OpFoldResult ofr) {
-        return !isConstantIntValue(ofr, 1);
-      }))
+  if (!llvm::all_of(sliceOp.getMixedStrides(), isOneInteger))
     return failure();
 
   FailureOr<TilingResult> tiledResult =

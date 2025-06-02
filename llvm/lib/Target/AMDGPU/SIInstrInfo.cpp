@@ -623,12 +623,12 @@ static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
                               MCRegister SrcReg, bool KillSrc,
                               const char *Msg = "illegal VGPR to SGPR copy") {
   MachineFunction *MF = MBB.getParent();
-  DiagnosticInfoUnsupported IllegalCopy(MF->getFunction(), Msg, DL, DS_Error);
+
   LLVMContext &C = MF->getFunction().getContext();
-  C.diagnose(IllegalCopy);
+  C.diagnose(DiagnosticInfoUnsupported(MF->getFunction(), Msg, DL, DS_Error));
 
   BuildMI(MBB, MI, DL, TII->get(AMDGPU::SI_ILLEGAL_COPY), DestReg)
-    .addReg(SrcReg, getKillRegState(KillSrc));
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
 /// Handle copying from SGPR to AGPR, or from AGPR to AGPR on GFX908. It is not
@@ -6062,6 +6062,12 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
       if (!Op.isReg() && !Op.isFI() && !Op.isRegMask() &&
           !isInlineConstant(Op, InstDesc.operands()[i]) &&
           !Op.isIdenticalTo(*MO))
+        return false;
+
+      // Do not fold a frame index into an instruction that already has a frame
+      // index. The frame index handling code doesn't handle fixing up operand
+      // constraints if there are multiple indexes.
+      if (Op.isFI() && MO->isFI())
         return false;
     }
   } else if (IsInlineConst && ST.hasNoF16PseudoScalarTransInlineConstants() &&

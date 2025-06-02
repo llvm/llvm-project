@@ -47,12 +47,12 @@ void test_1(int param, void *ptr) {
 void test_2(char *ptr, int ext) {
   clang_analyzer_explain((void *) "asdf"); // expected-warning-re{{{{^pointer to element of type 'char' with index 0 of string literal "asdf"$}}}}
   clang_analyzer_explain(strlen(ptr)); // expected-warning-re{{{{^metadata of type 'unsigned long' tied to pointee of argument 'ptr'$}}}}
-  clang_analyzer_explain(conjure()); // expected-warning-re{{{{^symbol of type 'int' conjured at statement 'conjure\(\)'$}}}}
-  clang_analyzer_explain(glob); // expected-warning-re{{{{^value derived from \(symbol of type 'int' conjured at statement 'conjure\(\)'\) for global variable 'glob'$}}}}
-  clang_analyzer_explain(glob_ptr); // expected-warning-re{{{{^value derived from \(symbol of type 'int' conjured at statement 'conjure\(\)'\) for global variable 'glob_ptr'$}}}}
+  clang_analyzer_explain(conjure()); // expected-warning-re{{{{^symbol of type 'int' conjured at CFG element 'conjure\(\)'$}}}}
+  clang_analyzer_explain(glob); // expected-warning-re{{{{^value derived from \(symbol of type 'int' conjured at CFG element 'conjure\(\)'\) for global variable 'glob'$}}}}
+  clang_analyzer_explain(glob_ptr); // expected-warning-re{{{{^value derived from \(symbol of type 'int' conjured at CFG element 'conjure\(\)'\) for global variable 'glob_ptr'$}}}}
   clang_analyzer_explain(clang_analyzer_getExtent(ptr)); // expected-warning-re{{{{^extent of pointee of argument 'ptr'$}}}}
   int *x = new int[ext];
-  clang_analyzer_explain(x); // expected-warning-re{{{{^pointer to element of type 'int' with index 0 of heap segment that starts at symbol of type 'int \*' conjured at statement 'new int \[ext\]'$}}}}
+  clang_analyzer_explain(x); // expected-warning-re{{{{^pointer to element of type 'int' with index 0 of heap segment that starts at symbol of type 'int \*' conjured at CFG element 'CFGNewAllocator\(int \*\)'$}}}}
   // Sic! What gets computed is the extent of the element-region.
   clang_analyzer_explain(clang_analyzer_getExtent(x)); // expected-warning-re{{{{^\(argument 'ext'\) \* 4$}}}}
   delete[] x;
@@ -99,8 +99,8 @@ public:
 } // end of anonymous namespace
 
 void test_6() {
-  clang_analyzer_explain(conjure_S()); // expected-warning-re{{{{^symbol of type 'int' conjured at statement 'conjure_S\(\)'$}}}}
-  clang_analyzer_explain(conjure_S().z); // expected-warning-re{{{{^value derived from \(symbol of type 'int' conjured at statement 'conjure_S\(\)'\) for field 'z' of temporary object constructed at statement 'conjure_S\(\)'$}}}}
+  clang_analyzer_explain(conjure_S()); // expected-warning-re{{{{^symbol of type 'int' conjured at CFG element 'conjure_S\(\) \(CXXRecordTypedCall, \+0\)'$}}}}
+  clang_analyzer_explain(conjure_S().z); // expected-warning-re{{{{^value derived from \(symbol of type 'int' conjured at CFG element 'conjure_S\(\) \(CXXRecordTypedCall, \)'\) for field 'z' of temporary object constructed at statement 'conjure_S\(\)'$}}}}
 }
 
 class C_top_level {

@@ -35,6 +35,26 @@ private:
   bool EmitFPOData = false;
   bool ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = false;
   bool IndCSPrefix = false;
+  bool EnableImportCallOptimization = false;
+
+  enum ImportCallKind : unsigned {
+    IMAGE_RETPOLINE_AMD64_IMPORT_BR = 0x02,
+    IMAGE_RETPOLINE_AMD64_IMPORT_CALL = 0x03,
+    IMAGE_RETPOLINE_AMD64_INDIR_BR = 0x04,
+    IMAGE_RETPOLINE_AMD64_INDIR_CALL = 0x05,
+    IMAGE_RETPOLINE_AMD64_INDIR_BR_REX = 0x06,
+    IMAGE_RETPOLINE_AMD64_CFG_BR = 0x08,
+    IMAGE_RETPOLINE_AMD64_CFG_CALL = 0x09,
+    IMAGE_RETPOLINE_AMD64_CFG_BR_REX = 0x0A,
+    IMAGE_RETPOLINE_AMD64_SWITCHTABLE_FIRST = 0x010,
+    IMAGE_RETPOLINE_AMD64_SWITCHTABLE_LAST = 0x01F,
+  };
+  struct ImportCallInfo {
+    MCSymbol *CalleeSymbol;
+    ImportCallKind Kind;
+  };
+  DenseMap<MCSection *, std::vector<ImportCallInfo>>
+      SectionToImportedFunctionCalls;
 
   // This utility class tracks the length of a stackmap instruction's 'shadow'.
   // It is used by the X86AsmPrinter to ensure that the stackmap shadow
@@ -49,7 +69,7 @@ private:
     void startFunction(MachineFunction &MF) {
       this->MF = &MF;
     }
-    void count(MCInst &Inst, const MCSubtargetInfo &STI,
+    void count(const MCInst &Inst, const MCSubtargetInfo &STI,
                MCCodeEmitter *CodeEmitter);
 
     // Called to signal the start of a shadow of RequiredSize bytes.
@@ -129,6 +149,12 @@ private:
                               MCSymbol *LazyPointer) override;
   void emitMachOIFuncStubHelperBody(Module &M, const GlobalIFunc &GI,
                                     MCSymbol *LazyPointer) override;
+
+  void emitCallInstruction(const llvm::MCInst &MCI);
+
+  // Emits a label to mark the next instruction as being relevant to Import Call
+  // Optimization.
+  void emitLabelAndRecordForImportCallOptimization(ImportCallKind Kind);
 
 public:
   X86AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);

@@ -218,12 +218,12 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX11-SDAG-NEXT:    s_mov_b32 s5, s12
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s3
-; GFX11-SDAG-NEXT:    s_mov_b32 s3, s12
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-SDAG-NEXT:    s_or_b64 s[6:7], s[4:5], s[12:13]
 ; GFX11-SDAG-NEXT:    s_mov_b32 s13, s2
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, s1
+; GFX11-SDAG-NEXT:    s_mov_b32 s3, s12
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -253,12 +253,12 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX11-GISEL-NEXT:    s_load_b32 s7, s[4:5], 0x30
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s9
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s8, s1
 ; GFX11-GISEL-NEXT:    s_mov_b32 s5, s2
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-GISEL-NEXT:    s_or_b64 s[4:5], s[8:9], s[4:5]
 ; GFX11-GISEL-NEXT:    s_mov_b32 s8, s3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], 0 offen glc slc dlc
@@ -287,12 +287,12 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX12-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX12-SDAG-NEXT:    s_mov_b32 s5, s12
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-SDAG-NEXT:    s_mov_b32 s4, s3
-; GFX12-SDAG-NEXT:    s_mov_b32 s3, s12
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-SDAG-NEXT:    s_or_b64 s[6:7], s[4:5], s[12:13]
 ; GFX12-SDAG-NEXT:    s_mov_b32 s13, s2
 ; GFX12-SDAG-NEXT:    s_mov_b32 s2, s1
+; GFX12-SDAG-NEXT:    s_mov_b32 s3, s12
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -322,12 +322,12 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX12-GISEL-NEXT:    s_load_b32 s7, s[4:5], 0x30
 ; GFX12-GISEL-NEXT:    s_mov_b32 s4, s9
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s8, s1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s5, s2
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-GISEL-NEXT:    s_or_b64 s[4:5], s[8:9], s[4:5]
 ; GFX12-GISEL-NEXT:    s_mov_b32 s8, s3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen th:TH_STORE_NT
@@ -546,12 +546,12 @@ define amdgpu_kernel void @buffer_nontemporal_and_volatile_load_store(ptr addrsp
 ; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX11-SDAG-NEXT:    s_mov_b32 s5, s12
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s3
-; GFX11-SDAG-NEXT:    s_mov_b32 s3, s12
+; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-SDAG-NEXT:    s_or_b64 s[6:7], s[4:5], s[12:13]
 ; GFX11-SDAG-NEXT:    s_mov_b32 s13, s2
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, s1
+; GFX11-SDAG-NEXT:    s_mov_b32 s3, s12
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -581,12 +581,12 @@ define amdgpu_kernel void @buffer_nontemporal_and_volatile_load_store(ptr addrsp
 ; GFX11-GISEL-NEXT:    s_load_b32 s7, s[4:5], 0x30
 ; GFX11-GISEL-NEXT:    s_mov_b32 s4, s9
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s8, s1
 ; GFX11-GISEL-NEXT:    s_mov_b32 s5, s2
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX11-GISEL-NEXT:    s_or_b64 s[4:5], s[8:9], s[4:5]
 ; GFX11-GISEL-NEXT:    s_mov_b32 s8, s3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], 0 offen dlc
@@ -615,12 +615,12 @@ define amdgpu_kernel void @buffer_nontemporal_and_volatile_load_store(ptr addrsp
 ; GFX12-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX12-SDAG-NEXT:    s_mov_b32 s5, s12
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-SDAG-NEXT:    s_mov_b32 s4, s3
-; GFX12-SDAG-NEXT:    s_mov_b32 s3, s12
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-SDAG-NEXT:    s_or_b64 s[6:7], s[4:5], s[12:13]
 ; GFX12-SDAG-NEXT:    s_mov_b32 s13, s2
 ; GFX12-SDAG-NEXT:    s_mov_b32 s2, s1
+; GFX12-SDAG-NEXT:    s_mov_b32 s3, s12
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_or_b64 s[4:5], s[2:3], s[12:13]
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
@@ -650,12 +650,12 @@ define amdgpu_kernel void @buffer_nontemporal_and_volatile_load_store(ptr addrsp
 ; GFX12-GISEL-NEXT:    s_load_b32 s7, s[4:5], 0x30
 ; GFX12-GISEL-NEXT:    s_mov_b32 s4, s9
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s8, s1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s5, s2
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-GISEL-NEXT:    s_or_b64 s[4:5], s[8:9], s[4:5]
 ; GFX12-GISEL-NEXT:    s_mov_b32 s8, s3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    buffer_store_b32 v0, v1, s[4:7], null offen th:TH_STORE_NT scope:SCOPE_SYS

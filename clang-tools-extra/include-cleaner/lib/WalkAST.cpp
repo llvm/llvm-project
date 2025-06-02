@@ -321,6 +321,11 @@ public:
     return true;
   }
 
+  bool VisitCleanupAttr(CleanupAttr *attr) {
+    report(attr->getArgLoc(), attr->getFunctionDecl());
+    return true;
+  }
+
   // TypeLoc visitors.
   void reportType(SourceLocation RefLoc, NamedDecl *ND) {
     // Reporting explicit references to types nested inside classes can cause

@@ -1088,8 +1088,10 @@ const char *__llvm_profile_get_filename(void) {
     return "\0";
   }
   Filename = getCurFilename(FilenameBuf, 1);
-  if (!Filename)
+  if (!Filename) {
+    free(FilenameBuf);
     return "\0";
+  }
 
   return FilenameBuf;
 }

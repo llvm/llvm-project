@@ -644,6 +644,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginPlatformPOSIX",
+        ":PluginProcessUtility",
         ":PluginTypeSystemClangHeaders",
         "//lldb:Breakpoint",
         "//lldb:Core",
@@ -838,7 +839,6 @@ gentbl_cc_library(
     deps = ["//lldb:CoreTdFiles"],
 )
 
-
 cc_library(
     name = "PluginCPlusPlusLanguageHeaders",
     hdrs = glob(["Language/CPlusPlus/*.h"]),
@@ -866,8 +866,8 @@ cc_library(
         "//lldb:Core",
         "//lldb:DataFormatters",
         "//lldb:Headers",
-        "//lldb:InterpreterHeaders",
         "//lldb:Host",
+        "//lldb:InterpreterHeaders",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",

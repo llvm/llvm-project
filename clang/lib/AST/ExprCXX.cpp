@@ -619,8 +619,10 @@ CXXOperatorCallExpr::Create(const ASTContext &Ctx,
   unsigned NumArgs = Args.size();
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/0, NumArgs, FPFeatures.requiresTrailingStorage());
-  void *Mem = Ctx.Allocate(sizeof(CXXOperatorCallExpr) + SizeOfTrailingObjects,
-                           alignof(CXXOperatorCallExpr));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CXXOperatorCallExpr>(
+                       SizeOfTrailingObjects),
+                   alignof(CXXOperatorCallExpr));
   return new (Mem) CXXOperatorCallExpr(OpKind, Fn, Args, Ty, VK, OperatorLoc,
                                        FPFeatures, UsesADL);
 }
@@ -632,8 +634,10 @@ CXXOperatorCallExpr *CXXOperatorCallExpr::CreateEmpty(const ASTContext &Ctx,
   // Allocate storage for the trailing objects of CallExpr.
   unsigned SizeOfTrailingObjects =
       CallExpr::sizeOfTrailingObjects(/*NumPreArgs=*/0, NumArgs, HasFPFeatures);
-  void *Mem = Ctx.Allocate(sizeof(CXXOperatorCallExpr) + SizeOfTrailingObjects,
-                           alignof(CXXOperatorCallExpr));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CXXOperatorCallExpr>(
+                       SizeOfTrailingObjects),
+                   alignof(CXXOperatorCallExpr));
   return new (Mem) CXXOperatorCallExpr(NumArgs, HasFPFeatures, Empty);
 }
 
@@ -684,7 +688,8 @@ CXXMemberCallExpr *CXXMemberCallExpr::Create(const ASTContext &Ctx, Expr *Fn,
   unsigned NumArgs = std::max<unsigned>(Args.size(), MinNumArgs);
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/0, NumArgs, FPFeatures.requiresTrailingStorage());
-  void *Mem = Ctx.Allocate(sizeof(CXXMemberCallExpr) + SizeOfTrailingObjects,
+  void *Mem = Ctx.Allocate(sizeToAllocateForCallExprSubclass<CXXMemberCallExpr>(
+                               SizeOfTrailingObjects),
                            alignof(CXXMemberCallExpr));
   return new (Mem)
       CXXMemberCallExpr(Fn, Args, Ty, VK, RP, FPFeatures, MinNumArgs);
@@ -697,7 +702,8 @@ CXXMemberCallExpr *CXXMemberCallExpr::CreateEmpty(const ASTContext &Ctx,
   // Allocate storage for the trailing objects of CallExpr.
   unsigned SizeOfTrailingObjects =
       CallExpr::sizeOfTrailingObjects(/*NumPreArgs=*/0, NumArgs, HasFPFeatures);
-  void *Mem = Ctx.Allocate(sizeof(CXXMemberCallExpr) + SizeOfTrailingObjects,
+  void *Mem = Ctx.Allocate(sizeToAllocateForCallExprSubclass<CXXMemberCallExpr>(
+                               SizeOfTrailingObjects),
                            alignof(CXXMemberCallExpr));
   return new (Mem) CXXMemberCallExpr(NumArgs, HasFPFeatures, Empty);
 }
@@ -958,8 +964,10 @@ UserDefinedLiteral *UserDefinedLiteral::Create(const ASTContext &Ctx, Expr *Fn,
   unsigned NumArgs = Args.size();
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/0, NumArgs, FPFeatures.requiresTrailingStorage());
-  void *Mem = Ctx.Allocate(sizeof(UserDefinedLiteral) + SizeOfTrailingObjects,
-                           alignof(UserDefinedLiteral));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<UserDefinedLiteral>(
+                       SizeOfTrailingObjects),
+                   alignof(UserDefinedLiteral));
   return new (Mem)
       UserDefinedLiteral(Fn, Args, Ty, VK, LitEndLoc, SuffixLoc, FPFeatures);
 }
@@ -971,8 +979,10 @@ UserDefinedLiteral *UserDefinedLiteral::CreateEmpty(const ASTContext &Ctx,
   // Allocate storage for the trailing objects of CallExpr.
   unsigned SizeOfTrailingObjects =
       CallExpr::sizeOfTrailingObjects(/*NumPreArgs=*/0, NumArgs, HasFPOptions);
-  void *Mem = Ctx.Allocate(sizeof(UserDefinedLiteral) + SizeOfTrailingObjects,
-                           alignof(UserDefinedLiteral));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<UserDefinedLiteral>(
+                       SizeOfTrailingObjects),
+                   alignof(UserDefinedLiteral));
   return new (Mem) UserDefinedLiteral(NumArgs, HasFPOptions, Empty);
 }
 
@@ -1946,8 +1956,10 @@ CUDAKernelCallExpr::Create(const ASTContext &Ctx, Expr *Fn, CallExpr *Config,
   unsigned NumArgs = std::max<unsigned>(Args.size(), MinNumArgs);
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/END_PREARG, NumArgs, FPFeatures.requiresTrailingStorage());
-  void *Mem = Ctx.Allocate(sizeof(CUDAKernelCallExpr) + SizeOfTrailingObjects,
-                           alignof(CUDAKernelCallExpr));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CUDAKernelCallExpr>(
+                       SizeOfTrailingObjects),
+                   alignof(CUDAKernelCallExpr));
   return new (Mem)
       CUDAKernelCallExpr(Fn, Config, Args, Ty, VK, RP, FPFeatures, MinNumArgs);
 }
@@ -1959,8 +1971,10 @@ CUDAKernelCallExpr *CUDAKernelCallExpr::CreateEmpty(const ASTContext &Ctx,
   // Allocate storage for the trailing objects of CallExpr.
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/END_PREARG, NumArgs, HasFPFeatures);
-  void *Mem = Ctx.Allocate(sizeof(CUDAKernelCallExpr) + SizeOfTrailingObjects,
-                           alignof(CUDAKernelCallExpr));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CUDAKernelCallExpr>(
+                       SizeOfTrailingObjects),
+                   alignof(CUDAKernelCallExpr));
   return new (Mem) CUDAKernelCallExpr(NumArgs, HasFPFeatures, Empty);
 }
 

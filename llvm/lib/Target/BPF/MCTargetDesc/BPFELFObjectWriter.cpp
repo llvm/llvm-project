@@ -25,8 +25,8 @@ public:
   ~BPFELFObjectWriter() override = default;
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 
 } // end anonymous namespace
@@ -35,8 +35,8 @@ BPFELFObjectWriter::BPFELFObjectWriter(uint8_t OSABI)
     : MCELFObjectTargetWriter(/*Is64Bit*/ true, OSABI, ELF::EM_BPF,
                               /*HasRelocationAddend*/ false) {}
 
-unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
-                                          const MCFixup &Fixup,
+unsigned BPFELFObjectWriter::getRelocType(const MCFixup &Fixup,
+                                          const MCValue &Target,
                                           bool IsPCRel) const {
   // determine the type of the relocation
   switch (Fixup.getKind()) {

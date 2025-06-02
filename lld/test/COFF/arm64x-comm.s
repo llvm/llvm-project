@@ -8,6 +8,9 @@
 // RUN: llvm-readobj --hex-dump=.test %t.dll | FileCheck %s
 // CHECK: 0x180004000 10200000 18200000 20200000 28200000
 
+// RUN: lld-link -machine:arm64ec -lldmingw -dll -noentry -out:%t-ec.dll %t-arm64.obj %t-arm64ec.obj
+// RUN: llvm-readobj --hex-dump=.test %t-ec.dll | FileCheck %s
+
         .data
         .word 0
 

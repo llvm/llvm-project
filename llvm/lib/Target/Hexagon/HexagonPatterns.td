@@ -1579,8 +1579,8 @@ def: OpR_RR_pat<C2_and,       Mul,        v8i1,  V8I1>;
 def: OpR_RR_pat<F2_sfadd,     pf2<fadd>,    f32, F32>;
 def: OpR_RR_pat<F2_sfsub,     pf2<fsub>,    f32, F32>;
 def: OpR_RR_pat<F2_sfmpy,     pf2<fmul>,    f32, F32>;
-def: OpR_RR_pat<F2_sfmin,     pf2<fminnum>, f32, F32>;
-def: OpR_RR_pat<F2_sfmax,     pf2<fmaxnum>, f32, F32>;
+def: OpR_RR_pat<F2_sfmin,     pf2<fminimumnum>, f32, F32>;
+def: OpR_RR_pat<F2_sfmax,     pf2<fmaximumnum>, f32, F32>;
 
 let Predicates = [HasV66] in {
   def: OpR_RR_pat<F2_dfadd,     pf2<fadd>,    f64, F64>;
@@ -1600,8 +1600,8 @@ let Predicates = [HasV67,UseUnsafeMath], AddedComplexity = 50 in {
   def: Pat<(fmul F64:$Rs, F64:$Rt), (DfMpy $Rs, $Rt)>;
 }
 let Predicates = [HasV67] in {
-  def: OpR_RR_pat<F2_dfmin,     pf2<fminnum>, f64, F64>;
-  def: OpR_RR_pat<F2_dfmax,     pf2<fmaxnum>, f64, F64>;
+  def: OpR_RR_pat<F2_dfmin,     pf2<fminimumnum>, f64, F64>;
+  def: OpR_RR_pat<F2_dfmax,     pf2<fmaximumnum>, f64, F64>;
 
   def: Pat<(fmul F64:$Rs, F64:$Rt), (DfMpy (F2_dfmpyfix $Rs, $Rt),
                                            (F2_dfmpyfix $Rt, $Rs))>;

@@ -1273,6 +1273,35 @@ define amdgpu_ps void @v_omod_mac_to_mad(float %b, float %a) #0 {
   ret void
 }
 
+define amdgpu_ps void @v_clamp_omod_div2_f32_minimumnum_maximumnum(float %a) #0 {
+; SI-LABEL: v_clamp_omod_div2_f32_minimumnum_maximumnum:
+; SI:       ; %bb.0:
+; SI-NEXT:    v_add_f32_e64 v0, v0, 1.0 clamp div:2
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: v_clamp_omod_div2_f32_minimumnum_maximumnum:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_add_f32_e64 v0, v0, 1.0 clamp div:2
+; VI-NEXT:    flat_store_dword v[0:1], v0
+; VI-NEXT:    s_endpgm
+;
+; GFX11PLUS-LABEL: v_clamp_omod_div2_f32_minimumnum_maximumnum:
+; GFX11PLUS:       ; %bb.0:
+; GFX11PLUS-NEXT:    v_add_f32_e64 v0, v0, 1.0 clamp div:2
+; GFX11PLUS-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX11PLUS-NEXT:    s_endpgm
+  %add = fadd float %a, 1.0
+  %div2 = fmul float %add, 0.5
+
+  %max = call float @llvm.maximumnum.f32(float %div2, float 0.0)
+  %clamp = call float @llvm.minimumnum.f32(float %max, float 1.0)
+  store float %clamp, ptr addrspace(1) poison
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @llvm.fabs.f32(float) #1
 declare float @llvm.floor.f32(float) #1

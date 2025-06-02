@@ -107,11 +107,7 @@ namespace {
       return !operator==(R);
     }
     bool operator<(const OffsetRange &R) const {
-      if (Min != R.Min)
-        return Min < R.Min;
-      if (Max != R.Max)
-        return Max < R.Max;
-      return Align < R.Align;
+      return std::tie(Min, Max, Align) < std::tie(R.Min, R.Max, R.Align);
     }
     static OffsetRange zero() { return {0, 0, 1}; }
   };

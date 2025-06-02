@@ -23,7 +23,6 @@
 using llvm::Clause;
 using llvm::ClauseVal;
 using llvm::raw_ostream;
-using llvm::Record;
 using llvm::RecordKeeper;
 
 // LLVM has multiple places (Clang, Flang, MLIR) where information about

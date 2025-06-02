@@ -389,8 +389,9 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
       }
       // Otherwise there just wasn't enough space.
       result.resize_for_overwrite(result.capacity() * 2);
-    } else
+    } else {
       break;
+    }
   }
 
   result.truncate(strlen(result.data()));
@@ -938,8 +939,9 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
         (Name.size() == 2 && Name[0] == '.' && Name[1] == '.'))
       return directory_iterator_increment(It);
     It.CurrentEntry.replace_filename(Name, direntType(CurDir));
-  } else
+  } else {
     return directory_iterator_destruct(It);
+  }
 
   return std::error_code();
 }

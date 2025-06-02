@@ -9,7 +9,7 @@ class TestWatchpointCount(TestBase):
 
     @skipIf(
         oslist=["freebsd", "linux"],
-        archs=["arm", "aarch64"],
+        archs=["arm$", "aarch64"],
         bugnumber="llvm.org/pr26031",
     )
     def test_watchpoint_count(self):

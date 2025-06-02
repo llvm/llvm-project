@@ -112,7 +112,7 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
   if((LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$") OR LLVM_ENABLE_RPMALLOC)
     add_compile_definitions(ENABLE_OVERRIDE ENABLE_PRELOAD)
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
-    set(delayload_flags "${delayload_flags} ${WL}-INCLUDE:malloc")
+    list(APPEND delayload_flags "${WL}-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/snmalloc/override/new.cc")
     set(system_libs ${system_libs} "mincore.lib" "${WL}-INCLUDE:malloc")
@@ -257,6 +257,7 @@ add_llvm_component_library(LLVMSupport
   SuffixTree.cpp
   SystemUtils.cpp
   TarWriter.cpp
+  TextEncoding.cpp
   ThreadPool.cpp
   TimeProfiler.cpp
   Timer.cpp
@@ -315,6 +316,14 @@ add_llvm_component_library(LLVMSupport
   LINK_COMPONENTS
   Demangle
   )
+
+# Link ICU library if it is an external library.
+if(ICU_FOUND)
+  target_link_libraries(LLVMSupport
+  PRIVATE
+  ${ICU_LIBRARIES}
+  )
+endif()
 
 set(llvm_system_libs ${system_libs})
 

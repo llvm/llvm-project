@@ -196,7 +196,7 @@ struct Foo {
 
 template <int K>
 using Bar = Foo<double, K>; // expected-note {{constraints not satisfied for class template 'Foo'}}
-// expected-note@-1 {{candidate template ignored: could not match}}
+// expected-note@-1 {{candidate template ignored: could not match}} expected-note@-1 {{candidate template ignored: constraints not satisfied}}
 // expected-note@-2 {{implicit deduction guide declared as 'template <int K> requires __is_deducible(test14::Bar, Foo<double, K>) Bar(Foo<double, K>) -> Foo<double, K>'}}
 // expected-note@-3 {{implicit deduction guide declared as 'template <int K> requires __is_deducible(test14::Bar, Foo<double, K>) Bar(const double (&)[K]) -> Foo<double, K>'}}
 double abc[3];

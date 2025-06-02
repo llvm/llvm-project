@@ -18,8 +18,7 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getClearedProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 

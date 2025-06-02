@@ -48,7 +48,7 @@ class ModuleImport {
 public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
                bool emitExpensiveWarnings, bool importEmptyDICompositeTypes,
-               bool preferUnregisteredIntrinsics);
+               bool preferUnregisteredIntrinsics, bool importStructsAsLiterals);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -330,6 +330,9 @@ private:
   /// Converts a single debug intrinsic.
   LogicalResult processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
                                       DominanceInfo &domInfo);
+  /// Converts LLMV IR asm inline call operand's attributes into an array of
+  /// MLIR attributes to be utilized in `llvm.inline_asm`.
+  ArrayAttr convertAsmInlineOperandAttrs(const llvm::CallBase &llvmCall);
   /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
   LogicalResult convertIntrinsic(llvm::CallInst *inst);

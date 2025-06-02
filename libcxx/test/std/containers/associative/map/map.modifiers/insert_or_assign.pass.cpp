@@ -140,14 +140,16 @@ int main(int, char**) {
     M::const_iterator it = m.find(2);
 
     Moveable mv1(3, 3.0);
-    r = m.insert_or_assign(it, 2, std::move(mv1));
+    const int key1 = 2;
+    r              = m.insert_or_assign(it, key1, std::move(mv1));
     assert(m.size() == 10);
     assert(mv1.moved());          // was moved from
     assert(r->first == 2);        // key
     assert(r->second.get() == 3); // value
 
     Moveable mv2(5, 5.0);
-    r = m.insert_or_assign(it, 3, std::move(mv2));
+    const int key2 = 3;
+    r              = m.insert_or_assign(it, key2, std::move(mv2));
     assert(m.size() == 11);
     assert(mv2.moved());          // was moved from
     assert(r->first == 3);        // key
@@ -155,14 +157,16 @@ int main(int, char**) {
 
     // wrong hint: begin()
     Moveable mv3(7, 7.0);
-    r = m.insert_or_assign(m.begin(), 4, std::move(mv3));
+    const int key3 = 4;
+    r              = m.insert_or_assign(m.begin(), key3, std::move(mv3));
     assert(m.size() == 11);
     assert(mv3.moved());          // was moved from
     assert(r->first == 4);        // key
     assert(r->second.get() == 7); // value
 
     Moveable mv4(9, 9.0);
-    r = m.insert_or_assign(m.begin(), 5, std::move(mv4));
+    const int key4 = 5;
+    r              = m.insert_or_assign(m.begin(), key4, std::move(mv4));
     assert(m.size() == 12);
     assert(mv4.moved());          // was moved from
     assert(r->first == 5);        // key
@@ -170,14 +174,16 @@ int main(int, char**) {
 
     // wrong hint: end()
     Moveable mv5(11, 11.0);
-    r = m.insert_or_assign(m.end(), 6, std::move(mv5));
+    const int key5 = 6;
+    r              = m.insert_or_assign(m.end(), key5, std::move(mv5));
     assert(m.size() == 12);
     assert(mv5.moved());           // was moved from
     assert(r->first == 6);         // key
     assert(r->second.get() == 11); // value
 
     Moveable mv6(13, 13.0);
-    r = m.insert_or_assign(m.end(), 7, std::move(mv6));
+    const int key6 = 7;
+    r              = m.insert_or_assign(m.end(), key6, std::move(mv6));
     assert(m.size() == 13);
     assert(mv6.moved());           // was moved from
     assert(r->first == 7);         // key
@@ -185,14 +191,16 @@ int main(int, char**) {
 
     // wrong hint: third element
     Moveable mv7(15, 15.0);
-    r = m.insert_or_assign(std::next(m.begin(), 2), 8, std::move(mv7));
+    const int key7 = 8;
+    r              = m.insert_or_assign(std::next(m.begin(), 2), key7, std::move(mv7));
     assert(m.size() == 13);
     assert(mv7.moved());           // was moved from
     assert(r->first == 8);         // key
     assert(r->second.get() == 15); // value
 
     Moveable mv8(17, 17.0);
-    r = m.insert_or_assign(std::next(m.begin(), 2), 9, std::move(mv8));
+    const int key8 = 9;
+    r              = m.insert_or_assign(std::next(m.begin(), 2), key8, std::move(mv8));
     assert(m.size() == 14);
     assert(mv8.moved());           // was moved from
     assert(r->first == 9);         // key

@@ -13497,18 +13497,18 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    v_lshl_or_b32 v3, v18, 8, v20
 ; ALIGNED-NEXT:    v_lshl_or_b32 v4, v14, 8, v15
 ; ALIGNED-NEXT:    v_lshl_or_b32 v103, v4, 16, v3
-; ALIGNED-NEXT:    buffer_load_ubyte v3, v2, s[0:3], 0 offen offset:7
 ; ALIGNED-NEXT:    v_lshl_or_b32 v4, v17, 8, v19
+; ALIGNED-NEXT:    buffer_load_ubyte v3, v2, s[0:3], 0 offen offset:7
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(4)
 ; ALIGNED-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:1292 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
 ; ALIGNED-NEXT:    buffer_store_dword v106, off, s[0:3], s32 offset:1296 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(2)
 ; ALIGNED-NEXT:    buffer_store_dword v123, off, s[0:3], s32 offset:1304 ; 4-byte Folded Spill
-; ALIGNED-NEXT:    s_waitcnt vmcnt(1)
-; ALIGNED-NEXT:    buffer_store_dword v125, off, s[0:3], s32 offset:1308 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    v_lshl_or_b32 v86, v77, 16, v4
 ; ALIGNED-NEXT:    v_lshl_or_b32 v77, v11, 8, v12
+; ALIGNED-NEXT:    s_waitcnt vmcnt(1)
+; ALIGNED-NEXT:    buffer_store_dword v125, off, s[0:3], s32 offset:1308 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    v_lshl_or_b32 v71, v91, 16, v77
 ; ALIGNED-NEXT:    v_lshl_or_b32 v77, v6, 8, v8
 ; ALIGNED-NEXT:    v_lshl_or_b32 v91, v7, 8, v5

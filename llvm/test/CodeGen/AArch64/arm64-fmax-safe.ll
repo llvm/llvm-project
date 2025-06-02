@@ -53,3 +53,22 @@ define i64 @test_integer(i64  %in) {
   %val = select i1 %cmp, i64 0, i64 %in
   ret i64 %val
 }
+
+; Make sure we don't translate it into fminnm when the nsz flag is set on the fcmp.
+define float @minnum_fcmp_nsz(float %x, float %y) {
+; CHECK-LABEL: minnum_fcmp_nsz:
+  %cmp = fcmp nnan nsz ole float %x, %y
+  %sel = select i1 %cmp, float %x, float %y
+  ret float %sel
+; CHECK-NOT: fminnm
+; CHECK: fcsel s0, s0, s1, le
+}
+
+; Make sure we translate it into fminnm when the nsz flag is set on the select.
+define float @minnum_select_nsz(float %x, float %y) {
+; CHECK-LABEL: minnum_select_nsz:
+  %cmp = fcmp nnan ole float %x, %y
+  %sel = select nsz i1 %cmp, float %x, float %y
+  ret float %sel
+; CHECK: fminnm s0, s0, s1
+}

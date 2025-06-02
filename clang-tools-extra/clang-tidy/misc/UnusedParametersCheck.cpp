@@ -15,7 +15,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/STLExtras.h"
 #include <unordered_map>
 #include <unordered_set>
 

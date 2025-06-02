@@ -22,10 +22,10 @@ int main()
 
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
-  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_wait_critical: wait_id=[[WAIT_ID:[0-9]+]], hint={{[0-9]+}}, impl={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]
+  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_wait_critical: wait_id=[[WAIT_ID:[0-9]+]], hint={{[0-9]+}}, impl={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_acquired_critical: wait_id=[[WAIT_ID]], codeptr_ra=[[RETURN_ADDRESS]]
   // CHECK-NEXT: {{^}}[[MASTER_ID]]: current_address={{.*}}[[RETURN_ADDRESS]]
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_release_critical: wait_id=[[WAIT_ID]], codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_release_critical: wait_id=[[WAIT_ID]], codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]
   // CHECK-NEXT: {{^}}[[MASTER_ID]]: current_address={{.*}}[[RETURN_ADDRESS]]
 
   return 0;

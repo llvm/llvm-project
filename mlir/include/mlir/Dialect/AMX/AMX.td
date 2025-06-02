@@ -29,6 +29,7 @@
 #define AMX
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Dialect/AMX/AMXInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinTypes.td"
@@ -47,8 +48,6 @@ def AMX_Dialect : Dialect {
 
     This `AMX` dialect provides a bridge between MLIR concepts such as
     vectors and memrefs and the lower level LLVM IR support of AMX.
-    The dialect is split into user-facing AMX ops (AMX_Op) and
-    backend-facing intrinsic ops (AMX_IntrOp).
 
     Note that since configuration changes (implicit at dialect level) are
     costly, it is highly recommended to use the AMX dialect on same-shaped
@@ -135,21 +134,17 @@ def AMXTileI8 : AMXTileOf<[I8]>;
 class AMX_Op<string mnemonic, list<Trait> traits = []> :
   Op<AMX_Dialect, mnemonic, traits> {}
 
-// The "internal" intrinsics are meant for compiler usage.
-class AMX_IntrOp<string mnemonic, int numResults, list<Trait> traits = []> :
-  LLVM_IntrOpBase<AMX_Dialect, mnemonic,
-                  "x86_" # !subst(".", "_", mnemonic) # "_internal",
-                  [], [], traits, numResults>;
-
 //===----------------------------------------------------------------------===//
-// AMX Op definitions (user facing).
+// AMX Op definitions
 //===----------------------------------------------------------------------===//
 
 //
 // Tile reset.
 //
 
-def TileZeroOp : AMX_Op<"tile_zero", [Pure]> {
+def TileZeroOp : AMX_Op<"tile_zero", [Pure,
+    AMXIntrinsicOpInterface
+  ]> {
   let summary = "tile zero operation";
   let description = [{
     Zeroes the destination tile, with the shape defined by the 2-dim
@@ -167,6 +162,14 @@ def TileZeroOp : AMX_Op<"tile_zero", [Pure]> {
     TileType getTileType() {
       return ::llvm::cast<TileType>(getRes().getType());
     }
+
+    std::string getIntrinsicName() {
+      return "llvm.x86.tilezero.internal";
+    }
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
   }];
   let assemblyFormat = "attr-dict `:` qualified(type($res))";
   let hasVerifier = 1;
@@ -176,7 +179,9 @@ def TileZeroOp : AMX_Op<"tile_zero", [Pure]> {
 // Tile memory operations.
 //
 
-def TileLoadOp : AMX_Op<"tile_load", [Pure]> {
+def TileLoadOp : AMX_Op<"tile_load", [Pure,
+    AMXIntrinsicOpInterface
+  ]> {
   let summary = "tile load operation";
   let description = [{
     Loads a tile from memory defined by a base and indices, with the
@@ -200,13 +205,23 @@ def TileLoadOp : AMX_Op<"tile_load", [Pure]> {
     TileType getTileType() {
       return ::llvm::cast<TileType>(getRes().getType());
     }
+
+    std::string getIntrinsicName() {
+      return "llvm.x86.tileloadd64.internal";
+    }
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
   }];
   let assemblyFormat = "$base `[` $indices `]` attr-dict `:` "
                        "type($base) `into` qualified(type($res))";
   let hasVerifier = 1;
 }
 
-def TileStoreOp : AMX_Op<"tile_store"> {
+def TileStoreOp : AMX_Op<"tile_store", [
+    AMXIntrinsicOpInterface
+  ]> {
   let summary = "tile store operation";
   let description = [{
     Stores a tile to memory defined by a base and indices, with the
@@ -230,6 +245,14 @@ def TileStoreOp : AMX_Op<"tile_store"> {
     TileType getTileType() {
       return ::llvm::cast<TileType>(getVal().getType());
     }
+
+    std::string getIntrinsicName() {
+      return "llvm.x86.tilestored64.internal";
+    }
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
   }];
   let assemblyFormat = "$base `[` $indices `]` `,` $val attr-dict `:` "
                        "type($base) `,` qualified(type($val))";
@@ -240,8 +263,10 @@ def TileStoreOp : AMX_Op<"tile_store"> {
 // Tile arithmetic operations.
 //
 
-def TileMulFOp : AMX_Op<"tile_mulf", [
-    Pure, AllTypesMatch<["acc", "res"]>]> {
+def TileMulFOp : AMX_Op<"tile_mulf", [Pure,
+    AMXIntrinsicOpInterface,
+    AllTypesMatch<["acc", "res"]>
+  ]> {
   let summary = "tile multiplication operation (floating-point)";
   let description = [{
     Multiplies a "m x k" tile with a "k x n" tile and accumulates the results
@@ -270,6 +295,19 @@ def TileMulFOp : AMX_Op<"tile_mulf", [
     TileType getTileType() {
       return ::llvm::cast<TileType>(getRes().getType());
     }
+
+    std::string getIntrinsicName() {
+      std::string intr = "llvm.x86.tdp";
+      auto elementType =
+        getLhsTileType().getElementType();
+      intr += elementType.isF16() ? "fp16" : "bf16";
+      intr += "ps.internal";
+      return intr;
+    }
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
   }];
   let assemblyFormat = "$lhs `,` $rhs `,` $acc attr-dict `:` "
                        "qualified(type($lhs)) `,` qualified(type($rhs))"
@@ -277,8 +315,10 @@ def TileMulFOp : AMX_Op<"tile_mulf", [
   let hasVerifier = 1;
 }
 
-def TileMulIOp : AMX_Op<"tile_muli", [
-    Pure, AllTypesMatch<["acc", "res"]>]> {
+def TileMulIOp : AMX_Op<"tile_muli", [Pure,
+    AMXIntrinsicOpInterface,
+    AllTypesMatch<["acc", "res"]>
+  ]> {
   let summary = "tile multiplication operation (integer)";
   let description = [{
     Multiplies a "m x k" tile with a "k x n" tile and accumulates the results
@@ -313,77 +353,22 @@ def TileMulIOp : AMX_Op<"tile_muli", [
     TileType getTileType() {
       return ::llvm::cast<TileType>(getRes().getType());
     }
+
+    std::string getIntrinsicName() {
+      std::string intr = "llvm.x86.tdpb";
+      intr += getIsZextLhs() ? "u" : "s";
+      intr += getIsZextRhs() ? "u" : "s";
+      intr += "d.internal";
+      return intr;
+    }
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
   }];
   let assemblyFormat = "$lhs (`zext` $isZextLhs^)? `,` $rhs (`zext` $isZextRhs^)? `,` $acc attr-dict `:` "
                        "qualified(type($lhs)) `,` qualified(type($rhs)) `,` qualified(type($acc)) ";
   let hasVerifier = 1;
 }
-
-//===----------------------------------------------------------------------===//
-// AMX IntrOp definitions (LLVM compiler facing).
-//===----------------------------------------------------------------------===//
-
-//
-// Tile reset. Parameters define the tile size.
-//
-
-def LLVM_x86_amx_tilezero : AMX_IntrOp<"tilezero", 1>,
-  Arguments<(ins AnyInteger, AnyInteger)>;
-
-//
-// Tile memory operations. Parameters define the tile size,
-// base address, and stride between consecutive rows for the
-// memory operation.
-//
-
-def LLVM_x86_amx_tileloadd64 : AMX_IntrOp<"tileloadd64", 1>,
-  Arguments<(ins AnyInteger,
-                 AnyInteger, LLVM_AnyPointer, AnyInteger)>;
-
-def LLVM_x86_amx_tilestored64 : AMX_IntrOp<"tilestored64", 0>,
-  Arguments<(ins AnyInteger,
-                 AnyInteger, LLVM_AnyPointer, AnyInteger, LLVM_Type)>;
-
-//
-// Tile multiplication operations (series of dot products). Parameters
-// define the tile sizes and source and destination tiles for the
-// operation. Note that the prefix "tdp" stands for tile dot product.
-//
-
-// Dot product of bf16 tiles into f32 tile.
-def LLVM_x86_amx_tdpbf16ps : AMX_IntrOp<"tdpbf16ps", 1>,
-  Arguments<(ins AnyInteger,
-                 AnyInteger,
-		 AnyInteger, LLVM_Type, LLVM_Type, LLVM_Type)>;
-
-// Dot product of f16 tiles into f32 tile.
-def LLVM_x86_amx_tdpfp16ps : AMX_IntrOp<"tdpfp16ps", 1>,
-  Arguments<(ins AnyInteger,
-                 AnyInteger,
-		 AnyInteger, LLVM_Type, LLVM_Type, LLVM_Type)>;
-
-// Dot product of i8 tiles into i32 tile (with sign/sign extension).
-def LLVM_x86_amx_tdpbssd : AMX_IntrOp<"tdpbssd", 1>,
-  Arguments<(ins AnyInteger,
-                 AnyInteger,
-		 AnyInteger, LLVM_Type, LLVM_Type, LLVM_Type)>;
-
-// Dot product of i8 tiles into i32 tile (with sign/zero extension).
-def LLVM_x86_amx_tdpbsud : AMX_IntrOp<"tdpbsud", 1>,
-  Arguments<(ins AnyInteger,
-                 AnyInteger,
-		 AnyInteger, LLVM_Type, LLVM_Type, LLVM_Type)>;
-
-// Dot product of i8 tiles into i32 tile (with zero/sign extension).
-def LLVM_x86_amx_tdpbusd : AMX_IntrOp<"tdpbusd", 1>,
-  Arguments<(ins AnyInteger,
-                 AnyInteger,
-		 AnyInteger, LLVM_Type, LLVM_Type, LLVM_Type)>;
-
-// Dot product of i8 tiles into i32 tile (with zero/zero extension).
-def LLVM_x86_amx_tdpbuud : AMX_IntrOp<"tdpbuud", 1>,
-  Arguments<(ins AnyInteger,
-                 AnyInteger,
-		 AnyInteger, LLVM_Type, LLVM_Type, LLVM_Type)>;
 
 #endif // AMX

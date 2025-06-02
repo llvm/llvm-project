@@ -54,7 +54,7 @@ to the categories of interest for notifications.
 Paying attention to changes being made by others is a good way to see what other people
 are interested in and watching the flow of the project as a whole.
 
-Contibutions to the project are made through :ref:`GitHub Pull Requests <github-reviews>`.
+Contributions to the project are made through :ref:`GitHub Pull Requests <github-reviews>`.
 You can subscribe to notification for areas of the codebase by joining
 one of the `pr-subscribers-* <https://github.com/orgs/llvm/teams?query=pr-subscribers>`_
 GitHub teams. This `mapping <https://github.com/llvm/llvm-project/blob/main/.github/new-prs-labeler.yml>`_

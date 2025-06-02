@@ -78,7 +78,7 @@ end
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare mapper
 !PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpMapperSpecifier
-!PARSE-TREE: | | | | Name = 'mymapper'
+!PARSE-TREE: | | | | string = 'mymapper'
 !PARSE-TREE: | | | | TypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | Name = 'v'
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Map -> OmpMapClause

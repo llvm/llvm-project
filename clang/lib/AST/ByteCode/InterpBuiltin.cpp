@@ -23,6 +23,24 @@
 namespace clang {
 namespace interp {
 
+static bool isNoopBuiltin(unsigned ID) {
+  switch (ID) {
+  case Builtin::BIas_const:
+  case Builtin::BIforward:
+  case Builtin::BIforward_like:
+  case Builtin::BImove:
+  case Builtin::BImove_if_noexcept:
+  case Builtin::BIaddressof:
+  case Builtin::BI__addressof:
+  case Builtin::BI__builtin_addressof:
+  case Builtin::BI__builtin_launder:
+    return true;
+  default:
+    return false;
+  }
+  return false;
+}
+
 static unsigned callArgSize(const InterpState &S, const CallExpr *C) {
   unsigned O = 0;
 
@@ -100,6 +118,8 @@ static bool retBI(InterpState &S, const CallExpr *Call, unsigned BuiltinID) {
 static bool retPrimValue(InterpState &S, CodePtr OpPC,
                          std::optional<PrimType> &T, const CallExpr *Call,
                          unsigned BuiltinID) {
+  if (isNoopBuiltin(BuiltinID))
+    return true;
 
   if (!T) {
     if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
@@ -152,6 +172,9 @@ static QualType getElemType(const Pointer &P) {
 
 static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
                                         unsigned ID) {
+  if (!S.diagnosing())
+    return;
+
   auto Loc = S.Current->getSource(OpPC);
   if (S.getLangOpts().CPlusPlus11)
     S.CCEDiag(Loc, diag::note_constexpr_invalid_function)
@@ -740,26 +763,18 @@ static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
                                       const CallExpr *Call) {
+#ifndef NDEBUG
   assert(Call->getArg(0)->isLValue());
   PrimType PtrT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
-
-  if (PtrT == PT_Ptr) {
-    const Pointer &Arg = S.Stk.peek<Pointer>();
-    S.Stk.push<Pointer>(Arg);
-  } else {
-    assert(false && "Unsupported pointer type passed to __builtin_addressof()");
-  }
+  assert(PtrT == PT_Ptr &&
+         "Unsupported pointer type passed to __builtin_addressof()");
+#endif
   return true;
 }
 
 static bool interp__builtin_move(InterpState &S, CodePtr OpPC,
                                  const InterpFrame *Frame,
                                  const CallExpr *Call) {
-
-  PrimType ArgT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
-
-  TYPE_SWITCH(ArgT, const T &Arg = S.Stk.peek<T>(); S.Stk.push<T>(Arg););
-
   return Call->getDirectCallee()->isConstexpr();
 }
 
@@ -772,13 +787,6 @@ static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
   int Result = S.getASTContext().getTargetInfo().getEHDataRegisterNumber(
       Arg.getZExtValue());
   pushInteger(S, Result, Call->getType());
-  return true;
-}
-
-/// Just takes the first Argument to the call and puts it on the stack.
-static bool noopPointer(InterpState &S) {
-  const Pointer &Arg = S.Stk.peek<Pointer>();
-  S.Stk.push<Pointer>(Arg);
   return true;
 }
 
@@ -2504,6 +2512,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
+    assert(isNoopBuiltin(BuiltinID));
     if (!interp__builtin_addressof(S, OpPC, Frame, Call))
       return false;
     break;
@@ -2513,6 +2522,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIforward_like:
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
+    assert(isNoopBuiltin(BuiltinID));
     if (!interp__builtin_move(S, OpPC, Frame, Call))
       return false;
     break;
@@ -2523,8 +2533,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     break;
 
   case Builtin::BI__builtin_launder:
-    if (!noopPointer(S))
-      return false;
+    assert(isNoopBuiltin(BuiltinID));
     break;
 
   case Builtin::BI__builtin_add_overflow:

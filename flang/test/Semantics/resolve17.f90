@@ -290,6 +290,7 @@ module m14d
  contains
   subroutine test
     real :: y
+    !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'bar') is ambiguous with a structure constructor of the same name
     y = foo(1.0)
     x = foo(2)
   end subroutine
@@ -301,6 +302,7 @@ module m14e
  contains
   subroutine test
     real :: y
+    !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'bar') is ambiguous with a structure constructor of the same name
     y = foo(1.0)
     x = foo(2)
   end subroutine

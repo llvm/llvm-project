@@ -1,4 +1,5 @@
 ! RUN: %flang_fc1 -fdebug-unparse %s 2>&1 | FileCheck %s
+
 module m1
   type foo
     integer n
@@ -31,6 +32,9 @@ module m3
     f2%m = 3
   end
 end
+
+!CHECK: portability: Reference to generic function 'foo' (resolving to specific 'f1') is ambiguous with a structure constructor of the same name
+!CHECK: portability: Reference to generic function 'foo' (resolving to specific 'f2') is ambiguous with a structure constructor of the same name
 
 program main
   use m3

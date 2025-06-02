@@ -70,7 +70,7 @@ entry:
   store i32 %extra, ptr addrspace(5) %v
   store <2 x i32> %in, ptr addrspace(5) %v1
   %e = getelementptr [2 x i32], ptr addrspace(5) %v1, i32 0, i32 %idx
-  %x = load i32, ptr addrspace(5) %e
+  %x = load volatile i32, ptr addrspace(5) %e
   %xf = bitcast i32 %x to float
   call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %xf, ptr addrspace(8) poison, i32 0, i32 0, i32 0)
   ret void

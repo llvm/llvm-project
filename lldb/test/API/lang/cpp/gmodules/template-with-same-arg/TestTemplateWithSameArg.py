@@ -34,7 +34,7 @@ class TestTemplateWithSameArg(TestBase):
 
     @add_test_categories(["gmodules"])
     def test_same_template_arg(self):
-        lldbutil.run_to_source_breakpoint(self, "Break here", self.main_source_file)
+        lldbutil.run_to_source_breakpoint(self, "return 0", self.main_source_file)
 
         self.expect_expr(
             "FromMod1",
@@ -58,7 +58,7 @@ class TestTemplateWithSameArg(TestBase):
 
     @add_test_categories(["gmodules"])
     def test_duplicate_decls(self):
-        lldbutil.run_to_source_breakpoint(self, "Break here", self.main_source_file)
+        lldbutil.run_to_source_breakpoint(self, "return 0", self.main_source_file)
 
         self.expect_expr("(intptr_t)&FromMod1 + (intptr_t)&FromMod2")
 

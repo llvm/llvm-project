@@ -84,7 +84,7 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
 
 private:
   static uint64_t
-  getRelocHash(const Reloc &reloc,
+  getRelocHash(const macho::Reloc &reloc,
                const llvm::DenseMap<const void *, uint64_t> &sectionToIdx) {
     auto *isec = reloc.getReferentInputSection();
     std::optional<uint64_t> sectionIdx;

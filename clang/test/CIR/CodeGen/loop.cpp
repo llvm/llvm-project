@@ -54,7 +54,7 @@ void l1() {
 // CIR-NEXT:   cir.scope {
 // CIR-NEXT:     %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-NEXT:     cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:     cir.store{{.*}} %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:     cir.for : cond {
 // CIR-NEXT:       %[[TRUE:.*]] = cir.const #true
 // CIR-NEXT:       cir.condition(%[[TRUE]])
@@ -107,7 +107,7 @@ void l2() {
 // CIR-NEXT:       cir.scope {
 // CIR-NEXT:         %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-NEXT:         cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:         cir.store{{.*}} %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:       }
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     } step {
@@ -156,7 +156,7 @@ void l3() {
 // CIR-NEXT:       cir.condition(%[[TRUE]])
 // CIR-NEXT:     } body {
 // CIR-NEXT:       %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-NEXT:       cir.store %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:       cir.store{{.*}} %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     } step {
 // CIR-NEXT:       cir.yield
@@ -203,30 +203,30 @@ void l4() {
 // CIR:     %[[BEGIN_ADDR:.*]] = cir.alloca {{.*}} ["__begin1", init]
 // CIR:     %[[END_ADDR:.*]] = cir.alloca {{.*}} ["__end1", init]
 // CIR:     %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
-// CIR:     cir.store %[[A_ADDR]], %[[RANGE_ADDR]]
-// CIR:     %[[RANGE_LOAD:.*]] = cir.load %[[RANGE_ADDR]]
+// CIR:     cir.store{{.*}} %[[A_ADDR]], %[[RANGE_ADDR]]
+// CIR:     %[[RANGE_LOAD:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[RANGE_LOAD]] : {{.*}})
-// CIR:     cir.store %[[RANGE_CAST]], %[[BEGIN_ADDR]]
-// CIR:     %[[BEGIN:.*]] = cir.load %[[RANGE_ADDR]]
+// CIR:     cir.store{{.*}} %[[RANGE_CAST]], %[[BEGIN_ADDR]]
+// CIR:     %[[BEGIN:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
 // CIR:     %[[BEGIN_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[BEGIN]] : {{.*}})
 // CIR:     %[[TEN:.*]] = cir.const #cir.int<10>
 // CIR:     %[[END_PTR:.*]] = cir.ptr_stride(%[[BEGIN_CAST]] : {{.*}}, %[[TEN]] : {{.*}})
-// CIR:     cir.store %[[END_PTR]], %[[END_ADDR]]
+// CIR:     cir.store{{.*}} %[[END_PTR]], %[[END_ADDR]]
 // CIR:     cir.for : cond {
-// CIR:       %[[CUR:.*]] = cir.load %[[BEGIN_ADDR]]
-// CIR:       %[[END:.*]] = cir.load %[[END_ADDR]]
+// CIR:       %[[CUR:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
+// CIR:       %[[END:.*]] = cir.load{{.*}} %[[END_ADDR]]
 // CIR:       %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[END]])
 // CIR:       cir.condition(%[[CMP]])
 // CIR:     } body {
-// CIR:       %[[CUR:.*]] = cir.load deref %[[BEGIN_ADDR]]
-// CIR:       %[[N:.*]] = cir.load %[[CUR]]
-// CIR:       cir.store %[[N]], %[[N_ADDR]]
+// CIR:       %[[CUR:.*]] = cir.load deref{{.*}} %[[BEGIN_ADDR]]
+// CIR:       %[[N:.*]] = cir.load{{.*}} %[[CUR]]
+// CIR:       cir.store{{.*}} %[[N]], %[[N_ADDR]]
 // CIR:       cir.yield
 // CIR:     } step {
-// CIR:       %[[CUR:.*]] = cir.load %[[BEGIN_ADDR]]
+// CIR:       %[[CUR:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:       %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:       %[[NEXT:.*]] = cir.ptr_stride(%[[CUR]] : {{.*}}, %[[ONE]] : {{.*}})
-// CIR:       cir.store %[[NEXT]], %[[BEGIN_ADDR]]
+// CIR:       cir.store{{.*}} %[[NEXT]], %[[BEGIN_ADDR]]
 // CIR:       cir.yield
 // CIR:     }
 // CIR:   }
@@ -314,43 +314,43 @@ void l5() {
 // CIR:     %[[X_ADDR:.*]] = cir.alloca {{.*}} ["x", init]
 // CIR:     %[[ARR_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[ARR_ADDR]] : {{.*}})
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:     cir.store %[[ONE]], %[[ARR_CAST]]
+// CIR:     cir.store{{.*}} %[[ONE]], %[[ARR_CAST]]
 // CIR:     %[[OFFSET1:.*]] = cir.const #cir.int<1> : !s64i
 // CIR:     %[[STRIDE:.*]] = cir.ptr_stride(%[[ARR_CAST]] : {{.*}}, %[[OFFSET1]] : {{.*}})
 // CIR:     %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CIR:     cir.store %[[TWO]], %[[STRIDE]]
+// CIR:     cir.store{{.*}} %[[TWO]], %[[STRIDE]]
 // CIR:     %[[OFFSET2:.*]] = cir.const #cir.int<2> : !s64i
 // CIR:     %[[STRIDE2:.*]] = cir.ptr_stride(%[[ARR_CAST]] : {{.*}}, %[[OFFSET2]] : {{.*}})
 // CIR:     %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-// CIR:     cir.store %[[THREE]], %[[STRIDE2]]
+// CIR:     cir.store{{.*}} %[[THREE]], %[[STRIDE2]]
 // CIR:     %[[OFFSET3:.*]] = cir.const #cir.int<3> : !s64i
 // CIR:     %[[STRIDE3:.*]] = cir.ptr_stride(%[[ARR_CAST]] : {{.*}}, %[[OFFSET3]] : {{.*}})
 // CIR:     %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
-// CIR:     cir.store %[[FOUR]], %[[STRIDE3]]
-// CIR:     cir.store %[[ARR_ADDR]], %[[RANGE_ADDR]]
-// CIR:     %[[RANGE_LOAD:.*]] = cir.load %[[RANGE_ADDR]]
+// CIR:     cir.store{{.*}} %[[FOUR]], %[[STRIDE3]]
+// CIR:     cir.store{{.*}} %[[ARR_ADDR]], %[[RANGE_ADDR]]
+// CIR:     %[[RANGE_LOAD:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
 // CIR:     %[[RANGE_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[RANGE_LOAD]] : {{.*}})
-// CIR:     cir.store %[[RANGE_CAST]], %[[BEGIN_ADDR]]
-// CIR:     %[[BEGIN:.*]] = cir.load %[[RANGE_ADDR]]
+// CIR:     cir.store{{.*}} %[[RANGE_CAST]], %[[BEGIN_ADDR]]
+// CIR:     %[[BEGIN:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
 // CIR:     %[[BEGIN_CAST:.*]] = cir.cast(array_to_ptrdecay, %[[BEGIN]] : {{.*}})
 // CIR:     %[[FOUR:.*]] = cir.const #cir.int<4> : !s64i
 // CIR:     %[[END_PTR:.*]] = cir.ptr_stride(%[[BEGIN_CAST]] : {{.*}}, %[[FOUR]] : {{.*}})
-// CIR:     cir.store %[[END_PTR]], %[[END_ADDR]]
+// CIR:     cir.store{{.*}} %[[END_PTR]], %[[END_ADDR]]
 // CIR:     cir.for : cond {
-// CIR:       %[[CUR:.*]] = cir.load %[[BEGIN_ADDR]]
-// CIR:       %[[END:.*]] = cir.load %[[END_ADDR]]
+// CIR:       %[[CUR:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
+// CIR:       %[[END:.*]] = cir.load{{.*}} %[[END_ADDR]]
 // CIR:       %[[CMP:.*]] = cir.cmp(ne, %[[CUR]], %[[END]])
 // CIR:       cir.condition(%[[CMP]])
 // CIR:     } body {
-// CIR:       %[[CUR:.*]] = cir.load deref %[[BEGIN_ADDR]]
-// CIR:       %[[X:.*]] = cir.load %[[CUR]]
-// CIR:       cir.store %[[X]], %[[X_ADDR]]
+// CIR:       %[[CUR:.*]] = cir.load deref{{.*}} %[[BEGIN_ADDR]]
+// CIR:       %[[X:.*]] = cir.load{{.*}} %[[CUR]]
+// CIR:       cir.store{{.*}} %[[X]], %[[X_ADDR]]
 // CIR:       cir.yield
 // CIR:     } step {
-// CIR:       %[[CUR:.*]] = cir.load %[[BEGIN_ADDR]]
+// CIR:       %[[CUR:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:       %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:       %[[NEXT:.*]] = cir.ptr_stride(%[[CUR]] : {{.*}}, %[[ONE]] : {{.*}})
-// CIR:       cir.store %[[NEXT]], %[[BEGIN_ADDR]]
+// CIR:       cir.store{{.*}} %[[NEXT]], %[[BEGIN_ADDR]]
 // CIR:       cir.yield
 // CIR:     }
 // CIR:   }
@@ -528,7 +528,7 @@ void unreachable_after_continue() {
 // CIR:         cir.continue
 // CIR:       ^bb1:  // no predecessors
 // CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:         cir.store %[[ONE]], %[[X]] : !s32i, !cir.ptr<!s32i>
+// CIR:         cir.store{{.*}} %[[ONE]], %[[X]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.yield
 // CIR:       }
 // CIR:       cir.yield
@@ -588,7 +588,7 @@ void unreachable_after_break() {
 // CIR:         cir.break
 // CIR:       ^bb1:  // no predecessors
 // CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-// CIR:         cir.store %[[ONE]], %[[X]] : !s32i, !cir.ptr<!s32i>
+// CIR:         cir.store{{.*}} %[[ONE]], %[[X]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.yield
 // CIR:       }
 // CIR:       cir.yield

@@ -497,7 +497,7 @@ __const, __const__, __volatile, __volatile__, __restrict, __restrict__
 ----------------------------------------------------------------------
 
 These are alternate spellings for their non-underscore counterparts, but are
-available in all langauge modes.
+available in all language modes.
 
 __decltype
 ----------
@@ -526,7 +526,7 @@ __typeof, __typeof__, __typeof_unqual, __typeof_unqual__
 --------------------------------------------------------
 
 ``__typeof`` and ``__typeof__`` are alternate spellings for ``typeof``, but are
-available in all langauge modes. These spellings result in the operand,
+available in all language modes. These spellings result in the operand,
 retaining all qualifiers.
 
 ``__typeof_unqual`` and ``__typeof_unqual__`` are alternate spellings for the
@@ -2043,7 +2043,7 @@ references can be used instead of numeric references.
   }
 
 
-Constexpr strings in GNU ASM statememts
+Constexpr strings in GNU ASM statements
 =======================================
 
 In C++11 mode (and greater), Clang supports specifying the template,
@@ -4412,7 +4412,7 @@ It is undefined behavior to call this function on an already initialized
 A builtin function for the target-specific ``va_start`` function-like macro,
 available only in C23 and later. The builtin accepts zero or one argument for
 the ellipsis (``...``). If such an argument is provided, it should be the name
-of the parameter preceeding the ellipsis, which is used for compatibility with
+of the parameter preceding the ellipsis, which is used for compatibility with
 C versions before C23. It is an error to provide two or more variadic arguments.
 This function initializes the given ``__builtin_va_list`` object. It is
 undefined behavior to call this function on an already initialized

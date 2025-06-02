@@ -937,8 +937,8 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_dont_realign_stack(i32 %idx) {
 ; GISEL-GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v8
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v4, v0
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v3, s3
-; GISEL-GFX11-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GISEL-GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GISEL-GFX11-NEXT:    scratch_store_b128 v4, v[0:3], off dlc
 ; GISEL-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX11-NEXT:    s_endpgm

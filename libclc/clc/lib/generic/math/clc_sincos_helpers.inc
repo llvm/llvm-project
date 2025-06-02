@@ -90,7 +90,7 @@ _CLC_DECL _CLC_OVERLOAD __CLC_FLOATN __clc_tanf_piby4(__CLC_FLOATN x,
   __CLC_FLOATN t = __clc_mad(x * r, __clc_native_divide(a, b), x);
   __CLC_FLOATN tr = -MATH_RECIP(t);
 
-  return regn & 1 ? tr : t;
+  return (regn & 1) != 0 ? tr : t;
 }
 
 _CLC_DEF _CLC_OVERLOAD void __clc_fullMulS(private __CLC_FLOATN *hi,

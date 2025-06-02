@@ -489,9 +489,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs).set(
-          MachineFunctionProperties::Property::TracksLiveness);
+      return MachineFunctionProperties().setNoVRegs().setTracksLiveness();
     }
 
     StringRef getPassName() const override {
@@ -1293,7 +1291,7 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
 
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   RDA = &getAnalysis<ReachingDefAnalysis>();
-  MF->getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
+  MF->getProperties().setTracksLiveness();
   MRI = &MF->getRegInfo();
   TII = static_cast<const ARMBaseInstrInfo*>(ST.getInstrInfo());
   TRI = ST.getRegisterInfo();

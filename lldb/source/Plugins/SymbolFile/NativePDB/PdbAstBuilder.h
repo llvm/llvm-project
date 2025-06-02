@@ -87,7 +87,7 @@ public:
   TypeSystemClang &clang() { return m_clang; }
   ClangASTImporter &GetClangASTImporter() { return m_importer; }
 
-  void Dump(Stream &stream);
+  void Dump(Stream &stream, llvm::StringRef filter);
 
 private:
   clang::Decl *TryGetDecl(PdbSymUid uid) const;

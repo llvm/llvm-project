@@ -185,9 +185,8 @@ void filterRenameTargets(llvm::DenseSet<const NamedDecl *> &Decls) {
   // For renaming, we're only interested in foo's declaration, so drop the other
   // one. There should never be more than one UsingDecl here, otherwise the
   // rename would be ambiguos anyway.
-  auto UD = std::find_if(Decls.begin(), Decls.end(), [](const NamedDecl *D) {
-    return llvm::isa<UsingDecl>(D);
-  });
+  auto UD = llvm::find_if(
+      Decls, [](const NamedDecl *D) { return llvm::isa<UsingDecl>(D); });
   if (UD != Decls.end()) {
     Decls.erase(UD);
   }

@@ -322,6 +322,8 @@ void CIRGenFunction::emitDecl(const Decl &d) {
   case Decl::ObjCTypeParam:
   case Decl::Binding:
   case Decl::UnresolvedUsingIfExists:
+  case Decl::HLSLBuffer:
+  case Decl::HLSLRootSignature:
     llvm_unreachable("Declaration should not be in declstmts!");
 
   case Decl::Function:     // void X();
@@ -374,7 +376,6 @@ void CIRGenFunction::emitDecl(const Decl &d) {
     return;
   }
   case Decl::ImplicitConceptSpecialization:
-  case Decl::HLSLBuffer:
   case Decl::TopLevelStmt:
   case Decl::UsingPack:
   case Decl::Decomposition: // This could be moved to join Decl::Var

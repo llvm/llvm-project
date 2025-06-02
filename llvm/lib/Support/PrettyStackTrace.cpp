@@ -185,8 +185,9 @@ static void CrashHandler(void *) {
   if (!crashHandlerString.empty()) {
     setCrashLogMessage(crashHandlerString.c_str());
     errs() << crashHandlerString.str();
-  } else
+  } else {
     setCrashLogMessage("No crash information.");
+  }
 #endif
 }
 

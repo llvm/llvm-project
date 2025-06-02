@@ -764,19 +764,14 @@ inline bool checkForSingleVariableOnRHS(
   return designator != nullptr;
 }
 
-/// Checks if the symbol on the LHS of the assignment statement is present in
-/// the RHS expression.
-inline bool checkForSymbolMatch(
-    const Fortran::parser::AssignmentStmt &assignmentStmt) {
-  const auto &var{std::get<Fortran::parser::Variable>(assignmentStmt.t)};
-  const auto &expr{std::get<Fortran::parser::Expr>(assignmentStmt.t)};
-  const auto *e{Fortran::semantics::GetExpr(expr)};
-  const auto *v{Fortran::semantics::GetExpr(var)};
-  auto varSyms{Fortran::evaluate::GetSymbolVector(*v)};
-  const Fortran::semantics::Symbol &varSymbol{*varSyms.front()};
+/// Checks if the symbol on the LHS is present in the RHS expression.
+inline bool checkForSymbolMatch(const Fortran::semantics::SomeExpr *lhs,
+    const Fortran::semantics::SomeExpr *rhs) {
+  auto lhsSyms{Fortran::evaluate::GetSymbolVector(*lhs)};
+  const Fortran::semantics::Symbol &lhsSymbol{*lhsSyms.front()};
   for (const Fortran::semantics::Symbol &symbol :
-      Fortran::evaluate::GetSymbolVector(*e)) {
-    if (varSymbol == symbol) {
+      Fortran::evaluate::GetSymbolVector(*rhs)) {
+    if (lhsSymbol == symbol) {
       return true;
     }
   }

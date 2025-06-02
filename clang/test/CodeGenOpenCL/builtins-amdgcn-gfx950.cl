@@ -1764,6 +1764,36 @@ void test_cvt_sr_f16_f32(global half2 *out, float src, uint seed)
   *out = __builtin_amdgcn_cvt_sr_f16_f32(*out, src, seed, 1);
 }
 
+// CHECK-LABEL: @test_load_to_lds_96(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[DST_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(3) [[DST:%.*]], ptr addrspace(5) [[DST_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[SRC_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(3), ptr addrspace(5) [[DST_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.amdgcn.load.to.lds.p1(ptr addrspace(1) [[TMP0]], ptr addrspace(3) [[TMP1]], i32 12, i32 0, i32 0)
+// CHECK-NEXT:    ret void
+//
+void test_load_to_lds_96(global void* src, local void *dst) {
+  __builtin_amdgcn_load_to_lds(src, dst, /*size=*/12, /*offset=*/0, /*aux=*/0);
+}
+
+// CHECK-LABEL: @test_load_to_lds_128(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[DST_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 8
+// CHECK-NEXT:    store ptr addrspace(3) [[DST:%.*]], ptr addrspace(5) [[DST_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[SRC_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(3), ptr addrspace(5) [[DST_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.amdgcn.load.to.lds.p1(ptr addrspace(1) [[TMP0]], ptr addrspace(3) [[TMP1]], i32 16, i32 0, i32 0)
+// CHECK-NEXT:    ret void
+//
+void test_load_to_lds_128(global void* src, local void *dst) {
+  __builtin_amdgcn_load_to_lds(src, dst, /*size=*/16, /*offset=*/0, /*aux=*/0);
+}
+
 // CHECK-LABEL: @test_global_load_lds_96(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)

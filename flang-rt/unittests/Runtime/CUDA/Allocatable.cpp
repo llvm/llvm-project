@@ -42,7 +42,8 @@ TEST(AllocatableCUFTest, SimpleDeviceAllocatable) {
   CUDA_REPORT_IF_ERROR(cudaMalloc(&device_desc, a->SizeInBytes()));
 
   RTNAME(AllocatableAllocate)
-  (*a, kNoAsyncId, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  (*a, kNoAsyncObject, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
+      __LINE__);
   EXPECT_TRUE(a->IsAllocated());
   RTNAME(CUFDescriptorSync)(device_desc, a.get(), __FILE__, __LINE__);
   cudaDeviceSynchronize();
@@ -82,19 +83,22 @@ TEST(AllocatableCUFTest, StreamDeviceAllocatable) {
   RTNAME(AllocatableSetBounds)(*c, 0, 1, 100);
 
   RTNAME(AllocatableAllocate)
-  (*a, 1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  (*a, /*asyncObject=*/nullptr, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
+      __LINE__);
   EXPECT_TRUE(a->IsAllocated());
   cudaDeviceSynchronize();
   EXPECT_EQ(cudaSuccess, cudaGetLastError());
 
   RTNAME(AllocatableAllocate)
-  (*b, 1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  (*b, /*asyncObject=*/nullptr, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
+      __LINE__);
   EXPECT_TRUE(b->IsAllocated());
   cudaDeviceSynchronize();
   EXPECT_EQ(cudaSuccess, cudaGetLastError());
 
   RTNAME(AllocatableAllocate)
-  (*c, 1, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__, __LINE__);
+  (*c, /*asyncObject=*/nullptr, /*hasStat=*/false, /*errMsg=*/nullptr, __FILE__,
+      __LINE__);
   EXPECT_TRUE(c->IsAllocated());
   cudaDeviceSynchronize();
   EXPECT_EQ(cudaSuccess, cudaGetLastError());

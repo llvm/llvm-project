@@ -412,7 +412,7 @@ IR for the `coverage mapping sample`_ that was shown earlier:
   for the first function record.
 
 * The two trailing bytes are zeroes and are used to pad the coverage mapping
-  data to give it the 8 byte alignment.
+  data to give it the 8-byte alignment.
 
 Encoding
 ========

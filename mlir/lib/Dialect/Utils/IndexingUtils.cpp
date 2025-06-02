@@ -24,7 +24,7 @@ SmallVector<ExprType> computeSuffixProductImpl(ArrayRef<ExprType> sizes,
   if (sizes.empty())
     return {};
   SmallVector<ExprType> strides(sizes.size(), unit);
-  for (int64_t r = strides.size() - 2; r >= 0; --r)
+  for (int64_t r = static_cast<int64_t>(strides.size()) - 2; r >= 0; --r)
     strides[r] = strides[r + 1] * sizes[r + 1];
   return strides;
 }

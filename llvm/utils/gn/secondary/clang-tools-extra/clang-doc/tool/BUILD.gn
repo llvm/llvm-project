@@ -1,7 +1,15 @@
 copy("assets") {
   sources = [
     "../assets/clang-doc-default-stylesheet.css",
+    "../assets/clang-doc-mustache.css",
+    "../assets/class-template.mustache",
+    "../assets/comment-template.mustache",
+    "../assets/enum-template.mustache",
+    "../assets/function-template.mustache",
     "../assets/index.js",
+    "../assets/mustache-index.js",
+    "../assets/namespace-template.mustache",
+    "../assets/template.mustache",
   ]
   outputs = [ "$root_build_dir/share/clang-doc/{{source_file_part}}" ]
 }

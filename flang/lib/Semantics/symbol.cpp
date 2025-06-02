@@ -144,6 +144,52 @@ llvm::raw_ostream &operator<<(
       os << ' ' << x;
     }
   }
+  if (!x.openACCRoutineInfos_.empty()) {
+    os << " openACCRoutineInfos:";
+    for (const auto &x : x.openACCRoutineInfos_) {
+      os << x;
+    }
+  }
+  return os;
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const OpenACCRoutineDeviceTypeInfo &x) {
+  if (x.dType() != common::OpenACCDeviceType::None) {
+    os << " deviceType(" << common::EnumToString(x.dType()) << ')';
+  }
+  if (x.isSeq()) {
+    os << " seq";
+  }
+  if (x.isVector()) {
+    os << " vector";
+  }
+  if (x.isWorker()) {
+    os << " worker";
+  }
+  if (x.isGang()) {
+    os << " gang(" << x.gangDim() << ')';
+  }
+  if (const auto *bindName{x.bindName()}) {
+    if (const auto &symbol{std::get_if<std::string>(bindName)}) {
+      os << " bindName(\"" << *symbol << "\")";
+    } else {
+      const SymbolRef s{std::get<SymbolRef>(*bindName)};
+      os << " bindName(" << s->name() << ")";
+    }
+  }
+  return os;
+}
+
+llvm::raw_ostream &operator<<(
+    llvm::raw_ostream &os, const OpenACCRoutineInfo &x) {
+  if (x.isNohost()) {
+    os << " nohost";
+  }
+  os << static_cast<const OpenACCRoutineDeviceTypeInfo &>(x);
+  for (const auto &d : x.deviceTypeInfos_) {
+    os << d;
+  }
   return os;
 }
 

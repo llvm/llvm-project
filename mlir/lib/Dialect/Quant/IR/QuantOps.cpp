@@ -122,7 +122,7 @@ LogicalResult verifySubChannelQuantization(
   //
   // Therefore, we explicitly disallow the case where d = 0 to maintain
   // consistency and avoid these issues.
-  if (llvm::find(tensorType.getShape(), 0) != tensorType.getShape().end()) {
+  if (llvm::is_contained(tensorType.getShape(), 0)) {
     return op->emitError() << "tensor dimension size of zero is not allowed "
                               "with sub-channel quantization";
   }

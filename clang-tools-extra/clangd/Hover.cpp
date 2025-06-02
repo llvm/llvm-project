@@ -1270,9 +1270,8 @@ void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
   for (const auto &UsedSymbolDecl : UsedSymbols)
     HI.UsedSymbolNames.push_back(getSymbolName(UsedSymbolDecl));
   llvm::sort(HI.UsedSymbolNames);
-  HI.UsedSymbolNames.erase(
-      std::unique(HI.UsedSymbolNames.begin(), HI.UsedSymbolNames.end()),
-      HI.UsedSymbolNames.end());
+  HI.UsedSymbolNames.erase(llvm::unique(HI.UsedSymbolNames),
+                           HI.UsedSymbolNames.end());
 }
 
 } // namespace

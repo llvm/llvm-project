@@ -330,8 +330,11 @@ decision to go right:
       process.Continue()
    else:
       print "Here is the problem; going right, should go left!"
-   Just as a reminder, LLDB is going to take this script and wrap it up in a function, like this:
 
+
+Just as a reminder, LLDB is going to take this script and wrap it up in a function, like this:
+
+::
 
    def some_unique_and_obscure_function_name (frame, bp_loc):
       global path

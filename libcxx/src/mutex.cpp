@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__assert>
+#include <__system_error/throw_system_error.h>
 #include <__thread/id.h>
 #include <__utility/exception_guard.h>
 #include <limits>

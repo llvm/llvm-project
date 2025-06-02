@@ -29,14 +29,26 @@ class Dialect;
 class Type;
 class Pred;
 
+// Wrapper class providing helper methods for accesing property constraint
+// values.
+class PropConstraint : public Constraint {
+  using Constraint::Constraint;
+
+public:
+  static bool classof(const Constraint *c) { return c->getKind() == CK_Prop; }
+
+  StringRef getInterfaceType() const;
+};
+
 // Wrapper class providing helper methods for accessing MLIR Property defined
 // in TableGen. This class should closely reflect what is defined as class
 // `Property` in TableGen.
-class Property {
+class Property : public PropConstraint {
 public:
-  explicit Property(const llvm::Record *record);
+  explicit Property(const llvm::Record *def);
   explicit Property(const llvm::DefInit *init);
-  Property(StringRef summary, StringRef description, StringRef storageType,
+  Property(const llvm::Record *maybeDef, StringRef summary,
+           StringRef description, StringRef storageType,
            StringRef interfaceType, StringRef convertFromStorageCall,
            StringRef assignToStorageCall, StringRef convertToAttributeCall,
            StringRef convertFromAttributeCall, StringRef parserCall,
@@ -131,13 +143,7 @@ public:
   // property constraints, this function is added for future-proofing)
   Property getBaseProperty() const;
 
-  // Returns the TableGen definition this Property was constructed from.
-  const llvm::Record &getDef() const { return *def; }
-
 private:
-  // The TableGen definition of this constraint.
-  const llvm::Record *def;
-
   // Elements describing a Property, in general fetched from the record.
   StringRef summary;
   StringRef description;

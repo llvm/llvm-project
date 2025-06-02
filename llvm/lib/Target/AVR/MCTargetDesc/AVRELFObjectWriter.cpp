@@ -14,7 +14,6 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -27,15 +26,15 @@ public:
 
   virtual ~AVRELFObjectWriter() = default;
 
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 
 AVRELFObjectWriter::AVRELFObjectWriter(uint8_t OSABI)
     : MCELFObjectTargetWriter(false, OSABI, ELF::EM_AVR, true) {}
 
-unsigned AVRELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
-                                          const MCFixup &Fixup,
+unsigned AVRELFObjectWriter::getRelocType(const MCFixup &Fixup,
+                                          const MCValue &Target,
                                           bool IsPCRel) const {
   auto Modifier = AVRMCExpr::Specifier(Target.getSpecifier());
   switch ((unsigned)Fixup.getKind()) {

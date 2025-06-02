@@ -349,6 +349,11 @@ struct Fragment {
     ///     symbol is forward-declared
     ///   "Never": Never insert headers
     std::optional<Located<std::string>> HeaderInsertion;
+    /// Will suggest code patterns & snippets.
+    /// Values are Config::CodePatternsPolicy:
+    ///   All  => enable all code patterns and snippets suggestion
+    ///   None => disable all code patterns and snippets suggestion
+    std::optional<Located<std::string>> CodePatterns;
   };
   CompletionBlock Completion;
 

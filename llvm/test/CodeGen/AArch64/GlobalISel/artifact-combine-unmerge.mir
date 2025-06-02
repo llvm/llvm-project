@@ -9,9 +9,9 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_none_none
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: $w0 = COPY [[COPY]](s32)
-    ; CHECK: $w1 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[COPY1]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1
@@ -25,9 +25,9 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_gpr_none
     ; CHECK: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
-    ; CHECK: $w0 = COPY [[COPY]](s32)
-    ; CHECK: $w1 = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
+    ; CHECK-NEXT: $w0 = COPY [[COPY]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[COPY1]](s32)
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = COPY $w1
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1
@@ -41,11 +41,11 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_none_gpr
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:gpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK: $w0 = COPY [[COPY2]](s32)
-    ; CHECK: $w1 = COPY [[COPY3]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[COPY3]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s32) = COPY $w1
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1
@@ -59,11 +59,11 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fpr_gpr
     ; CHECK: [[COPY:%[0-9]+]]:fpr(s32) = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:fpr(s32) = COPY $w1
-    ; CHECK: [[COPY2:%[0-9]+]]:gpr(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:gpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK: $w0 = COPY [[COPY2]](s32)
-    ; CHECK: $w1 = COPY [[COPY3]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s32) = COPY $w1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: $w0 = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[COPY3]](s32)
     %0:fpr(s32) = COPY $w0
     %1:fpr(s32) = COPY $w1
     %2:_(s64) = G_MERGE_VALUES %0(s32), %1

@@ -855,11 +855,11 @@ define i32 @smaxv_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    cmp w11, w10
 ; NONEON-NOSVE-NEXT:    csel w9, w11, w10, gt
 ; NONEON-NOSVE-NEXT:    cmp w9, w8
-; NONEON-NOSVE-NEXT:    ldp w10, w12, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldp w11, w12, [sp, #8]
 ; NONEON-NOSVE-NEXT:    csel w8, w9, w8, gt
-; NONEON-NOSVE-NEXT:    ldp w11, w9, [sp, #24]
-; NONEON-NOSVE-NEXT:    cmp w10, w11
-; NONEON-NOSVE-NEXT:    csel w10, w10, w11, gt
+; NONEON-NOSVE-NEXT:    ldp w10, w9, [sp, #24]
+; NONEON-NOSVE-NEXT:    cmp w11, w10
+; NONEON-NOSVE-NEXT:    csel w10, w11, w10, gt
 ; NONEON-NOSVE-NEXT:    cmp w8, w10
 ; NONEON-NOSVE-NEXT:    csel w8, w8, w10, gt
 ; NONEON-NOSVE-NEXT:    cmp w12, w9
@@ -1363,11 +1363,11 @@ define i32 @sminv_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    cmp w11, w10
 ; NONEON-NOSVE-NEXT:    csel w9, w11, w10, lt
 ; NONEON-NOSVE-NEXT:    cmp w9, w8
-; NONEON-NOSVE-NEXT:    ldp w10, w12, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldp w11, w12, [sp, #8]
 ; NONEON-NOSVE-NEXT:    csel w8, w9, w8, lt
-; NONEON-NOSVE-NEXT:    ldp w11, w9, [sp, #24]
-; NONEON-NOSVE-NEXT:    cmp w10, w11
-; NONEON-NOSVE-NEXT:    csel w10, w10, w11, lt
+; NONEON-NOSVE-NEXT:    ldp w10, w9, [sp, #24]
+; NONEON-NOSVE-NEXT:    cmp w11, w10
+; NONEON-NOSVE-NEXT:    csel w10, w11, w10, lt
 ; NONEON-NOSVE-NEXT:    cmp w8, w10
 ; NONEON-NOSVE-NEXT:    csel w8, w8, w10, lt
 ; NONEON-NOSVE-NEXT:    cmp w12, w9
@@ -1871,11 +1871,11 @@ define i32 @umaxv_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    cmp w11, w10
 ; NONEON-NOSVE-NEXT:    csel w9, w11, w10, hi
 ; NONEON-NOSVE-NEXT:    cmp w9, w8
-; NONEON-NOSVE-NEXT:    ldp w10, w12, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldp w11, w12, [sp, #8]
 ; NONEON-NOSVE-NEXT:    csel w8, w9, w8, hi
-; NONEON-NOSVE-NEXT:    ldp w11, w9, [sp, #24]
-; NONEON-NOSVE-NEXT:    cmp w10, w11
-; NONEON-NOSVE-NEXT:    csel w10, w10, w11, hi
+; NONEON-NOSVE-NEXT:    ldp w10, w9, [sp, #24]
+; NONEON-NOSVE-NEXT:    cmp w11, w10
+; NONEON-NOSVE-NEXT:    csel w10, w11, w10, hi
 ; NONEON-NOSVE-NEXT:    cmp w8, w10
 ; NONEON-NOSVE-NEXT:    csel w8, w8, w10, hi
 ; NONEON-NOSVE-NEXT:    cmp w12, w9
@@ -2379,11 +2379,11 @@ define i32 @uminv_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    cmp w11, w10
 ; NONEON-NOSVE-NEXT:    csel w9, w11, w10, lo
 ; NONEON-NOSVE-NEXT:    cmp w9, w8
-; NONEON-NOSVE-NEXT:    ldp w10, w12, [sp, #8]
+; NONEON-NOSVE-NEXT:    ldp w11, w12, [sp, #8]
 ; NONEON-NOSVE-NEXT:    csel w8, w9, w8, lo
-; NONEON-NOSVE-NEXT:    ldp w11, w9, [sp, #24]
-; NONEON-NOSVE-NEXT:    cmp w10, w11
-; NONEON-NOSVE-NEXT:    csel w10, w10, w11, lo
+; NONEON-NOSVE-NEXT:    ldp w10, w9, [sp, #24]
+; NONEON-NOSVE-NEXT:    cmp w11, w10
+; NONEON-NOSVE-NEXT:    csel w10, w11, w10, lo
 ; NONEON-NOSVE-NEXT:    cmp w8, w10
 ; NONEON-NOSVE-NEXT:    csel w8, w8, w10, lo
 ; NONEON-NOSVE-NEXT:    cmp w12, w9

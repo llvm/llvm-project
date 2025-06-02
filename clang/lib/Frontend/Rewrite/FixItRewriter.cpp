@@ -14,7 +14,6 @@
 
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"

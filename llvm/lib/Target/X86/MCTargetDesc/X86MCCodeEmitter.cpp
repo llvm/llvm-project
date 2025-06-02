@@ -451,7 +451,18 @@ static MCFixupKind getImmFixupKind(uint64_t TSFlags) {
       return MCFixupKind(X86::reloc_signed_4byte);
     }
   }
-  return MCFixup::getKindForSize(Size, isPCRel);
+  switch (Size) {
+  default:
+    llvm_unreachable("Invalid generic fixup size!");
+  case 1:
+    return isPCRel ? FK_PCRel_1 : FK_Data_1;
+  case 2:
+    return isPCRel ? FK_PCRel_2 : FK_Data_2;
+  case 4:
+    return isPCRel ? FK_PCRel_4 : FK_Data_4;
+  case 8:
+    return isPCRel ? FK_PCRel_8 : FK_Data_8;
+  }
 }
 
 enum GlobalOffsetTableExprKind { GOT_None, GOT_Normal, GOT_SymDiff };

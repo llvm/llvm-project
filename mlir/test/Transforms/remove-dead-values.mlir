@@ -468,3 +468,45 @@ func.func private @no_block_func_declaration() -> ()
 
 // CHECK: llvm.func @no_block_external_func()
 llvm.func @no_block_external_func() attributes {sym_visibility = "private"}
+
+// -----
+
+// Check that yielded values aren't incorrectly removed in gpu regions
+gpu.module @test_module_3 {
+  gpu.func @gpu_all_reduce_region() {
+    %arg0 = arith.constant 1 : i32
+    %result = gpu.all_reduce %arg0 uniform {
+    ^bb(%lhs : i32, %rhs : i32):
+      %xor = arith.xori %lhs, %rhs : i32
+      "gpu.yield"(%xor) : (i32) -> ()
+    } : (i32) -> (i32)
+    gpu.return
+  }
+}
+
+// CHECK-LABEL: func @gpu_all_reduce_region()
+// CHECK: %[[yield:.*]] = arith.xori %{{.*}}, %{{.*}} : i32
+// CHECK: gpu.yield %[[yield]] : i32
+
+// -----
+
+// Check that yielded values aren't incorrectly removed in linalg regions
+module {
+  func.func @linalg_red_add(%arg0: tensor<?xf32>, %arg1: tensor<1xf32>) -> tensor<1xf32> {
+    %0 = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (0)>],
+      iterator_types = ["reduction"]
+    } ins(%arg0 : tensor<?xf32>) outs(%arg1 : tensor<1xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %1 = arith.addf %in, %out : f32
+      %2 = arith.subf %1, %out : f32 // this should still be removed
+      linalg.yield %1 : f32
+    } -> tensor<1xf32>
+    return %0 : tensor<1xf32>
+  }
+}
+
+// CHECK-LABEL: func @linalg_red_add
+// CHECK: %[[yield:.*]] = arith.addf %{{.*}}, %{{.*}} : f32
+// CHECK: linalg.yield %[[yield]] : f32
+// CHECK-NOT: arith.subf

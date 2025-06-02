@@ -7,14 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "PropertyDeclarationCheck.h"
-#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Basic/CharInfo.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Regex.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 

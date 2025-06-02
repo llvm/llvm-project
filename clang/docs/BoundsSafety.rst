@@ -664,7 +664,7 @@ In C, arrays on function prototypes are promoted (or "decayed") to a pointer to
 its first element (e.g., ``&arr[0]``). In ``-fbounds-safety``, arrays are also
 decayed to pointers, but with the addition of an implicit bounds annotation,
 which includes variable-length arrays (VLAs). As shown in the following example,
-arrays on function prototypes are decalyed to corresponding ``__counted_by``
+arrays on function prototypes are decayed to corresponding ``__counted_by``
 pointers.
 
 .. code-block:: c

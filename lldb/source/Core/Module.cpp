@@ -483,6 +483,9 @@ uint32_t Module::ResolveSymbolContextForAddress(
       symfile->SetLoadDebugInfoEnabled();
       resolved_flags |=
           symfile->ResolveSymbolContext(so_addr, resolve_scope, sc);
+
+      if ((resolve_scope & eSymbolContextLineEntry) && sc.line_entry.IsValid())
+        sc.line_entry.ApplyFileMappings(sc.target_sp);
     }
 
     // Resolve the symbol if requested, but don't re-look it up if we've

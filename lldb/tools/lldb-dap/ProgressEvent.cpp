@@ -86,7 +86,7 @@ ProgressEvent::Create(uint64_t progress_id, std::optional<StringRef> message,
 bool ProgressEvent::EqualsForIDE(const ProgressEvent &other) const {
   return m_progress_id == other.m_progress_id &&
          m_event_type == other.m_event_type &&
-         m_percentage == other.m_percentage;
+         m_percentage == other.m_percentage && m_message == other.m_message;
 }
 
 ProgressEventType ProgressEvent::GetEventType() const { return m_event_type; }

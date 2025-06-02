@@ -12,7 +12,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
@@ -1489,7 +1488,7 @@ template <typename ELFT> void elf::writeARMCmseImportLib(Ctx &ctx) {
   const uint64_t fileSize =
       sectionHeaderOff + shnum * sizeof(typename ELFT::Shdr);
   const unsigned flags =
-      ctx.arg.mmapOutputFile ? 0 : (unsigned)FileOutputBuffer::F_no_mmap;
+      ctx.arg.mmapOutputFile ? (unsigned)FileOutputBuffer::F_mmap : 0;
   unlinkAsync(ctx.arg.cmseOutputLib);
   Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
       FileOutputBuffer::create(ctx.arg.cmseOutputLib, fileSize, flags);

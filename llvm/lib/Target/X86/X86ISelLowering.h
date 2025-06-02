@@ -90,6 +90,10 @@ namespace llvm {
     /// POP_FROM_X87_REG (which may remove a required FPU stack pop).
     POP_FROM_X87_REG,
 
+    // Pseudo for a call to an imported function to ensure the correct machine
+    // instruction is emitted for Import Call Optimization.
+    IMP_CALL,
+
     /// X86 compare and logical compare instructions.
     CMP,
     FCMP,
@@ -724,6 +728,10 @@ namespace llvm {
     MCVTSI2P,
     MCVTUI2P,
 
+    // Custom handling for FP_TO_xINT_SAT
+    FP_TO_SINT_SAT,
+    FP_TO_UINT_SAT,
+
     // Vector float to bfloat16.
     // Convert packed single data to packed BF16 data
     CVTNEPS2BF16,
@@ -916,10 +924,6 @@ namespace llvm {
 
     // Load x87 FPU environment from memory.
     FLDENVm,
-
-    // Custom handling for FP_TO_xINT_SAT
-    FP_TO_SINT_SAT,
-    FP_TO_UINT_SAT,
 
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
@@ -1463,8 +1467,9 @@ namespace llvm {
     /// from i32 to i16.
     bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
-    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                              EVT VT) const override;
+    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                              unsigned SelectOpcode, SDValue X,
+                                              SDValue Y) const override;
 
     /// Given an intrinsic, checks if on the target the intrinsic will need to map
     /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
@@ -1746,8 +1751,8 @@ namespace llvm {
 
     /// Creates target global address or external symbol nodes for calls or
     /// other uses.
-    SDValue LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
-                                  bool ForCall) const;
+    SDValue LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG, bool ForCall,
+                                  bool *IsImpCall) const;
 
     SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;

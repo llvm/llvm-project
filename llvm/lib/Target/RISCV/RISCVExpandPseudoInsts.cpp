@@ -323,6 +323,8 @@ bool RISCVExpandPseudo::expandRV32ZdinxStore(MachineBasicBlock &MBB,
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_even);
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
+  if (Hi == RISCV::DUMMY_REG_PAIR_WITH_X0)
+    Hi = RISCV::X0;
 
   auto MIBLo = BuildMI(MBB, MBBI, DL, TII->get(RISCV::SW))
                    .addReg(Lo, getKillRegState(MBBI->getOperand(0).isKill()))
@@ -370,6 +372,7 @@ bool RISCVExpandPseudo::expandRV32ZdinxLoad(MachineBasicBlock &MBB,
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_even);
   Register Hi =
       TRI->getSubReg(MBBI->getOperand(0).getReg(), RISCV::sub_gpr_odd);
+  assert(Hi != RISCV::DUMMY_REG_PAIR_WITH_X0 && "Cannot write to X0_Pair");
 
   MachineInstrBuilder MIBLo, MIBHi;
 

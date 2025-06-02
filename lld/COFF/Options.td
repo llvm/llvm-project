@@ -356,3 +356,4 @@ def tlbid : P_priv<"tlbid">;
 def tlbout : P_priv<"tlbout">;
 def verbose_all : P_priv<"verbose">;
 def guardsym : P_priv<"guardsym">;
+def arm64xsameaddress : P_priv<"arm64xsameaddress">;

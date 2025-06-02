@@ -119,7 +119,7 @@ public:
                      SMLoc Loc = SMLoc()) override;
   void emitULEB128Value(const MCExpr *Value) override;
   void emitSLEB128Value(const MCExpr *Value) override;
-  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
+  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void switchSectionNoPrint(MCSection *Section) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;

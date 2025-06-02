@@ -12,7 +12,7 @@ define void @shuffle() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v11 = shufflevector <2 x i16> undef, <2 x i16> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v12 = shufflevector <4 x i16> undef, <4 x i16> undef, <4 x i32> <i32 1, i32 3, i32 2, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v13 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>
-; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v10b = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v10b = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v14 = shufflevector <2 x i32> undef, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v15 = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> <i32 1, i32 3, i32 2, i32 0>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v16 = shufflevector <2 x float> undef, <2 x float> undef, <2 x i32> <i32 1, i32 0>
@@ -365,7 +365,7 @@ define void @multipart() {
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v16c = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v16d = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v32a = shufflevector <4 x i32> undef, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 0, i32 1>
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v32a4 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v32a4 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %v32idrev = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 15, i32 14, i32 13, i32 12, i32 16, i32 17, i32 18, i32 19, i32 31, i32 30, i32 29, i32 28>
 ; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v32many = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
 ; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v32many2 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> <i32 1, i32 4, i32 8, i32 12, i32 17, i32 20, i32 24, i32 28, i32 2, i32 6, i32 11, i32 14, i32 18, i32 22, i32 27, i32 30>

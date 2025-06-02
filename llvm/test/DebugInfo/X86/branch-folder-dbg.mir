@@ -1,0 +1,111 @@
+# RUN: llc %s --start-before=branch-folder --stop-after=branch-folder -o - | FileCheck %s
+
+## Check that common instructions hoisted from `if.then` and `if.else` into
+## common pred `entry` get merged debug locations.
+
+## FIXME: The debug instructions handling here is wrong.
+
+# CHECK: bb.0
+# CHECK:      CALL64pcrel32 @f, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+## --- Start splice from bb.2.if.else ---
+# CHECK-NEXT: DBG_VALUE 2, $noreg, ![[#]], !DIExpression(),  debug-location ![[#]]
+# CHECK-NEXT: $edi = MOV32r0 implicit-def dead $eflags,  debug-location !DILocation(line: 0, scope: ![[#]])
+## --- End splice --------------
+# CHECK-NEXT: TEST64rr killed renamable $rax, renamable $rax, implicit-def $eflags
+# CHECK-NEXT: JCC_1 %bb.2, 9, implicit killed $eflags
+# CHECK: bb.1
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  declare dso_local noundef i64 @f() local_unnamed_addr
+
+  define dso_local noundef i32 @g() local_unnamed_addr !dbg !7 {
+    %call = tail call noundef i64 @f()
+    %cmp1 = icmp sgt i64 0, %call
+    %conv2 = trunc i64 0 to i32
+    br i1 %cmp1, label %if.then, label %if.else
+
+  if.then:                                          ; preds = %0
+      #dbg_value(i64 0, !11, !DIExpression(), !13)
+    tail call void @_Z3fooii(i32 noundef %conv2, i32 noundef 0), !dbg !14
+      #dbg_value(i64 1, !11, !DIExpression(), !13)
+    br label %if.end, !dbg !15
+
+  if.else:                                          ; preds = %0
+      #dbg_value(i64 2, !11, !DIExpression(), !13)
+    tail call void @_Z3barii(i32 noundef %conv2, i32 noundef 1), !dbg !16
+      #dbg_value(i64 3, !11, !DIExpression(), !13)
+    br label %if.end, !dbg !17
+
+  if.end:                                           ; preds = %if.else, %if.then
+    ret i32 2
+  }
+
+  declare void @_Z3fooii(i32 noundef, i32 noundef) local_unnamed_addr
+
+  declare void @_Z3barii(i32 noundef, i32 noundef) local_unnamed_addr
+
+  !llvm.module.flags = !{!0, !1}
+  !llvm.ident = !{!2}
+  !llvm.dbg.cu = !{!3}
+  !llvm.debugify = !{!5, !6}
+
+  !0 = !{i32 7, !"Dwarf Version", i32 5}
+  !1 = !{i32 2, !"Debug Info Version", i32 3}
+  !2 = !{!"clang version 21.0.0"}
+  !3 = distinct !DICompileUnit(language: DW_LANG_C, file: !4, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !4 = !DIFile(filename: "test.nodbg.ll", directory: "/")
+  !5 = !{i32 15}
+  !6 = !{i32 7}
+  !7 = distinct !DISubprogram(name: "g", linkageName: "g", scope: null, file: !4, line: 1, type: !8, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !3, retainedNodes: !10)
+  !8 = !DISubroutineType(types: !9)
+  !9 = !{}
+  !10 = !{!11}
+  !11 = !DILocalVariable(name: "1", scope: !7, file: !4, line: 3, type: !12)
+  !12 = !DIBasicType(name: "ty64", size: 64, encoding: DW_ATE_unsigned)
+  !13 = !DILocation(line: 3, column: 1, scope: !7)
+  !14 = !DILocation(line: 9, column: 1, scope: !7)
+  !15 = !DILocation(line: 10, column: 1, scope: !7)
+  !16 = !DILocation(line: 11, column: 1, scope: !7)
+  !17 = !DILocation(line: 12, column: 1, scope: !7)
+...
+---
+name:            g
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    CALL64pcrel32 @f, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    TEST64rr killed renamable $rax, renamable $rax, implicit-def $eflags
+    JCC_1 %bb.2, 9, implicit killed $eflags
+    JMP_1 %bb.1
+
+  bb.1.if.then:
+    successors: %bb.3(0x80000000)
+
+    DBG_VALUE 0, $noreg, !11, !DIExpression(),  debug-location !13
+    $edi = MOV32r0 implicit-def dead $eflags,  debug-location !14
+    $esi = MOV32r0 implicit-def dead $eflags,  debug-location !14
+    CALL64pcrel32 target-flags(x86-plt) @_Z3fooii, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit killed $esi, implicit-def $rsp, implicit-def $ssp,  debug-location !14
+    DBG_VALUE 1, $noreg, !11, !DIExpression(),  debug-location !13
+    JMP_1 %bb.3,  debug-location !15
+
+  bb.2.if.else:
+    successors: %bb.3(0x80000000)
+
+    DBG_VALUE 2, $noreg, !11, !DIExpression(),  debug-location !13
+    $edi = MOV32r0 implicit-def dead $eflags,  debug-location !16
+    $esi = MOV32ri 1,  debug-location !16
+    CALL64pcrel32 target-flags(x86-plt) @_Z3barii, csr_64, implicit $rsp, implicit $ssp, implicit killed $edi, implicit killed $esi, implicit-def $rsp, implicit-def $ssp,  debug-location !16
+    DBG_VALUE 3, $noreg, !11, !DIExpression(),  debug-location !13
+
+  bb.3.if.end:
+    $eax = MOV32ri 2
+    $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    frame-destroy CFI_INSTRUCTION def_cfa_offset 8
+    RET 0, $eax
+...

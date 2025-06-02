@@ -389,10 +389,9 @@ ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
   return SanArgs;
 }
 
-const XRayArgs& ToolChain::getXRayArgs() const {
-  if (!XRayArguments)
-    XRayArguments.reset(new XRayArgs(*this, Args));
-  return *XRayArguments;
+const XRayArgs ToolChain::getXRayArgs(const llvm::opt::ArgList &JobArgs) const {
+  XRayArgs XRayArguments(*this, JobArgs);
+  return XRayArguments;
 }
 
 namespace {
@@ -502,8 +501,7 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   StringRef Prefix(ProgName);
   Prefix = Prefix.slice(0, LastComponent);
   std::string IgnoredError;
-  bool IsRegistered =
-      llvm::TargetRegistry::lookupTarget(std::string(Prefix), IgnoredError);
+  bool IsRegistered = llvm::TargetRegistry::lookupTarget(Prefix, IgnoredError);
   return ParsedClangName{std::string(Prefix), ModeSuffix, DS->ModeFlag,
                          IsRegistered};
 }
@@ -934,6 +932,15 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   const llvm::Triple &T = getTriple();
   if (auto Path = getPathForTriple(T))
     return *Path;
+
+  if (T.isOSAIX() && T.getEnvironment() == Triple::UnknownEnvironment) {
+    // Strip unknown environment from the triple.
+    const llvm::Triple AIXTriple(
+        llvm::Triple(T.getArchName(), T.getVendorName(),
+                     llvm::Triple::getOSTypeName(T.getOS())));
+    if (auto Path = getPathForTriple(AIXTriple))
+      return *Path;
+  }
 
   if (T.isOSzOS() &&
       (!T.getOSVersion().empty() || !T.getEnvironmentVersion().empty())) {
@@ -1441,7 +1448,7 @@ std::string ToolChain::detectLibcxxVersion(StringRef IncludePath) const {
     StringRef VersionText = llvm::sys::path::filename(LI->path());
     int Version;
     if (VersionText[0] == 'v' &&
-        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
+        !VersionText.substr(1).getAsInteger(10, Version)) {
       if (Version > MaxVersion) {
         MaxVersion = Version;
         MaxVersionString = std::string(VersionText);

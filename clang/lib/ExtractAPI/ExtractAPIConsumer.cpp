@@ -305,8 +305,7 @@ public:
 
       auto DefLoc = MI->getDefinitionLoc();
 
-      if (SM.isWrittenInBuiltinFile(DefLoc) ||
-          SM.isWrittenInCommandLineFile(DefLoc))
+      if (SM.isInPredefinedFile(DefLoc))
         continue;
 
       auto AssociatedModuleMacros = MD.getModuleMacros();

@@ -29,16 +29,11 @@ define <2 x i64> @or_zext_v2i32(<2 x i32> %a0) {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [4294967295,4294967295]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: or_zext_v2i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovsxbd {{.*#+}} xmm0 = [4294967295,0,4294967295,0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: or_zext_v2i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = [4294967295,4294967295]
-; AVX2-NEXT:    # xmm0 = mem[0,0]
-; AVX2-NEXT:    retq
+; AVX-LABEL: or_zext_v2i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [4294967295,4294967295]
+; AVX-NEXT:    # xmm0 = mem[0,0]
+; AVX-NEXT:    retq
   %1 = zext <2 x i32> %a0 to <2 x i64>
   %2 = or <2 x i64> %1, <i64 4294967295, i64 4294967295>
   ret <2 x i64> %2
@@ -261,7 +256,7 @@ define i64 @PR89533(<64 x i8> %a0) {
 ;
 ; AVX2-LABEL: PR89533:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm2 = [95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95]
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95]
 ; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm0

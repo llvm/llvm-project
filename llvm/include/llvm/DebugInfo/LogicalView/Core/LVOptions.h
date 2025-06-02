@@ -119,6 +119,7 @@ enum class LVAttributeKind {
   Range,         // --attribute=range
   Reference,     // --attribute=reference
   Register,      // --attribute=register
+  Size,          // --attribute=size
   Standard,      // --attribute=standard
   Subrange,      // --attribute=subrange
   System,        // --attribute=system
@@ -349,6 +350,7 @@ public:
   ATTRIBUTE_OPTION(Range);
   ATTRIBUTE_OPTION(Reference);
   ATTRIBUTE_OPTION(Register);
+  ATTRIBUTE_OPTION(Size);
   ATTRIBUTE_OPTION(Standard);
   ATTRIBUTE_OPTION(Subrange);
   ATTRIBUTE_OPTION(System);

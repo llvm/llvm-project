@@ -98,6 +98,7 @@ struct JmpBuf {
   uptr sp;
   int int_signal_send;
   bool in_blocking_func;
+  uptr oldset_stack_size;
   uptr in_signal_handler;
   uptr *shadow_stack_pos;
 };

@@ -175,6 +175,7 @@
 // CHECK-NEXT: PreserveNone (SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: RandomizeLayout (SubjectMatchRule_record)
 // CHECK-NEXT: ReadOnlyPlacement (SubjectMatchRule_record)
+// CHECK-NEXT: ReentrantCapability (SubjectMatchRule_record, SubjectMatchRule_type_alias)
 // CHECK-NEXT: ReleaseHandle (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: ReqdWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: Restrict (SubjectMatchRule_function)

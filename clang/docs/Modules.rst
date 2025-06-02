@@ -613,10 +613,10 @@ tls
   A specific target feature (e.g., ``sse4``, ``avx``, ``neon``) is available.
 
 *platform/os*
-  A os/platform variant (e.g. ``freebsd``, ``win32``, ``windows``, ``linux``, ``ios``, ``macos``, ``iossimulator``) is available.
+  An os/platform variant (e.g. ``freebsd``, ``win32``, ``windows``, ``linux``, ``ios``, ``macos``, ``iossimulator``) is available.
 
 *environment*
-  A environment variant (e.g. ``gnu``, ``gnueabi``, ``android``, ``msvc``) is available.
+  An environment variant (e.g. ``gnu``, ``gnueabi``, ``android``, ``msvc``) is available.
 
 **Example:** The ``std`` module can be extended to also include C++ and C++11 headers using a *requires-declaration*:
 

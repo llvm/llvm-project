@@ -14,17 +14,17 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK:        UAVs at every shader stage
 ; CHECK:        64 UAV slots
 
-; CHECK: Function test : 0x00000000
+; CHECK: Function test : 0x00018000
 define void @test() "hlsl.export" {
   ; RWBuffer<float> Buf : register(u0, space0)
   %buf0 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 0, i32 1, i32 0, i1 false)
+           i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
 
   ; RWBuffer<float> Buf[8] : register(u1, space0)
   %buf1 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 1, i32 8, i32 0, i1 false)
+           i32 0, i32 1, i32 8, i32 0, i1 false, ptr null)
   ret void
 }
 

@@ -257,8 +257,45 @@ define {<2 x double>, <2 x double>} @vector_deinterleave_load_v2f64_v4f64(ptr %p
   ret {<2 x double>, <2 x double>} %res1
 }
 
+define { <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor3(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg3e8.v v6, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <24 x i8>, ptr %p
+  %d0 = call {<8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave3(<24 x i8> %vec)
+  %t0 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 0
+  %t1 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 1
+  %t2 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 2
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 0
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 0
+  ret { <8 x i8>, <8 x i8>, <8 x i8> } %res2
+}
+
 define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor4(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_factor4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg4e8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <32 x i8>, ptr %p
+  %d0 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.vector.deinterleave4(<32 x i8> %vec)
+  %t0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 0
+  %t1 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 1
+  %t2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 2
+  %t3 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 3
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  %res3 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res2, <8 x i8> %t3, 3
+  ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3
+}
+
+; TODO: Remove once recursive deinterleaving support is removed
+define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor4_recursive(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor4_recursive:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlseg4e8.v v8, (a0)
@@ -281,8 +318,106 @@ define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_fact
   ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3
 }
 
-define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave_load_factor8(ptr %ptr) {
+define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor5(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg5e8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <40 x i8>, ptr %p
+  %d0 = call {<8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave5(<40 x i8> %vec)
+  %t0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 0
+  %t1 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 1
+  %t2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 2
+  %t3 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 3
+  %t4 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 4
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  %res3 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res2, <8 x i8> %t3, 3
+  %res4 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3, <8 x i8> %t4, 4
+  ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res4
+}
+
+define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor6(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg6e8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <48 x i8>, ptr %p
+  %d0 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.vector.deinterleave6(<48 x i8> %vec)
+  %t0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 0
+  %t1 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 1
+  %t2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 2
+  %t3 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 3
+  %t4 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 4
+  %t5 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 5
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  %res3 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res2, <8 x i8> %t3, 3
+  %res4 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3, <8 x i8> %t4, 4
+  %res5 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res4, <8 x i8> %t5, 5
+  ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res5
+}
+
+define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor7(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg7e8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <56 x i8>, ptr %p
+  %d0 = call {<8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave7(<56 x i8> %vec)
+  %t0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 0
+  %t1 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 1
+  %t2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 2
+  %t3 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 3
+  %t4 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 4
+  %t5 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 5
+  %t6 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 6
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  %res3 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res2, <8 x i8> %t3, 3
+  %res4 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3, <8 x i8> %t4, 4
+  %res5 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res4, <8 x i8> %t5, 5
+  %res6 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res5, <8 x i8> %t6, 6
+  ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res6
+}
+
+define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor8(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_factor8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg8e8.v v8, (a0)
+; CHECK-NEXT:    vmv1r.v v15, v14
+; CHECK-NEXT:    ret
+  %vec = load <64 x i8>, ptr %p
+  %d0 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.vector.deinterleave8(<64 x i8> %vec)
+  %t0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 0
+  %t1 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 1
+  %t2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 2
+  %t3 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 3
+  %t4 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 4
+  %t5 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 5
+  %t6 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 6
+  %t7 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 7
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  %res3 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res2, <8 x i8> %t3, 3
+  %res4 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3, <8 x i8> %t4, 4
+  %res5 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res4, <8 x i8> %t5, 5
+  %res6 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res5, <8 x i8> %t6, 6
+  %res7 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res6, <8 x i8> %t6, 7
+  ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res7
+}
+
+; TODO: Remove once recursive deinterleaving support is removed
+define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave_load_factor8_recursive(ptr %ptr) {
+; CHECK-LABEL: vector_deinterleave_load_factor8_recursive:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vlseg8e32.v v8, (a0)

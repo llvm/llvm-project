@@ -10,8 +10,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: positive_zero
     ; CHECK: [[FMOVH0_:%[0-9]+]]:fpr16 = FMOVH0
-    ; CHECK: $h0 = COPY [[FMOVH0_]]
-    ; CHECK: RET_ReallyLR implicit $h0
+    ; CHECK-NEXT: $h0 = COPY [[FMOVH0_]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:fpr(s16) = G_FCONSTANT half 0.0
     $h0 = COPY %0(s16)
     RET_ReallyLR implicit $h0
@@ -25,8 +25,8 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: one
     ; CHECK: [[FMOVHi:%[0-9]+]]:fpr16 = FMOVHi 112
-    ; CHECK: $h0 = COPY [[FMOVHi]]
-    ; CHECK: RET_ReallyLR implicit $h0
+    ; CHECK-NEXT: $h0 = COPY [[FMOVHi]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:fpr(s16) = G_FCONSTANT half 1.0
     $h0 = COPY %0(s16)
     RET_ReallyLR implicit $h0
@@ -40,9 +40,9 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: constant_pool_load
     ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
-    ; CHECK: [[LDRHui:%[0-9]+]]:fpr16 = LDRHui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s16) from constant-pool)
-    ; CHECK: $h0 = COPY [[LDRHui]]
-    ; CHECK: RET_ReallyLR implicit $h0
+    ; CHECK-NEXT: [[LDRHui:%[0-9]+]]:fpr16 = LDRHui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s16) from constant-pool)
+    ; CHECK-NEXT: $h0 = COPY [[LDRHui]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:fpr(s16) = G_FCONSTANT half 0xH000B
     $h0 = COPY %0(s16)
     RET_ReallyLR implicit $h0

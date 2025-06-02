@@ -367,6 +367,77 @@ loop:
   br label %loop
 }
 
+; FIXME: Hoist ADD and copy NUW NSW if both ops have it.
+define void @add_nuw_nsw(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_nuw_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add nuw nsw i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw nsw i64 [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add nuw nsw i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nuw nsw i64 %index, %c1
+  call void @use(i64 %step.add)
+  %index.next = add nuw nsw i64 %step.add, %c2
+  br label %loop
+}
+
+define void @add_both_nsw_first_nuw(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_both_nsw_first_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw nsw i64 [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nuw nsw i64 %index, %c1
+  call void @use(i64 %step.add)
+  %index.next = add nsw i64 %step.add, %c2
+  br label %loop
+}
+
+define void @add_both_nsw_second_nuw(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @add_both_nsw_second_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nsw i64 [[INDEX]], [[C1]]
+; CHECK-NEXT:    call void @use(i64 [[STEP_ADD]])
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = add i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = add nsw i64 %index, %c1
+  call void @use(i64 %step.add)
+  %index.next = add nuw nsw i64 %step.add, %c2
+  br label %loop
+}
+
+;
 ; Hoist MUL and drop NSW even if both ops have it.
 define void @mul_no_nsw_2(i64 %c1, i64 %c2) {
 ; CHECK-LABEL: @mul_no_nsw_2(
@@ -719,6 +790,69 @@ entry:
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
   %step.add = or i64 %index, %c1
+  %index.next = or i64 %c2, %step.add
+  br label %loop
+}
+
+; Trivially hoist or disjoint.
+define void @or_all_disjoint(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @or_all_disjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = or disjoint i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = or disjoint i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = or disjoint i64 %index, %c1
+  %index.next = or disjoint i64 %c2, %step.add
+  br label %loop
+}
+
+; Trivially hoist or, disjoint on first or only .
+define void @or_disjoint_on_first_or_only(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @or_disjoint_on_first_or_only(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = or i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = or i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = or i64 %index, %c1
+  %index.next = or disjoint i64 %c2, %step.add
+  br label %loop
+}
+
+; Trivially hoist or, disjoint on second or only .
+define void @or_disjoint_on_second_or_only(i64 %c1, i64 %c2) {
+; CHECK-LABEL: @or_disjoint_on_second_or_only(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = or i64 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT_REASS:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX_NEXT_REASS]] = or i64 [[INDEX]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
+  %step.add = or disjoint i64 %index, %c1
   %index.next = or i64 %c2, %step.add
   br label %loop
 }

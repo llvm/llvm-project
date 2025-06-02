@@ -173,3 +173,20 @@ using alias_template = class_template<Extents...>;
 alias_template var2{converible_to_one{}, 2};
 
 }
+
+namespace GH136624 {
+  // expected-note@+1 2{{no known conversion}}
+  template<typename U> struct A {
+    U t;
+  };
+
+  template<typename V> A(V) -> A<V>;
+
+  namespace foo {
+    template<class Y> using Alias = A<Y>;
+  }
+
+  // FIXME: This diagnostic prints incorrect qualification for `A<int>`.
+  foo::Alias t = 0;
+  // expected-error@-1 {{no viable conversion from 'int' to 'foo::A<int>' (aka 'A<int>')}}
+} // namespace GH136624

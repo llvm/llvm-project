@@ -110,6 +110,8 @@ private:
                                   Callback<std::vector<TextEdit>>);
   void onDocumentRangeFormatting(const DocumentRangeFormattingParams &,
                                  Callback<std::vector<TextEdit>>);
+  void onDocumentRangesFormatting(const DocumentRangesFormattingParams &,
+                                  Callback<std::vector<TextEdit>>);
   void onDocumentFormatting(const DocumentFormattingParams &,
                             Callback<std::vector<TextEdit>>);
   // The results are serialized 'vector<DocumentSymbol>' if

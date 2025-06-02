@@ -31,17 +31,20 @@ struct MissingFeatures {
   static bool cgfSymbolTable() { return false; }
 
   // Unhandled global/linkage information.
-  static bool opGlobalDSOLocal() { return false; }
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
-  static bool opGlobalAlignment() { return false; }
   static bool opGlobalWeakRef() { return false; }
   static bool opGlobalLinkage() { return false; }
-  static bool opGlobalSetVisitibility() { return false; }
+  static bool opGlobalUnnamedAddr() { return false; }
+  static bool opGlobalSection() { return false; }
+  static bool opGlobalVisibility() { return false; }
+  static bool opGlobalDLLImportExport() { return false; }
+  static bool opGlobalPartition() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
-  static bool supportComdat() { return false; }
+  static bool hiddenVisibility() { return false; }
+  static bool protectedVisibility() { return false; }
 
   // Load/store attributes
   static bool opLoadStoreThreadLocal() { return false; }
@@ -50,7 +53,6 @@ struct MissingFeatures {
   static bool opLoadStoreTbaa() { return false; }
   static bool opLoadStoreMemOrder() { return false; }
   static bool opLoadStoreVolatile() { return false; }
-  static bool opLoadStoreAlignment() { return false; }
   static bool opLoadStoreAtomic() { return false; }
   static bool opLoadStoreObjC() { return false; }
 
@@ -90,22 +92,26 @@ struct MissingFeatures {
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
   static bool opCallSideEffect() { return false; }
-  static bool opCallChainCall() { return false; }
   static bool opCallNoPrototypeFunc() { return false; }
   static bool opCallMustTail() { return false; }
-  static bool opCallIndirect() { return false; }
   static bool opCallVirtual() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
   static bool opCallASTAttr() { return false; }
-  static bool opCallVariadic() { return false; }
   static bool opCallObjCMethod() { return false; }
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
   static bool opCallLandingPad() { return false; }
   static bool opCallContinueBlock() { return false; }
+
+  // FnInfoOpts -- This is used to track whether calls are chain calls or
+  // instance methods. Classic codegen uses chain call to track and extra free
+  // register for x86 and uses instance method as a condition for a thunk
+  // generation special case. It's not clear that we need either of these in
+  // pre-lowering CIR codegen.
+  static bool opCallFnInfoOpts() { return false; }
 
   // ScopeOp handling
   static bool opScopeCleanupRegion() { return false; }
@@ -114,7 +120,6 @@ struct MissingFeatures {
   static bool opUnaryPromotionType() { return false; }
 
   // SwitchOp handling
-  static bool foldCascadingCases() { return false; }
   static bool foldRangeCase() { return false; }
 
   // Clang early optimizations or things defered to LLVM lowering.
@@ -122,7 +127,6 @@ struct MissingFeatures {
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
   // RecordType
-  static bool recursiveRecordLayout() { return false; }
   static bool skippedLayout() { return false; }
   static bool astRecordDeclAttr() { return false; }
   static bool cxxSupport() { return false; }
@@ -179,15 +183,22 @@ struct MissingFeatures {
   static bool msabi() { return false; }
   static bool typeChecks() { return false; }
   static bool lambdaFieldToName() { return false; }
+  static bool updateCompletedType() { return false; }
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
-  static bool setDSOLocal() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
   static bool cudaSupport() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool constEmitterArrayILE() { return false; }
   static bool constEmitterVectorILE() { return false; }
   static bool needsGlobalCtorDtor() { return false; }
+  static bool emitTypeCheck() { return false; }
+  static bool cxxabiThisDecl() { return false; }
+  static bool cxxabiThisAlignment() { return false; }
+  static bool writebacks() { return false; }
+  static bool cleanupsToDeactivate() { return false; }
+  static bool stackBase() { return false; }
+  static bool deferredDecls() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

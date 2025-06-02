@@ -45,9 +45,20 @@ void ModulesRequestHandler::operator()(
   FillResponse(request, response);
 
   llvm::json::Array modules;
-  for (size_t i = 0; i < dap.target.GetNumModules(); i++) {
-    lldb::SBModule module = dap.target.GetModuleAtIndex(i);
-    modules.emplace_back(CreateModule(dap.target, module));
+
+  {
+    std::lock_guard<std::mutex> guard(dap.modules_mutex);
+    for (size_t i = 0; i < dap.target.GetNumModules(); i++) {
+      lldb::SBModule module = dap.target.GetModuleAtIndex(i);
+      if (!module.IsValid())
+        continue;
+
+      llvm::StringRef module_id = module.GetUUIDString();
+      if (!module_id.empty())
+        dap.modules.insert(module_id);
+
+      modules.emplace_back(CreateModule(dap.target, module));
+    }
   }
 
   llvm::json::Object body;

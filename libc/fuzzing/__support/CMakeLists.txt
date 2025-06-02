@@ -19,6 +19,7 @@ add_libc_fuzzer(
   SRCS
     hashtable_fuzz.cpp
   DEPENDS
+    libc.hdr.types.ENTRY
     libc.src.__support.HashTable.table
   COMPILE_OPTIONS
     -D__LIBC_EXPLICIT_SIMD_OPT

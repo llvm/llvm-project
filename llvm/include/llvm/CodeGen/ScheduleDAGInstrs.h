@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <list>
@@ -112,7 +113,7 @@ namespace llvm {
   using UnderlyingObjectsVector = SmallVector<UnderlyingObject, 4>;
 
   /// A ScheduleDAG for scheduling lists of MachineInstr.
-  class ScheduleDAGInstrs : public ScheduleDAG {
+  class LLVM_ABI ScheduleDAGInstrs : public ScheduleDAG {
   protected:
     const MachineLoopInfo *MLI = nullptr;
     const MachineFrameInfo &MFI;

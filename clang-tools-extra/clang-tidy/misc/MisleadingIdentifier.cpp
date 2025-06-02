@@ -8,7 +8,6 @@
 
 #include "MisleadingIdentifier.h"
 
-#include "clang/Frontend/CompilerInstance.h"
 #include "llvm/Support/ConvertUTF.h"
 
 namespace clang::tidy::misc {

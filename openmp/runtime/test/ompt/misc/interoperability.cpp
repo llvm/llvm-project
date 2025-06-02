@@ -64,9 +64,9 @@ int main() {
 // CHECK: {{^}}[[MASTER_ID_1]]: ompt_event_parallel_begin:
 // CHECK-SAME: parent_task_id=[[PARENT_TASK_ID_1]]
 // CHECK-SAME: parent_task_frame.exit=[[NULL]]
-// CHECK-SAME: parent_task_frame.reenter={{0x[0-f]+}}
+// CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}}
 // CHECK-SAME: parallel_id=[[PARALLEL_ID_1:[0-9]+]], requested_team_size=2
-// CHECK-SAME: codeptr_ra=0x{{[0-f]+}}, invoker={{.*}}
+// CHECK-SAME: codeptr_ra={{(0x)?[0-f]+}}, invoker={{.*}}
 
 // CHECK: {{^}}[[MASTER_ID_1]]: ompt_event_parallel_end:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID_1]], task_id=[[PARENT_TASK_ID_1]]
@@ -90,9 +90,9 @@ int main() {
 // CHECK: {{^}}[[MASTER_ID_2]]: ompt_event_parallel_begin:
 // CHECK-SAME: parent_task_id=[[PARENT_TASK_ID_2]]
 // CHECK-SAME: parent_task_frame.exit=[[NULL]]
-// CHECK-SAME: parent_task_frame.reenter={{0x[0-f]+}}
+// CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}}
 // CHECK-SAME: parallel_id=[[PARALLEL_ID_2:[0-9]+]]
-// CHECK-SAME: requested_team_size=2, codeptr_ra=0x{{[0-f]+}}
+// CHECK-SAME: requested_team_size=2, codeptr_ra={{(0x)?[0-f]+}}
 // CHECK-SAME: invoker={{.*}}
 
 // CHECK: {{^}}[[MASTER_ID_2]]: ompt_event_parallel_end:

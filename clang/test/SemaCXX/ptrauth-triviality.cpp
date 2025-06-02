@@ -3,6 +3,8 @@
 
 #define AQ __ptrauth(1,1,50)
 #define IQ __ptrauth(1,0,50)
+#define AQ_IP __ptrauth(1,1,50)
+#define IQ_IP __ptrauth(1,0,50)
 #define AA [[clang::ptrauth_vtable_pointer(process_independent,address_discrimination,no_extra_discrimination)]]
 #define IA [[clang::ptrauth_vtable_pointer(process_independent,no_address_discrimination,type_discrimination)]]
 #define PA [[clang::ptrauth_vtable_pointer(process_dependent,no_address_discrimination,no_extra_discrimination)]]
@@ -134,3 +136,49 @@ static_assert(!__is_trivially_copyable(Holder<S5>));
 static_assert(__is_trivially_relocatable(Holder<S5>)); // expected-warning{{deprecated}}
 static_assert(__builtin_is_cpp_trivially_relocatable(Holder<S5>));
 static_assert(!__is_trivially_equality_comparable(Holder<S5>));
+
+struct S6 {
+  __INTPTR_TYPE__ AQ_IP p_;
+  void *payload_;
+  bool operator==(const S6&) const = default;
+};
+static_assert(__is_trivially_constructible(S6));
+static_assert(!__is_trivially_constructible(S6, const S6&));
+static_assert(!__is_trivially_assignable(S6, const S6&));
+static_assert(__is_trivially_destructible(S6));
+static_assert(!__is_trivially_copyable(S6));
+static_assert(!__is_trivially_relocatable(S6)); // expected-warning{{deprecated}}
+static_assert(!__builtin_is_cpp_trivially_relocatable(S6));
+static_assert(!__is_trivially_equality_comparable(S6));
+
+static_assert(__is_trivially_constructible(Holder<S6>));
+static_assert(!__is_trivially_constructible(Holder<S6>, const Holder<S6>&));
+static_assert(!__is_trivially_assignable(Holder<S6>, const Holder<S6>&));
+static_assert(__is_trivially_destructible(Holder<S6>));
+static_assert(!__is_trivially_copyable(Holder<S6>));
+static_assert(!__is_trivially_relocatable(Holder<S6>)); // expected-warning{{deprecated}}
+static_assert(!__builtin_is_cpp_trivially_relocatable(Holder<S6>));
+static_assert(!__is_trivially_equality_comparable(Holder<S6>));
+
+struct S7 {
+  __INTPTR_TYPE__ IQ_IP p_;
+  void *payload_;
+  bool operator==(const S7&) const = default;
+};
+static_assert(__is_trivially_constructible(S7));
+static_assert(__is_trivially_constructible(S7, const S7&));
+static_assert(__is_trivially_assignable(S7&, const S7&));
+static_assert(__is_trivially_destructible(S7));
+static_assert(__is_trivially_copyable(S7));
+static_assert(__is_trivially_relocatable(S7)); // expected-warning{{deprecated}}
+static_assert(__builtin_is_cpp_trivially_relocatable(S7));
+static_assert(__is_trivially_equality_comparable(S7));
+
+static_assert(__is_trivially_constructible(Holder<S7>));
+static_assert(__is_trivially_constructible(Holder<S7>, const Holder<S7>&));
+static_assert(__is_trivially_assignable(Holder<S7>, const Holder<S7>&));
+static_assert(__is_trivially_destructible(Holder<S7>));
+static_assert(__is_trivially_copyable(Holder<S7>));
+static_assert(__is_trivially_relocatable(Holder<S7>)); // expected-warning{{deprecated}}
+static_assert(__builtin_is_cpp_trivially_relocatable(Holder<S7>));
+static_assert(__is_trivially_equality_comparable(Holder<S7>));

@@ -32,11 +32,13 @@
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfSummaryBuilder.h"
 #include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
@@ -305,14 +307,20 @@ bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
 }
 
 void RawMemProfReader::printYAML(raw_ostream &OS) {
+  MemProfSummaryBuilder MemProfSumBuilder;
   uint64_t NumAllocFunctions = 0, NumMibInfo = 0;
   for (const auto &KV : MemProfData.Records) {
+    MemProfSumBuilder.addRecord(KV.second);
     const size_t NumAllocSites = KV.second.AllocSites.size();
     if (NumAllocSites > 0) {
       NumAllocFunctions++;
       NumMibInfo += NumAllocSites;
     }
   }
+
+  // Print the summary first, as it is printed as YAML comments.
+  auto MemProfSum = MemProfSumBuilder.getSummary();
+  MemProfSum->printSummaryYaml(OS);
 
   OS << "MemprofProfile:\n";
   OS << "  Summary:\n";
@@ -569,8 +577,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
       for (size_t I = 0, NumFrames = DI.getNumberOfFrames(); I < NumFrames;
            I++) {
         const auto &DIFrame = DI.getFrame(I);
-        const uint64_t Guid =
-            IndexedMemProfRecord::getGUID(DIFrame.FunctionName);
+        const uint64_t Guid = memprof::getGUID(DIFrame.FunctionName);
         const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
@@ -823,6 +830,34 @@ void YAMLMemProfReader::parse(StringRef YAMLData) {
 
     MemProfData.Records.try_emplace(GUID, std::move(IndexedRecord));
   }
+
+  if (Doc.YamlifiedDataAccessProfiles.isEmpty())
+    return;
+
+  auto ToSymHandleRef =
+      [](const memprof::SymbolHandle &Handle) -> memprof::SymbolHandleRef {
+    if (std::holds_alternative<std::string>(Handle))
+      return StringRef(std::get<std::string>(Handle));
+    return std::get<uint64_t>(Handle);
+  };
+
+  auto DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  for (const auto &Record : Doc.YamlifiedDataAccessProfiles.Records)
+    if (Error E = DataAccessProfileData->setDataAccessProfile(
+            ToSymHandleRef(Record.SymHandle), Record.AccessCount,
+            Record.Locations))
+      reportFatalInternalError(std::move(E));
+
+  for (const uint64_t Hash : Doc.YamlifiedDataAccessProfiles.KnownColdStrHashes)
+    if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Hash))
+      reportFatalInternalError(std::move(E));
+
+  for (const std::string &Sym :
+       Doc.YamlifiedDataAccessProfiles.KnownColdSymbols)
+    if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Sym))
+      reportFatalInternalError(std::move(E));
+
+  setDataAccessProfileData(std::move(DataAccessProfileData));
 }
 } // namespace memprof
 } // namespace llvm

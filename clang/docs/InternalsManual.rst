@@ -3560,7 +3560,7 @@ For example:
 
   // expected-note {{{evaluates to '{{2, 3, 4}} == {0, 3, 4}'}}}
 
-The intent is to allow the delimeter to be wider than the longest `{` or `}`
+The intent is to allow the delimiter to be wider than the longest `{` or `}`
 brace sequence in the content, so that if your expected text contains `{{{`
 (three braces) it may be delimited with `{{{{` (four braces), and so on.
 

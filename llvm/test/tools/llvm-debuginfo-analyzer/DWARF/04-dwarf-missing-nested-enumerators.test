@@ -25,7 +25,7 @@
 ; references to the enumerators 'RED' and 'BLUE'. The DWARF generated
 ; by GCC, does include such references.
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
+; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer,size \
 ; RUN:                         --output-sort=name \
 ; RUN:                         --print=symbols,types \
 ; RUN:                         %p/Inputs/pr-46466-dwarf-clang.o \
@@ -38,7 +38,7 @@
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 15.0.0 {{.*}}'
 ; ONE-NEXT: [002]     8         {Variable} extern 'S' -> 'Struct'
-; ONE-NEXT: [002]     1         {Struct} 'Struct'
+; ONE-NEXT: [002]     1         {Struct} 'Struct' [Size = 1]
 ; ONE-NEXT: [003]     5           {Member} public 'U' -> 'Union'
 ; ONE-EMPTY:
 ; ONE-NEXT: Logical View:
@@ -47,9 +47,9 @@
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
 ; ONE-NEXT: [002]               {Producer} 'GNU C++14 10.3.0 {{.*}}'
 ; ONE-NEXT: [002]     8         {Variable} extern 'S' -> 'Struct'
-; ONE-NEXT: [002]     1         {Struct} 'Struct'
+; ONE-NEXT: [002]     1         {Struct} 'Struct' [Size = 1]
 ; ONE-NEXT: [003]     5           {Member} public 'U' -> 'Union'
-; ONE-NEXT: [003]     2           {Union} 'Union'
+; ONE-NEXT: [003]     2           {Union} 'Union' [Size = 1]
 ; ONE-NEXT: [004]     3             {Enumeration} 'NestedEnum' -> 'unsigned int'
 ; ONE-NEXT: [005]                     {Enumerator} 'BLUE' = '0x1'
 ; ONE-NEXT: [005]                     {Enumerator} 'RED' = '0x0'
@@ -58,7 +58,7 @@
 ; showing just the logical types that are 'Enumerator' and its
 ; parents. The logical view is sorted by the types name.
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,format \
+; RUN: llvm-debuginfo-analyzer --attribute=level,format,size \
 ; RUN:                         --output-sort=name \
 ; RUN:                         --select-types=Enumerator \
 ; RUN:                         --report=parents \
@@ -75,8 +75,8 @@
 ; TWO-NEXT: [000]           {File} 'pr-46466-dwarf-gcc.o' -> elf64-x86-64
 ; TWO-EMPTY:
 ; TWO-NEXT: [001]             {CompileUnit} 'pr-46466.cpp'
-; TWO-NEXT: [002]     1         {Struct} 'Struct'
-; TWO-NEXT: [003]     2           {Union} 'Union'
+; TWO-NEXT: [002]     1         {Struct} 'Struct' [Size = 1]
+; TWO-NEXT: [003]     2           {Union} 'Union' [Size = 1]
 ; TWO-NEXT: [004]     3             {Enumeration} 'NestedEnum' -> 'unsigned int'
 ; TWO-NEXT: [005]                     {Enumerator} 'BLUE' = '0x1'
 ; TWO-NEXT: [005]                     {Enumerator} 'RED' = '0x0'

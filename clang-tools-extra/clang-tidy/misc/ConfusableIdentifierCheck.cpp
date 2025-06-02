@@ -9,7 +9,6 @@
 
 #include "ConfusableIdentifierCheck.h"
 
-#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"

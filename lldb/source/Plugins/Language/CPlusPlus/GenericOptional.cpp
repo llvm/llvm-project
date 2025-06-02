@@ -74,9 +74,10 @@ lldb::ChildCacheState GenericOptionalFrontend::Update() {
 
   if (m_stdlib == StdLib::LibCxx)
     engaged_sp = m_backend.GetChildMemberWithName("__engaged_");
-  else if (m_stdlib == StdLib::LibStdcpp)
-    engaged_sp = m_backend.GetChildMemberWithName("_M_payload")
-                     ->GetChildMemberWithName("_M_engaged");
+  else if (m_stdlib == StdLib::LibStdcpp) {
+    if (ValueObjectSP payload = m_backend.GetChildMemberWithName("_M_payload"))
+      engaged_sp = payload->GetChildMemberWithName("_M_engaged");
+  }
 
   if (!engaged_sp)
     return lldb::ChildCacheState::eRefetch;

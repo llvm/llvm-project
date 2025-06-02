@@ -983,8 +983,8 @@ td_library(
     srcs = [],
     includes = ["../include"],
     deps = [
-        "//mlir:SMTTdFiles",
         "//mlir:OpBaseTdFiles",
+        "//mlir:SMTTdFiles",
     ],
 )
 

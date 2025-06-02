@@ -4108,6 +4108,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atanf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atanf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.atanf16
+)
+
+add_fp_unittest(
   atan2f_test
   SUITE
     libc-math-smoke-tests

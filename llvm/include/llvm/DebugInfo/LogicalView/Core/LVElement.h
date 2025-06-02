@@ -16,6 +16,7 @@
 
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include <map>
 #include <set>
 #include <vector>
@@ -42,6 +43,7 @@ enum class LVSubclassID : unsigned char {
   LV_SCOPE_FUNCTION,
   LV_SCOPE_FUNCTION_INLINED,
   LV_SCOPE_FUNCTION_TYPE,
+  LV_SCOPE_MODULE,
   LV_SCOPE_NAMESPACE,
   LV_SCOPE_ROOT,
   LV_SCOPE_TEMPLATE_PACK,
@@ -63,6 +65,10 @@ enum class LVElementKind { Discarded, Global, Optimized, LastEntry };
 using LVElementKindSet = std::set<LVElementKind>;
 using LVElementDispatch = std::map<LVElementKind, LVElementGetFunction>;
 using LVElementRequest = std::vector<LVElementGetFunction>;
+
+// Assume 8-bit bytes; this is consistent, e.g. with
+// lldb/source/Plugins/SymbolFile/DWARF/DWARFASTParserClang.cpp.
+constexpr unsigned int DWARF_CHAR_BIT = 8u;
 
 class LVElement : public LVObject {
   enum class Property {
@@ -239,6 +245,9 @@ public:
   virtual bool isBase() const { return false; }
   virtual bool isTemplateParam() const { return false; }
 
+  uint32_t getStorageSizeInBytes() const {
+    return llvm::divideCeil(getBitSize(), DWARF_CHAR_BIT);
+  }
   virtual uint32_t getBitSize() const { return 0; }
   virtual void setBitSize(uint32_t Size) {}
 

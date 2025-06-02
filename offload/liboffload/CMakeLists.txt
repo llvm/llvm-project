@@ -14,8 +14,8 @@ foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
     target_link_libraries(LLVMOffload PRIVATE omptarget.rtl.${plugin})
 endforeach()
 
-if(LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-    target_link_libraries(LLVMOffload PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
+if(LLVM_HAVE_LINK_VERSION_SCRIPT)
+  target_link_libraries(LLVMOffload PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports")
 endif()
 
 target_include_directories(LLVMOffload PUBLIC

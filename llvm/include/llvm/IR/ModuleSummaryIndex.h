@@ -28,6 +28,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScaledNumber.h"
@@ -72,7 +73,8 @@ struct CalleeInfo {
   uint32_t Hotness : 3;
 
   // True if at least one of the calls to the callee is a tail call.
-  bool HasTailCall : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  uint32_t HasTailCall : 1;
 
   /// The value stored in RelBlockFreq has to be interpreted as the digits of
   /// a scaled number with a scale of \p -ScaleShift.

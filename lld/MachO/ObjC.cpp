@@ -17,7 +17,6 @@
 
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Support/TimeProfiler.h"
 

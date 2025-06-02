@@ -79,18 +79,18 @@ body:             |
   bb.0:
     %0:int32regs, %1:int32regs, %2:int32regs, %3:int32regs = LoadParamMemV4I32 0
     ; CHECK-NOT: ProxyReg
-    %4:int32regs = ProxyRegI32 killed %0
-    %5:int32regs = ProxyRegI32 killed %1
-    %6:int32regs = ProxyRegI32 killed %2
-    %7:int32regs = ProxyRegI32 killed %3
+    %4:int32regs = ProxyRegB32 killed %0
+    %5:int32regs = ProxyRegB32 killed %1
+    %6:int32regs = ProxyRegB32 killed %2
+    %7:int32regs = ProxyRegB32 killed %3
     ; CHECK: StoreRetvalV4I32 killed %0, killed %1, killed %2, killed %3
     StoreRetvalV4I32 killed %4, killed %5, killed %6, killed %7, 0
 
     %8:int32regs = LoadParamMemI32 0
     ; CHECK-NOT: ProxyReg
-    %9:int32regs = ProxyRegI32 killed %8
-    %10:int32regs = ProxyRegI32 killed %9
-    %11:int32regs = ProxyRegI32 killed %10
+    %9:int32regs = ProxyRegB32 killed %8
+    %10:int32regs = ProxyRegB32 killed %9
+    %11:int32regs = ProxyRegB32 killed %10
     ; CHECK: StoreRetvalI32 killed %8
     StoreRetvalI32 killed %11, 0
     Return

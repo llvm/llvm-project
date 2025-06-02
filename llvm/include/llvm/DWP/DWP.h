@@ -10,6 +10,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <deque>
 #include <vector>
@@ -66,12 +67,10 @@ struct CompileUnitIdentifiers {
   const char *DWOName = "";
 };
 
-Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
-            OnCuIndexOverflow OverflowOptValue);
+LLVM_ABI Error write(MCStreamer &Out, ArrayRef<std::string> Inputs,
+                     OnCuIndexOverflow OverflowOptValue);
 
-unsigned getContributionIndex(DWARFSectionKind Kind, uint32_t IndexVersion);
-
-Error handleSection(
+LLVM_ABI Error handleSection(
     const StringMap<std::pair<MCSection *, DWARFSectionKind>> &KnownSections,
     const MCSection *StrSection, const MCSection *StrOffsetSection,
     const MCSection *TypesSection, const MCSection *CUIndexSection,
@@ -85,20 +84,24 @@ Error handleSection(
     StringRef &CurCUIndexSection, StringRef &CurTUIndexSection,
     std::vector<std::pair<DWARFSectionKind, uint32_t>> &SectionLength);
 
-Expected<InfoSectionUnitHeader> parseInfoSectionUnitHeader(StringRef Info);
+LLVM_ABI Expected<InfoSectionUnitHeader>
+parseInfoSectionUnitHeader(StringRef Info);
 
-void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
-                            MCSection *StrOffsetSection,
-                            StringRef CurStrSection,
-                            StringRef CurStrOffsetSection, uint16_t Version);
+LLVM_ABI void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
+                                     MCSection *StrOffsetSection,
+                                     StringRef CurStrSection,
+                                     StringRef CurStrOffsetSection,
+                                     uint16_t Version);
 
-Error buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
-                          const CompileUnitIdentifiers &ID, StringRef DWPName);
+LLVM_ABI Error
+buildDuplicateError(const std::pair<uint64_t, UnitIndexEntry> &PrevE,
+                    const CompileUnitIdentifiers &ID, StringRef DWPName);
 
-void writeIndex(MCStreamer &Out, MCSection *Section,
-                ArrayRef<unsigned> ContributionOffsets,
-                const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
-                uint32_t IndexVersion);
+LLVM_ABI void
+writeIndex(MCStreamer &Out, MCSection *Section,
+           ArrayRef<unsigned> ContributionOffsets,
+           const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
+           uint32_t IndexVersion);
 
 } // namespace llvm
 #endif // LLVM_DWP_DWP_H

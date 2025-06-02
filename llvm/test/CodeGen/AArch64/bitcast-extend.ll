@@ -70,8 +70,8 @@ define <4 x i64> @z_i32_v4i64(i32 %x) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov s0, w0
 ; CHECK-SD-NEXT:    movi v1.2d, #0x000000000000ff
-; CHECK-SD-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-SD-NEXT:    mov v3.b[0], v0.b[2]
+; CHECK-SD-NEXT:    mov b2, v0.b[0]
+; CHECK-SD-NEXT:    mov b3, v0.b[2]
 ; CHECK-SD-NEXT:    mov v2.b[4], v0.b[1]
 ; CHECK-SD-NEXT:    mov v3.b[4], v0.b[3]
 ; CHECK-SD-NEXT:    ushll v0.2d, v2.2s, #0
@@ -172,8 +172,8 @@ define <4 x i64> @s_i32_v4i64(i32 %x) {
 ; CHECK-SD-LABEL: s_i32_v4i64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    mov v1.b[0], v0.b[0]
-; CHECK-SD-NEXT:    mov v2.b[0], v0.b[2]
+; CHECK-SD-NEXT:    mov b1, v0.b[0]
+; CHECK-SD-NEXT:    mov b2, v0.b[2]
 ; CHECK-SD-NEXT:    mov v1.b[4], v0.b[1]
 ; CHECK-SD-NEXT:    mov v2.b[4], v0.b[3]
 ; CHECK-SD-NEXT:    ushll v0.2d, v1.2s, #0

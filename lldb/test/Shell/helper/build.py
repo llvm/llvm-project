@@ -683,13 +683,13 @@ class MsvcBuilder(Builder):
             args.append("-fms-compatibility-version=19")
         args.append("/c")
 
+        if self.std:
+            args.append("/std:" + self.std)
+
         args.append("/Fo" + obj)
         if self.toolchain_type == "clang-cl":
             args.append("--")
         args.append(source)
-
-        if self.std:
-            args.append("/std:" + self.std)
 
         return ("compiling", [source], obj, self.compile_env, args)
 

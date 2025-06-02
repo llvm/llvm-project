@@ -270,7 +270,7 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
     Function *F = UseFunc.second;
     FunctionType *Ty = CB->getFunctionType();
 
-    auto Pair = Wrappers.insert(std::make_pair(std::make_pair(F, Ty), nullptr));
+    auto Pair = Wrappers.try_emplace(std::make_pair(F, Ty));
     if (Pair.second)
       Pair.first->second = createWrapper(F, Ty);
 

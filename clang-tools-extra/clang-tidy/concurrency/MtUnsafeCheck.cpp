@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MtUnsafeCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -153,7 +152,6 @@ static const clang::StringRef GlibcFunctions[] = {
     "::sigsuspend",
     "::sleep",
     "::srand48",
-    "::strerror",
     "::strsignal",
     "::strtok",
     "::tcflow",

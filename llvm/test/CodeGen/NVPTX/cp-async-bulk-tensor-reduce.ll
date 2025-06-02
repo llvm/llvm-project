@@ -22,10 +22,10 @@ define void @cp_async_bulk_tensor_reduce_tile_1d(ptr addrspace(3) %src, ptr %tma
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_reduce_tile_1d_param_0];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_reduce_tile_1d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_reduce_tile_1d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd3, [cp_async_bulk_tensor_reduce_tile_1d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_reduce_tile_1d_param_0];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_reduce_tile_1d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_reduce_tile_1d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd3, [cp_async_bulk_tensor_reduce_tile_1d_param_3];
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.1d.global.shared::cta.add.tile.bulk_group.L2::cache_hint [%rd2, {%r1}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.1d.global.shared::cta.min.tile.bulk_group.L2::cache_hint [%rd2, {%r1}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.1d.global.shared::cta.max.tile.bulk_group.L2::cache_hint [%rd2, {%r1}], [%rd1], %rd3;
@@ -71,11 +71,11 @@ define void @cp_async_bulk_tensor_reduce_tile_2d(ptr addrspace(3) %src, ptr %tma
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_reduce_tile_2d_param_0];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_reduce_tile_2d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_reduce_tile_2d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_reduce_tile_2d_param_3];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd3, [cp_async_bulk_tensor_reduce_tile_2d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_reduce_tile_2d_param_0];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_reduce_tile_2d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_reduce_tile_2d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_reduce_tile_2d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd3, [cp_async_bulk_tensor_reduce_tile_2d_param_4];
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.2d.global.shared::cta.add.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.2d.global.shared::cta.min.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.2d.global.shared::cta.max.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2}], [%rd1], %rd3;
@@ -121,12 +121,12 @@ define void @cp_async_bulk_tensor_reduce_tile_3d(ptr addrspace(3) %src, ptr %tma
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_reduce_tile_3d_param_0];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_reduce_tile_3d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_reduce_tile_3d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_reduce_tile_3d_param_3];
-; CHECK-PTX-NEXT:    ld.param.u32 %r3, [cp_async_bulk_tensor_reduce_tile_3d_param_4];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd3, [cp_async_bulk_tensor_reduce_tile_3d_param_5];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_reduce_tile_3d_param_0];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_reduce_tile_3d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_reduce_tile_3d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_reduce_tile_3d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b32 %r3, [cp_async_bulk_tensor_reduce_tile_3d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd3, [cp_async_bulk_tensor_reduce_tile_3d_param_5];
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.3d.global.shared::cta.add.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.3d.global.shared::cta.min.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.3d.global.shared::cta.max.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3}], [%rd1], %rd3;
@@ -172,13 +172,13 @@ define void @cp_async_bulk_tensor_reduce_tile_4d(ptr addrspace(3) %src, ptr %tma
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_reduce_tile_4d_param_0];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_reduce_tile_4d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_reduce_tile_4d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_reduce_tile_4d_param_3];
-; CHECK-PTX-NEXT:    ld.param.u32 %r3, [cp_async_bulk_tensor_reduce_tile_4d_param_4];
-; CHECK-PTX-NEXT:    ld.param.u32 %r4, [cp_async_bulk_tensor_reduce_tile_4d_param_5];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd3, [cp_async_bulk_tensor_reduce_tile_4d_param_6];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_reduce_tile_4d_param_0];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_reduce_tile_4d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_reduce_tile_4d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_reduce_tile_4d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b32 %r3, [cp_async_bulk_tensor_reduce_tile_4d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b32 %r4, [cp_async_bulk_tensor_reduce_tile_4d_param_5];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd3, [cp_async_bulk_tensor_reduce_tile_4d_param_6];
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.4d.global.shared::cta.add.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.4d.global.shared::cta.min.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.4d.global.shared::cta.max.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4}], [%rd1], %rd3;
@@ -224,14 +224,14 @@ define void @cp_async_bulk_tensor_reduce_tile_5d(ptr addrspace(3) %src, ptr %tma
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_reduce_tile_5d_param_0];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_reduce_tile_5d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_reduce_tile_5d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_reduce_tile_5d_param_3];
-; CHECK-PTX-NEXT:    ld.param.u32 %r3, [cp_async_bulk_tensor_reduce_tile_5d_param_4];
-; CHECK-PTX-NEXT:    ld.param.u32 %r4, [cp_async_bulk_tensor_reduce_tile_5d_param_5];
-; CHECK-PTX-NEXT:    ld.param.u32 %r5, [cp_async_bulk_tensor_reduce_tile_5d_param_6];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd3, [cp_async_bulk_tensor_reduce_tile_5d_param_7];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_reduce_tile_5d_param_0];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_reduce_tile_5d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_reduce_tile_5d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_reduce_tile_5d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b32 %r3, [cp_async_bulk_tensor_reduce_tile_5d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b32 %r4, [cp_async_bulk_tensor_reduce_tile_5d_param_5];
+; CHECK-PTX-NEXT:    ld.param.b32 %r5, [cp_async_bulk_tensor_reduce_tile_5d_param_6];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd3, [cp_async_bulk_tensor_reduce_tile_5d_param_7];
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.5d.global.shared::cta.add.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4, %r5}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.5d.global.shared::cta.min.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4, %r5}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.5d.global.shared::cta.max.tile.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4, %r5}], [%rd1], %rd3;
@@ -277,12 +277,12 @@ define void @cp_async_bulk_tensor_reduce_im2col_3d(ptr addrspace(3) %src, ptr %t
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_reduce_im2col_3d_param_0];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_reduce_im2col_3d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_reduce_im2col_3d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_reduce_im2col_3d_param_3];
-; CHECK-PTX-NEXT:    ld.param.u32 %r3, [cp_async_bulk_tensor_reduce_im2col_3d_param_4];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd3, [cp_async_bulk_tensor_reduce_im2col_3d_param_5];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_reduce_im2col_3d_param_0];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_reduce_im2col_3d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_reduce_im2col_3d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_reduce_im2col_3d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b32 %r3, [cp_async_bulk_tensor_reduce_im2col_3d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd3, [cp_async_bulk_tensor_reduce_im2col_3d_param_5];
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.3d.global.shared::cta.add.im2col_no_offs.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.3d.global.shared::cta.min.im2col_no_offs.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.3d.global.shared::cta.max.im2col_no_offs.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3}], [%rd1], %rd3;
@@ -328,13 +328,13 @@ define void @cp_async_bulk_tensor_reduce_im2col_4d(ptr addrspace(3) %src, ptr %t
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_reduce_im2col_4d_param_0];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_reduce_im2col_4d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_reduce_im2col_4d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_reduce_im2col_4d_param_3];
-; CHECK-PTX-NEXT:    ld.param.u32 %r3, [cp_async_bulk_tensor_reduce_im2col_4d_param_4];
-; CHECK-PTX-NEXT:    ld.param.u32 %r4, [cp_async_bulk_tensor_reduce_im2col_4d_param_5];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd3, [cp_async_bulk_tensor_reduce_im2col_4d_param_6];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_reduce_im2col_4d_param_0];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_reduce_im2col_4d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_reduce_im2col_4d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_reduce_im2col_4d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b32 %r3, [cp_async_bulk_tensor_reduce_im2col_4d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b32 %r4, [cp_async_bulk_tensor_reduce_im2col_4d_param_5];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd3, [cp_async_bulk_tensor_reduce_im2col_4d_param_6];
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.4d.global.shared::cta.add.im2col_no_offs.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.4d.global.shared::cta.min.im2col_no_offs.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.4d.global.shared::cta.max.im2col_no_offs.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4}], [%rd1], %rd3;
@@ -380,14 +380,14 @@ define void @cp_async_bulk_tensor_reduce_im2col_5d(ptr addrspace(3) %src, ptr %t
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_reduce_im2col_5d_param_0];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_reduce_im2col_5d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_reduce_im2col_5d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_reduce_im2col_5d_param_3];
-; CHECK-PTX-NEXT:    ld.param.u32 %r3, [cp_async_bulk_tensor_reduce_im2col_5d_param_4];
-; CHECK-PTX-NEXT:    ld.param.u32 %r4, [cp_async_bulk_tensor_reduce_im2col_5d_param_5];
-; CHECK-PTX-NEXT:    ld.param.u32 %r5, [cp_async_bulk_tensor_reduce_im2col_5d_param_6];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd3, [cp_async_bulk_tensor_reduce_im2col_5d_param_7];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_reduce_im2col_5d_param_0];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_reduce_im2col_5d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_reduce_im2col_5d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_reduce_im2col_5d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b32 %r3, [cp_async_bulk_tensor_reduce_im2col_5d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b32 %r4, [cp_async_bulk_tensor_reduce_im2col_5d_param_5];
+; CHECK-PTX-NEXT:    ld.param.b32 %r5, [cp_async_bulk_tensor_reduce_im2col_5d_param_6];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd3, [cp_async_bulk_tensor_reduce_im2col_5d_param_7];
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.5d.global.shared::cta.add.im2col_no_offs.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4, %r5}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.5d.global.shared::cta.min.im2col_no_offs.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4, %r5}], [%rd1], %rd3;
 ; CHECK-PTX-NEXT:    cp.reduce.async.bulk.tensor.5d.global.shared::cta.max.im2col_no_offs.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4, %r5}], [%rd1], %rd3;

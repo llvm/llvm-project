@@ -17,7 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -1632,6 +1632,9 @@ LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     Op.setReg(convertFPR32ToFPR64(Reg));
     return Match_Success;
   }
+
+  if (Kind == MCK_GPRNoR0R1 && (Reg == LoongArch::R0 || Reg == LoongArch::R1))
+    return Match_RequiresOpnd2NotR0R1;
 
   return Match_InvalidOperand;
 }

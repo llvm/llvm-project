@@ -10,6 +10,7 @@
 #define LLVM_MC_MCWINEH_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/Support/SMLoc.h"
 #include <vector>
 
 namespace llvm {
@@ -42,6 +43,7 @@ struct FrameInfo {
   const MCSymbol *FuncletOrFuncEnd = nullptr;
   const MCSymbol *ExceptionHandler = nullptr;
   const MCSymbol *Function = nullptr;
+  SMLoc FunctionLoc;
   const MCSymbol *PrologEnd = nullptr;
   const MCSymbol *Symbol = nullptr;
   MCSection *TextSection = nullptr;
@@ -52,6 +54,8 @@ struct FrameInfo {
   bool HandlesExceptions = false;
   bool EmitAttempted = false;
   bool Fragment = false;
+  constexpr static uint8_t DefaultVersion = 1;
+  uint8_t Version = DefaultVersion;
 
   int LastFrameInst = -1;
   const FrameInfo *ChainedParent = nullptr;
@@ -59,7 +63,10 @@ struct FrameInfo {
   struct Epilog {
     std::vector<Instruction> Instructions;
     unsigned Condition;
-    MCSymbol *End;
+    const MCSymbol *Start = nullptr;
+    const MCSymbol *End = nullptr;
+    const MCSymbol *UnwindV2Start = nullptr;
+    SMLoc Loc;
   };
   MapVector<MCSymbol *, Epilog> EpilogMap;
 

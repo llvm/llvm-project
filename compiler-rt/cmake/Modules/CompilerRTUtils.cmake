@@ -373,7 +373,12 @@ macro(construct_compiler_rt_default_triple)
     message(STATUS "cmake c compiler target: ${CMAKE_C_COMPILER_TARGET}")
     set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${CMAKE_C_COMPILER_TARGET})
   else()
-    set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${LLVM_TARGET_TRIPLE} CACHE STRING
+    set(target_triple ${LLVM_TARGET_TRIPLE})
+    # AIX triples can have OS version numbers we don't want for the compiler-rt target.
+    if (target_triple MATCHES "aix")
+      string(REGEX REPLACE "[0-9.]+$" "" target_triple "${target_triple}")
+    endif()
+    set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${target_triple} CACHE STRING
           "Default triple for which compiler-rt runtimes will be built.")
   endif()
 

@@ -17,8 +17,6 @@
 #include <cstdint>
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
-extern llvm::cl::opt<bool> enableDelayedPrivatization;
-extern llvm::cl::opt<bool> enableDelayedPrivatizationStaging;
 
 namespace fir {
 class FirOpBuilder;

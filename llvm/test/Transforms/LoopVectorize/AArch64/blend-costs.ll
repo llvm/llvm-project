@@ -28,7 +28,7 @@ define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <16 x i1> [[TMP6]], <16 x i1> zeroinitializer, <16 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <16 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <16 x i1> [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP7]], <16 x ptr> [[BROADCAST_SPLAT]], <16 x ptr> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP6]], <16 x ptr> [[BROADCAST_SPLAT]], <16 x ptr> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i1> [[TMP9]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
@@ -219,7 +219,7 @@ define void @test_blend_feeding_replicated_store_2(ptr noalias %src, ptr %dst, i
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <16 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <16 x i1> [[TMP4]], <16 x i1> [[TMP5]], <16 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i1> [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP6]], <16 x i8> zeroinitializer, <16 x i8> splat (i8 1)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP3]], <16 x i8> splat (i8 1), <16 x i8> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[TMP7]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:

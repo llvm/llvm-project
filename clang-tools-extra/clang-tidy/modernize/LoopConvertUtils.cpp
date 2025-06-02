@@ -18,8 +18,6 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <optional>

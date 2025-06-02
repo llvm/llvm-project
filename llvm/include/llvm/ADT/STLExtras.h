@@ -1804,8 +1804,9 @@ T *find_singleton(R &&Range, Predicate P, bool AllowRepeats = false) {
       if (RC) {
         if (!AllowRepeats || PRC != RC)
           return nullptr;
-      } else
+      } else {
         RC = PRC;
+      }
     }
   }
   return RC;
@@ -1835,8 +1836,9 @@ std::pair<T *, bool> find_singleton_nested(R &&Range, Predicate P,
       if (RC) {
         if (!AllowRepeats || PRC.first != RC)
           return {nullptr, true};
-      } else
+      } else {
         RC = PRC.first;
+      }
     }
   }
   return {RC, false};

@@ -3,17 +3,37 @@
 program test_size
   real :: scalar
   real, dimension(5, 5) :: array
-  call test(array, array)
+  call test(array, array, array)
  contains
-  subroutine test(arg, assumedRank)
+  subroutine test(arg, assumedRank, poly)
     real, dimension(5, *) :: arg
     real, dimension(..) :: assumedRank
+    class(*) :: poly(5, *)
     !ERROR: A dim= argument is required for 'size' when the array is assumed-size
     print *, size(arg)
+    print *, size(arg, dim=1) ! ok
+    select type (poly)
+     type is (real)
+      !ERROR: A dim= argument is required for 'size' when the array is assumed-size
+      print *, size(poly)
+      print *, size(poly, dim=1) ! ok
+    end select
     !ERROR: A dim= argument is required for 'ubound' when the array is assumed-size
     print *, ubound(arg)
+    print *, ubound(arg, dim=1) ! ok
+    select type (poly)
+     type is (real)
+      !ERROR: A dim= argument is required for 'ubound' when the array is assumed-size
+      print *, ubound(poly)
+      print *, ubound(poly, dim=1) ! ok
+    end select
     !ERROR: The 'source=' argument to the intrinsic function 'shape' may not be assumed-size
     print *, shape(arg)
+    select type (poly)
+     type is (real)
+      !ERROR: The 'source=' argument to the intrinsic function 'shape' may not be assumed-size
+      print *, shape(poly)
+    end select
     !ERROR: The 'harvest=' argument to the intrinsic procedure 'random_number' may not be assumed-size
     call random_number(arg)
     !ERROR: 'array=' argument has unacceptable rank 0
@@ -85,5 +105,16 @@ program test_size
       print *, lbound(assumedRank, dim=2)
       print *, ubound(assumedRank, dim=2)
     end select
+   contains
+    subroutine inner
+      !ERROR: A dim= argument is required for 'size' when the array is assumed-size
+      print *, size(arg)
+      print *, size(arg, dim=1) ! ok
+      !ERROR: A dim= argument is required for 'ubound' when the array is assumed-size
+      print *, ubound(arg)
+      print *, ubound(arg, dim=1) ! ok
+      !ERROR: The 'source=' argument to the intrinsic function 'shape' may not be assumed-size
+      print *, shape(arg)
+    end
   end subroutine
 end

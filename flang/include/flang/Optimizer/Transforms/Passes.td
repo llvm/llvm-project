@@ -76,6 +76,17 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
+def FIRToSCFPass : Pass<"fir-to-scf"> {
+  let summary = "Convert FIR structured control flow ops to SCF dialect.";
+  let description = [{
+    Convert FIR structured control flow ops to SCF dialect.
+  }];
+  let constructor = "::fir::createFIRToSCFPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::scf::SCFDialect"
+  ];
+}
+
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
   let summary = "Annotate constant operands to all FIR operations";
   let description = [{
@@ -285,7 +296,9 @@ def StackArrays : Pass<"stack-arrays", "mlir::func::FuncOp"> {
     Convert heap allocations for arrays, even those of unknown size, into stack
     allocations.
   }];
-  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect"
+  ];
 }
 
 def StackReclaim : Pass<"stack-reclaim"> {
@@ -356,7 +369,7 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     an array has element sized stride. The element sizes stride allows some
     loops to be vectorized as well as other loop optimizations.
   }];
-  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let dependentDialects = [ "fir::FIROpsDialect", "mlir::DLTIDialect" ];
 }
 
 def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
@@ -416,8 +429,18 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "module.">,
        Option<"unsafeFPMath", "unsafe-fp-math", "bool", /*default=*/"false",
               "Set the unsafe-fp-math attribute on functions in the module.">,
+       Option<"preferVectorWidth", "prefer-vector-width", "std::string",
+              /*default=*/"",
+              "Set the prefer-vector-width attribute on functions in the "
+              "module.">,
        Option<"tuneCPU", "tune-cpu", "std::string", /*default=*/"",
               "Set the tune-cpu attribute on functions in the module.">,
+       Option<"setNoCapture", "set-nocapture", "bool", /*default=*/"false",
+              "Set LLVM nocapture attribute on function arguments, "
+              "if possible">,
+       Option<"setNoAlias", "set-noalias", "bool", /*default=*/"false",
+              "Set LLVM noalias attribute on function arguments, "
+              "if possible">,
   ];
 }
 
@@ -436,7 +459,7 @@ def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::gpu::GPUDialect"
+    "fir::FIROpsDialect", "mlir::gpu::GPUDialect", "mlir::DLTIDialect"
   ];
 }
 
@@ -451,14 +474,14 @@ def CUFDeviceGlobal :
 def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
   let summary = "Add constructor to register CUDA Fortran allocators";
   let dependentDialects = [
-    "cuf::CUFDialect", "mlir::func::FuncDialect"
+    "cuf::CUFDialect", "mlir::func::FuncDialect", "mlir::DLTIDialect"
   ];
 }
 
 def CUFGPUToLLVMConversion : Pass<"cuf-gpu-convert-to-llvm", "mlir::ModuleOp"> {
   let summary = "Convert some GPU operations lowered from CUF to runtime calls";
   let dependentDialects = [
-    "mlir::LLVM::LLVMDialect"
+    "mlir::LLVM::LLVMDialect", "mlir::DLTIDialect"
   ];
 }
 
@@ -472,7 +495,10 @@ def CUFComputeSharedMemoryOffsetsAndSize
     the global and set it.
   }];
 
-  let dependentDialects = ["cuf::CUFDialect", "fir::FIROpsDialect"];
+  let dependentDialects = [
+    "cuf::CUFDialect", "fir::FIROpsDialect", "mlir::gpu::GPUDialect",
+    "mlir::DLTIDialect"
+  ];
 }
 
 def SetRuntimeCallAttributes

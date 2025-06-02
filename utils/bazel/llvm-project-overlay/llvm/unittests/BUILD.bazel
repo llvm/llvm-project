@@ -430,6 +430,7 @@ cc_test(
     deps = [
         "//llvm:Analysis",
         "//llvm:Core",
+        "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenACC",
         "//llvm:FrontendOpenMP",
         "//llvm:Passes",

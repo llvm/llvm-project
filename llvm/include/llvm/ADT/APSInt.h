@@ -16,6 +16,7 @@
 #define LLVM_ADT_APSINT_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -41,7 +42,7 @@ public:
   /// constructed APSInt is determined automatically.
   ///
   /// \param Str the string to be interpreted.
-  explicit APSInt(StringRef Str);
+  LLVM_ABI explicit APSInt(StringRef Str);
 
   /// Determine sign of this APSInt.
   ///
@@ -351,7 +352,7 @@ public:
 
   /// Used to insert APSInt objects, or objects that contain APSInt objects,
   /// into FoldingSets.
-  void Profile(FoldingSetNodeID &ID) const;
+  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
 };
 
 inline bool operator==(int64_t V1, const APSInt &V2) { return V2 == V1; }

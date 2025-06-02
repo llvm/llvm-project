@@ -259,7 +259,7 @@ void llvm::reportGISelWarning(MachineFunction &MF, const TargetPassConfig &TPC,
 void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
                               MachineOptimizationRemarkEmitter &MORE,
                               MachineOptimizationRemarkMissed &R) {
-  MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+  MF.getProperties().setFailedISel();
   reportGISelDiagnostic(DS_Error, MF, TPC, MORE, R);
 }
 

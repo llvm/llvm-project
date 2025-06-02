@@ -614,3 +614,31 @@ nvfortran defines `-fast` as
  - `-Mcache_align`: there is no equivalent flag in Flang or Clang.
  - `-Mflushz`: flush-to-zero mode - when `-ffast-math` is specified, Flang will
    link to `crtfastmath.o` to ensure denormal numbers are flushed to zero.
+
+
+## FCC_OVERRIDE_OPTIONS
+
+The environment variable `FCC_OVERRIDE_OPTIONS` can be used to edit flang's
+command line arguments. The value of this variable is a space-separated list of
+edits to perform. The edits are applied in the order in which they appear in
+`FCC_OVERRIDE_OPTIONS`. Each edit should be one of the following form:
+
+- `#`: Silence information about the changes to the command line arguments.
+
+- `^FOO`: Add `FOO` as a new argument at the beginning of the command line right
+  after the name of the compiler executable.
+
+- `+FOO`: Add `FOO` as a new argument at the end of the command line.
+
+- `s/XXX/YYY/`: Substitute the regular expression `XXX` with `YYY` in the
+  command line.
+
+- `xOPTION`: Removes all instances of the literal argument `OPTION`.
+
+- `XOPTION`: Removes all instances of the literal argument `OPTION`, and the
+  following argument.
+
+- `Ox`: Removes all flags matching `O` or `O[sz0-9]` and adds `Ox` at the end
+  of the command line.
+
+This environment variable does not affect the options added by the config files.

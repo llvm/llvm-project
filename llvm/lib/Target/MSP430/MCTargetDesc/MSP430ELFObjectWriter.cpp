@@ -27,8 +27,8 @@ public:
   ~MSP430ELFObjectWriter() override = default;
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override {
+  unsigned getRelocType(const MCFixup &Fixup, const MCValue &,
+                        bool IsPCRel) const override {
     // Translate fixup kind to ELF relocation type.
     switch (Fixup.getTargetKind()) {
     case FK_Data_1:                   return ELF::R_MSP430_8;

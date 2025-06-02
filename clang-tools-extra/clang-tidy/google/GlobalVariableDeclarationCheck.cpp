@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalVariableDeclarationCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"

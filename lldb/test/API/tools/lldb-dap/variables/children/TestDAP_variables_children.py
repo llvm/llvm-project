@@ -13,14 +13,11 @@ class TestDAP_variables_children(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(
             program,
-            stopOnEntry=True,
             preRunCommands=[
                 "command script import '%s'" % self.getSourcePath("formatter.py")
             ],
         )
         source = "main.cpp"
-        breakpoint1_line = line_number(source, "// break here")
-
         breakpoint_ids = self.set_source_breakpoints(
             source, [line_number(source, "// break here")]
         )
@@ -41,13 +38,13 @@ class TestDAP_variables_children(lldbdap_testcase.DAPTestCaseBase):
             )["body"]["result"],
         )
 
-    @skipIf(archs=["arm", "arm64", "aarch64"])
+    @skipIf(archs=["arm$", "arm64", "aarch64"])
     def test_return_variable_with_children(self):
         """
         Test the stepping out of a function with return value show the children correctly
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
+        self.build_and_launch(program)
 
         function_name = "test_return_variable_with_children"
         breakpoint_ids = self.set_function_breakpoints([function_name])

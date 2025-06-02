@@ -294,7 +294,7 @@ TEST_P(RISCVInstrInfoTest, DescribeLoadedValue) {
   DebugLoc DL;
 
   MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
-  MF->getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  MF->getProperties().setNoVRegs();
 
   // Register move.
   auto *MI1 = BuildMI(*MBB, MBB->begin(), DL, TII->get(RISCV::ADDI), RISCV::X1)

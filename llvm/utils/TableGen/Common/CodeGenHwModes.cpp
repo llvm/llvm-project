@@ -20,7 +20,7 @@ StringRef CodeGenHwModes::DefaultModeName = "DefaultMode";
 
 HwMode::HwMode(const Record *R) {
   Name = R->getName();
-  Features = std::string(R->getValueAsString("Features"));
+  Features = R->getValueAsString("Features").str();
 
   SmallString<128> PredicateCheck;
   raw_svector_ostream OS(PredicateCheck);

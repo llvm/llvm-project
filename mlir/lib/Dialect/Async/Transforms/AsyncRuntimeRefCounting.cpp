@@ -534,15 +534,15 @@ void AsyncRuntimePolicyBasedRefCountingPass::initializeDefaultPolicy() {
     bool isValue = isa<ValueType>(type);
 
     // Drop reference after async token or group error check (coro await).
-    if (dyn_cast<RuntimeIsErrorOp>(op))
+    if (isa<RuntimeIsErrorOp>(op))
       return (isToken || isGroup) ? -1 : 0;
 
     // Drop reference after async value load.
-    if (dyn_cast<RuntimeLoadOp>(op))
+    if (isa<RuntimeLoadOp>(op))
       return isValue ? -1 : 0;
 
     // Drop reference after async token added to the group.
-    if (dyn_cast<RuntimeAddToGroupOp>(op))
+    if (isa<RuntimeAddToGroupOp>(op))
       return isToken ? -1 : 0;
 
     return 0;

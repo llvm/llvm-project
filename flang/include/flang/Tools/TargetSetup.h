@@ -94,6 +94,10 @@ namespace Fortran::tools {
   if (targetTriple.isOSWindows())
     targetCharacteristics.set_isOSWindows(true);
 
+  // Currently the integer kind happens to be the same as the byte size
+  targetCharacteristics.set_integerKindForPointer(
+      targetTriple.getArchPointerBitWidth() / 8);
+
   // TODO: use target machine data layout to set-up the target characteristics
   // type size and alignment info.
 }

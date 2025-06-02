@@ -111,6 +111,68 @@ struct WmmaConstantOpToSPIRVLowering final
   }
 };
 
+/// Converts GPU MMA ExtractOp to CompositeExtract SPIR-V KHR/NV cooperative
+/// matrix ops.
+struct WmmaExtractOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaExtractThreadLocalOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupMmaExtractThreadLocalOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value matrix = adaptor.getMatrix();
+    auto coopType =
+        getTypeConverter()->convertType<spirv::CooperativeMatrixType>(
+            matrix.getType());
+    if (!coopType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    SmallVector<int32_t> intValues;
+    for (Value val : op.getIndices()) {
+      if (auto constOp = val.getDefiningOp<arith::ConstantIndexOp>()) {
+        intValues.push_back(static_cast<int32_t>(constOp.value()));
+      } else {
+        return rewriter.notifyMatchFailure(op, "indices must be constants");
+      }
+    }
+
+    Type elementType = coopType.getElementType();
+    rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
+        op, elementType, matrix, rewriter.getI32ArrayAttr(intValues));
+    return success();
+  }
+};
+
+/// Converts GPU MMA InsertOp to CompositeInsert SPIR-V KHR/NV cooperative
+/// matrix ops.
+struct WmmaInsertOpToSPIRVLowering final
+    : OpConversionPattern<gpu::SubgroupMmaInsertThreadLocalOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupMmaInsertThreadLocalOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value value = adaptor.getValue();
+    Value matrix = adaptor.getMatrix();
+    auto coopType = getTypeConverter()->convertType(matrix.getType());
+    if (!coopType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    SmallVector<int32_t> intValues;
+    for (Value val : op.getIndices()) {
+      if (auto constOp = val.getDefiningOp<arith::ConstantIndexOp>()) {
+        intValues.push_back(static_cast<int32_t>(constOp.value()));
+      } else {
+        return rewriter.notifyMatchFailure(op, "indices must be constants");
+      }
+    }
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
+        op, coopType, value, matrix, rewriter.getI32ArrayAttr(intValues));
+    return success();
+  }
+};
+
 /// Converts elementwise ops to SPIR-V cooperative matrix elementwise ops for
 /// the default case.
 struct WmmaElementwiseOpToSPIRVDefaultLowering final
@@ -296,6 +358,7 @@ void mlir::populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(
   MLIRContext *context = patterns.getContext();
   patterns.add<khr::WmmaLoadOpToSPIRVLowering, khr::WmmaMmaOpToSPIRVLowering,
                khr::WmmaStoreOpToSPIRVLowering, WmmaConstantOpToSPIRVLowering,
+               WmmaExtractOpToSPIRVLowering, WmmaInsertOpToSPIRVLowering,
                WmmaElementwiseOpToSPIRVDefaultLowering>(converter, context);
   // Give the following patterns higher benefit to prevail over the default one.
   patterns.add<WmmaElementwiseOpToSPIRVScalarMulLowering>(converter, context,

@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include <string>
 
@@ -44,6 +45,8 @@ public:
   ModuleSpec moduleSpec() {
     return ModuleSpec(FileSpec(), UUID(), dataBuffer());
   }
+
+  llvm::Expected<llvm::sys::fs::TempFile> writeToTemporaryFile();
 
 private:
   TestFile(std::string &&Buffer) : Buffer(std::move(Buffer)) {}

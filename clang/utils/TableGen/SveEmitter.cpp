@@ -252,9 +252,7 @@ public:
   /// a short form without the type-specifiers, e.g. 'svld1(..)' instead of
   /// 'svld1_u32(..)'.
   static bool isOverloadedIntrinsic(StringRef Name) {
-    auto BrOpen = Name.find('[');
-    auto BrClose = Name.find(']');
-    return BrOpen != std::string::npos && BrClose != std::string::npos;
+    return Name.contains('[') && Name.contains(']');
   }
 
   /// Return true if the intrinsic takes a splat operand.
@@ -1275,16 +1273,14 @@ void SVEEmitter::createCoreHeaderIntrinsics(raw_ostream &OS,
   // - Architectural guard (i.e. does it require SVE2 or SVE2_AES)
   // - Class (is intrinsic overloaded or not)
   // - Intrinsic name
-  std::stable_sort(Defs.begin(), Defs.end(),
-                   [](const std::unique_ptr<Intrinsic> &A,
-                      const std::unique_ptr<Intrinsic> &B) {
-                     auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
-                       return std::make_tuple(
-                           I->getSVEGuard().str() + I->getSMEGuard().str(),
-                           (unsigned)I->getClassKind(), I->getName());
-                     };
-                     return ToTuple(A) < ToTuple(B);
-                   });
+  llvm::stable_sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
+                             const std::unique_ptr<Intrinsic> &B) {
+    auto ToTuple = [](const std::unique_ptr<Intrinsic> &I) {
+      return std::make_tuple(I->getSVEGuard().str() + I->getSMEGuard().str(),
+                             (unsigned)I->getClassKind(), I->getName());
+    };
+    return ToTuple(A) < ToTuple(B);
+  });
 
   // Actually emit the intrinsic declarations.
   for (auto &I : Defs)

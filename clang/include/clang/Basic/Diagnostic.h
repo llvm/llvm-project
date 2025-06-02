@@ -92,18 +92,15 @@ public:
   /// modification is known.
   FixItHint() = default;
 
-  bool isNull() const {
-    return !RemoveRange.isValid();
-  }
+  bool isNull() const { return !RemoveRange.isValid(); }
 
   /// Create a code modification hint that inserts the given
   /// code string at a specific location.
-  static FixItHint CreateInsertion(SourceLocation InsertionLoc,
-                                   StringRef Code,
+  static FixItHint CreateInsertion(SourceLocation InsertionLoc, StringRef Code,
                                    bool BeforePreviousInsertions = false) {
     FixItHint Hint;
     Hint.RemoveRange =
-      CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
+        CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
     Hint.CodeToInsert = std::string(Code);
     Hint.BeforePreviousInsertions = BeforePreviousInsertions;
     return Hint;
@@ -111,12 +108,13 @@ public:
 
   /// Create a code modification hint that inserts the given
   /// code from \p FromRange at a specific location.
-  static FixItHint CreateInsertionFromRange(SourceLocation InsertionLoc,
-                                            CharSourceRange FromRange,
-                                        bool BeforePreviousInsertions = false) {
+  static FixItHint
+  CreateInsertionFromRange(SourceLocation InsertionLoc,
+                           CharSourceRange FromRange,
+                           bool BeforePreviousInsertions = false) {
     FixItHint Hint;
     Hint.RemoveRange =
-      CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
+        CharSourceRange::getCharRange(InsertionLoc, InsertionLoc);
     Hint.InsertFromRange = FromRange;
     Hint.BeforePreviousInsertions = BeforePreviousInsertions;
     return Hint;
@@ -143,8 +141,7 @@ public:
     return Hint;
   }
 
-  static FixItHint CreateReplacement(SourceRange RemoveRange,
-                                     StringRef Code) {
+  static FixItHint CreateReplacement(SourceRange RemoveRange, StringRef Code) {
     return CreateReplacement(CharSourceRange::getTokenRange(RemoveRange), Code);
   }
 };
@@ -333,7 +330,7 @@ private:
   unsigned ConstexprBacktraceLimit = 0;
 
   IntrusiveRefCntPtr<DiagnosticIDs> Diags;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions &DiagOpts;
   DiagnosticConsumer *Client = nullptr;
   std::unique_ptr<DiagnosticConsumer> Owner;
   SourceManager *SourceMgr = nullptr;
@@ -553,13 +550,11 @@ private:
   /// avoid redundancy across arguments.
   ///
   /// This is a hack to avoid a layering violation between libbasic and libsema.
-  using ArgToStringFnTy = void (*)(
-      ArgumentKind Kind, intptr_t Val,
-      StringRef Modifier, StringRef Argument,
-      ArrayRef<ArgumentValue> PrevArgs,
-      SmallVectorImpl<char> &Output,
-      void *Cookie,
-      ArrayRef<intptr_t> QualTypeVals);
+  using ArgToStringFnTy = void (*)(ArgumentKind Kind, intptr_t Val,
+                                   StringRef Modifier, StringRef Argument,
+                                   ArrayRef<ArgumentValue> PrevArgs,
+                                   SmallVectorImpl<char> &Output, void *Cookie,
+                                   ArrayRef<intptr_t> QualTypeVals);
 
   void *ArgToStringCookie = nullptr;
   ArgToStringFnTy ArgToStringFn;
@@ -571,7 +566,7 @@ private:
 
 public:
   explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
-                             IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+                             DiagnosticOptions &DiagOpts,
                              DiagnosticConsumer *client = nullptr,
                              bool ShouldOwnClient = true);
   DiagnosticsEngine(const DiagnosticsEngine &) = delete;
@@ -587,7 +582,7 @@ public:
   }
 
   /// Retrieve the diagnostic options.
-  DiagnosticOptions &getDiagnosticOptions() const { return *DiagOpts; }
+  DiagnosticOptions &getDiagnosticOptions() const { return DiagOpts; }
 
   using diag_mapping_range = llvm::iterator_range<DiagState::const_iterator>;
 
@@ -656,9 +651,7 @@ public:
 
   /// Retrieve the maximum number of template instantiation
   /// notes to emit along with a given diagnostic.
-  unsigned getTemplateBacktraceLimit() const {
-    return TemplateBacktraceLimit;
-  }
+  unsigned getTemplateBacktraceLimit() const { return TemplateBacktraceLimit; }
 
   /// Specify the maximum number of constexpr evaluation
   /// notes to emit along with a given diagnostic.
@@ -744,9 +737,7 @@ public:
   /// fails.
   ///
   /// By default, we show all candidates.
-  void setShowOverloads(OverloadsShown Val) {
-    ShowOverloads = Val;
-  }
+  void setShowOverloads(OverloadsShown Val) { ShowOverloads = Val; }
   OverloadsShown getShowOverloads() const { return ShowOverloads; }
 
   /// When a call or operator fails, print out up to this many candidate
@@ -885,9 +876,7 @@ public:
   unsigned getNumErrors() const { return NumErrors; }
   unsigned getNumWarnings() const { return NumWarnings; }
 
-  void setNumWarnings(unsigned NumWarnings) {
-    this->NumWarnings = NumWarnings;
-  }
+  void setNumWarnings(unsigned NumWarnings) { this->NumWarnings = NumWarnings; }
 
   /// Return an ID for a diagnostic with the specified format string and
   /// level.
@@ -907,9 +896,8 @@ public:
 
   /// Converts a diagnostic argument (as an intptr_t) into the string
   /// that represents it.
-  void ConvertArgToString(ArgumentKind Kind, intptr_t Val,
-                          StringRef Modifier, StringRef Argument,
-                          ArrayRef<ArgumentValue> PrevArgs,
+  void ConvertArgToString(ArgumentKind Kind, intptr_t Val, StringRef Modifier,
+                          StringRef Argument, ArrayRef<ArgumentValue> PrevArgs,
                           SmallVectorImpl<char> &Output,
                           ArrayRef<intptr_t> QualTypeVals) const {
     ArgToStringFn(Kind, Val, Modifier, Argument, PrevArgs, Output,
@@ -1074,8 +1062,9 @@ class DiagnosticErrorTrap {
   unsigned NumUnrecoverableErrors;
 
 public:
-  explicit DiagnosticErrorTrap(DiagnosticsEngine &Diag)
-      : Diag(Diag) { reset(); }
+  explicit DiagnosticErrorTrap(DiagnosticsEngine &Diag) : Diag(Diag) {
+    reset();
+  }
 
   /// Determine whether any errors have occurred since this
   /// object instance was created.
@@ -1278,7 +1267,8 @@ protected:
   bool Emit() {
     // If this diagnostic is inactive, then its soul was stolen by the copy ctor
     // (or by a subclass, as in SemaDiagnosticBuilder).
-    if (!isActive()) return false;
+    if (!isActive())
+      return false;
 
     // Process the diagnostic.
     bool Result = DiagObj->EmitDiagnostic(*this, IsForceEmit);
@@ -1553,7 +1543,9 @@ public:
   unsigned getID() const { return DiagID; }
   const SourceLocation &getLocation() const { return DiagLoc; }
   bool hasSourceManager() const { return DiagObj->hasSourceManager(); }
-  SourceManager &getSourceManager() const { return DiagObj->getSourceManager();}
+  SourceManager &getSourceManager() const {
+    return DiagObj->getSourceManager();
+  }
 
   unsigned getNumArgs() const { return DiagStorage.NumDiagArgs; }
 
@@ -1709,8 +1701,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StoredDiagnostic &);
 /// formats and prints fully processed diagnostics.
 class DiagnosticConsumer {
 protected:
-  unsigned NumWarnings = 0;       ///< Number of warnings reported
-  unsigned NumErrors = 0;         ///< Number of errors reported
+  unsigned NumWarnings = 0; ///< Number of warnings reported
+  unsigned NumErrors = 0;   ///< Number of errors reported
 
 public:
   DiagnosticConsumer() = default;

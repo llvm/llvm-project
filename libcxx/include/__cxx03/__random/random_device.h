@@ -47,11 +47,11 @@ public:
   typedef unsigned result_type;
 
   // generator characteristics
-  static _LIBCPP_CONSTEXPR const result_type _Min = 0;
-  static _LIBCPP_CONSTEXPR const result_type _Max = 0xFFFFFFFFu;
+  static const result_type _Min = 0;
+  static const result_type _Max = 0xFFFFFFFFu;
 
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  _LIBCPP_HIDE_FROM_ABI static result_type min() { return _Min; }
+  _LIBCPP_HIDE_FROM_ABI static result_type max() { return _Max; }
 
   // constructors
   explicit random_device(const string& __token = "/dev/urandom");

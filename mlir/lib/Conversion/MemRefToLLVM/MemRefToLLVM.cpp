@@ -35,6 +35,9 @@ namespace mlir {
 
 using namespace mlir;
 
+static constexpr LLVM::GEPNoWrapFlags kNoWrapFlags =
+    LLVM::GEPNoWrapFlags::inbounds | LLVM::GEPNoWrapFlags::nuw;
+
 namespace {
 
 static bool isStaticStrideOrOffset(int64_t strideOrOffset) {
@@ -420,8 +423,8 @@ struct AssumeAlignmentOpLowering
     auto loc = op.getLoc();
 
     auto srcMemRefType = cast<MemRefType>(op.getMemref().getType());
-    Value ptr = getStridedElementPtr(loc, srcMemRefType, memref, /*indices=*/{},
-                                     rewriter);
+    Value ptr = getStridedElementPtr(rewriter, loc, srcMemRefType, memref,
+                                     /*indices=*/{});
 
     // Emit llvm.assume(true) ["align"(memref, alignment)].
     // This is more direct than ptrtoint-based checks, is explicitly supported,
@@ -432,8 +435,7 @@ struct AssumeAlignmentOpLowering
         createIndexAttrConstant(rewriter, loc, getIndexType(), alignment);
     rewriter.create<LLVM::AssumeOp>(loc, trueCond, LLVM::AssumeAlignTag(), ptr,
                                     alignmentConst);
-
-    rewriter.eraseOp(op);
+    rewriter.replaceOp(op, memref);
     return success();
   }
 };
@@ -644,8 +646,8 @@ struct GenericAtomicRMWOpLowering
     // Compute the loaded value and branch to the loop block.
     rewriter.setInsertionPointToEnd(initBlock);
     auto memRefType = cast<MemRefType>(atomicOp.getMemref().getType());
-    auto dataPtr = getStridedElementPtr(loc, memRefType, adaptor.getMemref(),
-                                        adaptor.getIndices(), rewriter);
+    auto dataPtr = getStridedElementPtr(
+        rewriter, loc, memRefType, adaptor.getMemref(), adaptor.getIndices());
     Value init = rewriter.create<LLVM::LoadOp>(
         loc, typeConverter->convertType(memRefType.getElementType()), dataPtr);
     rewriter.create<LLVM::BrOp>(loc, init, loopBlock);
@@ -829,9 +831,12 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = loadOp.getMemRefType();
 
-    Value dataPtr =
-        getStridedElementPtr(loadOp.getLoc(), type, adaptor.getMemref(),
-                             adaptor.getIndices(), rewriter);
+    // Per memref.load spec, the indices must be in-bounds:
+    // 0 <= idx < dim_size, and additionally all offsets are non-negative,
+    // hence inbounds and nuw are used when lowering to llvm.getelementptr.
+    Value dataPtr = getStridedElementPtr(rewriter, loadOp.getLoc(), type,
+                                         adaptor.getMemref(),
+                                         adaptor.getIndices(), kNoWrapFlags);
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr, 0,
         false, loadOp.getNontemporal());
@@ -849,8 +854,12 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = op.getMemRefType();
 
-    Value dataPtr = getStridedElementPtr(op.getLoc(), type, adaptor.getMemref(),
-                                         adaptor.getIndices(), rewriter);
+    // Per memref.store spec, the indices must be in-bounds:
+    // 0 <= idx < dim_size, and additionally all offsets are non-negative,
+    // hence inbounds and nuw are used when lowering to llvm.getelementptr.
+    Value dataPtr =
+        getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
+                             adaptor.getIndices(), kNoWrapFlags);
     rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
                                                0, false, op.getNontemporal());
     return success();
@@ -868,8 +877,8 @@ struct PrefetchOpLowering : public LoadStoreOpLowering<memref::PrefetchOp> {
     auto type = prefetchOp.getMemRefType();
     auto loc = prefetchOp.getLoc();
 
-    Value dataPtr = getStridedElementPtr(loc, type, adaptor.getMemref(),
-                                         adaptor.getIndices(), rewriter);
+    Value dataPtr = getStridedElementPtr(
+        rewriter, loc, type, adaptor.getMemref(), adaptor.getIndices());
 
     // Replace with llvm.prefetch.
     IntegerAttr isWrite = rewriter.getI32IntegerAttr(prefetchOp.getIsWrite());
@@ -890,7 +899,7 @@ struct RankOpLowering : public ConvertOpToLLVMPattern<memref::RankOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Type operandType = op.getMemref().getType();
-    if (dyn_cast<UnrankedMemRefType>(operandType)) {
+    if (isa<UnrankedMemRefType>(operandType)) {
       UnrankedMemRefDescriptor desc(adaptor.getMemref());
       rewriter.replaceOp(op, {desc.rank(rewriter, loc)});
       return success();
@@ -1809,8 +1818,8 @@ struct AtomicRMWOpLowering : public LoadStoreOpLowering<memref::AtomicRMWOp> {
     if (failed(memRefType.getStridesAndOffset(strides, offset)))
       return failure();
     auto dataPtr =
-        getStridedElementPtr(atomicOp.getLoc(), memRefType, adaptor.getMemref(),
-                             adaptor.getIndices(), rewriter);
+        getStridedElementPtr(rewriter, atomicOp.getLoc(), memRefType,
+                             adaptor.getMemref(), adaptor.getIndices());
     rewriter.replaceOpWithNewOp<LLVM::AtomicRMWOp>(
         atomicOp, *maybeKind, dataPtr, adaptor.getValue(),
         LLVM::AtomicOrdering::acq_rel);

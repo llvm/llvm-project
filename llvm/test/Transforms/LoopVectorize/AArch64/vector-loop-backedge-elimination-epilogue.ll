@@ -18,11 +18,10 @@ define void @test_remove_vector_loop_region_epilogue(ptr %dst, i1 %c)  {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 16
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 32
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i32 16
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i32 32
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i32 48
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[TMP3]], align 4

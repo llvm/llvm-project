@@ -931,13 +931,10 @@ void PromoteMem2Reg::run() {
   // hasn't traversed.  If this is the case, the PHI nodes may not
   // have incoming values for all predecessors.  Loop over all PHI nodes we have
   // created, inserting poison values if they are missing any incoming values.
-  for (DenseMap<std::pair<unsigned, unsigned>, PHINode *>::iterator
-           I = NewPhiNodes.begin(),
-           E = NewPhiNodes.end();
-       I != E; ++I) {
+  for (const auto &PhiNode : NewPhiNodes) {
     // We want to do this once per basic block.  As such, only process a block
     // when we find the PHI that is the first entry in the block.
-    PHINode *SomePHI = I->second;
+    PHINode *SomePHI = PhiNode.second;
     BasicBlock *BB = SomePHI->getParent();
     if (&BB->front() != SomePHI)
       continue;

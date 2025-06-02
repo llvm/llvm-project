@@ -79,11 +79,6 @@ llvm.func @incompatible_integer_type_for_float_attr() -> i32 {
 
 // -----
 
-// expected-error @below{{unsupported constant value}}
-llvm.mlir.global internal constant @test([2.5, 7.4]) : !llvm.array<2 x f64>
-
-// -----
-
 // expected-error @below{{LLVM attribute 'readonly' does not expect a value}}
 llvm.func @passthrough_unexpected_value() attributes {passthrough = [["readonly", "42"]]}
 

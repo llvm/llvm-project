@@ -15,15 +15,17 @@
 #include "src/sys/mman/shm_unlink.h"
 #include "src/unistd/close.h"
 #include "src/unistd/ftruncate.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 #include <sys/syscall.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcShmTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 // since shm_open/shm_unlink are wrappers around open/unlink, we only focus on
 // testing basic cases and name conversions.
 
-TEST(LlvmLibcShmTest, Basic) {
+TEST_F(LlvmLibcShmTest, Basic) {
   const char *name = "/test_shm_open";
   int fd;
   ASSERT_THAT(fd = LIBC_NAMESPACE::shm_open(name, O_CREAT | O_RDWR, 0666),
@@ -57,7 +59,7 @@ TEST(LlvmLibcShmTest, Basic) {
   ASSERT_THAT(LIBC_NAMESPACE::shm_unlink(name), Succeeds());
 }
 
-TEST(LlvmLibcShmTest, NameConversion) {
+TEST_F(LlvmLibcShmTest, NameConversion) {
   const char *name = "////test_shm_open";
   int fd;
   ASSERT_THAT(fd = LIBC_NAMESPACE::shm_open(name, O_CREAT | O_RDWR, 0666),

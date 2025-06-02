@@ -205,9 +205,7 @@ public:
   void EndOfMainFile() override {
     for (auto &It : Out->IWYUExportBy) {
       llvm::sort(It.getSecond());
-      It.getSecond().erase(
-          std::unique(It.getSecond().begin(), It.getSecond().end()),
-          It.getSecond().end());
+      It.getSecond().erase(llvm::unique(It.getSecond()), It.getSecond().end());
     }
     Out->Arena.emplace_back(std::move(Arena));
   }

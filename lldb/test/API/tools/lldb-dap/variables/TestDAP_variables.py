@@ -116,7 +116,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.create_debug_adapter()
         self.assertTrue(os.path.exists(program), "executable must exist")
 
-        self.launch(program=program, initCommands=initCommands)
+        self.launch(program, initCommands=initCommands)
 
         functions = ["main"]
         breakpoint_ids = self.set_function_breakpoints(functions)

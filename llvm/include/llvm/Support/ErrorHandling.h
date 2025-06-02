@@ -40,11 +40,11 @@ typedef void (*fatal_error_handler_t)(void *user_data, const char *reason,
 ///
 /// \param user_data - An argument which will be passed to the install error
 /// handler.
-void install_fatal_error_handler(fatal_error_handler_t handler,
-                                 void *user_data = nullptr);
+LLVM_ABI void install_fatal_error_handler(fatal_error_handler_t handler,
+                                          void *user_data = nullptr);
 
 /// Restores default error handling behaviour.
-void remove_fatal_error_handler();
+LLVM_ABI void remove_fatal_error_handler();
 
 /// ScopedFatalErrorHandler - This is a simple helper class which just
 /// calls install_fatal_error_handler in its constructor and
@@ -60,12 +60,12 @@ struct ScopedFatalErrorHandler {
 
 /// @deprecated Use reportFatalInternalError() or reportFatalUsageError()
 /// instead.
-[[noreturn]] void report_fatal_error(const char *reason,
-                                     bool gen_crash_diag = true);
-[[noreturn]] void report_fatal_error(StringRef reason,
-                                     bool gen_crash_diag = true);
-[[noreturn]] void report_fatal_error(const Twine &reason,
-                                     bool gen_crash_diag = true);
+[[noreturn]] LLVM_ABI void report_fatal_error(const char *reason,
+                                              bool gen_crash_diag = true);
+[[noreturn]] LLVM_ABI void report_fatal_error(StringRef reason,
+                                              bool gen_crash_diag = true);
+[[noreturn]] LLVM_ABI void report_fatal_error(const Twine &reason,
+                                              bool gen_crash_diag = true);
 
 /// Report a fatal error that likely indicates a bug in LLVM. It serves a
 /// similar purpose as an assertion, but is always enabled, regardless of the
@@ -74,9 +74,9 @@ struct ScopedFatalErrorHandler {
 /// This will call installed error handlers (or print the message by default)
 /// and then abort. This will produce a crash trace and *will* ask users to
 /// report an LLVM bug.
-[[noreturn]] void reportFatalInternalError(const char *reason);
-[[noreturn]] void reportFatalInternalError(StringRef reason);
-[[noreturn]] void reportFatalInternalError(const Twine &reason);
+[[noreturn]] LLVM_ABI void reportFatalInternalError(const char *reason);
+[[noreturn]] LLVM_ABI void reportFatalInternalError(StringRef reason);
+[[noreturn]] LLVM_ABI void reportFatalInternalError(const Twine &reason);
 
 /// Report a fatal error that does not indicate a bug in LLVM.
 ///
@@ -92,9 +92,9 @@ struct ScopedFatalErrorHandler {
 /// This will call installed error handlers (or print the message by default)
 /// and then exit with code 1. It will not produce a crash trace and will
 /// *not* ask users to report an LLVM bug.
-[[noreturn]] void reportFatalUsageError(const char *reason);
-[[noreturn]] void reportFatalUsageError(StringRef reason);
-[[noreturn]] void reportFatalUsageError(const Twine &reason);
+[[noreturn]] LLVM_ABI void reportFatalUsageError(const char *reason);
+[[noreturn]] LLVM_ABI void reportFatalUsageError(StringRef reason);
+[[noreturn]] LLVM_ABI void reportFatalUsageError(const Twine &reason);
 
 /// Installs a new bad alloc error handler that should be used whenever a
 /// bad alloc error, e.g. failing malloc/calloc, is encountered by LLVM.
@@ -112,13 +112,13 @@ struct ScopedFatalErrorHandler {
 ///
 /// \param user_data - An argument which will be passed to the installed error
 /// handler.
-void install_bad_alloc_error_handler(fatal_error_handler_t handler,
-                                     void *user_data = nullptr);
+LLVM_ABI void install_bad_alloc_error_handler(fatal_error_handler_t handler,
+                                              void *user_data = nullptr);
 
 /// Restores default bad alloc error handling behavior.
-void remove_bad_alloc_error_handler();
+LLVM_ABI void remove_bad_alloc_error_handler();
 
-void install_out_of_memory_new_handler();
+LLVM_ABI void install_out_of_memory_new_handler();
 
 /// Reports a bad alloc error, calling any user defined bad alloc
 /// error handler. In contrast to the generic 'report_fatal_error'
@@ -132,15 +132,15 @@ void install_out_of_memory_new_handler();
 /// If no error handler is installed (default), throws a bad_alloc exception
 /// if LLVM is compiled with exception support. Otherwise prints the error
 /// to standard error and calls abort().
-[[noreturn]] void report_bad_alloc_error(const char *Reason,
-                                         bool GenCrashDiag = true);
+[[noreturn]] LLVM_ABI void report_bad_alloc_error(const char *Reason,
+                                                  bool GenCrashDiag = true);
 
 /// This function calls abort(), and prints the optional message to stderr.
 /// Use the llvm_unreachable macro (that adds location info), instead of
 /// calling this function directly.
-[[noreturn]] void llvm_unreachable_internal(const char *msg = nullptr,
-                                            const char *file = nullptr,
-                                            unsigned line = 0);
+[[noreturn]] LLVM_ABI void llvm_unreachable_internal(const char *msg = nullptr,
+                                                     const char *file = nullptr,
+                                                     unsigned line = 0);
 } // namespace llvm
 
 /// Marks that the current location is not supposed to be reachable.

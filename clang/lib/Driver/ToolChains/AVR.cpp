@@ -9,11 +9,8 @@
 #include "AVR.h"
 #include "CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -520,19 +517,9 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(TC, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   // If the family name is known, we can link with the device-specific libgcc.
   // Without it, libgcc will simply not be linked. This matches avr-gcc

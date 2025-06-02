@@ -28,10 +28,6 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
-  case FK_PCRel_1:
-  case FK_PCRel_2:
-  case FK_PCRel_4:
-  case FK_PCRel_8:
     return Value;
   case VE::fixup_ve_hi32:
   case VE::fixup_ve_pc_hi32:
@@ -60,14 +56,11 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
   case FK_Data_1:
-  case FK_PCRel_1:
     return 1;
   case FK_Data_2:
-  case FK_PCRel_2:
     return 2;
     return 4;
   case FK_Data_4:
-  case FK_PCRel_4:
   case VE::fixup_ve_reflong:
   case VE::fixup_ve_srel32:
   case VE::fixup_ve_hi32:
@@ -129,9 +122,8 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override {
+  bool shouldForceRelocation(const MCFixup &Fixup,
+                             const MCValue &Target) override {
     switch ((VE::Fixups)Fixup.getKind()) {
     default:
       return false;
@@ -177,10 +169,9 @@ public:
   ELFVEAsmBackend(const Target &T, Triple::OSType OSType)
       : VEAsmBackend(T), OSType(OSType) {}
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+  void applyFixup(const MCFragment &, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
+                  uint64_t Value, bool IsResolved) override {
     Value = adjustFixupValue(Fixup.getKind(), Value);
     if (!Value)
       return; // Doesn't change encoding.

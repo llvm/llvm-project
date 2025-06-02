@@ -36,10 +36,8 @@ define <16 x i8> @load_null_offset() {
 ; CHECK-LABEL: load_null_offset:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl 11, %eax
-; CHECK-NEXT:    movd %eax, %xmm1
-; CHECK-NEXT:    pslld $8, %xmm1
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    pslld $8, %xmm0
 ; CHECK-NEXT:    retq
   %gep.null = getelementptr i8, ptr null, i64 11
   %load = load i8, ptr %gep.null, align 1

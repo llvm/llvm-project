@@ -9,6 +9,7 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/SeedCollection.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAcceptOrRevert.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAlwaysAccept.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAlwaysRevert.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionSave.h"
 
 namespace llvm::sandboxir {

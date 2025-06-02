@@ -100,11 +100,7 @@ public:
     unsigned Column;
 
     bool operator<(const Position &other) const {
-      if (Line < other.Line)
-        return true;
-      if (Line > other.Line)
-        return false;
-      return Column < other.Column;
+      return std::tie(Line, Column) < std::tie(other.Line, other.Column);
     }
 
     static Position GetBeginSpelling(const SourceManager &SM,
@@ -770,9 +766,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
 
     // The AST unit populates its own diagnostics engine rather than ours.
-    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(
-        new DiagnosticsEngine(Diags->getDiagnosticIDs(),
-                              &Diags->getDiagnosticOptions()));
+    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(new DiagnosticsEngine(
+        Diags->getDiagnosticIDs(), Diags->getDiagnosticOptions()));
     ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
 
     // FIXME: What if the input is a memory buffer?
@@ -780,7 +775,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
-        ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
+        nullptr, ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
     if (!AST)
       return false;
 
@@ -846,8 +841,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, Diags,
-        CI.getFileSystemOpts(), CI.getHeaderSearchOpts(), &CI.getLangOpts());
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, nullptr,
+        Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts(),
+        &CI.getLangOpts());
 
     if (!AST)
       return false;

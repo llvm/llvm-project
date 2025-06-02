@@ -278,8 +278,9 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
                    << (IsSourceInst ? "input " : "output ")
                    << "Dag. No validation time check possible for values of "
                       "fixed immediate.\n");
-      } else
+      } else {
         llvm_unreachable("Unhandled CompressPat argument type!");
+      }
     }
   }
 }

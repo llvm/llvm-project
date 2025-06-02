@@ -1328,7 +1328,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   // Worst case is octal, with showbase enabled. Note that octal is always
   // printed as an unsigned value.
   using _Unsigned = typename make_unsigned<_Integral>::type;
-  _LIBCPP_CONSTEXPR const unsigned __nbuf =
+  const unsigned __nbuf =
       (numeric_limits<_Unsigned>::digits / 3)          // 1 char per 3 bits
       + ((numeric_limits<_Unsigned>::digits % 3) != 0) // round up
       + 2;                                             // base prefix + terminating null character
@@ -3140,7 +3140,7 @@ template <class _Codecvt,
           class _Elem      = wchar_t,
           class _WideAlloc = allocator<_Elem>,
           class _ByteAlloc = allocator<char> >
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert {
+class _LIBCPP_TEMPLATE_VIS wstring_convert {
 public:
   typedef basic_string<char, char_traits<char>, _ByteAlloc> byte_string;
   typedef basic_string<_Elem, char_traits<_Elem>, _WideAlloc> wide_string;
@@ -3155,11 +3155,10 @@ private:
   size_t __cvtcount_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXPLICIT_SINCE_CXX14 wstring_convert(_Codecvt* __pcvt = new _Codecvt);
+  _LIBCPP_HIDE_FROM_ABI wstring_convert(_Codecvt* __pcvt = new _Codecvt);
 
   _LIBCPP_HIDE_FROM_ABI wstring_convert(_Codecvt* __pcvt, state_type __state);
-  _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
-  wstring_convert(const byte_string& __byte_err, const wide_string& __wide_err = wide_string());
+  _LIBCPP_HIDE_FROM_ABI wstring_convert(const byte_string& __byte_err, const wide_string& __wide_err = wide_string());
   _LIBCPP_HIDE_FROM_ABI ~wstring_convert();
 
   wstring_convert(const wstring_convert& __wc)            = delete;
@@ -3329,7 +3328,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::to_bytes(const _Elem* 
 }
 
 template <class _Codecvt, class _Elem = wchar_t, class _Tr = char_traits<_Elem> >
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 wbuffer_convert : public basic_streambuf<_Elem, _Tr> {
+class _LIBCPP_TEMPLATE_VIS wbuffer_convert : public basic_streambuf<_Elem, _Tr> {
 public:
   // types:
   typedef _Elem char_type;
@@ -3356,7 +3355,7 @@ private:
   bool __always_noconv_;
 
 public:
-  _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf = nullptr, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
 
   _LIBCPP_HIDE_FROM_ABI ~wbuffer_convert();

@@ -600,7 +600,7 @@ BoltAddressTranslation::getSecondaryEntryPointId(uint64_t Address,
   if (FunctionIt == SecondaryEntryPointsMap.end())
     return 0;
   const std::vector<uint32_t> &Offsets = FunctionIt->second;
-  auto OffsetIt = std::find(Offsets.begin(), Offsets.end(), Offset);
+  auto OffsetIt = llvm::find(Offsets, Offset);
   if (OffsetIt == Offsets.end())
     return 0;
   // Adding one here because main entry point is not stored in BAT, and

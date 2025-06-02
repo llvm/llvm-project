@@ -1129,7 +1129,7 @@ enum PredefinedTypeIDs {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 // \brief SVE types with auto numeration
 #define SVE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 // \brief  PowerPC MMA types with auto numeration
 #define PPC_VECTOR_TYPE(Name, Id, Size) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/PPCTypes.def"

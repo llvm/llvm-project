@@ -1734,6 +1734,10 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
     if (Processed[i] || Real->getNumOperands() < 2)
       continue;
 
+    // Can only combined integer reductions at the moment.
+    if (!ReductionInfo[Real].second->getType()->isIntegerTy())
+      continue;
+
     RealPHI = ReductionInfo[Real].first;
     ImagPHI = nullptr;
     PHIsFound = false;

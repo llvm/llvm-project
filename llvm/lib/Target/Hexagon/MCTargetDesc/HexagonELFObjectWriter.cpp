@@ -28,8 +28,8 @@ private:
 public:
   HexagonELFObjectWriter(uint8_t OSABI, StringRef C);
 
-  unsigned getRelocType(MCContext &Ctx, MCValue const &Target,
-                        MCFixup const &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 }
 
@@ -38,9 +38,8 @@ HexagonELFObjectWriter::HexagonELFObjectWriter(uint8_t OSABI, StringRef C)
                               /*HasRelocationAddend*/ true),
       CPU(C) {}
 
-unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
-                                              MCValue const &Target,
-                                              MCFixup const &Fixup,
+unsigned HexagonELFObjectWriter::getRelocType(const MCFixup &Fixup,
+                                              const MCValue &Target,
                                               bool IsPCRel) const {
   auto Variant = HexagonMCExpr::VariantKind(Target.getSpecifier());
   switch (Variant) {

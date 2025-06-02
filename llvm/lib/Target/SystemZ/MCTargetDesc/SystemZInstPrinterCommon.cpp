@@ -148,22 +148,38 @@ void SystemZInstPrinterCommon::printU48ImmOperand(const MCInst *MI, int OpNum,
   printUImmOperand<48>(MI, OpNum, O);
 }
 
-void SystemZInstPrinterCommon::printPCRelOperand(const MCInst *MI, int OpNum,
+void SystemZInstPrinterCommon::printPCRelOperand(const MCInst *MI,
+                                                 uint64_t Address, int OpNum,
                                                  raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
+
+  // If the label has already been resolved to an immediate offset (say, when
+  // we're running the disassembler), just print the immediate.
   if (MO.isImm()) {
-    WithMarkup M = markup(O, Markup::Immediate);
-    O << "0x";
-    O.write_hex(MO.getImm());
-  } else
+    int64_t Offset = MO.getImm();
+    if (PrintBranchImmAsAddress)
+      markup(O, Markup::Target) << formatHex(Address + Offset);
+    else
+      markup(O, Markup::Immediate) << formatImm(Offset);
+    return;
+  }
+
+  // If the branch target is simply an address then print it in hex.
+  const MCConstantExpr *BranchTarget = dyn_cast<MCConstantExpr>(MO.getExpr());
+  int64_t TargetAddress;
+  if (BranchTarget && BranchTarget->evaluateAsAbsolute(TargetAddress)) {
+    markup(O, Markup::Target) << formatHex((uint64_t)TargetAddress);
+  } else {
+    // Otherwise, just print the expression.
     MO.getExpr()->print(O, &MAI);
+  }
 }
 
 void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
                                                     uint64_t Address, int OpNum,
                                                     raw_ostream &O) {
   // Output the PC-relative operand.
-  printPCRelOperand(MI, OpNum, O);
+  printPCRelOperand(MI, Address, OpNum, O);
 
   // Output the TLS marker if present.
   if ((unsigned)OpNum + 1 < MI->getNumOperands()) {

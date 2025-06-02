@@ -886,6 +886,10 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
   OperandValueKind OpInfo = OK_AnyValue;
   OperandValueProperties OpProps = OP_None;
 
+  // undef/poison don't materialize constants.
+  if (isa<UndefValue>(V))
+    return {OK_AnyValue, OP_None};
+
   if (isa<ConstantInt>(V) || isa<ConstantFP>(V)) {
     if (const auto *CI = dyn_cast<ConstantInt>(V)) {
       if (CI->getValue().isPowerOf2())
@@ -1395,9 +1399,8 @@ bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
   return TTIImpl->preferAlternateOpcodeVectorization();
 }
 
-bool TargetTransformInfo::preferPredicatedReductionSelect(unsigned Opcode,
-                                                          Type *Ty) const {
-  return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty);
+bool TargetTransformInfo::preferPredicatedReductionSelect() const {
+  return TTIImpl->preferPredicatedReductionSelect();
 }
 
 bool TargetTransformInfo::preferEpilogueVectorization() const {

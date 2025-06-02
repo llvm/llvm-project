@@ -60,7 +60,7 @@ private:
   }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR istreambuf_iterator() _NOEXCEPT : __sbuf_(nullptr) {}
+  _LIBCPP_HIDE_FROM_ABI istreambuf_iterator() _NOEXCEPT : __sbuf_(nullptr) {}
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(istream_type& __s) _NOEXCEPT : __sbuf_(__s.rdbuf()) {}
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(streambuf_type* __s) _NOEXCEPT : __sbuf_(__s) {}
   _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(const __proxy& __p) _NOEXCEPT : __sbuf_(__p.__sbuf_) {}

@@ -19,6 +19,13 @@ TEST_P(olGetDeviceInfoTest, SuccessType) {
                                  sizeof(ol_device_type_t), &DeviceType));
 }
 
+TEST_P(olGetDeviceInfoTest, HostSuccessType) {
+  ol_device_type_t DeviceType;
+  ASSERT_SUCCESS(olGetDeviceInfo(Host, OL_DEVICE_INFO_TYPE,
+                                 sizeof(ol_device_type_t), &DeviceType));
+  ASSERT_EQ(DeviceType, OL_DEVICE_TYPE_HOST);
+}
+
 TEST_P(olGetDeviceInfoTest, SuccessPlatform) {
   ol_platform_handle_t Platform = nullptr;
   ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM,
@@ -34,6 +41,16 @@ TEST_P(olGetDeviceInfoTest, SuccessName) {
   Name.resize(Size);
   ASSERT_SUCCESS(
       olGetDeviceInfo(Device, OL_DEVICE_INFO_NAME, Size, Name.data()));
+  ASSERT_EQ(std::strlen(Name.data()), Size - 1);
+}
+
+TEST_P(olGetDeviceInfoTest, HostName) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Host, OL_DEVICE_INFO_NAME, &Size));
+  ASSERT_GT(Size, 0ul);
+  std::vector<char> Name;
+  Name.resize(Size);
+  ASSERT_SUCCESS(olGetDeviceInfo(Host, OL_DEVICE_INFO_NAME, Size, Name.data()));
   ASSERT_EQ(std::strlen(Name.data()), Size - 1);
 }
 

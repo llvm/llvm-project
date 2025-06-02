@@ -606,9 +606,10 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
           nvPTXCompilerGetErrorLog(compiler, log.data()));
       emitError(loc) << "NVPTX compiler invocation failed, error log: "
                      << log.data();
-    } else
+    } else {
       emitError(loc) << "NVPTX compiler invocation failed with error code: "
                      << status;
+    }
     return std::nullopt;
   }
 
