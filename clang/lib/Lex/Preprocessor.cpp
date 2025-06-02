@@ -1168,12 +1168,12 @@ bool Preprocessor::LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
 ///
 /// At the start of phase 4 an import or module token is treated as starting a
 /// directive and are converted to their respective keywords iff:
-///   • After skipping horizontal whitespace are
-///     • at the start of a logical line, or
-///     • preceded by an 'export' at the start of the logical line.
-///   • Are followed by an identifier pp token (before macro expansion), or
-///     • <, ", or : (but not ::) pp tokens for 'import', or
-///     • ; for 'module'
+///   - After skipping horizontal whitespace are
+///     - at the start of a logical line, or
+///     - preceded by an 'export' at the start of the logical line.
+///   - Are followed by an identifier pp token (before macro expansion), or
+///     - <, ", or : (but not ::) pp tokens for 'import', or
+///     - ; for 'module'
 /// Otherwise the token is treated as an identifier.
 bool Preprocessor::HandleModuleContextualKeyword(
     Token &Result, bool TokAtPhysicalStartOfLine) {

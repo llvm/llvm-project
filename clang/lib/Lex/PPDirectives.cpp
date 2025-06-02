@@ -4249,7 +4249,13 @@ void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
     DirToks.push_back(Tok);
     break;
   case tok::identifier: {
-    if (LexModuleNameContinue(Tok, UseLoc, Path)) {
+    // C++ [cpp.module]p3: Any preprocessing tokens after the module
+    // preprocessing token in the module directive are processed just as in
+    // normal text.
+    //
+    // P3034R1 Module Declarations Shouldn’t be Macros.
+    if (LexModuleNameContinue(Tok, UseLoc, Path,
+                              /*AllowMacroExpansion=*/false)) {
       if (Tok.isNot(tok::eod))
         CheckEndOfDirective(ModuleTok.getIdentifierInfo()->getName());
       return;
