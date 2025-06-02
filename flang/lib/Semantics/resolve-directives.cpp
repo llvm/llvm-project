@@ -551,9 +551,7 @@ public:
   }
 
   bool Pre(const parser::OmpClause::Uniform &x) {
-    for (const auto &name : x.v) {
-      ResolveOmpName(name, Symbol::Flag::OmpUniform);
-    }
+    ResolveOmpNameList(x.v, Symbol::Flag::OmpUniform);
     return false;
   }
 
@@ -749,7 +747,7 @@ private:
   Symbol::Flags dataSharingAttributeFlags{Symbol::Flag::OmpShared,
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
       Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
-      Symbol::Flag::OmpLinear};
+      Symbol::Flag::OmpLinear, Symbol::Flag::OmpUniform};
 
   Symbol::Flags privateDataSharingAttributeFlags{Symbol::Flag::OmpPrivate,
       Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate};
@@ -759,7 +757,8 @@ private:
       Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
       Symbol::Flag::OmpCriticalLock, Symbol::Flag::OmpCopyIn,
       Symbol::Flag::OmpUseDevicePtr, Symbol::Flag::OmpUseDeviceAddr,
-      Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
+      Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr,
+      Symbol::Flag::OmpUniform};
 
   Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
       Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
