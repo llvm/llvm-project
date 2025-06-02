@@ -11,8 +11,6 @@ struct S {
   int InlineFunc() {
     return Member;
   }
-
-  int OutlineFunc();
 };
 
 // CIR: !rec_S = !cir.record<struct "S" {!s32i}>
