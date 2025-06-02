@@ -195,18 +195,7 @@ define <4 x i32> @popcount32vec(<4 x i32> %0) {
 define signext i32 @popcount64_zext(i32 %x) {
 ; CHECK-LABEL: @popcount64_zext(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[ZEXT]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 1431655765
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i64 [[ZEXT]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 3689348814741910323
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 3689348814741910323
-; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 1085102592571150095
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 72340172838076673
-; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 56
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.ctpop.i64(i64 [[ZEXT]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc nuw nsw i64 [[TMP12]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP13]]
 ;
@@ -230,18 +219,7 @@ define signext i32 @popcount64_zext(i32 %x) {
 define signext i32 @popcount64_mask(i64 %x) {
 ; CHECK-LABEL: @popcount64_mask(
 ; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[X:%.*]], -281470681808896
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[MASK]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 6148820867675914240
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i64 [[MASK]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 3689348814741910323
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 3689348814741910323
-; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP8]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 1085102592571150095
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 72340172838076673
-; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 56
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.ctpop.i64(i64 [[MASK]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc nuw nsw i64 [[TMP12]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP13]]
 ;
