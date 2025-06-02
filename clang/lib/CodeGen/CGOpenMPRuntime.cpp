@@ -10532,8 +10532,7 @@ getNDSWDS(const FunctionDecl *FD, ArrayRef<ParamAttrTy> ParamAttrs) {
                       }) &&
          "Invalid size");
 
-  return std::make_tuple(*std::min_element(std::begin(Sizes), std::end(Sizes)),
-                         *std::max_element(std::begin(Sizes), std::end(Sizes)),
+  return std::make_tuple(*llvm::min_element(Sizes), *llvm::max_element(Sizes),
                          OutputBecomesInput);
 }
 
@@ -11351,7 +11350,7 @@ CGOpenMPRuntime::LastprivateConditionalRAII::LastprivateConditionalRAII(
     LastprivateConditionalData &Data =
         CGM.getOpenMPRuntime().LastprivateConditionalStack.emplace_back();
     for (const Decl *VD : NeedToAddForLPCsAsDisabled)
-      Data.DeclToUniqueName.insert(std::make_pair(VD, SmallString<16>()));
+      Data.DeclToUniqueName.try_emplace(VD);
     Data.Fn = CGF.CurFn;
     Data.Disabled = true;
   }

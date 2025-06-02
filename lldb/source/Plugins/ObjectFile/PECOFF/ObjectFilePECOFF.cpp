@@ -919,8 +919,7 @@ ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
     uint32_t idx = symtab.AddSymbol(symbol);
     export_list.push_back(std::make_pair(function_rva, idx));
   }
-  std::stable_sort(export_list.begin(), export_list.end(),
-                   RVASymbolListCompareRVA);
+  llvm::stable_sort(export_list, RVASymbolListCompareRVA);
   return export_list;
 }
 

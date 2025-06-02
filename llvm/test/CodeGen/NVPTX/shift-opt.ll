@@ -6,15 +6,13 @@
 define i64 @test_or(i64 %x, i32 %y) {
 ; CHECK-LABEL: test_or(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_or_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_or_param_1];
-; CHECK-NEXT:    mul.wide.u32 %rd2, %r1, 32;
-; CHECK-NEXT:    or.b64 %rd3, %rd1, %rd2;
-; CHECK-NEXT:    shr.u64 %rd4, %rd3, 5;
+; CHECK-NEXT:    ld.param.b32 %rd2, [test_or_param_1];
+; CHECK-NEXT:    shr.u64 %rd3, %rd1, 5;
+; CHECK-NEXT:    or.b64 %rd4, %rd3, %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %ext = zext i32 %y to i64
@@ -29,15 +27,13 @@ define i64 @test_or(i64 %x, i32 %y) {
 define i64 @test_xor(i64 %x, i32 %y) {
 ; CHECK-LABEL: test_xor(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_xor_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_xor_param_1];
-; CHECK-NEXT:    mul.wide.u32 %rd2, %r1, 32;
-; CHECK-NEXT:    xor.b64 %rd3, %rd1, %rd2;
-; CHECK-NEXT:    shr.u64 %rd4, %rd3, 5;
+; CHECK-NEXT:    ld.param.b32 %rd2, [test_xor_param_1];
+; CHECK-NEXT:    shr.u64 %rd3, %rd1, 5;
+; CHECK-NEXT:    xor.b64 %rd4, %rd3, %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %ext = zext i32 %y to i64
@@ -52,15 +48,13 @@ define i64 @test_xor(i64 %x, i32 %y) {
 define i64 @test_and(i64 %x, i32 %y) {
 ; CHECK-LABEL: test_and(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_and_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_and_param_1];
-; CHECK-NEXT:    mul.wide.u32 %rd2, %r1, 32;
-; CHECK-NEXT:    and.b64 %rd3, %rd1, %rd2;
-; CHECK-NEXT:    shr.u64 %rd4, %rd3, 5;
+; CHECK-NEXT:    ld.param.b32 %rd2, [test_and_param_1];
+; CHECK-NEXT:    shr.u64 %rd3, %rd1, 5;
+; CHECK-NEXT:    and.b64 %rd4, %rd3, %rd2;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
   %ext = zext i32 %y to i64
@@ -76,23 +70,19 @@ define i64 @test_and(i64 %x, i32 %y) {
 define <2 x i16> @test_vec(<2 x i16> %x, <2 x i8> %y) {
 ; CHECK-LABEL: test_vec(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<9>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_vec_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [test_vec_param_1];
 ; CHECK-NEXT:    and.b32 %r3, %r2, 16711935;
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r3;
-; CHECK-NEXT:    shl.b16 %rs3, %rs2, 5;
-; CHECK-NEXT:    shl.b16 %rs4, %rs1, 5;
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    shr.u16 %rs3, %rs2, 5;
+; CHECK-NEXT:    shr.u16 %rs4, %rs1, 5;
 ; CHECK-NEXT:    mov.b32 %r4, {%rs4, %rs3};
-; CHECK-NEXT:    or.b32 %r5, %r1, %r4;
-; CHECK-NEXT:    mov.b32 {%rs5, %rs6}, %r5;
-; CHECK-NEXT:    shr.u16 %rs7, %rs6, 5;
-; CHECK-NEXT:    shr.u16 %rs8, %rs5, 5;
-; CHECK-NEXT:    mov.b32 %r6, {%rs8, %rs7};
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    or.b32 %r5, %r4, %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
   %ext = zext <2 x i8> %y to <2 x i16>
   %shl = shl <2 x i16> %ext, splat(i16 5)
