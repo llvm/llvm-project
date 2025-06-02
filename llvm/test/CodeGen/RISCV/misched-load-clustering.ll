@@ -1,8 +1,10 @@
 ; REQUIRES: asserts
-; RUN: llc -mtriple=riscv32 -verify-misched -riscv-misched-load-store-clustering=false \
+; RUN: llc -mtriple=riscv32 -verify-misched -riscv-misched-load-clustering=false \
+; RUN:     -riscv-misched-store-clustering=false \
 ; RUN:     -debug-only=machine-scheduler -o - 2>&1 < %s \
 ; RUN:   | FileCheck -check-prefix=NOCLUSTER %s
-; RUN: llc -mtriple=riscv64 -verify-misched -riscv-misched-load-store-clustering=false \
+; RUN: llc -mtriple=riscv64 -verify-misched -riscv-misched-load-clustering=false \
+; RUN:     -riscv-misched-store-clustering=false \
 ; RUN:     -debug-only=machine-scheduler -o - 2>&1 < %s \
 ; RUN:   | FileCheck -check-prefix=NOCLUSTER %s
 ; RUN: llc -mtriple=riscv32 -verify-misched \
