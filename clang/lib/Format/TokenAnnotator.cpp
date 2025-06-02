@@ -14,7 +14,6 @@
 
 #include "TokenAnnotator.h"
 #include "FormatToken.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
@@ -3977,8 +3976,13 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
        Tok; Tok = Tok->Next) {
     if (Tok->is(TT_StartOfName))
       SeenName = true;
-    if (Tok->Previous->EndsCppAttributeGroup)
+    const auto *Previous = Tok->Previous;
+    if (Previous->EndsCppAttributeGroup) {
       AfterLastAttribute = Tok;
+    } else if (Line.InMacroBody &&
+               Previous->endsSequence(tok::hashhash, TT_StartOfName)) {
+      Tok->setType(TT_StartOfName);
+    }
     if (const bool IsCtorOrDtor = Tok->is(TT_CtorDtorDeclName);
         IsCtorOrDtor ||
         isFunctionDeclarationName(LangOpts, *Tok, Line, ClosingParen)) {
