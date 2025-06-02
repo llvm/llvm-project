@@ -9915,7 +9915,7 @@ Sema::PerformCopyInitialization(const InitializedEntity &Entity,
     EqualLoc = InitE->getBeginLoc();
 
   if (Entity.getType().getDesugaredType(Context) ==
-      Context.AMDGPUFeaturePredicateTy) {
+      Context.AMDGPUFeaturePredicateTy && Entity.getDecl()) {
     Diag(EqualLoc, diag::err_amdgcn_predicate_type_is_not_constructible)
         << Entity.getDecl();
     return ExprError();

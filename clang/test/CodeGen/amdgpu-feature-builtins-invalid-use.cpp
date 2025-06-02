@@ -41,3 +41,8 @@ void invalid_invocations(int x, const char* str) {
     // CHECK: error: use of undeclared identifier '__builtin_ia32_pause'
     else if (__builtin_amdgcn_is_invocable(__builtin_ia32_pause)) return;
 }
+
+bool return_needs_cast() {
+    // CHECK: error: '__builtin_amdgcn_processor_is("gfx900")' must be explicitly cast to 'bool'; however, please note that this is almost always an error and that it prevents the effective guarding of target dependent code, and thus should be avoided
+    return __builtin_amdgcn_processor_is("gfx900");
+}
