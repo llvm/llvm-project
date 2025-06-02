@@ -30,7 +30,7 @@ int bar;
 @synthesize PROP3=IVAR;
 
 - (int) Meth4 { return PROP4; }
-@synthesize PROP4=PROP4;
+@synthesize PROP4=PROP4; // expected-note 4 {{'PROP4' declared here}}
 
 - (int) Meth5 { return bar; }
 @synthesize bar = _bar;

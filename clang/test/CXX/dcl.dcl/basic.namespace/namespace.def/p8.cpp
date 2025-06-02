@@ -3,7 +3,7 @@
 // Fun things you can do with inline namespaces:
 
 inline namespace X {
-  void f1();
+  void f1(); // expected-note {{'f1' declared here}}
 
   inline namespace Y {
     void f2();
@@ -21,7 +21,7 @@ void foo1() {
   f1();
   ::f1();
   X::f1();
-  Y::f1(); // expected-error {{no member named 'f1' in namespace 'Y'}}
+  Y::f1(); // expected-error {{no member named 'f1' in namespace 'Y'; did you mean simply 'f1'?}}
 
   f2();
   ::f2();
@@ -90,7 +90,7 @@ namespace redecl { inline namespace n1 {
   {
   public:
       typedef Tp& reference;
-
+  
       void allocate(allocator<void>::const_pointer = 0);
   };
 
@@ -99,7 +99,7 @@ namespace redecl { inline namespace n1 {
 // Normal redeclarations (not for explicit instantiations or
 // specializations) are distinct in an inline namespace vs. not in an
 // inline namespace.
-namespace redecl2 {
+namespace redecl2 { 
   inline namespace n1 {
     void f(int) { }
     struct X1 { };

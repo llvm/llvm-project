@@ -60,10 +60,10 @@ int main(void) {
 	return 0;
 }
 
-enum XXXYYYZZZType { XXXYYYZZZTypeAny };
+enum XXXYYYZZZType { XXXYYYZZZTypeAny }; // expected-note {{'XXXYYYZZZTypeAny' declared here}}
 void foo(void) {
   NSDictionary *d = @{
-    @"A" : @(XXXYYYZZZTypeA), // expected-error {{use of undeclared identifier 'XXXYYYZZZTypeA'}}
-    @"F" : @(XXXYYYZZZTypeSomethingSomething),
+    @"A" : @(XXXYYYZZZTypeA), // expected-error {{use of undeclared identifier 'XXXYYYZZZTypeA'; did you mean 'XXXYYYZZZTypeAny'}}
+    @"F" : @(XXXYYYZZZTypeSomethingSomething), // expected-error {{use of undeclared identifier 'XXXYYYZZZTypeSomethingSomething'}}
   };
 }

@@ -18,7 +18,7 @@ namespace X {
 };
 
 struct B {
-  static int ib;
+  static int ib; // expected-note {{'B::ib' declared here}}
   static int bfoo() { return 8; }
 };
 
@@ -35,7 +35,7 @@ void test_linear_colons()
   // expected-error@+1 {{unexpected ':' in nested name specifier; did you mean '::'}}
   #pragma omp for simd linear(B::ib:B:bfoo())
   for (int i = 0; i < 10; ++i) ;
-  // expected-error@+1 {{use of undeclared identifier 'ib'}}
+  // expected-error@+1 {{use of undeclared identifier 'ib'; did you mean 'B::ib'}}
   #pragma omp for simd linear(B:ib)
   for (int i = 0; i < 10; ++i) ;
   // expected-error@+1 {{unexpected ':' in nested name specifier; did you mean '::'?}}

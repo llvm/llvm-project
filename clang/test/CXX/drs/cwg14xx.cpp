@@ -21,19 +21,23 @@ namespace cwg1413 { // cwg1413: 12
       // expected-error@-1 {{use of undeclared identifier 'var1'}}
 
       // ok, variable declaration
-      Check<true ? 0 : a>::type *var2;
+      Check<true ? 0 : a>::type *var2; // #cwg1413-var2
       Check<true ? 0 : b>::type *var3;
       // expected-error@-1 {{use of undeclared identifier 'var3'}}
+      //   expected-note@#cwg1413-var2 {{'var2' declared here}}
       Check<true ? 0 : ((void)c, 0)>::type *var4;
       // expected-error@-1 {{use of undeclared identifier 'var4'}}
+      //   expected-note@#cwg1413-var2 {{'var2' declared here}}
 
       // value-dependent because of the implied type-dependent 'this->', not because of 'd'
       Check<true ? 0 : (d(), 0)>::type *var5;
       // expected-error@-1 {{use of undeclared identifier 'var5'}}
+      //   expected-note@#cwg1413-var2 {{'var2' declared here}}
 
       // value-dependent because of the value-dependent '&' operator, not because of 'A::d'
       Check<true ? 0 : (&A::d(), 0)>::type *var5;
       // expected-error@-1 {{use of undeclared identifier 'var5'}}
+      //   expected-note@#cwg1413-var2 {{'var2' declared here}}
     }
   };
 } // namespace cwg1413

@@ -35,7 +35,7 @@ void Func(int i, int j) {
   while (true);
 }
 
-template<typename T, unsigned I, auto &IPtr>
+template<typename T, unsigned I, auto &IPtr>// #IPTR
 void TemplFunc() {
   T array[I];
   T array2[2*I];
@@ -73,7 +73,8 @@ void TemplFunc() {
   // expected-note@+1{{to match this '['}}
 #pragma acc parallel private(array[:I:])
   while (true);
-  // expected-error@+1{{no member named 'IPtr' in the global namespace}}
+  // expected-error@+2{{no member named 'IPtr' in the global namespace}}
+  // expected-note@#IPTR{{'IPtr' declared here}}
 #pragma acc parallel private(array[::IPtr])
   while (true);
   // expected-error@+2{{expected ']'}}

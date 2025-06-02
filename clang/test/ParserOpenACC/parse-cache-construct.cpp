@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 %s -verify -fopenacc
 
 namespace NS {
-  static char* NSArray;
-  static int NSInt;
+  static char* NSArray; // expected-note {{'NS::NSArray' declared here}}
+  static int NSInt;     // expected-note 2 {{'NS::NSInt' declared here}}
 }
 char *getArrayPtr();
 template<typename T, int I>

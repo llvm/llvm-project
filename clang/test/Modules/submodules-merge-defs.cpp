@@ -48,11 +48,10 @@ int pre_fg = F<int>().g<int>(); // expected-error +{{must be declared}}
 // expected-note@defs.h:34 +{{here}}
 
 G::A pre_ga // expected-error +{{must be declared}}
-  = G::a; // expected-error +{{no member named 'a' in namespace 'G'}}
+  = G::a; // expected-error +{{must be declared}}
 // expected-note@defs.h:50 +{{here}}
-decltype(G::h) pre_gh = G::h; // expected-error +{{no member named 'h' in namespace 'G'}}
-// FIXME: some of the RUN lines emit this note, textual ones do not.
-// expected-note@defs.h:51 0+{{here}}
+decltype(G::h) pre_gh = G::h; // expected-error +{{must be declared}} expected-error +{{must be defined}}
+// expected-note@defs.h:51 +{{here}}
 
 int pre_h = H(); // expected-error +{{must be declared}}
 // expected-note@defs.h:56 +{{here}}

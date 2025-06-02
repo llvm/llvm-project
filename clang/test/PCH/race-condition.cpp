@@ -31,7 +31,11 @@ constexpr enable_if_t<meta<F>::value == 2, void> midpoint(F) {}
 
 #else
 
+// expected-error@27{{'N::midpoint' has different definitions in different modules; defined here first difference is 1st parameter with type 'F'}}
+// expected-error@24{{'N::midpoint' has different definitions in different modules; defined here first difference is 1st parameter with type 'U'}}
+// expected-note@21{{but in '' found 1st parameter with type 'T'}}
 int x = N::something;
-// expected-error@-1{{no member named 'something' in namespace 'N'}}
+// expected-error@37{{no member named 'something' in namespace 'N'}}
+// expected-note@21{{but in '' found 1st parameter with type 'T'}}
 
 #endif

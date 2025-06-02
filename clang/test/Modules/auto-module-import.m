@@ -28,7 +28,8 @@ int getDependsOther(void) { return depends_on_module_other; }
 
 void testSubframeworkOther(void) {
 #ifdef ERRORS
-  double *sfo1 = sub_framework_other; // expected-error{{use of undeclared identifier 'sub_framework_other'}}
+  double *sfo1 = sub_framework_other; // expected-error{{declaration of 'sub_framework_other' must be imported from module 'DependsOnModule.SubFramework.Other'}}
+  // expected-note@Inputs/DependsOnModule.framework/Frameworks/SubFramework.framework/Headers/Other.h:15 {{not visible}}
 #endif
 }
 
@@ -46,8 +47,7 @@ int getNoUmbrellaC(void) { return no_umbrella_C; }
 #endif
 
 void testSubframeworkOtherAgain(void) {
-  // FIXME: this diagnostic should be triggered consistently.
-  double *sfo1 = sub_framework_other; // expected-error 0+{{use of undeclared identifier 'sub_framework_other'}}
+  double *sfo1 = sub_framework_other;
 }
 
 void testModuleSubFramework(void) {
@@ -72,7 +72,8 @@ int getModulePrivate(void) { return module_private; }
 #include <NoUmbrella/A_Private.h> // expected-remark{{treating #include as an import of module 'NoUmbrella.Private.A_Private'}}
 int getNoUmbrellaAPrivate(void) { return no_umbrella_A_private; }
 
-int getNoUmbrellaBPrivateFail(void) { return no_umbrella_B_private; } // expected-error{{use of undeclared identifier 'no_umbrella_B_private'}}
+int getNoUmbrellaBPrivateFail(void) { return no_umbrella_B_private; } // expected-error{{declaration of 'no_umbrella_B_private' must be imported from module 'NoUmbrella.Private.B_Private'}}
+// expected-note@Inputs/NoUmbrella.framework/PrivateHeaders/B_Private.h:1 {{not visible}}
 
 // Test inclusion of headers that are under an umbrella directory but
 // not actually part of the module.

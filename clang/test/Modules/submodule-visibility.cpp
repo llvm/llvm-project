@@ -28,7 +28,8 @@
 // The use of -fmodule-name=x causes us to textually include the above headers.
 // The submodule visibility rules are still applied in this case.
 //
-// expected-error@b.h:1 {{use of undeclared identifier 'n'}}
+// expected-error@b.h:1 {{missing '#include "a.h"'; 'n' must be declared}}
+// expected-note@a.h:1 {{here}}
 #endif
 
 int k = n + m; // OK, a and b are visible here.
@@ -44,8 +45,8 @@ int k = n + m; // OK, a and b are visible here.
 // Ensure we don't compute the linkage of this struct before we find it has a
 // typedef name for linkage purposes.
 typedef struct {
-  int p;
-  void (*f)(int p);
+  int p;                 
+  void (*f)(int p);                                                                       
 } name_for_linkage;
 
 void g() { b_template<int>(); }

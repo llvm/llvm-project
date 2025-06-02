@@ -85,7 +85,7 @@
 
 @interface Test6 
 { 
-  id _var;
+  id _var; // expected-note {{'_var' declared here}}
 } 
 @property (readwrite, assign) id var; 
 @end

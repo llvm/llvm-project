@@ -2627,9 +2627,10 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
         nullptr, CorrectTypoKind::ErrorRecovery, LookupCtx);
     if (*Out)
       return true;
-  } else if (S && (Corrected = CorrectTypo(
-                       R.getLookupNameInfo(), R.getLookupKind(), S, &SS, CCC,
-                       CorrectTypoKind::ErrorRecovery, LookupCtx))) {
+  }
+  if (S && (Corrected =
+                CorrectTypo(R.getLookupNameInfo(), R.getLookupKind(), S, &SS,
+                            CCC, CorrectTypoKind::ErrorRecovery, LookupCtx))) {
     std::string CorrectedStr(Corrected.getAsString(getLangOpts()));
     bool DroppedSpecifier =
         Corrected.WillReplaceSpecifier() && Name.getAsString() == CorrectedStr;

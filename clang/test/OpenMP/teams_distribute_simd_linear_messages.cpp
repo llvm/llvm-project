@@ -18,7 +18,7 @@ namespace X {
 };
 
 struct B {
-  static int ib;
+  static int ib; // expected-note {{'B::ib' declared here}}
   static int bfoo() { return 8; }
 };
 
@@ -43,7 +43,7 @@ void test_linear_colons()
 
 // expected-error@+2 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
 #pragma omp target
-#pragma omp teams distribute simd linear(B:ib) // expected-error {{use of undeclared identifier 'ib'}}
+#pragma omp teams distribute simd linear(B:ib) // expected-error {{use of undeclared identifier 'ib'; did you mean 'B::ib'}}
   for (int i = 0; i < 10; ++i) ;
 
 // expected-error@+2 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}

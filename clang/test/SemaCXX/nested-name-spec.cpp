@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify -fblocks %s 
 namespace A {
   struct C {
     static int cx;
@@ -111,7 +111,7 @@ void A2::CC::NC::m(); // expected-error{{out-of-line declaration of a member mus
 
 namespace E {
   int X = 5;
-
+  
   namespace Nested {
     enum E {
       X = 0
@@ -146,7 +146,7 @@ Operators::operator bool() {
 
 namespace A {
   void g(int&); // expected-note{{type of 1st parameter of member declaration does not match definition ('int &' vs 'const int &')}}
-}
+} 
 
 void A::f() {} // expected-error-re{{out-of-line definition of 'f' does not match any declaration in namespace 'A'{{$}}}}
 
@@ -303,14 +303,14 @@ struct A2<T>::B::C; // expected-error {{no struct named 'C'}}
 
 namespace PR13033 {
 namespace NS {
- int a;
- int longer_b;
+ int a; // expected-note {{'NS::a' declared here}}
+ int longer_b; //expected-note {{'NS::longer_b' declared here}}
 }
 
 // Suggest adding a namespace qualifier to both variable names even though one
 // is only a single character long.
-int foobar = a + longer_b; // expected-error {{use of undeclared identifier 'a'}} \
-                           // expected-error {{use of undeclared identifier 'longer_b'}}
+int foobar = a + longer_b; // expected-error {{use of undeclared identifier 'a'; did you mean 'NS::a'?}} \
+                           // expected-error {{use of undeclared identifier 'longer_b'; did you mean 'NS::longer_b'?}}
 }
 
 namespace N {
@@ -409,7 +409,8 @@ T1<C2::N1> var_1a;
 T1<C2:N1> var_1b;  // expected-error{{unexpected ':' in nested name specifier; did you mean '::'?}}
 template<int N> int F() {}
 int (*X1)() = (B1::B2 ? F<1> : F<2>);
-int (*X2)() = (B1:B2 ? F<1> : F<2>);  // expected-error{{unexpected ':' in nested name specifier; did you mean '::'?}}
+int (*X2)() = (B1:B2 ? F<1> : F<2>);  // expected-error{{unexpected ':' in nested name specifier; did you mean '::'?}} \
+                                         expected-note{{'PR18587::X2' declared here}}
 
 // Bit fields + templates
 struct S7a {
@@ -445,7 +446,8 @@ namespace PR16951 {
 
   int x4 = enumerator_2::ENUMERATOR_2; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
   int x5 = enumerator_2::X2; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
-                             // expected-error{{no member named 'X2' in 'PR16951::enumerator_2'}}
+                             // expected-error{{no member named 'X2' in 'PR16951::enumerator_2'}} \
+                             // expected-error{{cannot initialize a variable of type 'int' with an lvalue of type 'int (*)()'}}
 
 }
 

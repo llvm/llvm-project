@@ -274,7 +274,7 @@ TEST(ExternalSemaSource, ExternalDelayedTypoCorrection) {
   DiagnosticWatcher Watcher("aaa", "bbb");
   Installer->PushSource(Provider.get());
   Installer->PushWatcher(&Watcher);
-  std::vector<std::string> Args(1, "-std=c++11");
+  std::vector<std::string> Args{"-std=c++11", "-fdelayed-typo-correction"};
   ASSERT_TRUE(clang::tooling::runToolOnCodeWithArgs(
       std::move(Installer), "namespace AAA { } void foo() { AAA::aaa(); }",
       Args));

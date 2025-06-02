@@ -37,7 +37,7 @@ void disambig() {
   f < 1 + 3 > (q); // ok, function call
 }
 
-bool typo(int something) { // expected-note 2{{declared here}}
+bool typo(int something) { // expected-note 4{{declared here}}
   // FIXME: We shouldn't suggest the N:: for an ADL call if the candidate can be found by ADL.
   some_logn_name<3>(q); // expected-error {{did you mean 'N::some_long_name'?}}
   somethign < 3 ? h() > 4 : h(0); // expected-error {{did you mean 'something'}}
@@ -45,8 +45,8 @@ bool typo(int something) { // expected-note 2{{declared here}}
   somethign < 3 ? h() + 4 : h(0); // expected-error {{did you mean 'something'}}
   // This is parsed as an ADL-only template-id call.
   somethign < 3 ? h() + 4 : h(0) >(0); // expected-error {{undeclared identifier 'somethign'}}
-  bool k(somethign < 3); // expected-error {{use of undeclared identifier 'somethign'}}
-  return somethign < 3; // expected-error {{use of undeclared identifier 'somethign'}}
+  bool k(somethign < 3); // expected-error {{did you mean 'something'}}
+  return somethign < 3; // expected-error {{did you mean 'something'}}
 }
 
 // Ensure that treating undeclared identifiers as template names doesn't cause

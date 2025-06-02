@@ -36,9 +36,10 @@ template <typename b> class c {
 }
 
 namespace GH45915 {
-short g_volatile_ushort;
+short g_volatile_ushort;                   // expected-note {{'g_volatile_ushort' declared here}}
 namespace a {
-   int b = l_volatile_uwchar.a ::c ::~d<>; // expected-error {{use of undeclared identifier 'l_volatile_uwchar'}}
+   int b = l_volatile_uwchar.a ::c ::~d<>; // expected-error {{use of undeclared identifier 'l_volatile_uwchar'}} \
+                                              expected-error {{no member named 'd' in namespace 'GH45915::a'}}
 }
 }
 
@@ -52,9 +53,9 @@ namespace GH32903 {
 void
 B(
   char cat_dog_3, char cat_dog_2, char cat_dog_1, char cat_dog_0, char pigeon_dog_3, char pigeon_dog_2,
-  char pigeon_dog_1, char pigeon_dog_0, short &elefant15_lion, short &elefant14_lion, short &elefant13_lion,
-  short &elefant12_lion, short &elefant11_lion, short &elefant10_lion, short &elefant9_lion, short &elefant8_lion,
-  short &elefant7_lion, short &elefant6_lion, short &elefant5_lion, short &elefant4_lion, short &elefant3_lion,
+  char pigeon_dog_1, char pigeon_dog_0, short &elefant15_lion, short &elefant14_lion, short &elefant13_lion,       // expected-note 3 {{declared here}}
+  short &elefant12_lion, short &elefant11_lion, short &elefant10_lion, short &elefant9_lion, short &elefant8_lion, // expected-note 5 {{declared here}}
+  short &elefant7_lion, short &elefant6_lion, short &elefant5_lion, short &elefant4_lion, short &elefant3_lion,    // expected-note 2 {{declared here}}
   short &elefant2_lion, short &elefant1_lion, short &elefant0_lion, char& no_animal)
 {
 
