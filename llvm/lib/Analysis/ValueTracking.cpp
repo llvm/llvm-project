@@ -4594,6 +4594,10 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
                                                    const SimplifyQuery &Q) {
   KnownFPClass KnownFromContext;
 
+  if (Q.CC && Q.CC->AffectedValues.contains(V))
+    computeKnownFPClassFromCond(V, Q.CC->Cond, 0, !Q.CC->Invert, Q.CxtI,
+                                KnownFromContext);
+
   if (!Q.CxtI)
     return KnownFromContext;
 
@@ -8898,19 +8902,20 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
   Value *TrueVal = SI->getTrueValue();
   Value *FalseVal = SI->getFalseValue();
 
-  return llvm::matchDecomposedSelectPattern(CmpI, TrueVal, FalseVal, LHS, RHS,
-                                            CastOp, Depth);
+  return llvm::matchDecomposedSelectPattern(
+      CmpI, TrueVal, FalseVal, LHS, RHS,
+      isa<FPMathOperator>(SI) ? SI->getFastMathFlags() : FastMathFlags(),
+      CastOp, Depth);
 }
 
 SelectPatternResult llvm::matchDecomposedSelectPattern(
     CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
-    Instruction::CastOps *CastOp, unsigned Depth) {
+    FastMathFlags FMF, Instruction::CastOps *CastOp, unsigned Depth) {
   CmpInst::Predicate Pred = CmpI->getPredicate();
   Value *CmpLHS = CmpI->getOperand(0);
   Value *CmpRHS = CmpI->getOperand(1);
-  FastMathFlags FMF;
-  if (isa<FPMathOperator>(CmpI))
-    FMF = CmpI->getFastMathFlags();
+  if (isa<FPMathOperator>(CmpI) && CmpI->hasNoNaNs())
+    FMF.setNoNaNs();
 
   // Bail out early.
   if (CmpI->isEquality())
