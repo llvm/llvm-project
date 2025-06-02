@@ -61,16 +61,23 @@ min_command(uint slot_num, __global AmdAqlWrap* wraps)
     return minCommand;
 }
 
+static inline bool
+check_pcie_support(__global SchedulerParam* param) {
+  #define kInvalidWriteIndex (ulong)(-1)
+  return (param->write_index == kInvalidWriteIndex) ? true : false;
+}
+
 static inline void
 EnqueueDispatch(__global hsa_kernel_dispatch_packet_t* aqlPkt, __global SchedulerParam* param)
 {
     __global hsa_queue_t* child_queue = param->child_queue;
 
-
-    // ulong index = __ockl_hsa_queue_add_write_index(child_queue, 1, __ockl_memory_order_relaxed);
-    // The original code seen above relies on PCIe 3 atomics, which might not be supported on some systems, so use a device side global
-    // for workaround.
-    ulong index = atomic_fetch_add_explicit((__global atomic_ulong*)&param->write_index, (ulong)1, memory_order_relaxed, memory_scope_device);
+    ulong index;
+    if (check_pcie_support(param)) {
+      index = __ockl_hsa_queue_add_write_index(child_queue, 1, __ockl_memory_order_relaxed);
+    } else {
+      index = atomic_fetch_add_explicit((__global atomic_ulong*)&param->write_index, (ulong)1, memory_order_relaxed, memory_scope_device);
+    }
 
     const ulong queueMask = child_queue->size - 1;
     __global hsa_kernel_dispatch_packet_t* dispatch_packet = &(((__global hsa_kernel_dispatch_packet_t*)(child_queue->base_address))[index & queueMask]);
@@ -82,17 +89,20 @@ EnqueueScheduler(__global SchedulerParam* param)
 {
     __global hsa_queue_t* child_queue = param->child_queue;
 
-    // ulong index = __ockl_hsa_queue_add_write_index(child_queue, 1, __ockl_memory_order_relaxed);
-    // The original code seen above relies on PCIe 3 atomics, which might not be supported on some systems, so use a device side global
-    // for workaround.
-    ulong index = atomic_fetch_add_explicit((__global atomic_ulong*)&param->write_index, (ulong)1, memory_order_relaxed, memory_scope_device);
+    ulong index;
+    if (check_pcie_support(param)) {
+      index = __ockl_hsa_queue_add_write_index(child_queue, 1, __ockl_memory_order_relaxed);
+    } else {
+      index = atomic_fetch_add_explicit((__global atomic_ulong*)&param->write_index, (ulong)1, memory_order_relaxed, memory_scope_device);
+    }
 
     const ulong queueMask = child_queue->size - 1;
     __global hsa_kernel_dispatch_packet_t* dispatch_packet = &(((__global hsa_kernel_dispatch_packet_t*)(child_queue->base_address))[index & queueMask]);
     *dispatch_packet = param->scheduler_aql;
 
-     // This is part of the PCIe 3 atomics workaround, to write the final write_index value back to the child_queue
-    __ockl_hsa_queue_store_write_index(child_queue, index + 1, __ockl_memory_order_relaxed);
+    if (!check_pcie_support(param)) {
+      __ockl_hsa_queue_store_write_index(child_queue, index + 1, __ockl_memory_order_relaxed);
+    }
 
     __ockl_hsa_signal_store(child_queue->doorbell_signal, index, __ockl_memory_order_release);
 }
