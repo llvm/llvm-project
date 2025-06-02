@@ -256,6 +256,9 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
   case MCOI::OperandType::OPERAND_PCREL:
     AssignedValue = MCOperand::createImm(0);
     return Error::success();
+  case MCOI::OperandType::OPERAND_FIRST_TARGET:
+    AssignedValue = MCOperand::createImm(0);
+    return Error::success();
   default:
     llvm_unreachable("Unexpected operand type in randomizeTargetMCOperand");
   }
