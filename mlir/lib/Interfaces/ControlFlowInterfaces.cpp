@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
@@ -84,24 +85,33 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 // WeightedBranchOpInterface
 //===----------------------------------------------------------------------===//
 
-LogicalResult detail::verifyBranchWeights(Operation *op) {
-  auto weights = cast<WeightedBranchOpInterface>(op).getBranchWeightsOrNull();
+static LogicalResult verifyWeights(Operation *op, DenseI32ArrayAttr weights,
+                                   int64_t weightsNum,
+                                   llvm::StringRef weightAnchorName,
+                                   llvm::StringRef weightRefName) {
   if (weights) {
-    if (weights.size() != op->getNumSuccessors())
-      return op->emitError() << "number of weights (" << weights.size()
-                             << ") does not match the number of successors ("
-                             << op->getNumSuccessors() << ")";
-    int32_t total = 0;
-    for (auto weight : llvm::enumerate(weights.asArrayRef())) {
+    if (weights.size() != weightsNum)
+      return op->emitError() << "expects number of " << weightAnchorName
+                             << " weights to match number of " << weightRefName
+                             << ": " << weights.size() << " vs " << weightsNum;
+
+    for (auto weight : llvm::enumerate(weights.asArrayRef()))
       if (weight.value() < 0)
         return op->emitError()
                << "weight #" << weight.index() << " must be non-negative";
-      total += weight.value();
-    }
-    if (total != 100)
-      return op->emitError() << "total weight " << total << " is not 100";
   }
-  return mlir::success();
+  return success();
+}
+
+LogicalResult detail::verifyBranchWeights(Operation *op) {
+  auto weights = cast<WeightedBranchOpInterface>(op).getBranchWeightsOrNull();
+  unsigned successorsNum = op->getNumSuccessors();
+  // CallOpInterface operations without successors may only have
+  // one weight, though it seems to be redundant and indicate
+  // 100% probability of calling the callee(s).
+  int64_t weightsNum =
+      (successorsNum == 0 && isa<CallOpInterface>(op)) ? 1 : successorsNum;
+  return verifyWeights(op, weights, weightsNum, "branch", "successors");
 }
 
 //===----------------------------------------------------------------------===//
@@ -111,22 +121,7 @@ LogicalResult detail::verifyBranchWeights(Operation *op) {
 LogicalResult detail::verifyRegionBranchWeights(Operation *op) {
   auto weights =
       cast<WeightedRegionBranchOpInterface>(op).getRegionWeightsOrNull();
-  if (weights) {
-    if (weights.size() != op->getNumRegions())
-      return op->emitError() << "number of weights (" << weights.size()
-                             << ") does not match the number of regions ("
-                             << op->getNumRegions() << ")";
-    int32_t total = 0;
-    for (auto weight : llvm::enumerate(weights.asArrayRef())) {
-      if (weight.value() < 0)
-        return op->emitError()
-               << "weight #" << weight.index() << " must be non-negative";
-      total += weight.value();
-    }
-    if (total != 100)
-      return op->emitError() << "total weight " << total << " is not 100";
-  }
-  return mlir::success();
+  return verifyWeights(op, weights, op->getNumRegions(), "region", "regions");
 }
 
 //===----------------------------------------------------------------------===//
