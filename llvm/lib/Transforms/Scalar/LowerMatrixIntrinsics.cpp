@@ -2209,8 +2209,8 @@ public:
   /// Lower uniform shape intrinsics, if shape information is available.
   bool VisitUniformIntrinsic(IntrinsicInst *Inst) {
     auto I = ShapeMap.find(Inst);
-    if (I == ShapeMap.end())
-      return false;
+    assert(I != ShapeMap.end() &&
+           "must only visit instructions with shape info");
 
     IRBuilder<> Builder(Inst);
     ShapeInfo &Shape = I->second;
@@ -2220,22 +2220,22 @@ public:
     switch (Inst->getIntrinsicID()) {
     case Intrinsic::abs:
     case Intrinsic::fabs: {
-      Value *Op = Inst->getOperand(0);
-
-      MatrixTy M = getMatrix(Op, Shape, Builder);
+      MatrixTy M = getMatrix(Inst->getOperand(0), Shape, Builder);
 
       Builder.setFastMathFlags(getFastMathFlags(Inst));
 
-      for (unsigned I = 0; I < Shape.getNumVectors(); ++I)
+      for (auto &Vector : M.vectors())
         switch (Inst->getIntrinsicID()) {
         case Intrinsic::abs:
-          Result.addVector(Builder.CreateBinaryIntrinsic(
-              Intrinsic::abs, M.getVector(I), Inst->getOperand(1)));
+          Result.addVector(Builder.CreateBinaryIntrinsic(Intrinsic::abs, Vector,
+                                                         Inst->getOperand(1)));
           break;
         case Intrinsic::fabs:
-          Result.addVector(Builder.CreateUnaryIntrinsic(Inst->getIntrinsicID(),
-                                                        M.getVector(I)));
+          Result.addVector(
+              Builder.CreateUnaryIntrinsic(Inst->getIntrinsicID(), Vector));
           break;
+        default:
+          llvm_unreachable("unexpected intrinsic");
         }
 
       finalizeLowering(Inst,
