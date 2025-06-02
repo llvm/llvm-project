@@ -2757,7 +2757,6 @@ CodeGenFunction::CGCapturedStmtInfo::~CGCapturedStmtInfo() { }
 CodeGenFunction::SanitizerScope::SanitizerScope(CodeGenFunction *CGF)
     : CGF(CGF) {
   assert(!CGF->IsSanitizerScope);
-  assert(!ApplyTrapDI);
   CGF->IsSanitizerScope = true;
 }
 
