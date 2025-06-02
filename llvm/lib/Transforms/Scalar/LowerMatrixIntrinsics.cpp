@@ -590,23 +590,6 @@ public:
       MatrixVal = M.embedInVector(Builder);
     }
 
-    // If it's a PHI, split it now. We'll take care of fixing up the operands
-    // later once we're in VisitPHI.
-    if (auto *PHI = dyn_cast<PHINode>(MatrixVal)) {
-      auto *EltTy = cast<VectorType>(PHI->getType())->getElementType();
-      MatrixTy PhiM{SI.NumRows, SI.NumColumns, EltTy};
-
-      IRBuilder<>::InsertPointGuard IPG(Builder);
-      Builder.SetInsertPoint(PHI);
-      for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI)
-        PhiM.setVector(VI, Builder.CreatePHI(PhiM.getVectorTy(),
-                                             PHI->getNumIncomingValues(),
-                                             PHI->getName()));
-
-      Inst2ColumnMatrix[PHI] = PhiM;
-      return PhiM;
-    }
-
     // If it's a constant, materialize the split version of it with this shape.
     if (auto *IncomingConst = dyn_cast<ConstantData>(MatrixVal))
       return MatrixTy(IncomingConst, SI);
@@ -1122,12 +1105,9 @@ public:
         Changed |= VisitLoad(cast<LoadInst>(Inst), Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
         Changed |= VisitStore(cast<StoreInst>(Inst), Op1, Op2, Builder);
-    }
-
-    // Fifth, lower all the PHI's with shape information.
-    for (Instruction *Inst : MatrixInsts)
-      if (auto *PHI = dyn_cast<PHINode>(Inst))
+      else if (auto *PHI = dyn_cast<PHINode>(Inst))
         Changed |= VisitPHI(PHI);
+    }
 
     if (ORE) {
       RemarkGenerator RemarkGen(Inst2ColumnMatrix, *ORE, Func);
@@ -2191,22 +2171,47 @@ public:
     if (I == ShapeMap.end())
       return false;
 
+    const ShapeInfo &SI = I->second;
+
     IRBuilder<> Builder(Inst);
 
-    MatrixTy PhiM = getMatrix(Inst, I->second, Builder);
+    auto getMatrix = [this, &Builder, SI](Value *MatrixVal) -> MatrixTy {
+      auto *I = Inst2ColumnMatrix.find(MatrixVal);
+      if (I != Inst2ColumnMatrix.end())
+        return I->second;
+
+      if (auto *PHI = dyn_cast<PHINode>(MatrixVal)) {
+        auto *EltTy = cast<VectorType>(PHI->getType())->getElementType();
+        MatrixTy PhiM{SI.NumRows, SI.NumColumns, EltTy};
+
+        IRBuilder<>::InsertPointGuard IPG(Builder);
+        Builder.SetInsertPoint(PHI);
+        for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI)
+          PhiM.setVector(VI, Builder.CreatePHI(PhiM.getVectorTy(),
+                                               PHI->getNumIncomingValues(),
+                                               PHI->getName()));
+
+        Inst2ColumnMatrix[PHI] = PhiM;
+        return PhiM;
+      }
+
+      // getMatrix() may insert some instructions. The safe place to insert them
+      // is at the end of the parent block, where the register allocator would
+      // have inserted the copies that materialize the PHI.
+      if (auto *MatrixInst = dyn_cast<Instruction>(MatrixVal))
+        Builder.SetInsertPoint(MatrixInst->getParent()->getTerminator());
+
+      return this->getMatrix(MatrixVal, SI, Builder);
+    };
+
+    MatrixTy PhiM = getMatrix(Inst);
 
     for (unsigned IncomingI = 0, IncomingE = Inst->getNumIncomingValues();
          IncomingI != IncomingE; ++IncomingI) {
       Value *IncomingV = Inst->getIncomingValue(IncomingI);
       BasicBlock *IncomingB = Inst->getIncomingBlock(IncomingI);
 
-      // getMatrix() may insert some instructions. The safe place to insert them
-      // is at the end of the parent block, where the register allocator would
-      // have inserted the copies that materialize the PHI.
-      if (auto *IncomingInst = dyn_cast<Instruction>(IncomingV))
-        Builder.SetInsertPoint(IncomingInst->getParent()->getTerminator());
-
-      MatrixTy OpM = getMatrix(IncomingV, I->second, Builder);
+      MatrixTy OpM = getMatrix(IncomingV);
 
       for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI) {
         PHINode *NewPHI = cast<PHINode>(PhiM.getVector(VI));

@@ -20,18 +20,24 @@ define void @matrix_phi_loop(ptr %in1, ptr %in2, i32 %count, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <3 x double>, ptr [[VEC_GEP5]], align 8
 ; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[IN2]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <3 x double>, ptr [[VEC_GEP7]], align 8
-; CHECK-NEXT:    [[TMP0]] = fadd <3 x double> [[PHI9]], [[COL_LOAD4]]
-; CHECK-NEXT:    [[TMP1]] = fadd <3 x double> [[PHI10]], [[COL_LOAD6]]
-; CHECK-NEXT:    [[TMP2]] = fadd <3 x double> [[PHI11]], [[COL_LOAD8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <3 x double> [[PHI9]], [[COL_LOAD4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[PHI10]], [[COL_LOAD6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <3 x double> [[PHI11]], [[COL_LOAD8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <3 x double> [[TMP6]], <3 x double> [[TMP7]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <3 x double> [[TMP8]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x double> [[TMP3]], <6 x double> [[TMP4]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[DEC]] = sub i32 [[CTR]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DEC]], 0
+; CHECK-NEXT:    [[TMP0]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP2]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store <3 x double> [[TMP0]], ptr [[OUT:%.*]], align 128
+; CHECK-NEXT:    store <3 x double> [[TMP6]], ptr [[OUT:%.*]], align 128
 ; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr double, ptr [[OUT]], i64 3
-; CHECK-NEXT:    store <3 x double> [[TMP1]], ptr [[VEC_GEP12]], align 8
+; CHECK-NEXT:    store <3 x double> [[TMP7]], ptr [[VEC_GEP12]], align 8
 ; CHECK-NEXT:    [[VEC_GEP13:%.*]] = getelementptr double, ptr [[OUT]], i64 6
-; CHECK-NEXT:    store <3 x double> [[TMP2]], ptr [[VEC_GEP13]], align 16
+; CHECK-NEXT:    store <3 x double> [[TMP8]], ptr [[VEC_GEP13]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -69,18 +75,24 @@ define void @matrix_phi_loop_zeroinitializer(ptr %in1, ptr %in2, i32 %count, ptr
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN2]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
-; CHECK-NEXT:    [[TMP0]] = fadd <3 x double> [[PHI4]], [[COL_LOAD]]
-; CHECK-NEXT:    [[TMP1]] = fadd <3 x double> [[PHI5]], [[COL_LOAD1]]
-; CHECK-NEXT:    [[TMP2]] = fadd <3 x double> [[PHI6]], [[COL_LOAD3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <3 x double> [[PHI4]], [[COL_LOAD]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[PHI5]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <3 x double> [[PHI6]], [[COL_LOAD3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <3 x double> [[TMP6]], <3 x double> [[TMP7]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <3 x double> [[TMP8]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x double> [[TMP3]], <6 x double> [[TMP4]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[DEC]] = sub i32 [[CTR]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DEC]], 0
+; CHECK-NEXT:    [[TMP0]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP2]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store <3 x double> [[TMP0]], ptr [[OUT:%.*]], align 128
+; CHECK-NEXT:    store <3 x double> [[TMP6]], ptr [[OUT:%.*]], align 128
 ; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[OUT]], i64 3
-; CHECK-NEXT:    store <3 x double> [[TMP1]], ptr [[VEC_GEP7]], align 8
+; CHECK-NEXT:    store <3 x double> [[TMP7]], ptr [[VEC_GEP7]], align 8
 ; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[OUT]], i64 6
-; CHECK-NEXT:    store <3 x double> [[TMP2]], ptr [[VEC_GEP8]], align 16
+; CHECK-NEXT:    store <3 x double> [[TMP8]], ptr [[VEC_GEP8]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -153,18 +165,24 @@ define void @matrix_phi_loop_poison(ptr %in, i32 %count, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN2]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
-; CHECK-NEXT:    [[TMP0]] = fadd <3 x double> [[PHI4]], [[COL_LOAD]]
-; CHECK-NEXT:    [[TMP1]] = fadd <3 x double> [[PHI5]], [[COL_LOAD1]]
-; CHECK-NEXT:    [[TMP2]] = fadd <3 x double> [[PHI6]], [[COL_LOAD3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <3 x double> [[PHI4]], [[COL_LOAD]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[PHI5]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <3 x double> [[PHI6]], [[COL_LOAD3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <3 x double> [[TMP6]], <3 x double> [[TMP7]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <3 x double> [[TMP8]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x double> [[TMP3]], <6 x double> [[TMP4]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[DEC]] = sub i32 [[CTR]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DEC]], 0
+; CHECK-NEXT:    [[TMP0]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP2]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store <3 x double> [[TMP0]], ptr [[OUT:%.*]], align 128
+; CHECK-NEXT:    store <3 x double> [[TMP6]], ptr [[OUT:%.*]], align 128
 ; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[OUT]], i64 3
-; CHECK-NEXT:    store <3 x double> [[TMP1]], ptr [[VEC_GEP7]], align 8
+; CHECK-NEXT:    store <3 x double> [[TMP7]], ptr [[VEC_GEP7]], align 8
 ; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[OUT]], i64 6
-; CHECK-NEXT:    store <3 x double> [[TMP2]], ptr [[VEC_GEP8]], align 16
+; CHECK-NEXT:    store <3 x double> [[TMP8]], ptr [[VEC_GEP8]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -201,18 +219,24 @@ define void @matrix_phi_loop_cdv(ptr %in, i32 %count, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN2]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
-; CHECK-NEXT:    [[TMP0]] = fadd <3 x double> [[PHI4]], [[COL_LOAD]]
-; CHECK-NEXT:    [[TMP1]] = fadd <3 x double> [[PHI5]], [[COL_LOAD1]]
-; CHECK-NEXT:    [[TMP2]] = fadd <3 x double> [[PHI6]], [[COL_LOAD3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <3 x double> [[PHI4]], [[COL_LOAD]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[PHI5]], [[COL_LOAD1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <3 x double> [[PHI6]], [[COL_LOAD3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <3 x double> [[TMP6]], <3 x double> [[TMP7]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <3 x double> [[TMP8]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x double> [[TMP3]], <6 x double> [[TMP4]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[DEC]] = sub i32 [[CTR]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DEC]], 0
+; CHECK-NEXT:    [[TMP0]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP2]] = shufflevector <9 x double> [[TMP5]], <9 x double> poison, <3 x i32> <i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store <3 x double> [[TMP0]], ptr [[OUT:%.*]], align 128
+; CHECK-NEXT:    store <3 x double> [[TMP6]], ptr [[OUT:%.*]], align 128
 ; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[OUT]], i64 3
-; CHECK-NEXT:    store <3 x double> [[TMP1]], ptr [[VEC_GEP7]], align 8
+; CHECK-NEXT:    store <3 x double> [[TMP7]], ptr [[VEC_GEP7]], align 8
 ; CHECK-NEXT:    [[VEC_GEP8:%.*]] = getelementptr double, ptr [[OUT]], i64 6
-; CHECK-NEXT:    store <3 x double> [[TMP2]], ptr [[VEC_GEP8]], align 16
+; CHECK-NEXT:    store <3 x double> [[TMP8]], ptr [[VEC_GEP8]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -257,18 +281,24 @@ define void @matrix_phi_loop_delay(ptr %in1, ptr %in2, i32 %count, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <3 x double>, ptr [[VEC_GEP5]], align 8
 ; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[IN2]], i64 6
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <3 x double>, ptr [[VEC_GEP7]], align 8
-; CHECK-NEXT:    [[TMP3]] = fadd <3 x double> [[PHI14]], [[COL_LOAD4]]
-; CHECK-NEXT:    [[TMP4]] = fadd <3 x double> [[PHI15]], [[COL_LOAD6]]
-; CHECK-NEXT:    [[TMP5]] = fadd <3 x double> [[PHI16]], [[COL_LOAD8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <3 x double> [[PHI14]], [[COL_LOAD4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <3 x double> [[PHI15]], [[COL_LOAD6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <3 x double> [[PHI16]], [[COL_LOAD8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <3 x double> [[TMP6]], <3 x double> [[TMP7]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <3 x double> [[TMP8]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <6 x double> [[TMP9]], <6 x double> [[TMP10]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[DEC]] = sub i32 [[CTR]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DEC]], 0
+; CHECK-NEXT:    [[TMP3]] = shufflevector <9 x double> [[TMP11]], <9 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP4]] = shufflevector <9 x double> [[TMP11]], <9 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP5]] = shufflevector <9 x double> [[TMP11]], <9 x double> poison, <3 x i32> <i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    store <3 x double> [[TMP3]], ptr [[OUT:%.*]], align 128
+; CHECK-NEXT:    store <3 x double> [[TMP6]], ptr [[OUT:%.*]], align 128
 ; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr double, ptr [[OUT]], i64 3
-; CHECK-NEXT:    store <3 x double> [[TMP4]], ptr [[VEC_GEP12]], align 8
+; CHECK-NEXT:    store <3 x double> [[TMP7]], ptr [[VEC_GEP12]], align 8
 ; CHECK-NEXT:    [[VEC_GEP13:%.*]] = getelementptr double, ptr [[OUT]], i64 6
-; CHECK-NEXT:    store <3 x double> [[TMP5]], ptr [[VEC_GEP13]], align 16
+; CHECK-NEXT:    store <3 x double> [[TMP8]], ptr [[VEC_GEP13]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
