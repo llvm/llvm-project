@@ -2757,24 +2757,20 @@ CodeGenFunction::CGCapturedStmtInfo::~CGCapturedStmtInfo() { }
 CodeGenFunction::SanitizerScope::SanitizerScope(CodeGenFunction *CGF)
     : CGF(CGF) {
   assert(!CGF->IsSanitizerScope);
+  assert(!ApplyTrapDI);
   CGF->IsSanitizerScope = true;
-
-  assert(!this->ApplyTrapDI);
 }
 
 CodeGenFunction::SanitizerScope::SanitizerScope(
     CodeGenFunction *CGF, ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
     SanitizerHandler Handler)
     : SanitizerScope(CGF) {
-  this->ApplyTrapDI = new ApplyDebugLocation(
-      *CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler));
+  ApplyTrapDI = std::unique_ptr<ApplyDebugLocation>(new ApplyDebugLocation(
+      *CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler)));
 }
 
 CodeGenFunction::SanitizerScope::~SanitizerScope() {
   CGF->IsSanitizerScope = false;
-
-  delete ((ApplyDebugLocation *)this->ApplyTrapDI);
-  this->ApplyTrapDI = nullptr;
 }
 
 void CodeGenFunction::InsertHelper(llvm::Instruction *I,

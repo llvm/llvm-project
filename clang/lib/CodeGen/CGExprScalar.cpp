@@ -4238,9 +4238,10 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
                              PtrTy->getPointerAddressSpace()))
       return Ptr;
     // The inbounds GEP of null is valid iff the index is zero.
+    auto CheckOrdinal = SanitizerKind::SO_PointerOverflow;
     auto CheckHandler = SanitizerHandler::PointerOverflow;
-    CodeGenFunction::SanitizerScope SanScope(
-        &CGF, {SanitizerKind::SO_PointerOverflow}, CheckHandler);
+    CodeGenFunction::SanitizerScope SanScope(&CGF, {CheckOrdinal},
+                                             CheckHandler);
     Value *IsZeroIndex = CGF.Builder.CreateIsNull(index);
     llvm::Constant *StaticArgs[] = {
         CGF.EmitCheckSourceLocation(op.E->getExprLoc())};
@@ -4248,8 +4249,8 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     Value *IntPtr = llvm::Constant::getNullValue(IntPtrTy);
     Value *ComputedGEP = CGF.Builder.CreateZExtOrTrunc(index, IntPtrTy);
     Value *DynamicArgs[] = {IntPtr, ComputedGEP};
-    CGF.EmitCheck({{IsZeroIndex, SanitizerKind::SO_PointerOverflow}},
-                  CheckHandler, StaticArgs, DynamicArgs);
+    CGF.EmitCheck({{IsZeroIndex, CheckOrdinal}}, CheckHandler, StaticArgs,
+                  DynamicArgs);
     return Ptr;
   }
 
@@ -4770,16 +4771,16 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
     RHS = ConstrainShiftValue(Ops.LHS, RHS, "shl.mask");
   else if ((SanitizeBase || SanitizeExponent) &&
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
-    SmallVector<SanitizerKind::SanitizerOrdinal, 3> Kinds;
+    SmallVector<SanitizerKind::SanitizerOrdinal, 3> Ordinals;
     if (SanitizeSignedBase)
-      Kinds.push_back(SanitizerKind::SO_ShiftBase);
+      Ordinals.push_back(SanitizerKind::SO_ShiftBase);
     if (SanitizeUnsignedBase)
-      Kinds.push_back(SanitizerKind::SO_UnsignedShiftBase);
+      Ordinals.push_back(SanitizerKind::SO_UnsignedShiftBase);
     if (SanitizeExponent)
-      Kinds.push_back(SanitizerKind::SO_ShiftExponent);
+      Ordinals.push_back(SanitizerKind::SO_ShiftExponent);
 
     CodeGenFunction::SanitizerScope SanScope(
-        &CGF, Kinds, SanitizerHandler::ShiftOutOfBounds);
+        &CGF, Ordinals, SanitizerHandler::ShiftOutOfBounds);
     SmallVector<std::pair<Value *, SanitizerKind::SanitizerOrdinal>, 2> Checks;
     bool RHSIsSigned = Ops.rhsHasSignedIntegerRepresentation();
     llvm::Value *WidthMinusOne =

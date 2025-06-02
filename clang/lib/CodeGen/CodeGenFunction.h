@@ -272,6 +272,10 @@ public:
   ~ApplyAtomGroup();
 };
 
+// CGDebugInfo.h is not #included in this header due to overhead
+// (b384d6d6ccc8f4452cd7086061c657ce76b41224)
+class ApplyDebugLocation;
+
 /// CodeGenFunction - This class organizes the per-function state that is used
 /// while generating LLVM code.
 class CodeGenFunction : public CodeGenTypeCache {
@@ -597,9 +601,7 @@ public:
   class SanitizerScope {
     CodeGenFunction *CGF;
 
-    // ApplyDebugLocation is undeclared: CGDebugInfo.h is not #included in this
-    // header due to overhead (b384d6d6ccc8f4452cd7086061c657ce76b41224)
-    void *ApplyTrapDI = nullptr;
+    std::unique_ptr<ApplyDebugLocation> ApplyTrapDI;
 
   public:
     SanitizerScope(CodeGenFunction *CGF);
