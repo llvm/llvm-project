@@ -11,9 +11,12 @@
 #include "llvm/Frontend/HLSL/CBuffer.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "dxil-cbuffer-access"
@@ -161,7 +164,12 @@ static void replaceAccessesWithHandle(GlobalVariable *Global,
     }
 
     // Otherwise, walk users looking for a load...
-    ToProcess.append(Cur->user_begin(), Cur->user_end());
+    if (isa<GetElementPtrInst>(Cur) || isa<GEPOperator>(Cur)) {
+      ToProcess.append(Cur->user_begin(), Cur->user_end());
+      continue;
+    }
+
+    reportFatalInternalError("Unexpected user of Global");
   }
   RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
 }
