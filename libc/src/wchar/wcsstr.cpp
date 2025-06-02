@@ -26,10 +26,13 @@ LLVM_LIBC_FUNCTION(const wchar_t *, wcsstr,
   // If string to be found has length longer than s1, return nullptr.
   if (s2_len > s1_len)
     return nullptr;
+  // Checking for a match
   for (size_t i = 0; i <= (s1_len - s2_len); ++i) {
     size_t j = 0;
+    // j will increment until the characters don't match or end of string.
     for (; j < s2_len && s1[i + j] == s2[j]; ++j)
       ;
+    // Checking to see if we reached end of string.
     if (j == s2_len)
       return (s1 + i);
   }
