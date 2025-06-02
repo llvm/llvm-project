@@ -8835,6 +8835,13 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands[I]);
 
+    // the order of operands in MCInst and parsed operands are different.
+    // Adding dummy blgp and cbsz operands at corresponding MCInst operand
+    // indeces for parsing scale values correctly.
+    if (I == 5) {
+      Inst.addOperand(MCOperand::createImm(0));
+      Inst.addOperand(MCOperand::createImm(0));
+    }
     if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
     } else if (Op.isImmModifier()) {
@@ -8845,12 +8852,21 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   }
 
   // Insert CBSZ and BLGP operands for F8F6F4 variants
-  int InsertPos = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cbsz);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCBSZ,
-                        0, InsertPos);
-  InsertPos = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyBLGP,
-                        0, InsertPos);
+  auto CbszInsIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cbsz);
+  auto CbszIdx = OptionalIdx.find(AMDGPUOperand::ImmTyCBSZ);
+  if (CbszIdx != OptionalIdx.end()) {
+    auto CbszVal =
+        static_cast<const AMDGPUOperand &>(*Operands[CbszIdx->second]).getImm();
+    Inst.getOperand(CbszInsIdx).setImm(CbszVal);
+  }
+
+  auto BlgpInsIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
+  auto BlgpIdx = OptionalIdx.find(AMDGPUOperand::ImmTyBLGP);
+  if (BlgpIdx != OptionalIdx.end()) {
+    auto BlgpVal =
+        static_cast<const AMDGPUOperand &>(*Operands[BlgpIdx->second]).getImm();
+    Inst.getOperand(BlgpInsIdx).setImm(BlgpVal);
+  }
 
   // Add dummy src_modifiers
   Inst.addOperand(MCOperand::createImm(0));
