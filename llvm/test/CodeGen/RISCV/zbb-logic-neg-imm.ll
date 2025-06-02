@@ -397,18 +397,27 @@ define i64 @and_or_or(i64 %x, i64 %y) {
 ; RV32-NEXT:    and a1, a1, a3
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: and_or_or:
-; RV64:       # %bb.0:
-; RV64-NEXT:    li a2, -1
-; RV64-NEXT:    slli a2, a2, 33
-; RV64-NEXT:    addi a2, a2, 1
-; RV64-NEXT:    or a0, a0, a2
-; RV64-NEXT:    li a2, 1
-; RV64-NEXT:    slli a2, a2, 33
-; RV64-NEXT:    addi a2, a2, -2
-; RV64-NEXT:    or a1, a1, a2
-; RV64-NEXT:    and a0, a0, a1
-; RV64-NEXT:    ret
+; NOZBS64-LABEL: and_or_or:
+; NOZBS64:       # %bb.0:
+; NOZBS64-NEXT:    li a2, -1
+; NOZBS64-NEXT:    slli a2, a2, 33
+; NOZBS64-NEXT:    addi a2, a2, 1
+; NOZBS64-NEXT:    or a0, a0, a2
+; NOZBS64-NEXT:    li a2, 1
+; NOZBS64-NEXT:    slli a2, a2, 33
+; NOZBS64-NEXT:    addi a2, a2, -2
+; NOZBS64-NEXT:    or a1, a1, a2
+; NOZBS64-NEXT:    and a0, a0, a1
+; NOZBS64-NEXT:    ret
+;
+; ZBS64-LABEL: and_or_or:
+; ZBS64:       # %bb.0:
+; ZBS64-NEXT:    bseti a2, zero, 33
+; ZBS64-NEXT:    addi a2, a2, -2
+; ZBS64-NEXT:    orn a0, a0, a2
+; ZBS64-NEXT:    or a1, a1, a2
+; ZBS64-NEXT:    and a0, a0, a1
+; ZBS64-NEXT:    ret
   %a = or i64 %x, -8589934591
   %b = or i64 %y, 8589934590
   %c = and i64 %a, %b
