@@ -31,16 +31,11 @@ def connection
           "Connections are specified like 'tcp://[host]:port' or "
           "'unix:///path'.">;
 
-def launch_target: S<"launch-target">,
-  MetaVarName<"<target>">,
-  HelpText<"Launch a target for the launchInTerminal request. Any argument "
-    "provided after this one will be passed to the target. The parameter "
-    "--comm-file must also be specified.">;
-
-def comm_file: S<"comm-file">,
-  MetaVarName<"<file>">,
-  HelpText<"The fifo file used to communicate the with the debug adapter "
-    "when using --launch-target.">;
+def launch_target
+    : S<"launch-target">,
+      MetaVarName<"<target>">,
+      HelpText<"Launch a target for the launchInTerminal request. Any argument "
+               "provided after this one will be passed to the target.">;
 
 def debugger_pid: S<"debugger-pid">,
   MetaVarName<"<pid>">,

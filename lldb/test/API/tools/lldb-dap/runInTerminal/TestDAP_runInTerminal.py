@@ -14,6 +14,7 @@ import subprocess
 import shutil
 import json
 from threading import Thread
+import signal
 
 
 class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
@@ -30,6 +31,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             return file.readline()
 
     def isTestSupported(self):
+        return True
         # For some strange reason, this test fails on python3.6
         if not (sys.version_info.major == 3 and sys.version_info.minor >= 7):
             return False
@@ -144,97 +146,21 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertNotEqual(proc.returncode, 0)
         self.assertIn(
-            '"--launch-target" requires "--comm-file" to be specified', proc.stderr
+            '"--launch-target" requires "--debugger-pid" to be specified', proc.stderr
         )
-
-    @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
-    def test_FakeAttachedRunInTerminalLauncherWithInvalidProgram(self):
-        if not self.isTestSupported():
-            return
-        comm_file = os.path.join(self.getBuildDir(), "comm-file")
-        os.mkfifo(comm_file)
-
-        proc = subprocess.Popen(
-            [
-                self.lldbDAPExec,
-                "--comm-file",
-                comm_file,
-                "--launch-target",
-                "INVALIDPROGRAM",
-            ],
-            universal_newlines=True,
-            stderr=subprocess.PIPE,
-        )
-
-        self.readPidMessage(comm_file)
-        self.sendDidAttachMessage(comm_file)
-        self.assertIn("No such file or directory", self.readErrorMessage(comm_file))
-
-        _, stderr = proc.communicate()
-        self.assertIn("No such file or directory", stderr)
-
-    @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
-    def test_FakeAttachedRunInTerminalLauncherWithValidProgram(self):
-        if not self.isTestSupported():
-            return
-        comm_file = os.path.join(self.getBuildDir(), "comm-file")
-        os.mkfifo(comm_file)
-
-        proc = subprocess.Popen(
-            [
-                self.lldbDAPExec,
-                "--comm-file",
-                comm_file,
-                "--launch-target",
-                "echo",
-                "foo",
-            ],
-            universal_newlines=True,
-            stdout=subprocess.PIPE,
-        )
-
-        self.readPidMessage(comm_file)
-        self.sendDidAttachMessage(comm_file)
-
-        stdout, _ = proc.communicate()
-        self.assertIn("foo", stdout)
-
-    @skipIfWindows
-    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
-    def test_FakeAttachedRunInTerminalLauncherAndCheckEnvironment(self):
-        if not self.isTestSupported():
-            return
-        comm_file = os.path.join(self.getBuildDir(), "comm-file")
-        os.mkfifo(comm_file)
-
-        proc = subprocess.Popen(
-            [self.lldbDAPExec, "--comm-file", comm_file, "--launch-target", "env"],
-            universal_newlines=True,
-            stdout=subprocess.PIPE,
-            env={**os.environ, "FOO": "BAR"},
-        )
-
-        self.readPidMessage(comm_file)
-        self.sendDidAttachMessage(comm_file)
-
-        stdout, _ = proc.communicate()
-        self.assertIn("FOO=BAR", stdout)
 
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     def test_NonAttachedRunInTerminalLauncher(self):
         if not self.isTestSupported():
             return
-        comm_file = os.path.join(self.getBuildDir(), "comm-file")
-        os.mkfifo(comm_file)
+        signal.signal(signal.SIGUSR1, signal.SIG_IGN)
 
         proc = subprocess.Popen(
             [
                 self.lldbDAPExec,
-                "--comm-file",
-                comm_file,
+                "--debugger-pid",
+                str(os.getpid()),
                 "--launch-target",
                 "echo",
                 "foo",
@@ -244,7 +170,5 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             env={**os.environ, "LLDB_DAP_RIT_TIMEOUT_IN_MS": "1000"},
         )
 
-        self.readPidMessage(comm_file)
-
         _, stderr = proc.communicate()
-        self.assertIn("Timed out trying to get messages from the debug adapter", stderr)
+        self.assertIn("runInTerminal target did not resume in time", stderr)

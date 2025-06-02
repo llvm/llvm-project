@@ -466,9 +466,6 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 /// \param[in] cwd
 ///     The working directory for the run in terminal request.
 ///
-/// \param[in] comm_file
-///     The fifo file used to communicate the with the target launcher.
-///
 /// \param[in] debugger_pid
 ///     The PID of the lldb-dap instance that will attach to the target. The
 ///     launcher uses it on Linux tell the kernel that it should allow the
@@ -480,7 +477,7 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
-    llvm::StringRef comm_file, lldb::pid_t debugger_pid);
+    lldb::pid_t debugger_pid);
 
 /// Create a "Terminated" JSON object that contains statistics
 ///

@@ -1238,15 +1238,14 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
-    llvm::StringRef comm_file, lldb::pid_t debugger_pid) {
+    lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
   // This indicates the IDE to open an embedded terminal, instead of opening
   // the terminal in a new window.
   run_in_terminal_args.try_emplace("kind", "integrated");
 
   // The program path must be the first entry in the "args" field
-  std::vector<std::string> req_args = {DAP::debug_adapter_path.str(),
-                                       "--comm-file", comm_file.str()};
+  std::vector<std::string> req_args = {DAP::debug_adapter_path.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
     req_args.push_back("--debugger-pid");
     req_args.push_back(std::to_string(debugger_pid));
