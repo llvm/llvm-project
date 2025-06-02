@@ -1014,9 +1014,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // Fold PredPHI LiveIn -> LiveIn.
   if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&R)) {
     VPValue *Op = PredPHI->getOperand(0);
-    if (!Op->isLiveIn() || !Op->getLiveInIRValue())
-      return;
-    PredPHI->replaceAllUsesWith(Op);
+    if (Op->isLiveIn())
+      PredPHI->replaceAllUsesWith(Op);
   }
 
   // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
