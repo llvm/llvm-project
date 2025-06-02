@@ -13,7 +13,6 @@
 #ifndef LLVM_LTO_LEGACY_LTOMODULE_H
 #define LLVM_LTO_LEGACY_LTOMODULE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/lto.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
@@ -21,6 +20,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ModuleSymbolTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include <string>
 #include <vector>
@@ -76,7 +76,7 @@ public:
   /// Returns 'true' if the memory buffer is LLVM bitcode for the specified
   /// triple.
   LLVM_ABI static bool isBitcodeForTarget(MemoryBuffer *memBuffer,
-                                 StringRef triplePrefix);
+                                          StringRef triplePrefix);
 
   /// Returns a string representing the producer identification stored in the
   /// bitcode, or "" if the bitcode does not contains any.
@@ -153,12 +153,15 @@ public:
 
   const std::vector<StringRef> &getAsmUndefinedRefs() { return _asm_undefines; }
 
-  LLVM_ABI static lto::InputFile *createInputFile(const void *buffer, size_t buffer_size,
-                                         const char *path, std::string &out_error);
+  LLVM_ABI static lto::InputFile *createInputFile(const void *buffer,
+                                                  size_t buffer_size,
+                                                  const char *path,
+                                                  std::string &out_error);
 
   LLVM_ABI static size_t getDependentLibraryCount(lto::InputFile *input);
 
-  LLVM_ABI static const char *getDependentLibrary(lto::InputFile *input, size_t index, size_t *size);
+  LLVM_ABI static const char *getDependentLibrary(lto::InputFile *input,
+                                                  size_t index, size_t *size);
 
   LLVM_ABI Expected<uint32_t> getMachOCPUType() const;
 

@@ -35,7 +35,6 @@
 #ifndef LLVM_LTO_LEGACY_LTOCODEGENERATOR_H
 #define LLVM_LTO_LEGACY_LTOCODEGENERATOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/lto.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
@@ -45,6 +44,7 @@
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -182,7 +182,8 @@ struct LTOCodeGenerator {
   /// created using the \p AddStream callback. Returns true on success.
   ///
   /// Calls \a verifyMergedModuleOnce().
-  LLVM_ABI bool compileOptimized(AddStreamFn AddStream, unsigned ParallelismLevel);
+  LLVM_ABI bool compileOptimized(AddStreamFn AddStream,
+                                 unsigned ParallelismLevel);
 
   /// Enable the Freestanding mode: indicate that the optimizer should not
   /// assume builtins are present on the target.

@@ -9,10 +9,10 @@
 #ifndef LLVM_LINKER_IRMOVER_H
 #define LLVM_LINKER_IRMOVER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {
@@ -77,8 +77,9 @@ public:
   ///   Pass nullptr if there's no work to be done in such cases.
   /// - \p IsPerformingImport is true when this IR link is to perform ThinLTO
   ///   function importing from Src.
-  LLVM_ABI Error move(std::unique_ptr<Module> Src, ArrayRef<GlobalValue *> ValuesToLink,
-             LazyCallback AddLazyFor, bool IsPerformingImport);
+  LLVM_ABI Error move(std::unique_ptr<Module> Src,
+                      ArrayRef<GlobalValue *> ValuesToLink,
+                      LazyCallback AddLazyFor, bool IsPerformingImport);
   Module &getModule() { return Composite; }
 
 private:

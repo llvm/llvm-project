@@ -15,13 +15,13 @@
 #ifndef LLVM_LTO_LEGACY_THINLTOCODEGENERATOR_H
 #define LLVM_LTO_LEGACY_THINLTOCODEGENERATOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm-c/lto.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -262,21 +262,21 @@ public:
    * Index is updated to reflect linkage changes from weak resolution.
    */
   LLVM_ABI void promote(Module &Module, ModuleSummaryIndex &Index,
-               const lto::InputFile &File);
+                        const lto::InputFile &File);
 
   /**
    * Compute and emit the imported files for module at \p ModulePath.
    */
   LLVM_ABI void emitImports(Module &Module, StringRef OutputName,
-                   ModuleSummaryIndex &Index,
-                   const lto::InputFile &File);
+                            ModuleSummaryIndex &Index,
+                            const lto::InputFile &File);
 
   /**
    * Perform cross-module importing for the module identified by
    * ModuleIdentifier.
    */
   LLVM_ABI void crossModuleImport(Module &Module, ModuleSummaryIndex &Index,
-                         const lto::InputFile &File);
+                                  const lto::InputFile &File);
 
   /**
    * Compute the list of summaries and the subset of declaration summaries
@@ -291,7 +291,7 @@ public:
    * Perform internalization. Index is updated to reflect linkage changes.
    */
   LLVM_ABI void internalize(Module &Module, ModuleSummaryIndex &Index,
-                   const lto::InputFile &File);
+                            const lto::InputFile &File);
 
   /**
    * Perform post-importing ThinLTO optimizations.
@@ -304,7 +304,7 @@ public:
    * SavedObjectsDirectoryPath.
    */
   LLVM_ABI std::string writeGeneratedObject(int count, StringRef CacheEntryPath,
-                                   const MemoryBuffer &OutputBuffer);
+                                            const MemoryBuffer &OutputBuffer);
   /**@}*/
 
 private:

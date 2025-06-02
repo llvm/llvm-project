@@ -9,9 +9,9 @@
 #ifndef LLVM_LINKER_LINKER_H
 #define LLVM_LINKER_LINKER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Linker/IRMover.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;
@@ -40,14 +40,15 @@ public:
   /// callback.
   ///
   /// Returns true on error.
-  LLVM_ABI bool linkInModule(std::unique_ptr<Module> Src, unsigned Flags = Flags::None,
-                    std::function<void(Module &, const StringSet<> &)>
-                        InternalizeCallback = {});
+  LLVM_ABI bool linkInModule(std::unique_ptr<Module> Src,
+                             unsigned Flags = Flags::None,
+                             std::function<void(Module &, const StringSet<> &)>
+                                 InternalizeCallback = {});
 
-  LLVM_ABI static bool linkModules(Module &Dest, std::unique_ptr<Module> Src,
-                          unsigned Flags = Flags::None,
-                          std::function<void(Module &, const StringSet<> &)>
-                              InternalizeCallback = {});
+  LLVM_ABI static bool linkModules(
+      Module &Dest, std::unique_ptr<Module> Src, unsigned Flags = Flags::None,
+      std::function<void(Module &, const StringSet<> &)> InternalizeCallback =
+          {});
 };
 
 } // End llvm namespace

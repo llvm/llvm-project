@@ -9,8 +9,8 @@
 #ifndef LLVM_LINEEDITOR_LINEEDITOR_H
 #define LLVM_LINEEDITOR_LINEEDITOR_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdio>
 #include <memory>
 #include <optional>
@@ -31,8 +31,8 @@ public:
   /// \param In The input stream used by the editor.
   /// \param Out The output stream used by the editor.
   /// \param Err The error stream used by the editor.
-  LLVM_ABI LineEditor(StringRef ProgName, StringRef HistoryPath = "", FILE *In = stdin,
-             FILE *Out = stdout, FILE *Err = stderr);
+  LLVM_ABI LineEditor(StringRef ProgName, StringRef HistoryPath = "",
+                      FILE *In = stdin, FILE *Out = stdout, FILE *Err = stderr);
   LLVM_ABI ~LineEditor();
 
   /// Reads a line.
@@ -102,7 +102,8 @@ public:
   ///
   /// \param Buffer The string to complete
   /// \param Pos The zero-based cursor position in the StringRef
-  LLVM_ABI CompletionAction getCompletionAction(StringRef Buffer, size_t Pos) const;
+  LLVM_ABI CompletionAction getCompletionAction(StringRef Buffer,
+                                                size_t Pos) const;
 
   const std::string &getPrompt() const { return Prompt; }
   void setPrompt(const std::string &P) { Prompt = P; }

@@ -13,8 +13,8 @@
 #ifndef LLVM_INTERFACESTUB_ELFOBJHANDLER_H
 #define LLVM_INTERFACESTUB_ELFOBJHANDLER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
@@ -36,7 +36,7 @@ LLVM_ABI Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf);
 /// @param WriteIfChanged Whether or not to preserve timestamp if
 ///        the output stays the same.
 LLVM_ABI Error writeBinaryStub(StringRef FilePath, const IFSStub &Stub,
-                      bool WriteIfChanged = false);
+                               bool WriteIfChanged = false);
 
 } // end namespace ifs
 } // end namespace llvm

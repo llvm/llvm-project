@@ -15,8 +15,8 @@
 #ifndef LLVM_INTERFACESTUB_IFSHANDLER_H
 #define LLVM_INTERFACESTUB_IFSHANDLER_H
 
-#include "llvm/Support/Compiler.h"
 #include "IFSStub.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include <memory>
@@ -43,20 +43,21 @@ LLVM_ABI Expected<std::unique_ptr<IFSStub>> readIFSFromBuffer(StringRef Buf);
 LLVM_ABI Error writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub);
 
 /// Override the target platform inforation in the text stub.
-LLVM_ABI Error overrideIFSTarget(IFSStub &Stub, std::optional<IFSArch> OverrideArch,
-                        std::optional<IFSEndiannessType> OverrideEndianness,
-                        std::optional<IFSBitWidthType> OverrideBitWidth,
-                        std::optional<std::string> OverrideTriple);
+LLVM_ABI Error
+overrideIFSTarget(IFSStub &Stub, std::optional<IFSArch> OverrideArch,
+                  std::optional<IFSEndiannessType> OverrideEndianness,
+                  std::optional<IFSBitWidthType> OverrideBitWidth,
+                  std::optional<std::string> OverrideTriple);
 
 /// Validate the target platform inforation in the text stub.
 LLVM_ABI Error validateIFSTarget(IFSStub &Stub, bool ParseTriple);
 
 /// Strips target platform information from the text stub.
 LLVM_ABI void stripIFSTarget(IFSStub &Stub, bool StripTriple, bool StripArch,
-                    bool StripEndianness, bool StripBitWidth);
+                             bool StripEndianness, bool StripBitWidth);
 
 LLVM_ABI Error filterIFSSyms(IFSStub &Stub, bool StripUndefined,
-                    const std::vector<std::string> &Exclude = {});
+                             const std::vector<std::string> &Exclude = {});
 
 /// Parse llvm triple string into a IFSTarget struct.
 LLVM_ABI IFSTarget parseTriple(StringRef TripleStr);
