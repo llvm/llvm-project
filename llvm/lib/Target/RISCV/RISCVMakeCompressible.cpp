@@ -413,7 +413,6 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
 
   const RISCVSubtarget &STI = Fn.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
-  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
 
   // This optimization only makes sense if compressed instructions are emitted.
   if (!STI.hasStdExtCOrZca())
@@ -442,49 +441,10 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI), NewReg)
             .addReg(RegImm.Reg)
             .addImm(RegImm.Imm);
-      } else if (RISCV::GPRF16RegClass.contains(RegImm.Reg)) {
-        assert(RegImm.Imm == 0);
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR16INX),
-                NewReg)
-            .addReg(RegImm.Reg);
-      } else if (RISCV::GPRF32RegClass.contains(RegImm.Reg)) {
-        assert(RegImm.Imm == 0);
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR32INX),
-                NewReg)
-            .addReg(RegImm.Reg);
-      } else if (RISCV::GPRPairRegClass.contains(RegImm.Reg)) {
-        assert(RegImm.Imm == 0);
-        MCRegister EvenReg = TRI.getSubReg(RegImm.Reg, RISCV::sub_gpr_even);
-        MCRegister OddReg;
-        // We need to special case odd reg for X0_PAIR.
-        if (RegImm.Reg == RISCV::X0_Pair)
-          OddReg = RISCV::X0;
-        else
-          OddReg = TRI.getSubReg(RegImm.Reg, RISCV::sub_gpr_odd);
-        assert(NewReg != RISCV::X0_Pair && "Cannot write to X0_Pair");
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI),
-                TRI.getSubReg(NewReg, RISCV::sub_gpr_even))
-            .addReg(EvenReg)
-            .addImm(0);
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::ADDI),
-                TRI.getSubReg(NewReg, RISCV::sub_gpr_odd))
-            .addReg(OddReg)
-            .addImm(0);
       } else {
-        assert((RISCV::FPR32RegClass.contains(RegImm.Reg) ||
-                RISCV::FPR64RegClass.contains(RegImm.Reg)) &&
-               "Expected FP register class");
-        // If we are looking at replacing an FPR register we don't expect to
-        // have any offset. The only compressible FP instructions with an offset
-        // are loads and stores, for which the offset applies to the GPR operand
-        // not the FPR operand.
         assert(RegImm.Imm == 0);
-        unsigned Opcode = RISCV::FPR32RegClass.contains(RegImm.Reg)
-                              ? RISCV::FSGNJ_S
-                              : RISCV::FSGNJ_D;
-        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(Opcode), NewReg)
-            .addReg(RegImm.Reg)
-            .addReg(RegImm.Reg);
+        TII.copyPhysReg(MBB, MI, MI.getDebugLoc(), NewReg, RegImm.Reg,
+                        /*KillSrc*/ false);
       }
 
       // Update the set of instructions to use the compressed register and

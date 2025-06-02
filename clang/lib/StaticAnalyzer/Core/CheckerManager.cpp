@@ -24,7 +24,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -42,11 +41,11 @@ bool CheckerManager::hasPathSensitiveCheckers() const {
   return IfAnyAreNonEmpty(
       StmtCheckers, PreObjCMessageCheckers, ObjCMessageNilCheckers,
       PostObjCMessageCheckers, PreCallCheckers, PostCallCheckers,
-      LocationCheckers, BindCheckers, EndAnalysisCheckers,
-      BeginFunctionCheckers, EndFunctionCheckers, BranchConditionCheckers,
-      NewAllocatorCheckers, LiveSymbolsCheckers, DeadSymbolsCheckers,
-      RegionChangesCheckers, PointerEscapeCheckers, EvalAssumeCheckers,
-      EvalCallCheckers, EndOfTranslationUnitCheckers);
+      LocationCheckers, BindCheckers, BlockEntranceCheckers,
+      EndAnalysisCheckers, BeginFunctionCheckers, EndFunctionCheckers,
+      BranchConditionCheckers, NewAllocatorCheckers, LiveSymbolsCheckers,
+      DeadSymbolsCheckers, RegionChangesCheckers, PointerEscapeCheckers,
+      EvalAssumeCheckers, EvalCallCheckers, EndOfTranslationUnitCheckers);
 }
 
 void CheckerManager::reportInvalidCheckerOptionValue(
@@ -138,7 +137,7 @@ namespace {
 std::string checkerScopeName(StringRef Name, const CheckerBackend *Checker) {
   if (!llvm::timeTraceProfilerEnabled())
     return "";
-  StringRef CheckerTag = Checker ? Checker->getTagDescription() : "<unknown>";
+  StringRef CheckerTag = Checker ? Checker->getDebugTag() : "<unknown>";
   return (Name + ":" + CheckerTag).str();
 }
 
@@ -416,6 +415,42 @@ void CheckerManager::runCheckersForBind(ExplodedNodeSet &Dst,
   llvm::TimeTraceScope TimeScope{
       "CheckerManager::runCheckersForBind",
       [&val]() { return getTimeTraceBindMetadata(val); }};
+  expandGraphWithCheckers(C, Dst, Src);
+}
+
+namespace {
+struct CheckBlockEntranceContext {
+  using CheckBlockEntranceFunc = CheckerManager::CheckBlockEntranceFunc;
+  using CheckersTy = std::vector<CheckBlockEntranceFunc>;
+
+  const CheckersTy &Checkers;
+  const BlockEntrance &Entrance;
+  ExprEngine &Eng;
+
+  CheckBlockEntranceContext(const CheckersTy &Checkers,
+                            const BlockEntrance &Entrance, ExprEngine &Eng)
+      : Checkers(Checkers), Entrance(Entrance), Eng(Eng) {}
+
+  auto checkers_begin() const { return Checkers.begin(); }
+  auto checkers_end() const { return Checkers.end(); }
+
+  void runChecker(CheckBlockEntranceFunc CheckFn, NodeBuilder &Bldr,
+                  ExplodedNode *Pred) {
+    llvm::TimeTraceScope TimeScope(
+        checkerScopeName("BlockEntrance", CheckFn.Checker));
+    CheckerContext C(Bldr, Eng, Pred, Entrance.withTag(CheckFn.Checker));
+    CheckFn(Entrance, C);
+  }
+};
+
+} // namespace
+
+void CheckerManager::runCheckersForBlockEntrance(ExplodedNodeSet &Dst,
+                                                 const ExplodedNodeSet &Src,
+                                                 const BlockEntrance &Entrance,
+                                                 ExprEngine &Eng) const {
+  CheckBlockEntranceContext C(BlockEntranceCheckers, Entrance, Eng);
+  llvm::TimeTraceScope TimeScope{"CheckerManager::runCheckersForBlockEntrance"};
   expandGraphWithCheckers(C, Dst, Src);
 }
 
@@ -721,12 +756,12 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
             "while the {2} checker also tried to evaluate the same call. At "
             "most one checker supposed to evaluate a call.",
             toString(Call), evaluatorChecker,
-            EvalCallChecker.Checker->getTagDescription());
+            EvalCallChecker.Checker->getDebugTag());
         llvm_unreachable(AssertionMessage.c_str());
       }
 #endif
       if (evaluated) {
-        evaluatorChecker = EvalCallChecker.Checker->getTagDescription();
+        evaluatorChecker = EvalCallChecker.Checker->getDebugTag();
         Dst.insert(checkDst);
 #ifdef NDEBUG
         break; // on release don't check that no other checker also evals.
@@ -797,9 +832,8 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
     if (TempBuf.empty())
       continue;
 
-    Indent(Out, Space, IsDot)
-        << "{ \"checker\": \"" << CT.second->getTagDescription()
-        << "\", \"messages\": [" << NL;
+    Indent(Out, Space, IsDot) << "{ \"checker\": \"" << CT.second->getDebugTag()
+                              << "\", \"messages\": [" << NL;
     Indent(Out, InnerSpace, IsDot)
         << '\"' << TempBuf.str().trim() << '\"' << NL;
     Indent(Out, Space, IsDot) << "]}";
@@ -875,6 +909,10 @@ void CheckerManager::_registerForLocation(CheckLocationFunc checkfn) {
 
 void CheckerManager::_registerForBind(CheckBindFunc checkfn) {
   BindCheckers.push_back(checkfn);
+}
+
+void CheckerManager::_registerForBlockEntrance(CheckBlockEntranceFunc checkfn) {
+  BlockEntranceCheckers.push_back(checkfn);
 }
 
 void CheckerManager::_registerForEndAnalysis(CheckEndAnalysisFunc checkfn) {

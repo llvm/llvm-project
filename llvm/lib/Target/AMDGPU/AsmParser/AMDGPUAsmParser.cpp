@@ -3080,6 +3080,7 @@ void AMDGPUAsmParser::initializeGprCountSymbol(RegisterKind RegKind) {
   assert(SymbolName && "initializing invalid register kind");
   MCSymbol *Sym = getContext().getOrCreateSymbol(*SymbolName);
   Sym->setVariableValue(MCConstantExpr::create(0, getContext()));
+  Sym->setRedefinable(true);
 }
 
 bool AMDGPUAsmParser::updateGprCountSymbols(RegisterKind RegKind,
@@ -3100,7 +3101,7 @@ bool AMDGPUAsmParser::updateGprCountSymbols(RegisterKind RegKind,
   if (!Sym->isVariable())
     return !Error(getLoc(),
                   ".amdgcn.next_free_{v,s}gpr symbols must be variable");
-  if (!Sym->getVariableValue(false)->evaluateAsAbsolute(OldCount))
+  if (!Sym->getVariableValue()->evaluateAsAbsolute(OldCount))
     return !Error(
         getLoc(),
         ".amdgcn.next_free_{v,s}gpr symbols must be absolute expressions");

@@ -875,8 +875,7 @@ ASTContext::insertCanonicalTemplateTemplateParmDeclInternal(
 bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
                                           const QualType &Ty) const {
   std::string TyName = Ty.getUnqualifiedType().getAsString(getPrintingPolicy());
-  return NoSanitizeL->containsType(Mask, TyName) &&
-         !NoSanitizeL->containsType(Mask, TyName, "sanitize");
+  return NoSanitizeL->containsType(Mask, TyName);
 }
 
 TargetCXXABI::Kind ASTContext::getCXXABIKind() const {
@@ -1085,7 +1084,7 @@ void ASTContext::mergeDefinitionIntoModule(NamedDecl *ND, Module *M,
   MergedDefModules[cast<NamedDecl>(ND->getCanonicalDecl())].push_back(M);
 }
 
-void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
+void ASTContext::deduplicateMergedDefinitionsFor(NamedDecl *ND) {
   auto It = MergedDefModules.find(cast<NamedDecl>(ND->getCanonicalDecl()));
   if (It == MergedDefModules.end())
     return;
@@ -1448,11 +1447,11 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/HLSLIntangibleTypes.def"
   }
 
-  if (Target.hasAArch64SVETypes() ||
-      (AuxTarget && AuxTarget->hasAArch64SVETypes())) {
-#define SVE_TYPE(Name, Id, SingletonId) \
-    InitBuiltinType(SingletonId, BuiltinType::Id);
-#include "clang/Basic/AArch64SVEACLETypes.def"
+  if (Target.hasAArch64ACLETypes() ||
+      (AuxTarget && AuxTarget->hasAArch64ACLETypes())) {
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/AArch64ACLETypes.def"
   }
 
   if (Target.getTriple().isPPC64()) {
@@ -1808,7 +1807,7 @@ CharUnits ASTContext::getDeclAlign(const Decl *D, bool ForAlignof) const {
         Align = Target->getCharWidth();
     }
 
-    // Ensure miminum alignment for global variables.
+    // Ensure minimum alignment for global variables.
     if (const auto *VD = dyn_cast<VarDecl>(D))
       if (VD->hasGlobalStorage() && !ForAlignof) {
         uint64_t TypeSize =
@@ -2308,7 +2307,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = Bits;                                                              \
     Align = Bits;                                                              \
     break;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
   case BuiltinType::Id:                                                        \
     Width = Size;                                                              \
@@ -2497,6 +2496,19 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::HLSLAttributedResource:
     return getTypeInfo(
         cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr());
+
+  case Type::HLSLInlineSpirv: {
+    const auto *ST = cast<HLSLInlineSpirvType>(T);
+    // Size is specified in bytes, convert to bits
+    Width = ST->getSize() * 8;
+    Align = ST->getAlignment();
+    if (Width == 0 && Align == 0) {
+      // We are defaulting to laying out opaque SPIR-V types as 32-bit ints.
+      Width = 32;
+      Align = 32;
+    }
+    break;
+  }
 
   case Type::Atomic: {
     // Start with the base type information.
@@ -3465,7 +3477,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 #define SVE_TYPE(Name, Id, SingletonId)                                        \
   case BuiltinType::Id:                                                        \
     return;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   case BuiltinType::Id:                                                        \
     return;
@@ -3512,6 +3524,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     return;
   }
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     llvm_unreachable("should never get here");
     break;
   case Type::DeducedTemplateSpecialization:
@@ -4233,6 +4246,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::DependentBitInt:
   case Type::ArrayParameter:
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     llvm_unreachable("type should never be variably-modified");
 
   // These types can be variably-modified but should never need to
@@ -4481,8 +4495,7 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   case BuiltinType::Id:                                                        \
     return {BoolTy, llvm::ElementCount::getScalable(NumEls), NF};
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
                             IsSigned)                                          \
@@ -4521,7 +4534,7 @@ QualType ASTContext::getWebAssemblyExternrefType() const {
 /// type.
 QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
                                            unsigned NumFields) const {
-  if (Target->hasAArch64SVETypes()) {
+  if (Target->hasAArch64ACLETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 
 #define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
@@ -4552,8 +4565,7 @@ QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
 #define SVE_PREDICATE_TYPE_ALL(Name, MangledName, Id, SingletonId, NumEls, NF) \
   if (EltTy->isBooleanType() && NumElts == (NumEls * NF) && NumFields == 1)    \
     return SingletonId;
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
@@ -5491,6 +5503,31 @@ QualType ASTContext::getHLSLAttributedResourceType(
 
   return QualType(Ty, 0);
 }
+
+QualType ASTContext::getHLSLInlineSpirvType(uint32_t Opcode, uint32_t Size,
+                                            uint32_t Alignment,
+                                            ArrayRef<SpirvOperand> Operands) {
+  llvm::FoldingSetNodeID ID;
+  HLSLInlineSpirvType::Profile(ID, Opcode, Size, Alignment, Operands);
+
+  void *InsertPos = nullptr;
+  HLSLInlineSpirvType *Ty =
+      HLSLInlineSpirvTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (Ty)
+    return QualType(Ty, 0);
+
+  void *Mem = Allocate(
+      HLSLInlineSpirvType::totalSizeToAlloc<SpirvOperand>(Operands.size()),
+      alignof(HLSLInlineSpirvType));
+
+  Ty = new (Mem) HLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
+
+  Types.push_back(Ty);
+  HLSLInlineSpirvTypes.InsertNode(Ty, InsertPos);
+
+  return QualType(Ty, 0);
+}
+
 /// Retrieve a substitution-result type.
 QualType ASTContext::getSubstTemplateTypeParmType(QualType Replacement,
                                                   Decl *AssociatedDecl,
@@ -8984,7 +9021,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
@@ -9462,6 +9499,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
     return;
 
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:
@@ -10129,6 +10167,11 @@ TypedefDecl *ASTContext::getBuiltinMSVaListDecl() const {
 bool ASTContext::canBuiltinBeRedeclared(const FunctionDecl *FD) const {
   // Allow redecl custom type checking builtin for HLSL.
   if (LangOpts.HLSL && FD->getBuiltinID() != Builtin::NotBuiltin &&
+      BuiltinInfo.hasCustomTypechecking(FD->getBuiltinID()))
+    return true;
+  // Allow redecl custom type checking builtin for SPIR-V.
+  if (getTargetInfo().getTriple().isSPIROrSPIRV() &&
+      BuiltinInfo.isTSBuiltin(FD->getBuiltinID()) &&
       BuiltinInfo.hasCustomTypechecking(FD->getBuiltinID()))
     return true;
   return BuiltinInfo.canBeRedeclared(FD->getBuiltinID());
@@ -11909,6 +11952,20 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return LHS;
     return {};
   }
+  case Type::HLSLInlineSpirv:
+    const HLSLInlineSpirvType *LHSTy = LHS->castAs<HLSLInlineSpirvType>();
+    const HLSLInlineSpirvType *RHSTy = RHS->castAs<HLSLInlineSpirvType>();
+
+    if (LHSTy->getOpcode() == RHSTy->getOpcode() &&
+        LHSTy->getSize() == RHSTy->getSize() &&
+        LHSTy->getAlignment() == RHSTy->getAlignment()) {
+      for (size_t I = 0; I < LHSTy->getOperands().size(); I++)
+        if (LHSTy->getOperands()[I] != RHSTy->getOperands()[I])
+          return {};
+
+      return LHS;
+    }
+    return {};
   }
 
   llvm_unreachable("Invalid Type::Class!");
@@ -13931,6 +13988,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
     SUGAR_FREE_TYPE(UnresolvedUsing)
     SUGAR_FREE_TYPE(HLSLAttributedResource)
+    SUGAR_FREE_TYPE(HLSLInlineSpirv)
 #undef SUGAR_FREE_TYPE
 #define NON_UNIQUE_TYPE(Class) UNEXPECTED_TYPE(Class, "non-unique")
     NON_UNIQUE_TYPE(TypeOfExpr)
@@ -14271,6 +14329,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(FunctionProto)
     CANONICAL_TYPE(IncompleteArray)
     CANONICAL_TYPE(HLSLAttributedResource)
+    CANONICAL_TYPE(HLSLInlineSpirv)
     CANONICAL_TYPE(LValueReference)
     CANONICAL_TYPE(ObjCInterface)
     CANONICAL_TYPE(ObjCObject)

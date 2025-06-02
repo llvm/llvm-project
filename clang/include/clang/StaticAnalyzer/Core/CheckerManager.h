@@ -344,6 +344,12 @@ public:
                           const Stmt *S, ExprEngine &Eng,
                           const ProgramPoint &PP);
 
+  /// Run checkers after taking a control flow edge.
+  void runCheckersForBlockEntrance(ExplodedNodeSet &Dst,
+                                   const ExplodedNodeSet &Src,
+                                   const BlockEntrance &Entrance,
+                                   ExprEngine &Eng) const;
+
   /// Run checkers for end of analysis.
   void runCheckersForEndAnalysis(ExplodedGraph &G, BugReporter &BR,
                                  ExprEngine &Eng);
@@ -496,6 +502,9 @@ public:
   using CheckBindFunc =
       CheckerFn<void(SVal location, SVal val, const Stmt *S, CheckerContext &)>;
 
+  using CheckBlockEntranceFunc =
+      CheckerFn<void(const BlockEntrance &, CheckerContext &)>;
+
   using CheckEndAnalysisFunc =
       CheckerFn<void (ExplodedGraph &, BugReporter &, ExprEngine &)>;
 
@@ -556,6 +565,8 @@ public:
   void _registerForLocation(CheckLocationFunc checkfn);
 
   void _registerForBind(CheckBindFunc checkfn);
+
+  void _registerForBlockEntrance(CheckBlockEntranceFunc checkfn);
 
   void _registerForEndAnalysis(CheckEndAnalysisFunc checkfn);
 
@@ -662,6 +673,8 @@ private:
   std::vector<CheckLocationFunc> LocationCheckers;
 
   std::vector<CheckBindFunc> BindCheckers;
+
+  std::vector<CheckBlockEntranceFunc> BlockEntranceCheckers;
 
   std::vector<CheckEndAnalysisFunc> EndAnalysisCheckers;
 
