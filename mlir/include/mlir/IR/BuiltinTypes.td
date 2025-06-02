@@ -838,6 +838,20 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     ///
     bool areTrailingDimsContiguous(int64_t n);
 
+    /// Return the maximum number of trailing dimensions that can be
+    /// collapsed.
+    ///
+    /// Examples:
+    ///   - memref<2x3x2xi8, strided<[24, 12, 2]>, the number of collapsable
+    ///     trailing dimensions is 0
+    ///   - memref<2x3x2xi8, strided<[12, 6, 1]>, the number of collapsable
+    ///     trailing dimensions is 3
+    ///   - memref<5x4x3x2xi8, strided<[48, 6, 2, 1]>, the number of
+    ///     collapsable trailing dimensions is 2.
+    ///   - memref<5x4x?x2xi8>, the number of collapsable trailing dimensions
+    ///     is 4.
+    int64_t getMaxCollapsableTrailingDims();
+
     /// Return a version of this type with identity layout if it can be
     /// determined statically that the layout is the canonical contiguous
     /// strided layout. Otherwise pass the layout into `simplifyAffineMap`
