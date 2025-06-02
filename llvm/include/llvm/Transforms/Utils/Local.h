@@ -563,6 +563,13 @@ bool inferAttributesFromOthers(Function &F);
 struct OverflowTracking {
   bool HasNUW = true;
   bool HasNSW = true;
+  bool IsDisjoint = true;
+
+#ifndef NDEBUG
+  /// Opcode of merged instructions. All instructions passed to mergeFlags must
+  /// have the same opcode.
+  std::optional<unsigned> Opcode;
+#endif
 
   // Note: At the moment, users are responsible to manage AllKnownNonNegative
   // and AllKnownNonZero manually. AllKnownNonNegative can be true in a case

@@ -1314,8 +1314,9 @@ std::error_code DataAggregator::printLBRHeatMap() {
     opts::HeatmapMaxAddress = 0xffffffffffffffff;
     opts::HeatmapMinAddress = KernelBaseAddr;
   }
-  Heatmap HM(opts::HeatmapBlock, opts::HeatmapMinAddress,
-             opts::HeatmapMaxAddress, getTextSections(BC));
+  opts::HeatmapBlockSizes &HMBS = opts::HeatmapBlock;
+  Heatmap HM(HMBS[0], opts::HeatmapMinAddress, opts::HeatmapMaxAddress,
+             getTextSections(BC));
   auto getSymbolValue = [&](const MCSymbol *Symbol) -> uint64_t {
     if (Symbol)
       if (ErrorOr<uint64_t> SymValue = BC->getSymbolValue(*Symbol))
@@ -1364,6 +1365,14 @@ std::error_code DataAggregator::printLBRHeatMap() {
   } else {
     HM.printCDF(opts::HeatmapOutput + ".csv");
     HM.printSectionHotness(opts::HeatmapOutput + "-section-hotness.csv");
+  }
+  // Provide coarse-grained heatmaps if requested via zoom-out scales
+  for (const uint64_t NewBucketSize : ArrayRef(HMBS).drop_front()) {
+    HM.resizeBucket(NewBucketSize);
+    if (opts::HeatmapOutput == "-")
+      HM.print(opts::HeatmapOutput);
+    else
+      HM.print(formatv("{0}-{1}", opts::HeatmapOutput, NewBucketSize).str());
   }
 
   return std::error_code();

@@ -113,7 +113,7 @@ private:
 };
 } // namespace
 
-constexpr llvm::StringLiteral Message =
+constexpr llvm::StringLiteral ErrorMessageOnFunction =
     "use a trailing return type for this function";
 
 static SourceLocation expandIfMacroId(SourceLocation Loc,
@@ -125,7 +125,7 @@ static SourceLocation expandIfMacroId(SourceLocation Loc,
   return Loc;
 }
 
-SourceLocation UseTrailingReturnTypeCheck::findTrailingReturnTypeSourceLocation(
+static SourceLocation findTrailingReturnTypeSourceLocation(
     const FunctionDecl &F, const FunctionTypeLoc &FTL, const ASTContext &Ctx,
     const SourceManager &SM, const LangOptions &LangOpts) {
   // We start with the location of the closing parenthesis.
@@ -217,10 +217,11 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   return CT;
 }
 
-std::optional<SmallVector<ClassifiedToken, 8>>
-UseTrailingReturnTypeCheck::classifyTokensBeforeFunctionName(
-    const FunctionDecl &F, const ASTContext &Ctx, const SourceManager &SM,
-    const LangOptions &LangOpts) {
+static std::optional<SmallVector<ClassifiedToken, 8>>
+classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
+                                 const SourceManager &SM,
+                                 const LangOptions &LangOpts,
+                                 Preprocessor *PP) {
   SourceLocation BeginF = expandIfMacroId(F.getBeginLoc(), SM);
   SourceLocation BeginNameF = expandIfMacroId(F.getLocation(), SM);
 
@@ -242,7 +243,6 @@ UseTrailingReturnTypeCheck::classifyTokensBeforeFunctionName(
         const MacroInfo *MI = PP->getMacroInfo(&Info);
         if (!MI || MI->isFunctionLike()) {
           // Cannot handle function style macros.
-          diag(F.getLocation(), Message);
           return std::nullopt;
         }
       }
@@ -253,10 +253,8 @@ UseTrailingReturnTypeCheck::classifyTokensBeforeFunctionName(
 
     if (std::optional<ClassifiedToken> CT = classifyToken(F, *PP, T))
       ClassifiedTokens.push_back(*CT);
-    else {
-      diag(F.getLocation(), Message);
+    else
       return std::nullopt;
-    }
   }
 
   return ClassifiedTokens;
@@ -273,9 +271,10 @@ static bool hasAnyNestedLocalQualifiers(QualType Type) {
   return Result;
 }
 
-SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
-    const FunctionDecl &F, const TypeLoc &ReturnLoc, const ASTContext &Ctx,
-    const SourceManager &SM, const LangOptions &LangOpts) {
+static SourceRange
+findReturnTypeAndCVSourceRange(const FunctionDecl &F, const TypeLoc &ReturnLoc,
+                               const ASTContext &Ctx, const SourceManager &SM,
+                               const LangOptions &LangOpts, Preprocessor *PP) {
 
   // We start with the range of the return type and expand to neighboring
   // qualifiers (const, volatile and restrict).
@@ -283,7 +282,6 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
   if (ReturnTypeRange.isInvalid()) {
     // Happens if e.g. clang cannot resolve all includes and the return type is
     // unknown.
-    diag(F.getLocation(), Message);
     return {};
   }
 
@@ -294,7 +292,7 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
 
   // Include qualifiers to the left and right of the return type.
   std::optional<SmallVector<ClassifiedToken, 8>> MaybeTokens =
-      classifyTokensBeforeFunctionName(F, Ctx, SM, LangOpts);
+      classifyTokensBeforeFunctionName(F, Ctx, SM, LangOpts, PP);
   if (!MaybeTokens)
     return {};
   const SmallVector<ClassifiedToken, 8> &Tokens = *MaybeTokens;
@@ -331,10 +329,11 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
   return ReturnTypeRange;
 }
 
-void UseTrailingReturnTypeCheck::keepSpecifiers(
-    std::string &ReturnType, std::string &Auto, SourceRange ReturnTypeCVRange,
-    const FunctionDecl &F, const FriendDecl *Fr, const ASTContext &Ctx,
-    const SourceManager &SM, const LangOptions &LangOpts) {
+static void keepSpecifiers(std::string &ReturnType, std::string &Auto,
+                           SourceRange ReturnTypeCVRange, const FunctionDecl &F,
+                           const FriendDecl *Fr, const ASTContext &Ctx,
+                           const SourceManager &SM, const LangOptions &LangOpts,
+                           Preprocessor *PP) {
   // Check if there are specifiers inside the return type. E.g. unsigned
   // inline int.
   const auto *M = dyn_cast<CXXMethodDecl>(&F);
@@ -346,7 +345,7 @@ void UseTrailingReturnTypeCheck::keepSpecifiers(
   // Tokenize return type. If it contains macros which contain a mix of
   // qualifiers, specifiers and types, give up.
   std::optional<SmallVector<ClassifiedToken, 8>> MaybeTokens =
-      classifyTokensBeforeFunctionName(F, Ctx, SM, LangOpts);
+      classifyTokensBeforeFunctionName(F, Ctx, SM, LangOpts, PP);
   if (!MaybeTokens)
     return;
 
@@ -423,7 +422,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   if (F->getDeclaredReturnType()->isFunctionPointerType() ||
       F->getDeclaredReturnType()->isMemberFunctionPointerType() ||
       F->getDeclaredReturnType()->isMemberPointerType()) {
-    diag(F->getLocation(), Message);
+    diag(F->getLocation(), ErrorMessageOnFunction);
     return;
   }
 
@@ -440,24 +439,26 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
     // FIXME: This may happen if we have __attribute__((...)) on the function.
     // We abort for now. Remove this when the function type location gets
     // available in clang.
-    diag(F->getLocation(), Message);
+    diag(F->getLocation(), ErrorMessageOnFunction);
     return;
   }
 
   SourceLocation InsertionLoc =
       findTrailingReturnTypeSourceLocation(*F, FTL, Ctx, SM, LangOpts);
   if (InsertionLoc.isInvalid()) {
-    diag(F->getLocation(), Message);
+    diag(F->getLocation(), ErrorMessageOnFunction);
     return;
   }
 
   // Using the declared return type via F->getDeclaredReturnType().getAsString()
   // discards user formatting and order of const, volatile, type, whitespace,
   // space before & ... .
-  SourceRange ReturnTypeCVRange =
-      findReturnTypeAndCVSourceRange(*F, FTL.getReturnLoc(), Ctx, SM, LangOpts);
-  if (ReturnTypeCVRange.isInvalid())
+  SourceRange ReturnTypeCVRange = findReturnTypeAndCVSourceRange(
+      *F, FTL.getReturnLoc(), Ctx, SM, LangOpts, PP);
+  if (ReturnTypeCVRange.isInvalid()) {
+    diag(F->getLocation(), ErrorMessageOnFunction);
     return;
+  }
 
   // Check if unqualified names in the return type conflict with other entities
   // after the rewrite.
@@ -470,7 +471,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   UnqualNameVisitor UNV{*F};
   UNV.TraverseTypeLoc(FTL.getReturnLoc());
   if (UNV.Collision) {
-    diag(F->getLocation(), Message);
+    diag(F->getLocation(), ErrorMessageOnFunction);
     return;
   }
 
@@ -486,10 +487,10 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   std::string Auto = NeedSpaceAfterAuto ? "auto " : "auto";
   std::string ReturnType =
       std::string(tooling::fixit::getText(ReturnTypeCVRange, Ctx));
-  keepSpecifiers(ReturnType, Auto, ReturnTypeCVRange, *F, Fr, Ctx, SM,
-                 LangOpts);
+  keepSpecifiers(ReturnType, Auto, ReturnTypeCVRange, *F, Fr, Ctx, SM, LangOpts,
+                 PP);
 
-  diag(F->getLocation(), Message)
+  diag(F->getLocation(), ErrorMessageOnFunction)
       << FixItHint::CreateReplacement(ReturnTypeCVRange, Auto)
       << FixItHint::CreateInsertion(InsertionLoc, " -> " + ReturnType);
 }

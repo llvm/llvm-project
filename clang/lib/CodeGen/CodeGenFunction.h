@@ -17,7 +17,6 @@
 #include "CGLoopInfo.h"
 #include "CGValue.h"
 #include "CodeGenModule.h"
-#include "CodeGenPGO.h"
 #include "EHScopeStack.h"
 #include "VarBypassDetector.h"
 #include "clang/AST/CharUnits.h"
@@ -90,6 +89,7 @@ class OSLogBufferLayout;
 
 namespace CodeGen {
 class CodeGenTypes;
+class CodeGenPGO;
 class CGCallee;
 class CGFunctionInfo;
 class CGBlockInfo;
@@ -256,6 +256,20 @@ template <> struct DominatingValue<RValue> {
   static type restore(CodeGenFunction &CGF, saved_type value) {
     return value.restore(CGF);
   }
+};
+
+/// A scoped helper to set the current source atom group for
+/// CGDebugInfo::addInstToCurrentSourceAtom. A source atom is a source construct
+/// that is "interesting" for debug stepping purposes. We use an atom group
+/// number to track the instruction(s) that implement the functionality for the
+/// atom, plus backup instructions/source locations.
+class ApplyAtomGroup {
+  uint64_t OriginalAtom = 0;
+  CGDebugInfo *DI = nullptr;
+
+public:
+  ApplyAtomGroup(CGDebugInfo *DI);
+  ~ApplyAtomGroup();
 };
 
 /// CodeGenFunction - This class organizes the per-function state that is used
@@ -1656,7 +1670,7 @@ private:
   llvm::Value *emitCondLikelihoodViaExpectIntrinsic(llvm::Value *Cond,
                                                     Stmt::Likelihood LH);
 
-  CodeGenPGO PGO;
+  std::unique_ptr<CodeGenPGO> PGO;
 
   /// Bitmap used by MC/DC to track condition outcomes of a boolean expression.
   Address MCDCCondBitmapAddr = Address::invalid();
@@ -1669,12 +1683,9 @@ private:
                                             uint64_t LoopCount) const;
 
 public:
-  auto getIsCounterPair(const Stmt *S) const { return PGO.getIsCounterPair(S); }
-
-  void markStmtAsUsed(bool Skipped, const Stmt *S) {
-    PGO.markStmtAsUsed(Skipped, S);
-  }
-  void markStmtMaybeUsed(const Stmt *S) { PGO.markStmtMaybeUsed(S); }
+  std::pair<bool, bool> getIsCounterPair(const Stmt *S) const;
+  void markStmtAsUsed(bool Skipped, const Stmt *S);
+  void markStmtMaybeUsed(const Stmt *S);
 
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
@@ -1688,13 +1699,7 @@ public:
 
   /// Allocate a temp value on the stack that MCDC can use to track condition
   /// results.
-  void maybeCreateMCDCCondBitmap() {
-    if (isMCDCCoverageEnabled()) {
-      PGO.emitMCDCParameters(Builder);
-      MCDCCondBitmapAddr =
-          CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
-    }
-  }
+  void maybeCreateMCDCCondBitmap();
 
   bool isBinaryLogicalOp(const Expr *E) const {
     const BinaryOperator *BOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
@@ -1702,43 +1707,37 @@ public:
   }
 
   /// Zero-init the MCDC temp value.
-  void maybeResetMCDCCondBitmap(const Expr *E) {
-    if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
-      PGO.emitMCDCCondBitmapReset(Builder, E, MCDCCondBitmapAddr);
-      PGO.setCurrentStmt(E);
-    }
-  }
+  void maybeResetMCDCCondBitmap(const Expr *E);
 
   /// Increment the profiler's counter for the given expression by \p StepV.
   /// If \p StepV is null, the default increment is 1.
-  void maybeUpdateMCDCTestVectorBitmap(const Expr *E) {
-    if (isMCDCCoverageEnabled() && isBinaryLogicalOp(E)) {
-      PGO.emitMCDCTestVectorBitmapUpdate(Builder, E, MCDCCondBitmapAddr, *this);
-      PGO.setCurrentStmt(E);
-    }
-  }
+  void maybeUpdateMCDCTestVectorBitmap(const Expr *E);
 
   /// Update the MCDC temp value with the condition's evaluated result.
-  void maybeUpdateMCDCCondBitmap(const Expr *E, llvm::Value *Val) {
-    if (isMCDCCoverageEnabled()) {
-      PGO.emitMCDCCondBitmapUpdate(Builder, E, MCDCCondBitmapAddr, Val, *this);
-      PGO.setCurrentStmt(E);
-    }
-  }
+  void maybeUpdateMCDCCondBitmap(const Expr *E, llvm::Value *Val);
 
   /// Get the profiler's count for the given statement.
-  uint64_t getProfileCount(const Stmt *S) {
-    return PGO.getStmtCount(S).value_or(0);
-  }
+  uint64_t getProfileCount(const Stmt *S);
 
   /// Set the profiler's current count.
-  void setCurrentProfileCount(uint64_t Count) {
-    PGO.setCurrentRegionCount(Count);
-  }
+  void setCurrentProfileCount(uint64_t Count);
 
   /// Get the profiler's current count. This is generally the count for the most
   /// recently incremented counter.
-  uint64_t getCurrentProfileCount() { return PGO.getCurrentRegionCount(); }
+  uint64_t getCurrentProfileCount();
+
+  /// See CGDebugInfo::addInstToCurrentSourceAtom.
+  void addInstToCurrentSourceAtom(llvm::Instruction *KeyInstruction,
+                                  llvm::Value *Backup);
+
+  /// See CGDebugInfo::addInstToSpecificSourceAtom.
+  void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
+                                   llvm::Value *Backup, uint64_t Atom);
+
+  /// Add \p KeyInstruction and an optional \p Backup instruction to a new atom
+  /// group (See ApplyAtomGroup for more info).
+  void addInstToNewSourceAtom(llvm::Instruction *KeyInstruction,
+                              llvm::Value *Backup);
 
 private:
   /// SwitchInsn - This is nearest current switch instruction. It is null if
@@ -3027,6 +3026,7 @@ public:
 
   /// Emit an aggregate assignment.
   void EmitAggregateAssign(LValue Dest, LValue Src, QualType EltTy) {
+    ApplyAtomGroup Grp(getDebugInfo());
     bool IsVolatile = hasVolatileMember(EltTy);
     EmitAggregateCopy(Dest, Src, EltTy, AggValueSlot::MayOverlap, IsVolatile);
   }

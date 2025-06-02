@@ -763,3 +763,16 @@ gpu.module @test_module {
 gpu.module @test_custom_data_layout attributes {llvm.data_layout = "e"} {
 
 }
+
+// -----
+
+gpu.module @test_module {
+  // CHECK32-LABEL: func @gpu_dim_int_max_upper_bound()
+  func.func @gpu_dim_int_max_upper_bound()
+      -> (index) {
+
+    // CHECK32: rocdl.workgroup.dim.x range <i32, 1, 2147483647> : i32
+    %bDimX = gpu.block_dim x upper_bound 2147483647
+    func.return %bDimX : index
+  }
+}

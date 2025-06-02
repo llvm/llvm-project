@@ -198,9 +198,8 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override {
+  bool shouldForceRelocation(const MCFixup &Fixup,
+                             const MCValue &Target) override {
     switch(Fixup.getTargetKind()) {
       default:
         llvm_unreachable("Unknown Fixup Kind!");
@@ -408,10 +407,9 @@ public:
   /// ApplyFixup - Apply the \arg Value for given \arg Fixup into the provided
   /// data fragment, at the offset specified by the fixup and following the
   /// fixup kind as appropriate.
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+  void applyFixup(const MCFragment &, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t FixupValue, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
+                  uint64_t FixupValue, bool IsResolved) override {
 
     // When FixupValue is 0 the relocation is external and there
     // is nothing for us to do.
@@ -566,8 +564,7 @@ public:
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, const MCValue &,
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, const MCValue &,
                                     uint64_t Value,
                                     bool Resolved) const override {
     MCInst const &MCB = *RelaxedMCB;
@@ -595,7 +592,7 @@ public:
         if (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_SIZE) {
           ++relaxedCnt;
           *RelaxTarget = &MCI;
-          setExtender(Asm.getContext());
+          setExtender(getContext());
           return true;
         } else {
           return false;
@@ -633,7 +630,7 @@ public:
       if (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_SIZE) {
         ++relaxedCnt;
         *RelaxTarget = &MCI;
-        setExtender(Asm.getContext());
+        setExtender(getContext());
         return true;
       }
     }
@@ -700,7 +697,7 @@ public:
     return true;
   }
 
-  void finishLayout(MCAssembler const &Asm) const override {
+  bool finishLayout(const MCAssembler &Asm) const override {
     SmallVector<MCFragment *> Frags;
     for (MCSection &Sec : Asm) {
       Frags.clear();
@@ -723,7 +720,7 @@ public:
               break;
             }
             case MCFragment::FT_Relaxable: {
-              MCContext &Context = Asm.getContext();
+              MCContext &Context = getContext();
               auto &RF = cast<MCRelaxableFragment>(*Frags[K]);
               auto &Inst = const_cast<MCInst &>(RF.getInst());
 
@@ -763,7 +760,6 @@ public:
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);
-              Sec.setHasLayout(false);
               Size = 0; // Only look back one instruction
               break;
             }
@@ -773,6 +769,7 @@ public:
         }
       }
     }
+    return true;
   }
 }; // class HexagonAsmBackend
 

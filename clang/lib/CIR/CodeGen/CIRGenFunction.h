@@ -106,6 +106,7 @@ public:
 
   CIRGenTypes &getTypes() const { return cgm.getTypes(); }
 
+  const TargetInfo &getTarget() const { return cgm.getTarget(); }
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
 
 private:
@@ -281,6 +282,8 @@ public:
     localDeclMap.insert({vd, addr});
     // TODO: Add symbol table support
   }
+
+  LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
   /// is expected to be signed, the pointer passed to this function must have
@@ -515,6 +518,7 @@ public:
       AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
+  LValue emitCallExprLValue(const clang::CallExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>
@@ -526,6 +530,8 @@ public:
   mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
                                    mlir::Type condType,
                                    bool buildingTopLevelCase);
+
+  LValue emitCastLValue(const CastExpr *e);
 
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
@@ -548,6 +554,10 @@ public:
       ReturnValueSlot returnValue, bool hasQualifier,
       clang::NestedNameSpecifier *qualifier, bool isArrow,
       const clang::Expr *base);
+
+  RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
+                                       const CXXMethodDecl *md,
+                                       ReturnValueSlot returnValue);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -686,6 +696,8 @@ public:
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
+  LValue emitStringLiteralLValue(const StringLiteral *e);
+
   mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
                                      bool buildingTopLevelCase);
@@ -780,6 +792,9 @@ public:
 
   void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
   void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
+
+private:
+  QualType getVarArgType(const Expr *arg);
 };
 
 } // namespace clang::CIRGen

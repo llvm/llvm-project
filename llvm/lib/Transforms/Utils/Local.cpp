@@ -4511,7 +4511,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   if (!MatchBSwaps && !MatchBitReversals)
     return false;
   Type *ITy = I->getType();
-  if (!ITy->isIntOrIntVectorTy() || ITy->getScalarSizeInBits() > 128)
+  if (!ITy->isIntOrIntVectorTy() || ITy->getScalarSizeInBits() == 1 ||
+      ITy->getScalarSizeInBits() > 128)
     return false;  // Can't do integer/elements > 128 bits.
 
   // Try to find all the pieces corresponding to the bswap.
@@ -4758,10 +4759,19 @@ bool llvm::inferAttributesFromOthers(Function &F) {
 }
 
 void OverflowTracking::mergeFlags(Instruction &I) {
+#ifndef NDEBUG
+  if (Opcode)
+    assert(Opcode == I.getOpcode() &&
+           "can only use mergeFlags on instructions with matching opcodes");
+  else
+    Opcode = I.getOpcode();
+#endif
   if (isa<OverflowingBinaryOperator>(&I)) {
     HasNUW &= I.hasNoUnsignedWrap();
     HasNSW &= I.hasNoSignedWrap();
   }
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    IsDisjoint &= DisjointOp->isDisjoint();
 }
 
 void OverflowTracking::applyFlags(Instruction &I) {
@@ -4773,4 +4783,6 @@ void OverflowTracking::applyFlags(Instruction &I) {
     if (HasNSW && (AllKnownNonNegative || HasNUW))
       I.setHasNoSignedWrap();
   }
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    DisjointOp->setIsDisjoint(IsDisjoint);
 }

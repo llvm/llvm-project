@@ -414,14 +414,15 @@ void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
   popSection();
 }
 
+// Hack: Used by llvm-ml to implement the alias directive.
 void MCWinCOFFStreamer::emitWeakReference(MCSymbol *AliasS,
                                           const MCSymbol *Symbol) {
   auto *Alias = cast<MCSymbolCOFF>(AliasS);
   emitSymbolAttribute(Alias, MCSA_Weak);
+  Alias->setIsWeakExternal(true);
 
   getAssembler().registerSymbol(*Symbol);
-  Alias->setVariableValue(MCSymbolRefExpr::create(
-      Symbol, MCSymbolRefExpr::VK_WEAKREF, getContext()));
+  Alias->setVariableValue(MCSymbolRefExpr::create(Symbol, getContext()));
 }
 
 // TODO: Implement this if you want to emit .comment section in COFF obj files.

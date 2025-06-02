@@ -110,7 +110,7 @@ public:
   void processInstruction(const Module &M, const Instruction &I);
 
   /// Process a DILocalVariable.
-  void processVariable(const Module &M, const DILocalVariable *DVI);
+  void processVariable(DILocalVariable *DVI);
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
   /// Process a DbgRecord (e.g, treat a DbgVariableRecord like a
@@ -127,6 +127,7 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
+  void processImportedEntity(DIImportedEntity *Import);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
   bool addScope(DIScope *Scope);
