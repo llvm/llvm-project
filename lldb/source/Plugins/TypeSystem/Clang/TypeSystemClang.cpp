@@ -8519,8 +8519,8 @@ void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
                              /*Deserialize=*/false,
                              /*DumpLookups=*/false,
                              /*DumpDeclTypes=*/false, clang::ADOF_Default);
-  lldbassert(consumer);
-  lldbassert(m_ast_up);
+  assert(consumer);
+  assert(m_ast_up);
   consumer->HandleTranslationUnit(*m_ast_up);
 }
 
