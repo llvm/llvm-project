@@ -18,7 +18,7 @@ other than new functions which are described below.
 
 ### Adding a new function to the API
 
-When a new function  is added (e.g. `offloadDeviceFoo`), the actual entry
+When a new function is added (e.g. `offloadDeviceFoo`), the actual entry
 point is automatically generated, which contains validation and tracing code.
 It expects an implementation function (`offloadDeviceFoo_impl`) to be defined,
 which it will call into. The definition of this implementation function should
