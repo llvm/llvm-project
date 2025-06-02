@@ -114,6 +114,6 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.wchar_macros
-    libc.src.__support.wctype_utils
+    libc.src.string.memory_utils.inline_memmove
     libc.src.__support.macros.null_check
 )
