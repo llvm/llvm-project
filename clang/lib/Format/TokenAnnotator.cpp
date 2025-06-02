@@ -3976,13 +3976,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
        Tok; Tok = Tok->Next) {
     if (Tok->is(TT_StartOfName))
       SeenName = true;
-    const auto *Previous = Tok->Previous;
-    if (Previous->EndsCppAttributeGroup) {
+    if (Tok->Previous->EndsCppAttributeGroup)
       AfterLastAttribute = Tok;
-    } else if (Line.InMacroBody &&
-               Previous->endsSequence(tok::hashhash, TT_StartOfName)) {
-      Tok->setType(TT_StartOfName);
-    }
     if (const bool IsCtorOrDtor = Tok->is(TT_CtorDtorDeclName);
         IsCtorOrDtor ||
         isFunctionDeclarationName(LangOpts, *Tok, Line, ClosingParen)) {
