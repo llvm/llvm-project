@@ -10,3 +10,4 @@ settings set target.inherit-tcc true
 settings set target.detach-on-error false
 settings set symbols.swift-validate-typesystem true
 settings set symbols.swift-typesystem-compiler-fallback true
+settings set show-statusline false
