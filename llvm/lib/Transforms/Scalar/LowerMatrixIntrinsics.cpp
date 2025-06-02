@@ -2107,9 +2107,8 @@ public:
   /// Lower load instructions, if shape information is available.
   bool VisitLoad(LoadInst *Inst, Value *Ptr, IRBuilder<> &Builder) {
     auto I = ShapeMap.find(Inst);
-    if (I == ShapeMap.end())
-      return false;
-
+    assert(I != ShapeMap.end() &&
+           "must only visit instructions with shape info");
     LowerLoad(Inst, Ptr, Inst->getAlign(),
               Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
               I->second);
@@ -2119,9 +2118,8 @@ public:
   bool VisitStore(StoreInst *Inst, Value *StoredVal, Value *Ptr,
                   IRBuilder<> &Builder) {
     auto I = ShapeMap.find(StoredVal);
-    if (I == ShapeMap.end())
-      return false;
-
+    assert(I != ShapeMap.end() &&
+           "must only visit instructions with shape info");
     LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
                Builder.getInt64(I->second.getStride()), Inst->isVolatile(),
                I->second);
@@ -2131,8 +2129,8 @@ public:
   /// Lower binary operators, if shape information is available.
   bool VisitBinaryOperator(BinaryOperator *Inst) {
     auto I = ShapeMap.find(Inst);
-    if (I == ShapeMap.end())
-      return false;
+    assert(I != ShapeMap.end() &&
+           "must only visit instructions with shape info");
 
     Value *Lhs = Inst->getOperand(0);
     Value *Rhs = Inst->getOperand(1);
@@ -2163,8 +2161,8 @@ public:
   /// Lower unary operators, if shape information is available.
   bool VisitUnaryOperator(UnaryOperator *Inst) {
     auto I = ShapeMap.find(Inst);
-    if (I == ShapeMap.end())
-      return false;
+    assert(I != ShapeMap.end() &&
+           "must only visit instructions with shape info");
 
     Value *Op = Inst->getOperand(0);
 
