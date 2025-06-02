@@ -72,49 +72,57 @@
 #     CHECK-TEST7: Passed With Retry: 1
 
 # This test only passes on the 4th try. Here we check that a test can be re-run when:
-#  * The "--max-retries-per-test" is specified high enough (3).
+#  * The "--max-retries-per-test" is specified high enough (7).
 #  * No ALLOW_RETRIES keyword is used in the test script.
 #  * No config.test_retry_attempts is adjusted in the test suite config file.
 # RUN: rm -f %t.counter
 # RUN: %{lit} %{inputs}/max-retries-per-test/no-allow-retries-no-test_retry_attempts/test.py \
-# RUN:   --max-retries-per-test=3 \
+# RUN:   --max-retries-per-test=7 \
+# RUN:   --show-attempts-count \
 # RUN:   -Dcounter=%t.counter \
 # RUN:   -Dpython=%{python} \
 # RUN: | FileCheck --check-prefix=CHECK-TEST8 %s
+# CHECK-TEST8: FLAKYPASS: no-allow-retries-no-test_retry_attempts :: test.py (1 of 1) [attempts=4,max_allowed_attempts=8]
 # CHECK-TEST8: Passed With Retry: 1
 
 # This test only passes on the 4th try. Here we check that a test can be re-run when:
 #  * The "--max-retries-per-test" is specified too low (2).
-#  * ALLOW_RETRIES is specified high enough (3)
+#  * ALLOW_RETRIES is specified high enough (8)
 #  * No config.test_retry_attempts is adjusted in the test suite config file.
 # RUN: rm -f %t.counter
 # RUN: %{lit} %{inputs}/max-retries-per-test/allow-retries-no-test_retry_attempts/test.py \
 # RUN:   --max-retries-per-test=2 \
+# RUN:   --show-attempts-count \
 # RUN:   -Dcounter=%t.counter \
 # RUN:   -Dpython=%{python} \
 # RUN: | FileCheck --check-prefix=CHECK-TEST9 %s
+# CHECK-TEST9: FLAKYPASS: allow-retries-no-test_retry_attempts :: test.py (1 of 1) [attempts=4,max_allowed_attempts=9]
 # CHECK-TEST9: Passed With Retry: 1
 
 # This test only passes on the 4th try. Here we check that a test can be re-run when:
 #  * The "--max-retries-per-test" is specified too low (2).
 #  * No ALLOW_RETRIES keyword is used in the test script.
-#  * config.test_retry_attempts is set high enough (3).
+#  * config.test_retry_attempts is set high enough (9).
 # RUN: rm -f %t.counter
 # RUN: %{lit} %{inputs}/max-retries-per-test/no-allow-retries-test_retry_attempts/test.py \
 # RUN:   --max-retries-per-test=2 \
+# RUN:   --show-attempts-count \
 # RUN:   -Dcounter=%t.counter \
 # RUN:   -Dpython=%{python} \
 # RUN: | FileCheck --check-prefix=CHECK-TEST10 %s
+# CHECK-TEST10: FLAKYPASS: no-allow-retries-test_retry_attempts :: test.py (1 of 1) [attempts=4,max_allowed_attempts=10]
 # CHECK-TEST10: Passed With Retry: 1
 
 # This test only passes on the 4th try. Here we check that a test can be re-run when:
 #  * The "--max-retries-per-test" is specified too low (1).
-#  * ALLOW_RETRIES keyword set high enough (3).
-#  * config.test_retry_attempts is set too low enough (2).
+#  * ALLOW_RETRIES keyword is set high enough (10)
+#  * config.test_retry_attempts is set too low (2).
 # RUN: rm -f %t.counter
-# RUN: %{lit} %{inputs}/max-retries-per-test/no-allow-retries-test_retry_attempts/test.py \
+# RUN: %{lit} %{inputs}/max-retries-per-test/allow-retries-test_retry_attempts/test.py \
 # RUN:   --max-retries-per-test=1 \
+# RUN:   --show-attempts-count \
 # RUN:   -Dcounter=%t.counter \
 # RUN:   -Dpython=%{python} \
 # RUN: | FileCheck --check-prefix=CHECK-TEST11 %s
+# CHECK-TEST11: FLAKYPASS: allow-retries-test_retry_attempts :: test.py (1 of 1) [attempts=4,max_allowed_attempts=11]
 # CHECK-TEST11: Passed With Retry: 1
