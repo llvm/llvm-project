@@ -236,6 +236,8 @@ static bool parseDescriptorTable(LLVMContext *Ctx,
     return reportError(Ctx, "Invalid value for ShaderVisibility");
 
   mcdxbc::DescriptorTable Table;
+  Header.ParameterType =
+      llvm::to_underlying(dxbc::RootParameterType::DescriptorTable);
 
   for (unsigned int I = 2; I < DescriptorTableNode->getNumOperands(); I++) {
     MDNode *Element = dyn_cast<MDNode>(DescriptorTableNode->getOperand(I));
@@ -312,7 +314,7 @@ static bool verifyRegisterValue(uint32_t RegisterValue) {
 }
 
 static bool verifyRegisterSpace(uint32_t RegisterSpace) {
-  return !(RegisterSpace >= 0xFFFFFFF0 && RegisterSpace <= 0xFFFFFFFF);
+  return !(RegisterSpace >= 0xFFFFFFF0 && RegisterSpace < 0xFFFFFFFF);
 }
 
 static bool verifyDescriptorFlag(uint32_t Flags) { return (Flags & ~0xE) == 0; }
