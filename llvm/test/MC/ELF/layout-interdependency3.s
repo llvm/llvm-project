@@ -1,8 +1,12 @@
 ## This contrived .space example previously triggered "invalid number of bytes" error.
 ## https://github.com/llvm/llvm-project/issues/123402
-# RUN: not llvm-mc -filetype=obj -triple=x86_64 %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
-# CHECK: error: invalid number of bytes
+# CHECK-LABEL: <p_1st>:
+# CHECK:        e: cli
+# CHECK-LABEL: <q_1st>:
+# CHECK:        25: nop
 
 	.section .p,"ax"
 p_1st:
