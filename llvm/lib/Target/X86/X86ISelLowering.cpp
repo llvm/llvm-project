@@ -2238,7 +2238,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ZERO_EXTEND,        MVT::v32i8, Custom);
     setOperationAction(ISD::ANY_EXTEND,         MVT::v32i8, Custom);
 
-    for (auto VT : { MVT::v32i8, MVT::v16i8, MVT::v16i16, MVT::v8i16 }) {
+    for (auto VT : {MVT::v32i8, MVT::v16i8, MVT::v16i16, MVT::v8i16,
+                    MVT::v16f16, MVT::v8f16}) {
       setOperationAction(ISD::MLOAD,  VT, Subtarget.hasVLX() ? Legal : Custom);
       setOperationAction(ISD::MSTORE, VT, Subtarget.hasVLX() ? Legal : Custom);
     }
@@ -33192,8 +33193,8 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
          "Cannot lower masked load op.");
 
   assert((ScalarVT.getSizeInBits() >= 32 ||
-          (Subtarget.hasBWI() &&
-              (ScalarVT == MVT::i8 || ScalarVT == MVT::i16))) &&
+          (Subtarget.hasBWI() && (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
+                                  ScalarVT == MVT::f16))) &&
          "Unsupported masked load op.");
 
   // This operation is legal for targets with VLX, but without
@@ -33240,9 +33241,9 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
          "Cannot lower masked store op.");
 
   assert((ScalarVT.getSizeInBits() >= 32 ||
-          (Subtarget.hasBWI() &&
-              (ScalarVT == MVT::i8 || ScalarVT == MVT::i16))) &&
-          "Unsupported masked store op.");
+          (Subtarget.hasBWI() && (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
+                                  ScalarVT == MVT::f16))) &&
+         "Unsupported masked store op.");
 
   // This operation is legal for targets with VLX, but without
   // VLX the vector should be widened to 512 bit
@@ -42617,9 +42618,11 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     return SDValue();
   }
   case X86ISD::VPERM2X128: {
-    // Fold vperm2x128(bitcast(x),bitcast(y),c) -> bitcast(vperm2x128(x,y,c)).
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
+    unsigned Imm = N.getConstantOperandVal(2);
+
+    // Fold vperm2x128(bitcast(x),bitcast(y),c) -> bitcast(vperm2x128(x,y,c)).
     if (LHS.getOpcode() == ISD::BITCAST &&
         (RHS.getOpcode() == ISD::BITCAST || RHS.isUndef())) {
       EVT SrcVT = LHS.getOperand(0).getValueType();
@@ -42652,7 +42655,6 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       }
       return SDValue();
     };
-    unsigned Imm = N.getConstantOperandVal(2);
     if (SDValue SubLo = FindSubVector128(Imm & 0x0F)) {
       if (SDValue SubHi = FindSubVector128((Imm & 0xF0) >> 4)) {
         MVT SubVT = VT.getHalfNumVectorElementsVT();
@@ -42661,6 +42663,24 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SubLo, SubHi);
       }
     }
+
+    // Attempt to match VBROADCAST*128 subvector broadcast load.
+    if (RHS.isUndef()) {
+      SmallVector<int, 4> Mask;
+      DecodeVPERM2X128Mask(4, Imm, Mask);
+      if (isUndefOrInRange(Mask, 0, 4)) {
+        bool SplatLo = isShuffleEquivalent(Mask, {0, 1, 0, 1}, LHS);
+        bool SplatHi = isShuffleEquivalent(Mask, {2, 3, 2, 3}, LHS);
+        if ((SplatLo || SplatHi) && !Subtarget.hasAVX512() &&
+            X86::mayFoldLoad(LHS, Subtarget)) {
+          MVT MemVT = VT.getHalfNumVectorElementsVT();
+          unsigned Ofs = SplatLo ? 0 : MemVT.getStoreSize();
+          return getBROADCAST_LOAD(X86ISD::SUBV_BROADCAST_LOAD, DL, VT, MemVT,
+                                   cast<LoadSDNode>(LHS), Ofs, DAG);
+        }
+      }
+    }
+
     return SDValue();
   }
   case X86ISD::PSHUFD:
