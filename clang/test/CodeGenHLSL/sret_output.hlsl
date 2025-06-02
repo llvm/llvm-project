@@ -1,21 +1,26 @@
-// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s  \
-// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -triple spirv-unknown-vulkan1.3-library %s  \
+// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
-// FIXME: add semantic to a.
-// See https://github.com/llvm/llvm-project/issues/57874
+// CHECK: @SV_TARGET0 = external hidden thread_local addrspace(8) global <4 x float>, !spirv.Decorations !0
+
 struct S {
-  float a;
+  float4 a : SV_Target;
 };
 
 
-// Make sure sret parameter is generated.
-// CHECK:define internal void @_Z7ps_mainv(ptr dead_on_unwind noalias writable sret(%struct.S) align 1 %agg.result)
-// FIXME: change it to real value instead of poison value once semantic is add to a.
-// Make sure the function with sret is called.
-// CHECK:call void @_Z7ps_mainv(ptr poison)
+// CHECK-SPIRV: define internal spir_func void @_Z7ps_mainv(ptr dead_on_unwind noalias writable sret(%struct.S) align 1 %agg.result)
+// CHECK: %a = getelementptr inbounds nuw %struct.S, ptr %agg.result, i32 0, i32 0
+// CHECK: store <4 x float> zeroinitializer, ptr %a, align 1
+
+// CHECK-SPIRV: define void @ps_main()
+// CHECK:         %[[#VAR:]] = alloca %struct.S, align 16
+// CHECK-SPIRV:                call spir_func void @_Z7ps_mainv(ptr %[[#VAR]])
+// CHECK:          %[[#L1:]] = load %struct.S, ptr %[[#VAR]], align 16
+// CHECK:          %[[#L2:]] = extractvalue %struct.S %[[#L1]], 0
+// CHECK:          store <4 x float> %[[#L2]], ptr addrspace(8) @SV_TARGET0, align 16
 [shader("pixel")]
 S ps_main() {
   S s;
-  s.a = 0;
+  s.a = float4(0.f);
   return s;
 };

@@ -6786,6 +6786,7 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
 static void
 ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
                      const Sema::ProcessDeclAttributeOptions &Options) {
+
   if (AL.isInvalid() || AL.getKind() == ParsedAttr::IgnoredAttribute)
     return;
 
@@ -7432,29 +7433,26 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLWaveSize:
     S.HLSL().handleWaveSizeAttr(D, AL);
     break;
-  case ParsedAttr::AT_HLSLSV_Position:
-    S.HLSL().handleSV_PositionAttr(D, AL);
-    break;
   case ParsedAttr::AT_HLSLVkExtBuiltinInput:
     S.HLSL().handleVkExtBuiltinInputAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLVkConstantId:
     S.HLSL().handleVkConstantIdAttr(D, AL);
     break;
-  case ParsedAttr::AT_HLSLSV_GroupThreadID:
-    S.HLSL().handleSV_GroupThreadIDAttr(D, AL);
-    break;
-  case ParsedAttr::AT_HLSLSV_GroupID:
-    S.HLSL().handleSV_GroupIDAttr(D, AL);
-    break;
-  case ParsedAttr::AT_HLSLSV_GroupIndex:
-    handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
-    break;
+  // case ParsedAttr::AT_HLSLSV_GroupThreadID:
+  //   S.HLSL().handleSV_GroupThreadIDAttr(D, AL);
+  //   break;
+  // case ParsedAttr::AT_HLSLSV_GroupID:
+  //   S.HLSL().handleSV_GroupIDAttr(D, AL);
+  //   break;
+  // case ParsedAttr::AT_HLSLSV_GroupIndex:
+  //   handleSimpleAttribute<HLSLSV_GroupIndexAttr>(S, D, AL);
+  //   break;
+  // case ParsedAttr::AT_HLSLSV_DispatchThreadID:
+  //   S.HLSL().handleSV_DispatchThreadIDAttr(D, AL);
+  //   break;
   case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
     handleSimpleAttribute<HLSLGroupSharedAddressSpaceAttr>(S, D, AL);
-    break;
-  case ParsedAttr::AT_HLSLSV_DispatchThreadID:
-    S.HLSL().handleSV_DispatchThreadIDAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLPackOffset:
     S.HLSL().handlePackOffsetAttr(D, AL);
@@ -7467,6 +7465,12 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkLocation:
+    S.HLSL().handleVkLocationAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLUnparsedSemantic:
+    S.HLSL().handleSemanticAttr(D, AL);
     break;
 
   case ParsedAttr::AT_AbiTag:

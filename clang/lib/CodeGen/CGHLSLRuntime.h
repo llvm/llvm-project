@@ -21,6 +21,8 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
+#include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
 
@@ -29,6 +31,7 @@
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 
 #include <optional>
+#include <unordered_set>
 #include <vector>
 
 // A function generator macro for picking the right intrinsic
@@ -133,8 +136,75 @@ public:
 protected:
   CodeGenModule &CGM;
 
-  llvm::Value *emitInputSemantic(llvm::IRBuilder<> &B, const ParmVarDecl &D,
-                                 llvm::Type *Ty);
+  void collectInputSemantic(llvm::IRBuilder<> &B, const DeclaratorDecl *D,
+                            llvm::Type *Type,
+                            SmallVectorImpl<llvm::Value *> &Inputs);
+
+  struct SPIRVState {
+    uint32_t NextLocation;
+  };
+
+  struct SemanticInfo {
+    clang::HLSLSemanticAttr *Semantic;
+    uint32_t Index;
+  };
+
+  // llvm::Value *createDXILLocationLoad(llvm::IRBuilder<> &B, llvm::Module &M,
+  // llvm::Type *Ty, unsigned Location, StringRef Name = "");
+
+  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                         SemanticInfo &ActiveSemantic,
+                                         HLSLVkLocationAttr *LocAttr);
+  llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        SemanticInfo &ActiveSemantic);
+
+  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                    const clang::DeclaratorDecl *Decl,
+                                    SemanticInfo &ActiveSemantic);
+
+  llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                      const clang::DeclaratorDecl *Decl,
+                                      SemanticInfo &ActiveSemantic);
+
+  llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
+                                        SemanticInfo &ActiveSemantic);
+
+  llvm::Value *handleStructSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
+                                        SemanticInfo &ActiveSemantic);
+
+  llvm::Value *handleSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                  const clang::DeclaratorDecl *Decl,
+                                  SemanticInfo &ActiveSemantic);
+  ///
+
+  void emitSPIRVUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Value,
+                                  SemanticInfo &ActiveSemantic);
+  void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Value,
+                                 SemanticInfo &ActiveSemantic);
+
+  void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Value,
+                             const clang::DeclaratorDecl *Decl,
+                             SemanticInfo &ActiveSemantic);
+
+  void emitSystemSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Value,
+                               const clang::DeclaratorDecl *Decl,
+                               SemanticInfo &ActiveSemantic);
+
+  void handleScalarSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Value,
+                                 const clang::DeclaratorDecl *Decl,
+                                 SemanticInfo &ActiveSemantic);
+
+  void handleStructSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Value,
+                                 const clang::DeclaratorDecl *Decl,
+                                 SemanticInfo &ActiveSemantic);
+
+  void handleSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Value,
+                           const clang::DeclaratorDecl *Decl,
+                           SemanticInfo &ActiveSemantic);
+
+  ///
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
@@ -172,6 +242,13 @@ private:
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;
+
+  std::unordered_set<std::string> ActiveInputSemantics;
+  std::unordered_set<std::string> ActiveOutputSemantics;
+
+  std::optional<bool> SPIRVUsingExplicitLocation = std::nullopt;
+  unsigned SPIRVLastAssignedInputSemanticLocation = 0;
+  unsigned SPIRVLastAssignedOutputSemanticLocation = 0;
 };
 
 } // namespace CodeGen

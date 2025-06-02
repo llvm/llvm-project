@@ -129,6 +129,7 @@ public:
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
+  bool isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
   void DiagnoseAttrStageMismatch(
@@ -161,17 +162,31 @@ public:
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
-  void handleSV_PositionAttr(Decl *D, const ParsedAttr &AL);
+  // void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
+  // void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
+  // void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
   void handlePackOffsetAttr(Decl *D, const ParsedAttr &AL);
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
+  template <typename T>
+  T *createSemanticAttr(const ParsedAttr &AL,
+                        std::optional<unsigned> Location) {
+    T *Attr = ::new (getASTContext()) T(getASTContext(), AL);
+    if (Attr->isSemanticIndexable())
+      Attr->setSemanticIndex(Location ? *Location : 0);
+    return Attr;
+    // FIXME
+  }
+
+  void diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
+                                  std::optional<unsigned> Index);
+  void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
+
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkLocationAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   QualType ProcessResourceTypeAttributes(QualType Wrapped);

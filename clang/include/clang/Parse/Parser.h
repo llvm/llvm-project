@@ -5188,6 +5188,14 @@ private:
       ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
+  struct ParsedSemantic {
+    StringRef Name;
+    unsigned Index;
+    bool Explicit;
+  };
+
+  ParsedSemantic ParseHLSLSemantic();
+
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
                             SourceLocation *EndLoc = nullptr,
                             bool CouldBeBitField = false);
