@@ -2235,8 +2235,8 @@ Value *AMDGPUCodeGenPrepareImpl::matchFractPat(IntrinsicInst &I) {
 
   // The value is only used in contexts where we know the input isn't a nan, so
   // any of the fmin variants are fine.
-  if (IID != Intrinsic::minnum &&
-      IID != Intrinsic::minimumnum & IID != Intrinsic::minimum)
+  if (IID != Intrinsic::minnum && IID != Intrinsic::minimum &&
+      IID != Intrinsic::minimumnum)
     return nullptr;
 
   Type *Ty = I.getType();
