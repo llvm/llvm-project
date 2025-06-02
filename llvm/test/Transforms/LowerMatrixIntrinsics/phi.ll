@@ -385,6 +385,53 @@ exit:
   ret void
 }
 
+define void @matrix_phi_two_preds_shape_mismatch(i1 %cond1, ptr %a, ptr %b, ptr %out) {
+; CHECK-LABEL: @matrix_phi_two_preds_shape_mismatch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[BBA:%.*]], label [[BBB:%.*]]
+; CHECK:       bba:
+; CHECK-NEXT:    [[COL_LOAD16:%.*]] = load <3 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP17:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD18:%.*]] = load <3 x double>, ptr [[VEC_GEP17]], align 8
+; CHECK-NEXT:    [[VEC_GEP19:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[COL_LOAD20:%.*]] = load <3 x double>, ptr [[VEC_GEP19]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <3 x double> [[COL_LOAD16]], <3 x double> [[COL_LOAD18]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x double> [[COL_LOAD20]], <3 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <6 x double> [[TMP0]], <6 x double> [[TMP1]], <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <9 x double> [[TMP2]], <9 x double> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       bbb:
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <9 x double>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <9 x double> [ [[SPLIT]], [[BBA]] ], [ [[COL_LOAD]], [[BBB]] ]
+; CHECK-NEXT:    [[SPLIT38:%.*]] = shufflevector <9 x double> [[TMP11]], <9 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[SPLIT39:%.*]] = shufflevector <9 x double> [[TMP11]], <9 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[SPLIT40:%.*]] = shufflevector <9 x double> [[TMP11]], <9 x double> poison, <3 x i32> <i32 6, i32 7, i32 8>
+; CHECK-NEXT:    store <3 x double> [[SPLIT38]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP41:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    store <3 x double> [[SPLIT39]], ptr [[VEC_GEP41]], align 8
+; CHECK-NEXT:    [[VEC_GEP42:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    store <3 x double> [[SPLIT40]], ptr [[VEC_GEP42]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond1, label %bba, label %bbb
+
+bba:
+  %va = call <9 x double> @llvm.matrix.column.major.load(ptr %a, i64 3, i1 false, i32 3, i32 3)
+  br label %exit
+
+bbb:
+  %vb = call <9 x double> @llvm.matrix.column.major.load(ptr %b, i64 9, i1 false, i32 9, i32 1)
+  br label %exit
+
+exit:
+  %phi = phi <9 x double> [%va, %bba], [%vb, %bbb]
+  call void @llvm.matrix.column.major.store(<9 x double> %phi, ptr %out, i64 3, i1 false, i32 3, i32 3)
+  ret void
+}
+
 define <9 x double> @matrix_phi_ifthenelse(i1 %cond, <9 x double> %A, <9 x double> %B, <9 x double> %C) {
 ; CHECK-LABEL: @matrix_phi_ifthenelse(
 ; CHECK-NEXT:  entry:
