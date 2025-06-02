@@ -48,8 +48,9 @@ define amdgpu_kernel void @kernel(i32 %idx, ptr %out) "amdgpu-wavegroup-enable" 
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s10, s9, max(41, amdgpu.max_num_vgpr)
 ; CHECK-NEXT:    s_mul_i32 s33, s9, s8
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s10
+; CHECK-NEXT:    s_add_co_u32 s10, s10, 2
 ; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s10
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_mov_b64 s[36:37], s[2:3]
 ; CHECK-NEXT:    s_clause 0x1

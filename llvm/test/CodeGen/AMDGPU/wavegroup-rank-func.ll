@@ -134,11 +134,12 @@ define amdgpu_kernel void @main(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf,
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mul_i32 s1, s0, 0
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
+; CHECK-NEXT:    s_add_co_u32 s1, s1, 32
 ; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 32
 ; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB3_2
 ; CHECK-NEXT:  ; %bb.1:
@@ -175,7 +176,7 @@ entry:
 }
 ; RANK:         .set main.private_seg_size, max(0, 0+max(.Linput.private_seg_size, .Lcompute.private_seg_size, .Loutput.private_seg_size))
 ; RANK:         .set main.num_vgpr_rank_sum, 0+.Linput.num_vgpr+.Lcompute.num_vgpr+.Loutput.num_vgpr
-; RANK: ; NumVGPRsForWavesPerEU: 23
+; RANK: ; NumVGPRsForWavesPerEU: 55
 
 ; Function Attrs: convergent mustprogress nocallback nofree nosync nounwind willreturn memory(none)
 declare <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half>, <9 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, i32 immarg, i1 immarg) #1

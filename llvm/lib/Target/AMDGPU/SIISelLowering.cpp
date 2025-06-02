@@ -18231,6 +18231,21 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
         MRI.setRegClass(Reg, TRI->getRegClass(NewClassID));
     }
   }
+  // Update the laneshared vgpr and scratch size in MFI with the function
+  // Metadata.
+  auto *MD = MF.getFunction().getMetadata("laneshared-vgpr-size");
+  if (MD)
+    Info->updateLaneSharedVGPRSize(
+        cast<ConstantInt>(
+            cast<ConstantAsMetadata>(MD->getOperand(0))->getValue())
+            ->getZExtValue());
+
+  MD = MF.getFunction().getMetadata("laneshared-scratch-size");
+  if (MD)
+    Info->updateLaneSharedScratchSize(
+        cast<ConstantInt>(
+            cast<ConstantAsMetadata>(MD->getOperand(0))->getValue())
+            ->getZExtValue());
 
   TargetLoweringBase::finalizeLowering(MF);
 }
