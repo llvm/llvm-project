@@ -76,6 +76,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.wchar_macros
     libc.src.__support.wctype_utils
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
