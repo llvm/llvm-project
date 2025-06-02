@@ -615,7 +615,9 @@ void CompilerInstance::createPCHExternalASTSource(
       Path, getHeaderSearchOpts().Sysroot, DisableValidation,
       AllowPCHWithCompilerErrors, getPreprocessor(), getModuleCache(),
       getASTContext(), getPCHContainerReader(),
-      getFrontendOpts().ModuleFileExtensions, DependencyCollectors,
+      getFrontendOpts().ModuleFileExtensions,
+      getFrontendOpts().LangOptionsOpts,
+      DependencyCollectors,
       DeserializationListener, OwnDeserializationListener, Preamble,
       getFrontendOpts().UseGlobalModuleIndex);
 }
@@ -626,6 +628,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
     ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
+    LangOptionsOptions& LangOptionsOpts,
     ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
     void *DeserializationListener, bool OwnDeserializationListener,
     bool Preamble, bool UseGlobalModuleIndex) {
@@ -634,6 +637,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
 
   IntrusiveRefCntPtr<ASTReader> Reader(new ASTReader(
       PP, ModCache, &Context, PCHContainerRdr, Extensions,
+      LangOptionsOpts,
       Sysroot.empty() ? "" : Sysroot.data(), DisableValidation,
       AllowPCHWithCompilerErrors, /*AllowConfigurationMismatch*/ false,
       HSOpts.ModulesValidateSystemHeaders,
@@ -1746,14 +1750,15 @@ void CompilerInstance::createASTReader() {
                                               "Reading modules", *timerGroup);
   TheASTReader = new ASTReader(
       getPreprocessor(), getModuleCache(), &getASTContext(),
-      getPCHContainerReader(), getFrontendOpts().ModuleFileExtensions,
+      getPCHContainerReader(), FEOpts.ModuleFileExtensions,
+      FEOpts.LangOptionsOpts,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       PPOpts.DisablePCHOrModuleValidation,
       /*AllowASTWithCompilerErrors=*/FEOpts.AllowPCMWithCompilerErrors,
       /*AllowConfigurationMismatch=*/false, HSOpts.ModulesValidateSystemHeaders,
       HSOpts.ModulesForceValidateUserHeaders,
       HSOpts.ValidateASTInputFilesContent,
-      getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));
+      FEOpts.UseGlobalModuleIndex, std::move(ReadTimer));
   if (hasASTConsumer()) {
     TheASTReader->setDeserializationListener(
         getASTConsumer().GetASTDeserializationListener());

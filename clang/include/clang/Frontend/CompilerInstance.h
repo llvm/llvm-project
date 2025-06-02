@@ -721,6 +721,7 @@ public:
       bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
       ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
+      LangOptionsOptions& LangOptionsOpts,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
       bool Preamble, bool UseGlobalModuleIndex);
