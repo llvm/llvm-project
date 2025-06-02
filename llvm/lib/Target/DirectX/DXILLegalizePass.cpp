@@ -182,9 +182,10 @@ static void fixI8UseChain(Instruction &I,
       ElementType = ArrTy->getArrayElementType();
 
     ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
-    // Note: the only way to convert an i8 offset to an i32 offset without
-    // emitting code Would be to emit code. We sould expect this value to be a
-    // ConstantInt since Offsets are very regulalrly converted.
+    // Note: i8 to i32 offset conversion without emitting IR requires constant
+    // ints. Since offset conversion is common, we can safely assume Offset is
+    // always a ConstantInt, so no need to have a conditional bail out on
+    // nullptr, instead assert this is the case.
     assert(Offset && "Offset is expected to be a ConstantInt");
     uint32_t ByteOffset = Offset->getZExtValue();
     uint32_t ElemSize = GEP->getDataLayout().getTypeAllocSize(ElementType);
@@ -210,9 +211,9 @@ static void upcastI8AllocasAndUses(Instruction &I,
   auto ProcessLoad = [&](LoadInst *Load) {
     for (User *LU : Load->users()) {
       Type *Ty = nullptr;
-      if (auto *Cast = dyn_cast<CastInst>(LU)) {
+      if (CastInst *Cast = dyn_cast<CastInst>(LU))
         Ty = Cast->getType();
-      } else if (auto *CI = dyn_cast<CallInst>(LU)) {
+      else if (CallInst *CI = dyn_cast<CallInst>(LU)) {
         if (CI->getIntrinsicID() == Intrinsic::memset)
           Ty = Type::getInt32Ty(CI->getContext());
       }
@@ -220,10 +221,9 @@ static void upcastI8AllocasAndUses(Instruction &I,
       if (!Ty)
         continue;
 
-      if (!SmallestType || Ty->getPrimitiveSizeInBits() <
-                               SmallestType->getPrimitiveSizeInBits()) {
+      if (!SmallestType ||
+          Ty->getPrimitiveSizeInBits() < SmallestType->getPrimitiveSizeInBits())
         SmallestType = Ty;
-      }
     }
   };
 
@@ -232,9 +232,8 @@ static void upcastI8AllocasAndUses(Instruction &I,
       ProcessLoad(Load);
     else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
       for (User *GU : GEP->users()) {
-        if (auto *Load = dyn_cast<LoadInst>(GU)) {
+        if (auto *Load = dyn_cast<LoadInst>(GU))
           ProcessLoad(Load);
-        }
       }
     }
   }
