@@ -437,6 +437,12 @@ struct VGPRBlock2IndexFunctor {
   }
 };
 
+#if LLPC_BUILD_NPI
+// Creates a vreg definition for idx0, so it's value can be manipulated
+// prior to frame lowering
+Register initIdx0VRegDef(MachineFunction &MF, const SIInstrInfo *TII);
+
+#endif /* LLPC_BUILD_NPI */
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
@@ -643,6 +649,9 @@ private:
   Register SGPRForEXECCopy;
 
 #if LLPC_BUILD_NPI
+  // Maps s_set_gpr instrs to a idx0 s_add computation
+  DenseMap<MachineInstr *, MachineInstr *> SetterPairs;
+  Register Idx0VRegDef;
   bool NeedIdx0Restore;
 
 #endif /* LLPC_BUILD_NPI */
@@ -857,6 +866,19 @@ public:
   bool getNeedIdx0Restore() const { return NeedIdx0Restore; }
 
   void setNeedIdx0Restore(bool Need) { NeedIdx0Restore = Need; }
+
+  Register getIdx0VRegDef() const { return Idx0VRegDef; }
+
+  DenseMap<MachineInstr *, MachineInstr *> &getIdx0PrivateComputations() {
+    return SetterPairs;
+  }
+
+  void setIdx0VRegDef(Register Reg) {
+    assert(!Idx0VRegDef.isValid() && Reg.isVirtual() &&
+           "Idx0 should only have one reg def and it must be set before reg "
+           "alloc");
+    Idx0VRegDef = Reg;
+  }
 
 #endif /* LLPC_BUILD_NPI */
   ArrayRef<MCPhysReg> getVGPRSpillAGPRs() const {

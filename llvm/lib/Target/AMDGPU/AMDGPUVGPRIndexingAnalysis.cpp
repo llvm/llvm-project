@@ -61,18 +61,20 @@ namespace {
 class AnalysisImpl {
 public:
   AnalysisImpl(
-      const SIRegisterInfo &TRI, const MachineRegisterInfo &MRI,
+      const SIRegisterInfo &TRI, MachineFunction &MF,
       std::unordered_map<const MachineInstr *, AMDGPULaneSharedIdxInfo> &MapLS,
       std::unordered_map<const MachineInstr *, AMDGPUPrivateObjectIdxInfo>
           &MapPO,
       unsigned LaneSharedSize)
-      : TRI(TRI), MRI(MRI), LaneSharedIdxInfos(MapLS),
+      : TRI(TRI), MRI(MF.getRegInfo()),
+        MFI(*MF.getInfo<SIMachineFunctionInfo>()), LaneSharedIdxInfos(MapLS),
         PrivateObjectIdxInfos(MapPO), LaneSharedSize(LaneSharedSize) {}
   void compute(const MachineFunction &MF);
 
 private:
   const SIRegisterInfo &TRI;
-  const MachineRegisterInfo &MRI;
+  MachineRegisterInfo &MRI;
+  SIMachineFunctionInfo &MFI;
   std::unordered_map<const MachineInstr *, AMDGPULaneSharedIdxInfo>
       &LaneSharedIdxInfos;
   std::unordered_map<const MachineInstr *, AMDGPUPrivateObjectIdxInfo>
@@ -113,8 +115,7 @@ bool AMDGPUIndexingInfoWrapper::runOnMachineFunction(MachineFunction &MF) {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   unsigned LaneSharedSize = MFI.getLaneSharedVGPRSize() / 4u;
   IndexingInfo = AMDGPUIndexingInfo(LaneSharedSize);
-  AnalysisImpl Impl(*ST.getRegisterInfo(), MF.getRegInfo(),
-                    IndexingInfo.LaneSharedIdxInfos,
+  AnalysisImpl Impl(*ST.getRegisterInfo(), MF, IndexingInfo.LaneSharedIdxInfos,
                     IndexingInfo.PrivateObjectIdxInfos, LaneSharedSize);
   Impl.compute(MF);
 
@@ -134,9 +135,7 @@ llvm::getAMDGPUPrivateObjectNodeInfo(const MDNode *Obj) {
   return std::make_pair(Offset, Size);
 }
 
-// Return metadata describing the object the passed instruction refers to,
-// if any, or nullptr otherwise.
-static const MDNode *getPromotedPrivateObject(const MachineInstr &MI) {
+const MDNode *llvm::getAMDGPUPromotedPrivateObject(const MachineInstr &MI) {
   if (MI.getOpcode() != AMDGPU::V_LOAD_IDX &&
       MI.getOpcode() != AMDGPU::V_STORE_IDX)
     return nullptr;
@@ -162,7 +161,7 @@ static const MDNode *getPromotedPrivateObject(const MachineInstr &MI) {
 void AnalysisImpl::addPrivateObjectIdxInfo(
     const MachineInstr *MI,
     std::optional<std::pair<unsigned, unsigned>> UsedRegs) {
-  const MDNode *Obj = getPromotedPrivateObject(*MI);
+  const MDNode *Obj = getAMDGPUPromotedPrivateObject(*MI);
   assert(Obj && "Expected promoted private object");
   auto [Offset, Size] = getAMDGPUPrivateObjectNodeInfo(Obj);
   PrivateObjectIdxInfos.insert({MI, {UsedRegs, Obj, Size, Offset}});
@@ -211,8 +210,24 @@ void AnalysisImpl::analyzeIdxInst(const MachineInstr &MI) {
     assert(Idx < NumIdxRegs);
     if (SrcOpnd.isImm())
       GprIdxImmedVals[Idx] = SrcOpnd.getImm();
-    else
+    else {
+      // Peel away the idx0 s_add to get the real imm value, if there is one.
       GprIdxImmedVals[Idx] = {};
+      if (MachineInstr *Adder = MFI.getIdx0PrivateComputations().lookup(&MI)) {
+        Register UseReg = MI.getOperand(1).getReg();
+        Register DefReg = Adder->getOperand(0).getReg();
+        assert(UseReg == DefReg &&
+               "Setter is not using the result of the idx0 computation");
+        MachineOperand RealIdxUse = Adder->getOperand(1);
+        MachineOperand Idx0MO = Adder->getOperand(2);
+        if (RealIdxUse.isReg() && Idx0MO.isImm()) {
+          // they got swapped by optimize instr size
+          RealIdxUse = Idx0MO;
+        }
+        if (RealIdxUse.isImm())
+          GprIdxImmedVals[Idx] = RealIdxUse.getImm();
+      }
+    }
   } else if (MI.getOpcode() == AMDGPU::V_STORE_IDX ||
              MI.getOpcode() == AMDGPU::V_LOAD_IDX) {
     auto IdxSrcIdx =

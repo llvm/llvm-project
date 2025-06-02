@@ -34,6 +34,23 @@ const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
   return static_cast<const GCNTargetMachine &>(TLI->getTargetMachine());
 }
 
+#if LLPC_BUILD_NPI
+Register llvm::initIdx0VRegDef(MachineFunction &MF, const SIInstrInfo *TII) {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  Register Idx0VRegDef =
+      MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0_XEXECRegClass);
+  MachineBasicBlock &EntryMBB = MF.front();
+  auto InsertPt = EntryMBB.begin();
+  BuildMI(EntryMBB, InsertPt, DebugLoc(), TII->get(AMDGPU::S_SET_GPR_IDX_U32),
+          AMDGPU::IDX0)
+      .addImm(0);
+  BuildMI(EntryMBB, InsertPt, DebugLoc(), TII->get(TargetOpcode::COPY),
+          Idx0VRegDef)
+      .addReg(AMDGPU::IDX0);
+  return Idx0VRegDef;
+}
+
+#endif /* LLPC_BUILD_NPI */
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
     : AMDGPUMachineFunction(F, *STI), Mode(F, *STI), GWSResourcePSV(getTM(STI)),

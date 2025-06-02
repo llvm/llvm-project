@@ -31,6 +31,10 @@ class SIRegisterInfo;
 class MachineRegisterInfo;
 class SIInstrInfo;
 
+// Return metadata describing the object the passed instruction refers to,
+// if any, or nullptr otherwise.
+const MDNode *getAMDGPUPromotedPrivateObject(const MachineInstr &MI);
+
 std::pair<unsigned, unsigned>
 getAMDGPUPrivateObjectNodeInfo(const MDNode *Node);
 
