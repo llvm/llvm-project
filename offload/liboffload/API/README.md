@@ -8,6 +8,7 @@ The root file is `OffloadAPI.td` - additional `.td` files can be included in
 this file to add them to the API.
 
 ## Modifying the API
+
 API modifications, including additions, can be made by modifying the existing
 `.td` files. It is also possible to add a new tablegen file to the API by adding
 it to the includes in `OffloadAPI.td`. When Offload is rebuilt the new
@@ -35,16 +36,19 @@ In short, the steps to add a new function are:
 * Rebuild `LLVMOffload`
 
 ## API Objects
+
 The API consists of a number of objects, which always have a *name* field and
 *description* field, and are one of the following types:
 
 ### Function
+
 Represents an API entry point function. Has a list of returns and parameters.
 Also has fields for details (representing a bullet-point list of information
 about the function that would otherwise be too detailed for the description),
 and analogues (equivalent functions in other APIs).
 
 #### Parameter
+
 Represents a parameter to a function, has *type*, *name*, and *desc* fields.
 Also has a *flags* field containing flags representing whether the parameter is
 in, out, or optional.
@@ -64,6 +68,7 @@ There are two special variants of a *parameter*:
   functions (e.g. `olGetDeviceInfo`) to return data of an arbitrary type.
 
 #### Return
+
 A return represents a possible return code from the function, and optionally a
 list of conditions in which this value may be returned. The conditions list is
 not expected to be exhaustive. A condition is considered free-form text, but if
@@ -79,6 +84,7 @@ values automatically.
 
 
 ### Struct
+
 Represents a struct. Contains a list of members, which each have a *type*,
 *name*, and *desc*.
 
@@ -89,6 +95,7 @@ actual C++ inheritance, but instead explicitly has those members copied in,
 which preserves ABI compatibility with C.
 
 ### Enum
+
 Represents a C-style enum. Contains a list of `etor` values, which have a name
 and description.
 
@@ -100,13 +107,16 @@ All enums automatically get a `<enum_name>_FORCE_UINT32 = 0x7fffffff` value,
 which forces the underlying type to be uint32.
 
 ### Handle
+
 Represents a pointer to an opaque struct, as described in the Parameter section.
 It does not take any extra fields.
 
 ### Typedef
+
 Represents a typedef, contains only a *value* field.
 
 ### Macro
+
 Represents a C preprocessor `#define`. Contains a *value* field. Optionally
 takes a *condition* field, which allows the macro to be conditionally defined,
 and an *alt_value* field, which represents the value if the condition is false.
@@ -120,6 +130,7 @@ files, rather than requiring a mix of C source and tablegen.
 ## Generation
 
 ### API header
+
 ```
 ./offload-tblgen -I <path-to-llvm>/offload/API  <path-to-llvm>/offload/API/OffloadAPI.td --gen-api
 ```
@@ -132,6 +143,7 @@ this header is expected to be part of the installation and distributed to
 end-users, so should be self-contained.
 
 ### Entry Points
+
 ```
 ./offload-tblgen -I <path-to-llvm>/offload/API  <path-to-llvm>/offload/API/OffloadAPI.td --gen-entry-points
 ```
@@ -144,6 +156,7 @@ function calls with arguments and results. The tracing can be enabled with the
 `OFFLOAD_TRACE` environment variable.
 
 ### Implementation function declarations
+
 ```
 ./offload-tblgen -I <path-to-llvm>/offload/API  <path-to-llvm>/offload/API/OffloadAPI.td --gen-impl-func-decls
 ```
@@ -151,6 +164,7 @@ Generates declarations of the implementation of functions of every entry point
 in the API, e.g. `offloadDeviceFoo_impl` for `offloadDeviceFoo`.
 
 ### Print header
+
 ```
 ./offload-tblgen -I <path-to-llvm>/offload/API  <path-to-llvm>/offload/API/OffloadAPI.td --gen-print-header
 ```
@@ -164,5 +178,6 @@ For ease of implementation, and since it is not strictly part of the API, this
 is a C++ header file. If a C version is desirable it could be added.
 
 ### Additional Tablegen backends
+
 `RecordTypes.hpp` contains wrappers for all of the API object types, which
 allows new backends to be easily added if needed.
