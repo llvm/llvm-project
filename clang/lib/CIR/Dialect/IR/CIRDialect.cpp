@@ -21,6 +21,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
+
 #include <numeric>
 
 using namespace mlir;
@@ -1597,9 +1598,9 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
     elements.reserve(numElements);
 
     const uint64_t maskBits = llvm::NextPowerOf2(numElements - 1) - 1;
-    for (uint64_t i = 0; i < numElements; i++) {
-      cir::IntAttr idxAttr = mlir::cast<cir::IntAttr>(indicesElts[i]);
-      uint64_t idxValue = idxAttr.getUInt();
+    for (const mlir::APInt &idxAttr :
+         indicesElts.getAsValueRange<cir::IntAttr, mlir::APInt>()) {
+      uint64_t idxValue = idxAttr.getZExtValue();
       uint64_t newIdx = idxValue & maskBits;
       elements.push_back(vecElts[newIdx]);
     }
