@@ -66,8 +66,8 @@ void registerMatchersForGetArrowStart(MatchFinder *Finder,
 
   // Make sure we are not missing the known standard types.
   const auto SmartptrAny = anyOf(knownSmartptr(), QuacksLikeASmartptr);
-  const auto SmartptrWithDeref =
-      anyOf(cxxRecordDecl(knownSmartptr(), HasRelevantOps), QuacksLikeASmartptr);
+  const auto SmartptrWithDeref = anyOf(
+      cxxRecordDecl(knownSmartptr(), HasRelevantOps), QuacksLikeASmartptr);
 
   // Catch 'ptr.get()->Foo()'
   Finder->addMatcher(
