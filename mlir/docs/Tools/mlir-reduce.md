@@ -31,7 +31,7 @@ results and different time complexity. You can run as
 As mentioned, you need to provide a command to `mlir-reduce` which identifies
 cases you're interested in. For each intermediate output generated during
 reduction, `mlir-reduce` will run the command over the it, the script should
-returns 1 for interesting case, 0 otherwise. The sample script,
+returns 0 for an interesting case, 1 otherwise. The sample script,
 
 ```shell
 mlir-opt -convert-vector-to-spirv $1 | grep "failed to materialize"
