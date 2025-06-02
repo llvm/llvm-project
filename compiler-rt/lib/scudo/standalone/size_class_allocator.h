@@ -59,6 +59,11 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
 
   bool deallocate(uptr ClassId, void *P) {
     CHECK_LT(ClassId, NumClasses);
+
+    if(SizeClassAllocator::ZeroOnDealloc) {
+      memset(P, 0, SizeClassAllocator::getSizeByClassId(ClassId));
+    }
+
     PerClass *C = &PerClassArray[ClassId];
 
     // If the cache is full, drain half of blocks back to the main allocator.
@@ -210,6 +215,10 @@ template <class SizeClassAllocator> struct SizeClassAllocatorNoCache {
 
   bool deallocate(uptr ClassId, void *P) {
     CHECK_LT(ClassId, NumClasses);
+
+    if(SizeClassAllocator::ZeroOnDealloc) {
+      memset(P, 0, SizeClassAllocator::getSizeByClassId(ClassId));
+    }
 
     if (ClassId == BatchClassId)
       return deallocateBatchClassBlock(P);
