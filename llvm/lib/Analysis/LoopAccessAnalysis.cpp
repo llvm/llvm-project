@@ -1001,12 +1001,12 @@ static void findForkedSCEVs(
       break;
     }
 
-    Type *PtrTy = GEP->getPointerOperandType();
+    Type *IntPtrTy = SE->getEffectiveSCEVType(GEP->getPointerOperandType());
 
     // Find the size of the type being pointed to. We only have a single
     // index term (guarded above) so we don't need to index into arrays or
     // structures, just get the size of the scalar value.
-    const SCEV *Size = SE->getSizeOfExpr(PtrTy, SourceTy);
+    const SCEV *Size = SE->getSizeOfExpr(IntPtrTy, SourceTy);
 
     for (auto [B, O] : zip(BaseScevs, OffsetScevs)) {
       const SCEV *Base = get<0>(B);
@@ -1014,7 +1014,7 @@ static void findForkedSCEVs(
 
       // Scale up the offsets by the size of the type, then add to the bases.
       const SCEV *Scaled =
-          SE->getMulExpr(Size, SE->getTruncateOrSignExtend(Offset, PtrTy));
+          SE->getMulExpr(Size, SE->getTruncateOrSignExtend(Offset, IntPtrTy));
       ScevList.emplace_back(SE->getAddExpr(Base, Scaled), NeedsFreeze);
     }
     break;
