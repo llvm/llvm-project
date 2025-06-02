@@ -2566,7 +2566,7 @@ static Value *getExpandedStep(const InductionDescriptor &ID,
     return C->getValue();
   if (auto *U = dyn_cast<SCEVUnknown>(Step))
     return U->getValue();
-  auto *V = ExpandedSCEVs.lookup(Step);
+  Value *V = ExpandedSCEVs.lookup(Step);
   assert(V && "SCEV must be expanded at this point");
   return V;
 }
@@ -10159,7 +10159,7 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
     auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandR)
       continue;
-    auto *ExpandedVal =
+    VPValue *ExpandedVal =
         Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR->getSCEV()));
     ExpandR->replaceAllUsesWith(ExpandedVal);
     if (Plan.getTripCount() == ExpandR)
