@@ -32,6 +32,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -700,202 +701,263 @@ void RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
   }
 }
 
-namespace {
+// namespace {
 
 //===----------------------------------------------------------------------===//
 // LayoutAttrAssignment
 //===----------------------------------------------------------------------===//
-template <typename OpTy>
-class UpdateTensorDescType : public OpConversionPattern<OpTy> {
-public:
-  UpdateTensorDescType(MLIRContext *context,
-                       function_ref<xegpu::LayoutAttr(Value)> getLayoutOfValue,
-                       TypeConverter &typeConverter, PatternBenefit benefit = 1)
-      : OpConversionPattern<OpTy>(typeConverter, context, benefit),
-        getLayoutOfValue(getLayoutOfValue) {}
-  using OpConversionPattern<OpTy>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(OpTy op, typename OpTy::Adaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // Op must have single result.
-    if (op->getNumResults() != 1)
-      return failure();
-    Type resultType = op->getResult(0).getType();
-    // Result type must be a tensor descriptor type.
-    if (!isa<xegpu::TensorDescType>(resultType)) {
-      LLVM_DEBUG(DBGS() << "Result type is not a tensor descriptor type: "
-                        << resultType << "\n");
-      return failure();
+// template <typename OpTy>
+// class UpdateTensorDescType : public OpConversionPattern<OpTy> {
+// public:
+//   UpdateTensorDescType(MLIRContext *context,
+//                        function_ref<xegpu::LayoutAttr(Value)>
+//                        getLayoutOfValue, TypeConverter &typeConverter,
+//                        PatternBenefit benefit = 1)
+//       : OpConversionPattern<OpTy>(typeConverter, context, benefit),
+//         getLayoutOfValue(getLayoutOfValue) {}
+//   using OpConversionPattern<OpTy>::OpConversionPattern;
+//   LogicalResult
+//   matchAndRewrite(OpTy op, typename OpTy::Adaptor adaptor,
+//                   ConversionPatternRewriter &rewriter) const override {
+//     // Op must have single result.
+//     if (op->getNumResults() != 1)
+//       return failure();
+//     Type resultType = op->getResult(0).getType();
+//     // Result type must be a tensor descriptor type.
+//     if (!isa<xegpu::TensorDescType>(resultType)) {
+//       LLVM_DEBUG(DBGS() << "Result type is not a tensor descriptor type: "
+//                         << resultType << "\n");
+//       return failure();
+//     }
+//     auto assignedLayout = getLayoutOfValue(op.getResult());
+//     if (!assignedLayout) {
+//       LLVM_DEBUG(DBGS() << "No layout assigned for " << *op << "\n");
+//       return failure();
+//     }
+//     // Get the original tensor descriptor type.
+//     auto origTensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType);
+//     auto newTensorDescTy = xegpu::TensorDescType::get(
+//         origTensorDescTy.getContext(), origTensorDescTy.getShape(),
+//         origTensorDescTy.getElementType(), origTensorDescTy.getEncoding(),
+//         assignedLayout);
+//     rewriter.replaceOpWithNewOp<OpTy>(op, newTensorDescTy,
+//                                       adaptor.getOperands(), op->getAttrs());
+//     return success();
+//   }
+
+// private:
+//   function_ref<xegpu::LayoutAttr(Value)> getLayoutOfValue;
+// };
+// /// This class is responsible for assigning the layout attributes to the ops
+// and
+// /// their users based on the layout propagation analysis result.
+// class LayoutAttrAssignment {
+// public:
+//   LayoutAttrAssignment(Operation *top,
+//                        function_ref<LayoutInfo(Value)> getLayout)
+//       : getAnalysisResult(getLayout), top(top) {}
+
+//   LogicalResult run();
+
+// private:
+//   LogicalResult assign(Operation *op);
+//   void assignToUsers(Value v, xegpu::LayoutAttr layout);
+//   xegpu::LayoutAttr getLayoutAttrForValue(Value v);
+//   LogicalResult resolveConflicts();
+//   // Callable to get the layout of a value based on the layout propagation
+//   // analysis.
+//   function_ref<LayoutInfo(Value)> getAnalysisResult;
+//   Operation *top;
+// };
+
+// } // namespace
+
+// /// Helper to assign the layout attribute to the users of the value.
+// void LayoutAttrAssignment::assignToUsers(Value v, xegpu::LayoutAttr layout) {
+//   for (OpOperand &user : v.getUses()) {
+//     Operation *owner = user.getOwner();
+//     unsigned operandNumber = user.getOperandNumber();
+//     // Use a generic name for ease of querying the layout attribute later.
+//     std::string attrName =
+//         operandLayoutNamePrefix + std::to_string(operandNumber);
+//     owner->setAttr(attrName, layout);
+//   }
+// }
+
+// /// Convert the layout assigned to a value to xegpu::LayoutAttr.
+// xegpu::LayoutAttr LayoutAttrAssignment::getLayoutAttrForValue(Value v) {
+//   llvm::errs() << "getLayoutAttrForValue: " << v << "\n";
+//   LayoutInfo layout = getAnalysisResult(v);
+//   if (!layout.isAssigned()) {
+//     llvm::errs() << "No layout assigned for value\n";
+//     return {};
+//   }
+//   SmallVector<int, 2> laneLayout, laneData;
+//   for (auto [layout, data] : llvm::zip_equal(layout.getLayoutAsArrayRef(),
+//                                              layout.getDataAsArrayRef())) {
+//     laneLayout.push_back(static_cast<int>(layout));
+//     laneData.push_back(static_cast<int>(data));
+//   }
+//   llvm::errs() << "return layout\n";
+//   return xegpu::LayoutAttr::get(v.getContext(), laneLayout, laneData);
+// }
+
+// /// Assign xegpu::LayoutAttr to the op and its users. The layout is assigned
+// /// based on the layout propagation analysis result.
+// LogicalResult LayoutAttrAssignment::assign(Operation *op) {
+//   // For function ops, propagate the function argument layout to the users.
+//   if (auto func = dyn_cast<FunctionOpInterface>(op)) {
+//     for (BlockArgument arg : func.getArguments()) {
+//       xegpu::LayoutAttr layoutInfo = getLayoutAttrForValue(arg);
+//       if (layoutInfo) {
+//         assignToUsers(arg, layoutInfo);
+//       }
+//     }
+//     return success();
+//   }
+//   // If no results, move on.
+//   if (op->getNumResults() == 0)
+//     return success();
+//   // If all the results are scalars, move on.
+//   if (llvm::all_of(op->getResultTypes(),
+//                    [](Type t) { return t.isIntOrIndexOrFloat(); }))
+//     return success();
+//   // If the op has more than one result and at least one result is a tensor
+//   // descriptor, exit. This case is not supported yet.
+//   // TODO: Support this case.
+//   if (op->getNumResults() > 1 && llvm::any_of(op->getResultTypes(), [](Type
+//   t) {
+//         return isa<xegpu::TensorDescType>(t);
+//       })) {
+//     LLVM_DEBUG(
+//         DBGS() << op->getName()
+//                << " op has more than one result and at least one is a tensor
+//                "
+//                   "descriptor. This case is not handled.\n");
+//     return failure();
+//   }
+//   // If the result is a tensor descriptor, attach the layout to the tensor
+//   // descriptor itself.
+//   if (auto tensorDescTy =
+//           dyn_cast<xegpu::TensorDescType>(op->getResultTypes()[0])) {
+//     xegpu::LayoutAttr layoutInfo = getLayoutAttrForValue(op->getResult(0));
+//     if (!layoutInfo) {
+//       LLVM_DEBUG(DBGS() << "No layout for result of " << *op << "\n");
+//       return failure();
+//     }
+
+//     // Clone the op, attach the layout to the result tensor descriptor, and
+//     // remove the original op.
+//     OpBuilder builder(op);
+//     Operation *newOp = builder.clone(*op);
+//     auto newTensorDescTy = xegpu::TensorDescType::get(
+//         tensorDescTy.getContext(), tensorDescTy.getShape(),
+//         tensorDescTy.getElementType(), tensorDescTy.getEncoding(),
+//         layoutInfo);
+//     newOp->getResult(0).setType(newTensorDescTy);
+//     op->replaceAllUsesWith(newOp->getResults());
+//     op->erase();
+//     return success();
+//   }
+//   // Otherwise simply attach the layout to the op itself.
+//   for (auto [i, r] : llvm::enumerate(op->getResults())) {
+//     xegpu::LayoutAttr layoutInfo = getLayoutAttrForValue(r);
+//     if (layoutInfo) {
+//       std::string attrName = resultLayoutNamePrefix + std::to_string(i);
+//       op->setAttr(attrName, layoutInfo);
+//       // Attach the layout attribute to the users of the result.
+//       assignToUsers(r, layoutInfo);
+//     }
+//   }
+//   return success();
+// }
+
+// /// Walk the IR and attach xegpu::LayoutAttr to all ops and their users.
+// LogicalResult LayoutAttrAssignment::run() {
+//   // auto walkResult = top->walk([&](Operation *op) {
+//   //   if (failed(assign(op)))
+//   //     return WalkResult::interrupt();
+//   //   return WalkResult::advance();
+//   // });
+
+//   // if (walkResult.wasInterrupted())
+//   //   return failure();
+//   // apply the UpdateTensorDescType pattern to all ops
+//   // RewritePatternSet patterns(top->getContext());
+//   // patterns.add<UpdateTensorDescType>(
+//   //     top->getContext(), [&](Value v) -> xegpu::LayoutAttr {
+//   //       llvm::errs() << "invoking callback for value\n";
+//   //       return getLayoutAttrForValue(v);
+//   //     });
+//   // if (failed(applyPatternsGreedily(top, std::move(patterns))))
+//   //   return failure();
+
+//   return resolveConflicts();
+// }
+
+// /// TODO: Implement the layout conflict resolution. This must ensure mainly
+// two
+// /// things:
+// /// 1) Is a given layout supported by the op? (need to query the target
+// ///    HW info). Otherwise can we achieve this layout using a layout
+// conversion?
+// /// 2) Do all the operands have the required layout? If not, can it
+// ///    be resolved using a layout conversion?
+// LogicalResult LayoutAttrAssignment::resolveConflicts() { return success(); }
+using GetLayoutCallbackFnTy = function_ref<xegpu::LayoutAttr(Value)>;
+static void handleBranchTerminatorOpInterface(
+    mlir::OpBuilder &builder,
+    mlir::RegionBranchTerminatorOpInterface terminator,
+    GetLayoutCallbackFnTy getLayoutOfValue) {}
+static void handleBranchOpInterface(mlir::OpBuilder &builder,
+                                    mlir::RegionBranchOpInterface branch,
+                                    GetLayoutCallbackFnTy getLayoutOfValue) {}
+static void updateBlockTypes(mlir::OpBuilder &builder, mlir::Block &block,
+                             GetLayoutCallbackFnTy getLayoutOfValue) {}
+static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
+                     GetLayoutCallbackFnTy getLayoutOfValue) {
+
+  auto updateValue = [&](Value v, unsigned vIndex,
+                         const std::string &layoutAttrName) {
+    // Layouts are needed only for vector and tensor descriptor types.
+    if (!isa<VectorType, xegpu::TensorDescType>(v.getType()))
+      return;
+    xegpu::LayoutAttr layout = getLayoutOfValue(v);
+    if (!layout) {
+      // TODO : handle error.
+      LLVM_DEBUG(DBGS() << "Expecting layout for value: " << v
+                        << " but got none.\n");
+      return;
     }
-    auto assignedLayout = getLayoutOfValue(op.getResult());
-    if (!assignedLayout) {
-      LLVM_DEBUG(DBGS() << "No layout assigned for " << *op << "\n");
-      return failure();
+    auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(v.getType());
+
+    if (tensorDescTy) {
+      auto newTensorDescTy = xegpu::TensorDescType::get(
+          tensorDescTy.getContext(), tensorDescTy.getShape(),
+          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
+      v.setType(newTensorDescTy);
+      return;
     }
-    // Get the original tensor descriptor type.
-    auto origTensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType);
-    auto newTensorDescTy = xegpu::TensorDescType::get(
-        origTensorDescTy.getContext(), origTensorDescTy.getShape(),
-        origTensorDescTy.getElementType(), origTensorDescTy.getEncoding(),
-        assignedLayout);
-    rewriter.replaceOpWithNewOp<OpTy>(op, newTensorDescTy,
-                                      adaptor.getOperands(), op->getAttrs());
-    return success();
+    // If type is vector, add a temporary layout attribute to the op.
+    op->setAttr(layoutAttrName, layout);
+  };
+
+  // Iterate over all the operands.
+  for (OpOperand &operand : op->getOpOperands()) {
+    unsigned operandIndex = operand.getOperandNumber();
+    std::string operandLayoutName =
+        operandLayoutNamePrefix + std::to_string(operandIndex);
+    updateValue(operand.get(), operandIndex, operandLayoutName);
   }
 
-private:
-  function_ref<xegpu::LayoutAttr(Value)> getLayoutOfValue;
-};
-/// This class is responsible for assigning the layout attributes to the ops and
-/// their users based on the layout propagation analysis result.
-class LayoutAttrAssignment {
-public:
-  LayoutAttrAssignment(Operation *top,
-                       function_ref<LayoutInfo(Value)> getLayout)
-      : getAnalysisResult(getLayout), top(top) {}
-
-  LogicalResult run();
-
-private:
-  LogicalResult assign(Operation *op);
-  void assignToUsers(Value v, xegpu::LayoutAttr layout);
-  xegpu::LayoutAttr getLayoutAttrForValue(Value v);
-  LogicalResult resolveConflicts();
-  // Callable to get the layout of a value based on the layout propagation
-  // analysis.
-  function_ref<LayoutInfo(Value)> getAnalysisResult;
-  Operation *top;
-};
-
-} // namespace
-
-/// Helper to assign the layout attribute to the users of the value.
-void LayoutAttrAssignment::assignToUsers(Value v, xegpu::LayoutAttr layout) {
-  for (OpOperand &user : v.getUses()) {
-    Operation *owner = user.getOwner();
-    unsigned operandNumber = user.getOperandNumber();
-    // Use a generic name for ease of querying the layout attribute later.
-    std::string attrName =
-        operandLayoutNamePrefix + std::to_string(operandNumber);
-    owner->setAttr(attrName, layout);
+  // Iterate over all the results.
+  for (OpResult result : op->getResults()) {
+    unsigned resultIndex = result.getResultNumber();
+    std::string resultLayoutName =
+        resultLayoutNamePrefix + std::to_string(resultIndex);
+    updateValue(result, resultIndex, resultLayoutName);
   }
 }
-
-/// Convert the layout assigned to a value to xegpu::LayoutAttr.
-xegpu::LayoutAttr LayoutAttrAssignment::getLayoutAttrForValue(Value v) {
-  llvm::errs() << "getLayoutAttrForValue: " << v << "\n";
-  LayoutInfo layout = getAnalysisResult(v);
-  if (!layout.isAssigned()) {
-    llvm::errs() << "No layout assigned for value\n";
-    return {};
-  }
-  SmallVector<int, 2> laneLayout, laneData;
-  for (auto [layout, data] : llvm::zip_equal(layout.getLayoutAsArrayRef(),
-                                             layout.getDataAsArrayRef())) {
-    laneLayout.push_back(static_cast<int>(layout));
-    laneData.push_back(static_cast<int>(data));
-  }
-  llvm::errs() << "return layout\n";
-  return xegpu::LayoutAttr::get(v.getContext(), laneLayout, laneData);
-}
-
-/// Assign xegpu::LayoutAttr to the op and its users. The layout is assigned
-/// based on the layout propagation analysis result.
-LogicalResult LayoutAttrAssignment::assign(Operation *op) {
-  // For function ops, propagate the function argument layout to the users.
-  if (auto func = dyn_cast<FunctionOpInterface>(op)) {
-    for (BlockArgument arg : func.getArguments()) {
-      xegpu::LayoutAttr layoutInfo = getLayoutAttrForValue(arg);
-      if (layoutInfo) {
-        assignToUsers(arg, layoutInfo);
-      }
-    }
-    return success();
-  }
-  // If no results, move on.
-  if (op->getNumResults() == 0)
-    return success();
-  // If all the results are scalars, move on.
-  if (llvm::all_of(op->getResultTypes(),
-                   [](Type t) { return t.isIntOrIndexOrFloat(); }))
-    return success();
-  // If the op has more than one result and at least one result is a tensor
-  // descriptor, exit. This case is not supported yet.
-  // TODO: Support this case.
-  if (op->getNumResults() > 1 && llvm::any_of(op->getResultTypes(), [](Type t) {
-        return isa<xegpu::TensorDescType>(t);
-      })) {
-    LLVM_DEBUG(
-        DBGS() << op->getName()
-               << " op has more than one result and at least one is a tensor "
-                  "descriptor. This case is not handled.\n");
-    return failure();
-  }
-  // If the result is a tensor descriptor, attach the layout to the tensor
-  // descriptor itself.
-  if (auto tensorDescTy =
-          dyn_cast<xegpu::TensorDescType>(op->getResultTypes()[0])) {
-    xegpu::LayoutAttr layoutInfo = getLayoutAttrForValue(op->getResult(0));
-    if (!layoutInfo) {
-      LLVM_DEBUG(DBGS() << "No layout for result of " << *op << "\n");
-      return failure();
-    }
-
-    // Clone the op, attach the layout to the result tensor descriptor, and
-    // remove the original op.
-    OpBuilder builder(op);
-    Operation *newOp = builder.clone(*op);
-    auto newTensorDescTy = xegpu::TensorDescType::get(
-        tensorDescTy.getContext(), tensorDescTy.getShape(),
-        tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layoutInfo);
-    newOp->getResult(0).setType(newTensorDescTy);
-    op->replaceAllUsesWith(newOp->getResults());
-    op->erase();
-    return success();
-  }
-  // Otherwise simply attach the layout to the op itself.
-  for (auto [i, r] : llvm::enumerate(op->getResults())) {
-    xegpu::LayoutAttr layoutInfo = getLayoutAttrForValue(r);
-    if (layoutInfo) {
-      std::string attrName = resultLayoutNamePrefix + std::to_string(i);
-      op->setAttr(attrName, layoutInfo);
-      // Attach the layout attribute to the users of the result.
-      assignToUsers(r, layoutInfo);
-    }
-  }
-  return success();
-}
-
-/// Walk the IR and attach xegpu::LayoutAttr to all ops and their users.
-LogicalResult LayoutAttrAssignment::run() {
-  // auto walkResult = top->walk([&](Operation *op) {
-  //   if (failed(assign(op)))
-  //     return WalkResult::interrupt();
-  //   return WalkResult::advance();
-  // });
-
-  // if (walkResult.wasInterrupted())
-  //   return failure();
-  // apply the UpdateTensorDescType pattern to all ops
-  // RewritePatternSet patterns(top->getContext());
-  // patterns.add<UpdateTensorDescType>(
-  //     top->getContext(), [&](Value v) -> xegpu::LayoutAttr {
-  //       llvm::errs() << "invoking callback for value\n";
-  //       return getLayoutAttrForValue(v);
-  //     });
-  // if (failed(applyPatternsGreedily(top, std::move(patterns))))
-  //   return failure();
-
-  return resolveConflicts();
-}
-
-/// TODO: Implement the layout conflict resolution. This must ensure mainly two
-/// things:
-/// 1) Is a given layout supported by the op? (need to query the target
-///    HW info). Otherwise can we achieve this layout using a layout conversion?
-/// 2) Do all the operands have the required layout? If not, can it
-///    be resolved using a layout conversion?
-LogicalResult LayoutAttrAssignment::resolveConflicts() { return success(); }
 
 namespace {
 
@@ -1657,10 +1719,10 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   // auto getPropagatedLayout = [&](Value val) {
   //   return analyis.getLayoutInfo(val);
   // };
-  auto getXeGpuLayoutForValue = [&](Value val) -> xegpu::LayoutAttr {
+  auto getXeGPULayoutForValue = [&](Value val) -> xegpu::LayoutAttr {
     LayoutInfo layout = analyis.getLayoutInfo(val);
     if (!layout.isAssigned()) {
-      llvm::errs() << "No layout assigned for value\n";
+      llvm::errs() << "No layout assigned for value" << val << "\n";
       return {};
     }
     SmallVector<int, 2> laneLayout, laneData;
@@ -1672,41 +1734,26 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     return xegpu::LayoutAttr::get(val.getContext(), laneLayout, laneData);
   };
 
-  ConversionTarget target(getContext());
-  target.addDynamicallyLegalOp<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp>(
-      [&](Operation *op) {
-        return llvm::all_of(op->getResults(), [&](Value val) {
-          if (auto descType = dyn_cast<xegpu::TensorDescType>(val.getType())) {
-            return descType.getLayoutAttr() != nullptr;
-          }
-          return true; // Non-tensor descriptor types are always legal.
-        });
-      });
-  target.addLegalOp<UnrealizedConversionCastOp>();
-  TypeConverter typeConverter;
-  typeConverter.addConversion([](Type type) { return type; });
-  // // typeConverter.addConversion([](xegpu::TensorDescType type) {
-  // //   return xegpu::TensorDescType::get(
-  // //       type.getContext(), type.getShape(), type.getElementType(),
-  // //       type.getEncoding(),
-  // //       xegpu::LayoutAttr::get(type.getContext(), {1, 1}, {1, 1}));
-  // // });
-  auto addUnrealizedCast = [](OpBuilder &builder, Type type, ValueRange inputs,
-                              Location loc) -> Value {
-    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
-    return cast.getResult(0);
-  };
+  mlir::OpBuilder builder(&getContext());
+  Operation *op = getOperation();
+  op->walk([&](mlir::Block *block) {
+    for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
+      if (auto terminator =
+              mlir::dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
+        handleBranchTerminatorOpInterface(builder, terminator,
+                                          getXeGPULayoutForValue);
+        continue;
+      }
 
-  typeConverter.addSourceMaterialization(addUnrealizedCast);
-  typeConverter.addTargetMaterialization(addUnrealizedCast);
+      if (auto iface = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op)) {
+        handleBranchOpInterface(builder, iface, getXeGPULayoutForValue);
+        continue;
+      }
+      updateOp(builder, &op, getXeGPULayoutForValue);
+    }
 
-  RewritePatternSet patterns(&getContext());
-  patterns.add<UpdateTensorDescType<xegpu::CreateNdDescOp>,
-               UpdateTensorDescType<xegpu::UpdateNdOffsetOp>>(
-      &getContext(), getXeGpuLayoutForValue, typeConverter);
-  if (failed(
-          applyPartialConversion(getOperation(), target, std::move(patterns))))
-    signalPassFailure();
+    updateBlockTypes(builder, *block, getXeGPULayoutForValue);
+  });
 
   // Assign xegpu::LayoutAttr to all ops and their users based on the layout
   // propagation analysis result.
