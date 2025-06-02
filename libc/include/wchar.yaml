@@ -42,6 +42,13 @@ functions:
     arguments: 
       - type: const wchar_t *
       - type: wchar_t
+  - name: wcscmp
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
   - name: wcspbrk
     standards:
       - stdc
