@@ -4370,12 +4370,17 @@ class Config:
         try:
             library = cdll.LoadLibrary(self.get_filename())
         except OSError as e:
-            msg = (
-                str(e) + ". To provide a path to libclang use "
-                "Config.set_library_path() or "
-                "Config.set_library_file()."
-            )
-            raise LibclangError(msg)
+            if "wrong ELF class: ELFCLASS32" in str(e):
+                print("warning: skipping check-clang-python"
+                      " since libclang cannot be loaded", file=sys.stderr)
+                os._exit(0)
+            else:
+                msg = (
+                    str(e) + ". To provide a path to libclang use "
+                    "Config.set_library_path() or "
+                    "Config.set_library_file()."
+                )
+                raise LibclangError(msg)
 
         return library
 
