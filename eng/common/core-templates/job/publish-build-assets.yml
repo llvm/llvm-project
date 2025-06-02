@@ -32,6 +32,12 @@ parameters:
   # Optional: 🌤️ or not the build has assets it wants to publish to BAR
   isAssetlessBuild: false
 
+  # Optional, publishing version
+  publishingVersion: 3
+
+  # Optional: A minimatch pattern for the asset manifests to publish to BAR
+  assetManifestsPattern: '*/manifests/**/*.xml'
+
 jobs:
 - job: Asset_Registry_Publish
 
@@ -77,13 +83,31 @@ jobs:
       clean: true
 
     - ${{ if eq(parameters.isAssetlessBuild, 'false') }}: 
-      - task: DownloadPipelineArtifact@2
-        displayName: Download Asset Manifests
-        inputs:
-          artifactName: AssetManifests
-          targetPath: '$(Build.StagingDirectory)/AssetManifests'
-        condition: ${{ parameters.condition }}
-        continueOnError: ${{ parameters.continueOnError }}
+      - ${{ if eq(parameters.publishingVersion, 3) }}: 
+        - task: DownloadPipelineArtifact@2
+          displayName: Download Asset Manifests
+          inputs:
+            artifactName: AssetManifests
+            targetPath: '$(Build.StagingDirectory)/AssetManifests'
+          condition: ${{ parameters.condition }}
+          continueOnError: ${{ parameters.continueOnError }}
+      - ${{ if eq(parameters.publishingVersion, 4) }}:
+        - task: DownloadPipelineArtifact@2
+          displayName: Download V4 asset manifests
+          inputs:
+            itemPattern: '*/manifests/**/*.xml'
+            targetPath: '$(Build.StagingDirectory)/AllAssetManifests'
+          condition: ${{ parameters.condition }}
+          continueOnError: ${{ parameters.continueOnError }}
+        - task: CopyFiles@2
+          displayName: Copy V4 asset manifests to AssetManifests
+          inputs:
+            SourceFolder: '$(Build.StagingDirectory)/AllAssetManifests'
+            Contents: ${{ parameters.assetManifestsPattern }}
+            TargetFolder: '$(Build.StagingDirectory)/AssetManifests'
+            flattenFolders: true
+          condition: ${{ parameters.condition }}
+          continueOnError: ${{ parameters.continueOnError }}
     
     - task: NuGetAuthenticate@1
 
@@ -119,6 +143,17 @@ jobs:
             Write-Host "SymbolExclusionFile exists"
             Copy-Item -Path $symbolExclusionfile -Destination "$(Build.StagingDirectory)/ReleaseConfigs"
           }
+
+    - ${{ if eq(parameters.publishingVersion, 4) }}:
+      - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
+        parameters:
+          is1ESPipeline: ${{ parameters.is1ESPipeline }}
+          args:
+            targetPath: '$(Build.ArtifactStagingDirectory)/MergedManifest.xml'
+            artifactName: AssetManifests
+            displayName: 'Publish Merged Manifest'
+            retryCountOnTaskFailure: 10 # for any logs being locked
+            sbomEnabled: false  # we don't need SBOM for logs
 
     - template: /eng/common/core-templates/steps/publish-build-artifacts.yml
       parameters:

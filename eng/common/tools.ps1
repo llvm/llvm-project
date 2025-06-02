@@ -65,8 +65,8 @@ $ErrorActionPreference = 'Stop'
 # Base-64 encoded SAS token that has permission to storage container described by $runtimeSourceFeed
 [string]$runtimeSourceFeedKey = if (Test-Path variable:runtimeSourceFeedKey) { $runtimeSourceFeedKey } else { $null }
 
-# True if the build is a product build
-[bool]$productBuild = if (Test-Path variable:productBuild) { $productBuild } else { $false }
+# True when the build is running within the VMR.
+[bool]$fromVMR = if (Test-Path variable:fromVMR) { $fromVMR } else { $false }
 
 function Create-Directory ([string[]] $path) {
     New-Item -Path $path -Force -ItemType 'Directory' | Out-Null
@@ -644,7 +644,6 @@ function GetNuGetPackageCachePath() {
       $env:NUGET_PACKAGES = Join-Path $env:UserProfile '.nuget\packages\'
     } else {
       $env:NUGET_PACKAGES = Join-Path $RepoRoot '.packages\'
-      $env:RESTORENOHTTPCACHE = $true
     }
   }
 
@@ -850,8 +849,8 @@ function MSBuild-Core() {
     }
 
     # When running on Azure Pipelines, override the returned exit code to avoid double logging.
-    # Skip this when the build is a child of the VMR orchestrator build.
-    if ($ci -and $env:SYSTEM_TEAMPROJECT -ne $null -and !$productBuild) {
+    # Skip this when the build is a child of the VMR build.
+    if ($ci -and $env:SYSTEM_TEAMPROJECT -ne $null -and !$fromVMR) {
       Write-PipelineSetResult -Result "Failed" -Message "msbuild execution failed."
       # Exiting with an exit code causes the azure pipelines task to log yet another "noise" error
       # The above Write-PipelineSetResult will cause the task to be marked as failure without adding yet another error

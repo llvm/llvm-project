@@ -103,14 +103,14 @@ Set-StrictMode -Version Latest
 Highlight 'Installing .NET, preparing the tooling..'
 . .\eng\common\tools.ps1
 $dotnetRoot = InitializeDotNetCli -install:$true
+$darc = Get-Darc
 $dotnet = "$dotnetRoot\dotnet.exe"
-& "$dotnet" tool restore
 
 Highlight "Starting the synchronization of VMR.."
 
 # Synchronize the VMR
 $darcArgs = (
-  "darc", "vmr", "forwardflow",
+  "vmr", "forwardflow",
   "--tmp", $tmpDir,
   "--$verbosity",
   $vmrDir
@@ -124,7 +124,7 @@ if ($azdevPat) {
   $darcArgs += ("--azdev-pat", $azdevPat)
 }
 
-& "$dotnet" $darcArgs
+& "$darc" $darcArgs
 
 if ($LASTEXITCODE -eq 0) {
   Highlight "Synchronization succeeded"
