@@ -4451,6 +4451,8 @@ defm ptrauth_init_fini_address_discrimination : OptInCC1FFlag<"ptrauth-init-fini
   "Enable address discrimination of function pointers in init/fini arrays">;
 defm ptrauth_elf_got : OptInCC1FFlag<"ptrauth-elf-got", "Enable authentication of pointers from GOT (ELF only)">;
 defm aarch64_jump_table_hardening: OptInCC1FFlag<"aarch64-jump-table-hardening", "Use hardened lowering for jump-table dispatch">;
+defm ptrauth_disable_128bit_type_discrimination : OptInCC1FFlag<"ptrauth-disable-128bit-type-discrimination",
+  "Do not use different discriminators for __int128_t / __uint128_t / _BitInt(n) compared to other integer types when computing function pointer type discriminator">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,

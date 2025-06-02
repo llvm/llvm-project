@@ -3399,11 +3399,14 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     OS << "?";
     return;
 
-  case Type::BitInt: {
-    const auto *BtTy = T->castAs<BitIntType>();
-    OS << "D" << (BtTy->isUnsigned() ? "U" : "B") << BtTy->getNumBits() << "_";
+  case Type::BitInt:
+    if (Ctx.getLangOpts().PointerAuthFunctionTypeDiscrimination128) {
+      const auto *BtTy = T->castAs<BitIntType>();
+      OS << "D" << (BtTy->isUnsigned() ? "U" : "B") << BtTy->getNumBits()
+         << "_";
+    } else
+      OS << "?";
     return;
-  }
 
   case Type::Builtin: {
     const auto *BTy = T->castAs<BuiltinType>();
@@ -3411,11 +3414,17 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     switch (Kind) {
 #define SIGNED_TYPE(Id, SingletonId)                                           \
   case BuiltinType::Id:                                                        \
-    OS << (Kind == BuiltinType::Int128 ? "n" : "i");                           \
+    OS << (Kind == BuiltinType::Int128 &&                                      \
+                   Ctx.getLangOpts().PointerAuthFunctionTypeDiscrimination128  \
+               ? "n"                                                           \
+               : "i");                                                         \
     return;
 #define UNSIGNED_TYPE(Id, SingletonId)                                         \
   case BuiltinType::Id:                                                        \
-    OS << (Kind == BuiltinType::UInt128 ? "o" : "i");                          \
+    OS << (Kind == BuiltinType::UInt128 &&                                     \
+                   Ctx.getLangOpts().PointerAuthFunctionTypeDiscrimination128  \
+               ? "o"                                                           \
+               : "i");                                                         \
     return;
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define BUILTIN_TYPE(Id, SingletonId)
