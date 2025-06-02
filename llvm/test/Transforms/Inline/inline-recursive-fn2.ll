@@ -1,6 +1,9 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes='cgscc(inline),instcombine,cgscc(inline)' -S -debug-only=inline -disable-output < %s 2>&1 | FileCheck %s
 
+; This test shows that the recursive function will not get simplified
+; unless the caller is the function itself, not another different caller.
+
 ; CHECK:  Inlining calls in: test
 ; CHECK:      Function size: 2
 ; CHECK:      NOT Inlining (cost=never): recursive, Call:   %call = tail call float @inline_rec_true_successor(float %x, float %scale)
