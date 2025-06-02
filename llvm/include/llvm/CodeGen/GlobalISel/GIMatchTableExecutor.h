@@ -161,11 +161,11 @@ enum {
   /// - Pred(2) - The predicate to test
   GIM_CheckImmOperandPredicate,
 
-  /// Check a register predicate on the specified instruction.
+  /// Check a leaf predicate on the specified instruction.
   /// - InsnID(ULEB128) - Instruction ID
   /// - OpIdx(ULEB128) - Operand index
   /// - Pred(2) - The predicate to test
-  GIM_CheckRegOperandPredicate,
+  GIM_CheckLeafOperandPredicate,
 
   /// Check a memory operation has the specified atomic ordering.
   /// - InsnID(ULEB128) - Instruction ID

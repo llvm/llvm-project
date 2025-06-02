@@ -867,10 +867,10 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 // NOOPT-NEXT:     /*  897 */   GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // NOOPT-NEXT:     /*  901 */   // MIs[0] src1
 // NOOPT-NEXT:     /*  901 */   GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:     /*  904 */   GIM_CheckRegOperandPredicate, /*MI*/0, /*MO*/1, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
+// NOOPT-NEXT:     /*  904 */   GIM_CheckLeafOperandPredicate, /*MI*/0, /*MO*/1, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
 // NOOPT-NEXT:     /*  909 */   // MIs[0] src2
 // NOOPT-NEXT:     /*  909 */   GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:     /*  912 */   GIM_CheckRegOperandPredicate, /*MI*/0, /*MO*/2, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
+// NOOPT-NEXT:     /*  912 */   GIM_CheckLeafOperandPredicate, /*MI*/0, /*MO*/2, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
 // NOOPT-NEXT:     /*  917 */   // (sub:{ *:[i32] } GPR32:{ *:[i32] }<<P:Predicate_leaf>>:$src1, GPR32:{ *:[i32] }<<P:Predicate_leaf>>:$src2)  =>  (INSN5:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2)
 // NOOPT-NEXT:     /*  917 */   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::INSN5),
 // NOOPT-NEXT:     /*  922 */   GIR_RootConstrainSelectedInstOperands,

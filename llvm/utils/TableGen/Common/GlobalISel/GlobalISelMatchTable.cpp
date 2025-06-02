@@ -1333,7 +1333,7 @@ void OperandImmPredicateMatcher::emitPredicateOpcodes(MatchTable &Table,
 
 void OperandLeafPredicateMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIM_CheckRegOperandPredicate")
+  Table << MatchTable::Opcode("GIM_CheckLeafOperandPredicate")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("MO") << MatchTable::ULEB128Value(OpIdx)
         << MatchTable::Comment("Predicate")
