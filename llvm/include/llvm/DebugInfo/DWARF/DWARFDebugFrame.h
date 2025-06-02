@@ -406,6 +406,30 @@ class FDE;
 /// machine errors, or a valid UnwindTable otherwise.
 LLVM_ABI Expected<UnwindTable> createUnwindTable(const FDE *Fde);
 
+class CIE;
+
+/// Create an UnwindTable from a Common Information Entry (CIE).
+///
+/// \param Cie The Common Information Entry to extract the table from. The
+/// CFIProgram is retrieved from the \a Cie object and used to create the
+/// UnwindTable.
+///
+/// \returns An error if the DWARF Call Frame Information opcodes have state
+/// machine errors, or a valid UnwindTable otherwise.
+Expected<UnwindTable> createUnwindTable(const CIE *Cie);
+
+class FDE;
+
+/// Create an UnwindTable from a Frame Descriptor Entry (FDE).
+///
+/// \param Fde The Frame Descriptor Entry to extract the table from. The
+/// CFIProgram is retrieved from the \a Fde object and used to create the
+/// UnwindTable.
+///
+/// \returns An error if the DWARF Call Frame Information opcodes have state
+/// machine errors, or a valid UnwindTable otherwise.
+Expected<UnwindTable> createUnwindTable(const FDE *Fde);
+
 /// An entry in either debug_frame or eh_frame. This entry can be a CIE or an
 /// FDE.
 class FrameEntry {
