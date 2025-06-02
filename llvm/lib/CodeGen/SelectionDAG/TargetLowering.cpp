@@ -8559,6 +8559,23 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
+static SDValue emitSignedZeroOrdering(SelectionDAG &DAG, bool IsMax,
+                                      SDValue MinMax, SDValue LHS, SDValue RHS,
+                                      EVT CCVT, SDNodeFlags Flags,
+                                      const SDLoc &DL) {
+  EVT VT = MinMax.getValueType();
+  SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
+                                DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
+  FloatSignAsInt State;
+  DAG.getSignAsIntValue(State, DL, LHS);
+  SDValue IsSpecificZero =
+      DAG.getSetCC(DL, CCVT, State.IntValue,
+                   DAG.getConstant(0, DL, State.IntValue.getValueType()),
+                   IsMax ? ISD::SETEQ : ISD::SETNE);
+  SDValue Sel = DAG.getSelect(DL, VT, IsSpecificZero, LHS, RHS, Flags);
+  return DAG.getSelect(DL, VT, IsZero, Sel, MinMax, Flags);
+}
+
 SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
                                                 SelectionDAG &DAG) const {
   if (SDValue Expanded = expandVectorNaryOpBySplitting(N, DAG))
@@ -8609,18 +8626,9 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
 
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
-      !DAG.isKnownNeverZeroFloat(RHS) && !DAG.isKnownNeverZeroFloat(LHS)) {
-    SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
-                                  DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
-    FloatSignAsInt State;
-    DAG.getSignAsIntValue(State, DL, LHS);
-    SDValue IsSpecificZero =
-        DAG.getSetCC(DL, CCVT, State.IntValue,
-                     DAG.getConstant(0, DL, State.IntValue.getValueType()),
-                     IsMax ? ISD::SETEQ : ISD::SETNE);
-    SDValue Sel = DAG.getSelect(DL, VT, IsSpecificZero, LHS, RHS, Flags);
-    MinMax = DAG.getSelect(DL, VT, IsZero, Sel, MinMax, Flags);
-  }
+      !DAG.isKnownNeverZeroFloat(RHS) && !DAG.isKnownNeverZeroFloat(LHS))
+    return emitSignedZeroOrdering(DAG, IsMax, MinMax, LHS, RHS, CCVT, Flags,
+                                  DL);
 
   return MinMax;
 }
@@ -8697,17 +8705,7 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
       DAG.isKnownNeverZeroFloat(LHS) || DAG.isKnownNeverZeroFloat(RHS)) {
     return MinMax;
   }
-  SDValue TestZero =
-      DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
-  SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
-                                DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
-  SDValue LCmp = DAG.getSelect(
-      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
-      MinMax, Flags);
-  SDValue RCmp = DAG.getSelect(
-      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS, LCmp,
-      Flags);
-  return DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
+  return emitSignedZeroOrdering(DAG, IsMax, MinMax, LHS, RHS, CCVT, Flags, DL);
 }
 
 /// Returns a true value if if this FPClassTest can be performed with an ordered

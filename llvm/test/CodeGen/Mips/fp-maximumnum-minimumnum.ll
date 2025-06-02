@@ -17,18 +17,16 @@ define float @maximumnum_float(float %x, float %y) {
 ;
 ; MIPS64R2-LABEL: maximumnum_float:
 ; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    mov.s $f0, $f13
 ; MIPS64R2-NEXT:    c.un.s $f12, $f12
 ; MIPS64R2-NEXT:    movt.s $f12, $f13, $fcc0
 ; MIPS64R2-NEXT:    c.un.s $f13, $f13
-; MIPS64R2-NEXT:    movt.s $f13, $f12, $fcc0
-; MIPS64R2-NEXT:    c.ule.s $f12, $f13
-; MIPS64R2-NEXT:    mov.s $f0, $f13
-; MIPS64R2-NEXT:    movf.s $f0, $f12, $fcc0
+; MIPS64R2-NEXT:    movt.s $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    mfc1 $1, $f12
 ; MIPS64R2-NEXT:    mov.s $f1, $f0
 ; MIPS64R2-NEXT:    movz.s $f1, $f12, $1
-; MIPS64R2-NEXT:    mfc1 $1, $f13
-; MIPS64R2-NEXT:    movz.s $f1, $f13, $1
+; MIPS64R2-NEXT:    c.ule.s $f12, $f0
+; MIPS64R2-NEXT:    movf.s $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    mtc1 $zero, $f2
 ; MIPS64R2-NEXT:    c.eq.s $f0, $f2
 ; MIPS64R2-NEXT:    jr $ra
@@ -67,14 +65,12 @@ define float @maximumnum_float_nnan(float %x, float %y) {
 ;
 ; MIPS64R2-LABEL: maximumnum_float_nnan:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    c.ule.s $f12, $f13
 ; MIPS64R2-NEXT:    mov.s $f0, $f13
-; MIPS64R2-NEXT:    movf.s $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    mfc1 $1, $f12
-; MIPS64R2-NEXT:    mov.s $f1, $f0
+; MIPS64R2-NEXT:    mov.s $f1, $f13
 ; MIPS64R2-NEXT:    movz.s $f1, $f12, $1
-; MIPS64R2-NEXT:    mfc1 $1, $f13
-; MIPS64R2-NEXT:    movz.s $f1, $f13, $1
+; MIPS64R2-NEXT:    c.ule.s $f12, $f13
+; MIPS64R2-NEXT:    movf.s $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    mtc1 $zero, $f2
 ; MIPS64R2-NEXT:    c.eq.s $f0, $f2
 ; MIPS64R2-NEXT:    jr $ra
@@ -94,18 +90,16 @@ define double @maximumnum_double(double %x, double %y) {
 ;
 ; MIPS64R2-LABEL: maximumnum_double:
 ; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    mov.d $f0, $f13
 ; MIPS64R2-NEXT:    c.un.d $f12, $f12
 ; MIPS64R2-NEXT:    movt.d $f12, $f13, $fcc0
 ; MIPS64R2-NEXT:    c.un.d $f13, $f13
-; MIPS64R2-NEXT:    movt.d $f13, $f12, $fcc0
-; MIPS64R2-NEXT:    c.ule.d $f12, $f13
-; MIPS64R2-NEXT:    mov.d $f0, $f13
-; MIPS64R2-NEXT:    movf.d $f0, $f12, $fcc0
+; MIPS64R2-NEXT:    movt.d $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    dmfc1 $1, $f12
 ; MIPS64R2-NEXT:    mov.d $f1, $f0
 ; MIPS64R2-NEXT:    movz.d $f1, $f12, $1
-; MIPS64R2-NEXT:    dmfc1 $1, $f13
-; MIPS64R2-NEXT:    movz.d $f1, $f13, $1
+; MIPS64R2-NEXT:    c.ule.d $f12, $f0
+; MIPS64R2-NEXT:    movf.d $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    dmtc1 $zero, $f2
 ; MIPS64R2-NEXT:    c.eq.d $f0, $f2
 ; MIPS64R2-NEXT:    jr $ra
@@ -144,14 +138,12 @@ define double @maximumnum_double_nnan(double %x, double %y) {
 ;
 ; MIPS64R2-LABEL: maximumnum_double_nnan:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    c.ule.d $f12, $f13
 ; MIPS64R2-NEXT:    mov.d $f0, $f13
-; MIPS64R2-NEXT:    movf.d $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    dmfc1 $1, $f12
-; MIPS64R2-NEXT:    mov.d $f1, $f0
+; MIPS64R2-NEXT:    mov.d $f1, $f13
 ; MIPS64R2-NEXT:    movz.d $f1, $f12, $1
-; MIPS64R2-NEXT:    dmfc1 $1, $f13
-; MIPS64R2-NEXT:    movz.d $f1, $f13, $1
+; MIPS64R2-NEXT:    c.ule.d $f12, $f13
+; MIPS64R2-NEXT:    movf.d $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    dmtc1 $zero, $f2
 ; MIPS64R2-NEXT:    c.eq.d $f0, $f2
 ; MIPS64R2-NEXT:    jr $ra
@@ -170,21 +162,16 @@ define float @minimumnum_float(float %x, float %y) {
 ;
 ; MIPS64R2-LABEL: minimumnum_float:
 ; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    mov.s $f0, $f13
 ; MIPS64R2-NEXT:    c.un.s $f12, $f12
 ; MIPS64R2-NEXT:    movt.s $f12, $f13, $fcc0
 ; MIPS64R2-NEXT:    c.un.s $f13, $f13
-; MIPS64R2-NEXT:    movt.s $f13, $f12, $fcc0
-; MIPS64R2-NEXT:    c.olt.s $f12, $f13
-; MIPS64R2-NEXT:    mov.s $f0, $f13
 ; MIPS64R2-NEXT:    movt.s $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    mfc1 $1, $f12
-; MIPS64R2-NEXT:    lui $2, 32768
-; MIPS64R2-NEXT:    xor $1, $1, $2
 ; MIPS64R2-NEXT:    mov.s $f1, $f0
-; MIPS64R2-NEXT:    movz.s $f1, $f12, $1
-; MIPS64R2-NEXT:    mfc1 $1, $f13
-; MIPS64R2-NEXT:    xor $1, $1, $2
-; MIPS64R2-NEXT:    movz.s $f1, $f13, $1
+; MIPS64R2-NEXT:    movn.s $f1, $f12, $1
+; MIPS64R2-NEXT:    c.olt.s $f12, $f0
+; MIPS64R2-NEXT:    movt.s $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    mtc1 $zero, $f2
 ; MIPS64R2-NEXT:    c.eq.s $f0, $f2
 ; MIPS64R2-NEXT:    jr $ra
@@ -223,17 +210,12 @@ define float @minimumnum_float_nnan(float %x, float %y) {
 ;
 ; MIPS64R2-LABEL: minimumnum_float_nnan:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    c.olt.s $f12, $f13
 ; MIPS64R2-NEXT:    mov.s $f0, $f13
-; MIPS64R2-NEXT:    movt.s $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    mfc1 $1, $f12
-; MIPS64R2-NEXT:    lui $2, 32768
-; MIPS64R2-NEXT:    xor $1, $1, $2
-; MIPS64R2-NEXT:    mov.s $f1, $f0
-; MIPS64R2-NEXT:    movz.s $f1, $f12, $1
-; MIPS64R2-NEXT:    mfc1 $1, $f13
-; MIPS64R2-NEXT:    xor $1, $1, $2
-; MIPS64R2-NEXT:    movz.s $f1, $f13, $1
+; MIPS64R2-NEXT:    mov.s $f1, $f13
+; MIPS64R2-NEXT:    movn.s $f1, $f12, $1
+; MIPS64R2-NEXT:    c.olt.s $f12, $f13
+; MIPS64R2-NEXT:    movt.s $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    mtc1 $zero, $f2
 ; MIPS64R2-NEXT:    c.eq.s $f0, $f2
 ; MIPS64R2-NEXT:    jr $ra
@@ -252,22 +234,16 @@ define double @minimumnum_double(double %x, double %y) {
 ;
 ; MIPS64R2-LABEL: minimumnum_double:
 ; MIPS64R2:       # %bb.0:
+; MIPS64R2-NEXT:    mov.d $f0, $f13
 ; MIPS64R2-NEXT:    c.un.d $f12, $f12
 ; MIPS64R2-NEXT:    movt.d $f12, $f13, $fcc0
 ; MIPS64R2-NEXT:    c.un.d $f13, $f13
-; MIPS64R2-NEXT:    movt.d $f13, $f12, $fcc0
-; MIPS64R2-NEXT:    c.olt.d $f12, $f13
-; MIPS64R2-NEXT:    mov.d $f0, $f13
 ; MIPS64R2-NEXT:    movt.d $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    dmfc1 $1, $f12
-; MIPS64R2-NEXT:    daddiu $2, $zero, 1
-; MIPS64R2-NEXT:    dsll $2, $2, 63
-; MIPS64R2-NEXT:    xor $1, $1, $2
 ; MIPS64R2-NEXT:    mov.d $f1, $f0
-; MIPS64R2-NEXT:    movz.d $f1, $f12, $1
-; MIPS64R2-NEXT:    dmfc1 $1, $f13
-; MIPS64R2-NEXT:    xor $1, $1, $2
-; MIPS64R2-NEXT:    movz.d $f1, $f13, $1
+; MIPS64R2-NEXT:    movn.d $f1, $f12, $1
+; MIPS64R2-NEXT:    c.olt.d $f12, $f0
+; MIPS64R2-NEXT:    movt.d $f0, $f12, $fcc0
 ; MIPS64R2-NEXT:    dmtc1 $zero, $f2
 ; MIPS64R2-NEXT:    c.eq.d $f0, $f2
 ; MIPS64R2-NEXT:    jr $ra
@@ -306,18 +282,12 @@ define double @minimumnum_double_nnan(double %x, double %y) {
 ;
 ; MIPS64R2-LABEL: minimumnum_double_nnan:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    c.olt.d $f12, $f13
 ; MIPS64R2-NEXT:    mov.d $f0, $f13
+; MIPS64R2-NEXT:    dmfc1 $1, $f12
+; MIPS64R2-NEXT:    mov.d $f1, $f13
+; MIPS64R2-NEXT:    movn.d $f1, $f12, $1
+; MIPS64R2-NEXT:    c.olt.d $f12, $f13
 ; MIPS64R2-NEXT:    movt.d $f0, $f12, $fcc0
-; MIPS64R2-NEXT:    daddiu $1, $zero, 1
-; MIPS64R2-NEXT:    dsll $1, $1, 63
-; MIPS64R2-NEXT:    dmfc1 $2, $f12
-; MIPS64R2-NEXT:    xor $2, $2, $1
-; MIPS64R2-NEXT:    mov.d $f1, $f0
-; MIPS64R2-NEXT:    movz.d $f1, $f12, $2
-; MIPS64R2-NEXT:    dmfc1 $2, $f13
-; MIPS64R2-NEXT:    xor $1, $2, $1
-; MIPS64R2-NEXT:    movz.d $f1, $f13, $1
 ; MIPS64R2-NEXT:    dmtc1 $zero, $f2
 ; MIPS64R2-NEXT:    c.eq.d $f0, $f2
 ; MIPS64R2-NEXT:    jr $ra
