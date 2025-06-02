@@ -1858,10 +1858,6 @@ mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     cir::VecCmpOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(mlir::isa<cir::VectorType>(op.getType()) &&
-         mlir::isa<cir::VectorType>(op.getLhs().getType()) &&
-         mlir::isa<cir::VectorType>(op.getRhs().getType()) &&
-         "Vector compare with non-vector type");
   mlir::Type elementType = elementTypeIfVector(op.getLhs().getType());
   mlir::Value bitResult;
   if (auto intType = mlir::dyn_cast<cir::IntType>(elementType)) {
