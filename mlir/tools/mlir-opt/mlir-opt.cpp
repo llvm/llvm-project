@@ -131,6 +131,7 @@ void registerTestMathToVCIXPass();
 void registerTestIrdlTestDialectConversionPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
+void registerTestMemRefToLLVMWithTransforms();
 void registerTestMeshReshardingSpmdizationPass();
 void registerTestMeshSimplificationsPass();
 void registerTestMultiBuffering();
@@ -277,6 +278,7 @@ void registerTestPasses() {
   mlir::test::registerTestMathToVCIXPass();
   mlir::test::registerTestMemRefDependenceCheck();
   mlir::test::registerTestMemRefStrideCalculation();
+  mlir::test::registerTestMemRefToLLVMWithTransforms();
   mlir::test::registerTestMeshReshardingSpmdizationPass();
   mlir::test::registerTestMeshSimplificationsPass();
   mlir::test::registerTestMultiBuffering();
