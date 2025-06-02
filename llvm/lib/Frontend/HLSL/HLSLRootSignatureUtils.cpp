@@ -10,9 +10,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/bit.h"
-#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
