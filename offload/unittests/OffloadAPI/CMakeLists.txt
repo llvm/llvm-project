@@ -20,6 +20,7 @@ add_offload_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/program/olDestroyProgram.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olGetKernel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olLaunchKernel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/kernel/olLaunchKernelSuggestedGroupSize.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/event/olDestroyEvent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/event/olWaitEvent.cpp
     )
