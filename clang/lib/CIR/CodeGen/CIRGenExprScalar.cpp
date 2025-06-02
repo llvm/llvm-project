@@ -208,18 +208,22 @@ public:
     Expr *lhsExpr = e->getTrueExpr();
     Expr *rhsExpr = e->getFalseExpr();
 
+    QualType condType = condExpr->getType();
+
     // OpenCL: If the condition is a vector, we can treat this condition like
     // the select function.
-    if ((cgf.getLangOpts().OpenCL && condExpr->getType()->isVectorType()) ||
-        condExpr->getType()->isExtVectorType()) {
-      cgf.getCIRGenModule().errorNYI(loc,
-                                     "TernaryOp OpenCL VectorType condition");
+    if ((cgf.getLangOpts().OpenCL && condType->isVectorType()) ||
+        condType->isExtVectorType()) {
+      cgf.cgm.errorNYI(loc, "TernaryOp OpenCL VectorType condition");
       return {};
     }
 
-    if (condExpr->getType()->isVectorType() ||
-        condExpr->getType()->isSveVLSBuiltinType()) {
-      assert(condExpr->getType()->isVectorType() && "?: op for SVE vector NYI");
+    if (condType->isVectorType() || condType->isSveVLSBuiltinType()) {
+      if (!condExpr->getType()->isVectorType()) {
+        cgf.cgm.errorNYI(loc, "TernaryOp for SVE vector");
+        return {};
+      }
+
       mlir::Value condValue = Visit(condExpr);
       mlir::Value lhsValue = Visit(lhsExpr);
       mlir::Value rhsValue = Visit(rhsExpr);
@@ -227,7 +231,7 @@ public:
                                                rhsValue);
     }
 
-    cgf.getCIRGenModule().errorNYI(loc, "TernaryOp for non vector types");
+    cgf.cgm.errorNYI(loc, "TernaryOp for non vector types");
     return {};
   }
 

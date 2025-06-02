@@ -2217,7 +2217,7 @@ def VecTernaryOp : CIR_Op<"vec.ternary",
   }];
 
   let arguments = (ins
-    IntegerVector:$cond,
+    CIR_VectorOfIntType:$cond,
     CIR_VectorType:$vec1,
     CIR_VectorType:$vec2
   );
