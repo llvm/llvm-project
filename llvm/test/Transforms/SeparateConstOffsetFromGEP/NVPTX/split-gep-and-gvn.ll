@@ -70,10 +70,10 @@ define void @sum_of_array(i32 %x, i32 %y, ptr nocapture %output) {
   ret void
 }
 ; PTX-LABEL: sum_of_array(
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+4]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+128]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+132]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+4]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+128]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+132]
 
 ; TODO: GVN is unable to preserve the "inbounds" keyword on the first GEP. Need
 ; some infrastructure changes to enable such optimizations.
@@ -134,10 +134,10 @@ define void @sum_of_array2(i32 %x, i32 %y, ptr nocapture %output) {
   ret void
 }
 ; PTX-LABEL: sum_of_array2(
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+4]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+128]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+132]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+4]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+128]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+132]
 
 
 
@@ -203,10 +203,10 @@ define void @sum_of_array3(i32 %x, i32 %y, ptr nocapture %output) {
   ret void
 }
 ; PTX-LABEL: sum_of_array3(
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+4]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+128]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+132]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+4]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+128]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+132]
 
 
 
@@ -268,10 +268,10 @@ define void @sum_of_array4(i32 %x, i32 %y, ptr nocapture %output) {
   ret void
 }
 ; PTX-LABEL: sum_of_array4(
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+4]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+128]
-; PTX-DAG: ld.shared.b32 {{%f[0-9]+}}, [[[BASE_REG]]+132]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG:%(rd|r)[0-9]+]]]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+4]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+128]
+; PTX-DAG: ld.shared.b32 {{%r[0-9]+}}, [[[BASE_REG]]+132]
 
 
 
@@ -307,7 +307,7 @@ entry:
   %0 = sext i32 %xy to i64
   %p0 = getelementptr inbounds float, ptr %input, i64 %0
   %v0 = load float, ptr %p0, align 4
-; PTX: ld.b32 %f{{[0-9]+}}, [[[p0:%rd[0-9]+]]]
+; PTX: ld.b32 %r{{[0-9]+}}, [[[p0:%rd[0-9]+]]]
   call void @use(float %v0)
 
   %y5 = add nsw i32 %y, 5
@@ -315,7 +315,7 @@ entry:
   %1 = sext i32 %xy5 to i64
   %p1 = getelementptr inbounds float, ptr %input, i64 %1
   %v1 = load float, ptr %p1, align 4
-; PTX: ld.b32 %f{{[0-9]+}}, [[[p0]]+20]
+; PTX: ld.b32 %r{{[0-9]+}}, [[[p0]]+20]
   call void @use(float %v1)
 
   ret void

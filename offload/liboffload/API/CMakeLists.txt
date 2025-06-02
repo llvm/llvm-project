@@ -11,13 +11,17 @@ if (CLANG_FORMAT)
     tablegen(OFFLOAD OffloadFuncs.inc -gen-func-names)
     tablegen(OFFLOAD OffloadImplFuncDecls.inc -gen-impl-func-decls)
     tablegen(OFFLOAD OffloadPrint.hpp -gen-print-header)
+    tablegen(OFFLOAD OffloadErrcodes.inc -gen-errcodes)
 
-    set(OFFLOAD_GENERATED_FILES ${TABLEGEN_OUTPUT})
+    set(FILES_TO_COPY "OffloadAPI.h;OffloadEntryPoints.inc;OffloadFuncs.inc;OffloadImplFuncDecls.inc;OffloadPrint.hpp")
+    set(GEN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../include/generated)
     add_public_tablegen_target(OffloadGenerate)
     add_custom_command(TARGET OffloadGenerate POST_BUILD COMMAND ${CLANG_FORMAT}
-        -i ${OFFLOAD_GENERATED_FILES})
+        -i ${TABLEGEN_OUTPUT})
     add_custom_command(TARGET OffloadGenerate POST_BUILD COMMAND ${CMAKE_COMMAND}
-        -E copy_if_different ${OFFLOAD_GENERATED_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/../include/generated")
+        -E copy_if_different ${FILES_TO_COPY} ${GEN_DIR})
+    add_custom_command(TARGET OffloadGenerate POST_BUILD COMMAND ${CMAKE_COMMAND}
+        -E copy_if_different OffloadErrcodes.inc "${LIBOMPTARGET_INCLUDE_DIR}/Shared/OffloadErrcodes.inc")
 else()
     message(WARNING "clang-format was not found, so the OffloadGenerate target\
         will not be available. Offload will still build, but you will not be\

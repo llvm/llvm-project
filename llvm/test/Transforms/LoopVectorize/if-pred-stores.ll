@@ -659,3 +659,126 @@ for.inc:
 for.end:
   ret void
 }
+
+define void @sdiv_with_uniform_ops(i16 %0, i1 %c, ptr %dst) {
+; UNROLL-LABEL: @sdiv_with_uniform_ops(
+; UNROLL-NEXT:  entry:
+; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
+; UNROLL:       vector.body:
+; UNROLL-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
+; UNROLL-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
+; UNROLL:       pred.store.if:
+; UNROLL-NEXT:    [[TMP1:%.*]] = sdiv i16 10, [[TMP0:%.*]]
+; UNROLL-NEXT:    store i16 [[TMP1]], ptr [[DST:%.*]], align 1
+; UNROLL-NEXT:    [[TMP2:%.*]] = sdiv i16 10, [[TMP0]]
+; UNROLL-NEXT:    store i16 [[TMP2]], ptr [[DST]], align 1
+; UNROLL-NEXT:    br label [[PRED_STORE_CONTINUE2]]
+; UNROLL:       pred.store.continue2:
+; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; UNROLL-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 98
+; UNROLL-NEXT:    br i1 [[TMP3]], label [[LOOP_HEADER:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; UNROLL:       loop.header:
+; UNROLL-NEXT:    [[IV:%.*]] = phi i16 [ [[INC:%.*]], [[LOOP_LATCH:%.*]] ], [ 99, [[PRED_STORE_CONTINUE2]] ]
+; UNROLL-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[LOOP_LATCH]]
+; UNROLL:       then:
+; UNROLL-NEXT:    [[DIV:%.*]] = sdiv i16 10, [[TMP0]]
+; UNROLL-NEXT:    store i16 [[DIV]], ptr [[DST]], align 1
+; UNROLL-NEXT:    br label [[LOOP_LATCH]]
+; UNROLL:       loop.latch:
+; UNROLL-NEXT:    [[INC]] = add i16 [[IV]], 1
+; UNROLL-NEXT:    [[EC:%.*]] = icmp eq i16 [[INC]], 100
+; UNROLL-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; UNROLL:       exit:
+; UNROLL-NEXT:    ret void
+;
+; UNROLL-NOSIMPLIFY-LABEL: @sdiv_with_uniform_ops(
+; UNROLL-NOSIMPLIFY-NEXT:  entry:
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL-NOSIMPLIFY:       vector.ph:
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_BODY:%.*]]
+; UNROLL-NOSIMPLIFY:       vector.body:
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; UNROLL-NOSIMPLIFY:       pred.store.if:
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = sdiv i16 10, [[TMP0:%.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    store i16 [[TMP1]], ptr [[DST:%.*]], align 1
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; UNROLL-NOSIMPLIFY:       pred.store.continue:
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[C]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
+; UNROLL-NOSIMPLIFY:       pred.store.if1:
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = sdiv i16 10, [[TMP0]]
+; UNROLL-NOSIMPLIFY-NEXT:    store i16 [[TMP2]], ptr [[DST]], align 1
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[PRED_STORE_CONTINUE2]]
+; UNROLL-NOSIMPLIFY:       pred.store.continue2:
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 98
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; UNROLL-NOSIMPLIFY:       middle.block:
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; UNROLL-NOSIMPLIFY:       scalar.ph:
+; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 99, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[LOOP_HEADER:%.*]]
+; UNROLL-NOSIMPLIFY:       loop.header:
+; UNROLL-NOSIMPLIFY-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[LOOP_LATCH:%.*]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[LOOP_LATCH]]
+; UNROLL-NOSIMPLIFY:       then:
+; UNROLL-NOSIMPLIFY-NEXT:    [[DIV:%.*]] = sdiv i16 10, [[TMP0]]
+; UNROLL-NOSIMPLIFY-NEXT:    store i16 [[DIV]], ptr [[DST]], align 1
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[LOOP_LATCH]]
+; UNROLL-NOSIMPLIFY:       loop.latch:
+; UNROLL-NOSIMPLIFY-NEXT:    [[INC]] = add i16 [[IV]], 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[EC:%.*]] = icmp eq i16 [[INC]], 100
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
+; UNROLL-NOSIMPLIFY:       exit:
+; UNROLL-NOSIMPLIFY-NEXT:    ret void
+;
+; VEC-LABEL: @sdiv_with_uniform_ops(
+; VEC-NEXT:  entry:
+; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
+; VEC:       vector.body:
+; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
+; VEC-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
+; VEC:       pred.store.if:
+; VEC-NEXT:    [[TMP1:%.*]] = sdiv i16 10, [[TMP0:%.*]]
+; VEC-NEXT:    store i16 [[TMP1]], ptr [[DST:%.*]], align 1
+; VEC-NEXT:    [[TMP2:%.*]] = sdiv i16 10, [[TMP0]]
+; VEC-NEXT:    store i16 [[TMP2]], ptr [[DST]], align 1
+; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
+; VEC:       pred.store.continue2:
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; VEC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 98
+; VEC-NEXT:    br i1 [[TMP3]], label [[LOOP_HEADER:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VEC:       loop.header:
+; VEC-NEXT:    [[IV:%.*]] = phi i16 [ [[INC:%.*]], [[LOOP_LATCH:%.*]] ], [ 99, [[PRED_STORE_CONTINUE2]] ]
+; VEC-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[LOOP_LATCH]]
+; VEC:       then:
+; VEC-NEXT:    [[DIV:%.*]] = sdiv i16 10, [[TMP0]]
+; VEC-NEXT:    store i16 [[DIV]], ptr [[DST]], align 1
+; VEC-NEXT:    br label [[LOOP_LATCH]]
+; VEC:       loop.latch:
+; VEC-NEXT:    [[INC]] = add i16 [[IV]], 1
+; VEC-NEXT:    [[EC:%.*]] = icmp eq i16 [[INC]], 100
+; VEC-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
+; VEC:       exit:
+; VEC-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i16 [ 1, %entry ], [ %inc, %loop.latch ]
+  br i1 %c, label %then, label %loop.latch
+
+then:
+  %div = sdiv i16 10, %0
+  store i16 %div, ptr %dst, align 1
+  br label %loop.latch
+
+loop.latch:
+  %inc = add i16 %iv, 1
+  %ec = icmp eq i16 %inc, 100
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}

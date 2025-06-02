@@ -656,9 +656,14 @@ bool DWARFUnit::parseDWO(StringRef DWOAlternativeLocation) {
 }
 
 void DWARFUnit::clearDIEs(bool KeepCUDie, bool KeepDWODies) {
-  assert(!Context.doWorkThreadSafely([&] {
+  cantFail(Context.doWorkThreadSafely([&] {
     if (!KeepDWODies && DWO) {
       DWO->clearDIEs(KeepCUDie, KeepDWODies);
+    }
+    if (!IsDWO) {
+      RangeSectionBase = 0;
+      LocSectionBase = 0;
+      AddrOffsetSectionBase = std::nullopt;
     }
     // Do not use resize() + shrink_to_fit() to free memory occupied by dies.
     // shrink_to_fit() is a *non-binding* request to reduce capacity() to

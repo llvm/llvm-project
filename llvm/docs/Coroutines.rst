@@ -606,7 +606,7 @@ be used to communicate with the coroutine. This distinguished alloca is called
 **coroutine promise** and is provided as the second parameter to the
 `coro.id`_ intrinsic.
 
-The following coroutine designates a 32 bit integer `promise` and uses it to
+The following coroutine designates a 32-bit integer `promise` and uses it to
 store the current value produced by a coroutine.
 
 .. code-block:: llvm
@@ -2055,7 +2055,7 @@ coroutine, and things that happen after the resumption of the coroutine
 are not guaranteed to happen only after the end of `await_suspend`.
 
 This version of intrinsic corresponds to 
-'``std::corouine_handle<> awaiter.await_suspend(...)``' variant.
+'``std::coroutine_handle<> awaiter.await_suspend(...)``' variant.
 
 Arguments:
 """"""""""

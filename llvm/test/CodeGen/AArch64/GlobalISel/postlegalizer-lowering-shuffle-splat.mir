@@ -218,9 +218,7 @@ body:             |
     liveins: $x0
     ; If all the elements are undefined, we consider it a splat. In this case,
     ; we can choose 0 as our index.
-    ;
     ; We should get a G_DUP here.
-    ;
     ; CHECK-LABEL: name: all_undef
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -246,9 +244,7 @@ body:             |
   bb.1.entry:
     liveins: $s0
     ; Make sure we can skip past undef values.
-    ;
     ; We should get a G_DUP here.
-    ;
     ; CHECK-LABEL: name: one_undef
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
@@ -350,7 +346,6 @@ body:             |
     liveins: $w0, $w1, $w2, $w3
     ; The G_SHUFFLE_VECTOR is fed by a G_BUILD_VECTOR, and the 0th input
     ; operand is not a constant. We should get a G_DUP.
-    ;
     ; CHECK-LABEL: name: build_vector
     ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
@@ -393,8 +388,7 @@ body:             |
     liveins: $w0, $w1, $w2, $w3, $w4
     ; The G_SHUFFLE_VECTOR is fed by a G_BUILD_VECTOR, and the 0th input
     ; operand is not a constant. We should get a G_DUP.
-    ;
-    ; CHECK-LABEL: name: build_vector
+    ; CHECK-LABEL: name: build_vector_rhs
     ; CHECK: liveins: $w0, $w1, $w2, $w3, $w4
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %lane_0:_(s32) = COPY $w0
