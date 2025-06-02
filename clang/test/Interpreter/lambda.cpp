@@ -21,7 +21,8 @@ int x = 42;
 // expected-error {{non-local lambda expression cannot have a capture-default}}
 auto capture = [&]() { return x * 2; };
 
-// Ensure valid C++ code before exiting
-x = 100;
+// Ensure interpreter continues and x is still valid
+printf("x = %d\n", x);
+// CHECK: x = 42
 
 %quit
