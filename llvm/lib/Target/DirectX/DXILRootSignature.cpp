@@ -558,14 +558,12 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << "Definition for '" << F.getName() << "':\n";
 
     // start root signature header
-    Space++;
     OS << indent(Space) << "Flags: " << format_hex(RS.Flags, 8) << "\n";
     OS << indent(Space) << "Version: " << RS.Version << "\n";
     OS << indent(Space) << "RootParametersOffset: " << RS.RootParameterOffset
        << "\n";
     OS << indent(Space) << "NumParameters: " << RS.ParametersContainer.size()
        << "\n";
-    Space++;
     for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
       const auto &[Type, Loc] =
           RS.ParametersContainer.getTypeAndLocForParameter(I);
@@ -588,7 +586,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
            << "Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
         break;
       }
-            case llvm::to_underlying(dxbc::RootParameterType::CBV):
+      case llvm::to_underlying(dxbc::RootParameterType::CBV):
       case llvm::to_underlying(dxbc::RootParameterType::UAV):
       case llvm::to_underlying(dxbc::RootParameterType::SRV): {
                 const dxbc::RTS0::v2::RootDescriptor &Descriptor =
@@ -601,8 +599,29 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
         OS << indent(Space + 2) << "Flags: " << Descriptor.Flags << "\n";
         break;
       }
+      case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+        const mcdxbc::DescriptorTable &Table =
+            RS.ParametersContainer.getDescriptorTable(Loc);
+        OS << indent(Space+ 2) << "NumRanges: " << Table.Ranges.size() << "\n";  
+
+        for(const dxbc::RTS0::v2::DescriptorRange Range : Table){
+        OS << indent(Space + 2) << "- Range Type: " << Range.RangeType
+           << "\n";        
+        OS << indent(Space + 4) << "Register Space: " << Range.RegisterSpace
+           << "\n";
+        OS << indent(Space + 4) << "Base Shader Register: " << Range.BaseShaderRegister
+           << "\n";
+        OS << indent(Space + 4) << "Num Descriptors: " << Range.NumDescriptors
+           << "\n";  
+        OS << indent(Space + 4) << "Offset In Descriptors From Table Start: " << Range.OffsetInDescriptorsFromTableStart
+           << "\n";  
+        if(RS.Version > 1)
+          OS << indent(Space + 4) << "Flags: " << Range.Flags
+            << "\n";                         
+        }
+        break;
       }
-      Space--;
+      }
     }
     OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
     OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
