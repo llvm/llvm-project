@@ -22,6 +22,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
 #include "llvm/IR/Constants.h"
@@ -337,6 +338,16 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
                 WaveSizeAttr->getPreferred());
     Fn->addFnAttr(WaveSizeKindStr, WaveSizeStr);
   }
+
+  if (HLSLVkLocationAttr *LocationAttr = FD->getAttr<HLSLVkLocationAttr>()) {
+    // const StringRef NumThreadsKindStr = "hlsl.numthreads";
+    // std::string NumThreadsStr =
+    //     formatv("{0},{1},{2}", NumThreadsAttr->getX(),
+    //     NumThreadsAttr->getY(),
+    //             NumThreadsAttr->getZ());
+    // Fn->addFnAttr(NumThreadsKindStr, NumThreadsStr);
+  }
+
   // HLSL entry functions are materialized for module functions with
   // HLSLShaderAttr attribute. SetLLVMFunctionAttributesForDefinition called
   // later in the compiler-flow for such module functions is not aware of and
@@ -371,6 +382,17 @@ static void addSPIRVBuiltinDecoration(llvm::GlobalVariable *GV,
   GV->addMetadata("spirv.Decorations", *Decoration);
 }
 
+static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
+  LLVMContext &Ctx = GV->getContext();
+  IRBuilder<> B(GV->getContext());
+  MDNode *Operands =
+      MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(/* Location */ 30)),
+                        ConstantAsMetadata::get(B.getInt32(Location))});
+  MDNode *Decoration = MDNode::get(Ctx, {Operands});
+  GV->addMetadata("spirv.Decorations", *Decoration);
+}
+
+#if 0
 static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
                                            llvm::Type *Ty, const Twine &Name,
                                            unsigned BuiltInID) {
@@ -383,38 +405,325 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   return B.CreateLoad(Ty, GV);
 }
+#endif
 
-llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
-                                              const ParmVarDecl &D,
-                                              llvm::Type *Ty) {
-  assert(D.hasAttrs() && "Entry parameter missing annotation attribute!");
-  if (D.hasAttr<HLSLSV_GroupIndexAttr>()) {
+static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
+                                            llvm::Type *Ty, unsigned Location,
+                                            StringRef Name = "") {
+  auto *GV = new llvm::GlobalVariable(
+      M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
+      /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
+      llvm::GlobalVariable::GeneralDynamicTLSModel,
+      /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  addLocationDecoration(GV, Location);
+  return B.CreateLoad(Ty, GV);
+}
+
+llvm::Value *
+CGHLSLRuntime::emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                         SemanticInfo &ActiveSemantic) {
+  Twine BaseName = Twine(ActiveSemantic.Semantic->getAttrName()->getName());
+  Twine VariableName = BaseName.concat(Twine(ActiveSemantic.Index));
+  unsigned Location = SPIRVLastAssignedSemanticLocation;
+
+  // DXC completely ignores the semantic/index pair. Location are assigned from
+  // the first semantic to the last.
+  llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Type);
+  unsigned ElementCount = AT ? AT->getNumElements() : 1;
+  SPIRVLastAssignedSemanticLocation += ElementCount;
+
+  return createSPIRVLocationLoad(B, CGM.getModule(), Type, Location,
+                                 VariableName.str());
+}
+
+llvm::Value *
+CGHLSLRuntime::emitUserSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
+                                    const clang::DeclaratorDecl *Decl,
+                                    SemanticInfo &ActiveSemantic) {
+  assert(nullptr != dyn_cast<HLSLUserSemanticAttr>(ActiveSemantic.Semantic));
+
+  uint32_t Location = ActiveSemantic.Index;
+  if (HLSLVkLocationAttr *LocationAttr = Decl->getAttr<HLSLVkLocationAttr>())
+    Location = LocationAttr->getLocation();
+
+  llvm::Value *SemanticValue =
+      emitSPIRVUserSemanticLoad(B, Type, ActiveSemantic);
+
+  llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Type);
+  unsigned ElementCount = AT ? AT->getNumElements() : 1;
+  ActiveSemantic.Index += ElementCount;
+
+  // Mark the semantic/index pair as active and detect collisions.
+  Twine BaseName = Twine(ActiveSemantic.Semantic->getAttrName()->getName());
+  for (unsigned I = 0; I < ElementCount; I++) {
+    Twine VariableName = BaseName.concat(Twine(Location + I));
+    auto [_, Inserted] = ActiveInputSemantics.insert(VariableName.str());
+    if (!Inserted) {
+      CGM.getDiags().Report(Decl->getInnerLocStart(),
+                            diag::err_hlsl_semantic_index_overlap)
+          << VariableName.str();
+      return nullptr;
+    }
+  }
+
+  return SemanticValue;
+}
+
+llvm::Value *
+CGHLSLRuntime::emitSystemSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
+                                      const clang::DeclaratorDecl *Decl,
+                                      SemanticInfo &ActiveSemantic) {
+
+#define CHECK_NO_INDEXING(Info)                                                \
+  if ((Info).Index != 0) {                                                     \
+    CGM.getDiags().Report(Decl->getInnerLocStart(),                            \
+                          diag::err_hlsl_semantic_indexing_not_supported)      \
+        << (Info).Semantic;                                                    \
+    return nullptr;                                                            \
+  }
+
+  if (HLSLSV_GroupIndexAttr *S =
+          dyn_cast<HLSLSV_GroupIndexAttr>(ActiveSemantic.Semantic)) {
+    CHECK_NO_INDEXING(ActiveSemantic)
     llvm::Function *GroupIndex =
         CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
-  if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
+
+  if (HLSLSV_DispatchThreadIDAttr *S =
+          dyn_cast<HLSLSV_DispatchThreadIDAttr>(ActiveSemantic.Semantic)) {
+    CHECK_NO_INDEXING(ActiveSemantic)
     llvm::Function *ThreadIDIntrinsic =
         CGM.getIntrinsic(getThreadIdIntrinsic());
-    return buildVectorInput(B, ThreadIDIntrinsic, Ty);
+    return buildVectorInput(B, ThreadIDIntrinsic, Type);
   }
-  if (D.hasAttr<HLSLSV_GroupThreadIDAttr>()) {
+
+  if (HLSLSV_GroupThreadIDAttr *S =
+          dyn_cast<HLSLSV_GroupThreadIDAttr>(ActiveSemantic.Semantic)) {
+    CHECK_NO_INDEXING(ActiveSemantic)
     llvm::Function *GroupThreadIDIntrinsic =
         CGM.getIntrinsic(getGroupThreadIdIntrinsic());
-    return buildVectorInput(B, GroupThreadIDIntrinsic, Ty);
+    return buildVectorInput(B, GroupThreadIDIntrinsic, Type);
   }
-  if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
+
+  if (HLSLSV_GroupIDAttr *S =
+          dyn_cast<HLSLSV_GroupIDAttr>(ActiveSemantic.Semantic)) {
+    CHECK_NO_INDEXING(ActiveSemantic)
     llvm::Function *GroupIDIntrinsic = CGM.getIntrinsic(getGroupIdIntrinsic());
-    return buildVectorInput(B, GroupIDIntrinsic, Ty);
+    return buildVectorInput(B, GroupIDIntrinsic, Type);
   }
-  if (D.hasAttr<HLSLSV_PositionAttr>()) {
-    if (getArch() == llvm::Triple::spirv)
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Ty, "sv_position",
-                                    /* BuiltIn::Position */ 0);
-    llvm_unreachable("SV_Position semantic not implemented for this target.");
+
+#undef CHECK_NO_INDEXING
+
+  if (HLSLSV_PositionAttr *S =
+          dyn_cast<HLSLSV_PositionAttr>(ActiveSemantic.Semantic))
+    return emitSPIRVUserSemanticLoad(B, Type, ActiveSemantic);
+
+  llvm_unreachable("non-handled system semantic. FIXME.");
+}
+
+llvm::Value *
+CGHLSLRuntime::handleScalarSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
+                                        SemanticInfo &ActiveSemantic) {
+
+  if (!ActiveSemantic.Semantic) {
+    ActiveSemantic.Semantic = Decl->getAttr<HLSLSemanticAttr>();
+    if (!ActiveSemantic.Semantic) {
+      CGM.getDiags().Report(Decl->getInnerLocStart(),
+                            diag::err_hlsl_semantic_missing);
+      return nullptr;
+    }
+    ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
   }
-  assert(false && "Unhandled parameter attribute");
-  return nullptr;
+
+  if (auto *UserSemantic =
+          dyn_cast<HLSLUserSemanticAttr>(ActiveSemantic.Semantic))
+    return emitUserSemanticLoad(B, Type, Decl, ActiveSemantic);
+  return emitSystemSemanticLoad(B, Type, Decl, ActiveSemantic);
+}
+
+llvm::Value *
+CGHLSLRuntime::handleStructSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
+                                        SemanticInfo &ActiveSemantic) {
+  const llvm::StructType *ST = cast<StructType>(Type);
+  const clang::RecordDecl *RD = Decl->getType()->getAsRecordDecl();
+
+  assert(std::distance(RD->field_begin(), RD->field_end()) ==
+         ST->getNumElements());
+
+  if (!ActiveSemantic.Semantic) {
+    ActiveSemantic.Semantic = Decl->getAttr<HLSLSemanticAttr>();
+    ActiveSemantic.Index = ActiveSemantic.Semantic
+                               ? ActiveSemantic.Semantic->getSemanticIndex()
+                               : 0;
+  }
+
+  llvm::Value *Aggregate = llvm::PoisonValue::get(Type);
+  auto FieldDecl = RD->field_begin();
+  for (unsigned I = 0; I < ST->getNumElements(); ++I) {
+    SemanticInfo Info = ActiveSemantic;
+    llvm::Value *ChildValue =
+        handleSemanticLoad(B, ST->getElementType(I), *FieldDecl, Info);
+    if (!ChildValue) {
+      CGM.getDiags().Report(Decl->getInnerLocStart(),
+                            diag::note_hlsl_semantic_used_here)
+          << Decl;
+      return nullptr;
+    }
+
+    Aggregate = B.CreateInsertValue(Aggregate, ChildValue, I);
+    ++FieldDecl;
+  }
+
+  return Aggregate;
+}
+
+llvm::Value *
+CGHLSLRuntime::handleSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
+                                  const clang::DeclaratorDecl *Decl,
+                                  SemanticInfo &ActiveSemantic) {
+
+  if (Type->isStructTy())
+    return handleStructSemanticLoad(B, Type, Decl, ActiveSemantic);
+  return handleScalarSemanticLoad(B, Type, Decl, ActiveSemantic);
+}
+
+static void createSPIRVLocationStore(IRBuilder<> &B, llvm::Module &M,
+                                     llvm::Value *Value, unsigned Location,
+                                     StringRef Name = "") {
+  auto *GV = new llvm::GlobalVariable(
+      M, Value->getType(), /* isConstant= */ false,
+      llvm::GlobalValue::ExternalLinkage,
+      /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
+      llvm::GlobalVariable::GeneralDynamicTLSModel,
+      /* AddressSpace */ 8, /* isExternallyInitialized= */ false);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  addLocationDecoration(GV, Location);
+  B.CreateStore(Value, GV);
+}
+
+void CGHLSLRuntime::emitSPIRVUserSemanticStore(llvm::IRBuilder<> &B,
+                                               llvm::Value *Source,
+                                               SemanticInfo &ActiveSemantic) {
+  Twine BaseName = Twine(ActiveSemantic.Semantic->getAttrName()->getName());
+  Twine VariableName = BaseName.concat(Twine(ActiveSemantic.Index));
+  unsigned Location = SPIRVLastAssignedSemanticLocation;
+
+  // DXC completely ignores the semantic/index pair. Location are assigned from
+  // the first semantic to the last.
+  llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Source->getType());
+  unsigned ElementCount = AT ? AT->getNumElements() : 1;
+  SPIRVLastAssignedSemanticLocation += ElementCount;
+
+  createSPIRVLocationStore(B, CGM.getModule(), Source, Location,
+                           VariableName.str());
+}
+
+void CGHLSLRuntime::emitUserSemanticStore(IRBuilder<> &B, llvm::Value *Source,
+                                          const clang::DeclaratorDecl *Decl,
+                                          SemanticInfo &ActiveSemantic) {
+  assert(nullptr != dyn_cast<HLSLUserSemanticAttr>(ActiveSemantic.Semantic));
+
+  uint32_t Location = ActiveSemantic.Index;
+  if (HLSLVkLocationAttr *LocationAttr = Decl->getAttr<HLSLVkLocationAttr>())
+    Location = LocationAttr->getLocation();
+
+  emitSPIRVUserSemanticStore(B, Source, ActiveSemantic);
+
+  llvm::ArrayType *AT = dyn_cast<llvm::ArrayType>(Source->getType());
+  unsigned ElementCount = AT ? AT->getNumElements() : 1;
+  ActiveSemantic.Index += ElementCount;
+
+  // Mark the semantic/index pair as active and detect collisions.
+  Twine BaseName = Twine(ActiveSemantic.Semantic->getAttrName()->getName());
+  for (unsigned I = 0; I < ElementCount; I++) {
+    Twine VariableName = BaseName.concat(Twine(Location + I));
+    auto [_, Inserted] = ActiveOutputSemantics.insert(VariableName.str());
+    if (!Inserted) {
+      CGM.getDiags().Report(Decl->getInnerLocStart(),
+                            diag::err_hlsl_semantic_index_overlap)
+          << VariableName.str();
+      return;
+    }
+  }
+}
+
+void CGHLSLRuntime::emitSystemSemanticStore(IRBuilder<> &B, llvm::Value *Source,
+                                            const clang::DeclaratorDecl *Decl,
+                                            SemanticInfo &ActiveSemantic) {
+
+  if (HLSLSV_TargetAttr *S =
+          dyn_cast<HLSLSV_TargetAttr>(ActiveSemantic.Semantic))
+    emitSPIRVUserSemanticStore(B, Source, ActiveSemantic);
+  else
+    llvm_unreachable("non-handled system semantic. FIXME.");
+}
+
+void CGHLSLRuntime::handleScalarSemanticStore(IRBuilder<> &B,
+                                              llvm::Value *Source,
+                                              const clang::DeclaratorDecl *Decl,
+                                              SemanticInfo &ActiveSemantic) {
+
+  if (!ActiveSemantic.Semantic) {
+    ActiveSemantic.Semantic = Decl->getAttr<HLSLSemanticAttr>();
+    if (!ActiveSemantic.Semantic) {
+      CGM.getDiags().Report(Decl->getInnerLocStart(),
+                            diag::err_hlsl_semantic_missing);
+      return;
+    }
+    ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+  }
+
+  if (auto *UserSemantic =
+          dyn_cast<HLSLUserSemanticAttr>(ActiveSemantic.Semantic))
+    emitUserSemanticStore(B, Source, Decl, ActiveSemantic);
+  else
+    emitSystemSemanticStore(B, Source, Decl, ActiveSemantic);
+}
+
+void CGHLSLRuntime::handleStructSemanticStore(IRBuilder<> &B,
+                                              llvm::Value *Source,
+                                              const clang::DeclaratorDecl *Decl,
+                                              SemanticInfo &ActiveSemantic) {
+
+  const llvm::StructType *ST = cast<StructType>(Source->getType());
+
+  const clang::RecordDecl *RD = nullptr;
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(Decl))
+    RD = FD->getDeclaredReturnType()->getAsRecordDecl();
+  else
+    RD = Decl->getType()->getAsRecordDecl();
+  assert(RD);
+
+  assert(std::distance(RD->field_begin(), RD->field_end()) ==
+         ST->getNumElements());
+
+  if (!ActiveSemantic.Semantic) {
+    ActiveSemantic.Semantic = Decl->getAttr<HLSLSemanticAttr>();
+    ActiveSemantic.Index = ActiveSemantic.Semantic
+                               ? ActiveSemantic.Semantic->getSemanticIndex()
+                               : 0;
+  }
+
+  auto FieldDecl = RD->field_begin();
+  for (unsigned I = 0; I < ST->getNumElements(); ++I) {
+    llvm::Value *Extract = B.CreateExtractValue(Source, I);
+    SemanticInfo Info = ActiveSemantic;
+    handleSemanticStore(B, Extract, *FieldDecl, Info);
+    ++FieldDecl;
+  }
+}
+
+void CGHLSLRuntime::handleSemanticStore(IRBuilder<> &B, llvm::Value *Source,
+                                        const clang::DeclaratorDecl *Decl,
+                                        SemanticInfo &ActiveSemantic) {
+  if (Source->getType()->isStructTy())
+    handleStructSemanticStore(B, Source, Decl, ActiveSemantic);
+  else
+    handleScalarSemanticStore(B, Source, Decl, ActiveSemantic);
 }
 
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
@@ -437,7 +746,6 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", EntryFn);
   IRBuilder<> B(BB);
-  llvm::SmallVector<Value *> Args;
 
   SmallVector<OperandBundleDef, 1> OB;
   if (CGM.shouldEmitConvergenceTokens()) {
@@ -448,25 +756,64 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     OB.emplace_back("convergencectrl", bundleArgs);
   }
 
-  // FIXME: support struct parameters where semantics are on members.
-  // See: https://github.com/llvm/llvm-project/issues/57874
+  std::unordered_map<const DeclaratorDecl *, llvm::Value *> OutputSemantic;
+
+  llvm::SmallVector<Value *> Args;
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
+
     if (Param.hasStructRetAttr()) {
-      // FIXME: support output.
-      // See: https://github.com/llvm/llvm-project/issues/57874
       SRetOffset = 1;
-      Args.emplace_back(PoisonValue::get(Param.getType()));
+      llvm::Type *VarType = Param.getParamStructRetType();
+      llvm::Value *Var = B.CreateAlloca(VarType);
+      Args.push_back(Var);
+      OutputSemantic.emplace(FD, Var);
       continue;
     }
+
     const ParmVarDecl *PD = FD->getParamDecl(Param.getArgNo() - SRetOffset);
-    Args.push_back(emitInputSemantic(B, *PD, Param.getType()));
+    llvm::Value *SemanticValue = nullptr;
+    if (HLSLParamModifierAttr *MA = PD->getAttr<HLSLParamModifierAttr>()) {
+      if (MA->isOut()) {
+        llvm::Type *VarType = CGM.getTypes().ConvertType(
+            cast<clang::ReferenceType>(PD->getType())->getPointeeType());
+        llvm::Value *Var = B.CreateAlloca(VarType);
+        SemanticValue = Var;
+        OutputSemantic.emplace(PD, Var);
+      } else
+        llvm_unreachable("Not handled yet");
+    } else {
+      llvm::Type *ParamType =
+          Param.hasByValAttr() ? Param.getParamByValType() : Param.getType();
+      SemanticInfo ActiveSemantic = {nullptr, 0};
+      SemanticValue = handleSemanticLoad(B, ParamType, PD, ActiveSemantic);
+      if (!SemanticValue)
+        return;
+      if (Param.hasByValAttr()) {
+        llvm::Value *Var = B.CreateAlloca(Param.getParamByValType());
+        B.CreateStore(SemanticValue, Var);
+        SemanticValue = Var;
+      }
+    }
+    Args.push_back(SemanticValue);
   }
 
   CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args, OB);
   CI->setCallingConv(Fn->getCallingConv());
-  // FIXME: Handle codegen for return type semantics.
-  // See: https://github.com/llvm/llvm-project/issues/57875
+
+  if (Fn->getReturnType() != CGM.VoidTy)
+    OutputSemantic.emplace(FD, CI);
+
+  for (auto &[Decl, Source] : OutputSemantic) {
+    llvm::Value *SourceValue = nullptr;
+    if (AllocaInst *AI = dyn_cast<AllocaInst>(Source))
+      SourceValue = B.CreateLoad(AI->getAllocatedType(), Source);
+    else
+      SourceValue = Source;
+    SemanticInfo ActiveSemantic = {nullptr, 0};
+    handleSemanticStore(B, SourceValue, Decl, ActiveSemantic);
+  }
+
   B.CreateRetVoid();
 
   // Add and identify root signature to function, if applicable

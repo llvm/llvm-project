@@ -103,6 +103,7 @@ namespace {
 } // namespace
 
 const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
+
   // If we have a ParsedAttrInfo for this ParsedAttr then return that.
   if ((size_t)A.getParsedKind() < std::size(AttrInfoMap))
     return *AttrInfoMap[A.getParsedKind()];

@@ -2725,12 +2725,15 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
     assert(!Supers.empty() && "Forgot to specify a superclass for the attr");
     std::string SuperName;
     bool Inheritable = false;
+    bool HLSLSemantic = false;
     for (const Record *R : reverse(Supers)) {
       if (R->getName() != "TargetSpecificAttr" &&
           R->getName() != "DeclOrTypeAttr" && SuperName.empty())
         SuperName = R->getName().str();
       if (R->getName() == "InheritableAttr")
         Inheritable = true;
+      if (R->getName() == "HLSLSemanticAttr")
+        HLSLSemantic = true;
     }
 
     if (Header)
@@ -3053,6 +3056,9 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
         OS << ", "
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
                                                               : "false");
+      }
+      if (HLSLSemantic) {
+        OS << ", " << (R.getValueAsBit("SemanticIndexable") ? "true" : "false");
       }
       OS << ")\n";
 

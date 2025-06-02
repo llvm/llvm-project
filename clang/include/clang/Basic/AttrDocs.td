@@ -8462,6 +8462,16 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
   }];
 }
 
+def HLSLSV_PositionDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{TODO}];
+}
+
+def HLSLSV_TargetDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{TODO}];
+}
+
 def HLSLSV_GroupIDDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -8544,20 +8554,6 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
   }];
 }
 
-def HLSLSV_PositionDocs : Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``SV_Position`` semantic, when applied to an input parameter in a pixel
-shader, contains the location of the pixel center (x, y) in screen space.
-This semantic can be applied to the parameter, or a field in a struct used
-as an input parameter.
-This attribute is supported as an input in pixel, hull, domain and mesh shaders.
-This attribute is supported as an output in vertex, geometry and domain shaders.
-
-The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics
-  }];
-}
-
 def HLSLGroupSharedAddressSpaceDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -8614,6 +8610,18 @@ storage class, and the `BuiltIn 26` decoration.
 
 The full documentation for this inline SPIR-V attribute can be found here:
 https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
+  }];
+}
+
+def HLSLVkLocationDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Attribute used for specifying the location number for the stage input/output
+variables. Allowed on function parameters, function returns, and struct
+fields. This parameter has no effect when used outside of an entrypoint
+parameter/parameter field/return value.
+
+This attribute maps to the 'Location' SPIR-V decoration.
   }];
 }
 
