@@ -65,7 +65,6 @@ add_entrypoint_object(
     wcscmp.h
   DEPENDS
     libc.hdr.wchar_macros
-    libc.src.__support.wctype_utils
 )
 
 add_entrypoint_object(
