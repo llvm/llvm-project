@@ -64,6 +64,11 @@
 
 using namespace llvm;
 
+static cl::opt<bool> DisableFPCallFolding(
+    "disable-fp-call-folding",
+    cl::desc("Disable constant-folding of FP intrinsics and libcalls."),
+    cl::init(false), cl::Hidden);
+
 namespace {
 
 //===----------------------------------------------------------------------===//
@@ -1576,6 +1581,17 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
     return false;
   if (Call->getFunctionType() != F->getFunctionType())
     return false;
+
+  // Allow FP calls (both libcalls and intrinsics) to avoid being folded.
+  // This can be useful for GPU targets or in cross-compilation scenarios
+  // when the exact target FP behaviour is required, and the host compiler's
+  // behaviour may be slightly different from the device's run-time behaviour.
+  if (DisableFPCallFolding && (F->getReturnType()->isFloatingPointTy() ||
+                               any_of(F->args(), [](const Argument &Arg) {
+                                 return Arg.getType()->isFloatingPointTy();
+                               })))
+    return false;
+
   switch (F->getIntrinsicID()) {
   // Operations that do not operate floating-point numbers and do not depend on
   // FP environment can be folded even in strictfp functions.
@@ -1700,7 +1716,6 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::x86_avx512_vcvtsd2usi64:
   case Intrinsic::x86_avx512_cvttsd2usi:
   case Intrinsic::x86_avx512_cvttsd2usi64:
-    return !Call->isStrictFP();
 
   // NVVM FMax intrinsics
   case Intrinsic::nvvm_fmax_d:
@@ -1775,6 +1790,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nvvm_d2ull_rn:
   case Intrinsic::nvvm_d2ull_rp:
   case Intrinsic::nvvm_d2ull_rz:
+    return !Call->isStrictFP();
 
   // Sign operations are actually bitwise operations, they do not raise
   // exceptions even for SNANs.
@@ -3909,8 +3925,12 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
                                             Constant *RHS, Type *Ty,
                                             Instruction *FMFSource) {
-  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS},
-                                    dyn_cast_if_present<CallBase>(FMFSource));
+  auto *Call = dyn_cast_if_present<CallBase>(FMFSource);
+  // Ensure we check flags like StrictFP that might prevent this from getting
+  // folded before generating a result.
+  if (Call && !canConstantFoldCallTo(Call, Call->getCalledFunction()))
+    return nullptr;
+  return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS}, Call);
 }
 
 Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,

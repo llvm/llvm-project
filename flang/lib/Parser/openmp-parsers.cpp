@@ -1402,7 +1402,7 @@ static OmpMapperSpecifier ConstructOmpMapperSpecifier(
   // This matches the syntax: <type-spec> :: <variable-name>
   if (DerivedTypeSpec * derived{std::get_if<DerivedTypeSpec>(&typeSpec.u)}) {
     return OmpMapperSpecifier{
-        std::get<Name>(derived->t).ToString() + ".omp.default.mapper",
+        std::get<Name>(derived->t).ToString() + llvm::omp::OmpDefaultMapperName,
         std::move(typeSpec), std::move(varName)};
   }
   return OmpMapperSpecifier{std::string("omp.default.mapper"),

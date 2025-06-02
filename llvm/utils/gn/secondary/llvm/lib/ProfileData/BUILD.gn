@@ -18,6 +18,7 @@ static_library("ProfileData") {
     "InstrProfWriter.cpp",
     "ItaniumManglingCanonicalizer.cpp",
     "MemProf.cpp",
+    "MemProfCommon.cpp",
     "MemProfRadixTree.cpp",
     "MemProfReader.cpp",
     "MemProfSummary.cpp",

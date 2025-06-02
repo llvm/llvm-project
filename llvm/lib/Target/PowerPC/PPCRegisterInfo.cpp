@@ -1509,6 +1509,95 @@ void PPCRegisterInfo::lowerQuadwordRestore(MachineBasicBlock::iterator II,
   MBB.erase(II);
 }
 
+/// lowerDMRSpilling - Generate the code for spilling the DMR register.
+void PPCRegisterInfo::lowerDMRSpilling(MachineBasicBlock::iterator II,
+                                       unsigned FrameIndex) const {
+  MachineInstr &MI = *II; // SPILL_DMR <SrcReg>, <offset>
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+
+  // DMR is made up of WACC and WACC_HI, so DMXXEXTFDMR512 to spill
+  // the corresponding 512 bits.
+  const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
+  Register SrcReg = MI.getOperand(0).getReg();
+
+  Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg2 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg3 = MF.getRegInfo().createVirtualRegister(RC);
+
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXEXTFDMR512_HI), VSRpReg2)
+      .addDef(VSRpReg3)
+      .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_wacc_hi));
+
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXEXTFDMR512), VSRpReg0)
+      .addDef(VSRpReg1)
+      .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_wacc_lo));
+
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                        .addReg(VSRpReg0, RegState::Kill),
+                    FrameIndex, IsLittleEndian ? 96 : 0);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                        .addReg(VSRpReg1, RegState::Kill),
+                    FrameIndex, IsLittleEndian ? 64 : 32);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                        .addReg(VSRpReg2, RegState::Kill),
+                    FrameIndex, IsLittleEndian ? 32 : 64);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                        .addReg(VSRpReg3, RegState::Kill),
+                    FrameIndex, IsLittleEndian ? 0 : 96);
+
+  // Discard the pseudo instruction.
+  MBB.erase(II);
+}
+
+/// lowerDMRRestore - Generate the code to restore the DMR register.
+void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
+                                      unsigned FrameIndex) const {
+  MachineInstr &MI = *II; // <DestReg> = RESTORE_WACC <offset>
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  bool IsLittleEndian = Subtarget.isLittleEndian();
+
+  const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
+  Register DestReg = MI.getOperand(0).getReg();
+
+  Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg2 = MF.getRegInfo().createVirtualRegister(RC);
+  Register VSRpReg3 = MF.getRegInfo().createVirtualRegister(RC);
+
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg0),
+                    FrameIndex, IsLittleEndian ? 96 : 0);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg1),
+                    FrameIndex, IsLittleEndian ? 64 : 32);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg2),
+                    FrameIndex, IsLittleEndian ? 32 : 64);
+  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg3),
+                    FrameIndex, IsLittleEndian ? 0 : 96);
+
+  // Kill virtual registers (killedRegState::Killed).
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512_HI),
+          TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_hi))
+      .addReg(VSRpReg2, RegState::Kill)
+      .addReg(VSRpReg3, RegState::Kill);
+
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512),
+          TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_lo))
+      .addReg(VSRpReg0, RegState::Kill)
+      .addReg(VSRpReg1, RegState::Kill);
+
+  // Discard the pseudo instruction.
+  MBB.erase(II);
+}
+
 bool PPCRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
                                            Register Reg, int &FrameIdx) const {
   // For the nonvolatile condition registers (CR2, CR3, CR4) return true to
@@ -1670,6 +1759,12 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return true;
   case PPC::RESTORE_WACC:
     lowerWACCRestore(II, FrameIndex);
+    return true;
+  case PPC::SPILL_DMR:
+    lowerDMRSpilling(II, FrameIndex);
+    return true;
+  case PPC::RESTORE_DMR:
+    lowerDMRRestore(II, FrameIndex);
     return true;
   case PPC::SPILL_QUADWORD:
     lowerQuadwordSpilling(II, FrameIndex);

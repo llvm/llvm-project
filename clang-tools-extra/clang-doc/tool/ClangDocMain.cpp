@@ -118,6 +118,8 @@ static llvm::cl::opt<OutputFormatTy> FormatEnum(
                                 "Documentation in mustache HTML format")),
     llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
 
+static llvm::ExitOnError ExitOnErr;
+
 static std::string getFormatString() {
   switch (FormatEnum) {
   case OutputFormatTy::yaml:
@@ -245,9 +247,29 @@ sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
   }
 }
 
+static llvm::Error handleMappingFailures(llvm::Error Err) {
+  if (!Err)
+    return llvm::Error::success();
+  if (IgnoreMappingFailures) {
+    llvm::errs() << "Error mapping decls in files. Clang-doc will ignore these "
+                    "files and continue:\n"
+                 << toString(std::move(Err)) << "\n";
+    return llvm::Error::success();
+  }
+  return Err;
+}
+
+static llvm::Error createDirectories(llvm::StringRef OutDirectory) {
+  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory))
+    return llvm::createFileError(OutDirectory, Err);
+  return llvm::Error::success();
+}
+
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
+
+  ExitOnErr.setBanner("clang-doc error: ");
 
   const char *Overview =
       R"(Generates documentation from source code and comments.
@@ -261,22 +283,13 @@ Example usage for a project using a compile commands database:
   $ clang-doc --executor=all-TUs compile_commands.json
 )";
 
-  auto Executor = clang::tooling::createExecutorFromCommandLineArgs(
-      argc, argv, ClangDocCategory, Overview);
-
-  if (!Executor) {
-    llvm::errs() << toString(Executor.takeError()) << "\n";
-    return 1;
-  }
+  auto Executor = ExitOnErr(clang::tooling::createExecutorFromCommandLineArgs(
+      argc, argv, ClangDocCategory, Overview));
 
   // Fail early if an invalid format was provided.
   std::string Format = getFormatString();
   llvm::outs() << "Emiting docs in " << Format << " format.\n";
-  auto G = doc::findGeneratorByName(Format);
-  if (!G) {
-    llvm::errs() << toString(G.takeError()) << "\n";
-    return 1;
-  }
+  auto G = ExitOnErr(doc::findGeneratorByName(Format));
 
   ArgumentsAdjuster ArgAdjuster;
   if (!DoxygenOnly)
@@ -286,7 +299,7 @@ Example usage for a project using a compile commands database:
         ArgAdjuster);
 
   clang::doc::ClangDocContext CDCtx = {
-      Executor->get()->getExecutionContext(),
+      Executor->getExecutionContext(),
       ProjectName,
       PublicOnly,
       OutDirectory,
@@ -297,40 +310,24 @@ Example usage for a project using a compile commands database:
       {UserStylesheets.begin(), UserStylesheets.end()}};
 
   if (Format == "html") {
-    if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
-      llvm::errs() << toString(std::move(Err)) << "\n";
-      return 1;
-    }
+    ExitOnErr(getHtmlAssetFiles(argv[0], CDCtx));
   }
 
   if (Format == "mustache") {
-    if (auto Err = getMustacheHtmlFiles(argv[0], CDCtx)) {
-      llvm::errs() << toString(std::move(Err)) << "\n";
-      return 1;
-    }
+    ExitOnErr(getMustacheHtmlFiles(argv[0], CDCtx));
   }
 
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
-  auto Err =
-      Executor->get()->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
-  if (Err) {
-    if (IgnoreMappingFailures)
-      llvm::errs() << "Error mapping decls in files. Clang-doc will ignore "
-                      "these files and continue:\n"
-                   << toString(std::move(Err)) << "\n";
-    else {
-      llvm::errs() << toString(std::move(Err)) << "\n";
-      return 1;
-    }
-  }
+  ExitOnErr(handleMappingFailures(
+      Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster)));
 
   // Collect values into output by key.
   // In ToolResults, the Key is the hashed USR and the value is the
   // bitcode-encoded representation of the Info object.
   llvm::outs() << "Collecting infos...\n";
   llvm::StringMap<std::vector<StringRef>> USRToBitcode;
-  Executor->get()->getToolResults()->forEachResult(
+  Executor->getToolResults()->forEachResult(
       [&](StringRef Key, StringRef Value) {
         USRToBitcode[Key].emplace_back(Value);
       });
@@ -391,25 +388,13 @@ Example usage for a project using a compile commands database:
   sortUsrToInfo(USRToInfo);
 
   // Ensure the root output directory exists.
-  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
-      Err != std::error_code()) {
-    llvm::errs() << "Failed to create directory '" << OutDirectory << "'\n";
-    return 1;
-  }
+  ExitOnErr(createDirectories(OutDirectory));
 
   // Run the generator.
   llvm::outs() << "Generating docs...\n";
-  if (auto Err =
-          G->get()->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx)) {
-    llvm::errs() << toString(std::move(Err)) << "\n";
-    return 1;
-  }
-
+  ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
   llvm::outs() << "Generating assets for docs...\n";
-  Err = G->get()->createResources(CDCtx);
-  if (Err) {
-    llvm::outs() << "warning: " << toString(std::move(Err)) << "\n";
-  }
+  ExitOnErr(G->createResources(CDCtx));
 
   return 0;
 }

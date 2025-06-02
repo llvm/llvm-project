@@ -34,6 +34,20 @@
 #define MAP_PRIVATE 2
 #define MAP_ANON 0x20
 
+// For other platforms that use platform linux
+#ifndef SIGILL
+#define SIGILL 4
+#endif
+#ifndef SIGBUS
+#define SIGBUS 7
+#endif
+#ifndef SIGFPE
+#define SIGFPE 8
+#endif
+#ifndef SIGSEGV
+#define SIGSEGV 11
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_linux;
@@ -124,7 +138,9 @@ PlatformLinux::PlatformLinux(bool is_host)
         {llvm::Triple::x86_64, llvm::Triple::x86, llvm::Triple::arm,
          llvm::Triple::aarch64, llvm::Triple::mips64, llvm::Triple::mips64,
          llvm::Triple::hexagon, llvm::Triple::mips, llvm::Triple::mips64el,
-         llvm::Triple::mipsel, llvm::Triple::msp430, llvm::Triple::systemz},
+         llvm::Triple::mipsel, llvm::Triple::msp430, llvm::Triple::systemz,
+         llvm::Triple::loongarch64, llvm::Triple::ppc64le,
+         llvm::Triple::riscv64},
         llvm::Triple::Linux);
   }
 }
@@ -564,7 +580,7 @@ static std::string GetDescriptionFromSiginfo(lldb::ValueObjectSP siginfo_sp) {
   }
 
   return linux_signals.GetSignalDescription(signo, code, addr, lower, upper,
-                                            uid, pid);
+                                            pid, uid);
 }
 
 lldb::StopInfoSP PlatformLinux::GetStopInfoFromSiginfo(Thread &thread) {

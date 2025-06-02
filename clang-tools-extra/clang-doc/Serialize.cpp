@@ -113,9 +113,9 @@ getFunctionPrototype(const FunctionDecl *FuncDecl) {
       Stream << " " << ParamDecl->getNameAsString();
 
     // Print default argument if it exists
-    if (ParamDecl->hasDefaultArg()) {
-      const Expr *DefaultArg = ParamDecl->getDefaultArg();
-      if (DefaultArg) {
+    if (ParamDecl->hasDefaultArg() &&
+        !ParamDecl->hasUninstantiatedDefaultArg()) {
+      if (const Expr *DefaultArg = ParamDecl->getDefaultArg()) {
         Stream << " = ";
         DefaultArg->printPretty(Stream, nullptr, Ctx.getPrintingPolicy());
       }

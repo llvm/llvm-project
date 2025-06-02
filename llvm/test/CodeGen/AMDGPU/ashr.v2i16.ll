@@ -685,16 +685,16 @@ define amdgpu_kernel void @ashr_v_imm_v4i16(ptr addrspace(1) %out, ptr addrspace
 ; CI-NEXT:    buffer_load_dwordx2 v[2:3], v[0:1], s[4:7], 0 addr64
 ; CI-NEXT:    s_mov_b64 s[2:3], s[6:7]
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_bfe_i32 v6, v3, 0, 16
-; CI-NEXT:    v_ashr_i64 v[3:4], v[2:3], 56
-; CI-NEXT:    v_bfe_i32 v5, v2, 0, 16
+; CI-NEXT:    v_bfe_i32 v4, v2, 0, 16
+; CI-NEXT:    v_bfe_i32 v5, v3, 0, 16
+; CI-NEXT:    v_ashrrev_i32_e32 v3, 24, v3
 ; CI-NEXT:    v_ashrrev_i32_e32 v2, 24, v2
-; CI-NEXT:    v_bfe_u32 v4, v6, 8, 16
-; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; CI-NEXT:    v_bfe_u32 v5, v5, 8, 16
 ; CI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; CI-NEXT:    v_or_b32_e32 v3, v4, v3
-; CI-NEXT:    v_or_b32_e32 v2, v5, v2
+; CI-NEXT:    v_bfe_u32 v5, v5, 8, 16
+; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; CI-NEXT:    v_bfe_u32 v4, v4, 8, 16
+; CI-NEXT:    v_or_b32_e32 v3, v5, v3
+; CI-NEXT:    v_or_b32_e32 v2, v4, v2
 ; CI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[0:3], 0 addr64
 ; CI-NEXT:    s_endpgm
 ;

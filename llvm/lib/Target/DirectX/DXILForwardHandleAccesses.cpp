@@ -75,6 +75,7 @@ static bool forwardHandleAccesses(Function &F, DominatorTree &DT) {
       if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
         switch (II->getIntrinsicID()) {
         case Intrinsic::dx_resource_handlefrombinding:
+        case Intrinsic::dx_resource_handlefromimplicitbinding:
           processHandle(II, HandleMap);
           break;
         default:

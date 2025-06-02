@@ -25,11 +25,22 @@ struct RootParameterInfo {
       : Header(Header), Location(Location) {}
 };
 
+struct DescriptorTable {
+  SmallVector<dxbc::RTS0::v2::DescriptorRange> Ranges;
+  SmallVector<dxbc::RTS0::v2::DescriptorRange>::const_iterator begin() const {
+    return Ranges.begin();
+  }
+  SmallVector<dxbc::RTS0::v2::DescriptorRange>::const_iterator end() const {
+    return Ranges.end();
+  }
+};
+
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
 
   SmallVector<dxbc::RTS0::v1::RootConstants> Constants;
   SmallVector<dxbc::RTS0::v2::RootDescriptor> Descriptors;
+  SmallVector<DescriptorTable> Tables;
 
   void addInfo(dxbc::RTS0::v1::RootParameterHeader Header, size_t Location) {
     ParametersInfo.push_back(RootParameterInfo(Header, Location));
@@ -51,6 +62,12 @@ struct RootParametersContainer {
     Descriptors.push_back(Descriptor);
   }
 
+  void addParameter(dxbc::RTS0::v1::RootParameterHeader Header,
+                    DescriptorTable Table) {
+    addInfo(Header, Tables.size());
+    Tables.push_back(Table);
+  }
+
   const std::pair<uint32_t, uint32_t>
   getTypeAndLocForParameter(uint32_t Location) const {
     const RootParameterInfo &Info = ParametersInfo[Location];
@@ -70,6 +87,10 @@ struct RootParametersContainer {
     return Descriptors[Index];
   }
 
+  const DescriptorTable &getDescriptorTable(size_t Index) const {
+    return Tables[Index];
+  }
+
   size_t size() const { return ParametersInfo.size(); }
 
   SmallVector<RootParameterInfo>::const_iterator begin() const {
@@ -87,6 +108,7 @@ struct RootSignatureDesc {
   uint32_t StaticSamplersOffset = 0u;
   uint32_t NumStaticSamplers = 0u;
   mcdxbc::RootParametersContainer ParametersContainer;
+  SmallVector<dxbc::RTS0::v1::StaticSampler> StaticSamplers;
 
   void write(raw_ostream &OS) const;
 

@@ -7,6 +7,9 @@
 # RUN: llvm-jitlink -all_load -show-init-es -noexec %t/main.o -L%t -lFoo \
 # RUN:     | FileCheck %s
 #
+# FIXME: Enable this test on Windows/arm64 once that backend is available.
+# UNSUPPORTED: target=aarch64-pc-windows-{{.*}}
+#
 # Check that synthesized archive member names are unambiguous, even if an
 # archive contains multiple files with the same name.
 #

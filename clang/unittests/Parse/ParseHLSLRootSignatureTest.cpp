@@ -225,7 +225,16 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   const llvm::StringLiteral Source = R"cc(
-    StaticSampler(s0, mipLODBias = 0)
+    StaticSampler(s0),
+    StaticSampler(s0, maxAnisotropy = 3, space = 4,
+      visibility = SHADER_VISIBILITY_DOMAIN,
+      minLOD = 4.2f, mipLODBias = 0.23e+3,
+      addressW = TEXTURE_ADDRESS_CLAMP,
+      addressV = TEXTURE_ADDRESS_BORDER,
+      maxLOD = 9000, addressU = TEXTURE_ADDRESS_MIRROR,
+      comparisonFunc = COMPARISON_NOT_EQUAL,
+      borderColor = STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT
+    )
   )cc";
 
   TrivialModuleLoader ModLoader;
@@ -241,13 +250,43 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
 
   ASSERT_FALSE(Parser.parse());
 
-  ASSERT_EQ(Elements.size(), 1u);
+  ASSERT_EQ(Elements.size(), 2u);
 
+  // Check default values are as expected
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Wrap);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Wrap);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Wrap);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 16u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc, ComparisonFunc::LessEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor,
+            StaticBorderColor::OpaqueWhite);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 0.f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 3.402823466e+38f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility, ShaderVisibility::All);
+
+  // Check values can be set as expected
+  Elem = Elements[1];
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Mirror);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Border);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Clamp);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 230.f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 3u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc, ComparisonFunc::NotEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor,
+            StaticBorderColor::OpaqueBlackUint);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 4.2f);
+  ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 9000.f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 4u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility, ShaderVisibility::Domain);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/MemProfSummaryBuilder.h"
+#include "llvm/ProfileData/MemProfCommon.h"
 
 using namespace llvm;
 using namespace llvm::memprof;

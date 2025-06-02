@@ -215,6 +215,20 @@ public:
 
 LLVM_ABI void checkForCycles(const SelectionDAG *DAG, bool force = false);
 
+/// Keeps track of state when getting the sign of a floating-point value as an
+/// integer.
+struct FloatSignAsInt {
+  EVT FloatVT;
+  SDValue Chain;
+  SDValue FloatPtr;
+  SDValue IntPtr;
+  MachinePointerInfo IntPointerInfo;
+  MachinePointerInfo FloatPointerInfo;
+  SDValue IntValue;
+  APInt SignMask;
+  uint8_t SignBit;
+};
+
 /// This is used to represent a portion of an LLVM function in a low-level
 /// Data Dependence DAG representation suitable for instruction selection.
 /// This DAG is constructed as the first step of instruction selection in order
@@ -2016,6 +2030,16 @@ public:
   /// Create a stack temporary suitable for holding either of the specified
   /// value types.
   LLVM_ABI SDValue CreateStackTemporary(EVT VT1, EVT VT2);
+
+  /// Bitcast a floating-point value to an integer value. Only bitcast the part
+  /// containing the sign bit if the target has no integer value capable of
+  /// holding all bits of the floating-point value.
+  void getSignAsIntValue(FloatSignAsInt &State, const SDLoc &DL, SDValue Value);
+
+  /// Replace the integer value produced by getSignAsIntValue() with a new value
+  /// and cast the result back to a floating-point type.
+  SDValue modifySignAsInt(const FloatSignAsInt &State, const SDLoc &DL,
+                          SDValue NewIntValue);
 
   LLVM_ABI SDValue FoldSymbolOffset(unsigned Opcode, EVT VT,
                                     const GlobalAddressSDNode *GA,

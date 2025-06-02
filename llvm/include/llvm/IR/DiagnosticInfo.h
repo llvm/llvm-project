@@ -528,7 +528,7 @@ public:
 
   /// \p PassName is the name of the pass emitting this diagnostic. \p
   /// RemarkName is a textual identifier for the remark (single-word,
-  /// camel-case). \p Fn is the function where the diagnostic is being emitted.
+  /// CamelCase). \p Fn is the function where the diagnostic is being emitted.
   /// \p Loc is the location information to use in the diagnostic. If line table
   /// information is available, the diagnostic will include the source code
   /// location.
@@ -593,7 +593,7 @@ protected:
   /// be emitted.
   const char *PassName;
 
-  /// Textual identifier for the remark (single-word, camel-case). Can be used
+  /// Textual identifier for the remark (single-word, CamelCase). Can be used
   /// by external tools reading the output file for optimization remarks to
   /// identify the remark.
   StringRef RemarkName;
@@ -668,18 +668,17 @@ class DiagnosticInfoIROptimization : public DiagnosticInfoOptimizationBase {
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. \p
   /// RemarkName is a textual identifier for the remark (single-word,
-  /// camel-case). \p Fn is the function where the diagnostic is being emitted.
+  /// CamelCase). \p Fn is the function where the diagnostic is being emitted.
   /// \p Loc is the location information to use in the diagnostic. If line table
   /// information is available, the diagnostic will include the source code
-  /// location. \p CodeRegion is IR value (currently basic block) that the
-  /// optimization operates on. This is currently used to provide run-time
-  /// hotness information with PGO.
+  /// location. \p CodeRegion is IR value that the optimization operates on.
+  /// This is currently used to provide run-time hotness information with PGO.
   DiagnosticInfoIROptimization(enum DiagnosticKind Kind,
                                enum DiagnosticSeverity Severity,
                                const char *PassName, StringRef RemarkName,
                                const Function &Fn,
                                const DiagnosticLocation &Loc,
-                               const Value *CodeRegion = nullptr)
+                               const BasicBlock *CodeRegion = nullptr)
       : DiagnosticInfoOptimizationBase(Kind, Severity, PassName, RemarkName, Fn,
                                        Loc),
         CodeRegion(CodeRegion) {}
@@ -717,16 +716,16 @@ public:
     *this << Msg.str();
   }
 
-  const Value *getCodeRegion() const { return CodeRegion; }
+  const BasicBlock *getCodeRegion() const { return CodeRegion; }
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() >= DK_FirstRemark && DI->getKind() <= DK_LastRemark;
   }
 
 private:
-  /// The IR value (currently basic block) that the optimization operates on.
+  /// The IR region (currently basic block) that the optimization operates on.
   /// This is currently used to provide run-time hotness information with PGO.
-  const Value *CodeRegion = nullptr;
+  const BasicBlock *CodeRegion = nullptr;
 };
 
 /// Diagnostic information for applied optimization remarks.
@@ -735,11 +734,11 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass=, then the diagnostic will
   /// be emitted. \p RemarkName is a textual identifier for the remark (single-
-  /// word, camel-case). \p Loc is the debug location and \p CodeRegion is the
-  /// region that the optimization operates on (currently only block is
-  /// supported).
+  /// word, CamelCase). \p Loc is the debug location and \p CodeRegion is the
+  /// region that the optimization operates on.
   OptimizationRemark(const char *PassName, StringRef RemarkName,
-                     const DiagnosticLocation &Loc, const Value *CodeRegion);
+                     const DiagnosticLocation &Loc,
+                     const BasicBlock *CodeRegion);
 
   /// Same as above, but the debug location and code region are derived from \p
   /// Instr.
@@ -780,12 +779,11 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-missed=, then the
   /// diagnostic will be emitted. \p RemarkName is a textual identifier for the
-  /// remark (single-word, camel-case). \p Loc is the debug location and \p
-  /// CodeRegion is the region that the optimization operates on (currently only
-  /// block is supported).
+  /// remark (single-word, CamelCase). \p Loc is the debug location and \p
+  /// CodeRegion is the region that the optimization operates on.
   OptimizationRemarkMissed(const char *PassName, StringRef RemarkName,
                            const DiagnosticLocation &Loc,
-                           const Value *CodeRegion);
+                           const BasicBlock *CodeRegion);
 
   /// Same as above but \p Inst is used to derive code region and debug
   /// location.
@@ -826,12 +824,11 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
   /// diagnostic will be emitted. \p RemarkName is a textual identifier for the
-  /// remark (single-word, camel-case). \p Loc is the debug location and \p
-  /// CodeRegion is the region that the optimization operates on (currently only
-  /// block is supported).
+  /// remark (single-word, CamelCase). \p Loc is the debug location and \p
+  /// CodeRegion is the region that the optimization operates on.
   OptimizationRemarkAnalysis(const char *PassName, StringRef RemarkName,
                              const DiagnosticLocation &Loc,
-                             const Value *CodeRegion);
+                             const BasicBlock *CodeRegion);
 
   /// This is ctor variant allows a pass to build an optimization remark
   /// from an existing remark.
@@ -874,7 +871,7 @@ protected:
   OptimizationRemarkAnalysis(enum DiagnosticKind Kind, const char *PassName,
                              StringRef RemarkName,
                              const DiagnosticLocation &Loc,
-                             const Value *CodeRegion);
+                             const BasicBlock *CodeRegion);
 
 private:
   /// This is deprecated now and only used by the function API below.
@@ -900,14 +897,14 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
   /// diagnostic will be emitted. \p RemarkName is a textual identifier for the
-  /// remark (single-word, camel-case). \p Loc is the debug location and \p
-  /// CodeRegion is the region that the optimization operates on (currently only
-  /// block is supported). The front-end will append its own message related to
-  /// options that address floating-point non-commutativity.
+  /// remark (single-word, CamelCase). \p Loc is the debug location and \p
+  /// CodeRegion is the region that the optimization operates on. The front-end
+  /// will append its own message related to options that address floating-point
+  /// non-commutativity.
   OptimizationRemarkAnalysisFPCommute(const char *PassName,
                                       StringRef RemarkName,
                                       const DiagnosticLocation &Loc,
-                                      const Value *CodeRegion)
+                                      const BasicBlock *CodeRegion)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisFPCommute,
                                    PassName, RemarkName, Loc, CodeRegion) {}
 
@@ -942,13 +939,13 @@ public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
   /// diagnostic will be emitted. \p RemarkName is a textual identifier for the
-  /// remark (single-word, camel-case). \p Loc is the debug location and \p
-  /// CodeRegion is the region that the optimization operates on (currently only
-  /// block is supported). The front-end will append its own message related to
-  /// options that address pointer aliasing legality.
+  /// remark (single-word, CamelCase). \p Loc is the debug location and \p
+  /// CodeRegion is the region that the optimization operates on. The front-end
+  /// will append its own message related to options that address pointer
+  /// aliasing legality.
   OptimizationRemarkAnalysisAliasing(const char *PassName, StringRef RemarkName,
                                      const DiagnosticLocation &Loc,
-                                     const Value *CodeRegion)
+                                     const BasicBlock *CodeRegion)
       : OptimizationRemarkAnalysis(DK_OptimizationRemarkAnalysisAliasing,
                                    PassName, RemarkName, Loc, CodeRegion) {}
 
@@ -1049,12 +1046,11 @@ public:
 
   /// \p PassName is the name of the pass emitting this diagnostic.  \p
   /// RemarkName is a textual identifier for the remark (single-word,
-  /// camel-case).  \p Loc is the debug location and \p CodeRegion is the
-  /// region that the optimization operates on (currently basic block is
-  /// supported).
+  /// CamelCase).  \p Loc is the debug location and \p CodeRegion is the
+  /// region that the optimization operates on.
   DiagnosticInfoOptimizationFailure(const char *PassName, StringRef RemarkName,
                                     const DiagnosticLocation &Loc,
-                                    const Value *CodeRegion);
+                                    const BasicBlock *CodeRegion);
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationFailure;

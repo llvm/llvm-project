@@ -91,6 +91,6 @@ Error writeMemProf(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
     std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
-    memprof::MemProfSummary *MemProfSum);
+    std::unique_ptr<memprof::MemProfSummary> MemProfSum);
 } // namespace llvm
 #endif

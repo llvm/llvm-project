@@ -77,6 +77,7 @@ Expected<std::unique_ptr<Embedder>> Embedder::create(IR2VecKind Mode,
 }
 
 void Embedder::addVectors(Embedding &Dst, const Embedding &Src) {
+  assert(Dst.size() == Src.size() && "Vectors must have the same dimension");
   std::transform(Dst.begin(), Dst.end(), Src.begin(), Dst.begin(),
                  std::plus<double>());
 }
@@ -115,6 +116,14 @@ const BBEmbeddingsMap &Embedder::getBBVecMap() const {
   return BBVecMap;
 }
 
+const Embedding &Embedder::getBBVector(const BasicBlock &BB) const {
+  auto It = BBVecMap.find(&BB);
+  if (It != BBVecMap.end())
+    return It->second;
+  computeEmbeddings(BB);
+  return BBVecMap[&BB];
+}
+
 const Embedding &Embedder::getFunctionVector() const {
   // Currently, we always (re)compute the embeddings for the function.
   // This is cheaper than caching the vector.
@@ -151,17 +160,7 @@ Embedding SymbolicEmbedder::getOperandEmbedding(const Value *Op) const {
 
 #undef RETURN_LOOKUP_IF
 
-void SymbolicEmbedder::computeEmbeddings() const {
-  if (F.isDeclaration())
-    return;
-  for (const auto &BB : F) {
-    auto [It, WasInserted] = BBVecMap.try_emplace(&BB, computeBB2Vec(BB));
-    assert(WasInserted && "Basic block already exists in the map");
-    addVectors(FuncVector, It->second);
-  }
-}
-
-Embedding SymbolicEmbedder::computeBB2Vec(const BasicBlock &BB) const {
+void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
   Embedding BBVector(Dimension, 0);
 
   for (const auto &I : BB) {
@@ -183,7 +182,16 @@ Embedding SymbolicEmbedder::computeBB2Vec(const BasicBlock &BB) const {
     InstVecMap[&I] = InstVector;
     addVectors(BBVector, InstVector);
   }
-  return BBVector;
+  BBVecMap[&BB] = BBVector;
+}
+
+void SymbolicEmbedder::computeEmbeddings() const {
+  if (F.isDeclaration())
+    return;
+  for (const auto &BB : F) {
+    computeEmbeddings(BB);
+    addVectors(FuncVector, BBVecMap[&BB]);
+  }
 }
 
 // ==----------------------------------------------------------------------===//

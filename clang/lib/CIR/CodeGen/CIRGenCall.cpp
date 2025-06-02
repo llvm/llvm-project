@@ -122,7 +122,7 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
 
   if (const auto *proto = dyn_cast<FunctionProtoType>(fnType)) {
     if (proto->isVariadic())
-      cgm.errorNYI("call to variadic function");
+      required = RequiredArgs::getFromProtoWithExtraSlots(proto, 0);
     if (proto->hasExtParameterInfos())
       cgm.errorNYI("call to functions with extra parameter info");
   } else if (cgm.getTargetCIRGenInfo().isNoProtoCallVariadic(
@@ -409,6 +409,18 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
   args.add(emitAnyExprToTemp(e), argType);
 }
 
+QualType CIRGenFunction::getVarArgType(const Expr *arg) {
+  // System headers on Windows define NULL to 0 instead of 0LL on Win64. MSVC
+  // implicitly widens null pointer constants that are arguments to varargs
+  // functions to pointer-sized ints.
+  if (!getTarget().getTriple().isOSWindows())
+    return arg->getType();
+
+  assert(!cir::MissingFeatures::msabi());
+  cgm.errorNYI(arg->getSourceRange(), "getVarArgType: NYI for Windows target");
+  return arg->getType();
+}
+
 /// Similar to emitAnyExpr(), however, the result will always be accessible
 /// even if no aggregate location is provided.
 RValue CIRGenFunction::emitAnyExprToTemp(const Expr *e) {
@@ -429,18 +441,20 @@ void CIRGenFunction::emitCallArgs(
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // First, if a prototype was provided, use those argument types.
-  assert(!cir::MissingFeatures::opCallVariadic());
+  bool isVariadic = false;
   if (prototype.p) {
     assert(!cir::MissingFeatures::opCallObjCMethod());
 
     const auto *fpt = cast<const FunctionProtoType *>(prototype.p);
+    isVariadic = fpt->isVariadic();
+    assert(!cir::MissingFeatures::opCallCallConv());
     argTypes.assign(fpt->param_type_begin() + paramsToSkip,
                     fpt->param_type_end());
   }
 
   // If we still have any arguments, emit them using the type of the argument.
   for (const clang::Expr *a : llvm::drop_begin(argRange, argTypes.size()))
-    argTypes.push_back(a->getType());
+    argTypes.push_back(isVariadic ? getVarArgType(a) : a->getType());
   assert(argTypes.size() == (size_t)(argRange.end() - argRange.begin()));
 
   // We must evaluate arguments from right to left in the MS C++ ABI, because

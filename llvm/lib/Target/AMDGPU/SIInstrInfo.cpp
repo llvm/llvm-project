@@ -6063,6 +6063,12 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
           !isInlineConstant(Op, InstDesc.operands()[i]) &&
           !Op.isIdenticalTo(*MO))
         return false;
+
+      // Do not fold a frame index into an instruction that already has a frame
+      // index. The frame index handling code doesn't handle fixing up operand
+      // constraints if there are multiple indexes.
+      if (Op.isFI() && MO->isFI())
+        return false;
     }
   } else if (IsInlineConst && ST.hasNoF16PseudoScalarTransInlineConstants() &&
              isF16PseudoScalarTrans(MI.getOpcode())) {
