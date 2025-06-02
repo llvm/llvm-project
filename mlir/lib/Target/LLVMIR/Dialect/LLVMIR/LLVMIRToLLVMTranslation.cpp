@@ -146,7 +146,7 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 
-  if (auto iface = dyn_cast<BranchWeightOpInterface>(op)) {
+  if (auto iface = dyn_cast<WeightedBranchOpInterface>(op)) {
     iface.setBranchWeights(builder.getDenseI32ArrayAttr(branchWeights));
     return success();
   }

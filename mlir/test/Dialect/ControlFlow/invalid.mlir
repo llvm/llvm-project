@@ -72,7 +72,7 @@ func.func @switch_missing_default(%flag : i32, %caseOperand : i32) {
 
 // CHECK-LABEL: func @wrong_weights_number
 func.func @wrong_weights_number(%cond: i1) {
-  // expected-error@+1 {{number of weights (1) does not match the number of successors (2)}}
+  // expected-error@+1 {{expects number of branch weights to match number of successors: 1 vs 2}}
   cf.cond_br %cond weights([100]), ^bb1, ^bb2
   ^bb1:
     return
@@ -86,18 +86,6 @@ func.func @wrong_weights_number(%cond: i1) {
 func.func @wrong_total_weight(%cond: i1) {
   // expected-error@+1 {{weight #0 must be non-negative}}
   cf.cond_br %cond weights([-1, 101]), ^bb1, ^bb2
-  ^bb1:
-    return
-  ^bb2:
-    return
-}
-
-// -----
-
-// CHECK-LABEL: func @wrong_total_weight
-func.func @wrong_total_weight(%cond: i1) {
-  // expected-error@+1 {{total weight 101 is not 100}}
-  cf.cond_br %cond weights([100, 1]), ^bb1, ^bb2
   ^bb1:
     return
   ^bb2:

@@ -1397,7 +1397,7 @@ fir.local {type = local_init} @x.localizer : f32 init {
 // -----
 
 func.func @wrong_weights_number_in_if_then(%cond: i1) {
-// expected-error @below {{number of weights (1) does not match the number of regions (2)}}
+// expected-error @below {{expects number of region weights to match number of regions: 1 vs 2}}
   fir.if %cond weights([50]) {
   }
   return
@@ -1406,7 +1406,7 @@ func.func @wrong_weights_number_in_if_then(%cond: i1) {
 // -----
 
 func.func @wrong_weights_number_in_if_then_else(%cond: i1) {
-// expected-error @below {{number of weights (3) does not match the number of regions (2)}}
+// expected-error @below {{expects number of region weights to match number of regions: 3 vs 2}}
   fir.if %cond weights([50, 40, 10]) {
   } else {
   }
@@ -1418,15 +1418,6 @@ func.func @wrong_weights_number_in_if_then_else(%cond: i1) {
 func.func @negative_weight_in_if_then(%cond: i1) {
 // expected-error @below {{weight #0 must be non-negative}}
   fir.if %cond weights([-1, 101]) {
-  }
-  return
-}
-
-// -----
-
-func.func @wrong_total_weight_in_if_then(%cond: i1) {
-// expected-error @below {{total weight 101 is not 100}}
-  fir.if %cond weights([1, 100]) {
   }
   return
 }
