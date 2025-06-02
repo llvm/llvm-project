@@ -435,7 +435,8 @@ class Sema;
 
           // A function pointer type can be resolved to a member function type,
           // which is still an identity conversion.
-          if (auto *N = T->getAs<MemberPointerType>())
+          if (auto *N = T->getAs<MemberPointerType>();
+              N && N->isMemberFunctionPointer())
             T = C.getDecayedType(N->getPointeeType());
           return T;
         };

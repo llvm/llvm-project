@@ -6,7 +6,7 @@
 # REQUIRES: system-linux
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -o %t.exe -q --Ttext=0x80000
+# RUN: ld.lld %t.o -o %t.exe -q --image-base=0x80000 --Ttext=0x80000
 # RUN: llvm-bolt %t.exe --relocs -o %t.bolt --funcs=foo
 # RUN: llvm-objdump -d --print-imm-hex %t.exe \
 # RUN:   | FileCheck %s

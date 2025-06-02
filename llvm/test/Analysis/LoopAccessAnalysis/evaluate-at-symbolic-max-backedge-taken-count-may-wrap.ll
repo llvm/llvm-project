@@ -11,15 +11,15 @@ define void @runtime_checks_with_symbolic_max_btc_neg_1(ptr %P, ptr %S, i32 %x, 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv = getelementptr inbounds i32, ptr %P, i32 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:        ptr %S
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: ((4 * %y) + %P) High: ((4 * %y) + %P))
 ; CHECK-NEXT:            Member: {((4 * %y) + %P),+,4}<%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))
 ; CHECK-NEXT:            Member: %S
 ; CHECK-EMPTY:
@@ -52,15 +52,15 @@ define void @runtime_check_with_symbolic_max_btc_neg_2(ptr %P, ptr %S, i32 %x, i
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv = getelementptr inbounds i32, ptr %P, i32 %iv
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:        ptr %S
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: ((4 * %y) + %P) High: (-4 + (4 * %y) + %P))
 ; CHECK-NEXT:            Member: {((4 * %y) + %P),+,4}<%loop>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))
 ; CHECK-NEXT:            Member: %S
 ; CHECK-EMPTY:
@@ -146,15 +146,15 @@ define void @runtime_check_with_symbolic_max_wraps_to_positive_offset(ptr %P, pt
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv = getelementptr inbounds i16, ptr %P, i32 %iv
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:        ptr %S
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: ((2 * %y) + %P) High: (2 + (2 * %y) + %P))
 ; CHECK-NEXT:            Member: {((2 * %y) + %P),+,2}<%loop>
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))
 ; CHECK-NEXT:            Member: %S
 ; CHECK-EMPTY:

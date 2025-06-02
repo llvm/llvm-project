@@ -184,6 +184,7 @@ export async function createDebugAdapterExecutable(
       ...configEnvironment,
       ...env,
     },
+    cwd: workspaceFolder!!.uri.fsPath,
   };
   const dbgArgs = await getDAPArguments(workspaceFolder, configuration);
 

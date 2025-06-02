@@ -460,4 +460,22 @@ llvm::json::Value toJSON(const SetDataBreakpointsResponseBody &SDBR) {
   return result;
 }
 
+bool fromJSON(const llvm::json::Value &Params, DisassembleArguments &DA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("memoryReference", DA.memoryReference) &&
+         O.mapOptional("offset", DA.offset) &&
+         O.mapOptional("instructionOffset", DA.instructionOffset) &&
+         O.map("instructionCount", DA.instructionCount) &&
+         O.mapOptional("resolveSymbols", DA.resolveSymbols);
+}
+
+llvm::json::Value toJSON(const DisassembleResponseBody &DRB) {
+  llvm::json::Array instructions;
+  for (const auto &instruction : DRB.instructions) {
+    instructions.push_back(toJSON(instruction));
+  }
+  return llvm::json::Object{{"instructions", std::move(instructions)}};
+}
+
 } // namespace lldb_dap::protocol

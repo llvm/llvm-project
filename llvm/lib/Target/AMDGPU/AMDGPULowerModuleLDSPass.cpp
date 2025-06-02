@@ -196,7 +196,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1038,12 +1037,6 @@ public:
   }
 
   bool runOnModule(Module &M) {
-    // Check if we've already lowered this module. The pass may run more
-    // than once in the LTO pipeline, and multiple runs aren't supported.
-    if (M.getModuleFlag("amdgpu.lowered_lds"))
-      return false;
-    M.addModuleFlag(Module::ModFlagBehavior::Error, "amdgpu.lowered_lds", 1);
-
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
 
