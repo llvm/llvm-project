@@ -235,6 +235,126 @@ exit:
   ret void
 }
 
+define void @matrix_phi_loop_delay(ptr %in1, ptr %in2, i32 %count, ptr %out) {
+; CHECK-LABEL: @matrix_phi_loop_delay(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[IN1:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN1]], i64 3
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[IN1]], i64 6
+; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PHI14:%.*]] = phi <3 x double> [ [[COL_LOAD]], [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PHI15:%.*]] = phi <3 x double> [ [[COL_LOAD1]], [[ENTRY]] ], [ [[TMP1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PHI16:%.*]] = phi <3 x double> [ [[COL_LOAD3]], [[ENTRY]] ], [ [[TMP2:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0]] = phi <3 x double> [ [[COL_LOAD]], [[ENTRY]] ], [ [[TMP3:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP1]] = phi <3 x double> [ [[COL_LOAD1]], [[ENTRY]] ], [ [[TMP4:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP2]] = phi <3 x double> [ [[COL_LOAD3]], [[ENTRY]] ], [ [[TMP5:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[CTR:%.*]] = phi i32 [ [[COUNT:%.*]], [[ENTRY]] ], [ [[DEC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <3 x double>, ptr [[IN2:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, ptr [[IN2]], i64 3
+; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <3 x double>, ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[IN2]], i64 6
+; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <3 x double>, ptr [[VEC_GEP7]], align 8
+; CHECK-NEXT:    [[TMP3]] = fadd <3 x double> [[PHI14]], [[COL_LOAD4]]
+; CHECK-NEXT:    [[TMP4]] = fadd <3 x double> [[PHI15]], [[COL_LOAD6]]
+; CHECK-NEXT:    [[TMP5]] = fadd <3 x double> [[PHI16]], [[COL_LOAD8]]
+; CHECK-NEXT:    [[DEC]] = sub i32 [[CTR]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[DEC]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    store <3 x double> [[TMP3]], ptr [[OUT:%.*]], align 128
+; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    store <3 x double> [[TMP4]], ptr [[VEC_GEP12]], align 8
+; CHECK-NEXT:    [[VEC_GEP13:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    store <3 x double> [[TMP5]], ptr [[VEC_GEP13]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %in1v = call <9 x double> @llvm.matrix.column.major.load(ptr %in1, i64 3, i1 false, i32 3, i32 3)
+  br label %loop
+
+loop:
+  %phi2 = phi <9 x double> [%in1v, %entry], [%phi, %loop]
+  %phi = phi <9 x double> [%in1v, %entry], [%sum, %loop]
+  %ctr = phi i32 [%count, %entry], [%dec, %loop]
+
+  %in2v = call <9 x double> @llvm.matrix.column.major.load(ptr %in2, i64 3, i1 false, i32 3, i32 3)
+
+  %sum = fadd <9 x double> %phi2, %in2v
+
+  %dec = sub i32 %ctr, 1
+  %cmp = icmp eq i32 %dec, 0
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  store <9 x double> %sum, ptr %out
+  ret void
+}
+
+define void @matrix_phi_three_preds(i1 %cond1, i1 %cond2, ptr %a, ptr %b, ptr %c, ptr %out) {
+; CHECK-LABEL: @matrix_phi_three_preds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[BB1:%.*]], label [[BBA:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[BBB:%.*]], label [[BBC:%.*]]
+; CHECK:       bba:
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 3
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <3 x double>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[COL_LOAD3:%.*]] = load <3 x double>, ptr [[VEC_GEP2]], align 8
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       bbb:
+; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <3 x double>, ptr [[B:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr double, ptr [[B]], i64 3
+; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load <3 x double>, ptr [[VEC_GEP10]], align 8
+; CHECK-NEXT:    [[VEC_GEP12:%.*]] = getelementptr double, ptr [[B]], i64 6
+; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <3 x double>, ptr [[VEC_GEP12]], align 8
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       bbc:
+; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <3 x double>, ptr [[C:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, ptr [[C]], i64 3
+; CHECK-NEXT:    [[COL_LOAD6:%.*]] = load <3 x double>, ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[C]], i64 6
+; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <3 x double>, ptr [[VEC_GEP7]], align 8
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PHI14:%.*]] = phi <3 x double> [ [[COL_LOAD]], [[BBA]] ], [ [[COL_LOAD9]], [[BBB]] ], [ [[COL_LOAD4]], [[BBC]] ]
+; CHECK-NEXT:    [[PHI15:%.*]] = phi <3 x double> [ [[COL_LOAD1]], [[BBA]] ], [ [[COL_LOAD11]], [[BBB]] ], [ [[COL_LOAD6]], [[BBC]] ]
+; CHECK-NEXT:    [[PHI16:%.*]] = phi <3 x double> [ [[COL_LOAD3]], [[BBA]] ], [ [[COL_LOAD13]], [[BBB]] ], [ [[COL_LOAD8]], [[BBC]] ]
+; CHECK-NEXT:    store <3 x double> [[PHI14]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP17:%.*]] = getelementptr double, ptr [[OUT]], i64 3
+; CHECK-NEXT:    store <3 x double> [[PHI15]], ptr [[VEC_GEP17]], align 8
+; CHECK-NEXT:    [[VEC_GEP18:%.*]] = getelementptr double, ptr [[OUT]], i64 6
+; CHECK-NEXT:    store <3 x double> [[PHI16]], ptr [[VEC_GEP18]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %cond1, label %bb1, label %bba
+
+bb1:
+  br i1 %cond2, label %bbb, label %bbc
+
+bba:
+  %va = call <9 x double> @llvm.matrix.column.major.load(ptr %a, i64 3, i1 false, i32 3, i32 3)
+  br label %exit
+
+bbb:
+  %vb = call <9 x double> @llvm.matrix.column.major.load(ptr %b, i64 3, i1 false, i32 3, i32 3)
+  br label %exit
+
+bbc:
+  %vc = call <9 x double> @llvm.matrix.column.major.load(ptr %c, i64 3, i1 false, i32 3, i32 3)
+  br label %exit
+
+exit:
+  %phi = phi <9 x double> [%va, %bba], [%vb, %bbb], [%vc, %bbc]
+  call void @llvm.matrix.column.major.store(<9 x double> %phi, ptr %out, i64 3, i1 false, i32 3, i32 3)
+  ret void
+}
+
 define <9 x double> @matrix_phi_ifthenelse(i1 %cond, <9 x double> %A, <9 x double> %B, <9 x double> %C) {
 ; CHECK-LABEL: @matrix_phi_ifthenelse(
 ; CHECK-NEXT:  entry:
