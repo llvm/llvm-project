@@ -2701,6 +2701,14 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       if (!MemR || !isa<VPWidenLoadRecipe>(MemR) || !MemR->isReverse())
         continue;
 
+      auto *VecEndPtr = cast<VPVectorEndPointerRecipe>(MemR->getAddr());
+      VPValue *Ptr = VecEndPtr->getPtr();
+      Value *PtrUV = Ptr->getUnderlyingValue();
+      // Memory cost model requires the pointer operand of memory access
+      // instruction.
+      if (!PtrUV)
+        continue;
+
       Instruction &Ingredient = MemR->getIngredient();
       Type *ElementTy = getLoadStoreType(&Ingredient);
 
@@ -2711,10 +2719,9 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
           return false;
         const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
         const InstructionCost StridedLoadStoreCost =
-            Ctx.TTI.getStridedMemoryOpCost(
-                Instruction::Load, DataTy,
-                getLoadStorePointerOperand(&Ingredient), MemR->isMasked(),
-                Alignment, Ctx.CostKind, &Ingredient);
+            Ctx.TTI.getStridedMemoryOpCost(Instruction::Load, DataTy, PtrUV,
+                                           MemR->isMasked(), Alignment,
+                                           Ctx.CostKind, &Ingredient);
         return StridedLoadStoreCost < CurrentCost;
       };
 
@@ -2724,10 +2731,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
 
       // The stride of consecutive reverse access must be -1.
       int64_t Stride = -1;
-      auto *VecEndPtr = cast<VPVectorEndPointerRecipe>(MemR->getAddr());
-      VPValue *Ptr = VecEndPtr->getPtr();
-      auto *GEP = dyn_cast<GetElementPtrInst>(
-          Ptr->getUnderlyingValue()->stripPointerCasts());
+      auto *GEP = dyn_cast<GetElementPtrInst>(PtrUV->stripPointerCasts());
       // Create a new vector pointer for strided access.
       auto *NewPtr = new VPVectorPointerRecipe(Ptr, ElementTy, /*Stride=*/true,
                                                GEP ? GEP->getNoWrapFlags()
