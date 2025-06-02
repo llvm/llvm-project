@@ -194,4 +194,75 @@ static_assert(__is_trivially_copyable(S4));
 // expected-note@-1 {{because it has a non-trivially-copyable member 'b' of type 'B'}} \
 // expected-note@-1 {{because it has a user-provided destructor}} \
 // expected-note@#tc-S4 {{'S4' defined here}}
+
+struct B1 {
+    int & a;
+};
+
+struct B2 {
+    int & a;
+};
+
+struct S5 : virtual B1, virtual B2 { // #tc-S5
+};
+static_assert(__is_trivially_copyable(S5));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S5)'}} \
+// expected-note@-1 {{'S5' is not trivially copyable}} \
+// expected-note@-1 {{because it has a virtual base 'B1'}} \
+// expected-note@-1 {{because it has a virtual base 'B2'}} \
+// expected-note@#tc-S5 {{'S5' defined here}}
+
+struct B3 {
+    ~B3();
+};
+
+struct B4 {
+    ~B4();
+};
+
+struct S6 : B3, B4 { // #tc-S6
+};
+static_assert(__is_trivially_copyable(S6));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S6)'}} \
+// expected-note@-1 {{because it has a non-trivially-copyable base 'B3'}} \
+// expected-note@-1 {{because it has a non-trivially-copyable base 'B4'}} \
+// expected-note@-1 {{because it has a user-provided destructor}} \
+// expected-note@-1 {{'S6' is not trivially copyable}} \
+// expected-note@#tc-S6 {{'S6' defined here}}
+
+struct S7 { // #tc-S7
+    S7(const S7&);
+};
+static_assert(__is_trivially_copyable(S7));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S7)'}} \
+// expected-note@-1 {{because it has a user provided copy constructor}} \
+// expected-note@-1 {{'S7' is not trivially copyable}} \
+// expected-note@#tc-S7 {{'S7' defined here}}
+
+struct S8 { // #tc-S8
+    S8(S8&&);
+};
+static_assert(__is_trivially_copyable(S8));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S8)'}} \
+// expected-note@-1 {{because it has a user provided move constructor}} \
+// expected-note@-1 {{'S8' is not trivially copyable}} \
+// expected-note@#tc-S8 {{'S8' defined here}}
+
+struct S9 { // #tc-S9
+    S9& operator=(const S9&);
+};
+static_assert(__is_trivially_copyable(S9));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S9)'}} \
+// expected-note@-1 {{because it has a user provided copy assignment operator}} \
+// expected-note@-1 {{'S9' is not trivially copyable}} \
+// expected-note@#tc-S9 {{'S9' defined here}}
+
+struct S10 { // #tc-S10
+    S10& operator=(S10&&);
+};
+static_assert(__is_trivially_copyable(S10));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S10)'}} \
+// expected-note@-1 {{because it has a user provided move assignment operator}} \
+// expected-note@-1 {{'S10' is not trivially copyable}} \
+// expected-note@#tc-S10 {{'S10' defined here}}
 }
