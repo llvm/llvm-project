@@ -2853,8 +2853,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   if (requiresReturnValueNullabilityCheck()) {
     auto Nullability = Ty->getNullability();
     if (Nullability && *Nullability == NullabilityKind::NonNull) {
-      SanitizerScope SanScope(this, {},
-                              SanitizerHandler::AddOverflow /* Unused */);
+      SanitizerScope SanScope(this);
       RetValNullabilityPrecondition =
           Builder.CreateAnd(RetValNullabilityPrecondition,
                             Builder.CreateIsNotNull(Arg.getAnyValue()));
