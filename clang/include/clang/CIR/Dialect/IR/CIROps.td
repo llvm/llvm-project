@@ -2199,7 +2199,7 @@ def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
 //===----------------------------------------------------------------------===//
 
 def VecTernaryOp : CIR_Op<"vec.ternary",
-                   [Pure, AllTypesMatch<["result", "vec1", "vec2"]>]> {
+                   [Pure, AllTypesMatch<["result", "lhs", "rhs"]>]> {
   let summary = "The `cond ? a : b` ternary operator for vector types";
   let description = [{
     The `cir.vec.ternary` operation represents the C/C++ ternary operator,
@@ -2218,14 +2218,14 @@ def VecTernaryOp : CIR_Op<"vec.ternary",
 
   let arguments = (ins
     CIR_VectorOfIntType:$cond,
-    CIR_VectorType:$vec1,
-    CIR_VectorType:$vec2
+    CIR_VectorType:$lhs,
+    CIR_VectorType:$rhs
   );
 
   let results = (outs CIR_VectorType:$result);
   let assemblyFormat = [{
-    `(` $cond `,` $vec1 `,` $vec2 `)` `:` qualified(type($cond)) `,`
-    qualified(type($vec1)) attr-dict
+    `(` $cond `,` $lhs`,` $rhs `)` `:` qualified(type($cond)) `,`
+    qualified(type($lhs)) attr-dict
   }];
   let hasVerifier = 1;
 }

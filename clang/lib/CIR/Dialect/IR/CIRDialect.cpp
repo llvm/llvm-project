@@ -1598,10 +1598,10 @@ LogicalResult cir::VecTernaryOp::verify() {
   // other operands.  (The automatic verification already checked that all
   // operands are vector types and that the second and third operands are the
   // same type.)
-  if (getCond().getType().getSize() != getVec1().getType().getSize()) {
+  if (getCond().getType().getSize() != getLhs().getType().getSize()) {
     return emitOpError() << ": the number of elements in "
-                         << getCond().getType() << " and "
-                         << getVec1().getType() << " don't match";
+                         << getCond().getType() << " and " << getLhs().getType()
+                         << " don't match";
   }
   return success();
 }

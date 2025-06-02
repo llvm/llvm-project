@@ -1945,7 +1945,7 @@ mlir::LogicalResult CIRToLLVMVecTernaryOpLowering::matchAndRewrite(
           op.getCond().getLoc(),
           typeConverter->convertType(op.getCond().getType())));
   rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
-      op, bitVec, adaptor.getVec1(), adaptor.getVec2());
+      op, bitVec, adaptor.getLhs(), adaptor.getRhs());
   return mlir::success();
 }
 
