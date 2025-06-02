@@ -1361,8 +1361,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (Subtarget.isISAFuture()) {
       addRegisterClass(MVT::v512i1, &PPC::WACCRCRegClass);
       addRegisterClass(MVT::v1024i1, &PPC::DMRRCRegClass);
+      addRegisterClass(MVT::v2048i1, &PPC::DMRpRCRegClass);
       setOperationAction(ISD::LOAD, MVT::v1024i1, Custom);
       setOperationAction(ISD::STORE, MVT::v1024i1, Custom);
+      setOperationAction(ISD::LOAD, MVT::v2048i1, Custom);
+      setOperationAction(ISD::STORE, MVT::v2048i1, Custom);
     } else {
       addRegisterClass(MVT::v512i1, &PPC::UACCRCRegClass);
     }
@@ -11890,15 +11893,20 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   SDValue LoadChain = LN->getChain();
   SDValue BasePtr = LN->getBasePtr();
   EVT VT = Op.getValueType();
+  bool IsV1024i1 = VT == MVT::v1024i1;
+  bool IsV2048i1 = VT == MVT::v2048i1;
 
-  // Type v1024i1 is used for Dense Math dmr registers.
-  assert(VT == MVT::v1024i1 && "Unsupported type.");
+  // The types v1024i1 and v2048i1 are used for Dense Math dmr registers and
+  // Dense Math dmr pair registers, respectively.
+  assert((IsV1024i1 || IsV2048i1) && "Unsupported type.");
+  (void)IsV2048i1;
   assert((Subtarget.hasMMA() && Subtarget.isISAFuture()) &&
          "Dense Math support required.");
   assert(Subtarget.pairedVectorMemops() && "Vector pair support required.");
 
-  SmallVector<SDValue, 4> Loads;
-  SmallVector<SDValue, 4> LoadChains;
+  SmallVector<SDValue, 8> Loads;
+  SmallVector<SDValue, 8> LoadChains;
+
   SDValue IntrinID = DAG.getConstant(Intrinsic::ppc_vsx_lxvp, dl, MVT::i32);
   SDValue LoadOps[] = {LoadChain, IntrinID, BasePtr};
   MachineMemOperand *MMO = LN->getMemOperand();
@@ -11934,11 +11942,36 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
   SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
   const SDValue Ops[] = {RC, Lo, LoSub, Hi, HiSub};
+
   SDValue Value =
       SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Ops), 0);
 
-  SDValue RetOps[] = {Value, TF};
-  return DAG.getMergeValues(RetOps, dl);
+  if (IsV1024i1) {
+    return DAG.getMergeValues({Value, TF}, dl);
+  }
+
+  // Handle Loads for V2048i1 which represents a dmr pair.
+  SDValue DmrPValue;
+  SDValue Dmr1Lo(DAG.getMachineNode(PPC::DMXXINSTDMR512, dl, MVT::v512i1,
+                                    Loads[4], Loads[5]),
+                 0);
+  SDValue Dmr1Hi(DAG.getMachineNode(PPC::DMXXINSTDMR512_HI, dl, MVT::v512i1,
+                                    Loads[6], Loads[7]),
+                 0);
+  const SDValue Dmr1Ops[] = {RC, Dmr1Lo, LoSub, Dmr1Hi, HiSub};
+  SDValue Dmr1Value = SDValue(
+      DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Dmr1Ops), 0);
+
+  SDValue Dmr0Sub = DAG.getTargetConstant(PPC::sub_dmr0, dl, MVT::i32);
+  SDValue Dmr1Sub = DAG.getTargetConstant(PPC::sub_dmr1, dl, MVT::i32);
+
+  SDValue DmrPRC = DAG.getTargetConstant(PPC::DMRpRCRegClassID, dl, MVT::i32);
+  const SDValue DmrPOps[] = {DmrPRC, Value, Dmr0Sub, Dmr1Value, Dmr1Sub};
+
+  DmrPValue = SDValue(
+      DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v2048i1, DmrPOps), 0);
+
+  return DAG.getMergeValues({DmrPValue, TF}, dl);
 }
 
 SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
@@ -11949,7 +11982,7 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
   SDValue BasePtr = LN->getBasePtr();
   EVT VT = Op.getValueType();
 
-  if (VT == MVT::v1024i1)
+  if (VT == MVT::v1024i1 || VT == MVT::v2048i1)
     return LowerDMFVectorLoad(Op, DAG);
 
   if (VT != MVT::v256i1 && VT != MVT::v512i1)
@@ -11996,34 +12029,89 @@ SDValue PPCTargetLowering::LowerDMFVectorStore(SDValue Op,
   StoreSDNode *SN = cast<StoreSDNode>(Op.getNode());
   SDValue StoreChain = SN->getChain();
   SDValue BasePtr = SN->getBasePtr();
-  SmallVector<SDValue, 4> Values;
-  SmallVector<SDValue, 4> Stores;
+  SmallVector<SDValue, 8> Values;
+  SmallVector<SDValue, 8> Stores;
   EVT VT = SN->getValue().getValueType();
+  bool IsV1024i1 = VT == MVT::v1024i1;
+  bool IsV2048i1 = VT == MVT::v2048i1;
 
-  // Type v1024i1 is used for Dense Math dmr registers.
-  assert(VT == MVT::v1024i1 && "Unsupported type.");
+  // The types v1024i1 and v2048i1 are used for Dense Math dmr registers and
+  // Dense Math dmr pair registers, respectively.
+  assert((IsV1024i1 || IsV2048i1) && "Unsupported type.");
+  (void)IsV2048i1;
   assert((Subtarget.hasMMA() && Subtarget.isISAFuture()) &&
          "Dense Math support required.");
   assert(Subtarget.pairedVectorMemops() && "Vector pair support required.");
 
-  SDValue Lo(
-      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
-                         Op.getOperand(1),
-                         DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)),
-      0);
-  SDValue Hi(
-      DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
-                         Op.getOperand(1),
-                         DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)),
-      0);
   EVT ReturnTypes[] = {MVT::v256i1, MVT::v256i1};
-  MachineSDNode *ExtNode =
-      DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Lo);
-  Values.push_back(SDValue(ExtNode, 0));
-  Values.push_back(SDValue(ExtNode, 1));
-  ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Hi);
-  Values.push_back(SDValue(ExtNode, 0));
-  Values.push_back(SDValue(ExtNode, 1));
+  if (IsV1024i1) {
+    SDValue Lo(DAG.getMachineNode(
+                   TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
+                   Op.getOperand(1),
+                   DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)),
+               0);
+    SDValue Hi(DAG.getMachineNode(
+                   TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1,
+                   Op.getOperand(1),
+                   DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)),
+               0);
+    MachineSDNode *ExtNode =
+        DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Lo);
+    Values.push_back(SDValue(ExtNode, 0));
+    Values.push_back(SDValue(ExtNode, 1));
+    ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Hi);
+    Values.push_back(SDValue(ExtNode, 0));
+    Values.push_back(SDValue(ExtNode, 1));
+  } else {
+    // This corresponds to v2048i1 which represents a dmr pair.
+    SDValue Dmr0(
+        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v1024i1,
+                           Op.getOperand(1),
+                           DAG.getTargetConstant(PPC::sub_dmr0, dl, MVT::i32)),
+        0);
+
+    SDValue Dmr1(
+        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v1024i1,
+                           Op.getOperand(1),
+                           DAG.getTargetConstant(PPC::sub_dmr1, dl, MVT::i32)),
+        0);
+
+    SDValue Dmr0Lo(DAG.getMachineNode(
+                       TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1, Dmr0,
+                       DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)),
+                   0);
+
+    SDValue Dmr0Hi(DAG.getMachineNode(
+                       TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1, Dmr0,
+                       DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)),
+                   0);
+
+    SDValue Dmr1Lo(DAG.getMachineNode(
+                       TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1, Dmr1,
+                       DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32)),
+                   0);
+
+    SDValue Dmr1Hi(DAG.getMachineNode(
+                       TargetOpcode::EXTRACT_SUBREG, dl, MVT::v512i1, Dmr1,
+                       DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32)),
+                   0);
+
+    MachineSDNode *ExtNode =
+        DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Dmr0Lo);
+    Values.push_back(SDValue(ExtNode, 0));
+    Values.push_back(SDValue(ExtNode, 1));
+    ExtNode =
+        DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Dmr0Hi);
+    Values.push_back(SDValue(ExtNode, 0));
+    Values.push_back(SDValue(ExtNode, 1));
+    ExtNode = DAG.getMachineNode(PPC::DMXXEXTFDMR512, dl, ReturnTypes, Dmr1Lo);
+    Values.push_back(SDValue(ExtNode, 0));
+    Values.push_back(SDValue(ExtNode, 1));
+    ExtNode =
+        DAG.getMachineNode(PPC::DMXXEXTFDMR512_HI, dl, ReturnTypes, Dmr1Hi);
+    Values.push_back(SDValue(ExtNode, 0));
+    Values.push_back(SDValue(ExtNode, 1));
+  }
 
   if (Subtarget.isLittleEndian())
     std::reverse(Values.begin(), Values.end());
@@ -12062,7 +12150,7 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
   SDValue Value2 = SN->getValue();
   EVT StoreVT = Value.getValueType();
 
-  if (StoreVT == MVT::v1024i1)
+  if (StoreVT == MVT::v1024i1 || StoreVT == MVT::v2048i1)
     return LowerDMFVectorStore(Op, DAG);
 
   if (StoreVT != MVT::v256i1 && StoreVT != MVT::v512i1)
@@ -18456,9 +18544,89 @@ static SDValue stripModuloOnShift(const TargetLowering &TLI, SDNode *N,
   return SDValue();
 }
 
+SDValue PPCTargetLowering::combineVectorShift(SDNode *N,
+                                              DAGCombinerInfo &DCI) const {
+  EVT VT = N->getValueType(0);
+  assert(VT.isVector() && "Vector type expected.");
+
+  unsigned Opc = N->getOpcode();
+  assert((Opc == ISD::SHL || Opc == ISD::SRL || Opc == ISD::SRA) &&
+         "Unexpected opcode.");
+
+  if (!isOperationLegal(Opc, VT))
+    return SDValue();
+
+  EVT EltTy = VT.getScalarType();
+  unsigned EltBits = EltTy.getSizeInBits();
+  if (EltTy != MVT::i64 && EltTy != MVT::i32)
+    return SDValue();
+
+  SDValue N1 = N->getOperand(1);
+  uint64_t SplatBits = 0;
+  bool AddSplatCase = false;
+  unsigned OpcN1 = N1.getOpcode();
+  if (OpcN1 == PPCISD::VADD_SPLAT &&
+      N1.getConstantOperandVal(1) == VT.getVectorNumElements()) {
+    AddSplatCase = true;
+    SplatBits = N1.getConstantOperandVal(0);
+  }
+
+  if (!AddSplatCase) {
+    if (OpcN1 != ISD::BUILD_VECTOR)
+      return SDValue();
+
+    unsigned SplatBitSize;
+    bool HasAnyUndefs;
+    APInt APSplatBits, APSplatUndef;
+    BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(N1);
+    bool BVNIsConstantSplat =
+        BVN->isConstantSplat(APSplatBits, APSplatUndef, SplatBitSize,
+                             HasAnyUndefs, 0, !Subtarget.isLittleEndian());
+    if (!BVNIsConstantSplat || SplatBitSize != EltBits)
+      return SDValue();
+    SplatBits = APSplatBits.getZExtValue();
+  }
+
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  // PPC vector shifts by word/double look at only the low 5/6 bits of the
+  // shift vector, which means the max value is 31/63. A shift vector of all
+  // 1s will be truncated to 31/63, which is useful as vspltiw is limited to
+  // -16 to 15 range.
+  if (SplatBits == (EltBits - 1)) {
+    unsigned NewOpc;
+    switch (Opc) {
+    case ISD::SHL:
+      NewOpc = PPCISD::SHL;
+      break;
+    case ISD::SRL:
+      NewOpc = PPCISD::SRL;
+      break;
+    case ISD::SRA:
+      NewOpc = PPCISD::SRA;
+      break;
+    }
+    SDValue SplatOnes = getCanonicalConstSplat(255, 1, VT, DCI.DAG, DL);
+    return DCI.DAG.getNode(NewOpc, DL, VT, N0, SplatOnes);
+  }
+
+  if (Opc != ISD::SHL || !isOperationLegal(ISD::ADD, VT))
+    return SDValue();
+
+  // For 64-bit there is no splat immediate so we want to catch shift by 1 here
+  // before the BUILD_VECTOR is replaced by a load.
+  if (EltTy != MVT::i64 || SplatBits != 1)
+    return SDValue();
+
+  return DCI.DAG.getNode(ISD::ADD, SDLoc(N), VT, N0, N0);
+}
+
 SDValue PPCTargetLowering::combineSHL(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = stripModuloOnShift(*this, N, DCI.DAG))
     return Value;
+
+  if (N->getValueType(0).isVector())
+    return combineVectorShift(N, DCI);
 
   SDValue N0 = N->getOperand(0);
   ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(N->getOperand(1));
@@ -18490,12 +18658,18 @@ SDValue PPCTargetLowering::combineSRA(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = stripModuloOnShift(*this, N, DCI.DAG))
     return Value;
 
+  if (N->getValueType(0).isVector())
+    return combineVectorShift(N, DCI);
+
   return SDValue();
 }
 
 SDValue PPCTargetLowering::combineSRL(SDNode *N, DAGCombinerInfo &DCI) const {
   if (auto Value = stripModuloOnShift(*this, N, DCI.DAG))
     return Value;
+
+  if (N->getValueType(0).isVector())
+    return combineVectorShift(N, DCI);
 
   return SDValue();
 }

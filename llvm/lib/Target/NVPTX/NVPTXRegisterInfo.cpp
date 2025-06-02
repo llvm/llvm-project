@@ -25,10 +25,6 @@ using namespace llvm;
 
 namespace llvm {
 StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
-  if (RC == &NVPTX::Float32RegsRegClass)
-    return ".b32";
-  if (RC == &NVPTX::Float64RegsRegClass)
-    return ".b64";
   if (RC == &NVPTX::Int128RegsRegClass)
     return ".b128";
   if (RC == &NVPTX::Int64RegsRegClass)
@@ -63,10 +59,6 @@ StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
 }
 
 StringRef getNVPTXRegClassStr(TargetRegisterClass const *RC) {
-  if (RC == &NVPTX::Float32RegsRegClass)
-    return "%f";
-  if (RC == &NVPTX::Float64RegsRegClass)
-    return "%fd";
   if (RC == &NVPTX::Int128RegsRegClass)
     return "%rq";
   if (RC == &NVPTX::Int64RegsRegClass)

@@ -11,7 +11,6 @@
 
 #include "../ClangTidyCheck.h"
 #include "clang/Lex/Token.h"
-#include <optional>
 
 namespace clang::tidy::modernize {
 
@@ -39,23 +38,6 @@ public:
 
 private:
   Preprocessor *PP = nullptr;
-
-  SourceLocation findTrailingReturnTypeSourceLocation(
-      const FunctionDecl &F, const FunctionTypeLoc &FTL, const ASTContext &Ctx,
-      const SourceManager &SM, const LangOptions &LangOpts);
-  std::optional<SmallVector<ClassifiedToken, 8>>
-  classifyTokensBeforeFunctionName(const FunctionDecl &F, const ASTContext &Ctx,
-                                   const SourceManager &SM,
-                                   const LangOptions &LangOpts);
-  SourceRange findReturnTypeAndCVSourceRange(const FunctionDecl &F,
-                                             const TypeLoc &ReturnLoc,
-                                             const ASTContext &Ctx,
-                                             const SourceManager &SM,
-                                             const LangOptions &LangOpts);
-  void keepSpecifiers(std::string &ReturnType, std::string &Auto,
-                      SourceRange ReturnTypeCVRange, const FunctionDecl &F,
-                      const FriendDecl *Fr, const ASTContext &Ctx,
-                      const SourceManager &SM, const LangOptions &LangOpts);
 };
 
 } // namespace clang::tidy::modernize

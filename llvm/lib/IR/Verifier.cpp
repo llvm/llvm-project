@@ -1343,6 +1343,7 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
               N.getTag() == dwarf::DW_TAG_enumeration_type ||
               N.getTag() == dwarf::DW_TAG_class_type ||
               N.getTag() == dwarf::DW_TAG_variant_part ||
+              N.getTag() == dwarf::DW_TAG_variant ||
               N.getTag() == dwarf::DW_TAG_namelist,
           "invalid tag", &N);
 
@@ -1986,8 +1987,12 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           V);
 
   if (Attrs.hasAttribute(Attribute::ImmArg)) {
-    Check(Attrs.getNumAttributes() == 1,
-          "Attribute 'immarg' is incompatible with other attributes", V);
+    unsigned AttrCount =
+        Attrs.getNumAttributes() - Attrs.hasAttribute(Attribute::Range);
+    Check(AttrCount == 1,
+          "Attribute 'immarg' is incompatible with other attributes except the "
+          "'range' attribute",
+          V);
   }
 
   // Check for mutually incompatible attributes.  Only inreg is compatible with
@@ -3679,6 +3684,20 @@ void Verifier::visitCallBase(CallBase &Call) {
       Value *ArgVal = Call.getArgOperand(i);
       Check(isa<ConstantInt>(ArgVal) || isa<ConstantFP>(ArgVal),
             "immarg operand has non-immediate parameter", ArgVal, Call);
+
+      // If the imm-arg is an integer and also has a range attached,
+      // check if the given value is within the range.
+      if (Call.paramHasAttr(i, Attribute::Range)) {
+        if (auto *CI = dyn_cast<ConstantInt>(ArgVal)) {
+          const ConstantRange &CR =
+              Call.getParamAttr(i, Attribute::Range).getValueAsConstantRange();
+          Check(CR.contains(CI->getValue()),
+                "immarg value " + Twine(CI->getValue().getSExtValue()) +
+                    " out of range [" + Twine(CR.getLower().getSExtValue()) +
+                    ", " + Twine(CR.getUpper().getSExtValue()) + ")",
+                Call);
+        }
+      }
     }
 
     if (Call.paramHasAttr(i, Attribute::Preallocated)) {
@@ -6417,7 +6436,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
-    Check(isa_and_present<UnreachableInst>(Call.getNextNode()),
+
+    auto *Next = Call.getNextNonDebugInstruction();
+    bool IsAMDUnreachable = Next && isa<IntrinsicInst>(Next) &&
+                            cast<IntrinsicInst>(Next)->getIntrinsicID() ==
+                                Intrinsic::amdgcn_unreachable;
+    Check(Next && (isa<UnreachableInst>(Next) || IsAMDUnreachable),
           "llvm.amdgcn.cs.chain must be followed by unreachable", &Call);
     break;
   }
@@ -6547,6 +6571,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::thread_pointer: {
+    Check(Call.getType()->getPointerAddressSpace() ==
+              DL.getDefaultGlobalsAddressSpace(),
+          "llvm.thread.pointer intrinsic return type must be for the globals "
+          "address space",
+          &Call);
+    break;
+  }
   case Intrinsic::threadlocal_address: {
     const Value &Arg0 = *Call.getArgOperand(0);
     Check(isa<GlobalValue>(Arg0),
@@ -6583,7 +6615,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       for (BasicBlock *ColorFirstBB : CV)
         if (auto It = ColorFirstBB->getFirstNonPHIIt();
             It != ColorFirstBB->end())
-          if (dyn_cast_or_null<FuncletPadInst>(&*It))
+          if (isa_and_nonnull<FuncletPadInst>(&*It))
             InEHFunclet = true;
 
       // Check for funclet operand bundle
@@ -7282,11 +7314,13 @@ void Verifier::verifyAttachedCallBundle(const CallBase &Call,
 
   if (IID) {
     Check((IID == Intrinsic::objc_retainAutoreleasedReturnValue ||
+           IID == Intrinsic::objc_claimAutoreleasedReturnValue ||
            IID == Intrinsic::objc_unsafeClaimAutoreleasedReturnValue),
           "invalid function argument", Call);
   } else {
     StringRef FnName = Fn->getName();
     Check((FnName == "objc_retainAutoreleasedReturnValue" ||
+           FnName == "objc_claimAutoreleasedReturnValue" ||
            FnName == "objc_unsafeClaimAutoreleasedReturnValue"),
           "invalid function argument", Call);
   }

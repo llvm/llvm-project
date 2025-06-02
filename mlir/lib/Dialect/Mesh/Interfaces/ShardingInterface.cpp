@@ -57,8 +57,9 @@ checkOperandAffineExprRecursively(AffineExpr expr,
     } else if (rhs.getKind() == AffineExprKind::DimId &&
                lhs.getKind() == AffineExprKind::Constant) {
       dimExpr = rhs;
-    } else
+    } else {
       return failure();
+    }
     unsigned position = cast<AffineDimExpr>(dimExpr).getPosition();
     if ((size_t)position >= seenIds.size() || seenIds[position])
       return failure();

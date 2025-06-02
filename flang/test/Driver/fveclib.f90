@@ -5,6 +5,7 @@
 ! RUN: %flang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck -check-prefix CHECK-DARWIN_LIBSYSTEM_M %s
 ! RUN: %flang -### -c --target=aarch64-none-none -fveclib=SLEEF %s 2>&1 | FileCheck -check-prefix CHECK-SLEEF %s
 ! RUN: %flang -### -c --target=aarch64-none-none -fveclib=ArmPL %s 2>&1 | FileCheck -check-prefix CHECK-ARMPL %s
+! RUN: %flang -### -c --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM %s 2>&1 | FileCheck -check-prefix CHECK-AMDLIBM %s
 ! RUN: %flang -### -c --target=aarch64-apple-darwin -fveclib=none %s 2>&1 | FileCheck -check-prefix CHECK-NOLIB-DARWIN %s
 ! RUN: not %flang -c -fveclib=something %s 2>&1 | FileCheck -check-prefix CHECK-INVALID %s
 
@@ -15,6 +16,7 @@
 ! CHECK-DARWIN_LIBSYSTEM_M: "-fveclib=Darwin_libsystem_m"
 ! CHECK-SLEEF: "-fveclib=SLEEF"
 ! CHECK-ARMPL: "-fveclib=ArmPL"
+! CHECK-AMDLIBM: "-fveclib=AMDLIBM"
 ! CHECK-NOLIB-DARWIN: "-fveclib=none"
 
 ! CHECK-INVALID: error: invalid value 'something' in '-fveclib=something'
@@ -23,6 +25,7 @@
 ! RUN: not %flang --target=x86-none-none -c -fveclib=ArmPL %s 2>&1 | FileCheck -check-prefix CHECK-ERROR %s
 ! RUN: not %flang --target=aarch64-none-none -c -fveclib=libmvec %s 2>&1 | FileCheck -check-prefix CHECK-ERROR %s
 ! RUN: not %flang --target=aarch64-none-none -c -fveclib=SVML %s 2>&1 | FileCheck -check-prefix CHECK-ERROR %s
+! RUN: not %flang --target=aarch64-none-none -c -fveclib=AMDLIBM %s 2>&1 | FileCheck -check-prefix CHECK-ERROR %s
 ! CHECK-ERROR: unsupported option {{.*}} for target
 
 ! RUN: %flang -fveclib=Accelerate %s -target arm64-apple-ios8.0.0 -### 2>&1 | FileCheck --check-prefix=CHECK-LINK %s

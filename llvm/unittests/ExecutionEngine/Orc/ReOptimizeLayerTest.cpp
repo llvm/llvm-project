@@ -59,6 +59,10 @@ protected:
     if (Triple.isRISCV())
       GTEST_SKIP();
 
+    // ARM is not supported yet.
+    if (Triple.isARM())
+      GTEST_SKIP();
+
     auto EPC = SelfExecutorProcessControl::Create();
     if (!EPC) {
       consumeError(EPC.takeError());

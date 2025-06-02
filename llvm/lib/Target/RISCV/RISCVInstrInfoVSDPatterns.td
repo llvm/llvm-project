@@ -907,6 +907,18 @@ foreach vti = AllIntegerVectors in {
   }
 }
 
+// (add v, C) -> (sub v, -C) if -C cheaper to materialize
+foreach vti = I64IntegerVectors in {
+  let Predicates = [HasVInstructionsI64] in {
+    def : Pat<(add (vti.Vector vti.RegClass:$rs1),
+                   (vti.Vector (SplatPat_imm64_neg i64:$rs2))),
+              (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX)
+                   (vti.Vector (IMPLICIT_DEF)),
+                   vti.RegClass:$rs1,
+                   negImm:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
+  }
+}
+
 // 11.2. Vector Widening Integer Add and Subtract
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<add, sext_oneuse, "PseudoVWADD">;
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<add, zext_oneuse, "PseudoVWADDU">;

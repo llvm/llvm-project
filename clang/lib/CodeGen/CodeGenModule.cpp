@@ -971,6 +971,7 @@ void CodeGenModule::Release() {
         getModule(), Int8Ty, false, llvm::GlobalValue::ExternalLinkage,
         llvm::Constant::getNullValue(Int8Ty),
         "__hip_cuid_" + getContext().getCUIDHash());
+    getSanitizerMetadata()->disableSanitizerForGlobal(GV);
     addCompilerUsedGlobal(GV);
   }
   emitLLVMUsed();
@@ -1306,6 +1307,10 @@ void CodeGenModule::Release() {
   if (CodeGenOpts.ImportCallOptimization)
     getModule().addModuleFlag(llvm::Module::Warning, "import-call-optimization",
                               1);
+
+  // Enable unwind v2 (epilog).
+  if (CodeGenOpts.WinX64EHUnwindV2)
+    getModule().addModuleFlag(llvm::Module::Warning, "winx64-eh-unwindv2", 1);
 
   // Indicate whether this Module was compiled with -fopenmp
   if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd)
@@ -1685,7 +1690,7 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
 
   const llvm::Triple &TT = CGM.getTriple();
   const auto &CGOpts = CGM.getCodeGenOpts();
-  if (TT.isWindowsGNUEnvironment()) {
+  if (TT.isOSCygMing()) {
     // In MinGW, variables without DLLImport can still be automatically
     // imported from a DLL by the linker; don't mark variables that
     // potentially could come from another DLL as DSO local.
@@ -3270,9 +3275,11 @@ void CodeGenModule::EmitModuleLinkOptions() {
   LinkerOptionsMetadata.append(MetadataArgs.begin(), MetadataArgs.end());
 
   // Add the linker options metadata flag.
-  auto *NMD = getModule().getOrInsertNamedMetadata("llvm.linker.options");
-  for (auto *MD : LinkerOptionsMetadata)
-    NMD->addOperand(MD);
+  if (!LinkerOptionsMetadata.empty()) {
+    auto *NMD = getModule().getOrInsertNamedMetadata("llvm.linker.options");
+    for (auto *MD : LinkerOptionsMetadata)
+      NMD->addOperand(MD);
+  }
 }
 
 void CodeGenModule::EmitDeferred() {
@@ -4057,11 +4064,7 @@ namespace {
         return false;
       std::string BuiltinNameStr = BI.getName(BuiltinID);
       StringRef BuiltinName = BuiltinNameStr;
-      if (BuiltinName.starts_with("__builtin_") &&
-          Name == BuiltinName.slice(strlen("__builtin_"), StringRef::npos)) {
-        return true;
-      }
-      return false;
+      return BuiltinName.consume_front("__builtin_") && Name == BuiltinName;
     }
 
     bool VisitStmt(const Stmt *S) {
@@ -4234,19 +4237,19 @@ void CodeGenModule::EmitMultiVersionFunctionDefinition(GlobalDecl GD,
       EmitGlobalFunctionDefinition(GD.getWithMultiVersionIndex(I), nullptr);
   } else if (auto *TC = FD->getAttr<TargetClonesAttr>()) {
     for (unsigned I = 0; I < TC->featuresStrs_size(); ++I)
-      // AArch64 favors the default target version over the clone if any.
-      if ((!TC->isDefaultVersion(I) || !getTarget().getTriple().isAArch64()) &&
-          TC->isFirstOfVersion(I))
+      if (TC->isFirstOfVersion(I))
         EmitGlobalFunctionDefinition(GD.getWithMultiVersionIndex(I), nullptr);
-    // Ensure that the resolver function is also emitted.
-    GetOrCreateMultiVersionResolver(GD);
   } else
     EmitGlobalFunctionDefinition(GD, GV);
 
-  // Defer the resolver emission until we can reason whether the TU
-  // contains a default target version implementation.
-  if (FD->isTargetVersionMultiVersion())
-    AddDeferredMultiVersionResolverToEmit(GD);
+  // Ensure that the resolver function is also emitted.
+  if (FD->isTargetVersionMultiVersion() || FD->isTargetClonesMultiVersion()) {
+    // On AArch64 defer the resolver emission until the entire TU is processed.
+    if (getTarget().getTriple().isAArch64())
+      AddDeferredMultiVersionResolverToEmit(GD);
+    else
+      GetOrCreateMultiVersionResolver(GD);
+  }
 }
 
 void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
@@ -4348,7 +4351,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
     };
 
     // For AArch64, a resolver is only emitted if a function marked with
-    // target_version("default")) or target_clones() is present and defined
+    // target_version("default")) or target_clones("default") is defined
     // in this TU. For other architectures it is always emitted.
     bool ShouldEmitResolver = !getTarget().getTriple().isAArch64();
     SmallVector<CodeGenFunction::FMVResolverOption, 10> Options;
@@ -4371,12 +4374,11 @@ void CodeGenModule::emitMultiVersionFunctions() {
             TVA->getFeatures(Feats, Delim);
             Options.emplace_back(Func, Feats);
           } else if (const auto *TC = CurFD->getAttr<TargetClonesAttr>()) {
-            if (IsDefined)
-              ShouldEmitResolver = true;
             for (unsigned I = 0; I < TC->featuresStrs_size(); ++I) {
               if (!TC->isFirstOfVersion(I))
                 continue;
-
+              if (TC->isDefaultVersion(I) && IsDefined)
+                ShouldEmitResolver = true;
               llvm::Function *Func = createFunction(CurFD, I);
               Feats.clear();
               if (getTarget().getTriple().isX86()) {
@@ -5251,7 +5253,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
   assert(getContext().getTargetAddressSpace(ExpectedAS) == TargetAS);
   if (DAddrSpace != ExpectedAS) {
     return getTargetCodeGenInfo().performAddrSpaceCast(
-        *this, GV, DAddrSpace, ExpectedAS,
+        *this, GV, DAddrSpace,
         llvm::PointerType::get(getLLVMContext(), TargetAS));
   }
 
@@ -5486,7 +5488,7 @@ castStringLiteralToDefaultAddressSpace(CodeGenModule &CGM,
     auto AS = CGM.GetGlobalConstantAddressSpace();
     if (AS != LangAS::Default)
       Cast = CGM.getTargetCodeGenInfo().performAddrSpaceCast(
-          CGM, GV, AS, LangAS::Default,
+          CGM, GV, AS,
           llvm::PointerType::get(
               CGM.getLLVMContext(),
               CGM.getContext().getTargetAddressSpace(LangAS::Default)));
@@ -6886,7 +6888,7 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
   llvm::Constant *CV = GV;
   if (AddrSpace != LangAS::Default)
     CV = getTargetCodeGenInfo().performAddrSpaceCast(
-        *this, GV, AddrSpace, LangAS::Default,
+        *this, GV, AddrSpace,
         llvm::PointerType::get(
             getLLVMContext(),
             getContext().getTargetAddressSpace(LangAS::Default)));
@@ -7119,7 +7121,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     }
     // Emit any static data members, they may be definitions.
     for (auto *I : CRD->decls())
-      if (isa<VarDecl>(I) || isa<CXXRecordDecl>(I))
+      if (isa<VarDecl>(I) || isa<CXXRecordDecl>(I) || isa<EnumDecl>(I))
         EmitTopLevelDecl(I);
     break;
   }

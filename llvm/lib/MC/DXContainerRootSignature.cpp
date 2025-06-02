@@ -29,21 +29,39 @@ static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
 }
 
 size_t RootSignatureDesc::getSize() const {
-  size_t Size = sizeof(dxbc::RootSignatureHeader) +
-                ParametersContainer.size() * sizeof(dxbc::RootParameterHeader);
+  size_t Size =
+      sizeof(dxbc::RTS0::v1::RootSignatureHeader) +
+      ParametersContainer.size() * sizeof(dxbc::RTS0::v1::RootParameterHeader) +
+      StaticSamplers.size() * sizeof(dxbc::RTS0::v1::StaticSampler);
 
-  for (const auto &I : ParametersContainer) {
-    std::optional<ParametersView> P = ParametersContainer.getParameter(&I);
-    if (!P)
-      continue;
-    std::visit(
-        [&Size](auto &Value) -> void {
-          using T = std::decay_t<decltype(*Value)>;
-          Size += sizeof(T);
-        },
-        *P);
+  for (const RootParameterInfo &I : ParametersContainer) {
+    switch (I.Header.ParameterType) {
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
+      Size += sizeof(dxbc::RTS0::v1::RootConstants);
+      break;
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+      if (Version == 1)
+        Size += sizeof(dxbc::RTS0::v1::RootDescriptor);
+      else
+        Size += sizeof(dxbc::RTS0::v2::RootDescriptor);
+
+      break;
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):
+      const DescriptorTable &Table =
+          ParametersContainer.getDescriptorTable(I.Location);
+
+      // 4 bytes for the number of ranges in table and
+      // 4 bytes for the ranges offset
+      Size += 2 * sizeof(uint32_t);
+      if (Version == 1)
+        Size += sizeof(dxbc::RTS0::v1::DescriptorRange) * Table.Ranges.size();
+      else
+        Size += sizeof(dxbc::RTS0::v2::DescriptorRange) * Table.Ranges.size();
+      break;
+    }
   }
-
   return Size;
 }
 
@@ -62,7 +80,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   support::endian::write(BOS, Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
-  for (const auto &P : ParametersContainer) {
+  for (const RootParameterInfo &P : ParametersContainer) {
     support::endian::write(BOS, P.Header.ParameterType,
                            llvm::endianness::little);
     support::endian::write(BOS, P.Header.ShaderVisibility,
@@ -75,36 +93,69 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   const RootParameterInfo *H = ParametersContainer.begin();
   for (size_t I = 0; I < NumParameters; ++I, H++) {
     rewriteOffsetToCurrentByte(BOS, ParamsOffsets[I]);
-    auto P = ParametersContainer.getParameter(H);
-    if (!P)
-      continue;
-    if (std::holds_alternative<const dxbc::RootConstants *>(P.value())) {
-      auto *Constants = std::get<const dxbc::RootConstants *>(P.value());
-      support::endian::write(BOS, Constants->ShaderRegister,
+    const auto &[Type, Loc] = ParametersContainer.getTypeAndLocForParameter(I);
+    switch (Type) {
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+      const dxbc::RTS0::v1::RootConstants &Constants =
+          ParametersContainer.getConstant(Loc);
+      support::endian::write(BOS, Constants.ShaderRegister,
                              llvm::endianness::little);
-      support::endian::write(BOS, Constants->RegisterSpace,
+      support::endian::write(BOS, Constants.RegisterSpace,
                              llvm::endianness::little);
-      support::endian::write(BOS, Constants->Num32BitValues,
+      support::endian::write(BOS, Constants.Num32BitValues,
                              llvm::endianness::little);
-    } else if (std::holds_alternative<const dxbc::RTS0::v1::RootDescriptor *>(
-                   *P)) {
-      auto *Descriptor =
-          std::get<const dxbc::RTS0::v1::RootDescriptor *>(P.value());
-      support::endian::write(BOS, Descriptor->ShaderRegister,
-                             llvm::endianness::little);
-      support::endian::write(BOS, Descriptor->RegisterSpace,
-                             llvm::endianness::little);
-    } else if (std::holds_alternative<const dxbc::RTS0::v2::RootDescriptor *>(
-                   *P)) {
-      auto *Descriptor =
-          std::get<const dxbc::RTS0::v2::RootDescriptor *>(P.value());
+      }  break;
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):{
+      const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+                ParametersContainer.getRootDescriptor(Loc);
 
-      support::endian::write(BOS, Descriptor->ShaderRegister,
+      support::endian::write(BOS, Descriptor.ShaderRegister,
                              llvm::endianness::little);
-      support::endian::write(BOS, Descriptor->RegisterSpace,
+      support::endian::write(BOS, Descriptor.RegisterSpace,
                              llvm::endianness::little);
-      support::endian::write(BOS, Descriptor->Flags, llvm::endianness::little);
+      if (Version > 1)
+        support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
+      break;
     }
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+      const DescriptorTable &Table =
+          ParametersContainer.getDescriptorTable(Loc);
+      support::endian::write(BOS, (uint32_t)Table.Ranges.size(),
+                             llvm::endianness::little);
+      rewriteOffsetToCurrentByte(BOS, writePlaceholder(BOS));
+      for (const auto &Range : Table) {
+        support::endian::write(BOS, Range.RangeType, llvm::endianness::little);
+        support::endian::write(BOS, Range.NumDescriptors,
+                               llvm::endianness::little);
+        support::endian::write(BOS, Range.BaseShaderRegister,
+                               llvm::endianness::little);
+        support::endian::write(BOS, Range.RegisterSpace,
+                               llvm::endianness::little);
+        support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
+                               llvm::endianness::little);
+        if (Version > 1)
+          support::endian::write(BOS, Range.Flags, llvm::endianness::little);
+      }
+      break;
+    }
+    }
+  }
+  for (const auto &S : StaticSamplers) {
+    support::endian::write(BOS, S.Filter, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressU, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressV, llvm::endianness::little);
+    support::endian::write(BOS, S.AddressW, llvm::endianness::little);
+    support::endian::write(BOS, S.MipLODBias, llvm::endianness::little);
+    support::endian::write(BOS, S.MaxAnisotropy, llvm::endianness::little);
+    support::endian::write(BOS, S.ComparisonFunc, llvm::endianness::little);
+    support::endian::write(BOS, S.BorderColor, llvm::endianness::little);
+    support::endian::write(BOS, S.MinLOD, llvm::endianness::little);
+    support::endian::write(BOS, S.MaxLOD, llvm::endianness::little);
+    support::endian::write(BOS, S.ShaderRegister, llvm::endianness::little);
+    support::endian::write(BOS, S.RegisterSpace, llvm::endianness::little);
+    support::endian::write(BOS, S.ShaderVisibility, llvm::endianness::little);
   }
   assert(Storage.size() == getSize());
   OS.write(Storage.data(), Storage.size());

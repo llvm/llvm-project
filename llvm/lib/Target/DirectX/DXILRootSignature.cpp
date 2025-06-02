@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "DXILRootSignature.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -83,7 +84,9 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   if (RootConstantNode->getNumOperands() != 5)
     return reportError(Ctx, "Invalid format for RootConstants Element");
 
-  dxbc::RootParameterHeader Header;
+  dxbc::RTS0::v1::RootParameterHeader Header;
+  // The parameter offset doesn't matter here - we recalculate it during
+  // serialization  Header.ParameterOffset = 0;
   Header.ParameterType =
       llvm::to_underlying(dxbc::RootParameterType::Constants32Bit);
 
@@ -92,7 +95,7 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   else
     return reportError(Ctx, "Invalid value for ShaderVisibility");
 
-  dxbc::RootConstants Constants;
+  dxbc::RTS0::v1::RootConstants Constants;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
     Constants.ShaderRegister = *Val;
   else
@@ -126,7 +129,7 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
   if (!ElementText.has_value())
     return reportError(Ctx, "Root Descriptor, first element is not a string.");
 
-  dxbc::RootParameterHeader Header;
+  dxbc::RTS0::v1::RootParameterHeader Header;
   Header.ParameterType =
       StringSwitch<uint32_t>(*ElementText)
           .Case("RootCBV", llvm::to_underlying(dxbc::RootParameterType::CBV))
@@ -138,7 +141,7 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
   else
     return reportError(Ctx, "Invalid value for ShaderVisibility");
 
-  dxbc::RTS0::v1::RootDescriptor Descriptor;
+  dxbc::RTS0::v2::RootDescriptor Descriptor;
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 2))
     Descriptor.ShaderRegister = *Val;
   else
@@ -154,14 +157,13 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
     return false;
   }
   assert(RSD.Version > 1);
-  dxbc::RTS0::v2::RootDescriptor DescriptorV2(Descriptor);
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 4))
-    DescriptorV2.Flags = *Val;
+    Descriptor.Flags = *Val;
   else
     return reportError(Ctx, "Invalid value for Root Descriptor Flags");
 
-  RSD.ParametersContainer.addParameter(Header, DescriptorV2);
+  RSD.ParametersContainer.addParameter(Header, Descriptor);
   return false;
 }
 
@@ -239,7 +241,7 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     return reportValueError(Ctx, "RootFlags", RSD.Flags);
   }
 
-  for (const llvm::mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
+  for (const mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
     if (!dxbc::isValidShaderVisibility(Info.Header.ShaderVisibility))
       return reportValueError(Ctx, "ShaderVisibility",
                               Info.Header.ShaderVisibility);
@@ -247,37 +249,26 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
            "Invalid value for ParameterType");
 
-    auto P = RSD.ParametersContainer.getParameter(&Info);
-    if (!P)
-      return reportError(Ctx, "Cannot locate parameter from Header Info");
+    switch(Info.Header.ParameterType) {
+    
+      case llvm::to_underlying(dxbc::RootParameterType::CBV):
+      case llvm::to_underlying(dxbc::RootParameterType::UAV):
+      case llvm::to_underlying(dxbc::RootParameterType::SRV): {
+        const dxbc::RTS0::v2::RootDescriptor &Descriptor = RSD.ParametersContainer.getRootDescriptor(Info.Location);
+        if (!verifyRegisterValue(Descriptor.ShaderRegister))
+          return reportValueError(Ctx, "ShaderRegister",
+                                  Descriptor.ShaderRegister);
 
-    if (std::holds_alternative<const dxbc::RTS0::v1::RootDescriptor *>(*P)) {
-      auto *Descriptor =
-          std::get<const dxbc::RTS0::v1::RootDescriptor *>(P.value());
+        if (!verifyRegisterSpace(Descriptor.RegisterSpace))
+          return reportValueError(Ctx, "RegisterSpace",
+                                  Descriptor.RegisterSpace);
 
-      if (!verifyRegisterValue(Descriptor->ShaderRegister))
-        return reportValueError(Ctx, "ShaderRegister",
-                                Descriptor->ShaderRegister);
-
-      if (!verifyRegisterSpace(Descriptor->RegisterSpace))
-        return reportValueError(Ctx, "RegisterSpace",
-                                Descriptor->RegisterSpace);
-
-    } else if (std::holds_alternative<const dxbc::RTS0::v2::RootDescriptor *>(
-                   *P)) {
-      auto *Descriptor =
-          std::get<const dxbc::RTS0::v2::RootDescriptor *>(P.value());
-
-      if (!verifyRegisterValue(Descriptor->ShaderRegister))
-        return reportValueError(Ctx, "ShaderRegister",
-                                Descriptor->ShaderRegister);
-
-      if (!verifyRegisterSpace(Descriptor->RegisterSpace))
-        return reportValueError(Ctx, "RegisterSpace",
-                                Descriptor->RegisterSpace);
-      if (RSD.Version > 1)
-        if (!verifyDescriptorFlag(Descriptor->Flags))
-          return reportValueError(Ctx, "DescriptorFlag", Descriptor->Flags);
+        if(RSD.Version > 1) {
+          if (!verifyDescriptorFlag(Descriptor.Flags))
+            return reportValueError(Ctx, "DescriptorFlag", Descriptor.Flags);
+        }
+        break;
+      }
     }
   }
 
@@ -352,7 +343,7 @@ analyzeModule(Module &M) {
     // Clang emits the root signature data in dxcontainer following a specific
     // sequence. First the header, then the root parameters. So the header
     // offset will always equal to the header size.
-    RSD.RootParameterOffset = sizeof(dxbc::RootSignatureHeader);
+    RSD.RootParameterOffset = sizeof(dxbc::RTS0::v1::RootSignatureHeader);
 
     if (parse(Ctx, RSD, RootElementListNode) || validate(Ctx, RSD)) {
       return RSDMap;
@@ -398,41 +389,44 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << indent(Space) << "NumParameters: " << RS.ParametersContainer.size()
        << "\n";
     Space++;
-    for (auto const &Info : RS.ParametersContainer) {
-      OS << indent(Space) << "- Parameter Type: " << Info.Header.ParameterType
-         << "\n";
+    for (size_t I = 0; I < RS.ParametersContainer.size(); I++) {
+      const auto &[Type, Loc] =
+          RS.ParametersContainer.getTypeAndLocForParameter(I);
+      const dxbc::RTS0::v1::RootParameterHeader Header =
+          RS.ParametersContainer.getHeader(I);
+
+      OS << indent(Space) << "- Parameter Type: " << Type << "\n";
       OS << indent(Space + 2)
-         << "Shader Visibility: " << Info.Header.ShaderVisibility << "\n";
-      std::optional<mcdxbc::ParametersView> P =
-          RS.ParametersContainer.getParameter(&Info);
-      if (!P)
-        continue;
-      if (std::holds_alternative<const dxbc::RootConstants *>(*P)) {
-        auto *Constants = std::get<const dxbc::RootConstants *>(*P);
+         << "Shader Visibility: " << Header.ShaderVisibility << "\n";
+
+      switch (Type) {
+      case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+        const dxbc::RTS0::v1::RootConstants &Constants =
+            RS.ParametersContainer.getConstant(Loc);
+        OS << indent(Space + 2) << "Register Space: " << Constants.RegisterSpace
+           << "\n";
         OS << indent(Space + 2)
-           << "Register Space: " << Constants->RegisterSpace << "\n";
+           << "Shader Register: " << Constants.ShaderRegister << "\n";
         OS << indent(Space + 2)
-           << "Shader Register: " << Constants->ShaderRegister << "\n";
-        OS << indent(Space + 2)
-           << "Num 32 Bit Values: " << Constants->Num32BitValues << "\n";
-      } else if (std::holds_alternative<const dxbc::RTS0::v1::RootDescriptor *>(
-                     *P)) {
-        auto *Constants = std::get<const dxbc::RTS0::v1::RootDescriptor *>(*P);
-        OS << indent(Space + 2)
-           << "Register Space: " << Constants->RegisterSpace << "\n";
-        OS << indent(Space + 2)
-           << "Shader Register: " << Constants->ShaderRegister << "\n";
-      } else if (std::holds_alternative<const dxbc::RTS0::v2::RootDescriptor *>(
-                     *P)) {
-        auto *Constants = std::get<const dxbc::RTS0::v2::RootDescriptor *>(*P);
-        OS << indent(Space + 2)
-           << "Register Space: " << Constants->RegisterSpace << "\n";
-        OS << indent(Space + 2)
-           << "Shader Register: " << Constants->ShaderRegister << "\n";
-        OS << indent(Space + 2) << "Flags: " << Constants->Flags << "\n";
+           << "Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
+        break;
       }
+            case llvm::to_underlying(dxbc::RootParameterType::CBV):
+      case llvm::to_underlying(dxbc::RootParameterType::UAV):
+      case llvm::to_underlying(dxbc::RootParameterType::SRV): {
+                const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+            RS.ParametersContainer.getRootDescriptor(Loc);
+        OS << indent(Space + 2)
+           << "Register Space: " << Descriptor.RegisterSpace << "\n";
+        OS << indent(Space + 2)
+           << "Shader Register: " << Descriptor.ShaderRegister << "\n";
+        if(RS.Version > 1)
+        OS << indent(Space + 2) << "Flags: " << Descriptor.Flags << "\n";
+        break;
+      }
+      }
+      Space--;
     }
-    Space--;
     OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
     OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
        << "\n";
@@ -440,7 +434,6 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     Space--;
     // end root signature header
   }
-
   return PreservedAnalyses::all();
 }
 

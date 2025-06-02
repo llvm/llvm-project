@@ -612,7 +612,7 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
       MS(Firstprivate, Firstprivate)
       MS(None,         None)
       MS(Default,      Default)
-      // MS(, Present)  missing-in-parser
+      MS(Present,      Present)
       // clang-format on
   );
 

@@ -715,7 +715,7 @@ public:
   /// variables vector are acceptable.
   ///
   /// LastParamTransformed, if non-null, will be set to the index of the last
-  /// parameter on which transfromation was started. In the event of an error,
+  /// parameter on which transformation was started. In the event of an error,
   /// this will contain the parameter which failed to instantiate.
   ///
   /// Return true on error.
@@ -5305,12 +5305,14 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
   PointerAuthQualifier LocalPointerAuth = Quals.getPointerAuth();
   if (LocalPointerAuth.isPresent()) {
     if (T.getPointerAuth().isPresent()) {
-      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_redundant)
-          << TL.getType() << "__ptrauth";
+      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_redundant) << TL.getType();
       return QualType();
-    } else if (!T->isSignableType() && !T->isDependentType()) {
-      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_nonpointer) << T;
-      return QualType();
+    }
+    if (!T->isDependentType()) {
+      if (!T->isSignableType(SemaRef.getASTContext())) {
+        SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_invalid_target) << T;
+        return QualType();
+      }
     }
   }
   // C++ [dcl.fct]p7:
@@ -7681,6 +7683,13 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
   return Result;
 }
 
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformHLSLInlineSpirvType(
+    TypeLocBuilder &TLB, HLSLInlineSpirvTypeLoc TL) {
+  // No transformations needed.
+  return TL.getType();
+}
+
 template<typename Derived>
 QualType
 TreeTransform<Derived>::TransformParenType(TypeLocBuilder &TLB,
@@ -9160,6 +9169,8 @@ StmtResult TreeTransform<Derived>::TransformCXXTryStmt(CXXTryStmt *S) {
     Handlers.push_back(Handler.getAs<Stmt>());
   }
 
+  getSema().DiagnoseExceptionUse(S->getTryLoc(), /* IsTry= */ true);
+
   if (!getDerived().AlwaysRebuild() && TryBlock.get() == S->getTryBlock() &&
       !HandlerChanged)
     return S;
@@ -9581,8 +9592,9 @@ template <typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformOMPMetaDirective(OMPMetaDirective *D) {
   // TODO: Fix This
+  unsigned OMPVersion = getDerived().getSema().getLangOpts().OpenMP;
   SemaRef.Diag(D->getBeginLoc(), diag::err_omp_instantiation_not_supported)
-      << getOpenMPDirectiveName(D->getDirectiveKind());
+      << getOpenMPDirectiveName(D->getDirectiveKind(), OMPVersion);
   return StmtError();
 }
 
@@ -14380,6 +14392,8 @@ TreeTransform<Derived>::TransformCXXThrowExpr(CXXThrowExpr *E) {
   ExprResult SubExpr = getDerived().TransformExpr(E->getSubExpr());
   if (SubExpr.isInvalid())
     return ExprError();
+
+  getSema().DiagnoseExceptionUse(E->getThrowLoc(), /* IsTry= */ false);
 
   if (!getDerived().AlwaysRebuild() &&
       SubExpr.get() == E->getSubExpr())

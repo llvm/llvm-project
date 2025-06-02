@@ -4,7 +4,7 @@
 // CHECK-SAME: {found = {operand_0 = "is_tensor_like", result_0 = "is_buffer_like"}}
 func.func @builtin_unranked(%t: tensor<*xf32>) -> (memref<*xf32>)
 {
-  %0 = bufferization.to_memref %t : tensor<*xf32> to memref<*xf32>
+  %0 = bufferization.to_buffer %t : tensor<*xf32> to memref<*xf32>
   return %0 : memref<*xf32>
 }
 
@@ -14,7 +14,7 @@ func.func @builtin_unranked(%t: tensor<*xf32>) -> (memref<*xf32>)
 // CHECK-SAME: {found = {operand_0 = "is_tensor_like", result_0 = "is_buffer_like"}}
 func.func @builtin_ranked(%t: tensor<42xf32>) -> (memref<42xf32>)
 {
-  %0 = bufferization.to_memref %t : tensor<42xf32> to memref<42xf32>
+  %0 = bufferization.to_buffer %t : tensor<42xf32> to memref<42xf32>
   return %0 : memref<42xf32>
 }
 

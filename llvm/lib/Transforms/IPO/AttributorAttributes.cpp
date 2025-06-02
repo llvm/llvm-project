@@ -2150,7 +2150,8 @@ struct AANoUnwindCallSite final
 
 bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   switch (CB.getIntrinsicID()) {
-  case Intrinsic::nvvm_barrier0:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_count:
   case Intrinsic::nvvm_barrier0_and:
   case Intrinsic::nvvm_barrier0_or:
   case Intrinsic::nvvm_barrier0_popc:
@@ -10909,9 +10910,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return II.I == I && II.S == S;
     };
     bool operator<(const ItemInfo &II) const {
-      if (I == II.I)
-        return S < II.S;
-      return I < II.I;
+      return std::tie(I, S) < std::tie(II.I, II.S);
     };
   };
 
@@ -12593,29 +12592,18 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
     uint32_t OldAddressSpace = AssumedAddressSpace;
 
     auto CheckAddressSpace = [&](Value &Obj) {
       if (isa<UndefValue>(&Obj))
         return true;
-      // If an argument in flat address space only has addrspace cast uses, and
-      // those casts are same, then we take the dst addrspace.
       if (auto *Arg = dyn_cast<Argument>(&Obj)) {
-        if (Arg->getType()->getPointerAddressSpace() == FlatAS) {
-          unsigned CastAddrSpace = FlatAS;
-          for (auto *U : Arg->users()) {
-            auto *ASCI = dyn_cast<AddrSpaceCastInst>(U);
-            if (!ASCI)
-              return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
-            if (CastAddrSpace != FlatAS &&
-                CastAddrSpace != ASCI->getDestAddressSpace())
-              return false;
-            CastAddrSpace = ASCI->getDestAddressSpace();
-          }
-          if (CastAddrSpace != FlatAS)
-            return takeAddressSpace(CastAddrSpace);
-        }
+        auto *TTI =
+            A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(
+                *Arg->getParent());
+        unsigned AssumedAS = TTI->getAssumedAddrSpace(Arg);
+        if (AssumedAS != ~0U)
+          return takeAddressSpace(AssumedAS);
       }
       return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
     };

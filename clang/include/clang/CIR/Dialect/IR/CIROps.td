@@ -269,7 +269,7 @@ def PtrStrideOp : CIR_Op<"ptr_stride",
   let extraClassDeclaration = [{
     // Get type pointed by the base pointer.
     mlir::Type getElementTy() {
-      return mlir::cast<cir::PointerType>(getBase().getType()).getPointee();
+      return getBase().getType().getPointee();
     }
   }];
 }
@@ -417,11 +417,15 @@ def LoadOp : CIR_Op<"load", [
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr, UnitAttr:$isDeref);
+                           [MemRead]>:$addr,
+                       UnitAttr:$isDeref,
+                       OptionalAttr<I64Attr>:$alignment
+                       );
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
     (`deref` $isDeref^)?
+    (`align` `(` $alignment^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
@@ -458,9 +462,11 @@ def StoreOp : CIR_Op<"store", [
 
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
-                           [MemWrite]>:$addr);
+                           [MemWrite]>:$addr,
+                           OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
 
@@ -553,7 +559,6 @@ def IfOp : CIR_Op<"if",
   let arguments = (ins CIR_BoolType:$condition);
   let regions = (region AnyRegion:$thenRegion, AnyRegion:$elseRegion);
   let hasCustomAssemblyFormat=1;
-  let hasVerifier=1;
   let skipDefaultBuilders=1;
   let builders = [
     OpBuilder<(ins "mlir::Value":$cond, "bool":$withElseRegion,
@@ -969,6 +974,52 @@ def SwitchOp : CIR_Op<"switch",
     // This is an expensive and need to be used with caution.
     bool isSimpleForm(llvm::SmallVectorImpl<CaseOp> &cases);
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// SwitchFlatOp
+//===----------------------------------------------------------------------===//
+
+def SwitchFlatOp : CIR_Op<"switch.flat", [AttrSizedOperandSegments,
+                                          Terminator]> {
+
+  let description = [{
+    The `cir.switch.flat` operation is a region-less and simplified
+    version of the `cir.switch`.
+    Its representation is closer to LLVM IR dialect
+    than the C/C++ language feature.
+  }];
+
+  let arguments = (ins
+    CIR_IntType:$condition,
+    Variadic<AnyType>:$defaultOperands,
+    VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
+    ArrayAttr:$caseValues,
+    DenseI32ArrayAttr:$case_operand_segments
+  );
+
+  let successors = (successor
+    AnySuccessor:$defaultDestination,
+    VariadicSuccessor<AnySuccessor>:$caseDestinations
+  );
+
+  let assemblyFormat = [{
+    $condition `:` type($condition) `,`
+    $defaultDestination (`(` $defaultOperands^ `:` type($defaultOperands) `)`)?
+    custom<SwitchFlatOpCases>(ref(type($condition)), $caseValues,
+                              $caseDestinations, $caseOperands,
+                              type($caseOperands))
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$condition,
+      "mlir::Block *":$defaultDestination,
+      "mlir::ValueRange":$defaultOperands,
+      CArg<"llvm::ArrayRef<llvm::APInt>", "{}">:$caseValues,
+      CArg<"mlir::BlockRange", "{}">:$caseDestinations,
+      CArg<"llvm::ArrayRef<mlir::ValueRange>", "{}">:$caseOperands)>
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1401,18 +1452,20 @@ def ShiftOp : CIR_Op<"shift", [Pure]> {
     The `cir.shift` operation performs a bitwise shift, either to the left or to
     the right, based on the first operand. The second operand specifies the
     value to be shifted, and the third operand determines the number of
-    positions by which the shift is applied. Both the second and third operands
-    are required to be integers.
+    positions by which the shift is applied, They must be either all vector of
+    integer type, or all integer type. If they are vectors, each vector element of
+    the shift target is shifted by the corresponding shift amount in
+    the shift amount vector.
 
     ```mlir
-    %7 = cir.shift(left, %1 : !u64i, %4 : !s32i) -> !u64i
+    %res = cir.shift(left, %lhs : !u64i, %amount : !s32i) -> !u64i
+    %new_vec = cir.shift(left, %lhs : !cir.vector<2 x !s32i>, %rhs :
+        !cir.vector<2 x !s32i>) -> !cir.vector<2 x !s32i>
     ```
   }];
 
-  // TODO(cir): Support vectors. CIR_IntType -> CIR_AnyIntOrVecOfInt. Also
-  // update the description above.
-  let results = (outs CIR_IntType:$result);
-  let arguments = (ins CIR_IntType:$value, CIR_IntType:$amount,
+  let results = (outs CIR_AnyIntOrVecOfInt:$result);
+  let arguments = (ins CIR_AnyIntOrVecOfInt:$value, CIR_AnyIntOrVecOfInt:$amount,
                        UnitAttr:$isShiftleft);
 
   let assemblyFormat = [{
@@ -1581,7 +1634,8 @@ def GlobalLinkageKind : I32EnumAttr<
 // properties of a global variable will be added over time as more of ClangIR
 // is upstreamed.
 
-def GlobalOp : CIR_Op<"global"> {
+def GlobalOp : CIR_Op<"global",
+                      [DeclareOpInterfaceMethods<CIRGlobalValueInterface>]> {
   let summary = "Declare or define a global variable";
   let description = [{
     The `cir.global` operation declares or defines a named global variable.
@@ -1590,16 +1644,31 @@ def GlobalOp : CIR_Op<"global"> {
     described by the type of the variable.
 
     The `linkage` tracks C/C++ linkage types, currently very similar to LLVM's.
+    Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
+    and verified to be in accordance to `linkage`.
   }];
 
+  // Note that both sym_name and sym_visibility are tied to Symbol trait.
+  // TODO: sym_visibility can possibly be represented by implementing the
+  // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       DefaultValuedAttr<
+                        CIR_VisibilityAttr,
+                        "VisibilityKind::Default"
+                       >:$global_visibility,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        Arg<GlobalLinkageKind, "linkage type">:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
-                       UnitAttr:$dsolocal);
+                       UnitAttr:$comdat,
+                       UnitAttr:$dsolocal,
+                       OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
+    ($sym_visibility^)?
+    (`` $global_visibility^)?
     $linkage
+    (`comdat` $comdat^)?
     (`dsolocal` $dsolocal^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
@@ -1708,7 +1777,7 @@ def GetMemberOp : CIR_Op<"get_member"> {
 
     /// Return the result type.
     cir::PointerType getResultTy() {
-      return mlir::cast<cir::PointerType>(getResult().getType());
+      return getResult().getType();
     }
   }];
 
@@ -1796,13 +1865,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
                       DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
   let extraClassDeclaration = [{
     /// Get the argument operands to the called function.
-    mlir::OperandRange getArgOperands() {
-      return getArgs();
-    }
-
-    mlir::MutableOperandRange getArgOperandsMutable() {
-      return getArgsMutable();
-    }
+    mlir::OperandRange getArgOperands();
+    mlir::MutableOperandRange getArgOperandsMutable();
 
     /// Return the callee of this operation
     mlir::CallInterfaceCallable getCallableForCallee() {
@@ -1824,8 +1888,17 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     ::mlir::Attribute removeArgAttrsAttr() { return {}; }
     ::mlir::Attribute removeResAttrsAttr() { return {}; }
 
+    bool isIndirect() { return !getCallee(); }
+    mlir::Value getIndirectCall();
+
     void setArg(unsigned index, mlir::Value value) {
-      setOperand(index, value);
+      if (!isIndirect()) {
+        setOperand(index, value);
+        return;
+      }
+
+      // For indirect call, the operand list is shifted by one.
+      setOperand(index + 1, value);
     }
   }];
 
@@ -1837,16 +1910,24 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   // the upstreaming process moves on. The verifiers is also missing for now,
   // will add in the future.
 
-  dag commonArgs = (ins FlatSymbolRefAttr:$callee,
-                        Variadic<CIR_AnyType>:$args);
+  dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+      Variadic<CIR_AnyType>:$args);
 }
 
 def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let summary = "call a function";
   let description = [{
-    The `cir.call` operation represents a direct call to a function that is
-    within the same symbol scope as the call. The callee is encoded as a symbol
-    reference attribute named `callee`.
+    The `cir.call` operation represents a function call. It could represent
+    either a direct call or an indirect call.
+
+    If the operation represents a direct call, the callee should be defined
+    within the same symbol scope as the call. The `callee` attribute contains a
+    symbol reference to the callee function. All operands of this operation are
+    arguments to the callee function.
+
+    If the operation represents an indirect call, the `callee` attribute is
+    empty. The first operand of this operation must be a pointer to the callee
+    function. The rest operands are arguments to the callee function.
 
     Example:
 
@@ -1858,14 +1939,25 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let results = (outs Optional<CIR_AnyType>:$result);
   let arguments = commonArgs;
 
-  let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee,
-                                 "mlir::Type":$resType,
-                                 "mlir::ValueRange":$operands), [{
+  let builders = [
+    // Build a call op for a direct call
+    OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
+                   "mlir::ValueRange":$operands), [{
+      assert(callee && "callee attribute is required for direct call");
       $_state.addOperands(operands);
       $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
-    }]>];
+    }]>,
+    // Build a call op for an indirect call
+    OpBuilder<(ins "mlir::Value":$calleePtr, "mlir::Type":$resType,
+                   "mlir::ValueRange":$operands), [{
+      $_state.addOperands(calleePtr);
+      $_state.addOperands(operands);
+      if (resType && !isa<VoidType>(resType))
+        $_state.addTypes(resType);
+    }]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1970,6 +2062,42 @@ def VecCreateOp : CIR_Op<"vec.create", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// VecInsertOp
+//===----------------------------------------------------------------------===//
+
+def VecInsertOp : CIR_Op<"vec.insert", [Pure,
+  TypesMatchWith<"argument type matches vector element type", "vec", "value",
+                 "cast<VectorType>($_self).getElementType()">,
+  AllTypesMatch<["result", "vec"]>]> {
+
+  let summary = "Insert one element into a vector object";
+  let description = [{
+    The `cir.vec.insert` operation produces a new vector by replacing
+    the element of the input vector at `index` with `value`.
+
+    ```mlir
+    %value = cir.const #cir.int<5> : !s32i
+    %index = cir.const #cir.int<2> : !s32i
+    %vec_tmp = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+    %new_vec = cir.vec.insert %value, %vec_tmp[%index : !s32i] : !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_VectorType:$vec,
+    AnyType:$value,
+    CIR_AnyFundamentalIntType:$index
+  );
+
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:`
+    qualified(type($vec))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // VecExtractOp
 //===----------------------------------------------------------------------===//
 
@@ -1995,6 +2123,71 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   let assemblyFormat = [{
     $vec `[` $index `:` type($index) `]` attr-dict `:` qualified(type($vec))
   }];
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecCmpOp
+//===----------------------------------------------------------------------===//
+
+def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
+
+  let summary = "Compare two vectors";
+  let description = [{
+    The `cir.vec.cmp` operation does an element-wise comparison of two vectors
+    of the same type. The result is a vector of the same size as the operands
+    whose element type is the signed integral type that is the same size as the
+    element type of the operands. The values in the result are 0 or -1.
+
+    ```mlir
+    %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins Arg<CmpOpKind, "cmp kind">:$kind, CIR_VectorType:$lhs,
+                       CIR_VectorType:$rhs);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
+    qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VecShuffleDynamicOp
+//===----------------------------------------------------------------------===//
+
+def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
+                          [Pure, AllTypesMatch<["vec", "result"]>]> {
+  let summary = "Shuffle a vector using indices in another vector";
+  let description = [{
+    The `cir.vec.shuffle.dynamic` operation implements the undocumented form of
+    Clang's __builtin_shufflevector, where the indices of the shuffled result
+    can be runtime values.
+
+    There are two input vectors, which must have the same number of elements.
+    The second input vector must have an integral element type. The elements of
+    the second vector are interpreted as indices into the first vector. The
+    result vector is constructed by taking the elements from the first input
+    vector from the indices indicated by the elements of the second vector.
+
+    ```mlir
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<4 x !s32i>, %indices
+        : !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_VectorType:$vec, IntegerVector:$indices);
+  let results = (outs CIR_VectorType:$result);
+  let assemblyFormat = [{
+    $vec `:` qualified(type($vec)) `,` $indices `:` qualified(type($indices))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
