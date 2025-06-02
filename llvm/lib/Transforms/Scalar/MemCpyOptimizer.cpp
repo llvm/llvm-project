@@ -1443,57 +1443,46 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   int64_t MOffset = 0;
   const DataLayout &DL = MemCpy->getModule()->getDataLayout();
   // We can only transforms memcpy's where the dest of one is the source of the
-  // other, or they have a known offset.
+  // other, or the memory transfer has a known offset from the memset.
   if (MemCpy->getSource() != MemSet->getDest()) {
     std::optional<int64_t> Offset =
         MemCpy->getSource()->getPointerOffsetFrom(MemSet->getDest(), DL);
-    if (!Offset)
+    if (!Offset || *Offset < 0)
       return false;
     MOffset = *Offset;
   }
 
   MaybeAlign MDestAlign = MemCpy->getDestAlign();
-  int64_t MOffsetAligned = MDestAlign.valueOrOne().value() > 1 && MOffset < 0 ? -(-MOffset & ~(MDestAlign.valueOrOne().value() - 1)) : MOffset; // Compute the MOffset that keeps MDest aligned (truncate towards zero)
   if (MOffset != 0 || MemSetSize != CopySize) {
-    // Make sure the memcpy doesn't read any more than what the memset wrote, other than undef.
+    // Make sure the memcpy doesn't read any more than what the memset wrote,
+    // other than undef. Don't worry about sizes larger than i64. A known memset
+    // size is required.
     auto *CMemSetSize = dyn_cast<ConstantInt>(MemSetSize);
+    if (!CMemSetSize)
+      return false;
+    // A known memcpy size is required.
     auto *CCopySize = dyn_cast<ConstantInt>(CopySize);
-    // Don't worry about sizes larger than i64.
-    if (!CMemSetSize || !CCopySize || MOffset < 0 ||
-        CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()) {
+    if (!CCopySize)
+      return false;
+    if (CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()) {
       if (!coversInputFully(MSSA, MemCpy, MemSet, BAA))
         return false;
-
-      if (CMemSetSize && CCopySize) {
-        // If both have constant sizes and offsets, clip the memcpy to the bounds of the memset if applicable.
-        if (CCopySize->getZExtValue() + std::abs(MOffset) > CMemSetSize->getZExtValue()) {
-          if (MOffsetAligned == 0 || (MOffset < 0 && CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()))
-            CopySize = MemSetSize;
-          else
-            CopySize = ConstantInt::get(CopySize->getType(), std::max((int64_t)0, (int64_t)(CMemSetSize->getZExtValue() - std::abs(MOffsetAligned))));
-        }
-        else if (MOffsetAligned < 0) {
-          // Even if CMemSetSize isn't known, if the MOffsetAligned is negative, make sure to clip the new memset
-          CopySize = ConstantInt::get(CopySize->getType(), CCopySize->getZExtValue() + MOffsetAligned);
-        }
-      }
-      else if (CCopySize && MOffsetAligned < 0) {
-        // Even if CMemSetSize isn't known, if the MOffsetAligned is negative, can still clip the new memset
-        CopySize = ConstantInt::get(CopySize->getType(), CCopySize->getZExtValue() + MOffsetAligned);
-      }
-      else {
-        MOffsetAligned = 0;
-      }
+      // Clip the memcpy to the bounds of the memset
+      if (MOffset == 0)
+        CopySize = MemSetSize;
+      else
+        CopySize =
+            ConstantInt::get(CopySize->getType(),
+                             CMemSetSize->getZExtValue() <= (uint64_t)MOffset
+                                 ? 0
+                                 : CMemSetSize->getZExtValue() - MOffset);
     }
   }
 
   IRBuilder<> Builder(MemCpy);
   Value *MDest = MemCpy->getRawDest();
-  if (MOffsetAligned < 0)
-    MDest = Builder.CreateInBoundsPtrAdd(MDest, Builder.getInt64(-MOffsetAligned));
   Instruction *NewM =
-      Builder.CreateMemSet(MDest, MemSet->getOperand(1),
-                           CopySize, MDestAlign);
+      Builder.CreateMemSet(MDest, MemSet->getOperand(1), CopySize, MDestAlign);
   auto *LastDef = cast<MemoryDef>(MSSA->getMemoryAccess(MemCpy));
   auto *NewAccess = MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
   MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);
