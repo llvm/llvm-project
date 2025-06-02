@@ -106,6 +106,8 @@ static cl::opt<bool>
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
+  RegisterTargetMachine<RISCVTargetMachine> A(getTheRISCV32beTarget());
+  RegisterTargetMachine<RISCVTargetMachine> B(getTheRISCV64beTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeRISCVO0PreLegalizerCombinerPass(*PR);
@@ -139,21 +141,23 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVAsmPrinterPass(*PR);
 }
 
-static StringRef computeDataLayout(const Triple &TT,
-                                   const TargetOptions &Options) {
-  StringRef ABIName = Options.MCOptions.getABIName();
+static std::string computeDataLayout(const Triple &TT,
+                                     const TargetOptions &Opts) {
+  const bool IsLittle = TT.isLittleEndian();
+  StringRef ABI = Opts.MCOptions.getABIName();
+  std::string DL;
+
   if (TT.isArch64Bit()) {
-    if (ABIName == "lp64e")
-      return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S64";
-
-    return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
+    DL = (Twine(IsLittle ? "e" : "E") + "-m:e-p:64:64-i64:64-i128:128-n32:64-" +
+          (ABI == "lp64e" ? "S64" : "S128"))
+             .str();
+  } else {
+    assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
+    DL = (Twine(IsLittle ? "e" : "E") + "-m:e-p:32:32-i64:64-n32-" +
+          (ABI == "ilp32e" ? "S32" : "S128"))
+             .str();
   }
-  assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
-
-  if (ABIName == "ilp32e")
-    return "e-m:e-p:32:32-i64:64-n32-S32";
-
-  return "e-m:e-p:32:32-i64:64-n32-S128";
+  return DL;
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
