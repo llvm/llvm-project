@@ -2737,7 +2737,7 @@ static SourcedActionStmt GetActionStmt(const parser::Block &block) {
 // is that the ActionStmt will be either an assignment or a pointer-assignment,
 // otherwise return std::nullopt.
 // Note: This function can return std::nullopt on [Pointer]AssignmentStmt where
-// the "typedAssignment" is unset. This can happen is there are semantic errors
+// the "typedAssignment" is unset. This can happen if there are semantic errors
 // in the purported assignment.
 static std::optional<evaluate::Assignment> GetEvaluateAssignment(
     const parser::ActionStmt *x) {
@@ -3240,7 +3240,7 @@ OmpStructureChecker::CheckUpdateCapture(
   // row or column, including the case where everything is zero. All these
   // cases correspond to the determinant of the matrix being 0, which suggests
   // that checking the det may be a convenient diagnostic check. There is only
-  // one additional case where the det is 0, which is when the matrx is all 1
+  // one additional case where the det is 0, which is when the matrix is all 1
   // ("true"). The "all true" case represents the situation where both
   // assignments could be an update as well as a capture. On the other hand,
   // whenever det != 0, the roles of the update and the capture can be
