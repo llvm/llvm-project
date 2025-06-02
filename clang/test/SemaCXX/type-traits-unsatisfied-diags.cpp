@@ -144,3 +144,83 @@ static_assert(__builtin_is_cpp_trivially_relocatable(U2));
 // expected-note@#tr-U2 {{'U2' defined here}}
 
 }
+
+namespace trivially_copyable {
+struct B {
+ virtual ~B();
+};
+struct S : virtual B { // #tc-S
+    S();
+    int & a;
+    const int ci;
+    B & b;
+    B c;
+    ~S();
+};
+static_assert(__is_trivially_copyable(S));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S)'}} \
+// expected-note@-1 {{'S' is not trivially copyable}} \
+// expected-note@-1 {{because it has a virtual base 'B'}} \
+// expected-note@-1 {{because it has a non-trivially-copyable base 'B'}} \
+// expected-note@-1 {{because it has a non-trivially-copyable member 'c' of type 'B'}} \
+// expected-note@-1 {{because it has a non-trivially-copyable member 'b' of type 'B &'}} \
+// expected-note@-1 {{because it has a non-trivially-copyable member 'a' of type 'int &'}} \
+// expected-note@-1 {{because it has a user-provided destructor}}
+// expected-note@#tc-S {{'S' defined here}}
+
+struct S2 { // #tc-S2
+    S2(S2&&);
+    S2& operator=(const S2&);
+};
+static_assert(__is_trivially_copyable(S2));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S2)'}} \
+// expected-note@-1 {{'S2' is not trivially copyable}} \
+// expected-note@-1 {{because it has a user provided move constructor}} \
+// expected-note@-1 {{because it has a user provided copy assignment operator}} \
+// expected-note@#tc-S2 {{'S2' defined here}}
+
+struct S3 {
+    ~S3() = delete;
+};
+static_assert(__is_trivially_copyable(S3));
+
+union U { // #tc-U
+    U(const U&);
+    U(U&&);
+    U& operator=(const U&);
+    U& operator=(U&&);
+};
+static_assert(__is_trivially_copyable(U));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::U)'}} \
+// expected-note@-1 {{'U' is not trivially copyable}} \
+// expected-note@-1 {{because it is a union with a user-declared copy constructor}} \
+// expected-note@-1 {{because it is a union with a user-declared copy assignment operator}} \
+// expected-note@-1 {{because it is a union with a user-declared move constructor}} \
+// expected-note@-1 {{because it is a union with a user-declared move assignment operator}}
+// expected-note@#tc-U {{'U' defined here}}
+
+struct S4 { // #tc-S4
+    ~S4();
+    B b;
+};
+static_assert(__is_trivially_copyable(S4));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S4)'}} \
+// expected-note@-1 {{'S4' is not trivially copyable}} \
+// expected-note@-1 {{because it has a non-trivially-copyable member 'b' of type 'B'}} \
+// expected-note@-1 {{because it has a user-provided destructor}} \
+// expected-note@#tc-S4 {{'S4' defined here}}
+
+union U2 { // #tc-U2
+    U2(const U2&);
+    U2(U2&&);
+    B b;
+};
+static_assert(__is_trivially_copyable(U2));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::U2)'}} \
+// expected-note@-1 {{'U2' is not trivially copyable}} \
+// expected-note@-1 {{because it is a union with a user-declared copy constructor}} \
+// expected-note@-1 {{because it is a union with a user-declared move constructor}} \
+// expected-note@-1 {{because it has a deleted destructor}} \
+// expected-note@-1 {{because it has a non-trivially-copyable member 'b' of type 'B'}} \
+// expected-note@#tc-U2 {{'U2' defined here}}
+}
