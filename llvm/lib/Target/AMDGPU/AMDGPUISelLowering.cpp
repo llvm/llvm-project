@@ -4710,6 +4710,11 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+bool isFnegOrFabs(SDValue &V) {
+  unsigned Opcode = V.getOpcode();
+  return Opcode == ISD::FNEG || Opcode == ISD::FABS;
+}
+
 SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   if (SDValue Folded = foldFreeOpFromSelect(DCI, SDValue(N, 0)))
@@ -4727,7 +4732,30 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
   SDValue True = N->getOperand(1);
   SDValue False = N->getOperand(2);
 
-  if (Cond.hasOneUse()) { // TODO: Look for multiple select uses.
+  int ShouldSwap = 0;
+  for (auto it = Cond->use_begin(); it != Cond->use_end(); it++) {
+    auto User = it->getUser();
+
+    if (User->getOpcode() != ISD::SELECT) {
+      ShouldSwap = 0;
+      break;
+    }
+
+    auto Op1 = User->getOperand(1);
+    auto Op2 = User->getOperand(2);
+
+    // if the operand is defined by fneg or fabs it means the instruction
+    // will have source modifiers and therefore can't be shrinked to vop2
+    if (isFnegOrFabs(Op1) || isFnegOrFabs(Op2))
+      continue;
+
+    if (!Op1->isDivergent() && Op2->isDivergent())
+      ShouldSwap++;
+    else if (Op1->isDivergent() && !Op2->isDivergent())
+      ShouldSwap--;
+  }
+
+  if (Cond->hasOneUse() || ShouldSwap > 0) {
     SelectionDAG &DAG = DCI.DAG;
     if (DAG.isConstantValueOfAnyType(True) &&
         !DAG.isConstantValueOfAnyType(False)) {
