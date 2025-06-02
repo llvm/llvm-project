@@ -84,4 +84,4 @@ Options
   is possible to select all functions of a specific class (like `MyClass::.*`)
   or a specific function of any class (like `my_function` or
   `::.*::my_function`). The function names are matched at the base class.
-  Default value: empty string.
+  Default value is empty string.
