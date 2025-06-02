@@ -31,21 +31,21 @@ struct MissingFeatures {
   static bool cgfSymbolTable() { return false; }
 
   // Unhandled global/linkage information.
-  static bool opGlobalDSOLocal() { return false; }
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
   static bool opGlobalWeakRef() { return false; }
-  static bool opGlobalLinkage() { return false; }
   static bool opGlobalUnnamedAddr() { return false; }
   static bool opGlobalSection() { return false; }
   static bool opGlobalVisibility() { return false; }
   static bool opGlobalDLLImportExport() { return false; }
   static bool opGlobalPartition() { return false; }
-  static bool opGlobalCIRGlobalValueInterface() { return false; }
+  static bool opGlobalUsedOrCompilerUsed() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
-  static bool supportComdat() { return false; }
+  static bool hiddenVisibility() { return false; }
+  static bool protectedVisibility() { return false; }
+  static bool defaultVisibility() { return false; }
 
   // Load/store attributes
   static bool opLoadStoreThreadLocal() { return false; }
@@ -78,6 +78,9 @@ struct MissingFeatures {
   static bool opFuncLinkage() { return false; }
   static bool opFuncVisibility() { return false; }
   static bool opFuncNoProto() { return false; }
+  static bool opFuncCPUAndFeaturesAttributes() { return false; }
+  static bool opFuncSection() { return false; }
+  static bool opFuncSetComdat() { return false; }
 
   // CallOp handling
   static bool opCallBuiltinFunc() { return false; }
@@ -100,7 +103,6 @@ struct MissingFeatures {
   static bool opCallAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
   static bool opCallASTAttr() { return false; }
-  static bool opCallVariadic() { return false; }
   static bool opCallObjCMethod() { return false; }
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }
@@ -138,7 +140,6 @@ struct MissingFeatures {
   // Misc
   static bool cxxABI() { return false; }
   static bool cirgenABIInfo() { return false; }
-  static bool cirgenTargetInfo() { return false; }
   static bool abiArgInfo() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
@@ -188,7 +189,6 @@ struct MissingFeatures {
   static bool updateCompletedType() { return false; }
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
-  static bool setDSOLocal() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
   static bool cudaSupport() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
@@ -202,6 +202,7 @@ struct MissingFeatures {
   static bool cleanupsToDeactivate() { return false; }
   static bool stackBase() { return false; }
   static bool deferredDecls() { return false; }
+  static bool setTargetAttributes() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
