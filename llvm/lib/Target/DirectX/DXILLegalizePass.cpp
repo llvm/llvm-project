@@ -95,6 +95,8 @@ static void fixI8UseChain(Instruction &I,
     Type *ElementType = NewOperands[0]->getType();
     if (auto *AI = dyn_cast<AllocaInst>(NewOperands[0]))
       ElementType = AI->getAllocatedType();
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(NewOperands[0]))
+      ElementType = GEP->getSourceElementType();
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
     ReplacedValues[Load] = NewLoad;
     ToRemove.push_back(Load);
@@ -164,6 +166,36 @@ static void fixI8UseChain(Instruction &I,
     if (AdjustedCast)
       Cast->replaceAllUsesWith(AdjustedCast);
   }
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+    if (!GEP->getType()->isPointerTy() ||
+        !GEP->getSourceElementType()->isIntegerTy(8))
+      return;
+
+    Value *BasePtr = GEP->getPointerOperand();
+    if (ReplacedValues.count(BasePtr))
+      BasePtr = ReplacedValues[BasePtr];
+
+    Type *ElementType = BasePtr->getType();
+    if (auto *AI = dyn_cast<AllocaInst>(BasePtr))
+      ElementType = AI->getAllocatedType();
+    if (auto *ArrTy = dyn_cast<ArrayType>(ElementType))
+      ElementType = ArrTy->getArrayElementType();
+
+    ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
+    // Note: the only way to convert an i8 offset to an i32 offset without
+    // emitting code Would be to emit code. We sould expect this value to be a
+    // ConstantInt since Offsets are very regulalrly converted.
+    assert(Offset && "Offset is expected to be a ConstantInt");
+    uint32_t ByteOffset = Offset->getZExtValue();
+    uint32_t ElemSize = GEP->getDataLayout().getTypeAllocSize(ElementType);
+    assert(ElemSize > 0 && "ElementSize must be set");
+    uint32_t Index = ByteOffset / ElemSize;
+    Value *NewGEP =
+        Builder.CreateGEP(ElementType, BasePtr, Builder.getInt32(Index),
+                          GEP->getName(), GEP->getNoWrapFlags());
+    ReplacedValues[GEP] = NewGEP;
+    ToRemove.push_back(GEP);
+  }
 }
 
 static void upcastI8AllocasAndUses(Instruction &I,
@@ -175,15 +207,12 @@ static void upcastI8AllocasAndUses(Instruction &I,
 
   Type *SmallestType = nullptr;
 
-  for (User *U : AI->users()) {
-    auto *Load = dyn_cast<LoadInst>(U);
-    if (!Load)
-      continue;
+  auto ProcessLoad = [&](LoadInst *Load) {
     for (User *LU : Load->users()) {
       Type *Ty = nullptr;
-      if (auto *Cast = dyn_cast<CastInst>(LU))
+      if (auto *Cast = dyn_cast<CastInst>(LU)) {
         Ty = Cast->getType();
-      if (CallInst *CI = dyn_cast<CallInst>(LU)) {
+      } else if (auto *CI = dyn_cast<CallInst>(LU)) {
         if (CI->getIntrinsicID() == Intrinsic::memset)
           Ty = Type::getInt32Ty(CI->getContext());
       }
@@ -191,9 +220,22 @@ static void upcastI8AllocasAndUses(Instruction &I,
       if (!Ty)
         continue;
 
-      if (!SmallestType ||
-          Ty->getPrimitiveSizeInBits() < SmallestType->getPrimitiveSizeInBits())
+      if (!SmallestType || Ty->getPrimitiveSizeInBits() <
+                               SmallestType->getPrimitiveSizeInBits()) {
         SmallestType = Ty;
+      }
+    }
+  };
+
+  for (User *U : AI->users()) {
+    if (auto *Load = dyn_cast<LoadInst>(U))
+      ProcessLoad(Load);
+    else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+      for (User *GU : GEP->users()) {
+        if (auto *Load = dyn_cast<LoadInst>(GU)) {
+          ProcessLoad(Load);
+        }
+      }
     }
   }
 
