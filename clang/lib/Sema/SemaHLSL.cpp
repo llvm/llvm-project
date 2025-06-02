@@ -963,8 +963,8 @@ public:
   // KeyT: 32-lsb denotes resource space, and 32-msb denotes ResourceClass enum
   using KeyT = std::pair<ResourceClass, uint32_t>;
 
-  static const unsigned NumVisEnums =
-      (unsigned)llvm::hlsl::rootsig::ShaderVisibility::NumEnums;
+  static const size_t NumVisEnums =
+      (size_t)llvm::hlsl::rootsig::ShaderVisibility::NumEnums;
 
 private:
   llvm::hlsl::rootsig::ResourceRange::IMap::Allocator Allocator;
