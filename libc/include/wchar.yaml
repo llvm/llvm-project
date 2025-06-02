@@ -64,6 +64,14 @@ functions:
       - type: const wchar_t *
       - type: const wchar_t *
       - type: size_t
+  - name: wmempcpy
+    standards:
+      - gnu
+    return_type: wchar_t * 
+    arguments: 
+      - type: wchar_t *
+      - type: const wchar_t *
+      - type: size_t
   - name: wmemcpy
     standards:
       - stdc
