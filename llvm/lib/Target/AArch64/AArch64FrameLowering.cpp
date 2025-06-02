@@ -1914,6 +1914,9 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   bool FPAfterSVECalleeSaves =
       Subtarget.isTargetWindows() && AFI->getSVECalleeSavedStackSize();
 
+  if (FPAfterSVECalleeSaves && AFI->hasStackHazardSlotIndex())
+    reportFatalUsageError("SME hazard padding is not supported on Windows");
+
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
   // All of the remaining stack allocations are for locals.
   AFI->setLocalStackSize(NumBytes - PrologueSaveSize);
