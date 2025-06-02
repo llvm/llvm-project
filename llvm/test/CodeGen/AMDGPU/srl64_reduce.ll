@@ -114,7 +114,7 @@ define <2 x i64> @srl_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
   ret <2 x i64> %srl
 }
 
-; Shifted bits matter for exact shift.  Reduction must not be done.
+; Exact attribute does not inhibit reduction
 define <2 x i64> @srl_exact_v2_metadata(<2 x i64> %arg0, ptr %arg1.ptr) {
 ; CHECK-LABEL: srl_exact_v2_metadata:
 ; CHECK:       ; %bb.0:
