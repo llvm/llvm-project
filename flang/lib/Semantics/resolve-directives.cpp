@@ -2024,6 +2024,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclarativeAllocate &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
+  IssueNonConformanceWarning(llvm::omp::Directive::OMPD_allocate, x.source);
   const auto &list{std::get<parser::OmpObjectList>(x.t)};
   ResolveOmpObjectList(list, Symbol::Flag::OmpDeclarativeAllocateDirective);
   return false;
@@ -2036,6 +2037,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDispatchConstruct &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
+  IssueNonConformanceWarning(llvm::omp::Directive::OMPD_allocate, x.source);
   const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)};
   if (list) {
     ResolveOmpObjectList(*list, Symbol::Flag::OmpExecutableAllocateDirective);
@@ -3073,6 +3075,9 @@ void OmpAttributeVisitor::IssueNonConformanceWarning(
     break;
   case llvm::omp::OMPD_parallel_master_taskloop_simd:
     setAlternativeStr("PARALLEL_MASKED TASKLOOP SIMD");
+    break;
+  case llvm::omp::OMPD_allocate:
+    setAlternativeStr("ALLOCATORS");
     break;
   case llvm::omp::OMPD_target_loop:
   default:;

@@ -5,6 +5,7 @@
 program main
   integer :: x, y
 
+  // CHECK: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   // CHECK: not yet implemented: OpenMPDeclarativeAllocate
   !$omp allocate(x, y)
 end
