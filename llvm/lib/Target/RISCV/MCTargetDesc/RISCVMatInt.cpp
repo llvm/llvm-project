@@ -353,6 +353,13 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
       } while (Hi != 0);
       Res = TmpSeq;
     }
+
+    // Fold LI 1 + SLLI into BSETI.
+    if (Res[0].getOpcode() == RISCV::ADDI && Res[0].getImm() == 1 &&
+        Res[1].getOpcode() == RISCV::SLLI) {
+      Res.erase(Res.begin());                                 // Remove ADDI.
+      Res.front() = Inst(RISCV::BSETI, Res.front().getImm()); // Patch SLLI.
+    }
   }
 
   // Perform optimization with BCLRI in the Zbs extension.
