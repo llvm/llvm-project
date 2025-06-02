@@ -15,6 +15,7 @@
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/raw_ostream.h"
 #include <variant>
@@ -27,7 +28,10 @@ class Metadata;
 namespace hlsl {
 namespace rootsig {
 
-// Definition of the various enumerations and flags
+// Definition of the various enumerations and flags. The definitions of all
+// values here correspond to their description in the d3d12.h header and are
+// carried over from their values in DXC. For reference:
+// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/
 
 enum class RootFlags : uint32_t {
   None = 0,
@@ -74,6 +78,47 @@ enum class ShaderVisibility {
   Pixel = 5,
   Amplification = 6,
   Mesh = 7,
+};
+
+// D3D12_FILTER enumeration:
+// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter
+enum class SamplerFilter {
+  MinMagMipPoint = 0,
+  MinMagPointMipLinear = 0x1,
+  MinPointMagLinearMipPoint = 0x4,
+  MinPointMagMipLinear = 0x5,
+  MinLinearMagMipPoint = 0x10,
+  MinLinearMagPointMipLinear = 0x11,
+  MinMagLinearMipPoint = 0x14,
+  MinMagMipLinear = 0x15,
+  Anisotropic = 0x55,
+  ComparisonMinMagMipPoint = 0x80,
+  ComparisonMinMagPointMipLinear = 0x81,
+  ComparisonMinPointMagLinearMipPoint = 0x84,
+  ComparisonMinPointMagMipLinear = 0x85,
+  ComparisonMinLinearMagMipPoint = 0x90,
+  ComparisonMinLinearMagPointMipLinear = 0x91,
+  ComparisonMinMagLinearMipPoint = 0x94,
+  ComparisonMinMagMipLinear = 0x95,
+  ComparisonAnisotropic = 0xd5,
+  MinimumMinMagMipPoint = 0x100,
+  MinimumMinMagPointMipLinear = 0x101,
+  MinimumMinPointMagLinearMipPoint = 0x104,
+  MinimumMinPointMagMipLinear = 0x105,
+  MinimumMinLinearMagMipPoint = 0x110,
+  MinimumMinLinearMagPointMipLinear = 0x111,
+  MinimumMinMagLinearMipPoint = 0x114,
+  MinimumMinMagMipLinear = 0x115,
+  MinimumAnisotropic = 0x155,
+  MaximumMinMagMipPoint = 0x180,
+  MaximumMinMagPointMipLinear = 0x181,
+  MaximumMinPointMagLinearMipPoint = 0x184,
+  MaximumMinPointMagMipLinear = 0x185,
+  MaximumMinLinearMagMipPoint = 0x190,
+  MaximumMinLinearMagPointMipLinear = 0x191,
+  MaximumMinMagLinearMipPoint = 0x194,
+  MaximumMinMagMipLinear = 0x195,
+  MaximumAnisotropic = 0x1d5
 };
 
 enum class TextureAddressMode {
@@ -150,7 +195,7 @@ struct DescriptorTable {
   uint32_t NumClauses = 0;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
 
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
 static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
@@ -180,10 +225,12 @@ struct DescriptorTableClause {
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const DescriptorTableClause &Clause);
 
 struct StaticSampler {
   Register Reg;
+  SamplerFilter Filter = SamplerFilter::Anisotropic;
   TextureAddressMode AddressU = TextureAddressMode::Wrap;
   TextureAddressMode AddressV = TextureAddressMode::Wrap;
   TextureAddressMode AddressW = TextureAddressMode::Wrap;
@@ -217,7 +264,7 @@ using RootElement =
     std::variant<RootFlags, RootConstants, RootDescriptor, DescriptorTable,
                  DescriptorTableClause, StaticSampler>;
 
-void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
+LLVM_ABI void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 
 class MetadataBuilder {
 public:
@@ -228,7 +275,7 @@ public:
   ///
   /// Accumulates the root signature and returns the Metadata node that is just
   /// a list of all the elements
-  MDNode *BuildRootSignature();
+  LLVM_ABI MDNode *BuildRootSignature();
 
 private:
   /// Define the various builders for the different metadata types
