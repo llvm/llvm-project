@@ -38,6 +38,13 @@ namespace {
           OutputKind(K), OutputFormat(Format), FilterString(FilterString),
           DumpLookups(DumpLookups), DumpDeclTypes(DumpDeclTypes) {}
 
+    ASTPrinter(raw_ostream &Out, Kind K, ASTDumpOutputFormat Format,
+               StringRef FilterString, bool DumpLookups = false,
+               bool DumpDeclTypes = false)
+        : Out(Out), OwnedOut(nullptr), OutputKind(K), OutputFormat(Format),
+          FilterString(FilterString), DumpLookups(DumpLookups),
+          DumpDeclTypes(DumpDeclTypes) {}
+
     void HandleTranslationUnit(ASTContext &Context) override {
       TranslationUnitDecl *D = Context.getTranslationUnitDecl();
 
@@ -171,6 +178,19 @@ clang::CreateASTDumper(std::unique_ptr<raw_ostream> Out, StringRef FilterString,
       Deserialize ? ASTPrinter::DumpFull
                   : DumpDecls ? ASTPrinter::Dump : ASTPrinter::None,
       Format, FilterString, DumpLookups, DumpDeclTypes);
+}
+
+std::unique_ptr<ASTConsumer>
+clang::CreateASTDumper(raw_ostream &Out, StringRef FilterString, bool DumpDecls,
+                       bool Deserialize, bool DumpLookups, bool DumpDeclTypes,
+                       ASTDumpOutputFormat Format) {
+  assert((DumpDecls || Deserialize || DumpLookups) && "nothing to dump");
+  return std::make_unique<ASTPrinter>(Out,
+                                      Deserialize ? ASTPrinter::DumpFull
+                                      : DumpDecls ? ASTPrinter::Dump
+                                                  : ASTPrinter::None,
+                                      Format, FilterString, DumpLookups,
+                                      DumpDeclTypes);
 }
 
 std::unique_ptr<ASTConsumer> clang::CreateASTDeclNodeLister() {
