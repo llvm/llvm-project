@@ -3157,7 +3157,6 @@ void VPWidenStridedLoadRecipe::execute(VPTransformState &State) {
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
   auto &Builder = State.Builder;
-  State.setDebugLocFrom(getDebugLoc());
   Value *Addr = State.get(getAddr(), /*IsScalar*/ true);
   Value *Stride = State.get(getStride(), /*IsScalar*/ true);
   Value *Mask = nullptr;
