@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-strict-prototypes
 
 void f1(void) __attribute__((ownership_takes("foo"))); // expected-error {{'ownership_takes' attribute requires parameter 1 to be an identifier}}
-void *f2(void) __attribute__((ownership_returns(foo, 1, 2)));  // expected-error {{'ownership_returns' attribute takes no more than 1 argument}}
+void *f2(void) __attribute__((ownership_returns(foo, 1, 2)));  // expected-error {{'ownership_returns' attribute takes no more than 2 arguments}}
 void f3(void) __attribute__((ownership_holds(foo, 1))); // expected-error {{'ownership_holds' attribute parameter 1 is out of bounds}}
 void *f4(void) __attribute__((ownership_returns(foo)));
 void f5(void) __attribute__((ownership_holds(foo)));  // expected-error {{'ownership_holds' attribute takes at least 2 arguments}}

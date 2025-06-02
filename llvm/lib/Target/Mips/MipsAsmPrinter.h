@@ -117,13 +117,15 @@ private:
   bool isLongBranchPseudo(int Opcode) const;
 
 public:
+  static char ID;
+
   const MipsSubtarget *Subtarget;
   const MipsFunctionInfo *MipsFI;
   MipsMCInstLower MCInstLowering;
 
   explicit MipsAsmPrinter(TargetMachine &TM,
                           std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(*this) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), MCInstLowering(*this) {}
 
   StringRef getPassName() const override { return "Mips Assembly Printer"; }
 

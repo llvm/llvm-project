@@ -420,8 +420,11 @@ void CombinerHelper::applyCombineShuffleToBuildVector(MachineInstr &MI) const {
     else
       Extracts.push_back(Unmerge2.getReg(Val - Width));
   }
-
-  Builder.buildBuildVector(MI.getOperand(0).getReg(), Extracts);
+  assert(Extracts.size() > 0 && "Expected at least one element in the shuffle");
+  if (Extracts.size() == 1)
+    Builder.buildCopy(MI.getOperand(0).getReg(), Extracts[0]);
+  else
+    Builder.buildBuildVector(MI.getOperand(0).getReg(), Extracts);
   MI.eraseFromParent();
 }
 
@@ -867,9 +870,8 @@ void CombinerHelper::applyCombineExtendingLoads(
 
   // Rewrite all the uses to fix up the types.
   auto &LoadValue = MI.getOperand(0);
-  SmallVector<MachineOperand *, 4> Uses;
-  for (auto &UseMO : MRI.use_operands(LoadValue.getReg()))
-    Uses.push_back(&UseMO);
+  SmallVector<MachineOperand *, 4> Uses(
+      llvm::make_pointer_range(MRI.use_operands(LoadValue.getReg())));
 
   for (auto *UseMO : Uses) {
     MachineInstr *UseMI = UseMO->getParent();
@@ -2113,6 +2115,8 @@ bool CombinerHelper::matchCombineSubToAdd(MachineInstr &MI,
     MI.setDesc(B.getTII().get(TargetOpcode::G_ADD));
     MI.getOperand(2).setReg(NegCst.getReg(0));
     MI.clearFlag(MachineInstr::MIFlag::NoUWrap);
+    if (Imm.isMinSignedValue())
+      MI.clearFlags(MachineInstr::MIFlag::NoSWrap);
     Observer.changedInstr(MI);
   };
   return true;

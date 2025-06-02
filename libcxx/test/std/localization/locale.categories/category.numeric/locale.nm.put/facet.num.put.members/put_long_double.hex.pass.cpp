@@ -1846,11 +1846,25 @@ void test1() {
 void test2() {
   std::locale lc = std::locale::classic();
   std::locale lg(lc, new my_numpunct);
-#if (defined(__APPLE__) || defined(TEST_HAS_GLIBC) || defined(__MINGW32__)) && defined(__x86_64__)
-  // This test is failing on FreeBSD, possibly due to different representations
-  // of the floating point numbers.
-  // This test is failing in MSVC environments, where long double is equal to regular
-  // double, and instead of "0x9.32c05a44p+27", this prints "0x1.26580b4880000p+30".
+#if (defined(__APPLE__) || defined(TEST_HAS_GLIBC) || defined(__MINGW32__)) && defined(TEST_LONG_DOUBLE_IS_80_BIT)
+  // This test assumes that long doubles are x87 80 bit long doubles, and
+  // assumes one specific way of formatting the long doubles. (There are
+  // multiple valid ways of hex formatting the same float.)
+  //
+  // FreeBSD does use x87 80 bit long doubles, but normalizes the hex floats
+  // differently.
+  //
+  // This test assumes the form used by Glibc, Darwin and others, where the
+  // 64 mantissa bits are grouped by nibble as they are stored in the long
+  // double representation (nibble aligned at the end of the least significant
+  // bits). This makes 1.0L to be formatted as "0x8p-3" (where the leading
+  // bit of the mantissa is the higest bit in the 0x8 nibble), and makes
+  // __LDBL_MAX__ be formatted as "0xf.fffffffffffffffp+16380".
+  //
+  // FreeBSD normalizes/aligns the leading bit of the mantissa as a separate
+  // nibble, so that 1.0L is formatted as "0x1p+0" and __LDBL_MAX__ as
+  // "0x1.fffffffffffffffep+16383" (note the lowest bit of the last nibble
+  // being zero as the nibbles don't align to the actual floats).
   const my_facet f(1);
   char str[200];
   {

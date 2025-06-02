@@ -35,10 +35,10 @@ class Prescanner;
 class TokenSequence {
 public:
   TokenSequence() {}
-  TokenSequence(const TokenSequence &that) { Put(that); }
+  TokenSequence(const TokenSequence &that) { CopyAll(that); }
   TokenSequence(
       const TokenSequence &that, std::size_t at, std::size_t count = 1) {
-    Put(that, at, count);
+    AppendRange(that, at, count);
   }
   TokenSequence(TokenSequence &&that)
       : start_{std::move(that.start_)}, nextStart_{that.nextStart_},
@@ -48,7 +48,7 @@ public:
 
   TokenSequence &operator=(const TokenSequence &that) {
     clear();
-    Put(that);
+    CopyAll(that);
     return *this;
   }
   TokenSequence &operator=(TokenSequence &&that);
@@ -100,13 +100,25 @@ public:
     start_.pop_back();
   }
 
-  void Put(const TokenSequence &);
-  void Put(const TokenSequence &, ProvenanceRange);
-  void Put(const TokenSequence &, std::size_t at, std::size_t tokens = 1);
+  // These append characters with provenance and then close the token.
+  // When the last token of this sequence remains open beforehand,
+  // the new characters are appended to it.
   void Put(const char *, std::size_t, Provenance);
   void Put(const CharBlock &, Provenance);
   void Put(const std::string &, Provenance);
   void Put(llvm::raw_string_ostream &, Provenance);
+
+  // Appends a full copy of another sequence.  When the last token of this
+  // sequence remains open beforehand, it is closed before the new text
+  // is appended.
+  void CopyAll(const TokenSequence &);
+  // Copies a range of tokens from another sequence.  If the last token of
+  // this sequence remains open, the first token of the copied range will be
+  // appended to it.
+  void AppendRange(
+      const TokenSequence &, std::size_t at, std::size_t tokens = 1);
+  // Copies tokens (via Put above) with new provenance.
+  void CopyWithProvenance(const TokenSequence &, ProvenanceRange);
 
   Provenance GetCharProvenance(std::size_t) const;
   Provenance GetTokenProvenance(
@@ -125,7 +137,7 @@ public:
   TokenSequence &RemoveRedundantBlanks(std::size_t firstChar = 0);
   TokenSequence &ClipComment(const Prescanner &, bool skipFirst = false);
   const TokenSequence &CheckBadFortranCharacters(
-      Messages &, const Prescanner &, bool allowAmpersand) const;
+      Messages &, const Prescanner &, bool preprocessingOnly) const;
   bool BadlyNestedParentheses() const;
   const TokenSequence &CheckBadParentheses(Messages &) const;
   void Emit(CookedSource &) const;

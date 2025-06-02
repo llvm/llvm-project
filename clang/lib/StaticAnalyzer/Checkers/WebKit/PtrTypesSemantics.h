@@ -58,6 +58,10 @@ bool isCheckedPtr(const clang::CXXRecordDecl *Class);
 /// \returns true if \p Class is a RetainPtr, false if not.
 bool isRetainPtr(const clang::CXXRecordDecl *Class);
 
+/// \returns true if \p Class is a smart pointer (RefPtr, WeakPtr, etc...),
+/// false if not.
+bool isSmartPtr(const clang::CXXRecordDecl *Class);
+
 /// \returns true if \p Class is ref-countable AND not ref-counted, false if
 /// not, std::nullopt if inconclusive.
 std::optional<bool> isUncounted(const clang::QualType T);

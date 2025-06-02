@@ -13,7 +13,8 @@
 // Bufferization Type Interfaces
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h.inc"
 #include "mlir/IR/Types.h"
+
+#include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h.inc"
 
 #endif // MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONTYPEINTERFACES_H_

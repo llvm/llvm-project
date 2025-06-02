@@ -1485,7 +1485,7 @@ define amdgpu_kernel void @test_writelane_imm_f64(ptr addrspace(1) %out, double 
   ret void
 }
 
-define amdgpu_kernel void @test_writelane_sreg_oldval_i32(i32 inreg %oldval, ptr addrspace(1) %out, i32 %src0, i32 %src1) #1 {
+define amdgpu_kernel void @test_writelane_sreg_oldval_i32(i32 %oldval, ptr addrspace(1) %out, i32 %src0, i32 %src1) #1 {
 ; GFX802-SDAG-LABEL: test_writelane_sreg_oldval_i32:
 ; GFX802-SDAG:       ; %bb.0:
 ; GFX802-SDAG-NEXT:    s_load_dword s4, s[8:9], 0x0
@@ -1570,7 +1570,7 @@ define amdgpu_kernel void @test_writelane_sreg_oldval_i32(i32 inreg %oldval, ptr
   ret void
 }
 
-define amdgpu_kernel void @test_writelane_sreg_oldval_i64(i64 inreg %oldval, ptr addrspace(1) %out, i64 %src0, i32 %src1) #1 {
+define amdgpu_kernel void @test_writelane_sreg_oldval_i64(i64 %oldval, ptr addrspace(1) %out, i64 %src0, i32 %src1) #1 {
 ; GFX802-SDAG-LABEL: test_writelane_sreg_oldval_i64:
 ; GFX802-SDAG:       ; %bb.0:
 ; GFX802-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
@@ -1673,7 +1673,7 @@ define amdgpu_kernel void @test_writelane_sreg_oldval_i64(i64 inreg %oldval, ptr
   ret void
 }
 
-define amdgpu_kernel void @test_writelane_sreg_oldval_f64(double inreg %oldval, ptr addrspace(1) %out, double %src0, i32 %src1) #1 {
+define amdgpu_kernel void @test_writelane_sreg_oldval_f64(double %oldval, ptr addrspace(1) %out, double %src0, i32 %src1) #1 {
 ; GFX802-SDAG-LABEL: test_writelane_sreg_oldval_f64:
 ; GFX802-SDAG:       ; %bb.0:
 ; GFX802-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
@@ -3283,8 +3283,8 @@ define void @test_writelane_v8f64(ptr addrspace(1) %out, <8 x double> %src, i32 
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s8, v2
 ; GFX802-SDAG-NEXT:    v_addc_u32_e32 v23, vcc, 0, v1, vcc
-; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[2:5], v[22:23]
 ; GFX802-SDAG-NEXT:    s_mov_b32 m0, s4
+; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[2:5], v[22:23]
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s4, v9
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s10, v15
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s11, v14
@@ -3444,8 +3444,8 @@ define void @test_writelane_v8f64(ptr addrspace(1) %out, <8 x double> %src, i32 
 ; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s7, v4
 ; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX802-GISEL-NEXT:    v_addc_u32_e32 v23, vcc, 0, v1, vcc
-; GFX802-GISEL-NEXT:    flat_load_dwordx4 v[2:5], v[22:23]
 ; GFX802-GISEL-NEXT:    s_mov_b32 m0, s5
+; GFX802-GISEL-NEXT:    flat_load_dwordx4 v[2:5], v[22:23]
 ; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
 ; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s9, v11
 ; GFX802-GISEL-NEXT:    v_readfirstlane_b32 s10, v12

@@ -78,6 +78,8 @@ class ModulePass;
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
   void initializePPCDAGToDAGISelLegacyPass(PassRegistry &);
+  void initializePPCLinuxAsmPrinterPass(PassRegistry &);
+  void initializePPCAIXAsmPrinterPass(PassRegistry &);
 
   extern char &PPCVSXFMAMutateID;
 

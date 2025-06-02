@@ -14,7 +14,6 @@ foo:
 ; CHECK: sbci r19, 16                 ; encoding: [0x30,0x41]
 
 ; CHECK: sbci r22, FOO                ; encoding: [0x60'A',0x40]
-; CHECK:                              ;   fixup A - offset: 0, value: FOO, kind: fixup_ldi
 
 ; CHECK-INST: sbci r17, 21
 ; CHECK-INST: sbci r23, 196

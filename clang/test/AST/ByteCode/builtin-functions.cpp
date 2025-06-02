@@ -30,7 +30,32 @@ extern "C" {
   extern wchar_t *wcschr(const wchar_t *s, wchar_t c);
   extern int wcscmp(const wchar_t *s1, const wchar_t *s2);
   extern int wcsncmp(const wchar_t *s1, const wchar_t *s2, size_t n);
+  extern wchar_t *wmemcpy(wchar_t *d, const wchar_t *s, size_t n);
 }
+
+
+constexpr int test_address_of_incomplete_array_type() { // both-error {{never produces a constant expression}}
+  extern int arr[];
+  __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0])); // both-note 2{{cannot constant evaluate 'memmove' between objects of incomplete type 'int[]'}}
+  return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+}
+static_assert(test_address_of_incomplete_array_type() == 1234, ""); // both-error {{constant}} \
+                                                                    // both-note {{in call}}
+
+
+  struct NonTrivial {
+    constexpr NonTrivial() : n(0) {}
+    constexpr NonTrivial(const NonTrivial &) : n(1) {}
+    int n;
+  };
+  constexpr bool test_nontrivial_memcpy() { // both-error {{never produces a constant}}
+    NonTrivial arr[3] = {};
+    __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // both-note {{non-trivially-copyable}} \
+                                                        // both-note {{non-trivially-copyable}}
+    return true;
+  }
+  static_assert(test_nontrivial_memcpy()); // both-error {{constant}} \
+                                           // both-note {{in call}}
 
 namespace strcmp {
   constexpr char kFoobar[6] = {'f','o','o','b','a','r'};
@@ -1348,6 +1373,29 @@ namespace BuiltinMemcpy {
                                                                                   // both-note {{source of 'memcpy' is (void *)123}}
   static_assert(__builtin_memcpy(fold(reinterpret_cast<wchar_t*>(123)), &global, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
                                                                                                     // both-note {{destination of 'memcpy' is (void *)123}}
+
+
+  constexpr float type_pun(const unsigned &n) {
+    float f = 0.0f;
+    __builtin_memcpy(&f, &n, 4); // both-note {{cannot constant evaluate 'memcpy' from object of type 'const unsigned int' to object of type 'float'}}
+    return f;
+  }
+  static_assert(type_pun(0x3f800000) == 1.0f); // both-error {{constant}} \
+                                               // both-note {{in call}}
+
+  struct Base { int a; };
+  struct Derived : Base { int b; };
+  constexpr int test_derived_to_base(int n) {
+    Derived arr[2] = {1, 2, 3, 4};
+    Base *p = &arr[0];
+    Base *q = &arr[1];
+    __builtin_memcpy(p, q, sizeof(Base) * n); // both-note {{source is not a contiguous array of at least 2 elements of type 'BuiltinMemcpy::Base'}}
+    return arr[0].a * 1000 + arr[0].b * 100 + arr[1].a * 10 + arr[1].b;
+  }
+  static_assert(test_derived_to_base(0) == 1234);
+  static_assert(test_derived_to_base(1) == 3234);
+  static_assert(test_derived_to_base(2) == 3434); // both-error {{constant}} \
+                                                  // both-note {{in call}}
 }
 
 namespace Memcmp {
@@ -1592,6 +1640,67 @@ namespace WMemChr {
                                               // both-note {{non-constexpr function 'wcschr' cannot be used in a constant expression}}
 }
 
+namespace WMemCpy {
+  template<typename T>
+  constexpr T result(T (&arr)[4]) {
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+  constexpr int test_wmemcpy(int a, int b, int n) {
+    wchar_t arr[4] = {1, 2, 3, 4};
+    __builtin_wmemcpy(arr + a, arr + b, n);
+    // both-note@-1 2{{overlapping memory regions}}
+    // both-note@-2 {{source is not a contiguous array of at least 2 elements of type 'wchar_t'}}
+    // both-note@-3 {{destination is not a contiguous array of at least 3 elements of type 'wchar_t'}}
+    return result(arr);
+  }
+  static_assert(test_wmemcpy(1, 2, 1) == 1334);
+  static_assert(test_wmemcpy(2, 1, 1) == 1224);
+  static_assert(test_wmemcpy(0, 1, 2) == 2334); // both-error {{constant}} both-note {{in call}}
+  static_assert(test_wmemcpy(1, 0, 2) == 1124); // both-error {{constant}} both-note {{in call}}
+  static_assert(test_wmemcpy(1, 2, 1) == 1334);
+  static_assert(test_wmemcpy(0, 3, 1) == 4234);
+  static_assert(test_wmemcpy(0, 3, 2) == 4234); // both-error {{constant}} both-note {{in call}}
+  static_assert(test_wmemcpy(2, 0, 3) == 4234); // both-error {{constant}} both-note {{in call}}
+
+  wchar_t global;
+  constexpr wchar_t *null = 0;
+  static_assert(__builtin_wmemcpy(&global, null, sizeof(wchar_t))); // both-error {{}} \
+                                                                    // both-note {{source of 'wmemcpy' is nullptr}}
+  static_assert(__builtin_wmemcpy(null, &global, sizeof(wchar_t))); // both-error {{}} \
+                                                                    // both-note {{destination of 'wmemcpy' is nullptr}}
+}
+
+namespace WMemMove {
+  template<typename T>
+  constexpr T result(T (&arr)[4]) {
+    return arr[0] * 1000 + arr[1] * 100 + arr[2] * 10 + arr[3];
+  }
+
+  constexpr int test_wmemmove(int a, int b, int n) {
+    wchar_t arr[4] = {1, 2, 3, 4};
+    __builtin_wmemmove(arr + a, arr + b, n);
+    // both-note@-1 {{source is not a contiguous array of at least 2 elements of type 'wchar_t'}}
+    // both-note@-2 {{destination is not a contiguous array of at least 3 elements of type 'wchar_t'}}
+    return result(arr);
+  }
+
+  static_assert(test_wmemmove(1, 2, 1) == 1334);
+  static_assert(test_wmemmove(2, 1, 1) == 1224);
+  static_assert(test_wmemmove(0, 1, 2) == 2334);
+  static_assert(test_wmemmove(1, 0, 2) == 1124);
+  static_assert(test_wmemmove(1, 2, 1) == 1334);
+  static_assert(test_wmemmove(0, 3, 1) == 4234);
+  static_assert(test_wmemmove(0, 3, 2) == 4234); // both-error {{constant}} both-note {{in call}}
+  static_assert(test_wmemmove(2, 0, 3) == 4234); // both-error {{constant}} both-note {{in call}}
+
+  wchar_t global;
+  constexpr wchar_t *null = 0;
+  static_assert(__builtin_wmemmove(&global, null, sizeof(wchar_t))); // both-error {{}} \
+                                                                     // both-note {{source of 'wmemmove' is nullptr}}
+  static_assert(__builtin_wmemmove(null, &global, sizeof(wchar_t))); // both-error {{}} \
+                                                                     // both-note {{destination of 'wmemmove' is nullptr}}
+}
+
 namespace Invalid {
   constexpr int test() { // both-error {{never produces a constant expression}}
     __builtin_abort(); // both-note 2{{subexpression not valid in a constant expression}}
@@ -1600,3 +1709,36 @@ namespace Invalid {
   static_assert(test() == 0); // both-error {{not an integral constant expression}} \
                               // both-note {{in call to}}
 }
+
+#if __cplusplus >= 202002L
+namespace WithinLifetime {
+  constexpr int a = 10;
+  static_assert(__builtin_is_within_lifetime(&a));
+
+  consteval int IsActive(bool ReadB) {
+    union {
+      int a, b;
+    } A;
+    A.a = 10;
+    if (ReadB)
+      return __builtin_is_within_lifetime(&A.b);
+    return __builtin_is_within_lifetime(&A.a);
+  }
+  static_assert(IsActive(false));
+  static_assert(!IsActive(true));
+
+  static_assert(__builtin_is_within_lifetime((void*)nullptr)); // both-error {{not an integral constant expression}} \
+                                                               // both-note {{'__builtin_is_within_lifetime' cannot be called with a null pointer}}
+
+  constexpr int i = 2;
+  constexpr int arr[2]{};
+  void f() {
+    __builtin_is_within_lifetime(&i + 1); // both-error {{call to consteval function '__builtin_is_within_lifetime' is not a constant expression}} \
+                                          // both-note {{'__builtin_is_within_lifetime' cannot be called with a one-past-the-end pointer}} \
+                                          // both-warning {{expression result unused}}
+    __builtin_is_within_lifetime(arr + 2); // both-error {{call to consteval function '__builtin_is_within_lifetime' is not a constant expression}} \
+                                           // both-note {{'__builtin_is_within_lifetime' cannot be called with a one-past-the-end pointer}} \
+                                           // both-warning {{expression result unused}}
+  }
+}
+#endif

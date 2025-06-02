@@ -232,8 +232,9 @@ SystemZELFRegisters::getCallPreservedMask(const MachineFunction &MF,
   return CSR_SystemZ_ELF_RegMask;
 }
 
-SystemZRegisterInfo::SystemZRegisterInfo(unsigned int RA)
-    : SystemZGenRegisterInfo(RA) {}
+SystemZRegisterInfo::SystemZRegisterInfo(unsigned int RA, unsigned int HwMode)
+    : SystemZGenRegisterInfo(RA, /*DwarfFlavour=*/0, /*EHFlavour=*/0, /*PC=*/0,
+                             HwMode) {}
 
 const MCPhysReg *
 SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {

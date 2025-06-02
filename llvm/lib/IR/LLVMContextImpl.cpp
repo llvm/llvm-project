@@ -147,33 +147,6 @@ LLVMContextImpl::~LLVMContextImpl() {
     delete Pair.second;
 }
 
-void LLVMContextImpl::dropTriviallyDeadConstantArrays() {
-  SmallSetVector<ConstantArray *, 4> WorkList;
-
-  // When ArrayConstants are of substantial size and only a few in them are
-  // dead, starting WorkList with all elements of ArrayConstants can be
-  // wasteful. Instead, starting WorkList with only elements that have empty
-  // uses.
-  for (ConstantArray *C : ArrayConstants)
-    if (C->use_empty())
-      WorkList.insert(C);
-
-  while (!WorkList.empty()) {
-    ConstantArray *C = WorkList.pop_back_val();
-    if (C->use_empty()) {
-      for (const Use &Op : C->operands()) {
-        if (auto *COp = dyn_cast<ConstantArray>(Op))
-          WorkList.insert(COp);
-      }
-      C->destroyConstant();
-    }
-  }
-}
-
-void Module::dropTriviallyDeadConstantArrays() {
-  Context.pImpl->dropTriviallyDeadConstantArrays();
-}
-
 namespace llvm {
 
 /// Make MDOperand transparent for hashing.
@@ -207,7 +180,7 @@ unsigned MDNodeOpsKey::calculateHash(MDNode *N, unsigned Offset) {
 }
 
 unsigned MDNodeOpsKey::calculateHash(ArrayRef<Metadata *> Ops) {
-  return hash_combine_range(Ops.begin(), Ops.end());
+  return hash_combine_range(Ops);
 }
 
 StringMapEntry<uint32_t> *LLVMContextImpl::getOrInsertBundleTag(StringRef Tag) {

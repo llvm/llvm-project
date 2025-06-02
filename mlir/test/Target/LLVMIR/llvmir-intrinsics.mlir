@@ -242,7 +242,8 @@ llvm.func @nearbyint_test(%arg0 : f32, %arg1 : f64, %arg2 : vector<8xf32>, %arg3
 }
 
 // CHECK-LABEL: @lround_test
-llvm.func @lround_test(%arg0 : f32, %arg1 : f64) {
+llvm.func @lround_test(%arg0 : f32, %arg1 : f64,
+                       %arg2 : vector<2xf32>, %arg3 : vector<2xf64>) {
   // CHECK: call i32 @llvm.lround.i32.f32
   "llvm.intr.lround"(%arg0) : (f32) -> i32
   // CHECK: call i64 @llvm.lround.i64.f32
@@ -251,6 +252,14 @@ llvm.func @lround_test(%arg0 : f32, %arg1 : f64) {
   "llvm.intr.lround"(%arg1) : (f64) -> i32
   // CHECK: call i64 @llvm.lround.i64.f64
   "llvm.intr.lround"(%arg1) : (f64) -> i64
+  // CHECK: call <2 x i32> @llvm.lround.v2i32.v2f32
+  "llvm.intr.lround"(%arg2) : (vector<2xf32>) -> vector<2xi32>
+  // CHECK: call <2 x i32> @llvm.lround.v2i32.v2f64
+  "llvm.intr.lround"(%arg3) : (vector<2xf64>) -> vector<2xi32>
+  // CHECK: call <2 x i64> @llvm.lround.v2i64.v2f32
+  "llvm.intr.lround"(%arg2) : (vector<2xf32>) -> vector<2xi64>
+  // CHECK: call <2 x i64> @llvm.lround.v2i64.v2f64
+  "llvm.intr.lround"(%arg3) : (vector<2xf64>) -> vector<2xi64>
   llvm.return
 }
 
@@ -264,7 +273,8 @@ llvm.func @llround_test(%arg0 : f32, %arg1 : f64) {
 }
 
 // CHECK-LABEL: @lrint_test
-llvm.func @lrint_test(%arg0 : f32, %arg1 : f64) {
+llvm.func @lrint_test(%arg0 : f32, %arg1 : f64,
+                      %arg2 : vector<2xf32>, %arg3 : vector<2xf64>) {
   // CHECK: call i32 @llvm.lrint.i32.f32
   "llvm.intr.lrint"(%arg0) : (f32) -> i32
   // CHECK: call i64 @llvm.lrint.i64.f32
@@ -273,15 +283,28 @@ llvm.func @lrint_test(%arg0 : f32, %arg1 : f64) {
   "llvm.intr.lrint"(%arg1) : (f64) -> i32
   // CHECK: call i64 @llvm.lrint.i64.f64
   "llvm.intr.lrint"(%arg1) : (f64) -> i64
+  // CHECK: call <2 x i32> @llvm.lrint.v2i32.v2f32
+  "llvm.intr.lrint"(%arg2) : (vector<2xf32>) -> vector<2xi32>
+  // CHECK: call <2 x i32> @llvm.lrint.v2i32.v2f64
+  "llvm.intr.lrint"(%arg3) : (vector<2xf64>) -> vector<2xi32>
+  // CHECK: call <2 x i64> @llvm.lrint.v2i64.v2f32
+  "llvm.intr.lrint"(%arg2) : (vector<2xf32>) -> vector<2xi64>
+  // CHECK: call <2 x i64> @llvm.lrint.v2i64.v2f64
+  "llvm.intr.lrint"(%arg3) : (vector<2xf64>) -> vector<2xi64>
   llvm.return
 }
 
 // CHECK-LABEL: @llrint_test
-llvm.func @llrint_test(%arg0 : f32, %arg1 : f64) {
+llvm.func @llrint_test(%arg0 : f32, %arg1 : f64,
+                       %arg2 : vector<2xf32>, %arg3 : vector<2xf64>) {
   // CHECK: call i64 @llvm.llrint.i64.f32
   "llvm.intr.llrint"(%arg0) : (f32) -> i64
   // CHECK: call i64 @llvm.llrint.i64.f64
   "llvm.intr.llrint"(%arg1) : (f64) -> i64
+  // CHECK: call <2 x i64> @llvm.llrint.v2i64.v2f32
+  "llvm.intr.llrint"(%arg2) : (vector<2xf32>) -> vector<2xi64>
+  // CHECK: call <2 x i64> @llvm.llrint.v2i64.v2f64
+  "llvm.intr.llrint"(%arg3) : (vector<2xf64>) -> vector<2xi64>
   llvm.return
 }
 

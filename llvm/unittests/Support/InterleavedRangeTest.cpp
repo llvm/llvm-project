@@ -67,4 +67,26 @@ TEST(InterleavedRangeTest, CustomPrint) {
   EXPECT_EQ("[$$3##, $$4##, $$5##]", interleaved_array(V).str());
 }
 
+struct CustomDoublingOStream : raw_string_ostream {
+  unsigned NumCalled = 0;
+  using raw_string_ostream::raw_string_ostream;
+
+  friend CustomDoublingOStream &operator<<(CustomDoublingOStream &OS, int V) {
+    ++OS.NumCalled;
+    static_cast<raw_string_ostream &>(OS) << (2 * V);
+    return OS;
+  }
+};
+
+TEST(InterleavedRangeTest, CustomOStream) {
+  // Make sure that interleaved calls the stream operator on the derived class,
+  // and that it returns a reference to the same stream type.
+  int V[] = {3, 4, 5};
+  std::string Buf;
+  CustomDoublingOStream OS(Buf);
+  OS << interleaved(V) << 22;
+  EXPECT_EQ("6, 8, 1044", Buf);
+  EXPECT_EQ(OS.NumCalled, 4u);
+}
+
 } // namespace

@@ -4506,3 +4506,53 @@ entry:
   %d = call <2 x i128> @llvm.fshr(<2 x i128> %a, <2 x i128> %b, <2 x i128> <i128 3, i128 3>)
   ret <2 x i128> %d
 }
+
+
+
+define <2 x i64> @fshl_to_rev2i64(<2 x i64> %r) {
+; CHECK-SD-LABEL: fshl_to_rev2i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshl_to_rev2i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    shl v1.2d, v0.2d, #32
+; CHECK-GI-NEXT:    ushr v0.2d, v0.2d, #32
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
+    %or = tail call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %r, <2 x i64> %r, <2 x i64> splat (i64 32))
+    ret <2 x i64> %or
+}
+
+define <4 x i32> @fshl_to_rev4i32(<4 x i32> %r) {
+; CHECK-SD-LABEL: fshl_to_rev4i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    rev32 v0.8h, v0.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshl_to_rev4i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    shl v1.4s, v0.4s, #16
+; CHECK-GI-NEXT:    ushr v0.4s, v0.4s, #16
+; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    ret
+    %or = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %r, <4 x i32> %r, <4 x i32> splat (i32 16))
+    ret <4 x i32> %or
+}
+
+define <2 x i32> @fshl_to_rev2i32(<2 x i32> %r) {
+; CHECK-SD-LABEL: fshl_to_rev2i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshl_to_rev2i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    shl v1.2s, v0.2s, #16
+; CHECK-GI-NEXT:    ushr v0.2s, v0.2s, #16
+; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    ret
+    %or = tail call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %r, <2 x i32> %r, <2 x i32> splat (i32 16))
+    ret <2 x i32> %or
+}
