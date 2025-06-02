@@ -484,11 +484,10 @@ Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
   return Error::success();
 }
 
-Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
-                          ol_kernel_handle_t Kernel, const void *ArgumentsData,
-                          size_t ArgumentsSize,
-                          const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-                          ol_event_handle_t *EventOut) {
+namespace {
+Error do_launch(ol_queue_handle_t Queue, ol_device_handle_t Device,
+                ol_kernel_handle_t Kernel, KernelArgsTy &Args,
+                ol_event_handle_t *EventOut) {
   auto *DeviceImpl = Device->Device;
   if (Queue && Device != Queue->Device) {
     return createOffloadError(
@@ -498,6 +497,26 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
 
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
+  auto *KernelImpl = reinterpret_cast<GenericKernelTy *>(Kernel);
+  auto Err = KernelImpl->launch(*DeviceImpl, Args.ArgPtrs, nullptr, Args,
+                                AsyncInfoWrapper);
+
+  AsyncInfoWrapper.finalize(Err);
+  if (Err)
+    return Err;
+
+  if (EventOut)
+    *EventOut = makeEvent(Queue);
+
+  return Error::success();
+}
+} // namespace
+
+Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
+                          ol_kernel_handle_t Kernel, const void *ArgumentsData,
+                          size_t ArgumentsSize,
+                          const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                          ol_event_handle_t *EventOut) {
   KernelArgsTy LaunchArgs{};
   LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroupsX;
   LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroupsY;
@@ -514,18 +533,34 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   // Don't do anything with pointer indirection; use arg data as-is
   LaunchArgs.Flags.IsCUDA = true;
 
-  auto *KernelImpl = reinterpret_cast<GenericKernelTy *>(Kernel);
-  auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
-                                LaunchArgs, AsyncInfoWrapper);
+  return do_launch(Queue, Device, Kernel, LaunchArgs, EventOut);
+}
 
-  AsyncInfoWrapper.finalize(Err);
-  if (Err)
-    return Err;
+Error olLaunchKernelSuggestedGroupSize_impl(
+    ol_queue_handle_t Queue, ol_device_handle_t Device,
+    ol_kernel_handle_t Kernel, const void *ArgumentsData, size_t ArgumentsSize,
+    const ol_kernel_launch_size_suggested_args_t *LaunchSizeArgs,
+    ol_event_handle_t *EventOut) {
+  // TODO: Use backend specific magic to determine the best work group size
+  size_t PreferredSize[3] = {1, 1, 1};
 
-  if (EventOut)
-    *EventOut = makeEvent(Queue);
+  KernelArgsTy LaunchArgs{};
+  LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumItemsX / PreferredSize[0];
+  LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumItemsY / PreferredSize[1];
+  LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumItemsZ / PreferredSize[2];
+  LaunchArgs.ThreadLimit[0] = PreferredSize[0];
+  LaunchArgs.ThreadLimit[1] = PreferredSize[1];
+  LaunchArgs.ThreadLimit[2] = PreferredSize[2];
+  LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
 
-  return Error::success();
+  KernelLaunchParamsTy Params;
+  Params.Data = const_cast<void *>(ArgumentsData);
+  Params.Size = ArgumentsSize;
+  LaunchArgs.ArgPtrs = reinterpret_cast<void **>(&Params);
+  // Don't do anything with pointer indirection; use arg data as-is
+  LaunchArgs.Flags.IsCUDA = true;
+
+  return do_launch(Queue, Device, Kernel, LaunchArgs, EventOut);
 }
 
 } // namespace offload
