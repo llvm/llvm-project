@@ -3755,9 +3755,9 @@ static Constant *ConstantFoldFixedVectorCall(
     return nullptr;
   }
   case Intrinsic::vector_extract: {
-    auto *Vec = dyn_cast<Constant>(Operands[0]);
-    auto *Idx = cast<ConstantInt>(Operands[1]);
-    if (!Vec || !Idx || !isa<FixedVectorType>(Vec->getType()))
+    auto *Idx = dyn_cast<ConstantInt>(Operands[1]);
+    Constant *Vec = Operands[0];
+    if (!Idx || !isa<FixedVectorType>(Vec->getType()))
       return nullptr;
 
     unsigned NumElements = FVTy->getNumElements();
@@ -3786,10 +3786,10 @@ static Constant *ConstantFoldFixedVectorCall(
     return ConstantVector::get(Result);
   }
   case Intrinsic::vector_insert: {
-    auto *Vec = dyn_cast<Constant>(Operands[0]);
-    auto *SubVec = dyn_cast<Constant>(Operands[1]);
+    Constant *Vec = Operands[0];
+    Constant *SubVec = Operands[1];
     auto *Idx = dyn_cast<ConstantInt>(Operands[2]);
-    if (!Vec || !SubVec || !Idx || !isa<FixedVectorType>(Vec->getType()))
+    if (!Idx || !isa<FixedVectorType>(Vec->getType()))
       return nullptr;
 
     unsigned SubVecNumElements =
@@ -3804,24 +3804,15 @@ static Constant *ConstantFoldFixedVectorCall(
     // Make sure indices are in the range [0, VecNumElements), otherwise the
     // result is a poison value.
     if (IdxN >= VecNumElements || IdxN + SubVecNumElements > VecNumElements ||
-        (IdxN && (SubVecNumElements % IdxN) != 0))
+        (IdxN % SubVecNumElements) != 0)
       return PoisonValue::get(FVTy);
 
-    unsigned I = 0;
-    for (; I < IdxN; ++I) {
-      Constant *Elt = Vec->getAggregateElement(I);
-      if (!Elt)
-        return nullptr;
-      Result[I] = Elt;
-    }
-    for (; I < IdxN + SubVecNumElements; ++I) {
-      Constant *Elt = SubVec->getAggregateElement(I - IdxN);
-      if (!Elt)
-        return nullptr;
-      Result[I] = Elt;
-    }
-    for (; I < VecNumElements; ++I) {
-      Constant *Elt = Vec->getAggregateElement(I);
+    for (unsigned I = 0; I < VecNumElements; ++I) {
+      Constant *Elt;
+      if (I >= IdxN && I < IdxN + SubVecNumElements)
+        Elt = SubVec->getAggregateElement(I - IdxN);
+      else
+        Elt = Vec->getAggregateElement(I);
       if (!Elt)
         return nullptr;
       Result[I] = Elt;
@@ -3829,16 +3820,11 @@ static Constant *ConstantFoldFixedVectorCall(
     return ConstantVector::get(Result);
   }
   case Intrinsic::vector_interleave2: {
-    auto *Vec0 = dyn_cast<Constant>(Operands[0]);
-    auto *Vec1 = dyn_cast<Constant>(Operands[1]);
-    if (!Vec0 || !Vec1)
-      return nullptr;
-
     unsigned NumElements =
-        cast<FixedVectorType>(Vec0->getType())->getNumElements();
+        cast<FixedVectorType>(Operands[0]->getType())->getNumElements();
     for (unsigned I = 0; I < NumElements; ++I) {
-      Constant *Elt0 = Vec0->getAggregateElement(I);
-      Constant *Elt1 = Vec1->getAggregateElement(I);
+      Constant *Elt0 = Operands[0]->getAggregateElement(I);
+      Constant *Elt1 = Operands[1]->getAggregateElement(I);
       if (!Elt0 || !Elt1)
         return nullptr;
       Result[2 * I] = Elt0;
