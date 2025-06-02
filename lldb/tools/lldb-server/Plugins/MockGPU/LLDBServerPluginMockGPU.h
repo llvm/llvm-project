@@ -61,7 +61,7 @@ namespace lldb_server {
 
 class LLDBServerPluginMockGPU : public LLDBServerPlugin {
 public:
-  LLDBServerPluginMockGPU(LLDBServerPlugin::GDBServer &native_process);
+  LLDBServerPluginMockGPU(LLDBServerPlugin::GDBServer &native_process, MainLoop &main_loop);
   ~LLDBServerPluginMockGPU() override;
   llvm::StringRef GetPluginName() override;
   int GetEventFileDescriptorAtIndex(size_t idx) override;

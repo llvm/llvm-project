@@ -1,1 +1,5 @@
-add_subdirectory(MockGPU)
+if(DEFINED ROCM_PATH AND EXISTS ${ROCM_PATH})
+  add_subdirectory(AMDGPU)
+else()
+  add_subdirectory(MockGPU)
+endif()

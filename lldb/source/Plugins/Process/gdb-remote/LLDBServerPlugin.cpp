@@ -15,8 +15,8 @@ using namespace lldb_private;
 using namespace lldb_server;
 
 
-LLDBServerPlugin::LLDBServerPlugin(GDBServer &native_process) :
-  m_native_process(native_process) {}
+LLDBServerPlugin::LLDBServerPlugin(GDBServer &native_process, MainLoop &main_loop) :
+  m_native_process(native_process), m_main_loop(main_loop) {}
 
 LLDBServerPlugin::~LLDBServerPlugin() {}
 

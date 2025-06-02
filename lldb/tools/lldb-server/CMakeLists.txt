@@ -42,6 +42,14 @@ if(APPLE_EMBEDDED)
   endif()
 endif()
 
+if(DEFINED ROCM_PATH AND EXISTS ${ROCM_PATH})
+  add_definitions(-DLLDB_ENABLE_AMDGPU_PLUGIN=1)
+  list(APPEND LLDB_PLUGINS lldbServerPluginAMDGPU)
+else()
+  add_definitions(-DLLDB_ENABLE_MOCKGPU_PLUGIN=1)
+  list(APPEND LLDB_PLUGINS lldbServerPluginMockGPU)
+endif()
+
 add_lldb_tool(lldb-server
     lldb-gdbserver.cpp
     lldb-platform.cpp
