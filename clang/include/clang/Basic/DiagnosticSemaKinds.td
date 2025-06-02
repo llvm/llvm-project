@@ -4288,6 +4288,9 @@ def warn_impcast_integer_sign_conditional : Warning<
 def warn_impcast_integer_precision : Warning<
   "implicit conversion loses integer precision: %0 to %1">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
+def warn_impcast_integer_precision_on_negation : Warning<
+  "implicit conversion loses integer precision: %0 to %1 on negation">,
+  InGroup<ImplicitIntConversionOnNegation>, DefaultIgnore;
 def warn_impcast_high_order_zero_bits : Warning<
   "higher order bits are zeroes after implicit conversion">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
@@ -4679,7 +4682,7 @@ def err_attribute_preferred_name_arg_invalid : Error<
   "argument %0 to 'preferred_name' attribute is not a typedef for "
   "a specialization of %1">;
 def err_attribute_builtin_alias : Error<
-  "%0 attribute can only be applied to a ARM, HLSL or RISC-V builtin">;
+  "%0 attribute can only be applied to a ARM, HLSL, SPIR-V or RISC-V builtin">;
 
 // called-once attribute diagnostics.
 def err_called_once_attribute_wrong_type : Error<
@@ -6065,7 +6068,7 @@ def err_undeclared_use : Error<"use of undeclared %0">;
 def warn_deprecated : Warning<"%0 is deprecated">,
     InGroup<DeprecatedDeclarations>;
 def warn_deprecated_switch_case : Warning<warn_deprecated.Summary>,
-    InGroup<DeprecatedSwitchCase>;
+    InGroup<DeprecatedDeclarationsSwitchCase>;
 def note_from_diagnose_if : Note<"from 'diagnose_if' attribute on %0:">;
 def warn_property_method_deprecated :
     Warning<"property access is using %0 method which is deprecated">,
@@ -12878,6 +12881,16 @@ def err_bit_int_bad_size : Error<"%select{signed|unsigned}0 _BitInt must "
 def err_bit_int_max_size : Error<"%select{signed|unsigned}0 _BitInt of bit "
                                  "sizes greater than %1 not supported">;
 
+// SPIR-V builtins diagnostics
+def err_spirv_invalid_target : Error<
+   "builtin requires %select{spirv|spirv32 or spirv64}0 target">;
+def err_spirv_builtin_generic_cast_invalid_arg : Error<
+  "expecting a pointer argument to the generic address space">;
+def err_spirv_enum_not_int : Error<
+   "%0{storage class} argument for SPIR-V builtin is not a 32-bits integer">;
+def err_spirv_enum_not_valid : Error<
+   "invalid value for %select{storage class}0 argument">;
+
 // errors of expect.with.probability
 def err_probability_not_constant_float : Error<
    "probability argument to __builtin_expect_with_probability must be constant "
@@ -12942,7 +12955,7 @@ def warn_hlsl_deprecated_register_type_i: Warning<"binding type 'i' ignored. The
 def err_hlsl_unsupported_register_number : Error<"register number should be an integer">;
 def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected 'space' followed by an integer, like space1">;
 def err_hlsl_space_on_global_constant : Error<"register space cannot be specified on global constants">;
-def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultError;
+def warn_hlsl_implicit_binding : Warning<"resource has implicit register binding">, InGroup<HLSLImplicitBinding>, DefaultIgnore;
 def warn_hlsl_packoffset_mix : Warning<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">,
     InGroup<HLSLMixPackOffset>;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;

@@ -69,14 +69,13 @@ static void WarnSize(int Offset, MachineFunction &MF, DebugLoc& DL,
         }
 
     const Function &F = MF.getFunction();
-    DiagnosticInfoUnsupported DiagStackSize(
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,
         "Looks like the BPF stack limit is exceeded. "
         "Please move large on stack variables into BPF per-cpu array map. For "
         "non-kernel uses, the stack can be increased using -mllvm "
         "-bpf-stack-size.\n",
-        DL);
-    F.getContext().diagnose(DiagStackSize);
+        DL));
   }
 }
 
