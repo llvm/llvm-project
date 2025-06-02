@@ -496,7 +496,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   bool IsAArch64 = TargetTriple.getArch() == Triple::aarch64 ||
                    TargetTriple.getArch() == Triple::aarch64_be;
   bool IsLoongArch64 = TargetTriple.isLoongArch64();
-  bool IsRISCV64 = TargetTriple.getArch() == Triple::riscv64;
+  bool IsRISCV64 = TargetTriple.getArch() == Triple::riscv64 ||
+                   TargetTriple.getArch() == Triple::riscv64be;
   bool IsWindows = TargetTriple.isOSWindows();
   bool IsFuchsia = TargetTriple.isOSFuchsia();
   bool IsAMDGPU = TargetTriple.isAMDGPU();

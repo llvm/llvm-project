@@ -33,9 +33,11 @@ static cl::opt<bool> ULEB128Reloc(
     cl::desc("Emit R_RISCV_SET_ULEB128/E_RISCV_SUB_ULEB128 if appropriate"));
 
 RISCVAsmBackend::RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
-                                 bool Is64Bit, const MCTargetOptions &Options)
-    : MCAsmBackend(llvm::endianness::little), STI(STI), OSABI(OSABI),
-      Is64Bit(Is64Bit), TargetOptions(Options) {
+                                 bool Is64Bit, bool IsLittleEndian,
+                                 const MCTargetOptions &Options)
+    : MCAsmBackend(IsLittleEndian ? llvm::endianness::little
+                                  : llvm::endianness::big),
+      STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
   RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
 }
 
@@ -313,7 +315,7 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
     OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
     Offset = OS.tell();
     Fixup = RISCV::getRelocPairForSize(2);
-    support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
+    support::endian::write<uint16_t>(OS, 0, Endian);
   }
 
   const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
@@ -370,15 +372,15 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
     AddFixups(0, {ELF::R_RISCV_SET6, ELF::R_RISCV_SUB6});
   } else if (isUInt<8>(Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc1);
-    support::endian::write<uint8_t>(OS, 0, llvm::endianness::little);
+    support::endian::write<uint8_t>(OS, 0, Endian);
     AddFixups(1, {ELF::R_RISCV_SET8, ELF::R_RISCV_SUB8});
   } else if (isUInt<16>(Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc2);
-    support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
+    support::endian::write<uint16_t>(OS, 0, Endian);
     AddFixups(1, {ELF::R_RISCV_SET16, ELF::R_RISCV_SUB16});
   } else if (isUInt<32>(Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc4);
-    support::endian::write<uint32_t>(OS, 0, llvm::endianness::little);
+    support::endian::write<uint32_t>(OS, 0, Endian);
     AddFixups(1, {ELF::R_RISCV_SET32, ELF::R_RISCV_SUB32});
   } else {
     llvm_unreachable("unsupported CFA encoding");
@@ -815,6 +817,34 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   return false;
 }
 
+// Data should be swapped for big endian cores.
+static bool isDataFixup(unsigned Kind) {
+  switch (Kind) {
+  default:
+    llvm_unreachable("Unknown fixup kind!");
+
+  case FK_Data_1:
+  case FK_Data_2:
+  case FK_Data_4:
+  case FK_Data_8:
+    return true;
+
+  case RISCV::fixup_riscv_hi20:
+  case RISCV::fixup_riscv_lo12_i:
+  case RISCV::fixup_riscv_lo12_s:
+  case RISCV::fixup_riscv_pcrel_hi20:
+  case RISCV::fixup_riscv_pcrel_lo12_i:
+  case RISCV::fixup_riscv_pcrel_lo12_s:
+  case RISCV::fixup_riscv_jal:
+  case RISCV::fixup_riscv_branch:
+  case RISCV::fixup_riscv_call:
+  case RISCV::fixup_riscv_call_plt:
+  case RISCV::fixup_riscv_rvc_jump:
+  case RISCV::fixup_riscv_rvc_branch:
+    return false;
+  }
+}
+
 void RISCVAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                  const MCValue &Target,
                                  MutableArrayRef<char> Data, uint64_t Value,
@@ -839,8 +869,11 @@ void RISCVAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
+  // For big endian cores, data fixup should be swapped.
+  bool SwapValue = (Endian == llvm::endianness::big) && isDataFixup(Kind);
   for (unsigned i = 0; i != NumBytes; ++i) {
-    Data[Offset + i] |= uint8_t((Value >> (i * 8)) & 0xff);
+    unsigned Idx = SwapValue ? (NumBytes - 1 - i) : i;
+    Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }
 
@@ -905,5 +938,6 @@ MCAsmBackend *llvm::createRISCVAsmBackend(const Target &T,
                                           const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  return new RISCVAsmBackend(STI, OSABI, TT.isArch64Bit(), Options);
+  return new RISCVAsmBackend(STI, OSABI, TT.isArch64Bit(), TT.isLittleEndian(),
+                             Options);
 }

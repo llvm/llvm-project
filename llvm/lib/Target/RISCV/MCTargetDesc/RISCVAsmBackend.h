@@ -36,7 +36,7 @@ class RISCVAsmBackend : public MCAsmBackend {
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
-                  const MCTargetOptions &Options);
+                  bool IsLittleEndian, const MCTargetOptions &Options);
   ~RISCVAsmBackend() override = default;
 
   // Return Size with extra Nop Bytes for alignment directive in code section.
