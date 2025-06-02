@@ -448,7 +448,7 @@ bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
       (AllowUndefOrPoison || paramHasAttr(ArgNo, Attribute::NoUndef)))
     return true;
 
-  if (getParamDereferenceableBytes(ArgNo) > 0 &&
+  if (paramHasAttr(ArgNo, Attribute::Dereferenceable) &&
       !NullPointerIsDefined(
           getCaller(),
           getArgOperand(ArgNo)->getType()->getPointerAddressSpace()))
