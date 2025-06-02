@@ -131,9 +131,10 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
         StructType::create({FnPtrTy, FnPtrTy}, "NoopCoro.Frame");
 
     // Create a Noop function that does nothing.
-    Function *NoopFn =
-        Function::Create(FnTy, GlobalValue::LinkageTypes::PrivateLinkage,
-                         "__NoopCoro_ResumeDestroy", &M);
+    Function *NoopFn = Function::createWithDefaultAttr(
+        FnTy, GlobalValue::LinkageTypes::PrivateLinkage,
+        M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
+        &M);
     NoopFn->setCallingConv(CallingConv::Fast);
     buildDebugInfoForNoopResumeDestroyFunc(NoopFn);
     auto *Entry = BasicBlock::Create(C, "entry", NoopFn);
