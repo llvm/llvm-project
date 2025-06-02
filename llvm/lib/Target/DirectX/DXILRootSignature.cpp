@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "DXILRootSignature.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -27,6 +28,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -166,6 +168,88 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
   return false;
 }
 
+static bool parseDescriptorRange(LLVMContext *Ctx,
+                                 mcdxbc::RootSignatureDesc &RSD,
+                                 mcdxbc::DescriptorTable &Table,
+                                 MDNode *RangeDescriptorNode) {
+
+  if (RangeDescriptorNode->getNumOperands() != 6)
+    return reportError(Ctx, "Invalid format for Descriptor Range");
+
+  dxbc::RTS0::v2::DescriptorRange Range;
+
+  std::optional<StringRef> ElementText =
+      extractMdStringValue(RangeDescriptorNode, 0);
+
+  if (!ElementText.has_value())
+    return reportError(Ctx, "Descriptor Range, first element is not a string.");
+
+  Range.RangeType =
+      StringSwitch<uint32_t>(*ElementText)
+          .Case("CBV", llvm::to_underlying(dxbc::DescriptorRangeType::CBV))
+          .Case("SRV", llvm::to_underlying(dxbc::DescriptorRangeType::SRV))
+          .Case("UAV", llvm::to_underlying(dxbc::DescriptorRangeType::UAV))
+          .Case("Sampler",
+                llvm::to_underlying(dxbc::DescriptorRangeType::Sampler))
+          .Default(llvm::to_underlying(dxbc::DescriptorRangeType::ERROR));
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 1))
+    Range.NumDescriptors = *Val;
+  else
+    return reportError(Ctx, "Invalid value for Number of Descriptor in Range");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 2))
+    Range.BaseShaderRegister = *Val;
+  else
+    return reportError(Ctx, "Invalid value for BaseShaderRegister");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 3))
+    Range.RegisterSpace = *Val;
+  else
+    return reportError(Ctx, "Invalid value for RegisterSpace");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 4))
+    Range.OffsetInDescriptorsFromTableStart = *Val;
+  else
+    return reportError(Ctx,
+                       "Invalid value for OffsetInDescriptorsFromTableStart");
+
+  if (std::optional<uint32_t> Val = extractMdIntValue(RangeDescriptorNode, 5))
+    Range.Flags = *Val;
+  else
+    return reportError(Ctx, "Invalid value for Descriptor Range Flags");
+
+  Table.Ranges.push_back(Range);
+  return false;
+}
+
+static bool parseDescriptorTable(LLVMContext *Ctx,
+                                 mcdxbc::RootSignatureDesc &RSD,
+                                 MDNode *DescriptorTableNode) {
+  if (DescriptorTableNode->getNumOperands() < 2)
+    return reportError(Ctx, "Invalid format for Descriptor Table");
+
+  dxbc::RTS0::v1::RootParameterHeader Header;
+  if (std::optional<uint32_t> Val = extractMdIntValue(DescriptorTableNode, 1))
+    Header.ShaderVisibility = *Val;
+  else
+    return reportError(Ctx, "Invalid value for ShaderVisibility");
+
+  mcdxbc::DescriptorTable Table;
+
+  for (unsigned int I = 2; I < DescriptorTableNode->getNumOperands(); I++) {
+    MDNode *Element = dyn_cast<MDNode>(DescriptorTableNode->getOperand(I));
+    if (Element == nullptr)
+      return reportError(Ctx, "Missing Root Element Metadata Node.");
+
+    if (parseDescriptorRange(Ctx, RSD, Table, Element))
+      return true;
+  }
+
+  RSD.ParametersContainer.addParameter(Header, Table);
+  return false;
+}
+
 static bool parseRootSignatureElement(LLVMContext *Ctx,
                                       mcdxbc::RootSignatureDesc &RSD,
                                       MDNode *Element) {
@@ -180,6 +264,7 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
           .Case("RootCBV", RootSignatureElementKind::RootDescriptors)
           .Case("RootSRV", RootSignatureElementKind::RootDescriptors)
           .Case("RootUAV", RootSignatureElementKind::RootDescriptors)
+          .Case("DescriptorTable", RootSignatureElementKind::DescriptorTable)
           .Default(RootSignatureElementKind::Error);
 
   switch (ElementKind) {
@@ -190,6 +275,8 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
     return parseRootConstants(Ctx, RSD, Element);
   case RootSignatureElementKind::RootDescriptors:
     return parseRootDescriptors(Ctx, RSD, Element);
+  case RootSignatureElementKind::DescriptorTable:
+    return parseDescriptorTable(Ctx, RSD, Element);
   case RootSignatureElementKind::Error:
     return reportError(Ctx, "Invalid Root Signature Element: " +
                                 ElementText->getString());
@@ -230,6 +317,79 @@ static bool verifyRegisterSpace(uint32_t RegisterSpace) {
 
 static bool verifyDescriptorFlag(uint32_t Flags) { return (Flags & ~0xE) == 0; }
 
+static bool verifyRangeType(uint32_t Type) {
+  switch (Type) {
+  case llvm::to_underlying(dxbc::DescriptorRangeType::CBV):
+  case llvm::to_underlying(dxbc::DescriptorRangeType::SRV):
+  case llvm::to_underlying(dxbc::DescriptorRangeType::UAV):
+  case llvm::to_underlying(dxbc::DescriptorRangeType::Sampler):
+    return true;
+  };
+
+  return false;
+}
+
+static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
+                                      uint32_t Flags) {
+  if (Version == 1 &&
+      Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler))
+    return Flags == 0;
+
+  if (Version == 2 &&
+      Type == llvm::to_underlying(dxbc::DescriptorRangeType::Sampler)) {
+    switch (Flags) {
+    case 0:
+    case llvm::to_underlying(dxbc::DescriptorRangeFlag::DATA_VOLATILE):
+    case llvm::to_underlying(
+        dxbc::DescriptorRangeFlag::
+            DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS):
+      return true;
+    }
+    return false;
+  }
+
+  if (Version == 1 &&
+      Type != llvm::to_underlying(dxbc::DescriptorRangeType::Sampler))
+    return Flags ==
+           llvm::to_underlying(dxbc::DescriptorRangeFlag::DESCRIPTORS_VOLATILE);
+
+  if (Version == 2 &&
+      Type != llvm::to_underlying(dxbc::DescriptorRangeType::Sampler)) {
+    switch (Flags) {
+    case 0:
+    case llvm::to_underlying(dxbc::DescriptorRangeFlag::DESCRIPTORS_VOLATILE):
+    case llvm::to_underlying(dxbc::DescriptorRangeFlag::DATA_VOLATILE):
+    case llvm::to_underlying(dxbc::DescriptorRangeFlag::DATA_STATIC):
+    case llvm::to_underlying(
+        dxbc::DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE):
+    case llvm::to_underlying(
+        dxbc::DescriptorRangeFlag::
+            DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS):
+    case llvm::to_underlying(dxbc::DescriptorRangeFlag::DESCRIPTORS_VOLATILE) |
+        llvm::to_underlying(dxbc::DescriptorRangeFlag::DATA_VOLATILE):
+    case llvm::to_underlying(dxbc::DescriptorRangeFlag::DESCRIPTORS_VOLATILE) |
+        llvm::to_underlying(
+            dxbc::DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE):
+    case llvm::to_underlying(
+        dxbc::DescriptorRangeFlag::
+            DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS) |
+        llvm::to_underlying(dxbc::DescriptorRangeFlag::DATA_VOLATILE):
+    case llvm::to_underlying(
+        dxbc::DescriptorRangeFlag::
+            DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS) |
+        llvm::to_underlying(dxbc::DescriptorRangeFlag::DATA_STATIC):
+    case llvm::to_underlying(
+        dxbc::DescriptorRangeFlag::
+            DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS) |
+        llvm::to_underlying(
+            dxbc::DescriptorRangeFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE):
+      return true;
+    }
+    return false;
+  }
+  return false;
+}
+
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
 
   if (!verifyVersion(RSD.Version)) {
@@ -265,6 +425,22 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
         if(RSD.Version > 1) {
           if (!verifyDescriptorFlag(Descriptor.Flags))
             return reportValueError(Ctx, "DescriptorFlag", Descriptor.Flags);
+        }
+        break;
+      }
+      case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+        const mcdxbc::DescriptorTable &Table =
+            RSD.ParametersContainer.getDescriptorTable(Info.Location);
+        for (const dxbc::RTS0::v2::DescriptorRange &Range : Table) {
+          if (!verifyRangeType(Range.RangeType))
+            return reportValueError(Ctx, "RangeType", Range.RangeType);
+
+          if (!verifyRegisterSpace(Range.RegisterSpace))
+            return reportValueError(Ctx, "RegisterSpace", Range.RegisterSpace);
+
+          if (!verifyDescriptorRangeFlag(RSD.Version, Range.RangeType,
+                                         Range.Flags))
+            return reportValueError(Ctx, "DescriptorFlag", Range.Flags);
         }
         break;
       }
