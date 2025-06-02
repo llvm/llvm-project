@@ -21,9 +21,12 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include <variant>
 
 namespace llvm {
+
+class LPMUpdater;
+
 /// A tuple of bits that are expected to be zero, number N of them expected to
 /// be zero, with a boolean indicating whether it's the top or bottom N bits
 /// expected to be zero.
