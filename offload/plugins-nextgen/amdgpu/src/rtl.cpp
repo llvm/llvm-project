@@ -420,7 +420,7 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
     assert(PtrStorage && "Invalid pointer storage");
 
     *PtrStorage = MemoryManager->allocate(Size, nullptr);
-    if (Size && *PtrStorage == nullptr)
+    if (*PtrStorage == nullptr)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failure to allocate from AMDGPU memory manager");
 
@@ -429,6 +429,8 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 
   /// Release an allocation to be reused.
   Error deallocate(void *Ptr) {
+    assert(Ptr && "Invalid pointer");
+
     if (MemoryManager->free(Ptr))
       return Plugin::error(ErrorCode::UNKNOWN,
                            "failure to deallocate from AMDGPU memory manager");
@@ -3365,7 +3367,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (ArgsSize != LaunchParams.Size &&
       ArgsSize > LaunchParams.Size + getImplicitArgsSize())
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "mismatch of kernel arguments size");
+                         "invalid kernel arguments size");
 
   AMDGPUPluginTy &AMDGPUPlugin =
       static_cast<AMDGPUPluginTy &>(GenericDevice.Plugin);
