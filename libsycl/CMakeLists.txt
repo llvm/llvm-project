@@ -18,6 +18,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(LIBSYCL_ENABLE_WERROR "Treat all warnings as errors in the libsycl project" OFF)
 
+# If LIBSYCL_ENABLE_BACKENDS is undefined, we default to enabling OpenCL and Level
+# Zero backends.
+if (NOT DEFINED LIBSYCL_ENABLE_BACKENDS)
+  set(LIBSYCL_ENABLE_BACKENDS "opencl;level_zero;level_zero_v2" CACHE STRING "Backends enabled for SYCL")
+endif()
+
 #===============================================================================
 # Configure System
 #===============================================================================
@@ -55,7 +61,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-# Download dependency
+# Download & build dependency for kernel offloading
 include(FetchUnifiedRuntime)
 
 # The change in LIBSYCL_MAJOR_VERSION must be accompanied with the same update in
