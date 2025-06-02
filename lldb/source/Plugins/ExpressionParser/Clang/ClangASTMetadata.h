@@ -122,7 +122,7 @@ private:
     uint64_t m_isa_ptr;
   };
 
-  bool m_union_is_user_id : 1, m_union_is_isa_ptr : 1, m_has_object_ptr : 1,
+  unsigned m_union_is_user_id : 1, m_union_is_isa_ptr : 1, m_has_object_ptr : 1,
       m_is_self : 1, m_is_dynamic_cxx : 2, m_is_forcefully_completed : 1
       // BEGIN SWIFT
       , m_is_potentially_swift_interop_type : 1
