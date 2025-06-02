@@ -255,7 +255,7 @@ def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
 def err_drv_malformed_sanitizer_metadata_ignorelist : Error<
   "malformed sanitizer metadata ignorelist: '%0'">;
 def err_drv_unsupported_sanitizer : Error<
-  "%0 %1 runtime is not supported on %3">;
+  "%0 %1 runtime is not supported on %2">;
 def err_drv_duplicate_config : Error<
   "no more than one option '--config' is allowed">;
 def err_drv_cannot_open_config_file : Error<
