@@ -815,7 +815,7 @@ static void debugVectorizationMessage(const StringRef Prefix,
 static OptimizationRemarkAnalysis
 createLVAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
                  Instruction *I, DebugLoc DL = {}) {
-  Value *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
+  BasicBlock *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
   // If debug location is attached to the instruction, use it. Otherwise if DL
   // was not provided, use the loop's.
   if (I && I->getDebugLoc())
@@ -2379,13 +2379,13 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   PreVectorPH->swapSuccessors();
 
   // We just connected a new block to the scalar preheader. Update all
-  // ResumePhis by adding an incoming value for it, replicating the last value.
-  for (VPRecipeBase &R : *cast<VPBasicBlock>(ScalarPH)) {
-    auto *ResumePhi = dyn_cast<VPInstruction>(&R);
-    if (!ResumePhi || ResumePhi->getOpcode() != VPInstruction::ResumePhi)
-      continue;
-    ResumePhi->addOperand(
-        ResumePhi->getOperand(ResumePhi->getNumOperands() - 1));
+  // VPPhis by adding an incoming value for it, replicating the last value.
+  unsigned NumPredecessors = ScalarPH->getNumPredecessors();
+  for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
+    assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
+    assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
+           "must have incoming values for all operands");
+    R.addOperand(R.getOperand(NumPredecessors - 2));
   }
 }
 
@@ -2533,7 +2533,8 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
   for (auto &R : make_early_inc_range(*VPBB)) {
-    assert(!R.isPhi() && "Tried to move phi recipe to end of block");
+    assert((IRVPBB->empty() || IRVPBB->back().isPhi() || !R.isPhi()) &&
+           "Tried to move phi recipe after a non-phi recipe");
     R.moveBefore(*IRVPBB, IRVPBB->end());
   }
 
@@ -4643,12 +4644,12 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
       const RecurrenceDescriptor &RdxDesc = PhiDescriptorPair.second;
       // When finding the min width used by the recurrence we need to account
       // for casts on the input operands of the recurrence.
-      MinWidth = std::min<unsigned>(
-          MinWidth, std::min<unsigned>(
-                        RdxDesc.getMinWidthCastToRecurrenceTypeInBits(),
-                        RdxDesc.getRecurrenceType()->getScalarSizeInBits()));
-      MaxWidth = std::max<unsigned>(
-          MaxWidth, RdxDesc.getRecurrenceType()->getScalarSizeInBits());
+      MinWidth = std::min(
+          MinWidth,
+          std::min(RdxDesc.getMinWidthCastToRecurrenceTypeInBits(),
+                   RdxDesc.getRecurrenceType()->getScalarSizeInBits()));
+      MaxWidth = std::max(MaxWidth,
+                          RdxDesc.getRecurrenceType()->getScalarSizeInBits());
     }
   } else {
     for (Type *T : ElementTypesInLoop) {
@@ -7192,62 +7193,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     }
   }
 
-  // The legacy cost model has special logic to compute the cost of in-loop
-  // reductions, which may be smaller than the sum of all instructions involved
-  // in the reduction.
-  // TODO: Switch to costing based on VPlan once the logic has been ported.
-  for (const auto &[RedPhi, RdxDesc] : Legal->getReductionVars()) {
-    if (ForceTargetInstructionCost.getNumOccurrences())
-      continue;
-
-    if (!CM.isInLoopReduction(RedPhi))
-      continue;
-
-    const auto &ChainOps = RdxDesc.getReductionOpChain(RedPhi, OrigLoop);
-    SetVector<Instruction *> ChainOpsAndOperands(llvm::from_range, ChainOps);
-    auto IsZExtOrSExt = [](const unsigned Opcode) -> bool {
-      return Opcode == Instruction::ZExt || Opcode == Instruction::SExt;
-    };
-    // Also include the operands of instructions in the chain, as the cost-model
-    // may mark extends as free.
-    //
-    // For ARM, some of the instruction can folded into the reducion
-    // instruction. So we need to mark all folded instructions free.
-    // For example: We can fold reduce(mul(ext(A), ext(B))) into one
-    // instruction.
-    for (auto *ChainOp : ChainOps) {
-      for (Value *Op : ChainOp->operands()) {
-        if (auto *I = dyn_cast<Instruction>(Op)) {
-          ChainOpsAndOperands.insert(I);
-          if (I->getOpcode() == Instruction::Mul) {
-            auto *Ext0 = dyn_cast<Instruction>(I->getOperand(0));
-            auto *Ext1 = dyn_cast<Instruction>(I->getOperand(1));
-            if (Ext0 && IsZExtOrSExt(Ext0->getOpcode()) && Ext1 &&
-                Ext0->getOpcode() == Ext1->getOpcode()) {
-              ChainOpsAndOperands.insert(Ext0);
-              ChainOpsAndOperands.insert(Ext1);
-            }
-          }
-        }
-      }
-    }
-
-    // Pre-compute the cost for I, if it has a reduction pattern cost.
-    for (Instruction *I : ChainOpsAndOperands) {
-      auto ReductionCost =
-          CM.getReductionPatternCost(I, VF, toVectorTy(I->getType(), VF));
-      if (!ReductionCost)
-        continue;
-
-      assert(!CostCtx.SkipCostComputation.contains(I) &&
-             "reduction op visited multiple times");
-      CostCtx.SkipCostComputation.insert(I);
-      LLVM_DEBUG(dbgs() << "Cost of " << ReductionCost << " for VF " << VF
-                        << ":\n in-loop reduction " << *I << "\n");
-      Cost += *ReductionCost;
-    }
-  }
-
   // Pre-compute the costs for branches except for the backedge, as the number
   // of replicate regions in a VPlan may not directly match the number of
   // branches, which would lead to different decisions.
@@ -7591,14 +7536,10 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   // created a bc.merge.rdx Phi after the main vector body. Ensure that we carry
   // over the incoming values correctly.
   using namespace VPlanPatternMatch;
-  auto IsResumePhi = [](VPUser *U) {
-    auto *VPI = dyn_cast<VPInstruction>(U);
-    return VPI && VPI->getOpcode() == VPInstruction::ResumePhi;
-  };
-  assert(count_if(EpiRedResult->users(), IsResumePhi) == 1 &&
+  assert(count_if(EpiRedResult->users(), IsaPred<VPPhi>) == 1 &&
          "ResumePhi must have a single user");
   auto *EpiResumePhiVPI =
-      cast<VPInstruction>(*find_if(EpiRedResult->users(), IsResumePhi));
+      cast<VPInstruction>(*find_if(EpiRedResult->users(), IsaPred<VPPhi>));
   auto *EpiResumePhi = cast<PHINode>(State.get(EpiResumePhiVPI, true));
   EpiResumePhi->setIncomingValueForBlock(
       BypassBlock, MainResumePhi->getIncomingValueForBlock(BypassBlock));
@@ -8779,9 +8720,8 @@ static VPInstruction *addResumePhiRecipeForInduction(
                                                 WideIV->getDebugLoc());
   }
 
-  auto *ResumePhiRecipe =
-      ScalarPHBuilder.createNaryOp(VPInstruction::ResumePhi, {EndValue, Start},
-                                   WideIV->getDebugLoc(), "bc.resume.val");
+  auto *ResumePhiRecipe = ScalarPHBuilder.createScalarPhi(
+      {EndValue, Start}, WideIV->getDebugLoc(), "bc.resume.val");
   return ResumePhiRecipe;
 }
 
@@ -8810,8 +8750,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
       if (VPInstruction *ResumePhi = addResumePhiRecipeForInduction(
               WideIVR, VectorPHBuilder, ScalarPHBuilder, TypeInfo,
               &Plan.getVectorTripCount())) {
-        assert(ResumePhi->getOpcode() == VPInstruction::ResumePhi &&
-               "Expected a ResumePhi");
+        assert(isa<VPPhi>(ResumePhi) && "Expected a phi");
         IVEndValues[WideIVR] = ResumePhi->getOperand(0);
         ScalarPhiIRI->addOperand(ResumePhi);
         continue;
@@ -8836,8 +8775,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
           VPInstruction::ExtractLastElement, {ResumeFromVectorLoop}, {},
           "vector.recur.extract");
     StringRef Name = IsFOR ? "scalar.recur.init" : "bc.merge.rdx";
-    auto *ResumePhiR = ScalarPHBuilder.createNaryOp(
-        VPInstruction::ResumePhi,
+    auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
         {ResumeFromVectorLoop, VectorPhiR->getStartValue()}, {}, Name);
     ScalarPhiIRI->addOperand(ResumePhiR);
   }
@@ -9501,6 +9439,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+    Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
     // If tail is folded by masking, introduce selects between the phi
     // and the users outside the vector region of each reduction, at the
     // beginning of the dedicated latch block.
@@ -9512,7 +9451,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
-      Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
               ? std::make_optional(RdxDesc.getFastMathFlags())
@@ -9533,7 +9471,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
     // entire expression in the smaller type.
-    Type *PhiTy = PhiR->getStartValue()->getLiveInIRValue()->getType();
     if (MinVF.isVector() && PhiTy != RdxDesc.getRecurrenceType() &&
         !RecurrenceDescriptor::isAnyOfRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
@@ -10018,9 +9955,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       VPI->setOperand(1, Freeze);
       if (UpdateResumePhis)
         OrigStart->replaceUsesWithIf(Freeze, [Freeze](VPUser &U, unsigned) {
-          return Freeze != &U && isa<VPInstruction>(&U) &&
-                 cast<VPInstruction>(&U)->getOpcode() ==
-                     VPInstruction::ResumePhi;
+          return Freeze != &U && isa<VPPhi>(&U);
         });
     }
   };
@@ -10033,13 +9968,12 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   // scalar (which will become vector) epilogue loop we are done. Otherwise
   // create it below.
   if (any_of(*MainScalarPH, [VectorTC](VPRecipeBase &R) {
-        return match(&R, m_VPInstruction<VPInstruction::ResumePhi>(
-                             m_Specific(VectorTC), m_SpecificInt(0)));
+        return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
+                                                           m_SpecificInt(0)));
       }))
     return;
   VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
-  ScalarPHBuilder.createNaryOp(
-      VPInstruction::ResumePhi,
+  ScalarPHBuilder.createScalarPhi(
       {VectorTC, MainPlan.getCanonicalIV()->getStartValue()}, {},
       "vec.epilog.resume.val");
 }

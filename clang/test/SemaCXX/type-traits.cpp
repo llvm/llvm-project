@@ -414,6 +414,9 @@ struct PotentiallyFinal<T*> final { };
 template<>
 struct PotentiallyFinal<int> final { };
 
+struct FwdDeclFinal;
+using FwdDeclFinalAlias = FwdDeclFinal;
+struct FwdDeclFinal final {};
 
 
 
@@ -423,6 +426,8 @@ void is_final()
 	static_assert(__is_final(FinalClass));
 	static_assert(__is_final(PotentiallyFinal<float*>));
 	static_assert(__is_final(PotentiallyFinal<int>));
+        static_assert(__is_final(FwdDeclFinal));
+        static_assert(__is_final(FwdDeclFinalAlias));
 
 	static_assert(!__is_final(int));
 	static_assert(!__is_final(Union));
