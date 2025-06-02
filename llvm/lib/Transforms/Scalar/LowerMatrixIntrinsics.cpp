@@ -2110,17 +2110,16 @@ public:
   }
 
   /// Lower load instructions, if shape information is available.
-  void VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr, IRBuilder<> &Builder) {
-    LowerLoad(Inst, Ptr, Inst->getAlign(),
-              Builder.getInt64(SI.getStride()), Inst->isVolatile(),
-              SI);
+  void VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr,
+                 IRBuilder<> &Builder) {
+    LowerLoad(Inst, Ptr, Inst->getAlign(), Builder.getInt64(SI.getStride()),
+              Inst->isVolatile(), SI);
   }
 
-  void VisitStore(StoreInst *Inst, const ShapeInfo &SI, Value *StoredVal, Value *Ptr,
-                  IRBuilder<> &Builder) {
+  void VisitStore(StoreInst *Inst, const ShapeInfo &SI, Value *StoredVal,
+                  Value *Ptr, IRBuilder<> &Builder) {
     LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
-               Builder.getInt64(SI.getStride()), Inst->isVolatile(),
-               SI);
+               Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI);
   }
 
   /// Lower binary operators, if shape information is available.
