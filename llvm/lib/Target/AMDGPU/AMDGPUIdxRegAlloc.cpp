@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUVGPRIndexingAnalysis.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -177,6 +178,18 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
       else
         Setter.addReg(SRegIdx);
 
+      // It's much easier to track which S_ADD_I32 instr is being used by this
+      // setter if we check it here. If idx0 is known to be 0 during frame
+      // lowering, then the add instruction is not needed
+      if (auto Idx0Def = MFI->getIdx0VRegDef();
+          Idx0Def.isValid() && DefMI->getOpcode() == AMDGPU::S_ADD_I32 &&
+          ((DefMI->getOperand(2).isReg() &&
+            DefMI->getOperand(2).getReg() == Idx0Def) ||
+           (DefMI->getOperand(1).isReg() &&
+            DefMI->getOperand(1).getReg() == Idx0Def))) {
+        MFI->getIdx0PrivateComputations()[Setter] = DefMI;
+      }
+
       IdxInfo[FreeIdx].SetIdxMI = Setter;
       IdxInfo[FreeIdx].IdxSrc = SRegIdx;
       IdxInfo[FreeIdx].UseTS = TimeStamp;
@@ -235,17 +248,14 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
 }
 
 void AMDGPUIdxRegAlloc::createIdx0SaveDef(MachineFunction &MF) {
-  // Create the idx0 save here instead of frame lowering so regalloc is aware
-  Register VReg =
-      MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0_XEXECRegClass);
-  MachineBasicBlock &EntryMBB = MF.front();
-  auto InsertPt = EntryMBB.begin();
-  BuildMI(EntryMBB, InsertPt, DebugLoc(), TII->get(AMDGPU::S_SET_GPR_IDX_U32),
-          AMDGPU::IDX0)
-      .addImm(0);
-  BuildMI(EntryMBB, InsertPt, DebugLoc(), TII->get(TargetOpcode::COPY), VReg)
-      .addReg(AMDGPU::IDX0);
-  MRI->replaceRegWith(Idx0Restore, VReg);
+  // Create the idx0 save if it hasn't already been created, otherwise only
+  // update the local restore
+  Register Idx0VRegDef = MFI->getIdx0VRegDef();
+  if (!Idx0VRegDef.isValid()) {
+    Idx0VRegDef = initIdx0VRegDef(MF, TII);
+    MFI->setIdx0VRegDef(Idx0VRegDef);
+  }
+  MRI->replaceRegWith(Idx0Restore, Idx0VRegDef);
 }
 
 bool AMDGPUIdxRegAlloc::runOnMachineFunction(MachineFunction &MF) {

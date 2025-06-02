@@ -49,12 +49,16 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry(i64 %i) "amdgpu-wavegr
 ; CHECK-NEXT:    s_lshl_b32 s0, s0, 2
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_lshr_b32 s0, s0, 2
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s0
-; CHECK-NEXT:    s_set_vgpr_frames 0x55 ; vsrc0_idx=1 vsrc1_idx=1 vsrc2_idx=1 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 g1[0], g1[0]
+; CHECK-NEXT:    s_add_co_i32 s2, s0, s1
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx2, s0
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s2
+; CHECK-NEXT:    s_set_vgpr_frames 0x42 ; vsrc0_idx=2 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_mov_b32_e32 g1[0], g2[0]
+; CHECK-NEXT:    s_add_co_i32 s0, s1, 0
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_lshl_add_u32 g1[2], g1[0], g1[1], g1[1]
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx2, s0
+; CHECK-NEXT:    s_set_vgpr_frames 0x59 ; vsrc0_idx=1 vsrc1_idx=2 vsrc2_idx=1 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    v_lshl_add_u32 g1[2], g1[0], g2[1], g1[1]
 ; CHECK-NEXT:    s_endpgm
 bb:
   %p = alloca [30 x i32], align 4, addrspace(5)

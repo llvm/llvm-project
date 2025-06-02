@@ -35,6 +35,7 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12 scope:SCOPE_SE
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_6
@@ -167,6 +168,7 @@ define amdgpu_kernel void @load_without_store(ptr addrspace(5) %out) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr3
@@ -234,6 +236,7 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 3
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr3
@@ -400,8 +403,9 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v30, 3
-; CHECK-NEXT:    s_mov_b32 s2, -1
-; CHECK-NEXT:    s_mov_b32 s3, 0
+; CHECK-NEXT:    s_mov_b32 s3, -1
+; CHECK-NEXT:    s_mov_b32 s4, 0
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
@@ -434,13 +438,12 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:    ; implicit-def: $vgpr29
 ; CHECK-NEXT:  .LBB4_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_lshr_b32 s4, s3, 2
-; CHECK-NEXT:    s_add_co_i32 s2, s2, 1
-; CHECK-NEXT:    s_add_co_i32 s3, s3, 4
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s4
+; CHECK-NEXT:    s_lshr_b32 s5, s4, 2
+; CHECK-NEXT:    s_add_co_i32 s3, s3, 1
+; CHECK-NEXT:    s_add_co_i32 s4, s4, 4
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s5
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    s_cmp_lt_u32 s2, s1
+; CHECK-NEXT:    s_cmp_lt_u32 s3, s1
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_mov_b32_e32 g1[0], v30
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0

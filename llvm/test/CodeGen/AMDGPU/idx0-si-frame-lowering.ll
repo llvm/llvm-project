@@ -238,12 +238,15 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry_private(i64 %idx0, i64
   ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LOAD_DWORDX8_IMM]].sub4, 2, implicit-def dead $scc
   ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LOAD_DWORDX8_IMM]].sub6, 2, implicit-def dead $scc
   ; ALLOC-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
-  ; ALLOC-NEXT:   $idx2 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
+  ; ALLOC-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHR_B32_]], [[COPY]], implicit-def $scc
+  ; ALLOC-NEXT:   $idx2 = S_SET_GPR_IDX_U32 [[S_ADD_I32_]]
   ; ALLOC-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_1]], 2, implicit-def dead $scc
-  ; ALLOC-NEXT:   $idx3 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_1]]
+  ; ALLOC-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHR_B32_1]], [[COPY]], implicit-def $scc
+  ; ALLOC-NEXT:   $idx3 = S_SET_GPR_IDX_U32 [[S_ADD_I32_1]]
   ; ALLOC-NEXT:   [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_2]], 2, implicit-def dead $scc
   ; ALLOC-NEXT:   [[S_LSHR_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_3]], 2, implicit-def dead $scc
-  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_3]]
+  ; ALLOC-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHR_B32_3]], [[COPY]], implicit-def $scc
+  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_ADD_I32_2]]
   ; ALLOC-NEXT:   $idx0 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_2]]
   ; ALLOC-NEXT:   BUNDLE implicit-def dead $stg_srcc, implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit $idx0, implicit $exec, implicit $idx3, implicit $idx2, implicit $idx1 {
   ; ALLOC-NEXT:     $stg_srcc = V_LOAD_IDX $idx0, 0, implicit $exec :: (load (s32) from %ir.o.3, addrspace 10)
@@ -275,6 +278,9 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry_private(i64 %idx0, i64
   ; GFX13-NEXT:   renamable $sgpr2 = S_LSHR_B32 killed renamable $sgpr2, 2, implicit-def dead $scc
   ; GFX13-NEXT:   renamable $sgpr3 = S_LSHR_B32 killed renamable $sgpr3, 2, implicit-def dead $scc
   ; GFX13-NEXT:   renamable $sgpr4 = S_LSHR_B32 killed renamable $sgpr4, 2, implicit-def dead $scc
+  ; GFX13-NEXT:   renamable $sgpr0 = S_ADD_I32 killed renamable $sgpr0, renamable $sgpr1, implicit-def dead $scc
+  ; GFX13-NEXT:   renamable $sgpr2 = S_ADD_I32 killed renamable $sgpr2, renamable $sgpr1, implicit-def dead $scc
+  ; GFX13-NEXT:   renamable $sgpr4 = S_ADD_I32 killed renamable $sgpr4, renamable $sgpr1, implicit-def dead $scc
   ; GFX13-NEXT:   $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
   ; GFX13-NEXT:   $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
   ; GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr4
@@ -337,13 +343,17 @@ define dso_local amdgpu_kernel void @test_nonwavegroup_entry_private(i64 %idx0, 
   ; ALLOC-NEXT:   [[S_LSHL_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LOAD_DWORDX8_IMM]].sub4, 2, implicit-def dead $scc
   ; ALLOC-NEXT:   [[S_LSHL_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 [[S_LOAD_DWORDX8_IMM]].sub6, 2, implicit-def dead $scc
   ; ALLOC-NEXT:   [[S_LSHR_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_]], 2, implicit-def dead $scc
-  ; ALLOC-NEXT:   $idx2 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_]]
+  ; ALLOC-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHR_B32_]], [[COPY]], implicit-def $scc
+  ; ALLOC-NEXT:   $idx2 = S_SET_GPR_IDX_U32 [[S_ADD_I32_]]
   ; ALLOC-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_1]], 2, implicit-def dead $scc
-  ; ALLOC-NEXT:   $idx3 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_1]]
+  ; ALLOC-NEXT:   [[S_ADD_I32_1:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHR_B32_1]], [[COPY]], implicit-def $scc
+  ; ALLOC-NEXT:   $idx3 = S_SET_GPR_IDX_U32 [[S_ADD_I32_1]]
   ; ALLOC-NEXT:   [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_2]], 2, implicit-def dead $scc
+  ; ALLOC-NEXT:   [[S_ADD_I32_2:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHR_B32_2]], [[COPY]], implicit-def $scc
   ; ALLOC-NEXT:   [[S_LSHR_B32_3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_LSHL_B32_3]], 2, implicit-def dead $scc
-  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_3]]
-  ; ALLOC-NEXT:   $idx0 = S_SET_GPR_IDX_U32 [[S_LSHR_B32_2]]
+  ; ALLOC-NEXT:   [[S_ADD_I32_3:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[S_LSHR_B32_3]], [[COPY]], implicit-def $scc
+  ; ALLOC-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_ADD_I32_3]]
+  ; ALLOC-NEXT:   $idx0 = S_SET_GPR_IDX_U32 [[S_ADD_I32_2]]
   ; ALLOC-NEXT:   BUNDLE implicit-def dead $stg_srcc, implicit-def dead $stg_srcb, implicit-def dead $stg_srca, implicit-def $stg_dsta, implicit $idx0, implicit $exec, implicit $idx3, implicit $idx2, implicit $idx1 {
   ; ALLOC-NEXT:     $stg_srcc = V_LOAD_IDX $idx0, 0, implicit $exec :: (load (s32) from %ir.o.3, addrspace 5)
   ; ALLOC-NEXT:     $stg_srcb = V_LOAD_IDX $idx3, 0, implicit $exec :: (load (s32) from %ir.o.2, addrspace 5)
@@ -359,6 +369,7 @@ define dso_local amdgpu_kernel void @test_nonwavegroup_entry_private(i64 %idx0, 
   ; GFX13-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX13-NEXT: {{  $}}
   ; GFX13-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX8_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s256) from %ir.idx0.kernarg.offset, align 4, addrspace 4)
+  ; GFX13-NEXT:   $idx0 = S_SET_GPR_IDX_U32 0
   ; GFX13-NEXT:   renamable $sgpr0 = S_LSHL_B32 renamable $sgpr0, 2, implicit-def dead $scc
   ; GFX13-NEXT:   renamable $sgpr2 = S_LSHL_B32 renamable $sgpr2, 2, implicit-def dead $scc
   ; GFX13-NEXT:   renamable $sgpr3 = S_LSHL_B32 renamable $sgpr4, 2, implicit-def dead $scc
@@ -367,10 +378,10 @@ define dso_local amdgpu_kernel void @test_nonwavegroup_entry_private(i64 %idx0, 
   ; GFX13-NEXT:   renamable $sgpr2 = S_LSHR_B32 killed renamable $sgpr2, 2, implicit-def dead $scc
   ; GFX13-NEXT:   renamable $sgpr3 = S_LSHR_B32 killed renamable $sgpr3, 2, implicit-def dead $scc
   ; GFX13-NEXT:   renamable $sgpr4 = S_LSHR_B32 killed renamable $sgpr4, 2, implicit-def dead $scc
-  ; GFX13-NEXT:   $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-  ; GFX13-NEXT:   $idx3 = S_SET_GPR_IDX_U32 killed renamable $sgpr2
-  ; GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr4
-  ; GFX13-NEXT:   $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr3
+  ; GFX13-NEXT:   $idx2 = S_SET_GPR_IDX_U32 renamable $sgpr0
+  ; GFX13-NEXT:   $idx3 = S_SET_GPR_IDX_U32 renamable $sgpr2
+  ; GFX13-NEXT:   $idx1 = S_SET_GPR_IDX_U32 renamable $sgpr4
+  ; GFX13-NEXT:   $idx0 = S_SET_GPR_IDX_U32 renamable $sgpr3
   ; GFX13-NEXT:   $vgpr0 = IMPLICIT_DEF
   ; GFX13-NEXT:   $vgpr1 = IMPLICIT_DEF
   ; GFX13-NEXT:   $vgpr2 = IMPLICIT_DEF
