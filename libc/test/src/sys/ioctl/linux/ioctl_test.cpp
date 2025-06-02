@@ -11,19 +11,33 @@
 #include "src/sys/ioctl/ioctl.h"
 #include "src/unistd/close.h"
 #include "src/unistd/read.h"
+#include "src/unistd/write.h"
+
 #include "test/UnitTest/ErrnoSetterMatcher.h"
+#include "test/UnitTest/Test.h"
 
 #include "hdr/sys_ioctl_macros.h"
 
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-TEST(LlvmLibcSysIoctlTest, TestFileFIONREAD) {
+TEST(LlvmLibcSysIoctlTest, InvalidCommandAndFIONREAD) {
   LIBC_NAMESPACE::libc_errno = 0;
 
+  // Setup the test file
+  constexpr const char *TEST_FILE_NAME = "testdata/ioctl.test";
   constexpr const char TEST_MSG[] = "ioctl test";
   constexpr int TEST_MSG_SIZE = sizeof(TEST_MSG) - 1;
-  constexpr const char *TEST_FILE = "testdata/ioctl.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
+  int new_test_file_fd =
+      LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, 0644);
+  ASSERT_THAT(
+      (int)LIBC_NAMESPACE::write(new_test_file_fd, TEST_MSG, TEST_MSG_SIZE),
+      Succeeds(TEST_MSG_SIZE));
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_THAT(LIBC_NAMESPACE::close(new_test_file_fd), Succeeds(0));
+  ASSERT_ERRNO_SUCCESS();
+
+  // Reopen the file for testing
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
@@ -49,21 +63,11 @@ TEST(LlvmLibcSysIoctlTest, TestFileFIONREAD) {
   ASSERT_GT(ret, -1);
   ASSERT_EQ(n - READ_COUNT, n_after_reading);
 
-  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
-}
-
-TEST(LlvmLibcSysIoctlTest, InvalidIoctlCommand) {
-  LIBC_NAMESPACE::libc_errno = 0;
-
-  int fd = LIBC_NAMESPACE::open("/dev/zero", O_RDONLY);
-  ASSERT_GT(fd, 0);
-  ASSERT_ERRNO_SUCCESS();
-
   // 0xDEADBEEF is just a random nonexistent command;
   // calling this should always fail with ENOTTY
-  int ret = LIBC_NAMESPACE::ioctl(fd, 0xDEADBEEF, NULL);
-  ASSERT_EQ(ret, -1);
+  ret = LIBC_NAMESPACE::ioctl(fd, 0xDEADBEEF, NULL);
   ASSERT_ERRNO_EQ(ENOTTY);
+  ASSERT_EQ(ret, -1);
 
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
