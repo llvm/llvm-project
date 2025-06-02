@@ -117,3 +117,16 @@ add_entrypoint_object(
     libc.src.string.memory_utils.inline_memmove
     libc.src.__support.macros.null_check
 )
+
+add_entrypoint_object(
+  wcscpy
+  SRCS
+    wcscpy.cpp
+  HDRS
+    wcscpy.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.string_utils
+)

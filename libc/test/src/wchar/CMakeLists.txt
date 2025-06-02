@@ -104,3 +104,13 @@ add_libc_test(
   DEPENDS
     libc.src.wchar.wmemmove
 )
+
+add_libc_test(
+  wcscpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcscpy_test.cpp
+  DEPENDS
+    libc.src.wchar.wcscpy
+)
