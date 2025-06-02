@@ -10,6 +10,7 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Frontend/ASTConsumers.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -8499,8 +8500,16 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 }
 #endif
 
-void TypeSystemClang::Dump(llvm::raw_ostream &output) {
-  GetTranslationUnitDecl()->dump(output);
+void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter) {
+  auto consumer =
+      clang::CreateASTDumper(output, filter,
+                             /*DumpDecls=*/true,
+                             /*Deserialize=*/false,
+                             /*DumpLookups=*/false,
+                             /*DumpDeclTypes=*/false, clang::ADOF_Default);
+  assert(consumer);
+  assert(m_ast_up);
+  consumer->HandleTranslationUnit(*m_ast_up);
 }
 
 void TypeSystemClang::DumpFromSymbolFile(Stream &s,
@@ -9625,10 +9634,11 @@ GetNameForIsolatedASTKind(ScratchTypeSystemClang::IsolatedASTKind kind) {
   llvm_unreachable("Unimplemented IsolatedASTKind?");
 }
 
-void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output) {
+void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output,
+                                  llvm::StringRef filter) {
   // First dump the main scratch AST.
   output << "State of scratch Clang type system:\n";
-  TypeSystemClang::Dump(output);
+  TypeSystemClang::Dump(output, filter);
 
   // Now sort the isolated sub-ASTs.
   typedef std::pair<IsolatedASTKey, TypeSystem *> KeyAndTS;
@@ -9643,7 +9653,7 @@ void ScratchTypeSystemClang::Dump(llvm::raw_ostream &output) {
         static_cast<ScratchTypeSystemClang::IsolatedASTKind>(a.first);
     output << "State of scratch Clang type subsystem "
            << GetNameForIsolatedASTKind(kind) << ":\n";
-    a.second->Dump(output);
+    a.second->Dump(output, filter);
   }
 }
 

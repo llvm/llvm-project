@@ -815,7 +815,7 @@ static void debugVectorizationMessage(const StringRef Prefix,
 static OptimizationRemarkAnalysis
 createLVAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
                  Instruction *I, DebugLoc DL = {}) {
-  Value *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
+  BasicBlock *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
   // If debug location is attached to the instruction, use it. Otherwise if DL
   // was not provided, use the loop's.
   if (I && I->getDebugLoc())
@@ -2380,10 +2380,12 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
 
   // We just connected a new block to the scalar preheader. Update all
   // VPPhis by adding an incoming value for it, replicating the last value.
+  unsigned NumPredecessors = ScalarPH->getNumPredecessors();
   for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
-    auto *ResumePhi = cast<VPPhi>(&R);
-    ResumePhi->addOperand(
-        ResumePhi->getOperand(ResumePhi->getNumOperands() - 1));
+    assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
+    assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
+           "must have incoming values for all operands");
+    R.addOperand(R.getOperand(NumPredecessors - 2));
   }
 }
 
