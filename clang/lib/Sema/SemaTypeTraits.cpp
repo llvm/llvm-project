@@ -2000,15 +2000,15 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
           << B.getSourceRange();
     if (!SemaRef.IsCXXTriviallyRelocatableType(B.getType()))
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::NRBase << B.getType()
+          << diag::TraitNotSatisfiedReason::NTRBase << B.getType()
           << B.getSourceRange();
   }
   for (const FieldDecl *Field : D->fields()) {
     if (!Field->getType()->isReferenceType() &&
         !SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::NRField << Field << Field->getType()
-          << Field->getSourceRange();
+          << diag::TraitNotSatisfiedReason::NTRField << Field
+          << Field->getType() << Field->getSourceRange();
   }
   if (D->hasDeletedDestructor())
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
