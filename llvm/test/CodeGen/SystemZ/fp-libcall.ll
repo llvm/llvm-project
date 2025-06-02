@@ -39,7 +39,7 @@ define double @f5(double %x, double %y) {
 
 define fp128 @f6(fp128 %x, fp128 %y) {
 ; CHECK-LABEL: f6:
-; CHECK: brasl %r14, powl@PLT
+; CHECK: brasl %r14, powf128@PLT
   %tmp = call fp128 @llvm.pow.f128(fp128 %x, fp128 %y)
   ret fp128 %tmp
 }
@@ -60,7 +60,7 @@ define double @f8(double %x) {
 
 define fp128 @f9(fp128 %x) {
 ; CHECK-LABEL: f9:
-; CHECK: brasl %r14, sinl@PLT
+; CHECK: brasl %r14, sinf128@PLT
   %tmp = call fp128 @llvm.sin.f128(fp128 %x)
   ret fp128 %tmp
 }
@@ -81,7 +81,7 @@ define double @f11(double %x) {
 
 define fp128 @f12(fp128 %x) {
 ; CHECK-LABEL: f12:
-; CHECK: brasl %r14, cosl@PLT
+; CHECK: brasl %r14, cosf128@PLT
   %tmp = call fp128 @llvm.cos.f128(fp128 %x)
   ret fp128 %tmp
 }
@@ -102,7 +102,7 @@ define double @f14(double %x) {
 
 define fp128 @f15(fp128 %x) {
 ; CHECK-LABEL: f15:
-; CHECK: brasl %r14, expl@PLT
+; CHECK: brasl %r14, expf128@PLT
   %tmp = call fp128 @llvm.exp.f128(fp128 %x)
   ret fp128 %tmp
 }
@@ -123,7 +123,7 @@ define double @f17(double %x) {
 
 define fp128 @f18(fp128 %x) {
 ; CHECK-LABEL: f18:
-; CHECK: brasl %r14, exp2l@PLT
+; CHECK: brasl %r14, exp2f128@PLT
   %tmp = call fp128 @llvm.exp2.f128(fp128 %x)
   ret fp128 %tmp
 }
@@ -144,7 +144,7 @@ define double @f20(double %x) {
 
 define fp128 @f21(fp128 %x) {
 ; CHECK-LABEL: f21:
-; CHECK: brasl %r14, logl@PLT
+; CHECK: brasl %r14, logf128@PLT
   %tmp = call fp128 @llvm.log.f128(fp128 %x)
   ret fp128 %tmp
 }
@@ -165,7 +165,7 @@ define double @f23(double %x) {
 
 define fp128 @f24(fp128 %x) {
 ; CHECK-LABEL: f24:
-; CHECK: brasl %r14, log2l@PLT
+; CHECK: brasl %r14, log2f128@PLT
   %tmp = call fp128 @llvm.log2.f128(fp128 %x)
   ret fp128 %tmp
 }
@@ -186,7 +186,7 @@ define double @f26(double %x) {
 
 define fp128 @f27(fp128 %x) {
 ; CHECK-LABEL: f27:
-; CHECK: brasl %r14, log10l@PLT
+; CHECK: brasl %r14, log10f128@PLT
   %tmp = call fp128 @llvm.log10.f128(fp128 %x)
   ret fp128 %tmp
 }
@@ -207,7 +207,7 @@ define double @f29(double %x, double %y) {
 
 define fp128 @f30(fp128 %x, fp128 %y) {
 ; CHECK-LABEL: f30:
-; CHECK: brasl %r14, fminl@PLT
+; CHECK: brasl %r14, fminf128@PLT
   %tmp = call fp128 @llvm.minnum.f128(fp128 %x, fp128 %y)
   ret fp128 %tmp
 }
@@ -238,7 +238,7 @@ define double @f32(double %x, double %y) {
 
 define fp128 @f33(fp128 %x, fp128 %y) {
 ; CHECK-LABEL: f33:
-; CHECK: brasl %r14, fmaxl@PLT
+; CHECK: brasl %r14, fmaxf128@PLT
   %tmp = call fp128 @llvm.maxnum.f128(fp128 %x, fp128 %y)
   ret fp128 %tmp
 }

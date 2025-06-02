@@ -70,7 +70,7 @@ define double @f5(double %f) {
 declare fp128 @llvm.nearbyint.f128(fp128 %f)
 define void @f6(ptr %ptr) {
 ; CHECK-LABEL: f6:
-; CHECK: brasl %r14, nearbyintl@PLT
+; CHECK: brasl %r14, nearbyintf128@PLT
 ; CHECK: br %r14
   %src = load fp128, ptr %ptr
   %res = call fp128 @llvm.nearbyint.f128(fp128 %src)
@@ -114,7 +114,7 @@ define double @f8(double %f) {
 declare fp128 @llvm.floor.f128(fp128 %f)
 define void @f9(ptr %ptr) {
 ; CHECK-LABEL: f9:
-; CHECK: brasl %r14, floorl@PLT
+; CHECK: brasl %r14, floorf128@PLT
 ; CHECK: br %r14
   %src = load fp128, ptr %ptr
   %res = call fp128 @llvm.floor.f128(fp128 %src)
@@ -158,7 +158,7 @@ define double @f11(double %f) {
 declare fp128 @llvm.ceil.f128(fp128 %f)
 define void @f12(ptr %ptr) {
 ; CHECK-LABEL: f12:
-; CHECK: brasl %r14, ceill@PLT
+; CHECK: brasl %r14, ceilf128@PLT
 ; CHECK: br %r14
   %src = load fp128, ptr %ptr
   %res = call fp128 @llvm.ceil.f128(fp128 %src)
@@ -190,7 +190,7 @@ define double @f14(double %f) {
 declare fp128 @llvm.trunc.f128(fp128 %f)
 define void @f15(ptr %ptr) {
 ; CHECK-LABEL: f15:
-; CHECK: brasl %r14, truncl@PLT
+; CHECK: brasl %r14, truncf128@PLT
 ; CHECK: br %r14
   %src = load fp128, ptr %ptr
   %res = call fp128 @llvm.trunc.f128(fp128 %src)
@@ -234,7 +234,7 @@ define double @f17(double %f) {
 declare fp128 @llvm.round.f128(fp128 %f)
 define void @f18(ptr %ptr) {
 ; CHECK-LABEL: f18:
-; CHECK: brasl %r14, roundl@PLT
+; CHECK: brasl %r14, roundf128@PLT
 ; CHECK: br %r14
   %src = load fp128, ptr %ptr
   %res = call fp128 @llvm.round.f128(fp128 %src)
@@ -266,7 +266,7 @@ define double @f20(double %f) {
 declare fp128 @llvm.roundeven.f128(fp128 %f)
 define void @f21(ptr %ptr) {
 ; CHECK-LABEL: f21:
-; CHECK: brasl %r14, roundevenl@PLT
+; CHECK: brasl %r14, roundevenf128@PLT
 ; CHECK: br %r14
   %src = load fp128, ptr %ptr
   %res = call fp128 @llvm.roundeven.f128(fp128 %src)

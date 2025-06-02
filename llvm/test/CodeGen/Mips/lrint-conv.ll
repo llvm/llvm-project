@@ -36,7 +36,7 @@ entry:
 
 define signext i32 @testmswl(fp128 %x) {
 ; CHECK-LABEL: testmswl:
-; CHECK:       jal     lrintl
+; CHECK:       jal     lrintf128
 entry:
   %0 = tail call i64 @llvm.lrint.i64.f128(fp128 %x)
   %conv = trunc i64 %0 to i32
@@ -45,7 +45,7 @@ entry:
 
 define signext i64 @testmsll(fp128 %x) {
 ; CHECK-LABEL: testmsll:
-; CHECK:       jal     lrintl
+; CHECK:       jal     lrintf128
 entry:
   %0 = tail call i64 @llvm.lrint.i64.f128(fp128 %x)
   ret i64 %0
