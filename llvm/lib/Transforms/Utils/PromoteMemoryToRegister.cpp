@@ -425,7 +425,7 @@ struct PromoteMem2Reg {
   VectorWithUndo<DebugLoc> IncomingLocs;
 
   // DFS work stack.
-  SmallVector<RenamePassData, 8> WorkList;
+  SmallVector<RenamePassData, 8> Worklist;
 
   /// Whether the function has the no-signed-zeros-fp-math attribute set.
   bool NoSignedZeros = false;
@@ -472,12 +472,12 @@ private:
   }
 
   void pushToWorklist(BasicBlock *BB, BasicBlock *Pred) {
-    WorkList.emplace_back(BB, Pred, IncomingVals.size(), IncomingVals.size());
+    Worklist.emplace_back(BB, Pred, IncomingVals.size(), IncomingVals.size());
   }
 
   RenamePassData popFromWorklist() {
-    RenamePassData R = WorkList.back();
-    WorkList.pop_back();
+    RenamePassData R = Worklist.back();
+    Worklist.pop_back();
     IncomingVals.undo(R.UndoVals);
     IncomingLocs.undo(R.UndoLocs);
     return R;
@@ -910,7 +910,7 @@ void PromoteMem2Reg::run() {
   do {
     RenamePassData RPD = popFromWorklist();
     RenamePass(RPD.BB, RPD.Pred);
-  } while (!WorkList.empty());
+  } while (!Worklist.empty());
 
   // Remove the allocas themselves from the function.
   for (Instruction *A : Allocas) {
