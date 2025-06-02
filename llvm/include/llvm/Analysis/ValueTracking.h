@@ -889,7 +889,8 @@ inline SelectPatternResult matchSelectPattern(const Value *V, const Value *&LHS,
 /// predicate and given values as its true/false operands would match.
 LLVM_ABI SelectPatternResult matchDecomposedSelectPattern(
     CmpInst *CmpI, Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
-    Instruction::CastOps *CastOp = nullptr, unsigned Depth = 0);
+    FastMathFlags FMF = FastMathFlags(), Instruction::CastOps *CastOp = nullptr,
+    unsigned Depth = 0);
 
 /// Determine the pattern for predicate `X Pred Y ? X : Y`.
 LLVM_ABI SelectPatternResult getSelectPattern(

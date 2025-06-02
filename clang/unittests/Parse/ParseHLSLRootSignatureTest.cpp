@@ -226,11 +226,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   const llvm::StringLiteral Source = R"cc(
     StaticSampler(s0),
-    StaticSampler(s0, maxAnisotropy = 3,
+    StaticSampler(s0, maxAnisotropy = 3, space = 4,
+      visibility = SHADER_VISIBILITY_DOMAIN,
       minLOD = 4.2f, mipLODBias = 0.23e+3,
       addressW = TEXTURE_ADDRESS_CLAMP,
       addressV = TEXTURE_ADDRESS_BORDER,
-      maxLOD = 9000, addressU = TEXTURE_ADDRESS_MIRROR
+      maxLOD = 9000, addressU = TEXTURE_ADDRESS_MIRROR,
+      comparisonFunc = COMPARISON_NOT_EQUAL,
+      borderColor = STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT
     )
   )cc";
 
@@ -259,8 +262,13 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Wrap);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 16u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc, ComparisonFunc::LessEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor,
+            StaticBorderColor::OpaqueWhite);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 0.f);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 3.402823466e+38f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 0u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility, ShaderVisibility::All);
 
   // Check values can be set as expected
   Elem = Elements[1];
@@ -272,8 +280,13 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Clamp);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 230.f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 3u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc, ComparisonFunc::NotEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor,
+            StaticBorderColor::OpaqueBlackUint);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 4.2f);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 9000.f);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 4u);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility, ShaderVisibility::Domain);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
