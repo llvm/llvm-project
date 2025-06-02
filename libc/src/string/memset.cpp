@@ -15,9 +15,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, memset, (void *dst, int value, size_t count)) {
-  if (count) {
+  if (count)
     LIBC_CRASH_ON_NULLPTR(dst);
-  }
+
   inline_memset(dst, static_cast<uint8_t>(value), count);
   return dst;
 }
