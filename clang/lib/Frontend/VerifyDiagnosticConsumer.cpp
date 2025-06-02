@@ -482,7 +482,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     // What's left in DToken is the actual prefix.  That might not be a -verify
     // prefix even if there is only one -verify prefix (for example, the full
     // DToken is foo-bar-warning, but foo is the only -verify prefix).
-    if (!std::binary_search(Prefixes.begin(), Prefixes.end(), DToken))
+    if (!llvm::binary_search(Prefixes, DToken))
       continue;
 
     if (NoDiag) {
@@ -812,7 +812,7 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
     C2 += C.substr(last, loc-last);
     last = loc + 1;
 
-    if (C[last] == '\n' || C[last] == '\r') {
+    if (last < C.size() && (C[last] == '\n' || C[last] == '\r')) {
       ++last;
 
       // Escape \r\n  or \n\r, but not \n\n.

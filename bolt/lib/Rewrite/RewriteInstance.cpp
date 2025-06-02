@@ -1341,6 +1341,19 @@ void RewriteInstance::discoverFileObjects() {
         }
       }
     }
+
+    // The linker may omit data markers for absolute long veneers. Introduce
+    // those markers artificially to assist the disassembler.
+    for (BinaryFunction &BF :
+         llvm::make_second_range(BC->getBinaryFunctions())) {
+      if (BF.getOneName().starts_with("__AArch64AbsLongThunk_") &&
+          BF.getSize() == 16 && !BF.getSizeOfDataInCodeAt(8)) {
+        BC->errs() << "BOLT-WARNING: missing data marker detected in veneer "
+                   << BF << '\n';
+        BF.markDataAtOffset(8);
+        BC->AddressToConstantIslandMap[BF.getAddress() + 8] = &BF;
+      }
+    }
   }
 
   if (!BC->IsLinuxKernel) {
@@ -4703,7 +4716,6 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   }
 
   // Assign indices to sections.
-  std::unordered_map<std::string, uint64_t> NameToIndex;
   for (uint32_t Index = 1; Index < OutputSections.size(); ++Index)
     OutputSections[Index].first->setIndex(Index);
 

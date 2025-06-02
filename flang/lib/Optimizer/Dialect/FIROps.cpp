@@ -2365,6 +2365,21 @@ llvm::LogicalResult fir::InsertOnRangeOp::verify() {
   return mlir::success();
 }
 
+bool fir::InsertOnRangeOp::isFullRange() {
+  auto extents = getType().getShape();
+  mlir::DenseIntElementsAttr indexes = getCoor();
+  if (indexes.size() / 2 != static_cast<int64_t>(extents.size()))
+    return false;
+  auto cur_index = indexes.value_begin<int64_t>();
+  for (unsigned i = 0; i < indexes.size(); i += 2) {
+    if (*(cur_index++) != 0)
+      return false;
+    if (*(cur_index++) != extents[i / 2] - 1)
+      return false;
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // InsertValueOp
 //===----------------------------------------------------------------------===//
@@ -4787,6 +4802,19 @@ bool fir::reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole) {
     }
   }
   return false;
+}
+
+std::optional<int64_t> fir::getAllocaByteSize(fir::AllocaOp alloca,
+                                              const mlir::DataLayout &dl,
+                                              const fir::KindMapping &kindMap) {
+  mlir::Type type = alloca.getInType();
+  // TODO: should use the constant operands when all info is not available in
+  // the type.
+  if (!alloca.isDynamic())
+    if (auto sizeAndAlignment =
+            getTypeSizeAndAlignment(alloca.getLoc(), type, dl, kindMap))
+      return sizeAndAlignment->first;
+  return std::nullopt;
 }
 
 //===----------------------------------------------------------------------===//

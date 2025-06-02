@@ -43,10 +43,13 @@ static llvm::cl::opt<bool>
 static llvm::cl::opt<bool>
     enableDirect("direct-tbaa", llvm::cl::init(true), llvm::cl::Hidden,
                  llvm::cl::desc("Add TBAA tags to direct variables"));
-static llvm::cl::opt<bool>
-    enableLocalAllocs("local-alloc-tbaa", llvm::cl::init(true),
-                      llvm::cl::Hidden,
-                      llvm::cl::desc("Add TBAA tags to local allocations."));
+// This is **known unsafe** (misscompare in spec2017/wrf_r). It should
+// not be enabled by default.
+// The code is kept so that these may be tried with new benchmarks to see if
+// this is worth fixing in the future.
+static llvm::cl::opt<bool> enableLocalAllocs(
+    "local-alloc-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
+    llvm::cl::desc("Add TBAA tags to local allocations. UNSAFE."));
 
 namespace {
 

@@ -71,7 +71,7 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
       InMemoryFs(new llvm::vfs::InMemoryFileSystem),
       Sources(Compiler.getSourceManager()),
       // Forward the new diagnostics to the original DiagnosticConsumer.
-      Diags(new DiagnosticIDs, new DiagnosticOptions,
+      Diags(new DiagnosticIDs, DiagOpts,
             new ForwardingDiagnosticConsumer(Compiler.getDiagnosticClient())),
       LangOpts(Compiler.getLangOpts()), HSOpts(Compiler.getHeaderSearchOpts()) {
   // Add a FileSystem containing the extra files needed in place of modular

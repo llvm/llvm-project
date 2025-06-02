@@ -37,7 +37,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <optional>
 
 using namespace clang;
 

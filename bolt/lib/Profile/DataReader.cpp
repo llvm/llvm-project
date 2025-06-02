@@ -1088,26 +1088,11 @@ bool DataReader::hasMemData() {
 
 std::error_code DataReader::parseInNoLBRMode() {
   auto GetOrCreateFuncEntry = [&](StringRef Name) {
-    auto I = NamesToBasicSamples.find(Name);
-    if (I == NamesToBasicSamples.end()) {
-      bool Success;
-      std::tie(I, Success) = NamesToBasicSamples.insert(std::make_pair(
-          Name, FuncBasicSampleData(Name, FuncBasicSampleData::ContainerTy())));
-
-      assert(Success && "unexpected result of insert");
-    }
-    return I;
+    return NamesToBasicSamples.try_emplace(Name, Name).first;
   };
 
   auto GetOrCreateFuncMemEntry = [&](StringRef Name) {
-    auto I = NamesToMemEvents.find(Name);
-    if (I == NamesToMemEvents.end()) {
-      bool Success;
-      std::tie(I, Success) = NamesToMemEvents.insert(
-          std::make_pair(Name, FuncMemData(Name, FuncMemData::ContainerTy())));
-      assert(Success && "unexpected result of insert");
-    }
-    return I;
+    return NamesToMemEvents.try_emplace(Name, Name).first;
   };
 
   while (hasBranchData()) {
@@ -1151,26 +1136,11 @@ std::error_code DataReader::parseInNoLBRMode() {
 
 std::error_code DataReader::parse() {
   auto GetOrCreateFuncEntry = [&](StringRef Name) {
-    auto I = NamesToBranches.find(Name);
-    if (I == NamesToBranches.end()) {
-      bool Success;
-      std::tie(I, Success) = NamesToBranches.insert(std::make_pair(
-          Name, FuncBranchData(Name, FuncBranchData::ContainerTy(),
-                               FuncBranchData::ContainerTy())));
-      assert(Success && "unexpected result of insert");
-    }
-    return I;
+    return NamesToBranches.try_emplace(Name, Name).first;
   };
 
   auto GetOrCreateFuncMemEntry = [&](StringRef Name) {
-    auto I = NamesToMemEvents.find(Name);
-    if (I == NamesToMemEvents.end()) {
-      bool Success;
-      std::tie(I, Success) = NamesToMemEvents.insert(
-          std::make_pair(Name, FuncMemData(Name, FuncMemData::ContainerTy())));
-      assert(Success && "unexpected result of insert");
-    }
-    return I;
+    return NamesToMemEvents.try_emplace(Name, Name).first;
   };
 
   Col = 0;

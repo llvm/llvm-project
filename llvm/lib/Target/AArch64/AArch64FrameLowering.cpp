@@ -3389,11 +3389,11 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
 
   // For performance reasons restore SVE register in increasing order
   auto IsPPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::PPR; };
-  auto PPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsPPR);
+  auto PPRBegin = llvm::find_if(RegPairs, IsPPR);
   auto PPREnd = std::find_if_not(PPRBegin, RegPairs.end(), IsPPR);
   std::reverse(PPRBegin, PPREnd);
   auto IsZPR = [](const RegPairInfo &c) { return c.Type == RegPairInfo::ZPR; };
-  auto ZPRBegin = std::find_if(RegPairs.begin(), RegPairs.end(), IsZPR);
+  auto ZPRBegin = llvm::find_if(RegPairs, IsZPR);
   auto ZPREnd = std::find_if_not(ZPRBegin, RegPairs.end(), IsZPR);
   std::reverse(ZPRBegin, ZPREnd);
 

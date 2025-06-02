@@ -407,7 +407,7 @@ def tblockaddress: SDNode<"ISD::TargetBlockAddress",  SDTPtrLeaf, [],
 
 def add        : SDNode<"ISD::ADD"       , SDTIntBinOp   ,
                         [SDNPCommutative, SDNPAssociative]>;
-def ptradd     : SDNode<"ISD::ADD"       , SDTPtrAddOp, []>;
+def ptradd     : SDNode<"ISD::PTRADD"    , SDTPtrAddOp, []>;
 def sub        : SDNode<"ISD::SUB"       , SDTIntBinOp>;
 def mul        : SDNode<"ISD::MUL"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;

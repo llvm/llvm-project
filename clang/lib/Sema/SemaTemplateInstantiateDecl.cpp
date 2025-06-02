@@ -648,21 +648,30 @@ static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
   EnterExpressionEvaluationContext Unevaluated(
       S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-  ExprResult ResultX = S.SubstExpr(Attr.getMaxNumWorkGroupsX(), TemplateArgs);
-  if (!ResultX.isUsable())
-    return;
-  ExprResult ResultY = S.SubstExpr(Attr.getMaxNumWorkGroupsY(), TemplateArgs);
-  if (!ResultY.isUsable())
-    return;
-  ExprResult ResultZ = S.SubstExpr(Attr.getMaxNumWorkGroupsZ(), TemplateArgs);
-  if (!ResultZ.isUsable())
-    return;
+  Expr *XExpr = nullptr;
+  Expr *YExpr = nullptr;
+  Expr *ZExpr = nullptr;
 
-  Expr *XExpr = ResultX.getAs<Expr>();
-  Expr *YExpr = ResultY.getAs<Expr>();
-  Expr *ZExpr = ResultZ.getAs<Expr>();
+  if (Attr.getMaxNumWorkGroupsX()) {
+    ExprResult ResultX = S.SubstExpr(Attr.getMaxNumWorkGroupsX(), TemplateArgs);
+    if (ResultX.isUsable())
+      XExpr = ResultX.getAs<Expr>();
+  }
 
-  S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
+  if (Attr.getMaxNumWorkGroupsY()) {
+    ExprResult ResultY = S.SubstExpr(Attr.getMaxNumWorkGroupsY(), TemplateArgs);
+    if (ResultY.isUsable())
+      YExpr = ResultY.getAs<Expr>();
+  }
+
+  if (Attr.getMaxNumWorkGroupsZ()) {
+    ExprResult ResultZ = S.SubstExpr(Attr.getMaxNumWorkGroupsZ(), TemplateArgs);
+    if (ResultZ.isUsable())
+      ZExpr = ResultZ.getAs<Expr>();
+  }
+
+  if (XExpr)
+    S.AMDGPU().addAMDGPUMaxNumWorkGroupsAttr(New, Attr, XExpr, YExpr, ZExpr);
 }
 
 // This doesn't take any template parameters, but we have a custom action that
@@ -2953,8 +2962,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       if (MSInfo->getPointOfInstantiation().isInvalid()) {
         SourceLocation Loc = D->getLocation(); // FIXME
         MSInfo->setPointOfInstantiation(Loc);
-        SemaRef.PendingLocalImplicitInstantiations.push_back(
-            std::make_pair(Function, Loc));
+        SemaRef.PendingLocalImplicitInstantiations.emplace_back(Function, Loc);
       }
     }
   }
@@ -5479,8 +5487,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       // definition will be required).
       assert(!Recursive);
       Function->setInstantiationIsPending(true);
-      PendingInstantiations.push_back(
-        std::make_pair(Function, PointOfInstantiation));
+      PendingInstantiations.emplace_back(Function, PointOfInstantiation);
 
       if (llvm::isTimeTraceVerbose()) {
         llvm::timeTraceAddInstantEvent("DeferInstantiation", [&] {
@@ -6069,22 +6076,20 @@ void Sema::InstantiateVariableInitializer(
   else if (OldVar->isInline())
     Var->setImplicitlyInline();
 
+  ContextRAII SwitchContext(*this, Var->getDeclContext());
+
+  EnterExpressionEvaluationContext Evaluated(
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
+  currentEvaluationContext().InLifetimeExtendingContext =
+      parentEvaluationContext().InLifetimeExtendingContext;
+  currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
+      parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
+
   if (OldVar->getInit()) {
-    EnterExpressionEvaluationContext Evaluated(
-        *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
-
-    currentEvaluationContext().InLifetimeExtendingContext =
-        parentEvaluationContext().InLifetimeExtendingContext;
-    currentEvaluationContext().RebuildDefaultArgOrDefaultInit =
-        parentEvaluationContext().RebuildDefaultArgOrDefaultInit;
     // Instantiate the initializer.
-    ExprResult Init;
-
-    {
-      ContextRAII SwitchContext(*this, Var->getDeclContext());
-      Init = SubstInitializer(OldVar->getInit(), TemplateArgs,
-                              OldVar->getInitStyle() == VarDecl::CallInit);
-    }
+    ExprResult Init =
+        SubstInitializer(OldVar->getInit(), TemplateArgs,
+                         OldVar->getInitStyle() == VarDecl::CallInit);
 
     if (!Init.isInvalid()) {
       Expr *InitExpr = Init.get();
@@ -6206,8 +6211,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   // unit.
   if (!Def && !DefinitionRequired) {
     if (TSK == TSK_ExplicitInstantiationDefinition) {
-      PendingInstantiations.push_back(
-        std::make_pair(Var, PointOfInstantiation));
+      PendingInstantiations.emplace_back(Var, PointOfInstantiation);
     } else if (TSK == TSK_ImplicitInstantiation) {
       // Warn about missing definition at the end of translation unit.
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred() &&

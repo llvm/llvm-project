@@ -162,10 +162,11 @@ define amdgpu_kernel void @basic_smax_smin_sgpr(ptr addrspace(1) %out, i32 inreg
 ; SDAG-VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v0, 0xff
 ; SDAG-VI-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-VI-NEXT:    v_max_i16_e64 v1, s2, 0
-; SDAG-VI-NEXT:    v_max_i16_e64 v2, s3, 0
-; SDAG-VI-NEXT:    v_min_i16_sdwa v0, v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; SDAG-VI-NEXT:    v_min_i16_e32 v1, 0xff, v1
+; SDAG-VI-NEXT:    s_sext_i32_i16 s2, s2
+; SDAG-VI-NEXT:    s_sext_i32_i16 s3, s3
+; SDAG-VI-NEXT:    v_med3_i32 v1, s2, 0, v0
+; SDAG-VI-NEXT:    v_med3_i32 v0, s3, 0, v0
+; SDAG-VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SDAG-VI-NEXT:    v_or_b32_e32 v2, v1, v0
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -689,12 +690,12 @@ define amdgpu_kernel void @vec_smax_smin_sgpr(ptr addrspace(1) %out, <2 x i16> i
 ; SDAG-VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v0, 0xff
 ; SDAG-VI-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-VI-NEXT:    s_lshr_b32 s3, s2, 16
-; SDAG-VI-NEXT:    v_max_i16_e64 v1, s2, 0
-; SDAG-VI-NEXT:    v_max_i16_e64 v2, s3, 0
-; SDAG-VI-NEXT:    v_min_i16_e32 v1, 0xff, v1
-; SDAG-VI-NEXT:    v_min_i16_sdwa v0, v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; SDAG-VI-NEXT:    v_or_b32_e32 v2, v1, v0
+; SDAG-VI-NEXT:    s_ashr_i32 s3, s2, 16
+; SDAG-VI-NEXT:    s_sext_i32_i16 s2, s2
+; SDAG-VI-NEXT:    v_med3_i32 v1, s2, 0, v0
+; SDAG-VI-NEXT:    v_med3_i32 v0, s3, 0, v0
+; SDAG-VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SDAG-VI-NEXT:    v_or_b32_sdwa v2, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-VI-NEXT:    v_mov_b32_e32 v1, s1
 ; SDAG-VI-NEXT:    flat_store_dword v[0:1], v2

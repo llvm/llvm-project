@@ -89,13 +89,13 @@ For the generation, the default bucket size was used with a line size of 128.
 Some useful options are:
 
 ```
--block-size=<uint>  - heatmap bucket size in bytes (default 64)
 -line-size=<uint>   - number of entries per line (default 256).
-                      Use 128 if the heatmap doesn't fit screen horizontally.
+                      Use a smaller value (e.g. 128) if the heatmap doesn't fit
+                      the screen horizontally.
+-block-size=<initial size>[,<zoom-out size>,...] - heatmap bucket size,
+                      optionally followed by zoom-out sizes to produce coarse-
+                      grained heatmaps. Size can be specified in human-readable
+                      format with [kKmMgG][i][B] suffix. Default 64B, 4K, 256K.
 -max-address=<uint> - maximum address considered valid for heatmap (default 4GB)
 -print-mappings     - print mappings in the legend, between characters/blocks and text sections (default false)
--heatmap-zoom-out=<uint>,... - print zoomed out heatmaps with given block sizes,
-                      must be multiples of block-size in ascending order.
-                      Suggested values: 4096 (default page size), 16384 (16k page),
-                      1048576 (1MB for XL workloads).
 ```

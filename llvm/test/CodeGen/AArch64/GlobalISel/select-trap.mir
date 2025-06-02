@@ -25,7 +25,7 @@ body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: foo
     ; CHECK: BRK 1
-    ; CHECK: RET_ReallyLR
+    ; CHECK-NEXT: RET_ReallyLR
     G_TRAP
     RET_ReallyLR
 

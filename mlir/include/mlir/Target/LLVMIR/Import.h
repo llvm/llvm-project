@@ -46,10 +46,14 @@ class ModuleOp;
 /// registered an explicit intrinsic operation. Warning: passes that rely on
 /// matching explicit intrinsic operations may not work properly if this flag is
 /// enabled.
+/// The `importStructsAsLiterals` flag (default off) ensures that all structs
+/// are imported as literal structs, even when they are named in the LLVM
+/// module.
 OwningOpRef<ModuleOp> translateLLVMIRToModule(
     std::unique_ptr<llvm::Module> llvmModule, MLIRContext *context,
     bool emitExpensiveWarnings = true, bool dropDICompositeTypeElements = false,
-    bool loadAllDialects = true, bool preferUnregisteredIntrinsics = false);
+    bool loadAllDialects = true, bool preferUnregisteredIntrinsics = false,
+    bool importStructsAsLiterals = false);
 
 /// Translate the given LLVM data layout into an MLIR equivalent using the DLTI
 /// dialect.

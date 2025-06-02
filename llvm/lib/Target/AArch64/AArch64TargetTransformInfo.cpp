@@ -5072,8 +5072,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   case RecurKind::FMin:
   case RecurKind::FMax:
   case RecurKind::FMulAdd:
-  case RecurKind::IAnyOf:
-  case RecurKind::FAnyOf:
+  case RecurKind::AnyOf:
     return true;
   default:
     return false;
@@ -5479,11 +5478,13 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
     VectorType *NTp =
         VectorType::get(Tp->getScalarType(), LT.second.getVectorElementCount());
     InstructionCost Cost;
+    std::map<std::tuple<unsigned, unsigned, SmallVector<int>>, InstructionCost>
+        PreviousCosts;
     for (unsigned N = 0; N < NumVecs; N++) {
       SmallVector<int> NMask;
       // Split the existing mask into chunks of size LTNumElts. Track the source
       // sub-vectors to ensure the result has at most 2 inputs.
-      unsigned Source1, Source2;
+      unsigned Source1 = 0, Source2 = 0;
       unsigned NumSources = 0;
       for (unsigned E = 0; E < LTNumElts; E++) {
         int MaskElt = (N * LTNumElts + E < TpNumElts) ? Mask[N * LTNumElts + E]
@@ -5515,15 +5516,26 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         else
           NMask.push_back(MaskElt % LTNumElts);
       }
+      // Check if we have already generated this sub-shuffle, which means we
+      // will have already generated the output. For example a <16 x i32> splat
+      // will be the same sub-splat 4 times, which only needs to be generated
+      // once and reused.
+      auto Result =
+          PreviousCosts.insert({std::make_tuple(Source1, Source2, NMask), 0});
+      // Check if it was already in the map (already costed).
+      if (!Result.second)
+        continue;
       // If the sub-mask has at most 2 input sub-vectors then re-cost it using
       // getShuffleCost. If not then cost it using the worst case as the number
       // of element moves into a new vector.
-      if (NumSources <= 2)
-        Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
+      InstructionCost NCost =
+          NumSources <= 2
+              ? getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
-                               NTp, NMask, CostKind, 0, nullptr, Args, CxtI);
-      else
-        Cost += LTNumElts;
+                               NTp, NMask, CostKind, 0, nullptr, Args, CxtI)
+              : LTNumElts;
+      Result.first->second = NCost;
+      Cost += NCost;
     }
     return Cost;
   }

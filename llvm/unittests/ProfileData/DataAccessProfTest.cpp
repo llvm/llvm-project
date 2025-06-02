@@ -10,12 +10,11 @@
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
-#include "gmock/gmock-more-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
-namespace data_access_prof {
+namespace memprof {
 namespace {
 
 using ::llvm::StringRef;
@@ -178,5 +177,5 @@ TEST(MemProf, DataAccessProfile) {
   }
 }
 } // namespace
-} // namespace data_access_prof
+} // namespace memprof
 } // namespace llvm
