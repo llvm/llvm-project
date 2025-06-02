@@ -66,43 +66,9 @@ set(LIBSYCL_ABI_NAMESPACE "V${LIBSYCL_MAJOR_VERSION}" CACHE STRING
 # Setup Compiler Flags
 #===============================================================================
 
+# Starting CMake 3.26 this property as ON by default. With 3.20+ we still need to set it.
 if(MSVC)
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-  # Skip asynchronous C++ exceptions catching and assume "extern C" functions
-  # never throw C++ exceptions.
-  append("/EHsc" CMAKE_CXX_FLAGS)
-
-  # Add PDB debug information
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-  include(CheckLinkerFlag)
-  check_linker_flag(CXX "LINKER:/DEBUG" LINKER_SUPPORTS_DEBUG)
-  if(LINKER_SUPPORTS_DEBUG)
-    # sccache is not compatible with /Zi flag
-    # https://github.com/mozilla/sccache?tab=readme-ov-file#usage
-    if (CMAKE_CXX_COMPILER_LAUNCHER STREQUAL "sccache")
-      # CMake may put /Zi by default
-      if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-        string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-      elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-        string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-        string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
-      elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-        string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-        string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
-      endif()
-      append("/Z7" CMAKE_CXX_FLAGS)
-    else()
-      append("/Zi" CMAKE_CXX_FLAGS)
-    endif()
-    add_link_options("LINKER:/DEBUG")
-
-    # Enable unreferenced removal and ICF in Release mode.
-    check_linker_flag(CXX "LINKER:/OPT:REF,/OPT:ICF" LINKER_SUPPORTS_OPTS)
-    if (LINKER_SUPPORTS_OPTS AND uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
-      add_link_options("LINKER:/OPT:REF" "LINKER:/OPT:ICF")
-    endif()
-  endif()
 endif()
 
 # Enable all warnings by default
