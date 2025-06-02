@@ -237,33 +237,35 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     const Instruction &Instr, const Variable &Var, MCOperand &AssignedValue,
     const BitVector &ForbiddenRegs) const {
   const Operand &Op = Instr.getPrimaryOperand(Var);
+  const auto OperandType = Op.getExplicitOperandInfo().OperandType;
   // Introducing some illegal instructions for (15) a few opcodes
   // TODO: Look into immediate values to be opcode specific
-  switch (Op.getExplicitOperandInfo().OperandType) {
-  case MCOI::OperandType::OPERAND_UNKNOWN: {
-    unsigned Opcode = Instr.getOpcode();
-    switch (Opcode) {
-    case AArch64::MOVIv2s_msl:
-    case AArch64::MOVIv4s_msl:
-    case AArch64::MVNIv2s_msl:
-    case AArch64::MVNIv4s_msl:
-      AssignedValue = MCOperand::createImm(8); // or 16, as needed
-      break;
-    default:
-      AssignedValue = MCOperand::createImm(0);
-      break;
+  switch (OperandType) {
+    case MCOI::OperandType::OPERAND_UNKNOWN: {
+      unsigned Opcode = Instr.getOpcode();
+      switch (Opcode) {
+        case AArch64::MOVIv2s_msl:
+        case AArch64::MOVIv4s_msl:
+        case AArch64::MVNIv2s_msl:
+        case AArch64::MVNIv4s_msl:
+          AssignedValue = MCOperand::createImm(8); // or 16, as needed
+          return Error::success();
+        default:
+          AssignedValue = MCOperand::createImm(0);
+          return Error::success();
+      }
     }
-    return Error::success();
+    case MCOI::OperandType::OPERAND_PCREL:
+    case MCOI::OperandType::OPERAND_FIRST_TARGET:
+      AssignedValue = MCOperand::createImm(0);
+      return Error::success();
+    default:
+      break;
   }
-  case MCOI::OperandType::OPERAND_PCREL:
-    AssignedValue = MCOperand::createImm(0);
-    return Error::success();
-  case MCOI::OperandType::OPERAND_FIRST_TARGET:
-    AssignedValue = MCOperand::createImm(0);
-    return Error::success();
-  default:
-    llvm_unreachable("Unexpected operand type in randomizeTargetMCOperand");
-  }
+
+  return make_error<Failure>(
+      Twine("Unimplemented operand type: MCOI::OperandType:")
+          .concat(Twine(static_cast<int>(OperandType))));
 }
 
 } // namespace
