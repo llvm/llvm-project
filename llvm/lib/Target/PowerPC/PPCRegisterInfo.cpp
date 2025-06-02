@@ -1519,7 +1519,6 @@ void PPCRegisterInfo::lowerDMRSpilling(MachineBasicBlock::iterator II,
   // DMR is made up of WACC and WACC_HI, so DMXXEXTFDMR512 to spill
   // the corresponding 512 bits.
   const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
-
   auto spillDMR = [&](Register SrcReg, int BEIdx, int LEIdx) {
     auto spillWACC = [&](unsigned Opc, unsigned RegIdx, int IdxBE, int IdxLE) {
       Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
@@ -1563,7 +1562,6 @@ void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
   bool IsLittleEndian = Subtarget.isLittleEndian();
 
   const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
-
   auto restoreDMR = [&](Register DestReg, int BEIdx, int LEIdx) {
     auto restoreWACC = [&](unsigned Opc, unsigned RegIdx, int IdxBE,
                            int IdxLE) {
