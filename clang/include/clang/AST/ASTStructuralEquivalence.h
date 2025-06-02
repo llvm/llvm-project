@@ -43,6 +43,9 @@ struct StructuralEquivalenceContext {
   /// key: (from, to, IgnoreTemplateParmDepth)
   using NonEquivalentDeclSet = llvm::DenseSet<std::tuple<Decl *, Decl *, int>>;
 
+  /// The language options to use for making a structural equivalence check.
+  const LangOptions &LangOpts;
+
   /// AST contexts for which we are checking structural equivalence.
   ASTContext &FromCtx, &ToCtx;
 
@@ -76,15 +79,17 @@ struct StructuralEquivalenceContext {
   /// Whether to ignore comparing the depth of template param(TemplateTypeParm)
   bool IgnoreTemplateParmDepth;
 
-  StructuralEquivalenceContext(ASTContext &FromCtx, ASTContext &ToCtx,
+  StructuralEquivalenceContext(const LangOptions &LangOpts, ASTContext &FromCtx,
+                               ASTContext &ToCtx,
                                NonEquivalentDeclSet &NonEquivalentDecls,
                                StructuralEquivalenceKind EqKind,
                                bool StrictTypeSpelling = false,
                                bool Complain = true,
                                bool ErrorOnTagTypeMismatch = false,
                                bool IgnoreTemplateParmDepth = false)
-      : FromCtx(FromCtx), ToCtx(ToCtx), NonEquivalentDecls(NonEquivalentDecls),
-        EqKind(EqKind), StrictTypeSpelling(StrictTypeSpelling),
+      : LangOpts(LangOpts), FromCtx(FromCtx), ToCtx(ToCtx),
+        NonEquivalentDecls(NonEquivalentDecls), EqKind(EqKind),
+        StrictTypeSpelling(StrictTypeSpelling),
         ErrorOnTagTypeMismatch(ErrorOnTagTypeMismatch), Complain(Complain),
         IgnoreTemplateParmDepth(IgnoreTemplateParmDepth) {}
 
@@ -123,8 +128,7 @@ struct StructuralEquivalenceContext {
   ///
   /// FIXME: This is needed by ASTImporter and ASTStructureEquivalence. It
   /// probably makes more sense in some other common place then here.
-  static std::optional<unsigned>
-  findUntaggedStructOrUnionIndex(RecordDecl *Anon);
+  static UnsignedOrNone findUntaggedStructOrUnionIndex(RecordDecl *Anon);
 
   // If ErrorOnTagTypeMismatch is set, return the error, otherwise get the
   // relevant warning for the input error diagnostic.

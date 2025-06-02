@@ -417,22 +417,19 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   MachineFunctionProperties getSetProperties() const override {
     if (Impl.ClearVirtRegs) {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     return MachineFunctionProperties();
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
@@ -1196,10 +1193,9 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
   MachineFunction &MF = *MI.getMF();
 
   // Avoid repeating the error every time a register is used.
-  bool EmitError = !MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::FailedRegAlloc);
+  bool EmitError = !MF.getProperties().hasFailedRegAlloc();
   if (EmitError)
-    MF.getProperties().set(MachineFunctionProperties::Property::FailedRegAlloc);
+    MF.getProperties().setFailedRegAlloc();
 
   // If the allocation order was empty, all registers in the class were
   // probably reserved. Fall back to taking the first register in the class,
@@ -1733,9 +1729,8 @@ void RegAllocFastImpl::handleDebugValue(MachineInstr &MI) {
     // See if this virtual register has already been allocated to a physical
     // register or spilled to a stack slot.
     LiveRegMap::iterator LRI = findLiveVirtReg(Reg);
-    SmallVector<MachineOperand *> DbgOps;
-    for (MachineOperand &Op : MI.getDebugOperandsForReg(Reg))
-      DbgOps.push_back(&Op);
+    SmallVector<MachineOperand *> DbgOps(
+        llvm::make_pointer_range(MI.getDebugOperandsForReg(Reg)));
 
     if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
       // Update every use of Reg within MI.

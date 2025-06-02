@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InefficientStringConcatenationCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;

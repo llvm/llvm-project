@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace llvm {
 namespace orc {
@@ -34,10 +35,7 @@ StringRef ELFThreadBSSSectionName = ".tbss";
 StringRef ELFThreadDataSectionName = ".tdata";
 
 bool isMachOInitializerSection(StringRef QualifiedName) {
-  for (auto &InitSection : MachOInitSectionNames)
-    if (InitSection == QualifiedName)
-      return true;
-  return false;
+  return llvm::is_contained(MachOInitSectionNames, QualifiedName);
 }
 
 bool isELFInitializerSection(StringRef SecName) {

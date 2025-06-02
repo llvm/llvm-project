@@ -965,8 +965,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
         Targets.insert(&*Next);
     }
   } else {
-    for (const MachineBasicBlock *SB : B.successors())
-      Targets.insert(SB);
+    Targets.insert_range(B.successors());
   }
 
   for (const MachineBasicBlock *TB : Targets)

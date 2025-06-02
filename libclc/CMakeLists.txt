@@ -18,14 +18,14 @@ include( AddLibclc )
 
 include( GNUInstallDirs )
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-  amdgcn-amdhsa/lib/SOURCES;
-  amdgcn/lib/SOURCES;
-  amdgpu/lib/SOURCES;
-  clspv/lib/SOURCES;
-  generic/lib/SOURCES;
-  ptx-nvidiacl/lib/SOURCES;
-  r600/lib/SOURCES;
-  spirv/lib/SOURCES;
+  # OpenCL libraries
+  opencl/lib/amdgcn-amdhsa/SOURCES;
+  opencl/lib/amdgcn/SOURCES;
+  opencl/lib/clspv/SOURCES;
+  opencl/lib/generic/SOURCES;
+  opencl/lib/ptx-nvidiacl/SOURCES;
+  opencl/lib/r600/SOURCES;
+  opencl/lib/spirv/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
   clc/lib/amdgcn/SOURCES;
@@ -228,7 +228,7 @@ if( ENABLE_RUNTIME_SUBNORMAL )
   foreach( file IN ITEMS subnormal_use_default subnormal_disable )
     link_bc(
        TARGET ${file}
-       INPUTS ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/${file}.ll
+       INPUTS ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/${file}.ll
     )
     install(
       FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
@@ -238,7 +238,7 @@ if( ENABLE_RUNTIME_SUBNORMAL )
 endif()
 
 find_package( Python3 REQUIRED COMPONENTS Interpreter )
-file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/generic/lib/gen_convert.py script_loc )
+file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/utils/gen_convert.py script_loc )
 add_custom_command(
   OUTPUT convert.cl
   COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
@@ -261,6 +261,45 @@ if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS
   add_custom_target( generate-clspv-convert.cl DEPENDS clspv-convert.cl )
   set_target_properties( generate-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
 endif()
+
+set_source_files_properties(
+  # CLC builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_cos.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_divide.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_powr.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_recip.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_rsqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sin.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_sqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/generic/math/clc_native_tan.cl
+  # Target-specific CLC builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/r600/math/clc_native_rsqrt.cl
+  # OpenCL builtins
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_cos.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_divide.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_exp.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_exp10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_exp2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_log.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_log10.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_log2.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_powr.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_recip.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_rsqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_sin.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_sqrt.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_tan.cl
+  PROPERTIES COMPILE_OPTIONS -fapprox-func
+)
 
 enable_testing()
 
@@ -313,7 +352,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
   libclc_configure_lib_source(
     clc_lib_files
-    CLC_INTERNAL
     LIB_ROOT_DIR clc
     DIRS ${clc_dirs}
   )
@@ -327,13 +365,14 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     else()
       list( APPEND opencl_gen_files convert.cl )
       if ( NOT ENABLE_RUNTIME_SUBNORMAL )
-        list( APPEND opencl_lib_files generic/lib/subnormal_use_default.ll )
+        list( APPEND opencl_lib_files opencl/lib/generic/subnormal_use_default.ll )
       endif()
     endif()
   endif()
 
   libclc_configure_lib_source(
     opencl_lib_files
+    LIB_ROOT_DIR opencl
     DIRS ${opencl_dirs}
   )
 
@@ -372,17 +411,48 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
     file( MAKE_DIRECTORY ${LIBCLC_ARCH_OBJFILE_DIR} )
 
+    # Build for OpenCL 3.0 independently of the target or device.
+    list( APPEND build_flags -cl-std=CL3.0 )
+
     string( TOUPPER "CLC_${MACRO_ARCH}" CLC_TARGET_DEFINE )
 
     list( APPEND build_flags
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
+      # Error on undefined macros
+      -Werror=undef
     )
 
     if( NOT "${cpu}" STREQUAL "" )
       list( APPEND build_flags -mcpu=${cpu} )
     endif()
+
+    # Generic address space support.
+    # Note: when declaring builtins, we must consider that even if a target
+    # formally/nominally supports the generic address space, in practice that
+    # target may map it to the same target address space as another address
+    # space (often the private one). In such cases we must be careful not to
+    # multiply-define a builtin in a single target address space, as it would
+    # result in a mangling clash.
+    # For this reason we must consider the target support of the generic
+    # address space separately from the *implementation* decision about whether
+    # to declare certain builtins in that address space.
+    # Note: we assume that if there is no distinct generic address space, it
+    # maps to the private address space.
+    set ( private_addrspace_val 0 )
+    set ( generic_addrspace_val 0 )
+    if( ARCH STREQUAL amdgcn OR ARCH STREQUAL r600 OR ARCH STREQUAL amdgcn-amdhsa )
+      set ( private_addrspace_val 5 )
+    endif()
+    if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64
+        OR ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
+      set ( generic_addrspace_val 4 )
+    endif()
+    list( APPEND build_flags
+      -D__CLC_PRIVATE_ADDRSPACE_VAL=${private_addrspace_val}
+      -D__CLC_GENERIC_ADDRSPACE_VAL=${generic_addrspace_val}
+    )
 
     set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
 
@@ -398,9 +468,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     )
 
     list( APPEND build_flags
-      -I${CMAKE_CURRENT_SOURCE_DIR}/generic/include
-      # FIXME: Fix libclc to not require disabling this noisy warning
-      -Wno-bitwise-conditional-parentheses
+      -I${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
     )
 
     add_libclc_builtin_set(

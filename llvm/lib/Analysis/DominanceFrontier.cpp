@@ -36,9 +36,7 @@ INITIALIZE_PASS_END(DominanceFrontierWrapperPass, "domfrontier",
                 "Dominance Frontier Construction", true, true)
 
 DominanceFrontierWrapperPass::DominanceFrontierWrapperPass()
-    : FunctionPass(ID) {
-  initializeDominanceFrontierWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : FunctionPass(ID) {}
 
 void DominanceFrontierWrapperPass::releaseMemory() {
   DF.releaseMemory();

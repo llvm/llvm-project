@@ -1,5 +1,6 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,GFX942 %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,GFX950 %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx950 -verify-machineinstrs -run-pass post-RA-hazard-rec --schedmodel=0 %s -o - | FileCheck -check-prefixes=GCN,GFX950 %s
 
 # GCN-LABEL: name: valu_write_vgpr_sgemm_mfma_read
 # GCN:      V_MOV_B32

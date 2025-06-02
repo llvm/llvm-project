@@ -368,10 +368,10 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  virtual int
+  virtual llvm::Expected<int>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) {
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'", child_name);
   }
 
   virtual bool
@@ -500,10 +500,8 @@ public:
     return false;
   }
 
-  virtual void OptionParsingStartedForCommandObject(
-      StructuredData::GenericSP cmd_obj_sp) {
-    return;
-  }
+  virtual void
+  OptionParsingStartedForCommandObject(StructuredData::GenericSP cmd_obj_sp) {}
 
   virtual uint32_t
   GetFlagsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
@@ -522,7 +520,8 @@ public:
   LoadScriptingModule(const char *filename, const LoadScriptOptions &options,
                       lldb_private::Status &error,
                       StructuredData::ObjectSP *module_sp = nullptr,
-                      FileSpec extra_search_dir = {});
+                      FileSpec extra_search_dir = {},
+                      lldb::TargetSP loaded_into_target_sp = {});
 
   virtual bool IsReservedWord(const char *word) { return false; }
 

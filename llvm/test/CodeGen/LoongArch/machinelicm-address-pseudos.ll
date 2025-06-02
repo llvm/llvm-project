@@ -212,7 +212,7 @@ define void @test_la_tls_ld(i32 signext %n) {
 ; LA32-NEXT:  .LBB3_1: # %loop
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    move $a0, $s0
-; LA32-NEXT:    bl %plt(__tls_get_addr)
+; LA32-NEXT:    bl __tls_get_addr
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    addi.w $s1, $s1, 1
 ; LA32-NEXT:    blt $s1, $fp, .LBB3_1
@@ -388,7 +388,7 @@ define void @test_la_tls_gd(i32 signext %n) nounwind {
 ; LA32-NEXT:  .LBB5_1: # %loop
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; LA32-NEXT:    move $a0, $s0
-; LA32-NEXT:    bl %plt(__tls_get_addr)
+; LA32-NEXT:    bl __tls_get_addr
 ; LA32-NEXT:    ld.w $zero, $a0, 0
 ; LA32-NEXT:    addi.w $s1, $s1, 1
 ; LA32-NEXT:    blt $s1, $fp, .LBB5_1

@@ -38,7 +38,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 using namespace llvm;
 
 AnalysisKey LiveVariablesAnalysis::Key;
@@ -61,7 +60,7 @@ char LiveVariablesWrapperPass::ID = 0;
 char &llvm::LiveVariablesID = LiveVariablesWrapperPass::ID;
 INITIALIZE_PASS_BEGIN(LiveVariablesWrapperPass, "livevars",
                       "Live Variable Analysis", false, false)
-INITIALIZE_PASS_DEPENDENCY(UnreachableMachineBlockElim)
+INITIALIZE_PASS_DEPENDENCY(UnreachableMachineBlockElimLegacy)
 INITIALIZE_PASS_END(LiveVariablesWrapperPass, "livevars",
                     "Live Variable Analysis", false, false)
 
@@ -764,7 +763,7 @@ void LiveVariables::recomputeForSingleDefVirtReg(Register Reg) {
 void LiveVariables::replaceKillInstruction(Register Reg, MachineInstr &OldMI,
                                            MachineInstr &NewMI) {
   VarInfo &VI = getVarInfo(Reg);
-  std::replace(VI.Kills.begin(), VI.Kills.end(), &OldMI, &NewMI);
+  llvm::replace(VI.Kills, &OldMI, &NewMI);
 }
 
 /// removeVirtualRegistersKilled - Remove all killed info for the specified

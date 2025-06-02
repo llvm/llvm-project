@@ -633,7 +633,7 @@ bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
     // Look at the first element of the array to determine its type
     if (isa<ArrayType>(EltTy))
       EltTy = EltTy->getArrayElementType();
-  } else {
+  } else if (!isa<Constant>(LdVal)) {
     // FIXME: grubbing around uses is pretty ugly, but with no more
     // `getPointerElementType` there's not much else we can do.
     for (const auto *LdUser : LdVal->users()) {

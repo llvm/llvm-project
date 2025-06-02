@@ -10,28 +10,15 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATION_H
 
 #include "GDBRemoteCommunicationHistory.h"
-
-#include <condition_variable>
-#include <future>
-#include <mutex>
-#include <queue>
-#include <string>
-#include <vector>
-
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Host/HostThread.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/Listener.h"
-#include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
-#include "lldb/lldb-public.h"
+#include <mutex>
+#include <string>
 
 namespace lldb_private {
-namespace repro {
-class PacketRecorder;
-}
 namespace process_gdb_remote {
 
 enum GDBStoppointType {
@@ -162,8 +149,6 @@ public:
 
   void DumpHistory(Stream &strm);
 
-  void SetPacketRecorder(repro::PacketRecorder *recorder);
-
   static llvm::Error ConnectLocally(GDBRemoteCommunication &client,
                                     GDBRemoteCommunication &server);
 
@@ -213,21 +198,8 @@ protected:
   // on m_bytes.  The checksum was for the compressed packet.
   bool DecompressPacket();
 
-  Status StartListenThread(const char *hostname = "127.0.0.1",
-                           uint16_t port = 0);
-
-  bool JoinListenThread();
-
-  lldb::thread_result_t ListenThread();
-
 private:
-  // Promise used to grab the port number from listening thread
-  std::promise<uint16_t> m_port_promise;
-
-  HostThread m_listen_thread;
-  std::string m_listen_url;
-
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   CompressionType m_decompression_scratch_type = CompressionType::None;
   void *m_decompression_scratch = nullptr;
 #endif

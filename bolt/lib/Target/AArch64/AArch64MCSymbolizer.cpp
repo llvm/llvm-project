@@ -119,25 +119,38 @@ AArch64MCSymbolizer::adjustRelocation(const Relocation &Rel,
     // The ADRP+LDR sequence was converted into ADRP+ADD. We are looking at the
     // second instruction and have to use the relocation type for ADD.
     AdjustedRel.Type = ELF::R_AARCH64_ADD_ABS_LO12_NC;
-  } else {
-    // For instructions that reference GOT, ignore the referenced symbol and
-    // use value at the relocation site. FixRelaxationPass will look at
-    // instruction pairs and will perform necessary adjustments.
+    return AdjustedRel;
+  }
+
+  // ADRP is a special case since the linker can leave the instruction opcode
+  // intact and modify only the operand. We are doing our best to detect when
+  // such conversion has happened without looking at the next instruction.
+  //
+  // If we detect that a page referenced by the ADRP cannot belong to GOT, and
+  // that it matches the symbol from the relocation, then we can be certain
+  // that the linker converted the GOT reference into the local one. Otherwise,
+  // we leave the disambiguation resolution to FixRelaxationPass.
+  //
+  // Note that ADRP relaxation described above cannot happen for TLS relocation.
+  // Since TLS relocations may not even have a valid symbol (not supported by
+  // BOLT), we explicitly exclude them from the check.
+  if (BC.MIB->isADRP(Inst) && Rel.Addend == 0 && !Relocation::isTLS(Rel.Type)) {
     ErrorOr<uint64_t> SymbolValue = BC.getSymbolValue(*Rel.Symbol);
     assert(SymbolValue && "Symbol value should be set");
     const uint64_t SymbolPageAddr = *SymbolValue & ~0xfffULL;
 
-    // Check if defined symbol and GOT are on the same page. If they are not,
-    // disambiguate the operand.
-    if (BC.MIB->isADRP(Inst) && Rel.Addend == 0 &&
-        SymbolPageAddr == Rel.Value &&
+    if (SymbolPageAddr == Rel.Value &&
         !isPageAddressValidForGOT(SymbolPageAddr)) {
       AdjustedRel.Type = ELF::R_AARCH64_ADR_PREL_PG_HI21;
-    } else {
-      AdjustedRel.Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
-      AdjustedRel.Addend = Rel.Value;
+      return AdjustedRel;
     }
   }
+
+  // For instructions that reference GOT, ignore the referenced symbol and
+  // use value at the relocation site. FixRelaxationPass will look at
+  // instruction pairs and will perform necessary adjustments.
+  AdjustedRel.Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
+  AdjustedRel.Addend = Rel.Value;
 
   return AdjustedRel;
 }

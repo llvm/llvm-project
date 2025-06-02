@@ -9,11 +9,11 @@ define i64 @test(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: LV: Checking a loop in 'test'
 ; CHECK: Cost of 1 for VF 8: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%{{.+}}>, vp<%{{.+}}>
 ; CHECK: Cost for VF 8: 30
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 16: EMIT branch-on-count vp<%{{.+}}>, vp<%{{.+}}>
 ; CHECK: Cost for VF 16: 56
 ; CHECK: LV: Selecting VF: 16
@@ -44,11 +44,11 @@ define i64 @test_external_iv_user(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: LV: Checking a loop in 'test_external_iv_user'
 ; CHECK: Cost of 1 for VF 8: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost for VF 8: 30
 ; CHECK-NEXT: Cost of 1 for VF 16: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
-; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost for VF 16: 57
 ; CHECK: LV: Selecting VF: vscale x 2
 entry:

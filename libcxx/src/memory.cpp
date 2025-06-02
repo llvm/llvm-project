@@ -11,7 +11,9 @@
 #  define _LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS
 #endif
 
+#include <__functional/hash.h>
 #include <memory>
+#include <typeinfo>
 
 #if _LIBCPP_HAS_THREADS
 #  include <mutex>
@@ -24,6 +26,7 @@
 #include "include/atomic_support.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 bad_weak_ptr::~bad_weak_ptr() noexcept {}
 
@@ -145,4 +148,5 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space) {
   return r;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

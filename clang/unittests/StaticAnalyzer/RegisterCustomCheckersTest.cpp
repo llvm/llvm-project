@@ -418,8 +418,8 @@ TEST(RegisterDeps, DependencyInteraction) {
 
   // Weak dependencies are registered before strong dependencies. This is most
   // important for purely diagnostic checkers that are implemented as a part of
-  // purely modeling checkers, becuse the checker callback order will have to be
-  // established in between the modeling portion and the weak dependency.
+  // purely modeling checkers, because the checker callback order will have to
+  // be established in between the modeling portion and the weak dependency.
   EXPECT_TRUE(
       runCheckerOnCode<addWeakDepAndStrongDep>("void f() {int i;}", Diags));
   EXPECT_EQ(Diags, "test.RegistrationOrder: test.WeakDep\ntest."

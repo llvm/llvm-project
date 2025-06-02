@@ -1,10 +1,10 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9,GCN-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9 %s
 ; XUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,GCN-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,GCN-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9,GCN-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9 %s
 
 ; GCN-LABEL: {{^}}ds_consume_lds:
@@ -35,8 +35,7 @@ define amdgpu_kernel void @ds_consume_lds_max_offset(ptr addrspace(3) %lds, ptr 
 ; GCN-LABEL: {{^}}ds_consume_no_fold_offset_si:
 ; GCN: s_load_dword [[PTR:s[0-9]+]]
 
-; SI: s_add_i32 [[PTR]], [[PTR]], 16
-; SI: s_mov_b32 m0, [[PTR]]
+; SI: s_add_i32 m0, [[PTR]], 16
 ; SI: ds_consume [[RESULT:v[0-9]+]]{{$}}
 
 ; CIPLUS: s_mov_b32 m0, [[PTR]]
@@ -55,11 +54,8 @@ define amdgpu_kernel void @ds_consume_no_fold_offset_si(ptr addrspace(4) %lds.pt
 ; GCN-LABEL: {{^}}ds_consume_lds_over_max_offset:
 ; GCN: s_load_dword [[PTR:s[0-9]+]]
 
-; SI: s_bitset1_b32 [[PTR]], 16
-; CIPLUS-SDAG: s_add_i32 [[PTR]], [[PTR]], 0x10000
-; CIPLUS-GISEL: s_add_u32 [[PTR]], [[PTR]], 0x10000
-
-; GCN-SDAG: s_mov_b32 m0, [[PTR]]
+; SI: s_or_b32 m0, [[PTR]], 0x10000
+; CIPLUS: s_add_{{i|u}}32 m0, [[PTR]], 0x10000
 ; GCN: ds_consume [[RESULT:v[0-9]+]]{{$}}
 ; GCN-NOT: buffer_wbinvl1
 ; GCN: {{.*}}store{{.*}} [[RESULT]]

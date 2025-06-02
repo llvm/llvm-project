@@ -11,7 +11,6 @@
 #include "ToolChains/CommonArgs.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"

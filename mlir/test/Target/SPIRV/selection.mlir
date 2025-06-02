@@ -150,3 +150,56 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.Return
   }
 }
+
+// -----
+
+// Selection yielding values
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// CHECK-LABEL: @selection_yield
+  spirv.func @selection_yield(%cond: i1) -> () "None" {
+// CHECK-NEXT:   spirv.Constant 0
+// CHECK-NEXT:   spirv.Variable
+    %zero = spirv.Constant 0 : i32
+    %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+// CHECK:        spirv.Branch ^[[BB:.+]]
+// CHECK-NEXT: ^[[BB]]:
+// CHECK-NEXT:   {{%.*}} = spirv.mlir.selection -> i32
+    %yield = spirv.mlir.selection -> i32 {
+// CHECK-NEXT: spirv.BranchConditional %{{.*}} [5, 10], ^[[THEN:.+]], ^[[ELSE:.+]]
+      spirv.BranchConditional %cond [5, 10], ^then, ^else
+
+// CHECK-NEXT:   ^[[THEN]]:
+    ^then:
+// CHECK-NEXT:     spirv.Constant 1
+      %one = spirv.Constant 1: i32
+
+// CHECK-NEXT:     spirv.Branch ^[[MERGE:.+]]({{%.*}} : i32)
+      spirv.Branch ^merge(%one : i32)
+
+// CHECK-NEXT:   ^[[ELSE]]:
+    ^else:
+// CHECK-NEXT:     spirv.Constant 2
+      %two = spirv.Constant 2: i32
+// CHECK-NEXT:     spirv.Branch ^[[MERGE]]({{%.*}} : i32)
+      spirv.Branch ^merge(%two : i32)
+
+// CHECK-NEXT:   ^[[MERGE]]({{%.*}}: i32):
+    ^merge(%merged: i32):
+// CHECK-NEXT:     spirv.mlir.merge {{%.*}} : i32
+      spirv.mlir.merge %merged : i32
+    }
+
+// CHECK:        spirv.Store "Function" {{%.*}}, {{%.*}} : i32
+    spirv.Store "Function" %var, %yield : i32
+
+    spirv.Return
+  }
+
+  spirv.func @main() -> () "None" {
+    spirv.Return
+  }
+  spirv.EntryPoint "GLCompute" @main
+  spirv.ExecutionMode @main "LocalSize", 1, 1, 1
+}

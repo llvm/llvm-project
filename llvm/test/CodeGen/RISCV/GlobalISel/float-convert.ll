@@ -790,7 +790,7 @@ define zeroext i8 @fcvt_wu_s_i8(float %a) nounwind {
 ; CHECKIF-LABEL: fcvt_wu_s_i8:
 ; CHECKIF:       # %bb.0:
 ; CHECKIF-NEXT:    fcvt.wu.s a0, fa0, rtz
-; CHECKIF-NEXT:    andi a0, a0, 255
+; CHECKIF-NEXT:    zext.b a0, a0
 ; CHECKIF-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_s_i8:
@@ -798,7 +798,7 @@ define zeroext i8 @fcvt_wu_s_i8(float %a) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __fixunssfsi
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
@@ -808,7 +808,7 @@ define zeroext i8 @fcvt_wu_s_i8(float %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __fixunssfsi
-; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret

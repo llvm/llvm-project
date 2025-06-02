@@ -10,7 +10,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Analysis/CallGraph.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/SCCIterator.h"
 
 using namespace clang::ast_matchers;

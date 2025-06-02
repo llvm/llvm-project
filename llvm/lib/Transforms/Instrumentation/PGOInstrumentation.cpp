@@ -956,7 +956,7 @@ void FunctionInstrumenter::instrument() {
     // llvm.instrprof.cover(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                      i32 <index>)
     Builder.CreateIntrinsic(
-        Intrinsic::instrprof_cover, {},
+        Intrinsic::instrprof_cover,
         {NormalizedNamePtr, CFGHash, Builder.getInt32(1), Builder.getInt32(0)});
     return;
   }
@@ -1013,7 +1013,7 @@ void FunctionInstrumenter::instrument() {
     IRBuilder<> Builder(&EntryBB, EntryBB.getFirstInsertionPt());
     // llvm.instrprof.timestamp(i8* <name>, i64 <hash>, i32 <num-counters>,
     //                          i32 <index>)
-    Builder.CreateIntrinsic(Intrinsic::instrprof_timestamp, {},
+    Builder.CreateIntrinsic(Intrinsic::instrprof_timestamp,
                             {NormalizedNamePtr, CFGHash,
                              Builder.getInt32(NumCounters),
                              Builder.getInt32(I)});
@@ -1028,7 +1028,6 @@ void FunctionInstrumenter::instrument() {
     //                          i32 <index>)
     Builder.CreateIntrinsic(PGOBlockCoverage ? Intrinsic::instrprof_cover
                                              : Intrinsic::instrprof_increment,
-                            {},
                             {NormalizedNamePtr, CFGHash,
                              Builder.getInt32(NumCounters),
                              Builder.getInt32(I++)});
@@ -1772,7 +1771,7 @@ void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   auto *NormalizedFuncNameVarPtr =
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(
           FuncNameVar, PointerType::get(M->getContext(), 0));
-  Builder.CreateIntrinsic(Intrinsic::instrprof_increment_step, {},
+  Builder.CreateIntrinsic(Intrinsic::instrprof_increment_step,
                           {NormalizedFuncNameVarPtr, Builder.getInt64(FuncHash),
                            Builder.getInt32(TotalNumCtrs),
                            Builder.getInt32(*CurCtrIdx), Step});
@@ -2087,10 +2086,12 @@ static void verifyFuncBFI(PGOUseFunc &Func, LoopInfo &LI,
 
   unsigned BBNum = 0, BBMisMatchNum = 0, NonZeroBBNum = 0;
   for (auto &BBI : F) {
-    uint64_t CountValue = 0;
-    uint64_t BFICountValue = 0;
+    PGOUseBBInfo *BBInfo = Func.findBBInfo(&BBI);
+    if (!BBInfo)
+      continue;
 
-    CountValue = Func.getBBInfo(&BBI).Count.value_or(CountValue);
+    uint64_t CountValue = BBInfo->Count.value_or(CountValue);
+    uint64_t BFICountValue = 0;
 
     BBNum++;
     if (CountValue)

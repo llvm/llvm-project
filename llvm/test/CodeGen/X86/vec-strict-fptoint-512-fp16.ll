@@ -101,7 +101,8 @@ define <32 x i1> @strict_vector_fptosi_v32f16_to_v32i1(<32 x half> %a) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttph2w %zmm0, %zmm0
 ; CHECK-NEXT:    vpmovw2m %zmm0, %k0
-; CHECK-NEXT:    vpmovm2b %k0, %ymm0
+; CHECK-NEXT:    vpmovm2b %k0, %zmm0
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <32 x i1> @llvm.experimental.constrained.fptosi.v32i1.v32f16(<32 x half> %a,
                                               metadata !"fpexcept.strict") #0
@@ -114,7 +115,8 @@ define <32 x i1> @strict_vector_fptoui_v32f16_to_v32i1(<32 x half> %a) #0 {
 ; CHECK-NEXT:    vcvttph2w %zmm0, %zmm0
 ; CHECK-NEXT:    vpsllw $15, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmovw2m %zmm0, %k0
-; CHECK-NEXT:    vpmovm2b %k0, %ymm0
+; CHECK-NEXT:    vpmovm2b %k0, %zmm0
+; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ret = call <32 x i1> @llvm.experimental.constrained.fptoui.v32i1.v32f16(<32 x half> %a,
                                               metadata !"fpexcept.strict") #0

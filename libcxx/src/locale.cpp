@@ -49,6 +49,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 struct __libcpp_unique_locale {
   __libcpp_unique_locale(const char* nm) : __loc_(__locale::__newlocale(_LIBCPP_ALL_MASK, nm, 0)) {}
@@ -3957,7 +3958,7 @@ static bool is_narrow_non_breaking_space(const char* ptr) {
 }
 
 static bool is_non_breaking_space(const char* ptr) {
-  // https://www.fileformat.info/info/unicode/char/0a/index.htm
+  // https://www.fileformat.info/info/unicode/char/a0/index.htm
   return ptr[0] == '\xc2' && ptr[1] == '\xa0';
 }
 #endif // _LIBCPP_HAS_WIDE_CHARACTERS
@@ -5727,6 +5728,7 @@ template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char16_t,
 template class _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS codecvt_byname<char32_t, char8_t, mbstate_t>;
 #endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

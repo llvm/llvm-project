@@ -28,6 +28,7 @@
 #include "llvm/Support/BalancedPartitioning.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -56,6 +57,37 @@ class InstrProfSymtab;
 class Instruction;
 class MDNode;
 class Module;
+
+// A struct to define how the data stream should be patched. For Indexed
+// profiling, only uint64_t data type is needed.
+struct PatchItem {
+  uint64_t Pos;         // Where to patch.
+  ArrayRef<uint64_t> D; // An array of source data.
+};
+
+// A wrapper class to abstract writer stream with support of bytes
+// back patching.
+class ProfOStream {
+public:
+  ProfOStream(raw_fd_ostream &FD);
+  ProfOStream(raw_string_ostream &STR);
+
+  [[nodiscard]] uint64_t tell() const;
+  void write(uint64_t V);
+  void write32(uint32_t V);
+  void writeByte(uint8_t V);
+
+  // \c patch can only be called when all data is written and flushed.
+  // For raw_string_ostream, the patch is done on the target string
+  // directly and it won't be reflected in the stream's internal buffer.
+  void patch(ArrayRef<PatchItem> P);
+
+  // If \c OS is an instance of \c raw_fd_ostream, this field will be
+  // true. Otherwise, \c OS will be an raw_string_ostream.
+  bool IsFDOStream;
+  raw_ostream &OS;
+  support::endian::Writer LE;
+};
 
 enum InstrProfSectKind {
 #define INSTR_PROF_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix) Kind,
@@ -325,6 +357,13 @@ void createPGONameMetadata(GlobalObject &GO, StringRef PGOName);
 /// the duplicated profile variables for Comdat functions.
 bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
 
+/// \c NameStrings is a string composed of one or more possibly encoded
+/// sub-strings. The substrings are separated by `\01` (returned by
+/// InstrProf.h:getInstrProfNameSeparator). This method decodes the string and
+/// calls `NameCallback` for each substring.
+Error readAndDecodeStrings(StringRef NameStrings,
+                           std::function<Error(StringRef)> NameCallback);
+
 /// An enum describing the attributes of an instrumented profile.
 enum class InstrProfKind {
   Unknown = 0x0,
@@ -461,6 +500,11 @@ class InstrProfSymtab {
 public:
   using AddrHashMap = std::vector<std::pair<uint64_t, uint64_t>>;
 
+  // Returns the canonical name of the given PGOName. In a canonical name, all
+  // suffixes that begins with "." except ".__uniq." are stripped.
+  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
+  static StringRef getCanonicalName(StringRef PGOName);
+
 private:
   using AddrIntervalMap =
       IntervalMap<uint64_t, uint64_t, 4, IntervalMapHalfOpenInfo<uint64_t>>;
@@ -495,11 +539,6 @@ private:
   bool Sorted = false;
 
   static StringRef getExternalSymbol() { return "** External Symbol **"; }
-
-  // Returns the canonial name of the given PGOName. In a canonical name, all
-  // suffixes that begins with "." except ".__uniq." are stripped.
-  // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
-  static StringRef getCanonicalName(StringRef PGOName);
 
   // Add the function into the symbol table, by creating the following
   // map entries:

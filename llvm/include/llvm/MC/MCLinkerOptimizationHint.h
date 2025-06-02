@@ -108,7 +108,7 @@ class MCLOHDirective {
   /// Emit this directive in \p OutStream using the information available
   /// in the given \p ObjWriter and \p Layout to get the address of the
   /// arguments within the object file.
-  void emit_impl(const MCAssembler &Asm, raw_ostream &OutStream,
+  void emit_impl(raw_ostream &OutStream,
                  const MachObjectWriter &ObjWriter) const;
 
 public:

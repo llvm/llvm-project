@@ -71,6 +71,11 @@ public:
                                       EVT ConditionVT) const override {
     return ConditionVT.getSimpleVT();
   }
+
+  bool enforcePtrTypeCompatibility(MachineInstr &I, unsigned PtrOpIdx,
+                                   unsigned OpIdx) const;
+  bool insertLogicalCopyOnResult(MachineInstr &I,
+                                 SPIRVType *NewResultType) const;
 };
 } // namespace llvm
 

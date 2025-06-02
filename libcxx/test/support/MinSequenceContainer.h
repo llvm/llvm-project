@@ -14,7 +14,9 @@
 
 #include "test_iterators.h"
 
-template <class T, class Iterator = random_access_iterator<T*>, class ConstIterator = random_access_iterator<const T*>>
+template <class T,
+          class Iterator      = three_way_random_access_iterator<T*>,
+          class ConstIterator = three_way_random_access_iterator<const T*>>
 struct MinSequenceContainer {
   using value_type      = T;
   using difference_type = int;

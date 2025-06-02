@@ -103,8 +103,7 @@ std::string getAnyTargetForTesting() {
     StringRef TargetName(Target.getName());
     if (TargetName == "x86-64")
       TargetName = "x86_64";
-    if (llvm::TargetRegistry::lookupTarget(std::string(TargetName), Error) ==
-        &Target) {
+    if (llvm::TargetRegistry::lookupTarget(TargetName, Error) == &Target) {
       return std::string(TargetName);
     }
   }

@@ -43,7 +43,7 @@ void BoolExpr(int *I, float *F) {
 #pragma acc kernels loop if (*I < *F)
   for (unsigned i = 0; i < 5; ++i);
 
-  // expected-error@+1{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
+  // expected-error@+1{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
 #pragma acc data if (*I < *F)
   for (unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop if (*I < *F)

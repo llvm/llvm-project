@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "OpClass.h"
 #include "OpFormatGen.h"
 #include "OpGenHelpers.h"
@@ -1587,6 +1588,7 @@ void OpEmitter::genPropertiesSupport() {
 
   const char *propHashFmt = R"decl(
   auto hash_{0} = [] (const auto &propStorage) -> llvm::hash_code {
+    using ::llvm::hash_value;
     return {1};
   };
 )decl";
@@ -1604,6 +1606,7 @@ void OpEmitter::genPropertiesSupport() {
       }
     }
   }
+  hashMethod << "  using llvm::hash_value;\n";
   hashMethod << "  return llvm::hash_combine(";
   llvm::interleaveComma(
       attrOrProperties, hashMethod, [&](const ConstArgument &attrOrProp) {
@@ -1613,8 +1616,8 @@ void OpEmitter::genPropertiesSupport() {
             hashMethod << "\n    hash_" << namedProperty->name << "(prop."
                        << namedProperty->name << ")";
           } else {
-            hashMethod << "\n    ::llvm::hash_value(prop."
-                       << namedProperty->name << ")";
+            hashMethod << "\n    hash_value(prop." << namedProperty->name
+                       << ")";
           }
           return;
         }
@@ -1802,7 +1805,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
       writePropertiesMethod << tgfmt(writeBytecodeSegmentSizeLegacy, &fmtCtxt);
     }
     if (const auto *namedProperty =
-            attrOrProp.dyn_cast<const NamedProperty *>()) {
+            dyn_cast<const NamedProperty *>(attrOrProp)) {
       StringRef name = namedProperty->name;
       readPropertiesMethod << formatv(
           R"(
@@ -1828,7 +1831,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
           name, tgfmt(namedProperty->prop.getWriteToMlirBytecodeCall(), &fctx));
       continue;
     }
-    const auto *namedAttr = attrOrProp.dyn_cast<const AttributeMetadata *>();
+    const auto *namedAttr = dyn_cast<const AttributeMetadata *>(attrOrProp);
     StringRef name = namedAttr->attrName;
     if (namedAttr->isRequired) {
       readPropertiesMethod << formatv(R"(
@@ -2090,7 +2093,6 @@ void OpEmitter::genOptionalAttrRemovers() {
   // Generate methods for removing optional attributes, instead of having to
   // use the string interface. Enables better compile time verification.
   auto emitRemoveAttr = [&](StringRef name, bool useProperties) {
-    auto upperInitial = name.take_front().upper();
     auto *method = opClass.addInlineMethod("::mlir::Attribute",
                                            op.getRemoverName(name) + "Attr");
     if (!method)
@@ -2641,8 +2643,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
 
       // Avoid emitting "resultTypes.size() >= 0u" which is always true.
       if (!hasVariadicResult || numNonVariadicResults != 0)
-        body << "  "
-             << "assert(resultTypes.size() "
+        body << "  " << "assert(resultTypes.size() "
              << (hasVariadicResult ? ">=" : "==") << " "
              << numNonVariadicResults
              << "u && \"mismatched number of results\");\n";
@@ -4750,6 +4751,11 @@ static void emitOpClassDecls(const RecordKeeper &records,
   for (auto *def : defs) {
     Operator op(*def);
     NamespaceEmitter emitter(os, op.getCppNamespace());
+    std::string comments = tblgen::emitSummaryAndDescComments(
+        op.getSummary(), op.getDescription());
+    if (!comments.empty()) {
+      os << comments << "\n";
+    }
     os << "class " << op.getCppClassName() << ";\n";
   }
 

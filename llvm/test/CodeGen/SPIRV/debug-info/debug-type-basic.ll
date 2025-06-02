@@ -59,17 +59,17 @@
 ; CHECK-SPIRV-DAG: [[type_int8:%[0-9]+]] = OpTypeInt 8 0
 ; CHECK-SPIRV-DAG: [[type_int16:%[0-9]+]] = OpTypeInt 16 0
 ; CHECK-SPIRV-DAG: [[type_int32:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG: [[encoding_signedchar:%[0-9]+]] = OpConstant [[type_int32]] 5
-; CHECK-SPIRV-DAG: [[flag_zero:%[0-9]+]] = OpConstant [[type_int32]] 0
-; CHECK-SPIRV-DAG: [[encoding_float:%[0-9]+]] = OpConstant [[type_int32]] 3
-; CHECK-SPIRV-DAG: [[size_8bit:%[0-9]+]] = OpConstant [[type_int32]] 8
-; CHECK-SPIRV-DAG: [[encoding_boolean:%[0-9]+]] = OpConstant [[type_int32]] 2
-; CHECK-SPIRV-DAG: [[size_32bit:%[0-9]+]] = OpConstant [[type_int32]] 32
-; CHECK-SPIRV-DAG: [[encoding_signed:%[0-9]+]] = OpConstant [[type_int32]] 4
-; CHECK-SPIRV-DAG: [[size_16bit:%[0-9]+]] = OpConstant [[type_int32]] 16
-; CHECK-SPIRV-DAG: [[size_64bit:%[0-9]+]] = OpConstant [[type_int32]] 64
-; CHECK-SPIRV-DAG: [[encoding_unsigned:%[0-9]+]] = OpConstant [[type_int32]] 6
-; CHECK-SPIRV-DAG: [[encoding_unsignedchar:%[0-9]+]] = OpConstant [[type_int32]] 7
+; CHECK-SPIRV-DAG: [[encoding_signedchar:%[0-9]+]] = OpConstant [[type_int32]] 5{{$}}
+; CHECK-SPIRV-DAG: [[flag_zero:%[0-9]+]] = OpConstant [[type_int32]] 0{{$}}
+; CHECK-SPIRV-DAG: [[encoding_float:%[0-9]+]] = OpConstant [[type_int32]] 3{{$}}
+; CHECK-SPIRV-DAG: [[size_8bit:%[0-9]+]] = OpConstant [[type_int32]] 8{{$}}
+; CHECK-SPIRV-DAG: [[encoding_boolean:%[0-9]+]] = OpConstant [[type_int32]] 2{{$}}
+; CHECK-SPIRV-DAG: [[size_32bit:%[0-9]+]] = OpConstant [[type_int32]] 32{{$}}
+; CHECK-SPIRV-DAG: [[encoding_signed:%[0-9]+]] = OpConstant [[type_int32]] 4{{$}}
+; CHECK-SPIRV-DAG: [[size_16bit:%[0-9]+]] = OpConstant [[type_int32]] 16{{$}}
+; CHECK-SPIRV-DAG: [[size_64bit:%[0-9]+]] = OpConstant [[type_int32]] 64{{$}}
+; CHECK-SPIRV-DAG: [[encoding_unsigned:%[0-9]+]] = OpConstant [[type_int32]] 6{{$}}
+; CHECK-SPIRV-DAG: [[encoding_unsignedchar:%[0-9]+]] = OpConstant [[type_int32]] 7{{$}}
 ; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_bool]] [[size_8bit]] [[encoding_boolean]] [[flag_zero]]
 ; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_int]] [[size_32bit]] [[encoding_signed]] [[flag_zero]]
 ; CHECK-SPIRV-DAG: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugTypeBasic [[str_short]] [[size_16bit]] [[encoding_signed]] [[flag_zero]]

@@ -169,7 +169,7 @@ void test_update_dpp_int(global int* out, int arg1, int arg2)
 
 // CHECK-LABEL: @test_update_dpp_long
 // CHECK:      %0 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 %x, i64 %x, i32 257, i32 15, i32 15, i1 false)
-// CHECk-NEXT: store i64 %0,
+// CHECK-NEXT: store i64 %0,
 void test_update_dpp_long(long x, global long *p) {
   *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
 }

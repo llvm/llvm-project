@@ -162,14 +162,14 @@ define void @reduce_smax() {
 
 define void @reduce_fmin16() {
 ; CHECK-NOF16-LABEL: 'reduce_fmin16'
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 11 for: %V2f16 = call half @llvm.vector.reduce.fmin.v2f16(<2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 50 for: %V4f16 = call half @llvm.vector.reduce.fmin.v4f16(<4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 174 for: %V8f16 = call half @llvm.vector.reduce.fmin.v8f16(<8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 240 for: %V16f16 = call half @llvm.vector.reduce.fmin.v16f16(<16 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 11 for: %V2f16m = call half @llvm.vector.reduce.fminimum.v2f16(<2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 50 for: %V4f16m = call half @llvm.vector.reduce.fminimum.v4f16(<4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 174 for: %V8f16m = call half @llvm.vector.reduce.fminimum.v8f16(<8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 240 for: %V16f16m = call half @llvm.vector.reduce.fminimum.v16f16(<16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:8 Lat:11 SizeLat:11 for: %V2f16 = call half @llvm.vector.reduce.fmin.v2f16(<2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:32 Lat:50 SizeLat:50 for: %V4f16 = call half @llvm.vector.reduce.fmin.v4f16(<4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:174 CodeSize:111 Lat:174 SizeLat:174 for: %V8f16 = call half @llvm.vector.reduce.fmin.v8f16(<8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:156 Lat:240 SizeLat:240 for: %V16f16 = call half @llvm.vector.reduce.fmin.v16f16(<16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:8 Lat:11 SizeLat:11 for: %V2f16m = call half @llvm.vector.reduce.fminimum.v2f16(<2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:32 Lat:50 SizeLat:50 for: %V4f16m = call half @llvm.vector.reduce.fminimum.v4f16(<4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:174 CodeSize:111 Lat:174 SizeLat:174 for: %V8f16m = call half @llvm.vector.reduce.fminimum.v8f16(<8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:156 Lat:240 SizeLat:240 for: %V16f16m = call half @llvm.vector.reduce.fminimum.v16f16(<16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'reduce_fmin16'
@@ -196,14 +196,14 @@ define void @reduce_fmin16() {
 
 define void @reduce_fmax16() {
 ; CHECK-NOF16-LABEL: 'reduce_fmax16'
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 11 for: %V2f16 = call half @llvm.vector.reduce.fmax.v2f16(<2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 50 for: %V4f16 = call half @llvm.vector.reduce.fmax.v4f16(<4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 174 for: %V8f16 = call half @llvm.vector.reduce.fmax.v8f16(<8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 240 for: %V16f16 = call half @llvm.vector.reduce.fmax.v16f16(<16 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 11 for: %V2f16m = call half @llvm.vector.reduce.fmaximum.v2f16(<2 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 50 for: %V4f16m = call half @llvm.vector.reduce.fmaximum.v4f16(<4 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 174 for: %V8f16m = call half @llvm.vector.reduce.fmaximum.v8f16(<8 x half> undef)
-; CHECK-NOF16-NEXT:  Cost Model: Found costs of 240 for: %V16f16m = call half @llvm.vector.reduce.fmaximum.v16f16(<16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:8 Lat:11 SizeLat:11 for: %V2f16 = call half @llvm.vector.reduce.fmax.v2f16(<2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:32 Lat:50 SizeLat:50 for: %V4f16 = call half @llvm.vector.reduce.fmax.v4f16(<4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:174 CodeSize:111 Lat:174 SizeLat:174 for: %V8f16 = call half @llvm.vector.reduce.fmax.v8f16(<8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:156 Lat:240 SizeLat:240 for: %V16f16 = call half @llvm.vector.reduce.fmax.v16f16(<16 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:8 Lat:11 SizeLat:11 for: %V2f16m = call half @llvm.vector.reduce.fmaximum.v2f16(<2 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:50 CodeSize:32 Lat:50 SizeLat:50 for: %V4f16m = call half @llvm.vector.reduce.fmaximum.v4f16(<4 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:174 CodeSize:111 Lat:174 SizeLat:174 for: %V8f16m = call half @llvm.vector.reduce.fmaximum.v8f16(<8 x half> undef)
+; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:240 CodeSize:156 Lat:240 SizeLat:240 for: %V16f16m = call half @llvm.vector.reduce.fmaximum.v16f16(<16 x half> undef)
 ; CHECK-NOF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-F16-LABEL: 'reduce_fmax16'

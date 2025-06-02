@@ -63,6 +63,11 @@ LLVM_LIBC_FUNCTION(float16, tanpif16, (float16 x)) {
   if (LIBC_UNLIKELY(x_abs >= 0x6400)) {
     // Check for NaN or infinity values
     if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      // is inf
       if (x_abs == 0x7c00) {
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);

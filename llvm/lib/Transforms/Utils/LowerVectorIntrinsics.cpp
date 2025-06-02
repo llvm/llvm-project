@@ -8,8 +8,6 @@
 
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "lower-vector-intrinsics"
 

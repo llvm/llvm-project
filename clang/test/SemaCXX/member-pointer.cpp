@@ -355,3 +355,56 @@ namespace GH132401 {
   };
   template struct CallableHelper<void (QIODevice::*)()>;
 } // namespace GH132401
+
+namespace adl_dependent_class {
+  struct A {
+    template <class T> A(T);
+  };
+  struct C;
+  template <class T> void d(void (T::*)());
+  void f(A);
+  void g() { f(d<C>); }
+} // namespace adl_dependent_class
+
+namespace deduction1 {
+  template <typename> struct RunCallImpl;
+
+  template <typename Derived>
+  struct RunCallImpl<int (Derived::Info::*)(Derived *)> {};
+
+  template <typename d>
+  void RunCall(d) {
+    RunCallImpl<d>();
+  }
+
+  struct Filter {
+    virtual void MakeCall();
+    virtual ~Filter() = default;
+  };
+
+  template <typename Derived>
+  struct ImplementFilter : Filter {
+    void MakeCall() { RunCall(&Derived::Info::OnStuffHandler); }
+  };
+
+  struct FoobarFilter : ImplementFilter<FoobarFilter> {
+    struct Info {
+      int OnStuffHandler(FoobarFilter *);
+    };
+  };
+} // namespace deduction1
+
+namespace deduction2 {
+  template <typename> struct A;
+  template <typename T>
+  struct A<void (T::C::*)(int &, T *)> {};
+  template <typename T> void e(T) {
+    A<T> f;
+  }
+  struct S {
+    struct C {
+      void h(int &, S *);
+    };
+    void i() { e(&C::h); }
+  };
+} // namespace deduction2

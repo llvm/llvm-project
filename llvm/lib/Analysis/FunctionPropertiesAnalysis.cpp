@@ -21,12 +21,13 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include <deque>
 
 using namespace llvm;
 
 namespace llvm {
-cl::opt<bool> EnableDetailedFunctionProperties(
+LLVM_ABI cl::opt<bool> EnableDetailedFunctionProperties(
     "enable-detailed-function-properties", cl::Hidden, cl::init(false),
     cl::desc("Whether or not to compute detailed function properties."));
 
@@ -365,8 +366,7 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
   // finish().
   Successors.erase(&CallSiteBB);
 
-  for (const auto *BB : Successors)
-    LikelyToChangeBBs.insert(BB);
+  LikelyToChangeBBs.insert_range(Successors);
 
   // Commit the change. While some of the BBs accounted for above may play dual
   // role - e.g. caller's entry BB may be the same as the callsite BB - set

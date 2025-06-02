@@ -31,7 +31,7 @@ class AnalysisUsage;
 class LostDebugLocObserver;
 class MachineBasicBlock;
 class BlockFrequencyInfo;
-class GISelKnownBits;
+class GISelValueTracking;
 class MachineFunction;
 class MachineInstr;
 class MachineIRBuilder;
@@ -325,13 +325,14 @@ ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
 
 std::optional<SmallVector<APInt>>
 ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                 unsigned DstScalarSizeInBits, unsigned ExtOp,
                  const MachineRegisterInfo &MRI);
 
 /// Test if the given value is known to have exactly one bit set. This differs
 /// from computeKnownBits in that it doesn't necessarily determine which bit is
 /// set.
 bool isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
-                            GISelKnownBits *KnownBits = nullptr);
+                            GISelValueTracking *ValueTracking = nullptr);
 
 /// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
 /// this returns if \p Val can be assumed to never be a signaling NaN.
@@ -654,6 +655,9 @@ public:
 /// }
 /// provides low-level access.
 class GFConstant {
+  using VecTy = SmallVector<APFloat>;
+  using const_iterator = VecTy::const_iterator;
+
 public:
   enum class GFConstantKind { Scalar, FixedVector, ScalableVector };
 
@@ -670,6 +674,23 @@ public:
 
   /// Returns the kind of of this constant, e.g, Scalar.
   GFConstantKind getKind() const { return Kind; }
+
+  const_iterator begin() const {
+    assert(Kind != GFConstantKind::ScalableVector &&
+           "Expected fixed vector or scalar constant");
+    return Values.begin();
+  }
+
+  const_iterator end() const {
+    assert(Kind != GFConstantKind::ScalableVector &&
+           "Expected fixed vector or scalar constant");
+    return Values.end();
+  }
+
+  size_t size() const {
+    assert(Kind == GFConstantKind::FixedVector && "Expected fixed vector");
+    return Values.size();
+  }
 
   /// Returns the value, if this constant is a scalar.
   APFloat getScalarValue() const;

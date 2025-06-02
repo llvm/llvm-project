@@ -6,8 +6,8 @@ struct X0 {
   template<typename U> struct Inner0 {
     static const unsigned value = 0;
   };
-  
-  template<typename U> struct Inner0<U*> { 
+
+  template<typename U> struct Inner0<U*> {
     static const unsigned value = 1;
   };
 };
@@ -23,22 +23,22 @@ int array2[X0<int>::Inner0<const int*>::value == 2? 1 : -1];
 
 // Make sure we can provide out-of-line class template partial specializations
 // for member templates (and instantiate them).
-template<class T> struct A { 
+template<class T> struct A {
   struct C {
     template<class T2> struct B;
   };
 };
 
-// partial specialization of A<T>::C::B<T2> 
-template<class T> template<class T2> struct A<T>::C::B<T2*> { }; 
+// partial specialization of A<T>::C::B<T2>
+template<class T> template<class T2> struct A<T>::C::B<T2*> { };
 
 A<short>::C::B<int*> absip;
 
-// Check for conflicts during template instantiation. 
+// Check for conflicts during template instantiation.
 template<typename T, typename U>
 struct Outer {
   template<typename X, typename Y> struct Inner;
-  template<typename Y> struct Inner<T, Y> {}; // expected-note{{previous declaration of class template partial specialization 'Inner<int, type-parameter-0-0>' is here}}
+  template<typename Y> struct Inner<T, Y> {}; // expected-note{{previous declaration of class template partial specialization 'Inner<int, Y>' is here}}
   template<typename Y> struct Inner<U, Y> {}; // expected-error{{cannot be redeclared}}
 };
 
@@ -61,12 +61,12 @@ namespace rdar8651930 {
     struct Inner;
 
     template<typename T>
-    struct Inner<T, T> { 
+    struct Inner<T, T> {
       static const bool value = true;
     };
 
     template<typename T, typename U>
-    struct Inner { 
+    struct Inner {
       static const bool value = false;
     };
   };
@@ -80,7 +80,7 @@ namespace print_dependent_TemplateSpecializationType {
 template <class T, class U> struct Foo {
   template <unsigned long, class X, class Y> struct Bar;
   template <class Y> struct Bar<0, T, Y> {};
-  // expected-note-re@-1 {{previous declaration {{.*}} 'Bar<0, int, type-parameter-0-0>' is here}}
+  // expected-note-re@-1 {{previous declaration {{.*}} 'Bar<0, int, Y>' is here}}
   template <class Y> struct Bar<0, U, Y> {};
   // expected-error@-1 {{partial specialization 'Bar<0, int, Y>' cannot be redeclared}}
 };

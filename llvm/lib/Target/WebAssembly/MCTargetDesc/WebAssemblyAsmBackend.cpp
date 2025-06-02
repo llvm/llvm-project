@@ -36,13 +36,10 @@ public:
       : MCAsmBackend(llvm::endianness::little), Is64Bit(Is64Bit),
         IsEmscripten(IsEmscripten) {}
 
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsPCRel,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value, bool) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -51,7 +48,7 @@ public:
                     const MCSubtargetInfo *STI) const override;
 };
 
-const MCFixupKindInfo &
+MCFixupKindInfo
 WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[WebAssembly::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
@@ -81,13 +78,11 @@ bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-void WebAssemblyAsmBackend::applyFixup(const MCAssembler &Asm,
-                                       const MCFixup &Fixup,
+void WebAssemblyAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                        const MCValue &Target,
                                        MutableArrayRef<char> Data,
-                                       uint64_t Value, bool IsPCRel,
-                                       const MCSubtargetInfo *STI) const {
-  const MCFixupKindInfo &Info = getFixupKindInfo(Fixup.getKind());
+                                       uint64_t Value, bool) {
+  MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   assert(Info.Flags == 0 && "WebAssembly does not use MCFixupKindInfo flags");
 
   unsigned NumBytes = alignTo(Info.TargetSize, 8) / 8;

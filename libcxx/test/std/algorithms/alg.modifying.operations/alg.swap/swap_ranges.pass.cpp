@@ -35,12 +35,31 @@ struct TestPtr {
   struct TestImpl {
     template <class Iter2>
     TEST_CONSTEXPR_CXX20 void operator()() {
-      int a[] = {1, 2, 3};
-      int b[] = {4, 5, 6};
-      Iter2 r = std::swap_ranges(Iter1(a), Iter1(a + 3), Iter2(b));
-      assert(base(r) == b + 3);
-      assert(a[0] == 4 && a[1] == 5 && a[2] == 6);
-      assert(b[0] == 1 && b[1] == 2 && b[2] == 3);
+      { // Basic test case: swapping three elements between two arrays
+        int a[] = {1, 2, 3};
+        int b[] = {4, 5, 6};
+        Iter2 r = std::swap_ranges(Iter1(a), Iter1(a + 3), Iter2(b));
+        assert(base(r) == b + 3);
+        assert(a[0] == 4 && a[1] == 5 && a[2] == 6);
+        assert(b[0] == 1 && b[1] == 2 && b[2] == 3);
+      }
+      { // Large-scale test: swapping 100 elements between two different containers
+        const int N = 100;
+        std::array<int, N> a;
+        std::vector<int> b(N + 2, 42);
+        b.front() = 1;
+        b.back()  = -1;
+        for (int i = 0; i < N; ++i)
+          a[i] = i * i + 1;
+        Iter2 r = std::swap_ranges(Iter1(a.data()), Iter1(a.data() + N), Iter2(b.data() + 1));
+        assert(base(r) == b.data() + N + 1);
+        assert(b.front() == 1); // Ensure that the unswapped portion remains unchanged
+        assert(b.back() == -1);
+        for (int i = 0; i < N; ++i) {
+          assert(a[i] == 42);
+          assert(b[i + 1] == i * i + 1);
+        }
+      }
     }
   };
 };

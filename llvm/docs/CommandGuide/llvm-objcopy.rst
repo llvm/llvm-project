@@ -606,7 +606,7 @@ options. For GNU :program:`objcopy` compatibility, the values are all bfdnames.
 - `elf64-loongarch`
 - `elf64-s390`
 
-The following formats are suppoprted by :program:`llvm-objcopy` for the
+The following formats are supported by :program:`llvm-objcopy` for the
 :option:`--output-target` only:
 
 - `srec`

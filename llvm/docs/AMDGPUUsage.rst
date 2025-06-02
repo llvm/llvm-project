@@ -394,12 +394,12 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
 
      **GCN GFX10.1 (RDNA 1)** [AMD-GCN-GFX10-RDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5700
-                                                    - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5700 XT
-                                                    - xnack             scratch       - *pal-amdpal*  - Radeon Pro 5600 XT
-                                                                                                      - Radeon Pro 5600M
+     ``gfx1010``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon Pro 5600 XT
+                                                    - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5600M
+                                                    - xnack             scratch       - *pal-amdpal*  - Radeon RX 5700
+                                                                                                      - Radeon RX 5700 XT
      ``gfx1011``                 ``amdgcn``   dGPU  - cumode                          - *rocm-amdhsa* - Radeon Pro V520
-                                                    - wavefrontsize64 - Absolute      - *pal-amdhsa*
+                                                    - wavefrontsize64 - Absolute      - *pal-amdhsa*  - Radeon Pro 5600M
                                                     - xnack             flat          - *pal-amdpal*
                                                                         scratch
      ``gfx1012``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5500
@@ -515,6 +515,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     **GCN GFX12 (RDNA 4)** [AMD-GCN-GFX12-RDNA4]_
+     -----------------------------------------------------------------------------------------------------------------------
      ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -619,18 +621,18 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 SALU floating point instructions
                                                                                                 are not available on:
 
-                                                                                                - ``gfx1150``
-                                                                                                - ``gfx1151``
-                                                                                                - ``gfx1152``
-                                                                                                - ``gfx1153``
+                                                                                                - ``gfx1100``
+                                                                                                - ``gfx1101``
+                                                                                                - ``gfx1102``
+                                                                                                - ``gfx1103``
 
                                                                                                 SGPRs are not supported for src1
                                                                                                 in dpp instructions for:
 
-                                                                                                - ``gfx1150``
-                                                                                                - ``gfx1151``
-                                                                                                - ``gfx1152``
-                                                                                                - ``gfx1153``
+                                                                                                - ``gfx1100``
+                                                                                                - ``gfx1101``
+                                                                                                - ``gfx1102``
+                                                                                                - ``gfx1103``
 
 
      ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
@@ -1214,7 +1216,15 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
 
   :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specifies state.
-
+  llvm.amdgcn.load.to.lds.p<1/7>                   Loads values from global memory (either in the form of a global
+                                                   a raw fat buffer pointer) to LDS. The size of the data copied can be 1, 2,
+                                                   or 4 bytes (and gfx950 also allows 12 or 16 bytes). The LDS pointer
+                                                   argument should be wavefront-uniform; the global pointer need not be.
+                                                   The LDS pointer is implicitly offset by 4 * lane_id bytes for sies <= 4 bytes
+                                                   and 16 * lane_id bytes for larger sizes. This lowers to `global_load_lds`,
+                                                   `buffer_load_* ... lds`, or `global_load__* ... lds` depending on address
+                                                   space and architecture. `amdgcn.global.load.lds` has the same semantics as
+                                                   `amdgcn.load.to.lds.p1`.
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
                                                    the lowest active lane of the input operand. Currently implemented
                                                    for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
@@ -1344,13 +1354,13 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0020: VMEM read instructions may be scheduled across sched_barrier.
                                                    - 0x0040: VMEM write instructions may be scheduled across sched_barrier.
                                                    - 0x0080: All DS instructions may be scheduled across sched_barrier.
-                                                   - 0x0100: All DS read instructions may be scheduled accoss sched_barrier.
+                                                   - 0x0100: All DS read instructions may be scheduled across sched_barrier.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
                                                    - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
 
   llvm.amdgcn.sched.group.barrier                  Creates schedule groups with specific properties to create custom scheduling
                                                    pipelines. The ordering between groups is enforced by the instruction scheduler.
-                                                   The intrinsic applies to the code that preceeds the intrinsic. The intrinsic
+                                                   The intrinsic applies to the code that precedes the intrinsic. The intrinsic
                                                    takes three values that control the behavior of the schedule groups.
 
                                                    - Mask : Classify instruction groups using the llvm.amdgcn.sched_barrier mask values.
@@ -1373,7 +1383,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    |  ``__builtin_amdgcn_sched_group_barrier(8, 5, 0)``
 
   llvm.amdgcn.iglp.opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
-                                                   implements predefined intruction scheduling orderings. The intrinsic applies to the
+                                                   implements predefined instruction scheduling orderings. The intrinsic applies to the
                                                    surrounding scheduling region. The intrinsic takes a value that specifies the
                                                    strategy.  The compiler implements two strategies.
 
@@ -1667,7 +1677,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-git-ptr-high"                            The hard-wired high half of the address of the global information table
                                                       for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
-                                                      current hardware only allows a 16 bit value.
+                                                      current hardware only allows a 16-bit value.
 
      "amdgpu-32bit-address-high-bits"                 Assumed high 32-bits for 32-bit address spaces which are really truncated
                                                       64-bit addresses (i.e., addrspace(6))
@@ -4545,7 +4555,7 @@ same *vendor-name*.
 Code Object V4 Metadata
 +++++++++++++++++++++++
 
-. warning::
+.. warning::
   Code object V4 is not the default code object version emitted by this version
   of LLVM.
 
@@ -4882,7 +4892,7 @@ apertures address can be used. For GFX7-GFX8 these are available in the
 :ref:`amdgpu-amdhsa-hsa-aql-queue` the address of which can be obtained with
 Queue Ptr SGPR (see :ref:`amdgpu-amdhsa-initial-kernel-execution-state`). For
 GFX9-GFX11 the aperture base addresses are directly available as inline constant
-registers ``SRC_SHARED_BASE/LIMIT`` and ``SRC_PRIVATE_BASE/LIMIT``. In 64 bit
+registers ``SRC_SHARED_BASE/LIMIT`` and ``SRC_PRIVATE_BASE/LIMIT``. In 64-bit
 address mode the aperture sizes are 2^32 bytes and the base is aligned to 2^32
 which makes it easier to convert from flat to segment or segment to flat.
 
@@ -17618,7 +17628,7 @@ combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX900-GFX904-VEGA]_, [AMD-GCN-GFX906-VEGA7NM]_,
 [AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX90A-CDNA2]_,
 [AMD-GCN-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
-[AMD-GCN-GFX11-RDNA3]_ and [AMD-GCN-GFX11-RDNA3.5]_.
+[AMD-GCN-GFX11-RDNA3]_, [AMD-GCN-GFX11-RDNA3.5]_ and [AMD-GCN-GFX12-RDNA4]_.
 
 Operands
 ~~~~~~~~
@@ -18420,6 +18430,7 @@ Additional Documentation
 .. [AMD-GCN-GFX10-RDNA2] `AMD RDNA 2 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3] `AMD RDNA 3 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA3_Shader_ISA_December2022.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3.5] `AMD RDNA 3.5 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna35_instruction_set_architecture.pdf>`__
+.. [AMD-GCN-GFX12-RDNA4] `AMD RDNA 4 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna4-instruction-set-architecture.pdf>`__
 .. [AMD-RADEON-HD-2000-3000] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-4000] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__

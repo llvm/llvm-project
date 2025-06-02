@@ -435,6 +435,57 @@ def RoundingModeOpInterface : OpInterface<"RoundingModeOpInterface"> {
   ];
 }
 
+def OneToOneIntrinsicOpInterface : OpInterface<"OneToOneIntrinsicOpInterface"> {
+  let description = [{
+    An interface for operations modelling LLVM intrinsics suitable for
+    1-to-1 conversion.
+
+    An op implementing this interface can be directly replaced by a call
+    to a matching intrinsic function.
+    The op must ensure that the combinations of its arguments and results
+    have valid intrinsic counterparts.
+
+    For example, an operation supporting different inputs:
+    ```mlir
+      %res_v8 = intr.op %value_v8 : vector<8xf32>
+      %res_v16 = intr.op %value_v16 : vector<16xf32>
+    ```
+    can be converted to the following intrinsic calls:
+    ```mlir
+      %res_v8 = llvm.call_intrinsic "llvm.x86.op.intr.256"(%value_v8)
+      %res_v16 = llvm.call_intrinsic "llvm.x86.op.intr.512"(%value_v16)
+    ```
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns mangled LLVM intrinsic function name matching the operation
+        variant.
+      }],
+      /*retType=*/"std::string",
+      /*methodName=*/"getIntrinsicName"
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns operands for a corresponding LLVM intrinsic.
+
+        Additional operations may be created to facilitate mapping
+        between the source operands and the target intrinsic.
+      }],
+      /*retType=*/"SmallVector<Value>",
+      /*methodName=*/"getIntrinsicOperands",
+      /*args=*/(ins "::mlir::ArrayRef<Value>":$operands,
+                    "const ::mlir::LLVMTypeConverter &":$typeConverter,
+                    "::mlir::RewriterBase &":$rewriter),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return SmallVector<Value>(operands);"
+    >,
+  ];
+}
+
 //===----------------------------------------------------------------------===//
 // LLVM dialect type interfaces.
 //===----------------------------------------------------------------------===//

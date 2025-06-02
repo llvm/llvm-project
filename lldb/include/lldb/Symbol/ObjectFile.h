@@ -319,7 +319,7 @@ public:
   ///
   /// \return
   ///     The symbol table for this object file.
-  Symtab *GetSymtab();
+  Symtab *GetSymtab(bool can_create = true);
 
   /// Parse the symbol table into the provides symbol table object.
   ///
@@ -748,6 +748,7 @@ public:
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);
+  std::string GetObjectName() const;
 
 protected:
   // Member variables.

@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/RWMutex.h"
 #include <atomic>
 #include <optional>
@@ -328,7 +329,8 @@ protected:
   DWARFDebugInfoEntry::collection m_die_array;
   mutable llvm::sys::RWMutex m_die_array_mutex;
   // It is used for tracking of ScopedExtractDIEs instances.
-  mutable llvm::sys::RWMutex m_die_array_scoped_mutex;
+  mutable llvm::sys::Mutex m_die_array_scoped_mutex;
+  mutable int m_die_array_scoped_count = 0;
   // ScopedExtractDIEs instances should not call ClearDIEsRWLocked()
   // as someone called ExtractDIEsIfNeeded().
   std::atomic<bool> m_cancel_scopes;

@@ -134,9 +134,7 @@ public:
   }
   static bool classof(const ConstantExpr *CE) {
     return CE->getOpcode() == Instruction::Add ||
-           CE->getOpcode() == Instruction::Sub ||
-           CE->getOpcode() == Instruction::Mul ||
-           CE->getOpcode() == Instruction::Shl;
+           CE->getOpcode() == Instruction::Sub;
   }
   static bool classof(const Value *V) {
     return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
@@ -150,7 +148,7 @@ struct OperandTraits<OverflowingBinaryOperator>
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(OverflowingBinaryOperator, Value)
 
-/// A udiv or sdiv instruction, which can be marked as "exact",
+/// A udiv, sdiv, lshr, or ashr instruction, which can be marked as "exact",
 /// indicating that no bits are destroyed.
 class PossiblyExactOperator : public Operator {
 public:
@@ -182,15 +180,11 @@ public:
            OpC == Instruction::LShr;
   }
 
-  static bool classof(const ConstantExpr *CE) {
-    return isPossiblyExactOpcode(CE->getOpcode());
-  }
   static bool classof(const Instruction *I) {
     return isPossiblyExactOpcode(I->getOpcode());
   }
   static bool classof(const Value *V) {
-    return (isa<Instruction>(V) && classof(cast<Instruction>(V))) ||
-           (isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V)));
+    return (isa<Instruction>(V) && classof(cast<Instruction>(V)));
   }
 };
 

@@ -53,8 +53,8 @@ public:
 
   MCContext &getContext() { return getParser().getContext(); }
 
-  MCAsmLexer &getLexer() { return getParser().getLexer(); }
-  const MCAsmLexer &getLexer() const {
+  AsmLexer &getLexer() { return getParser().getLexer(); }
+  const AsmLexer &getLexer() const {
     return const_cast<MCAsmParserExtension *>(this)->getLexer();
   }
 
@@ -99,6 +99,8 @@ public:
   }
 
   bool parseDirectiveCGProfile(StringRef, SMLoc);
+
+  bool maybeParseUniqueID(int64_t &UniqueID);
 
   bool check(bool P, const Twine &Msg) {
     return getParser().check(P, Msg);

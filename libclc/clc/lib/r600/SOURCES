@@ -1,1 +1,4 @@
+math/clc_fmax.cl
+math/clc_fmin.cl
+math/clc_native_rsqrt.cl
 math/clc_rsqrt_override.cl

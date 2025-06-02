@@ -34,7 +34,7 @@
 ; ONE-NEXT:                                    {File} 'test.cpp'
 ; ONE-NEXT:                                    {Public} 'foo' [0x0000000000:0x0000000046]
 ; ONE-NEXT: [0x0000000000][002]                {TypeAlias} 'INTPTR' -> [0x0000001001]'* const int'
-; ONE-NEXT: [0x0000000030][002]                {BaseType} 'bool'
+; ONE-NEXT: [0x0000000030][002]                {BaseType} 'bool' [Size = 1]
 ; ONE-NEXT: [0x0000000000][002]                {Function} extern not_inlined 'foo' -> [0x0000000074]'int'
 ; ONE-NEXT: [0x0000000000][003]                  {Range} Lines 2:9 [0x0000000000:0x0000000046]
 ; ONE-NEXT: [0x0000000000][003]                  {Linkage}  0x1 '?foo@@YAHPEBHI_N@Z'
@@ -80,8 +80,8 @@
 ; ONE-NEXT: [0x000000003e][003]                  {Code} 'movl	0x1c(%rsp), %eax'
 ; ONE-NEXT: [0x0000000042][003]                  {Code} 'addq	$0x20, %rsp'
 ; ONE-NEXT: [0x0000000046][003]                  {Code} 'retq'
-; ONE-NEXT: [0x0000000074][002]                {BaseType} 'int'
-; ONE-NEXT: [0x0000000075][002]                {BaseType} 'unsigned'
+; ONE-NEXT: [0x0000000074][002]                {BaseType} 'int' [Size = 4]
+; ONE-NEXT: [0x0000000075][002]                {BaseType} 'unsigned' [Size = 4]
 ; ONE-EMPTY:
 ; ONE-NEXT: -----------------------------
 ; ONE-NEXT: Element      Total    Printed

@@ -177,6 +177,84 @@ func.func @trigonometrics(%arg0: f32) {
 
 // -----
 
+// CHECK-LABEL: func @inverse_trigonometrics
+// CHECK-SAME: [[ARG0:%.+]]: f32
+func.func @inverse_trigonometrics(%arg0: f32) {
+  // CHECK: llvm.intr.asin([[ARG0]]) : (f32) -> f32
+  %0 = math.asin %arg0 : f32
+
+  // CHECK: llvm.intr.acos([[ARG0]]) : (f32) -> f32
+  %1 = math.acos %arg0 : f32
+
+  // CHECK: llvm.intr.atan([[ARG0]]) : (f32) -> f32
+  %2 = math.atan %arg0 : f32
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @atan2
+// CHECK-SAME: [[ARG0:%.+]]: f32, [[ARG1:%.+]]: f32
+func.func @atan2(%arg0: f32, %arg1: f32) {
+  // CHECK: llvm.intr.atan2([[ARG0]], [[ARG1]]) : (f32, f32) -> f32
+  %0 = math.atan2 %arg0, %arg1 : f32
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @inverse_trigonometrics_vector
+// CHECK-SAME: [[ARG0:%.+]]: vector<4xf32>
+func.func @inverse_trigonometrics_vector(%arg0: vector<4xf32>) {
+  // CHECK: llvm.intr.asin([[ARG0]]) : (vector<4xf32>) -> vector<4xf32>
+  %0 = math.asin %arg0 : vector<4xf32>
+
+  // CHECK: llvm.intr.acos([[ARG0]]) : (vector<4xf32>) -> vector<4xf32>
+  %1 = math.acos %arg0 : vector<4xf32>
+
+  // CHECK: llvm.intr.atan([[ARG0]]) : (vector<4xf32>) -> vector<4xf32>
+  %2 = math.atan %arg0 : vector<4xf32>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @atan2_vector
+// CHECK-SAME: [[ARG0:%.+]]: vector<4xf32>, [[ARG1:%.+]]: vector<4xf32>
+func.func @atan2_vector(%arg0: vector<4xf32>, %arg1: vector<4xf32>) {
+  // CHECK: llvm.intr.atan2([[ARG0]], [[ARG1]]) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %0 = math.atan2 %arg0, %arg1 : vector<4xf32>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @inverse_trigonometrics_fmf
+// CHECK-SAME: [[ARG0:%.+]]: f32
+func.func @inverse_trigonometrics_fmf(%arg0: f32) {
+  // CHECK: llvm.intr.asin([[ARG0]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+  %0 = math.asin %arg0 fastmath<fast> : f32
+
+  // CHECK: llvm.intr.acos([[ARG0]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+  %1 = math.acos %arg0 fastmath<fast> : f32
+
+  // CHECK: llvm.intr.atan([[ARG0]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> f32
+  %2 = math.atan %arg0 fastmath<fast> : f32
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @atan2_fmf
+// CHECK-SAME: [[ARG0:%.+]]: f32, [[ARG1:%.+]]: f32
+func.func @atan2_fmf(%arg0: f32, %arg1: f32) {
+  // CHECK: llvm.intr.atan2([[ARG0]], [[ARG1]]) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+  %0 = math.atan2 %arg0, %arg1 fastmath<fast> : f32
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @hyperbolics
 // CHECK-SAME: [[ARG0:%.+]]: f32
 func.func @hyperbolics(%arg0: f32) {

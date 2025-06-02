@@ -3,7 +3,7 @@
 ; RUN: FileCheck -input-file %t --check-prefix=PROFIT-CACHE %s
 
 ; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 \
-; RUN:     -pass-remarks-output=%t -disable-output -loop-interchange-prioritize-vectorization=1
+; RUN:     -pass-remarks-output=%t -disable-output -loop-interchange-profitabilities=vectorize,cache,instorder
 ; RUN: FileCheck -input-file %t --check-prefix=PROFIT-VEC %s
 
 @A = dso_local global [256 x [256 x float]] zeroinitializer

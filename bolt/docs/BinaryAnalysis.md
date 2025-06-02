@@ -180,12 +180,6 @@ The following are current known cases of false negatives:
    [prototype branch](
    https://github.com/llvm/llvm-project/compare/main...kbeyls:llvm-project:bolt-gadget-scanner-prototype).
 
-BOLT cannot currently handle functions with `cfi_negate_ra_state` correctly,
-i.e. any binaries built with `-mbranch-protection=pac-ret`. The scanner is meant
-to be used on specifically such binaries, so this is a major limitation! Work is
-going on in PR [#120064](https://github.com/llvm/llvm-project/pull/120064) to
-fix this.
-
 ## How to add your own binary analysis
 
 _TODO: this section needs to be written. Ideally, we should have a simple

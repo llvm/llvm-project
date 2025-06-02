@@ -144,7 +144,6 @@ public:
     case NestedNameSpecifier::Global:
       return true;
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
     case NestedNameSpecifier::Super:
     case NestedNameSpecifier::Identifier:
       return false;
@@ -319,6 +318,11 @@ public:
             VTSD->getTemplateSpecializationKind()))
       report(VTSD->getLocation(),
              VTSD->getSpecializedTemplate()->getTemplatedDecl());
+    return true;
+  }
+
+  bool VisitCleanupAttr(CleanupAttr *attr) {
+    report(attr->getArgLoc(), attr->getFunctionDecl());
     return true;
   }
 

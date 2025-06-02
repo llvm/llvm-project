@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace chrono {
 
 template <class _Clock, class _Duration = typename _Clock::duration>
-class _LIBCPP_TEMPLATE_VIS time_point {
+class time_point {
   static_assert(__is_duration_v<_Duration>, "Second template parameter of time_point must be a std::chrono::duration");
 
 public:
@@ -76,8 +76,7 @@ public:
 } // namespace chrono
 
 template <class _Clock, class _Duration1, class _Duration2>
-struct _LIBCPP_TEMPLATE_VIS
-common_type<chrono::time_point<_Clock, _Duration1>, chrono::time_point<_Clock, _Duration2> > {
+struct common_type<chrono::time_point<_Clock, _Duration1>, chrono::time_point<_Clock, _Duration2> > {
   typedef chrono::time_point<_Clock, typename common_type<_Duration1, _Duration2>::type> type;
 };
 

@@ -13,6 +13,7 @@ include "TestDialect.td"
 include "TestInterfaces.td"
 include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
+include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -243,16 +244,6 @@ def FloatElementsAttrOp : TEST_Op<"float_elements_attr"> {
   );
 }
 
-def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
-  let arguments = (ins NestedPolynomialAttr:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
-def ContainingIntPolynomialAttr2Op : TEST_Op<"containing_int_polynomial_attr2"> {
-  let arguments = (ins NestedPolynomialAttr2:$attr);
-  let assemblyFormat = "$attr attr-dict";
-}
-
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<
@@ -332,6 +323,10 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
    `i32attr` `=` $i32attr `i64attr` `=` $i64attr  `f32attr` `=` $f32attr
    `f64attr` `=` $f64attr `emptyattr` `=` $emptyattr attr-dict
   }];
+}
+
+def SlashAttrOp : TEST_Op<"slash_attr"> {
+  let arguments = (ins SlashAttr:$attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -422,6 +417,52 @@ def : Pat<(OpWithEnum ConstantEnumCase<TestEnumAttr, "first">:$value,
                       ConstantAttr<I32Attr, "0">:$tag),
           (OpWithEnum ConstantEnumCase<TestEnumAttr, "second">,
                       ConstantAttr<I32Attr, "1">)>;
+
+//===----------------------------------------------------------------------===//
+// Test Enum Properties
+//===----------------------------------------------------------------------===//
+
+// Define the enum property.
+def TestEnumProp : EnumProp<TestEnum>;
+// Define an op that contains the enum property.
+def OpWithEnumProp : TEST_Op<"op_with_enum_prop"> {
+  let arguments = (ins TestEnumProp:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
+def TestEnumPropAttrForm : EnumPropWithAttrForm<TestEnum, TestEnumAttr>;
+def OpWithEnumPropAttrForm : TEST_Op<"op_with_enum_prop_attr_form"> {
+  let arguments = (ins TestEnumPropAttrForm:$value);
+  let assemblyFormat = "prop-dict attr-dict";
+}
+
+def TestEnumPropAttrFormAlways : EnumPropWithAttrForm<TestEnum, TestEnumAttr> {
+  let storeInCustomAttribute = 1;
+}
+def OpWithEnumPropAttrFormAlways : TEST_Op<"op_with_enum_prop_attr_form_always"> {
+  let arguments = (ins TestEnumPropAttrFormAlways:$value);
+  let assemblyFormat = "prop-dict attr-dict";
+}
+
+def TestBitEnumProp : EnumProp<TestBitEnum> {
+  let defaultValue = TestBitEnum.cppType # "::Read";
+}
+def OpWithTestBitEnum : TEST_Op<"op_with_bit_enum_prop"> {
+  let arguments = (ins
+    TestBitEnumProp:$value1,
+    TestBitEnumProp:$value2);
+  let assemblyFormat = "$value1 ($value2^)? attr-dict `:` `(``)`";
+}
+
+def TestBitEnumPropNamed : NamedEnumProp<TestBitEnum, "bit_enum"> {
+  let defaultValue = TestBitEnum.cppType # "::Read";
+}
+def OpWithBitEnumPropNamed : TEST_Op<"op_with_bit_enum_prop_named"> {
+  let arguments = (ins
+    TestBitEnumPropNamed:$value1,
+    TestBitEnumPropNamed:$value2);
+  let assemblyFormat = "$value1 ($value2^)? attr-dict";
+}
 
 //===----------------------------------------------------------------------===//
 // Test Bit Enum Attributes
@@ -1462,6 +1503,7 @@ def TestDialectCanonicalizerOp : TEST_Op<"dialect_canonicalizable"> {
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Symbol Binding)
+//===----------------------------------------------------------------------===//
 
 // Test symbol binding.
 def OpSymbolBindingA : TEST_Op<"symbol_binding_a", []> {
@@ -1503,6 +1545,7 @@ def : Pat<(OpSymbolBindingNoResult:$op $operand),
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Attributes)
+//===----------------------------------------------------------------------===//
 
 // Test matching against op attributes.
 def OpAttrMatch1 : TEST_Op<"match_op_attribute1"> {
@@ -1618,6 +1661,7 @@ def : Pattern<
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Variadic Ops)
+//===----------------------------------------------------------------------===//
 
 def OneVResOneVOperandOp1 : TEST_Op<"one_variadic_out_one_variadic_in1"> {
   let arguments = (ins Variadic<I32>);
@@ -1801,8 +1845,23 @@ def : Pat<
   (MixedVOperandOp5 $input2a, $input2b, $input1b, $attr1,
                     ConstantStrAttr<StrAttr, "MatchMultiVariadicSubSymbol">)>;
 
+def MixedVOperandOp7 : TEST_Op<"mixed_variadic_optional_in7",
+                               [AttrSizedOperandSegments]> {
+  let arguments = (ins
+    Variadic<I32>:$input1,
+    Optional<I32>:$input2,
+    I32Attr:$attr1
+  );
+}
+
+def : Pat<
+  (MixedVOperandOp7 $input1, $input2, ConstantAttr<I32Attr, "2">:$attr1),
+  (MixedVOperandOp6 $input1, (variadic $input2), $attr1),
+  [(Constraint<CPred<"$0 != Value()">> $input2)]>;
+
 //===----------------------------------------------------------------------===//
 // Test Patterns (either)
+//===----------------------------------------------------------------------===//
 
 def TestEitherOpA : TEST_Op<"either_op_a"> {
   let arguments = (ins AnyInteger:$arg0, AnyInteger:$arg1, AnyInteger:$arg2);
@@ -1811,6 +1870,11 @@ def TestEitherOpA : TEST_Op<"either_op_a"> {
 
 def TestEitherOpB : TEST_Op<"either_op_b"> {
   let arguments = (ins AnyInteger:$arg0, AnyInteger:$arg1);
+  let results = (outs I32:$output);
+}
+
+def TestEitherOpC : TEST_Op<"either_op_c"> {
+  let arguments = (ins AnyI32Attr:$attr, AnyInteger:$arg0, AnyInteger:$arg1);
   let results = (outs I32:$output);
 }
 
@@ -1824,6 +1888,9 @@ def : Pat<(TestEitherOpA (either (TestEitherOpB I32:$arg1, $_),
                                  (TestEitherOpB I16:$arg2, $_)),
                           $x),
           (TestEitherOpB $arg2, $x)>;
+
+def : Pat<(TestEitherOpC ConstantAttr<I32Attr, "0">, (either $arg1, I32:$arg2)),
+          (TestEitherOpB $arg1, $arg2)>;
 
 def TestEitherHelperOpA : TEST_Op<"either_helper_op_a"> {
   let arguments = (ins I32:$arg0);
@@ -1845,6 +1912,7 @@ def : Pat<(TestEitherOpB (either (TestEitherHelperOpA I32:$either_helper_0),
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Location)
+//===----------------------------------------------------------------------===//
 
 // Test that we can specify locations for generated ops.
 def : Pat<(TestLocationSrcOp:$res1
@@ -1863,6 +1931,7 @@ def : Pat<(TestLocationSrcNoResOp:$loc
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Type Builders)
+//===----------------------------------------------------------------------===//
 
 def SourceOp : TEST_Op<"source_op"> {
   let arguments = (ins AnyInteger:$arg, AnyI32Attr:$tag);
@@ -1913,6 +1982,7 @@ def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "55">:$attr),
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Trailing Directives)
+//===----------------------------------------------------------------------===//
 
 // Test that we can specify both `location` and `returnType` directives.
 def : Pat<(SourceOp $val, ConstantAttr<I32Attr, "66">:$attr),
@@ -2079,6 +2149,7 @@ def ParseB64BytesOp : TEST_Op<"parse_b64"> {
 
 //===----------------------------------------------------------------------===//
 // Test region argument list parsing.
+//===----------------------------------------------------------------------===//
 
 def IsolatedRegionOp : TEST_Op<"isolated_region", [IsolatedFromAbove]> {
   let summary =  "isolated region operation";
@@ -2139,6 +2210,7 @@ def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
 
 //===----------------------------------------------------------------------===//
 // Custom printer/parser
+//===----------------------------------------------------------------------===//
 
 def CustomDimensionListAttrOp : TEST_Op<"custom_dimension_list_attr"> {
   let description = [{
@@ -2164,6 +2236,7 @@ def OptionalCustomAttrOp : TEST_Op<"optional_custom_attr"> {
 
 //===----------------------------------------------------------------------===//
 // Test OpAsmInterface.
+//===----------------------------------------------------------------------===//
 
 def AsmInterfaceOp : TEST_Op<"asm_interface_op"> {
   let results = (outs AnyType:$first, Variadic<AnyType>:$middle_results,
@@ -2555,7 +2628,7 @@ def MakeTupleOp: TEST_Op<"make_tuple"> {
 //===----------------------------------------------------------------------===//
 
 def OpWithDataLayoutOp : TEST_Op<"op_with_data_layout",
-                                 [HasDefaultDLTIDataLayout, DataLayoutOpInterface]> {
+                                 [IsolatedFromAbove, HasDefaultDLTIDataLayout, DataLayoutOpInterface]> {
   let summary =
       "An op that uses DataLayout implementation from the Target dialect";
   let regions = (region VariadicRegion<AnyRegion>:$regions);
@@ -2734,6 +2807,28 @@ def TestLinalgFillOp :
       return getOutputsMutable();
     }
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test NVVM RequiresSM trait.
+//===----------------------------------------------------------------------===//
+
+def TestNVVMRequiresSMOp :
+    TEST_Op<"nvvm_requires_sm_80", [NVVMRequiresSM<80>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMArchCondOp :
+    TEST_Op<"nvvm_requires_sm_90a", [NVVMRequiresSMa<[90]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequirestSMArchCondMultiOp : 
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -3102,6 +3197,20 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
   );
 }
 
+// Same as above, but without a custom `hashProperty` field, checking
+// that ADL is correctly working.
+def MyStructProperty2 : Property<"MyPropStruct"> {
+  let convertToAttribute = "return $_storage.asAttribute($_ctxt);";
+  let convertFromAttribute = "return MyPropStruct::setFromAttr($_storage, $_attr, $_diag);";
+}
+
+def TestOpWithWrappedProperties2 : TEST_Op<"with_wrapped_properties2"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins
+    MyStructProperty2:$prop
+  );
+}
+
 def TestOpWithEmptyProperties : TEST_Op<"empty_properties"> {
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins);
@@ -3429,6 +3538,18 @@ def TestMultiSlotAlloca : TEST_Op<"multi_slot_alloca",
      DeclareOpInterfaceMethods<DestructurableAllocationOpInterface>]> {
   let results = (outs Variadic<MemRefOf<[I32]>>:$results);
   let assemblyFormat = "attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
+// Test allocation Ops
+//===----------------------------------------------------------------------===//
+
+def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
+  let results = (outs Index:$index,
+                      Res<AnyMemRef, "", [MemAlloc]>:$memref);
+  let assemblyFormat = [{
+     attr-dict `:` type($index) `,` type($memref)
+  }];
 }
 
 #endif // TEST_OPS

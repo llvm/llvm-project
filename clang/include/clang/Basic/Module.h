@@ -888,7 +888,7 @@ public:
 
   /// Get the location at which the import of a module was triggered.
   SourceLocation getImportLoc(const Module *M) const {
-    return M->getVisibilityID() < ImportLocs.size()
+    return M && M->getVisibilityID() < ImportLocs.size()
                ? ImportLocs[M->getVisibilityID()]
                : SourceLocation();
   }

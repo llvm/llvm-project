@@ -9,9 +9,8 @@ define void @int_iv_based_on_pointer_iv(ptr %A) {
 ; VF1:       vector.body:
 ; VF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; VF1-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
-; VF1-NEXT:    [[INDUCTION:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; VF1-NEXT:    [[INDUCTION3:%.*]] = add i64 [[OFFSET_IDX]], 4
-; VF1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDUCTION]]
+; VF1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[OFFSET_IDX]]
 ; VF1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDUCTION3]]
 ; VF1-NEXT:    store i8 0, ptr [[TMP7]], align 1
 ; VF1-NEXT:    store i8 0, ptr [[TMP8]], align 1

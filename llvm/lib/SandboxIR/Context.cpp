@@ -54,7 +54,7 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
 }
 
 Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
-  auto Pair = LLVMValueToValueMap.insert({LLVMV, nullptr});
+  auto Pair = LLVMValueToValueMap.try_emplace(LLVMV);
   auto It = Pair.first;
   if (!Pair.second)
     return It->second.get();
@@ -360,6 +360,14 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
       It->second = std::unique_ptr<ConstantVector>(
           new ConstantVector(cast<llvm::ConstantVector>(LLVMC), *this));
       break;
+    case llvm::Value::ConstantDataArrayVal:
+      It->second = std::unique_ptr<ConstantDataArray>(
+          new ConstantDataArray(cast<llvm::ConstantDataArray>(LLVMC), *this));
+      break;
+    case llvm::Value::ConstantDataVectorVal:
+      It->second = std::unique_ptr<ConstantDataVector>(
+          new ConstantDataVector(cast<llvm::ConstantDataVector>(LLVMC), *this));
+      break;
     case llvm::Value::FunctionVal:
       It->second = std::unique_ptr<Function>(
           new Function(cast<llvm::Function>(LLVMC), *this));
@@ -424,7 +432,7 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
 }
 
 Argument *Context::getOrCreateArgument(llvm::Argument *LLVMArg) {
-  auto Pair = LLVMValueToValueMap.insert({LLVMArg, nullptr});
+  auto Pair = LLVMValueToValueMap.try_emplace(LLVMArg);
   auto It = Pair.first;
   if (Pair.second) {
     It->second = std::unique_ptr<Argument>(new Argument(LLVMArg, *this));
@@ -644,7 +652,7 @@ Module *Context::getModule(llvm::Module *LLVMM) const {
 }
 
 Module *Context::getOrCreateModule(llvm::Module *LLVMM) {
-  auto Pair = LLVMModuleToModuleMap.insert({LLVMM, nullptr});
+  auto Pair = LLVMModuleToModuleMap.try_emplace(LLVMM);
   auto It = Pair.first;
   if (!Pair.second)
     return It->second.get();

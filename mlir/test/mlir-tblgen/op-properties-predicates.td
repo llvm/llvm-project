@@ -36,7 +36,7 @@ def OpWithPredicates : NS_Op<"op_with_predicates"> {
 }
 
 // CHECK-LABEL: OpWithPredicates::verifyInvariantsImpl()
-// Note: for test readibility, we capture [[maybe_unused]] into the variable maybe_unused
+// Note: for test readability, we capture [[maybe_unused]] into the variable maybe_unused
 // CHECK: [[maybe_unused:\[\[maybe_unused\]\]]] int64_t tblgen_scalar = this->getScalar();
 // CHECK: if (!((tblgen_scalar >= 0)))
 // CHECK-NEXT:  return emitOpError("property 'scalar' failed to satisfy constraint: non-negative int64_t");

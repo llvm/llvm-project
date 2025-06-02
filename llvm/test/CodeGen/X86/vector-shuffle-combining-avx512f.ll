@@ -800,6 +800,35 @@ define <8 x double> @combine_vpermi2var_8f64_as_vpermpd(<8 x double> %x0, <8 x d
   ret <8 x double> %res1
 }
 
+define <8 x i64> @combine_vpermt2var_8i64_as_valignq(<8 x i64> %x0, <8 x i64> %x1) {
+; CHECK-LABEL: combine_vpermt2var_8i64_as_valignq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    valignq {{.*#+}} zmm0 = zmm1[7],zmm0[0,1,2,3,4,5,6]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res0 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 15, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6>, <8 x i64> %x0, <8 x i64> %x1, i8 -1)
+  ret <8 x i64> %res0
+}
+
+define <8 x i64> @combine_vpermt2var_8i64_as_valignq_zero(<8 x i64> %x0) {
+; CHECK-LABEL: combine_vpermt2var_8i64_as_valignq_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    valignq {{.*#+}} zmm0 = zmm0[7],zmm1[0,1,2,3,4,5,6]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res0 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 15, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6>, <8 x i64> zeroinitializer, <8 x i64> %x0, i8 -1)
+  ret <8 x i64> %res0
+}
+
+define <8 x i64> @combine_vpermt2var_8i64_as_zero_valignq(<8 x i64> %x0) {
+; CHECK-LABEL: combine_vpermt2var_8i64_as_zero_valignq:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    valignq {{.*#+}} zmm0 = zmm1[7],zmm0[0,1,2,3,4,5,6]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res0 = call <8 x i64> @llvm.x86.avx512.maskz.vpermt2var.q.512(<8 x i64> <i64 15, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6>, <8 x i64> %x0, <8 x i64> zeroinitializer, i8 -1)
+  ret <8 x i64> %res0
+}
+
 define <8 x i64> @combine_vpermt2var_8i64_as_vpermq(<8 x i64> %x0, <8 x i64> %x1) {
 ; CHECK-LABEL: combine_vpermt2var_8i64_as_vpermq:
 ; CHECK:       # %bb.0:

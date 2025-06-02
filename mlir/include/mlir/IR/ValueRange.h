@@ -36,6 +36,7 @@ class MutableOperandRangeRange;
 
 //===----------------------------------------------------------------------===//
 // OperandRange
+//===----------------------------------------------------------------------===//
 
 /// This class implements the operand iterators for the Operation class.
 class OperandRange final : public llvm::detail::indexed_accessor_range_base<
@@ -73,6 +74,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // OperandRangeRange
+//===----------------------------------------------------------------------===//
 
 /// This class represents a contiguous range of operand ranges, e.g. from a
 /// VariadicOfVariadic operand group.
@@ -109,6 +111,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // MutableOperandRange
+//===----------------------------------------------------------------------===//
 
 /// This class provides a mutable adaptor for a range of operands. It allows for
 /// setting, inserting, and erasing operands from the given range.
@@ -196,6 +199,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // MutableOperandRangeRange
+//===----------------------------------------------------------------------===//
 
 /// This class represents a contiguous range of mutable operand ranges, e.g.
 /// from a VariadicOfVariadic operand group.
@@ -235,6 +239,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // ResultRange
+//===----------------------------------------------------------------------===//
 
 /// This class implements the result iterators for the Operation class.
 class ResultRange final
@@ -368,6 +373,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // ValueRange
+//===----------------------------------------------------------------------===//
 
 /// This class provides an abstraction over the different types of ranges over
 /// Values. In many cases, this prevents the need to explicitly materialize a

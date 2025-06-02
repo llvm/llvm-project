@@ -29,13 +29,24 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeRange.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace {
 #include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
 } // namespace
+
+static llvm::cl::opt<bool> clUseStrictVolatileVerification(
+    "strict-fir-volatile-verifier", llvm::cl::init(false),
+    llvm::cl::desc(
+        "use stricter verifier for FIR operations with volatile types"));
+
+bool fir::useStrictVolatileVerification() {
+  return clUseStrictVolatileVerification;
+}
 
 static void propagateAttributes(mlir::Operation *fromOp,
                                 mlir::Operation *toOp) {
@@ -853,6 +864,15 @@ std::vector<mlir::Value> fir::ArrayLoadOp::getExtents() {
   return {};
 }
 
+void fir::ArrayLoadOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getMemrefMutable(),
+                       mlir::SideEffects::DefaultResource::get());
+  addVolatileMemoryEffects({getMemref().getType()}, effects);
+}
+
 llvm::LogicalResult fir::ArrayLoadOp::verify() {
   auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(getMemref().getType());
   auto arrTy = mlir::dyn_cast<fir::SequenceType>(eleTy);
@@ -933,6 +953,15 @@ llvm::LogicalResult fir::ArrayMergeStoreOp::verify() {
   if (!validTypeParams(getMemref().getType(), getTypeparams()))
     return emitOpError("invalid type parameters");
   return mlir::success();
+}
+
+void fir::ArrayMergeStoreOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Write::get(), &getMemrefMutable(),
+                       mlir::SideEffects::DefaultResource::get());
+  addVolatileMemoryEffects({getMemref().getType()}, effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1323,6 +1352,53 @@ mlir::ParseResult fir::CmpcOp::parse(mlir::OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
+// VolatileCastOp
+//===----------------------------------------------------------------------===//
+
+static bool typesMatchExceptForVolatility(mlir::Type fromType,
+                                          mlir::Type toType) {
+  // If we can change only the volatility and get identical types, then we
+  // match.
+  if (fir::updateTypeWithVolatility(fromType, fir::isa_volatile_type(toType)) ==
+      toType)
+    return true;
+
+  // Otherwise, recurse on the element types if the base classes are the same.
+  const bool match =
+      llvm::TypeSwitch<mlir::Type, bool>(fromType)
+          .Case<fir::BoxType, fir::ReferenceType, fir::ClassType>(
+              [&](auto type) {
+                using TYPE = decltype(type);
+                // If we are not the same base class, then we don't match.
+                auto castedToType = mlir::dyn_cast<TYPE>(toType);
+                if (!castedToType)
+                  return false;
+                // If we are the same base class, we match if the element types
+                // match.
+                return typesMatchExceptForVolatility(type.getEleTy(),
+                                                     castedToType.getEleTy());
+              })
+          .Default([](mlir::Type) { return false; });
+
+  return match;
+}
+
+llvm::LogicalResult fir::VolatileCastOp::verify() {
+  mlir::Type fromType = getValue().getType();
+  mlir::Type toType = getType();
+  if (!typesMatchExceptForVolatility(fromType, toType))
+    return emitOpError("types must be identical except for volatility ")
+           << fromType << " / " << toType;
+  return mlir::success();
+}
+
+mlir::OpFoldResult fir::VolatileCastOp::fold(FoldAdaptor adaptor) {
+  if (getValue().getType() == getType())
+    return getValue();
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // ConvertOp
 //===----------------------------------------------------------------------===//
 
@@ -1460,8 +1536,54 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
          areRecordsCompatible(inType, outType);
 }
 
+// In general, ptrtoint-like conversions are allowed to lose volatility
+// information because they are either:
+//
+// 1. passing an entity to an external function and there's nothing we can do
+//    about volatility after that happens, or
+// 2. for code generation, at which point we represent volatility with
+//    attributes on the LLVM instructions and intrinsics.
+//
+// For all other cases, volatility ought to match exactly.
+static mlir::LogicalResult verifyVolatility(mlir::Type inType,
+                                            mlir::Type outType) {
+  const bool toLLVMPointer = mlir::isa<mlir::LLVM::LLVMPointerType>(outType);
+  const bool toInteger = fir::isa_integer(outType);
+
+  // When converting references to classes or allocatables into boxes for
+  // runtime arguments, we cast away all the volatility information and pass a
+  // box<none>. This is allowed.
+  const bool isBoxNoneLike = [&]() {
+    if (fir::isBoxNone(outType))
+      return true;
+    if (auto referenceType = mlir::dyn_cast<fir::ReferenceType>(outType)) {
+      if (fir::isBoxNone(referenceType.getElementType())) {
+        return true;
+      }
+    }
+    return false;
+  }();
+
+  const bool isPtrToIntLike = toLLVMPointer || toInteger || isBoxNoneLike;
+  if (isPtrToIntLike) {
+    return mlir::success();
+  }
+
+  // In all other cases, we need to check for an exact volatility match.
+  return mlir::success(fir::isa_volatile_type(inType) ==
+                       fir::isa_volatile_type(outType));
+}
+
 llvm::LogicalResult fir::ConvertOp::verify() {
-  if (canBeConverted(getValue().getType(), getType()))
+  mlir::Type inType = getValue().getType();
+  mlir::Type outType = getType();
+  if (fir::useStrictVolatileVerification()) {
+    if (failed(verifyVolatility(inType, outType))) {
+      return emitOpError("this conversion does not preserve volatility: ")
+             << inType << " / " << outType;
+    }
+  }
+  if (canBeConverted(inType, outType))
     return mlir::success();
   return emitOpError("invalid type conversion")
          << getValue().getType() << " / " << getType();
@@ -1758,6 +1880,33 @@ llvm::LogicalResult fir::TypeInfoOp::verify() {
 // EmboxOp
 //===----------------------------------------------------------------------===//
 
+// Conversions from reference types to box types must preserve volatility.
+static llvm::LogicalResult
+verifyEmboxOpVolatilityInvariants(mlir::Type memrefType,
+                                  mlir::Type resultType) {
+
+  if (!fir::useStrictVolatileVerification())
+    return mlir::success();
+
+  mlir::Type boxElementType =
+      llvm::TypeSwitch<mlir::Type, mlir::Type>(resultType)
+          .Case<fir::BoxType, fir::ClassType>(
+              [&](auto type) { return type.getEleTy(); })
+          .Default([&](mlir::Type type) { return type; });
+
+  // If the embox is simply wrapping a non-volatile type into a volatile box,
+  // we're not losing any volatility information.
+  if (boxElementType == memrefType) {
+    return mlir::success();
+  }
+
+  // Otherwise, the volatility of the input and result must match.
+  const bool volatilityMatches =
+      fir::isa_volatile_type(memrefType) == fir::isa_volatile_type(resultType);
+
+  return mlir::success(volatilityMatches);
+}
+
 llvm::LogicalResult fir::EmboxOp::verify() {
   auto eleTy = fir::dyn_cast_ptrEleTy(getMemref().getType());
   bool isArray = false;
@@ -1787,6 +1936,11 @@ llvm::LogicalResult fir::EmboxOp::verify() {
     return emitOpError("slice must not be provided for a scalar");
   if (getSourceBox() && !mlir::isa<fir::ClassType>(getResult().getType()))
     return emitOpError("source_box must be used with fir.class result type");
+  if (failed(verifyEmboxOpVolatilityInvariants(getMemref().getType(),
+                                               getResult().getType())))
+    return emitOpError(
+               "cannot convert between volatile and non-volatile types:")
+           << " " << getMemref().getType() << " " << getResult().getType();
   return mlir::success();
 }
 
@@ -2211,6 +2365,21 @@ llvm::LogicalResult fir::InsertOnRangeOp::verify() {
   return mlir::success();
 }
 
+bool fir::InsertOnRangeOp::isFullRange() {
+  auto extents = getType().getShape();
+  mlir::DenseIntElementsAttr indexes = getCoor();
+  if (indexes.size() / 2 != static_cast<int64_t>(extents.size()))
+    return false;
+  auto cur_index = indexes.value_begin<int64_t>();
+  for (unsigned i = 0; i < indexes.size(); i += 2) {
+    if (*(cur_index++) != 0)
+      return false;
+    if (*(cur_index++) != extents[i / 2] - 1)
+      return false;
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // InsertValueOp
 //===----------------------------------------------------------------------===//
@@ -2597,6 +2766,15 @@ void fir::LoadOp::print(mlir::OpAsmPrinter &p) {
   p.printOperand(getMemref());
   p.printOptionalAttrDict(getOperation()->getAttrs(), {});
   p << " : " << getMemref().getType();
+}
+
+void fir::LoadOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getMemrefMutable(),
+                       mlir::SideEffects::DefaultResource::get());
+  addVolatileMemoryEffects({getMemref().getType()}, effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3951,6 +4129,15 @@ void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
   build(builder, result, value, memref, {});
 }
 
+void fir::StoreOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Write::get(), &getMemrefMutable(),
+                       mlir::SideEffects::DefaultResource::get());
+  addVolatileMemoryEffects({getMemref().getType()}, effects);
+}
+
 //===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
@@ -3969,6 +4156,19 @@ llvm::LogicalResult fir::CopyOp::verify() {
   if (sourceType != destinationType)
     return emitOpError("source and destination must have the same value type");
   return mlir::success();
+}
+
+void fir::CopyOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getSourceMutable(),
+                       mlir::SideEffects::DefaultResource::get());
+  effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                       &getDestinationMutable(),
+                       mlir::SideEffects::DefaultResource::get());
+  addVolatileMemoryEffects({getDestination().getType(), getSource().getType()},
+                           effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4566,6 +4766,61 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   return eleTy;
 }
 
+bool fir::reboxPreservesContinuity(fir::ReboxOp rebox, bool checkWhole) {
+  // If slicing is not involved, then the rebox does not affect
+  // the continuity of the array.
+  auto sliceArg = rebox.getSlice();
+  if (!sliceArg)
+    return true;
+
+  if (auto sliceOp =
+          mlir::dyn_cast_or_null<fir::SliceOp>(sliceArg.getDefiningOp())) {
+    if (sliceOp.getFields().empty() && sliceOp.getSubstr().empty()) {
+      // TODO: generalize code for the triples analysis with
+      // hlfir::designatePreservesContinuity, especially when
+      // recognition of the whole dimension slices is added.
+      auto triples = sliceOp.getTriples();
+      assert((triples.size() % 3) == 0 && "invalid triples size");
+
+      // A slice with step=1 in the innermost dimension preserves
+      // the continuity of the array in the innermost dimension.
+      // If checkWhole is false, then check only the innermost slice triples.
+      std::size_t checkUpTo = checkWhole ? triples.size() : 3;
+      checkUpTo = std::min(checkUpTo, triples.size());
+      for (std::size_t i = 0; i < checkUpTo; i += 3) {
+        if (triples[i] != triples[i + 1]) {
+          // This is a section of the dimension. Only allow it
+          // to be the first triple.
+          if (i != 0)
+            return false;
+          auto constantStep = fir::getIntIfConstant(triples[i + 2]);
+          if (!constantStep || *constantStep != 1)
+            return false;
+        }
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+std::optional<int64_t> fir::getAllocaByteSize(fir::AllocaOp alloca,
+                                              const mlir::DataLayout &dl,
+                                              const fir::KindMapping &kindMap) {
+  mlir::Type type = alloca.getInType();
+  // TODO: should use the constant operands when all info is not available in
+  // the type.
+  if (!alloca.isDynamic())
+    if (auto sizeAndAlignment =
+            getTypeSizeAndAlignment(alloca.getLoc(), type, dl, kindMap))
+      return sizeAndAlignment->first;
+  return std::nullopt;
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareOp
+//===----------------------------------------------------------------------===//
+
 llvm::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
@@ -4755,6 +5010,105 @@ void fir::BoxTotalElementsOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// LocalitySpecifierOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::LocalitySpecifierOp::verifyRegions() {
+  mlir::Type argType = getArgType();
+  auto verifyTerminator = [&](mlir::Operation *terminator,
+                              bool yieldsValue) -> llvm::LogicalResult {
+    if (!terminator->getBlock()->getSuccessors().empty())
+      return llvm::success();
+
+    if (!llvm::isa<fir::YieldOp>(terminator))
+      return mlir::emitError(terminator->getLoc())
+             << "expected exit block terminator to be an `fir.yield` op.";
+
+    YieldOp yieldOp = llvm::cast<YieldOp>(terminator);
+    mlir::TypeRange yieldedTypes = yieldOp.getResults().getTypes();
+
+    if (!yieldsValue) {
+      if (yieldedTypes.empty())
+        return llvm::success();
+
+      return mlir::emitError(terminator->getLoc())
+             << "Did not expect any values to be yielded.";
+    }
+
+    if (yieldedTypes.size() == 1 && yieldedTypes.front() == argType)
+      return llvm::success();
+
+    auto error = mlir::emitError(yieldOp.getLoc())
+                 << "Invalid yielded value. Expected type: " << argType
+                 << ", got: ";
+
+    if (yieldedTypes.empty())
+      error << "None";
+    else
+      error << yieldedTypes;
+
+    return error;
+  };
+
+  auto verifyRegion = [&](mlir::Region &region, unsigned expectedNumArgs,
+                          llvm::StringRef regionName,
+                          bool yieldsValue) -> llvm::LogicalResult {
+    assert(!region.empty());
+
+    if (region.getNumArguments() != expectedNumArgs)
+      return mlir::emitError(region.getLoc())
+             << "`" << regionName << "`: "
+             << "expected " << expectedNumArgs
+             << " region arguments, got: " << region.getNumArguments();
+
+    for (mlir::Block &block : region) {
+      // MLIR will verify the absence of the terminator for us.
+      if (!block.mightHaveTerminator())
+        continue;
+
+      if (failed(verifyTerminator(block.getTerminator(), yieldsValue)))
+        return llvm::failure();
+    }
+
+    return llvm::success();
+  };
+
+  // Ensure all of the region arguments have the same type
+  for (mlir::Region *region : getRegions())
+    for (mlir::Type ty : region->getArgumentTypes())
+      if (ty != argType)
+        return emitError() << "Region argument type mismatch: got " << ty
+                           << " expected " << argType << ".";
+
+  mlir::Region &initRegion = getInitRegion();
+  if (!initRegion.empty() &&
+      failed(verifyRegion(getInitRegion(), /*expectedNumArgs=*/2, "init",
+                          /*yieldsValue=*/true)))
+    return llvm::failure();
+
+  LocalitySpecifierType dsType = getLocalitySpecifierType();
+
+  if (dsType == LocalitySpecifierType::Local && !getCopyRegion().empty())
+    return emitError("`local` specifiers do not require a `copy` region.");
+
+  if (dsType == LocalitySpecifierType::LocalInit && getCopyRegion().empty())
+    return emitError(
+        "`local_init` specifiers require at least a `copy` region.");
+
+  if (dsType == LocalitySpecifierType::LocalInit &&
+      failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy",
+                          /*yieldsValue=*/true)))
+    return llvm::failure();
+
+  if (!getDeallocRegion().empty() &&
+      failed(verifyRegion(getDeallocRegion(), /*expectedNumArgs=*/1, "dealloc",
+                          /*yieldsValue=*/false)))
+    return llvm::failure();
+
+  return llvm::success();
+}
+
+//===----------------------------------------------------------------------===//
 // DoConcurrentOp
 //===----------------------------------------------------------------------===//
 
@@ -4779,21 +5133,25 @@ mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
                                                  mlir::OperationState &result) {
   auto &builder = parser.getBuilder();
   // Parse an opening `(` followed by induction variables followed by `)`
-  llvm::SmallVector<mlir::OpAsmParser::Argument, 4> ivs;
-  if (parser.parseArgumentList(ivs, mlir::OpAsmParser::Delimiter::Paren))
+  llvm::SmallVector<mlir::OpAsmParser::Argument, 4> regionArgs;
+
+  if (parser.parseArgumentList(regionArgs, mlir::OpAsmParser::Delimiter::Paren))
     return mlir::failure();
+
+  llvm::SmallVector<mlir::Type> argTypes(regionArgs.size(),
+                                         builder.getIndexType());
 
   // Parse loop bounds.
   llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> lower;
   if (parser.parseEqual() ||
-      parser.parseOperandList(lower, ivs.size(),
+      parser.parseOperandList(lower, regionArgs.size(),
                               mlir::OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(lower, builder.getIndexType(), result.operands))
     return mlir::failure();
 
   llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> upper;
   if (parser.parseKeyword("to") ||
-      parser.parseOperandList(upper, ivs.size(),
+      parser.parseOperandList(upper, regionArgs.size(),
                               mlir::OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(upper, builder.getIndexType(), result.operands))
     return mlir::failure();
@@ -4801,7 +5159,7 @@ mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
   // Parse step values.
   llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> steps;
   if (parser.parseKeyword("step") ||
-      parser.parseOperandList(steps, ivs.size(),
+      parser.parseOperandList(steps, regionArgs.size(),
                               mlir::OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(steps, builder.getIndexType(), result.operands))
     return mlir::failure();
@@ -4832,12 +5190,55 @@ mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
                         builder.getArrayAttr(arrayAttr));
   }
 
-  // Now parse the body.
-  mlir::Region *body = result.addRegion();
-  for (auto &iv : ivs)
-    iv.type = builder.getIndexType();
-  if (parser.parseRegion(*body, ivs))
-    return mlir::failure();
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> localOperands;
+  if (succeeded(parser.parseOptionalKeyword("local"))) {
+    std::size_t oldArgTypesSize = argTypes.size();
+    if (failed(parser.parseLParen()))
+      return mlir::failure();
+
+    llvm::SmallVector<mlir::SymbolRefAttr> localSymbolVec;
+    if (failed(parser.parseCommaSeparatedList([&]() {
+          if (failed(parser.parseAttribute(localSymbolVec.emplace_back())))
+            return mlir::failure();
+
+          if (parser.parseOperand(localOperands.emplace_back()) ||
+              parser.parseArrow() ||
+              parser.parseArgument(regionArgs.emplace_back()))
+            return mlir::failure();
+
+          return mlir::success();
+        })))
+      return mlir::failure();
+
+    if (failed(parser.parseColon()))
+      return mlir::failure();
+
+    if (failed(parser.parseCommaSeparatedList([&]() {
+          if (failed(parser.parseType(argTypes.emplace_back())))
+            return mlir::failure();
+
+          return mlir::success();
+        })))
+      return mlir::failure();
+
+    if (regionArgs.size() != argTypes.size())
+      return parser.emitError(parser.getNameLoc(),
+                              "mismatch in number of local arg and types");
+
+    if (failed(parser.parseRParen()))
+      return mlir::failure();
+
+    for (auto operandType : llvm::zip_equal(
+             localOperands, llvm::drop_begin(argTypes, oldArgTypesSize)))
+      if (parser.resolveOperand(std::get<0>(operandType),
+                                std::get<1>(operandType), result.operands))
+        return mlir::failure();
+
+    llvm::SmallVector<mlir::Attribute> symbolAttrs(localSymbolVec.begin(),
+                                                   localSymbolVec.end());
+    result.addAttribute(getLocalSymsAttrName(result.name),
+                        builder.getArrayAttr(symbolAttrs));
+  }
 
   // Set `operandSegmentSizes` attribute.
   result.addAttribute(DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
@@ -4845,7 +5246,16 @@ mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
                           {static_cast<int32_t>(lower.size()),
                            static_cast<int32_t>(upper.size()),
                            static_cast<int32_t>(steps.size()),
-                           static_cast<int32_t>(reduceOperands.size())}));
+                           static_cast<int32_t>(reduceOperands.size()),
+                           static_cast<int32_t>(localOperands.size())}));
+
+  // Now parse the body.
+  for (auto [arg, type] : llvm::zip_equal(regionArgs, argTypes))
+    arg.type = type;
+
+  mlir::Region *body = result.addRegion();
+  if (parser.parseRegion(*body, regionArgs))
+    return mlir::failure();
 
   // Parse attributes.
   if (parser.parseOptionalAttrDict(result.attributes))
@@ -4855,8 +5265,9 @@ mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
 }
 
 void fir::DoConcurrentLoopOp::print(mlir::OpAsmPrinter &p) {
-  p << " (" << getBody()->getArguments() << ") = (" << getLowerBound()
-    << ") to (" << getUpperBound() << ") step (" << getStep() << ")";
+  p << " (" << getBody()->getArguments().slice(0, getNumInductionVars())
+    << ") = (" << getLowerBound() << ") to (" << getUpperBound() << ") step ("
+    << getStep() << ")";
 
   if (!getReduceOperands().empty()) {
     p << " reduce(";
@@ -4869,12 +5280,27 @@ void fir::DoConcurrentLoopOp::print(mlir::OpAsmPrinter &p) {
     p << ')';
   }
 
+  if (!getLocalVars().empty()) {
+    p << " local(";
+    llvm::interleaveComma(llvm::zip_equal(getLocalSymsAttr(), getLocalVars(),
+                                          getRegionLocalArgs()),
+                          p, [&](auto it) {
+                            p << std::get<0>(it) << " " << std::get<1>(it)
+                              << " -> " << std::get<2>(it);
+                          });
+    p << " : ";
+    llvm::interleaveComma(getLocalVars(), p,
+                          [&](auto it) { p << it.getType(); });
+    p << ")";
+  }
+
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
       (*this)->getAttrs(),
       /*elidedAttrs=*/{DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
-                       DoConcurrentLoopOp::getReduceAttrsAttrName()});
+                       DoConcurrentLoopOp::getReduceAttrsAttrName(),
+                       DoConcurrentLoopOp::getLocalSymsAttrName()});
 }
 
 llvm::SmallVector<mlir::Region *> fir::DoConcurrentLoopOp::getLoopRegions() {
@@ -4885,6 +5311,7 @@ llvm::LogicalResult fir::DoConcurrentLoopOp::verify() {
   mlir::Operation::operand_range lbValues = getLowerBound();
   mlir::Operation::operand_range ubValues = getUpperBound();
   mlir::Operation::operand_range stepValues = getStep();
+  mlir::Operation::operand_range localVars = getLocalVars();
 
   if (lbValues.empty())
     return emitOpError(
@@ -4898,11 +5325,13 @@ llvm::LogicalResult fir::DoConcurrentLoopOp::verify() {
   // Check that the body defines the same number of block arguments as the
   // number of tuple elements in step.
   mlir::Block *body = getBody();
-  if (body->getNumArguments() != stepValues.size())
+  unsigned numIndVarArgs = body->getNumArguments() - localVars.size();
+
+  if (numIndVarArgs != stepValues.size())
     return emitOpError() << "expects the same number of induction variables: "
                          << body->getNumArguments()
                          << " as bound and step values: " << stepValues.size();
-  for (auto arg : body->getArguments())
+  for (auto arg : body->getArguments().slice(0, numIndVarArgs))
     if (!arg.getType().isIndex())
       return emitOpError(
           "expects arguments for the induction variable to be of index type");
@@ -4917,7 +5346,8 @@ llvm::LogicalResult fir::DoConcurrentLoopOp::verify() {
 
 std::optional<llvm::SmallVector<mlir::Value>>
 fir::DoConcurrentLoopOp::getLoopInductionVars() {
-  return llvm::SmallVector<mlir::Value>{getBody()->getArguments()};
+  return llvm::SmallVector<mlir::Value>{
+      getBody()->getArguments().slice(0, getLowerBound().size())};
 }
 
 //===----------------------------------------------------------------------===//

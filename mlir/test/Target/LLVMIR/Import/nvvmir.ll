@@ -73,11 +73,10 @@ define float @nvvm_rcp(float %0) {
 
 ; CHECK-LABEL: @llvm_nvvm_barrier0()
 define void @llvm_nvvm_barrier0() {
-  ; CHECK: nvvm.barrier0
+  ; CHECK: llvm.nvvm.barrier.cta.sync.aligned.all
   call void @llvm.nvvm.barrier0()
   ret void
 }
-
 
 ; TODO: Support the intrinsics below once they derive from NVVM_IntrOp rather than from NVVM_Op.
 ;

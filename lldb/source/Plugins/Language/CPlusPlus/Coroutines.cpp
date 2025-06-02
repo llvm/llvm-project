@@ -141,8 +141,7 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   if (frame_ptr_addr == 0 || frame_ptr_addr == LLDB_INVALID_ADDRESS)
     return lldb::ChildCacheState::eRefetch;
 
-  auto ts = valobj_sp->GetCompilerType().GetTypeSystem();
-  auto ast_ctx = ts.dyn_cast_or_null<TypeSystemClang>();
+  auto ast_ctx = valobj_sp->GetCompilerType().GetTypeSystem<TypeSystemClang>();
   if (!ast_ctx)
     return lldb::ChildCacheState::eRefetch;
 
@@ -199,10 +198,12 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-size_t StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
+llvm::Expected<size_t>
+StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   if (!m_resume_ptr_sp || !m_destroy_ptr_sp)
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
 
   if (name == ConstString("resume"))
     return 0;
@@ -211,7 +212,8 @@ size_t StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
   if (name == ConstString("promise_ptr") && m_promise_ptr_sp)
     return 2;
 
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *

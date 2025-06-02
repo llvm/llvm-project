@@ -44,7 +44,7 @@ public:
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[AArch64::NumTargetFixupKinds] = {
         // This table *must* be in the order that the fixup_* kinds are defined
         // in AArch64FixupKinds.h.
@@ -67,9 +67,9 @@ public:
         {"fixup_aarch64_pcrel_branch26", 0, 26, PCRelFlagVal},
         {"fixup_aarch64_pcrel_call26", 0, 26, PCRelFlagVal}};
 
-    // Fixup kinds from .reloc directive are like R_AARCH64_NONE. They do not
-    // require any extra processing.
-    if (Kind >= FirstLiteralRelocationKind)
+    // Fixup kinds from raw relocation types and .reloc directives force
+    // relocations and do not need these fields.
+    if (mc::isRelocation(Kind))
       return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
     if (Kind < FirstTargetFixupKind)
@@ -81,10 +81,9 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value) const override;
@@ -95,9 +94,8 @@ public:
 
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override;
+  bool shouldForceRelocation(const MCFixup &Fixup,
+                             const MCValue &Target) override;
 };
 
 } // end anonymous namespace
@@ -221,8 +219,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       Ctx.reportError(Fixup.getLoc(), "fixup must be 16-byte aligned");
     return Value >> 4;
   case AArch64::fixup_aarch64_movw: {
-    AArch64MCExpr::VariantKind RefKind =
-        static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
+    AArch64MCExpr::Specifier RefKind =
+        static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
     if (AArch64MCExpr::getSymbolLoc(RefKind) != AArch64MCExpr::VK_ABS &&
         AArch64MCExpr::getSymbolLoc(RefKind) != AArch64MCExpr::VK_SABS) {
       if (!RefKind) {
@@ -416,18 +414,26 @@ unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) con
   }
 }
 
-void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void AArch64AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                    const MCValue &Target,
                                    MutableArrayRef<char> Data, uint64_t Value,
-                                   bool IsResolved,
-                                   const MCSubtargetInfo *STI) const {
+                                   bool IsResolved) {
+  MCFixupKind Kind = Fixup.getKind();
+  if (mc::isRelocation(Kind))
+    return;
+
   if (Fixup.getTargetKind() == FK_Data_8 && TheTriple.isOSBinFormatELF()) {
-    auto RefKind = static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
-    AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
+    auto RefKind = static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
+    AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
     if (SymLoc == AArch64AuthMCExpr::VK_AUTH ||
         SymLoc == AArch64AuthMCExpr::VK_AUTHADDR) {
+      const auto *Expr = dyn_cast<AArch64AuthMCExpr>(Fixup.getValue());
+      if (!Expr) {
+        getContext().reportError(Fixup.getValue()->getLoc(),
+                                 "expected relocatable expression");
+        return;
+      }
       assert(Value == 0);
-      const auto *Expr = cast<AArch64AuthMCExpr>(Fixup.getValue());
       Value = (uint64_t(Expr->getDiscriminator()) << 32) |
               (uint64_t(Expr->getKey()) << 60) |
               (uint64_t(Expr->hasAddressDiversity()) << 63);
@@ -436,12 +442,9 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
   if (!Value)
     return; // Doesn't change encoding.
-  unsigned Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return;
   unsigned NumBytes = getFixupKindNumBytes(Kind);
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   int64_t SignedValue = static_cast<int64_t>(Value);
   // Apply any target-specific value adjustments.
   Value = adjustFixupValue(Fixup, Target, Value, Ctx, TheTriple, IsResolved);
@@ -474,8 +477,8 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
   // FIXME: getFixupKindInfo() and getFixupKindNumBytes() could be fixed to
   // handle this more cleanly. This may affect the output of -show-mc-encoding.
-  AArch64MCExpr::VariantKind RefKind =
-      static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
+  AArch64MCExpr::Specifier RefKind =
+      static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
   if (AArch64MCExpr::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS ||
       (!RefKind && Fixup.getTargetKind() == AArch64::fixup_aarch64_movw)) {
     // If the immediate is negative, generate MOVN else MOVZ.
@@ -515,10 +518,8 @@ bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                              const MCFixup &Fixup,
-                                              const MCValue &Target,
-                                              const MCSubtargetInfo *STI) {
+bool AArch64AsmBackend::shouldForceRelocation(const MCFixup &Fixup,
+                                              const MCValue &Target) {
   // The ADRP instruction adds some multiple of 0x1000 to the current PC &
   // ~0xfff. This means that the required offset to reach a symbol can vary by
   // up to one step depending on where the ADRP is in memory. For example:

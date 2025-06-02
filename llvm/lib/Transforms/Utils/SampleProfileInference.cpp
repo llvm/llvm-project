@@ -672,8 +672,8 @@ private:
 
     // Concatenate the two paths
     std::vector<FlowJump *> Result;
-    Result.insert(Result.end(), ForwardPath.begin(), ForwardPath.end());
-    Result.insert(Result.end(), BackwardPath.begin(), BackwardPath.end());
+    llvm::append_range(Result, ForwardPath);
+    llvm::append_range(Result, BackwardPath);
     return Result;
   }
 

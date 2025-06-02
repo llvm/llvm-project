@@ -5,8 +5,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -fp-contract=fast < %s | FileCheck -check-prefix=GFX10-CONTRACT %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefix=GFX10-DENORM %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -fp-contract=fast < %s | FileCheck -check-prefix=GFX11-CONTRACT %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefix=GFX11-DENORM %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -fp-contract=fast < %s | FileCheck -check-prefixes=GFX11-CONTRACT %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=GFX11-DENORM %s
 
 ; fold (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
 ; fold (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)

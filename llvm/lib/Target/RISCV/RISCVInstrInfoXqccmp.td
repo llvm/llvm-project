@@ -25,6 +25,30 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def RegListS0AsmOperand : AsmOperandClass {
+  let Name = "RegListS0";
+  let ParserMethod = "parseRegListS0";
+  let RenderMethod = "addRegListOperands";
+  let DiagnosticType = "InvalidRegListS0";
+  let DiagnosticString = "operand must be {ra, s0[-sN]} or {x1, x8[-x9][, x18[-xN]]}";
+}
+
+def reglist_s0 : RISCVOp<OtherVT> {
+   let ParserMatchClass = RegListS0AsmOperand;
+   let PrintMethod = "printRegList";
+   let DecoderMethod = "decodeXqccmpRlistS0";
+   let EncoderMethod = "getRlistS0OpValue";
+   let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    // 0~4 invalid for `qc.cm.pushfp`
+    return isUInt<4>(Imm) && Imm >= RISCVZC::RA_S0;
+  }];
+
+  string OperandType = "OPERAND_RLIST_S0";
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -32,6 +56,20 @@
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
+
+class RVInstXqccmpCPPPFP<bits<5> funct5, string opcodestr,
+                         DAGOperand immtype = stackadj>
+    : RVInst16<(outs), (ins reglist_s0:$rlist, immtype:$stackadj),
+               opcodestr, "$rlist, $stackadj", [], InstFormatOther> {
+  bits<4> rlist;
+  bits<16> stackadj;
+
+  let Inst{1-0} = 0b10;
+  let Inst{3-2} = stackadj{5-4};
+  let Inst{7-4} = rlist;
+  let Inst{12-8} = funct5;
+  let Inst{15-13} = 0b101;
+}
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -59,7 +97,7 @@ def QC_CM_PUSH : RVInstZcCPPP<0b11000, "qc.cm.push", negstackadj>,
                         ReadStoreData, ReadStoreData, ReadStoreData]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Uses = [X2], Defs = [X2, X8] in
-def QC_CM_PUSHFP : RVInstZcCPPP<0b11001, "qc.cm.pushfp", negstackadj>,
+def QC_CM_PUSHFP : RVInstXqccmpCPPPFP<0b11001, "qc.cm.pushfp", negstackadj>,
                    Sched<[WriteIALU, WriteIALU, ReadIALU, ReadStoreData, ReadStoreData,
                           ReadStoreData, ReadStoreData, ReadStoreData, ReadStoreData,
                           ReadStoreData, ReadStoreData, ReadStoreData, ReadStoreData,

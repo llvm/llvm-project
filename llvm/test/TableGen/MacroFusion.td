@@ -42,7 +42,7 @@ def TestBothFusionPredicate: Fusion<"test-both-fusion-predicate", "HasBothFusion
                                     [BothFusionPredicate]>;
 
 def TestFusion: SimpleFusion<"test-fusion", "HasTestFusion", "Test Fusion",
-                             CheckOpcode<[Inst0]>,
+                             CheckOpcode<[Inst0, Inst1]>,
                              CheckAll<[
                                CheckOpcode<[Inst1]>,
                                CheckRegOperand<0, X0>
@@ -62,12 +62,19 @@ def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
                                    Inst0, Inst2,
                                    secondInstPred=CheckRegOperand<0, X0>>;
 
+def TestFirstSameRegFusion: Fusion<"test-first-same-reg-fusion", "HasTestFirstSameRegFusion",
+                                   "Test FirstSameReg",
+                                   [FirstInstHasSameReg<0, 1>]> {
+  bit IsCommutable = 1;
+}
+
 // CHECK-PREDICATOR:       #ifdef GET_Test_MACRO_FUSION_PRED_DECL
 // CHECK-PREDICATOR-NEXT:  #undef GET_Test_MACRO_FUSION_PRED_DECL
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
 // CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  bool isTestCommutableFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);   
+// CHECK-PREDICATOR-NEXT:  bool isTestCommutableFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
+// CHECK-PREDICATOR-NEXT:  bool isTestFirstSameRegFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestSingleFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  } // end namespace llvm
@@ -144,6 +151,24 @@ def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
 // CHECK-PREDICATOR-NEXT:    }
 // CHECK-PREDICATOR-NEXT:    return true;
 // CHECK-PREDICATOR-NEXT:  }
+// CHECK-PREDICATOR-NEXT:  bool isTestFirstSameRegFusion(
+// CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
+// CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
+// CHECK-PREDICATOR-NEXT:      const MachineInstr *FirstMI,
+// CHECK-PREDICATOR-NEXT:      const MachineInstr &SecondMI) {
+// CHECK-PREDICATOR-NEXT:    {{[[]}}{{[[]}}maybe_unused{{[]]}}{{[]]}} auto &MRI = SecondMI.getMF()->getRegInfo();
+// CHECK-PREDICATOR-NEXT:    if (!FirstMI->getOperand(0).getReg().isVirtual()) {
+// CHECK-PREDICATOR-NEXT:      if (FirstMI->getOperand(0).getReg() != FirstMI->getOperand(1).getReg()) {
+// CHECK-PREDICATOR-NEXT:        if (!FirstMI->getDesc().isCommutable())
+// CHECK-PREDICATOR-NEXT:          return false;
+// CHECK-PREDICATOR-NEXT:        unsigned SrcOpIdx1 = 1, SrcOpIdx2 = TargetInstrInfo::CommuteAnyOperandIndex;
+// CHECK-PREDICATOR-NEXT:        if (TII.findCommutedOpIndices(FirstMI, SrcOpIdx1, SrcOpIdx2))
+// CHECK-PREDICATOR-NEXT:          if (FirstMI->getOperand(0).getReg() != FirstMI->getOperand(SrcOpIdx2).getReg())
+// CHECK-PREDICATOR-NEXT:            return false;
+// CHECK-PREDICATOR-NEXT:      }
+// CHECK-PREDICATOR-NEXT:    }
+// CHECK-PREDICATOR-NEXT:    return true;
+// CHECK-PREDICATOR-NEXT:  }
 // CHECK-PREDICATOR-NEXT:  bool isTestFusion(
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
@@ -162,7 +187,7 @@ def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
 // CHECK-PREDICATOR-NEXT:      return true;
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = FirstMI;
-// CHECK-PREDICATOR-NEXT:      if (( MI->getOpcode() != Test::Inst0 ))
+// CHECK-PREDICATOR-NEXT:      if (!llvm::is_contained({Test::Inst0, Test::Inst1}, MI->getOpcode()))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
 // CHECK-PREDICATOR-NEXT:    if (!SecondMI.getOperand(0).getReg().isVirtual()) {
@@ -238,6 +263,7 @@ def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
 // Check that we have generated target subfeature.
 // CHECK-SUBTARGET: { "test-both-fusion-predicate", "Test BothFusionPredicate", Test::TestBothFusionPredicate
 // CHECK-SUBTARGET: { "test-commutable-fusion", "Test Commutable Fusion", Test::TestCommutableFusion
+// CHECK-SUBTARGET: { "test-first-same-reg-fusion", "Test FirstSameReg", Test::TestFirstSameRegFusion
 // CHECK-SUBTARGET: { "test-fusion", "Test Fusion", Test::TestFusion
 // CHECK-SUBTARGET: { "test-single-fusion", "Test SingleFusion", Test::TestSingleFusion
 
@@ -246,8 +272,9 @@ def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
 
 // CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> TestGenSubtargetInfo::getMacroFusions() const {
 // CHECK-SUBTARGET-NEXT:   std::vector<MacroFusionPredTy> Fusions;
-// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestBothFusionPredicate)) Fusions.push_back(llvm::isTestBothFusionPredicate); 
-// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestCommutableFusion)) Fusions.push_back(llvm::isTestCommutableFusion); 
+// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestBothFusionPredicate)) Fusions.push_back(llvm::isTestBothFusionPredicate);
+// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestCommutableFusion)) Fusions.push_back(llvm::isTestCommutableFusion);
+// CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestFirstSameRegFusion)) Fusions.push_back(llvm::isTestFirstSameRegFusion);
 // CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestFusion)) Fusions.push_back(llvm::isTestFusion);
 // CHECK-SUBTARGET-NEXT:   if (hasFeature(Test::TestSingleFusion)) Fusions.push_back(llvm::isTestSingleFusion);
 // CHECK-SUBTARGET-NEXT:   return Fusions;

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
-#include "Clang.h"
 #include "CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
@@ -190,8 +189,7 @@ private:
 
         processInput(BufferOrErr.get()->getMemBufferRef());
       } else
-        WorkList.insert(WorkList.end(), CurrentAction->getInputs().begin(),
-                        CurrentAction->getInputs().end());
+        llvm::append_range(WorkList, CurrentAction->getInputs());
     }
   }
 

@@ -480,6 +480,48 @@ subroutine allocatable2()
   !$omp end parallel
 end subroutine
 
+! CHECK-LABEL:   func.func @_QPcommon_3() {
+! [...]
+! CHECK:           omp.parallel {
+! CHECK:             %[[VAL_22:.*]] = omp.threadprivate %[[VAL_0:.*]] : !fir.ref<!fir.array<32xi8>> -> !fir.ref<!fir.array<32xi8>>
+! CHECK:             %[[VAL_23:.*]] = fir.convert %[[VAL_22:.*]] : (!fir.ref<!fir.array<32xi8>>) -> !fir.ref<!fir.array<?xi8>>
+! CHECK:             %[[VAL_24:.*]] = arith.constant 0 : index
+! CHECK:             %[[VAL_25:.*]] = fir.coordinate_of %[[VAL_23:.*]], %[[VAL_24:.*]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_26:.*]] = fir.convert %[[VAL_25:.*]] : (!fir.ref<i8>) -> !fir.ref<i32>
+! CHECK:             %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_26:.*]] {uniq_name = "_QFcommon_3Ex"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_28:.*]] = fir.convert %[[VAL_22:.*]] : (!fir.ref<!fir.array<32xi8>>) -> !fir.ref<!fir.array<?xi8>>
+! CHECK:             %[[VAL_29:.*]] = arith.constant 4 : index
+! CHECK:             %[[VAL_30:.*]] = fir.coordinate_of %[[VAL_28:.*]], %[[VAL_29:.*]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30:.*]] : (!fir.ref<i8>) -> !fir.ref<i32>
+! CHECK:             %[[VAL_32:.*]]:2 = hlfir.declare %[[VAL_31:.*]] {uniq_name = "_QFcommon_3Ey"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_22:.*]] : (!fir.ref<!fir.array<32xi8>>) -> !fir.ref<!fir.array<?xi8>>
+! CHECK:             %[[VAL_34:.*]] = arith.constant 8 : index
+! CHECK:             %[[VAL_35:.*]] = fir.coordinate_of %[[VAL_33:.*]], %[[VAL_34:.*]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_36:.*]] = fir.convert %[[VAL_35:.*]] : (!fir.ref<i8>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:             %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_36:.*]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFcommon_3Earr"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+! CHECK:             %[[VAL_38:.*]] = fir.load %[[VAL_16:.*]]#0 : !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_38:.*]] to %[[VAL_27:.*]]#0 : i32, !fir.ref<i32>
+! CHECK:             %[[VAL_39:.*]] = fir.load %[[VAL_21:.*]]#0 : !fir.ref<i32>
+! CHECK:             hlfir.assign %[[VAL_39:.*]] to %[[VAL_32:.*]]#0 : i32, !fir.ref<i32>
+! CHECK:             %[[VAL_40:.*]] = fir.load %[[VAL_11:.*]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:             fir.store %[[VAL_40:.*]] to %[[VAL_37:.*]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:             omp.barrier
+! CHECK:             omp.terminator
+! CHECK:           }
+! CHECK:           return
+! CHECK:         }
+
+subroutine common_3()
+  integer :: x, y
+  integer, pointer :: arr
+  common /c3/ x, y, arr
+  !$omp threadprivate(/c3/)
+
+  !$omp parallel copyin(/c3/)
+     call sub_3()
+  !$omp end parallel
+end subroutine
+
 ! CHECK:    func.func @_QPallocatable3() {
 ! CHECK:      %[[VAL_0:.*]] = fir.address_of(@_QFallocatable3Ea) : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:      %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFallocatable3Ea"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
@@ -519,7 +561,7 @@ end subroutine
 ! CHECK:           }
 ! CHECK:          }
 ! CHECK:        omp.barrier
-! CHECK:        %[[VAL_22:.*]] = fir.load %7#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:        %[[VAL_22:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:        %[[VAL_23:.*]] = fir.box_addr %[[VAL_22]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK:       %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.heap<i32>
 ! CHECK:        %[[C1_I32:.*]] = arith.constant 1 : i32

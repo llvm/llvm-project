@@ -608,6 +608,16 @@ NaN-propagating maximum that also treat -0.0 as less than 0.0. While
 FMAXNUM_IEEE follow IEEE 754-2008 semantics, FMAXIMUM follows IEEE
 754-2019 semantics.
 
+G_FMINIMUMNUM
+^^^^^^^^^^^^^
+
+IEEE-754 2019 minimumNumber
+
+G_FMAXIMUMNUM
+^^^^^^^^^^^^^
+
+IEEE-754 2019 maximumNumber
+
 G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FREM
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -922,7 +932,8 @@ operands.
                                G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
                                G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
                                G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX,
-                               G_ATOMICRMW_FMIN, G_ATOMICRMW_UINC_WRAP,
+                               G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAXIMUM,
+                               G_ATOMICRMW_FMINIMUM, G_ATOMICRMW_UINC_WRAP,
 			       G_ATOMICRMW_UDEC_WRAP, G_ATOMICRMW_USUB_COND,
 			       G_ATOMICRMW_USUB_SAT
 

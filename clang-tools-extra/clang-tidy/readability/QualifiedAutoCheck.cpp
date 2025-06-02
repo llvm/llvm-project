@@ -8,6 +8,8 @@
 
 #include "QualifiedAutoCheck.h"
 #include "../utils/LexerUtils.h"
+#include "../utils/Matchers.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>
@@ -100,8 +102,17 @@ bool isAutoPointerConst(QualType QType) {
 
 } // namespace
 
+QualifiedAutoCheck::QualifiedAutoCheck(StringRef Name,
+                                       ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AddConstToQualified(Options.get("AddConstToQualified", true)),
+      AllowedTypes(
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
+
 void QualifiedAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AddConstToQualified", AddConstToQualified);
+  Options.store(Opts, "AllowedTypes",
+                utils::options::serializeStringList(AllowedTypes));
 }
 
 void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
@@ -124,20 +135,26 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
 
   auto IsBoundToType = refersToType(equalsBoundNode("type"));
   auto UnlessFunctionType = unless(hasUnqualifiedDesugaredType(functionType()));
-  auto IsAutoDeducedToPointer = [](const auto &...InnerMatchers) {
+  auto IsAutoDeducedToPointer = [](const std::vector<StringRef> &AllowedTypes,
+                                   const auto &...InnerMatchers) {
     return autoType(hasDeducedType(
-        hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...)))));
+        hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))),
+        unless(hasUnqualifiedType(
+            matchers::matchesAnyListedTypeName(AllowedTypes, false))),
+        unless(pointerType(pointee(hasUnqualifiedType(
+            matchers::matchesAnyListedTypeName(AllowedTypes, false)))))));
   };
 
   Finder->addMatcher(
-      ExplicitSingleVarDecl(hasType(IsAutoDeducedToPointer(UnlessFunctionType)),
-                            "auto"),
+      ExplicitSingleVarDecl(
+          hasType(IsAutoDeducedToPointer(AllowedTypes, UnlessFunctionType)),
+          "auto"),
       this);
 
   Finder->addMatcher(
       ExplicitSingleVarDeclInTemplate(
           allOf(hasType(IsAutoDeducedToPointer(
-                    hasUnqualifiedType(qualType().bind("type")),
+                    AllowedTypes, hasUnqualifiedType(qualType().bind("type")),
                     UnlessFunctionType)),
                 anyOf(hasAncestor(
                           functionDecl(hasAnyTemplateArgument(IsBoundToType))),

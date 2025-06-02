@@ -269,10 +269,47 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       mcdxbc::RootSignatureDesc RS;
       RS.Flags = P.RootSignature->getEncodedFlags();
       RS.Version = P.RootSignature->Version;
-      RS.NumParameters = P.RootSignature->NumParameters;
-      RS.RootParametersOffset = P.RootSignature->RootParametersOffset;
+      RS.RootParameterOffset = P.RootSignature->RootParametersOffset;
       RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
       RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
+
+      for (DXContainerYAML::RootParameterLocationYaml &L :
+           P.RootSignature->Parameters.Locations) {
+        dxbc::RTS0::v1::RootParameterHeader Header{L.Header.Type, L.Header.Visibility,
+                                         L.Header.Offset};
+
+        switch (L.Header.Type) {
+        case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+          const DXContainerYAML::RootConstantsYaml &ConstantYaml =
+              P.RootSignature->Parameters.getOrInsertConstants(L);
+          dxbc::RTS0::v1::RootConstants Constants;
+          Constants.Num32BitValues = ConstantYaml.Num32BitValues;
+          Constants.RegisterSpace = ConstantYaml.RegisterSpace;
+          Constants.ShaderRegister = ConstantYaml.ShaderRegister;
+          RS.ParametersContainer.addParameter(Header, Constants);
+          break;
+        }
+        case llvm::to_underlying(dxbc::RootParameterType::CBV):
+        case llvm::to_underlying(dxbc::RootParameterType::SRV):
+        case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+          const DXContainerYAML::RootDescriptorYaml &DescriptorYaml =
+              P.RootSignature->Parameters.getOrInsertDescriptor(L);
+
+          dxbc::RTS0::v2::RootDescriptor Descriptor;
+          Descriptor.RegisterSpace = DescriptorYaml.RegisterSpace;
+          Descriptor.ShaderRegister = DescriptorYaml.ShaderRegister;
+          if (RS.Version > 1)
+            Descriptor.Flags = DescriptorYaml.getEncodedFlags();
+          RS.ParametersContainer.addParameter(Header, Descriptor);
+          break;
+        }
+        default:
+          // Handling invalid parameter type edge case. We intentionally let
+          // obj2yaml/yaml2obj parse and emit invalid dxcontainer data, in order
+          // for that to be used as a testing tool more effectively.
+          RS.ParametersContainer.addInvalidParameter(Header);
+        }
+      }
 
       RS.write(OS);
       break;

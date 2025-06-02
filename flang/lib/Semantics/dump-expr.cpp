@@ -22,7 +22,6 @@ inline const char *DumpEvaluateExpr::GetIndentString() const {
 void DumpEvaluateExpr::Show(const evaluate::CoarrayRef &x) {
   Indent("coarray ref");
   Show(x.base());
-  Show(x.subscript());
   Show(x.cosubscript());
   Show(x.stat());
   Show(x.team());

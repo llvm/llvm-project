@@ -233,6 +233,9 @@ LVElement *LVDWARFReader::createElement(dwarf::Tag Tag) {
   case dwarf::DW_TAG_GNU_template_parameter_pack:
     CurrentScope = createScopeTemplatePack();
     return CurrentScope;
+  case dwarf::DW_TAG_module:
+    CurrentScope = createScopeModule();
+    return CurrentScope;
   default:
     // Collect TAGs not implemented.
     if (options().getInternalTag() && Tag)
@@ -306,6 +309,9 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
     break;
   case dwarf::DW_AT_bit_size:
     CurrentElement->setBitSize(GetAsUnsignedConstant());
+    break;
+  case dwarf::DW_AT_byte_size:
+    CurrentElement->setBitSize(GetAsUnsignedConstant() * DWARF_CHAR_BIT);
     break;
   case dwarf::DW_AT_call_file:
     CurrentElement->setCallFilenameIndex(IncrementFileIndex
@@ -913,7 +919,7 @@ Error LVDWARFReader::createScopes() {
           LT->getFileNameByIndex(
               1, None, DILineInfoSpecifier::FileLineInfoKind::RawValue,
               FileOne);
-          return FileZero.compare(FileOne);
+          return FileZero != FileOne;
         }
       }
 

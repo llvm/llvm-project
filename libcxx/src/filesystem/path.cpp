@@ -14,6 +14,7 @@
 #include "path_parser.h"
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 using detail::ErrorHandler;
 using parser::createView;
@@ -442,4 +443,5 @@ size_t __char_to_wide(const string& str, wchar_t* out, size_t outlen) {
 }
 #endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM

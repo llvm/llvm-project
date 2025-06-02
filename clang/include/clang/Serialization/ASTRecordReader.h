@@ -214,6 +214,8 @@ public:
 
   TypeCoupledDeclRefInfo readTypeCoupledDeclRefInfo();
 
+  SpirvOperand readHLSLSpirvOperand();
+
   /// Read a declaration name, advancing Idx.
   // DeclarationName readDeclarationName(); (inherited)
   DeclarationNameLoc readDeclarationNameLoc(DeclarationName Name);
@@ -317,6 +319,10 @@ public:
   /// Read a 64-bit unsigned value; required to satisfy BasicReader.
   uint64_t readUInt64() {
     return readInt();
+  }
+
+  UnsignedOrNone readUnsignedOrNone() {
+    return UnsignedOrNone::fromInternalRepresentation(unsigned(readInt()));
   }
 
   /// Read a string, advancing Idx.

@@ -48,14 +48,14 @@ handler2:
 ; X64-LABEL: $cppxdata$try_in_catch:
 ; CHECK-NEXT: .long   429065506
 ; CHECK-NEXT: .long   4
-; CHECK-NEXT: .long   ($stateUnwindMap$try_in_catch)
+; CHECK-NEXT: .long   $stateUnwindMap$try_in_catch
 ; CHECK-NEXT: .long   2
-; CHECK-NEXT: .long   ($tryMap$try_in_catch)
+; CHECK-NEXT: .long   $tryMap$try_in_catch
 ; ip2state num + ptr
 ; X86-NEXT: .long   0
 ; X86-NEXT: .long   0
 ; X64-NEXT: .long   7
-; X64-NEXT: .long   ($ip2state$try_in_catch)
+; X64-NEXT: .long   $ip2state$try_in_catch
 ; unwindhelp offset
 ; X64-NEXT: .long   40
 ; CHECK-NEXT: .long   0
@@ -67,24 +67,24 @@ handler2:
 ; X86-NEXT: .long   2
 ; X86-NEXT: .long   3
 ; X86-NEXT: .long   1
-; X86-NEXT: .long   ($handlerMap$0$try_in_catch)
+; X86-NEXT: .long   $handlerMap$0$try_in_catch
 ; X86-NEXT: .long   0
 ; X86-NEXT: .long   0
 ; X86-NEXT: .long   3
 ; X86-NEXT: .long   1
-; X86-NEXT: .long   ($handlerMap$1$try_in_catch)
+; X86-NEXT: .long   $handlerMap$1$try_in_catch
 
 ; X64-LABEL: $tryMap$try_in_catch:
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   3
 ; X64-NEXT: .long   1
-; X64-NEXT: .long   ($handlerMap$0$try_in_catch)
+; X64-NEXT: .long   $handlerMap$0$try_in_catch
 ; X64-NEXT: .long   2
 ; X64-NEXT: .long   2
 ; X64-NEXT: .long   3
 ; X64-NEXT: .long   1
-; X64-NEXT: .long   ($handlerMap$1$try_in_catch)
+; X64-NEXT: .long   $handlerMap$1$try_in_catch
 
 ; CHECK: $handlerMap$0$try_in_catch:
 ; CHECK-NEXT:   .long   64

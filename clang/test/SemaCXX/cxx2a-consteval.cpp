@@ -1272,3 +1272,53 @@ int main() {
 }
 
 } // namespace GH107175
+
+namespace GH137885 {
+
+template <typename... P> struct A {};
+
+template <int N>
+struct B {
+  consteval B() {}
+
+  template <typename... P> consteval operator A<P...>() const {
+    static_assert(sizeof...(P) == N);
+    return {};
+  }
+};
+
+template <typename T> struct type_identity {
+  using type = T;
+};
+
+template <typename... P>
+void foo(typename type_identity<A<P...>>::type a, P...) {}
+
+void foo() {
+  foo(B<0>());
+  foo(B<5>(), 1, 2, 3, 4, 5);
+}
+
+}
+
+// https://github.com/llvm/llvm-project/issues/139160
+namespace GH139160{
+  // original test case taken from Github
+  struct A {int x[1]; }; 
+  A f(); // expected-note {{declared here}}
+  typedef int *t[];
+  consteval int* f(int* x) { return x; }
+
+  int ** x = (t){f(f().x)}; // expected-error    {{call to consteval function 'GH139160::f' is not a constant expression}}
+                            // expected-note@-1  {{non-constexpr function 'f' cannot be used in a constant expression}}
+                            // expected-error@-2 {{initializer element is not a compile-time constant}} 
+
+  struct B {int value, value_two;};
+  B make_struct() {return {10, 20};} // expected-note {{declared here}}
+  consteval int get_value(B container) {return container.value;}
+  B result = (B){10, get_value(make_struct())}; // expected-error {{initializer element is not a compile-time constant}} 
+                                                // expected-error@-1 {{call to consteval function 'GH139160::get_value' is not a constant expression}}
+                                                // expected-note@-2  {{non-constexpr function 'make_struct' cannot be used in a constant expression}}
+};
+
+

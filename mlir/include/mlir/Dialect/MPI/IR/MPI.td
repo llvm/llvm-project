@@ -246,12 +246,7 @@ def MPI_OpClassEnum : I32EnumAttr<"MPI_OpClassEnum", "MPI operation class", [
       MPI_OpMaxloc,
       MPI_OpReplace
     ]> {
-  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::mpi";
-}
-
-def MPI_OpClassAttr : EnumAttr<MPI_Dialect, MPI_OpClassEnum, "opclass"> {
-  let assemblyFormat = "`<` $value `>`";
 }
 
 #endif // MLIR_DIALECT_MPI_IR_MPI_TD

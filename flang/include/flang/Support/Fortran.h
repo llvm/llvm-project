@@ -72,8 +72,8 @@ ENUM_CLASS(
 ENUM_CLASS(
     OpenACCDeviceType, Star, Default, Nvidia, Radeon, Host, Multicore, None)
 
-// OpenMP atomic_default_mem_order clause allowed values
-ENUM_CLASS(OmpAtomicDefaultMemOrderType, SeqCst, AcqRel, Relaxed)
+// OpenMP memory-order types
+ENUM_CLASS(OmpMemoryOrderType, Acq_Rel, Acquire, Relaxed, Release, Seq_Cst)
 
 // Fortran names may have up to 63 characters (See Fortran 2018 C601).
 static constexpr int maxNameLen{63};
@@ -96,7 +96,7 @@ std::string AsFortran(IgnoreTKRSet);
 
 bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
     std::optional<CUDADataAttr>, IgnoreTKRSet, std::optional<std::string> *,
-    bool allowUnifiedMatchingRule,
+    bool allowUnifiedMatchingRule, bool isHostDeviceProcedure,
     const LanguageFeatureControl *features = nullptr);
 
 static constexpr char blankCommonObjectName[] = "__BLNK__";

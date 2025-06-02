@@ -43,7 +43,8 @@ protected:
     // FIXME: technically, merged that we set here is incorrect, but that
     // shouldn't matter.
     RawComment Comment(SourceMgr, CommentRange, EmptyOpts, /*Merged=*/true);
-    DiagnosticsEngine Diags(new DiagnosticIDs, new DiagnosticOptions);
+    DiagnosticOptions DiagOpts;
+    DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts);
     return Comment.getFormattedText(SourceMgr, Diags);
   }
 };

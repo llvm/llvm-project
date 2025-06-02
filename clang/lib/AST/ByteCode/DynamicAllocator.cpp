@@ -84,6 +84,11 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   ID->IsFieldMutable = false;
   ID->IsConst = false;
   ID->IsInitialized = false;
+  ID->IsVolatile = false;
+
+  ID->LifeState =
+      AllocForm == Form::Operator ? Lifetime::Ended : Lifetime::Started;
+  ;
 
   B->IsDynamic = true;
 
