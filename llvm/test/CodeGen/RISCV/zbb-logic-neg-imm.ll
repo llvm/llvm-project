@@ -385,3 +385,32 @@ define i64 @xornofff(i64 %x) {
   %xor = xor i64 %x, -1152921504606846721
   ret i64 %xor
 }
+
+define i64 @and_or_or(i64 %x, i64 %y) {
+; RV32-LABEL: and_or_or:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ori a1, a1, -2
+; RV32-NEXT:    ori a0, a0, 1
+; RV32-NEXT:    ori a3, a3, 1
+; RV32-NEXT:    ori a2, a2, -2
+; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: and_or_or:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a2, -1
+; RV64-NEXT:    slli a2, a2, 33
+; RV64-NEXT:    addi a2, a2, 1
+; RV64-NEXT:    or a0, a0, a2
+; RV64-NEXT:    li a2, 1
+; RV64-NEXT:    slli a2, a2, 33
+; RV64-NEXT:    addi a2, a2, -2
+; RV64-NEXT:    or a1, a1, a2
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    ret
+  %a = or i64 %x, -8589934591
+  %b = or i64 %y, 8589934590
+  %c = and i64 %a, %b
+  ret i64 %c
+}
