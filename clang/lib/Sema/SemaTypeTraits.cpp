@@ -2113,8 +2113,7 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
         << D->getDestructor()->getSourceRange();
 
   for (const CXXMethodDecl *Method : D->methods()) {
-    if (Method->isIneligibleOrNotSelected() || Method->isTrivial() ||
-        !Method->isUserProvided()) {
+    if (Method->isTrivial() || !Method->isUserProvided()) {
       continue;
     }
     auto SpecialMemberKind =
