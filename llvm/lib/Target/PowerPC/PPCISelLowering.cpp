@@ -12682,7 +12682,7 @@ Value *PPCTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
   unsigned SZ = ValueTy->getPrimitiveSizeInBits();
 
   assert((SZ == 8 || SZ == 16 || SZ == 32 || SZ == 64) &&
-         +"Only 8/16/32/64-bit atomic loads supported");
+         "Only 8/16/32/64-bit atomic loads supported");
   Intrinsic::ID IntID;
   switch (SZ) {
   default:
@@ -19709,7 +19709,6 @@ PPCTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
   if (shouldInlineQuadwordAtomics() && Size == 128)
     return AtomicExpansionKind::MaskedIntrinsic;
   return AtomicExpansionKind::LLSC;
-  //return TargetLowering::shouldExpandAtomicCmpXchgInIR(AI);
 }
 
 static Intrinsic::ID
