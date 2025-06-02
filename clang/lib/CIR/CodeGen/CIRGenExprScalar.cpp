@@ -201,6 +201,36 @@ public:
                                 e->getSourceRange().getBegin());
   }
 
+  mlir::Value
+  VisitAbstractConditionalOperator(const AbstractConditionalOperator *e) {
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    Expr *condExpr = e->getCond();
+    Expr *lhsExpr = e->getTrueExpr();
+    Expr *rhsExpr = e->getFalseExpr();
+
+    // OpenCL: If the condition is a vector, we can treat this condition like
+    // the select function.
+    if ((cgf.getLangOpts().OpenCL && condExpr->getType()->isVectorType()) ||
+        condExpr->getType()->isExtVectorType()) {
+      cgf.getCIRGenModule().errorNYI(loc,
+                                     "TernaryOp OpenCL VectorType condition");
+      return {};
+    }
+
+    if (condExpr->getType()->isVectorType() ||
+        condExpr->getType()->isSveVLSBuiltinType()) {
+      assert(condExpr->getType()->isVectorType() && "?: op for SVE vector NYI");
+      mlir::Value condValue = Visit(condExpr);
+      mlir::Value lhsValue = Visit(lhsExpr);
+      mlir::Value rhsValue = Visit(rhsExpr);
+      return builder.create<cir::VecTernaryOp>(loc, condValue, lhsValue,
+                                               rhsValue);
+    }
+
+    cgf.getCIRGenModule().errorNYI(loc, "TernaryOp for non vector types");
+    return {};
+  }
+
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
   mlir::Value VisitInitListExpr(InitListExpr *e);
