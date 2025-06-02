@@ -53,6 +53,8 @@ public:
   InterpState(const InterpState &) = delete;
   InterpState &operator=(const InterpState &) = delete;
 
+  bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
+
   // Stack frame accessors.
   Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
   Frame *getCurrentFrame() override;

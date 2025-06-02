@@ -401,8 +401,8 @@ GetDemangledFunctionSuffix(const SymbolContext &sc) {
   if (!info->hasBasename())
     return std::nullopt;
 
-  return demangled_name.slice(info->QualifiersRange.second,
-                              llvm::StringRef::npos);
+  return demangled_name.slice(info->SuffixRange.first,
+                              info->SuffixRange.second);
 }
 
 static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {

@@ -18,6 +18,7 @@
 
 #include "llvm/CGData/StableFunctionMap.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -34,19 +35,20 @@ struct StableFunctionMapRecord {
 
   /// A static helper function to serialize the stable function map without
   /// owning the stable function map.
-  static void serialize(raw_ostream &OS, const StableFunctionMap *FunctionMap);
+  LLVM_ABI static void serialize(raw_ostream &OS,
+                                 const StableFunctionMap *FunctionMap);
 
   /// Serialize the stable function map to a raw_ostream.
-  void serialize(raw_ostream &OS) const;
+  LLVM_ABI void serialize(raw_ostream &OS) const;
 
   /// Deserialize the stable function map from a raw_ostream.
-  void deserialize(const unsigned char *&Ptr);
+  LLVM_ABI void deserialize(const unsigned char *&Ptr);
 
   /// Serialize the stable function map to a YAML stream.
-  void serializeYAML(yaml::Output &YOS) const;
+  LLVM_ABI void serializeYAML(yaml::Output &YOS) const;
 
   /// Deserialize the stable function map from a YAML stream.
-  void deserializeYAML(yaml::Input &YIS);
+  LLVM_ABI void deserializeYAML(yaml::Input &YIS);
 
   /// Finalize the stable function map by trimming content.
   void finalize(bool SkipTrim = false) { FunctionMap->finalize(SkipTrim); }
