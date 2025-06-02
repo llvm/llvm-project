@@ -1178,13 +1178,6 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   int64_t destRank = packOp.getDestRank();
   int64_t numTiles = destRank - srcRank;
 
-  if (!llvm::all_of(packOp.getInnerDimsPos(),
-                    [&srcRank, &numTiles](int64_t dimPos) {
-                      return dimPos >= (srcRank - numTiles - 1);
-                    }))
-    return rewriter.notifyMatchFailure(
-        packOp, "Attempting to tile non-trailing source dims!");
-
   // 1. Extract the inner tile sizes.
   // Where possible, values are replaced with constant attributes (to match the
   // behaviour of `getPackOpSourceOrPaddedSource`).
@@ -1205,15 +1198,22 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   //    %transposed_tile = linalg.transpose ins(%source_or_padded_source),
   //                                        outs(%init)
   // Assumptions made:
-  //  1. Inner dims position correspond to the trailing `numTiles` dims.
+  //  1. All outer dims are 1 - the corresponding transposition order doesn't
+  //     matter, but requires all dim indices to be present.
+  //  2. Inner dims position can have non-adjacent trailing dimensions. Where,
+  //     For example, a source tensor with indices [0, 1, 2] can have:
+  //       * adjacent trailing dimensions of [1, 2], [2, 1]
+  //       * non-adjacent trailing dimensions of [0, 2] or [2, 0]
+  //     Trailing dimensions are defined in the case above as index [2].
+  //     And the indices [0] or [1] are not defined to be trailing.
   SmallVector<int64_t> srcPermForTranspose;
   ArrayRef<int64_t> innerDimPos(packOp.getInnerDimsPos());
   for (int64_t i = 0; i < srcRank; i++) {
-    // As we assume the trailing dimensions of the inner dim position correspond
-    // to the trailing indices of the transpose permutation, we need to
-    // calculate the remaining indicies of the transpose permutation. This is
-    // done by adding the indices not contained in the inner dimension position.
-    //   For example if we have a source tensor of dimensions [0, 1, 2, 3]
+    // We assume the `k` dimensions of the inner dim position correspond
+    // to the last `k` indices of the transpose permutation. This is
+    // done by adding the indices not contained in the inner dimension position
+    // in order from 0 to `n`. Where n is the rank of the source tensor.
+    //   For example if we have a source tensor with indices [0, 1, 2, 3]
     //   and inner dim position of [3, 0], the remaining indices are [1, 2].
     //   and the transpose will be [1, 2, 3, 0].
     if (llvm::is_contained(innerDimPos, i))
