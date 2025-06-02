@@ -401,3 +401,70 @@ TEST_F(PluginManagerTest, MatchPluginName) {
   ASSERT_FALSE(PluginManager::MatchPluginName("foo.", Foo, Bar));
   ASSERT_FALSE(PluginManager::MatchPluginName("foo.ba", Foo, Bar));
 }
+
+TEST_F(PluginManagerTest, JsonFormat) {
+  RegisterMockSystemRuntimePlugins();
+
+  // We expect the following JSON output:
+  // {
+  //   "system-runtime": [
+  //     {
+  //       "enabled": true,
+  //       "name": "a"
+  //     },
+  //     {
+  //       "enabled": true,
+  //       "name": "b"
+  //     },
+  //     {
+  //       "enabled": true,
+  //       "name": "c"
+  //     }
+  //   ]
+  // }
+  llvm::json::Object obj = PluginManager::GetJSON();
+
+  // We should have a "system-runtime" array in the top-level object.
+  llvm::json::Array *maybe_array = obj.getArray("system-runtime");
+  ASSERT_TRUE(maybe_array!= nullptr);
+  auto &array = *maybe_array;
+  ASSERT_EQ(array.size(), 3u);
+
+  // Check plugin "a" info.
+  ASSERT_TRUE(array[0].getAsObject() != nullptr);
+  ASSERT_TRUE(array[0].getAsObject()->getString("name") == "a");
+  ASSERT_TRUE(array[0].getAsObject()->getBoolean("enabled") == true);
+
+  // Check plugin "b" info.
+  ASSERT_TRUE(array[1].getAsObject() != nullptr);
+  ASSERT_TRUE(array[1].getAsObject()->getString("name") == "b");
+  ASSERT_TRUE(array[1].getAsObject()->getBoolean("enabled") == true);
+
+  // Check plugin "c" info.
+  ASSERT_TRUE(array[2].getAsObject() != nullptr);
+  ASSERT_TRUE(array[2].getAsObject()->getString("name") == "c");
+  ASSERT_TRUE(array[2].getAsObject()->getBoolean("enabled") == true);
+
+  // Disabling a plugin should be reflected in the JSON output.
+  ASSERT_TRUE(PluginManager::SetSystemRuntimePluginEnabled("b", false));
+  array = *PluginManager::GetJSON().getArray("system-runtime");
+  ASSERT_TRUE(array[0].getAsObject()->getBoolean("enabled") == true);
+  ASSERT_TRUE(array[1].getAsObject()->getBoolean("enabled") == false);
+  ASSERT_TRUE(array[2].getAsObject()->getBoolean("enabled") == true);
+
+  // Un-registering a plugin should be reflected in the JSON output.
+  ASSERT_TRUE(PluginManager::UnregisterPlugin(CreateSystemRuntimePluginB));
+  array = *PluginManager::GetJSON().getArray("system-runtime");
+  ASSERT_EQ(array.size(), 2u);
+  ASSERT_TRUE(array[0].getAsObject()->getString("name") == "a");
+  ASSERT_TRUE(array[1].getAsObject()->getString("name") == "c");
+
+  // Filtering the JSON output should only include the matching plugins.
+  array = *PluginManager::GetJSON("system-runtime.c").getArray("system-runtime");
+  ASSERT_EQ(array.size(), 1u);
+  ASSERT_TRUE(array[0].getAsObject()->getString("name") == "c");
+
+  // Empty JSON output is allowed if there are no matching plugins.
+  obj = PluginManager::GetJSON("non-existent-plugin");
+  ASSERT_TRUE(obj.empty());
+}
