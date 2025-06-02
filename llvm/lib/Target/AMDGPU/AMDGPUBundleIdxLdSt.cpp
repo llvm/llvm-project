@@ -20,6 +20,7 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUResourceUsageAnalysis.h"
+#include "AMDGPUVGPRIndexingAnalysis.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
@@ -76,6 +77,10 @@ private:
   void recoverIdx0ForPrivateUse(SmallVector<BundleItem, 4> &Worklist,
                                 std::unordered_set<unsigned> &IdxList,
                                 unsigned &SrcStagingRegIdx);
+  Register computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
+                                         MachineInstr &MI);
+  void updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
+                                  MachineOperand *IdxOp, MachineInstr *LdStMI);
   bool hasConflictBetween(MachineBasicBlock *From, MachineBasicBlock *To,
                           MachineInstr &MI);
   bool blockPrologueInterferes(const MachineBasicBlock *BB,
@@ -108,6 +113,12 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   AliasAnalysis *AA = nullptr;
   MachineCycleInfo *CI = nullptr;
+  SIMachineFunctionInfo *MFI = nullptr;
+
+  // (Object, original idx reg) to new-idx-reg mapping
+  // Private-in-vgpr objects need a new idx reg that is calculated with idx0 as
+  // the offset.
+  DenseMap<std::pair<const MDNode *, unsigned>, unsigned> PrivateObjectNewRegs;
 };
 
 bool sideEffectConflict(MachineInstr &MIa, MachineInstr &MIb) {
@@ -579,6 +590,41 @@ bool AMDGPUBundleIdxLdSt::sinkLoadsAndCoreMIs(MachineFunction &MF) {
   return MadeChange;
 }
 
+Register
+AMDGPUBundleIdxLdSt::computeNewIdxForPrivateObject(MachineRegisterInfo &MRI,
+                                                   MachineInstr &MI) {
+  Register Idx0Def = MFI->getIdx0VRegDef();
+  if (!Idx0Def.isValid()) {
+    Idx0Def = initIdx0VRegDef(*MI.getMF(), STI);
+    MFI->setIdx0VRegDef(Idx0Def);
+  }
+  // Create a new reg that is idx0 added to the idx reg used by MI
+  MachineOperand *IdxOp = STI->getNamedOperand(MI, AMDGPU::OpName::idx);
+  Register IdxOpReg = IdxOp->getReg();
+  Register NewIdxReg =
+      MRI.createVirtualRegister(&AMDGPU::SReg_32_XEXEC_HIRegClass);
+  MachineInstr *DefRegMI = MRI.getUniqueVRegDef(IdxOpReg);
+  MachineBasicBlock::iterator InsertPt = std::next(DefRegMI->getIterator());
+  BuildMI(*DefRegMI->getParent(), InsertPt, DefRegMI->getDebugLoc(),
+          STI->get(AMDGPU::S_ADD_I32), NewIdxReg)
+      .addReg(IdxOpReg)
+      .addReg(Idx0Def);
+  return NewIdxReg;
+}
+
+void AMDGPUBundleIdxLdSt::updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
+                                                     MachineOperand *IdxOp,
+                                                     MachineInstr *LdStMI) {
+  // Ensure a private object indexing vgprs is calculating the idx
+  // relative to idx0.
+  if (const MDNode *Obj = getAMDGPUPromotedPrivateObject(*LdStMI)) {
+    unsigned &NewReg = PrivateObjectNewRegs[{Obj, IdxOp->getReg()}];
+    if (!NewReg)
+      NewReg = computeNewIdxForPrivateObject(*MRI, *LdStMI);
+    IdxOp->setReg(NewReg);
+  }
+}
+
 bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "BB." << MI->getParent()->getNumber() << " :: ";
              MI->print(dbgs()));
@@ -660,6 +706,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     }
 
     MachineOperand *IdxOp = STI->getNamedOperand(*StoreMI, AMDGPU::OpName::idx);
+    updatePrivateObjectNewRegs(MRI, IdxOp, StoreMI);
     IdxList.insert(IdxOp->getReg());
     Worklist.push_back({StoreMI, UseOfMI, {&Def}, AMDGPU::STG_DSTA, DefReg});
   }
@@ -749,6 +796,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
       continue;
 
     MachineOperand *IdxOp = STI->getNamedOperand(*LoadMI, AMDGPU::OpName::idx);
+    updatePrivateObjectNewRegs(MRI, IdxOp, LoadMI);
     if (!IdxList.count(IdxOp->getReg())) {
       // If a bundle would use more than 4 indexes, or if a bundle is
       // using idx0 already through a private vgpr Op, then it can't use idx0
@@ -842,6 +890,8 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = sinkLoadsAndCoreMIs(MF);
 
   LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Bundling Phase =====\n");
+  MFI = MF.getInfo<SIMachineFunctionInfo>();
+  PrivateObjectNewRegs.clear();
   for (MachineBasicBlock &MBB : MF) {
     auto Iter = make_early_inc_range(MBB);
     for (auto &MI : Iter)

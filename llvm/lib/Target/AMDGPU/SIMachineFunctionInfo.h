@@ -422,6 +422,10 @@ struct VGPRBlock2IndexFunctor {
   }
 };
 
+// Creates a vreg definition for idx0, so it's value can be manipulated
+// prior to frame lowering
+Register initIdx0VRegDef(MachineFunction &MF, const SIInstrInfo *TII);
+
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
@@ -602,6 +606,9 @@ private:
   // To save/restore EXEC MASK around WWM spills and copies.
   Register SGPRForEXECCopy;
 
+  // Maps s_set_gpr instrs to a idx0 s_add computation
+  DenseMap<MachineInstr *, MachineInstr *> SetterPairs;
+  Register Idx0VRegDef;
   bool NeedIdx0Restore;
 
   DenseMap<int, VGPRSpillToAGPR> VGPRToAGPRSpills;
@@ -812,6 +819,19 @@ public:
   bool getNeedIdx0Restore() const { return NeedIdx0Restore; }
 
   void setNeedIdx0Restore(bool Need) { NeedIdx0Restore = Need; }
+
+  Register getIdx0VRegDef() const { return Idx0VRegDef; }
+
+  DenseMap<MachineInstr *, MachineInstr *> &getIdx0PrivateComputations() {
+    return SetterPairs;
+  }
+
+  void setIdx0VRegDef(Register Reg) {
+    assert(!Idx0VRegDef.isValid() && Reg.isVirtual() &&
+           "Idx0 should only have one reg def and it must be set before reg "
+           "alloc");
+    Idx0VRegDef = Reg;
+  }
 
   ArrayRef<MCPhysReg> getVGPRSpillAGPRs() const {
     return SpillVGPR;

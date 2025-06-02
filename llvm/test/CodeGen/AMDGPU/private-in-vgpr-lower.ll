@@ -30,13 +30,17 @@ define amdgpu_kernel void @private_load_store() {
   ;
   ; SETIDX-LABEL: name: private_load_store
   ; SETIDX: bb.0.entry:
-  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 0
-  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec {
-  ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX $idx1, 31, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
+  ; SETIDX-NEXT:   $idx0 = S_SET_GPR_IDX_U32 0
+  ; SETIDX-NEXT:   [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY $idx0
+  ; SETIDX-NEXT:   $idx2 = S_SET_GPR_IDX_U32 0
+  ; SETIDX-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32_xexec_hi = S_ADD_I32 [[COPY]], 0, implicit-def $scc
+  ; SETIDX-NEXT:   $idx1 = S_SET_GPR_IDX_U32 [[S_ADD_I32_]]
+  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit $idx1 {
+  ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX $idx2, 31, implicit $exec :: (dereferenceable load (s32) from %ir.p.1, addrspace 5)
   ; SETIDX-NEXT:     V_STORE_IDX internal $stg_dsta, $idx1, 32, implicit $exec :: (store (s32) into %ir.p.2, addrspace 5)
   ; SETIDX-NEXT:   }
-  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx1, implicit $exec {
-  ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX $idx1, 1, implicit $exec :: (dereferenceable load (s32) from %ir.q.1, addrspace 5)
+  ; SETIDX-NEXT:   BUNDLE implicit-def $stg_dsta, implicit $idx2, implicit $exec, implicit $idx1 {
+  ; SETIDX-NEXT:     $stg_dsta = V_LOAD_IDX $idx2, 1, implicit $exec :: (dereferenceable load (s32) from %ir.q.1, addrspace 5)
   ; SETIDX-NEXT:     V_STORE_IDX internal $stg_dsta, $idx1, 2, implicit $exec :: (store (s32) into %ir.q.2, addrspace 5)
   ; SETIDX-NEXT:   }
   ; SETIDX-NEXT:   S_ENDPGM 0

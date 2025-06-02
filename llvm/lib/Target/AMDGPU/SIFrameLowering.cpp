@@ -11,6 +11,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
@@ -1164,7 +1165,7 @@ enum class Idx0UsageKind {
 static Idx0UsageKind determineIdx0Usage(SIMachineFunctionInfo *MFI,
                                         bool EntryFunction,
                                         Register TmpWavegroupReg) {
-  if (!MFI->getNeedIdx0Restore())
+  if (!MFI->getNeedIdx0Restore() && !MFI->getIdx0VRegDef().isValid())
     return Idx0UsageKind::NoUsage;
   if (EntryFunction && !TmpWavegroupReg.isValid())
     return Idx0UsageKind::EntryNonWavegroupUsage;
@@ -1186,16 +1187,62 @@ void SIFrameLowering::finalizeIdx0SaveRestores(MachineFunction &MF,
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  SmallVector<MachineInstr *, 4> InstrsToErase;
   Idx0UsageKind Idx0UK =
       determineIdx0Usage(FuncInfo, EntryFunction, TmpWavegroupReg);
   if (Idx0UK == Idx0UsageKind::NoUsage)
     return;
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::iterator BundleMBBI = nullptr;
+    SmallPtrSet<MachineInstr *, 16> InstrsToErase;
     for (MachineBasicBlock::reverse_iterator I = MBB.rbegin(), E = MBB.rend();
          I != E; ++I) {
       MachineInstr &MI = (*I);
+      // Rewrite unnecessary Idx0 base computations
+      if (Idx0UK == Idx0UsageKind::EntryNonWavegroupUsage &&
+          MI.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32) {
+        if (MachineInstr *Adder = FuncInfo->getIdx0PrivateComputations().lookup(&MI)) {
+          MachineOperand &Use = MI.getOperand(1);
+          Register UseReg = Use.getReg();
+          Register DefReg = Adder->getOperand(0).getReg();
+          assert(UseReg == DefReg &&
+                 "Setter is not using the result of the idx0 computation");
+          MachineOperand RealIdxUse = Adder->getOperand(1);
+          MachineOperand Idx0MO = Adder->getOperand(2);
+          if (RealIdxUse.isReg() && Idx0MO.isImm()) {
+            // they got swapped by optimize instr size
+            RealIdxUse = Idx0MO;
+          }
+          for (MachineOperand &MO : MI.uses()) {
+            if (MO.isReg() && MO.getReg() == DefReg) {
+              MO.setIsKill(false);
+              if (RealIdxUse.isReg())
+                MO.setReg(RealIdxUse.getReg());
+              else {
+                MI.removeOperand(MO.getOperandNo());
+                MI.addOperand(MachineOperand::CreateImm(RealIdxUse.getImm()));
+              }
+            }
+          }
+          // Cleanup liveins
+          SmallSet<MachineBasicBlock *, 16> Worklist;
+          Worklist.insert(MI.getParent());
+          while (!Worklist.empty()) {
+            MachineBasicBlock &MBB = **Worklist.begin();
+            Worklist.erase(&MBB);
+            if (&MBB == Adder->getParent())
+              continue;
+            // then we can't reach the def through this pred
+            if (!MBB.isLiveIn(DefReg))
+              continue;
+            assert(MBB.isLiveIn(DefReg) &&
+                   "idx0 private computation reg isn't live in predecessor");
+            MBB.removeLiveIn(DefReg);
+            Worklist.insert_range(MBB.predecessors());
+          }
+          InstrsToErase.insert(Adder);
+        }
+      }
+      // Stateful BundleMBBI check
       if (MI.getOpcode() == TargetOpcode::BUNDLE) {
         for (auto &MO : MI.operands()) {
           if (MO.getReg() == AMDGPU::IDX0) {
@@ -1207,14 +1254,16 @@ void SIFrameLowering::finalizeIdx0SaveRestores(MachineFunction &MF,
                  BundleMBBI == nullptr) {
         if (MI.getOperand(0).getReg() != AMDGPU::IDX0)
           continue;
-        // Update private base restore if necessary, or remove the extra idx0
-        // def
         if (Idx0UK == Idx0UsageKind::EntryNonWavegroupUsage &&
             !MI.getOperand(1).isImm()) {
+          // Update idx0 restores to restore to 0 for EntryNonWavegroupUsage.
           MI.removeOperand(1);
           MI.addOperand(MachineOperand::CreateImm(0));
-        } else if (MI.getOperand(1).isImm()) {
-          InstrsToErase.push_back(&MI);
+        } else if (Idx0UK != Idx0UsageKind::EntryNonWavegroupUsage &&
+                   MI.getOperand(1).isImm()) {
+          // Erase the extra idx0 setter if incorrectly setting to 0 when !=
+          // EntryNonWavegroupUsage.
+          InstrsToErase.insert(&MI);
         }
       } else if (MI.getOpcode() == AMDGPU::S_SET_GPR_IDX_U32 &&
                  BundleMBBI != nullptr) {
@@ -1231,15 +1280,15 @@ void SIFrameLowering::finalizeIdx0SaveRestores(MachineFunction &MF,
           BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(),
                   TII->get(AMDGPU::S_GETREG_B32), RestoreSGPR)
               .addImm(HwregEncoding::encode(ID_WAVE_GPR_MSB_IDX0, 0, 32));
-          InstrsToErase.push_back(&MI);
+          InstrsToErase.insert(&MI);
         } else if (Idx0UK == Idx0UsageKind::EntryNonWavegroupUsage) {
-          InstrsToErase.push_back(&MI);
+          InstrsToErase.insert(&MI);
         }
       }
     }
-  }
-  for (auto MI : InstrsToErase) {
-    MI->eraseFromParent();
+    for (auto MI : InstrsToErase) {
+      MI->eraseFromParent();
+    }
   }
 }
 
