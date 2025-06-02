@@ -12,6 +12,8 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -30,6 +32,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -38,6 +41,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InterleavedRange.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -701,7 +705,47 @@ namespace {
 //===----------------------------------------------------------------------===//
 // LayoutAttrAssignment
 //===----------------------------------------------------------------------===//
+template <typename OpTy>
+class UpdateTensorDescType : public OpConversionPattern<OpTy> {
+public:
+  UpdateTensorDescType(MLIRContext *context,
+                       function_ref<xegpu::LayoutAttr(Value)> getLayoutOfValue,
+                       TypeConverter &typeConverter, PatternBenefit benefit = 1)
+      : OpConversionPattern<OpTy>(typeConverter, context, benefit),
+        getLayoutOfValue(getLayoutOfValue) {}
+  using OpConversionPattern<OpTy>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(OpTy op, typename OpTy::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Op must have single result.
+    if (op->getNumResults() != 1)
+      return failure();
+    Type resultType = op->getResult(0).getType();
+    // Result type must be a tensor descriptor type.
+    if (!isa<xegpu::TensorDescType>(resultType)) {
+      LLVM_DEBUG(DBGS() << "Result type is not a tensor descriptor type: "
+                        << resultType << "\n");
+      return failure();
+    }
+    auto assignedLayout = getLayoutOfValue(op.getResult());
+    if (!assignedLayout) {
+      LLVM_DEBUG(DBGS() << "No layout assigned for " << *op << "\n");
+      return failure();
+    }
+    // Get the original tensor descriptor type.
+    auto origTensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType);
+    auto newTensorDescTy = xegpu::TensorDescType::get(
+        origTensorDescTy.getContext(), origTensorDescTy.getShape(),
+        origTensorDescTy.getElementType(), origTensorDescTy.getEncoding(),
+        assignedLayout);
+    rewriter.replaceOpWithNewOp<OpTy>(op, newTensorDescTy,
+                                      adaptor.getOperands(), op->getAttrs());
+    return success();
+  }
 
+private:
+  function_ref<xegpu::LayoutAttr(Value)> getLayoutOfValue;
+};
 /// This class is responsible for assigning the layout attributes to the ops and
 /// their users based on the layout propagation analysis result.
 class LayoutAttrAssignment {
@@ -739,15 +783,19 @@ void LayoutAttrAssignment::assignToUsers(Value v, xegpu::LayoutAttr layout) {
 
 /// Convert the layout assigned to a value to xegpu::LayoutAttr.
 xegpu::LayoutAttr LayoutAttrAssignment::getLayoutAttrForValue(Value v) {
+  llvm::errs() << "getLayoutAttrForValue: " << v << "\n";
   LayoutInfo layout = getAnalysisResult(v);
-  if (!layout.isAssigned())
+  if (!layout.isAssigned()) {
+    llvm::errs() << "No layout assigned for value\n";
     return {};
+  }
   SmallVector<int, 2> laneLayout, laneData;
   for (auto [layout, data] : llvm::zip_equal(layout.getLayoutAsArrayRef(),
                                              layout.getDataAsArrayRef())) {
     laneLayout.push_back(static_cast<int>(layout));
     laneData.push_back(static_cast<int>(data));
   }
+  llvm::errs() << "return layout\n";
   return xegpu::LayoutAttr::get(v.getContext(), laneLayout, laneData);
 }
 
@@ -820,14 +868,23 @@ LogicalResult LayoutAttrAssignment::assign(Operation *op) {
 
 /// Walk the IR and attach xegpu::LayoutAttr to all ops and their users.
 LogicalResult LayoutAttrAssignment::run() {
-  auto walkResult = top->walk([&](Operation *op) {
-    if (failed(assign(op)))
-      return WalkResult::interrupt();
-    return WalkResult::advance();
-  });
+  // auto walkResult = top->walk([&](Operation *op) {
+  //   if (failed(assign(op)))
+  //     return WalkResult::interrupt();
+  //   return WalkResult::advance();
+  // });
 
-  if (walkResult.wasInterrupted())
-    return failure();
+  // if (walkResult.wasInterrupted())
+  //   return failure();
+  // apply the UpdateTensorDescType pattern to all ops
+  // RewritePatternSet patterns(top->getContext());
+  // patterns.add<UpdateTensorDescType>(
+  //     top->getContext(), [&](Value v) -> xegpu::LayoutAttr {
+  //       llvm::errs() << "invoking callback for value\n";
+  //       return getLayoutAttrForValue(v);
+  //     });
+  // if (failed(applyPatternsGreedily(top, std::move(patterns))))
+  //   return failure();
 
   return resolveConflicts();
 }
@@ -1597,56 +1654,109 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     analyis.printAnalysisResult(os);
     return;
   }
-  auto getPropagatedLayout = [&](Value val) {
-    return analyis.getLayoutInfo(val);
+  // auto getPropagatedLayout = [&](Value val) {
+  //   return analyis.getLayoutInfo(val);
+  // };
+  auto getXeGpuLayoutForValue = [&](Value val) -> xegpu::LayoutAttr {
+    LayoutInfo layout = analyis.getLayoutInfo(val);
+    if (!layout.isAssigned()) {
+      llvm::errs() << "No layout assigned for value\n";
+      return {};
+    }
+    SmallVector<int, 2> laneLayout, laneData;
+    for (auto [layout, data] : llvm::zip_equal(layout.getLayoutAsArrayRef(),
+                                               layout.getDataAsArrayRef())) {
+      laneLayout.push_back(static_cast<int>(layout));
+      laneData.push_back(static_cast<int>(data));
+    }
+    return xegpu::LayoutAttr::get(val.getContext(), laneLayout, laneData);
   };
+
+  ConversionTarget target(getContext());
+  target.addDynamicallyLegalOp<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp>(
+      [&](Operation *op) {
+        return llvm::all_of(op->getResults(), [&](Value val) {
+          if (auto descType = dyn_cast<xegpu::TensorDescType>(val.getType())) {
+            return descType.getLayoutAttr() != nullptr;
+          }
+          return true; // Non-tensor descriptor types are always legal.
+        });
+      });
+  target.addLegalOp<UnrealizedConversionCastOp>();
+  TypeConverter typeConverter;
+  typeConverter.addConversion([](Type type) { return type; });
+  // // typeConverter.addConversion([](xegpu::TensorDescType type) {
+  // //   return xegpu::TensorDescType::get(
+  // //       type.getContext(), type.getShape(), type.getElementType(),
+  // //       type.getEncoding(),
+  // //       xegpu::LayoutAttr::get(type.getContext(), {1, 1}, {1, 1}));
+  // // });
+  auto addUnrealizedCast = [](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) -> Value {
+    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return cast.getResult(0);
+  };
+
+  typeConverter.addSourceMaterialization(addUnrealizedCast);
+  typeConverter.addTargetMaterialization(addUnrealizedCast);
+
+  RewritePatternSet patterns(&getContext());
+  patterns.add<UpdateTensorDescType<xegpu::CreateNdDescOp>,
+               UpdateTensorDescType<xegpu::UpdateNdOffsetOp>>(
+      &getContext(), getXeGpuLayoutForValue, typeConverter);
+  if (failed(
+          applyPartialConversion(getOperation(), target, std::move(patterns))))
+    signalPassFailure();
 
   // Assign xegpu::LayoutAttr to all ops and their users based on the layout
   // propagation analysis result.
-  LayoutAttrAssignment layoutAssignment(getOperation(), getPropagatedLayout);
-  if (failed(layoutAssignment.run())) {
-    signalPassFailure();
-    return;
-  }
+  // LayoutAttrAssignment layoutAssignment(getOperation(), getPropagatedLayout);
+  // if (failed(layoutAssignment.run())) {
+  //   signalPassFailure();
+  //   return;
+  // }
 
   // Move all operations of a GPU function inside gpu.warp_execute_on_lane_0
   // operation.
-  {
-    RewritePatternSet patterns(&getContext());
-    patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
+  // {
+  //   RewritePatternSet patterns(&getContext());
+  //   patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
 
-    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-      signalPassFailure();
-      return;
-    }
-    // At this point, we have moved the entire function body inside the warpOp.
-    // Now move any scalar uniform code outside of the warpOp (like GPU index
-    // ops, scalar constants, etc.). This will simplify the later lowering and
-    // avoid custom patterns for these ops.
-    getOperation()->walk([&](Operation *op) {
-      if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
-        vector::moveScalarUniformCode(warpOp);
-      }
-    });
-  }
-  // Finally, do the SIMD to SIMT distribution.
-  RewritePatternSet patterns(&getContext());
-  xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
-  // TODO: distributionFn and shuffleFn are not used at this point.
-  auto distributionFn = [](Value val) {
-    VectorType vecType = dyn_cast<VectorType>(val.getType());
-    int64_t vecRank = vecType ? vecType.getRank() : 0;
-    OpBuilder builder(val.getContext());
-    if (vecRank == 0)
-      return AffineMap::get(val.getContext());
-    return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
-  };
-  auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value srcIdx,
-                      int64_t warpSz) { return Value(); };
-  vector::populatePropagateWarpVectorDistributionPatterns(
-      patterns, distributionFn, shuffleFn);
-  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-    signalPassFailure();
-    return;
-  }
+  //   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+  //     signalPassFailure();
+  //     return;
+  //   }
+  //   // At this point, we have moved the entire function body inside the
+  //   warpOp.
+  //   // Now move any scalar uniform code outside of the warpOp (like GPU index
+  //   // ops, scalar constants, etc.). This will simplify the later lowering
+  //   and
+  //   // avoid custom patterns for these ops.
+  //   getOperation()->walk([&](Operation *op) {
+  //     if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
+  //       vector::moveScalarUniformCode(warpOp);
+  //     }
+  //   });
+  // }
+  // // Finally, do the SIMD to SIMT distribution.
+  // RewritePatternSet patterns(&getContext());
+  // xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
+  // // TODO: distributionFn and shuffleFn are not used at this point.
+  // auto distributionFn = [](Value val) {
+  //   VectorType vecType = dyn_cast<VectorType>(val.getType());
+  //   int64_t vecRank = vecType ? vecType.getRank() : 0;
+  //   OpBuilder builder(val.getContext());
+  //   if (vecRank == 0)
+  //     return AffineMap::get(val.getContext());
+  //   return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
+  // };
+  // auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value
+  // srcIdx,
+  //                     int64_t warpSz) { return Value(); };
+  // vector::populatePropagateWarpVectorDistributionPatterns(
+  //     patterns, distributionFn, shuffleFn);
+  // if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+  //   signalPassFailure();
+  //   return;
+  // }
 }
