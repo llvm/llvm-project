@@ -136,6 +136,12 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
 
+- New :doc:`portability-avoid-pragma-once
+  <clang-tidy/checks/portability/avoid-pragma-once>` check.
+
+  Finds uses of ``#pragma once`` and suggests replacing them with standard
+  include guards (``#ifndef``/``#define``/``#endif``) for improved portability.
+
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
 
@@ -242,6 +248,10 @@ Changes in existing checks
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `AllowedTypes`, that excludes specified types from adding qualifiers.
+
+- Improved :doc:`readability-redundant-smartptr-get
+  <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
+  some false positives involving smart pointers to arrays.
 
 Removed checks
 ^^^^^^^^^^^^^^

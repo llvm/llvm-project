@@ -420,7 +420,7 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
     assert(PtrStorage && "Invalid pointer storage");
 
     *PtrStorage = MemoryManager->allocate(Size, nullptr);
-    if (*PtrStorage == nullptr)
+    if (Size && *PtrStorage == nullptr)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failure to allocate from AMDGPU memory manager");
 
@@ -429,8 +429,6 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 
   /// Release an allocation to be reused.
   Error deallocate(void *Ptr) {
-    assert(Ptr && "Invalid pointer");
-
     if (MemoryManager->free(Ptr))
       return Plugin::error(ErrorCode::UNKNOWN,
                            "failure to deallocate from AMDGPU memory manager");
@@ -1204,7 +1202,6 @@ private:
     ReleaseBufferArgsTy *Args = reinterpret_cast<ReleaseBufferArgsTy *>(Data);
     assert(Args && "Invalid arguments");
     assert(Args->MemoryManager && "Invalid memory manager");
-    assert(Args->Buffer && "Invalid buffer");
 
     // Release the allocation to the memory manager.
     return Args->MemoryManager->deallocate(Args->Buffer);
@@ -3365,9 +3362,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  KernelLaunchParamsTy LaunchParams,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   if (ArgsSize != LaunchParams.Size &&
-      ArgsSize != LaunchParams.Size + getImplicitArgsSize())
+      ArgsSize > LaunchParams.Size + getImplicitArgsSize())
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "mismatch of kernel arguments size");
+                         "invalid kernel arguments size");
 
   AMDGPUPluginTy &AMDGPUPlugin =
       static_cast<AMDGPUPluginTy &>(GenericDevice.Plugin);
@@ -3401,23 +3398,39 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
-  hsa_utils::AMDGPUImplicitArgsTy *ImplArgs = nullptr;
-  if (ArgsSize == LaunchParams.Size + getImplicitArgsSize()) {
-    ImplArgs = reinterpret_cast<hsa_utils::AMDGPUImplicitArgsTy *>(
-        utils::advancePtr(AllArgs, LaunchParams.Size));
+  uint64_t ImplArgsOffset = utils::roundUp(
+      LaunchParams.Size, alignof(hsa_utils::AMDGPUImplicitArgsTy));
+  if (ArgsSize > ImplArgsOffset) {
+    hsa_utils::AMDGPUImplicitArgsTy *ImplArgs =
+        reinterpret_cast<hsa_utils::AMDGPUImplicitArgsTy *>(
+            utils::advancePtr(AllArgs, ImplArgsOffset));
 
-    // Set the COV5+ implicit arguments to the appropriate values.
-    std::memset(ImplArgs, 0, getImplicitArgsSize());
-    ImplArgs->BlockCountX = NumBlocks[0];
-    ImplArgs->BlockCountY = NumBlocks[1];
-    ImplArgs->BlockCountZ = NumBlocks[2];
-    ImplArgs->GroupSizeX = NumThreads[0];
-    ImplArgs->GroupSizeY = NumThreads[1];
-    ImplArgs->GroupSizeZ = NumThreads[2];
-    ImplArgs->GridDims = NumBlocks[2] * NumThreads[2] > 1
-                             ? 3
-                             : 1 + (NumBlocks[1] * NumThreads[1] != 1);
-    ImplArgs->DynamicLdsSize = KernelArgs.DynCGroupMem;
+    // Set the COV5+ implicit arguments to the appropriate values if present.
+    uint64_t ImplArgsSize = ArgsSize - ImplArgsOffset;
+    std::memset(ImplArgs, 0, ImplArgsSize);
+
+    using ImplArgsTy = hsa_utils::AMDGPUImplicitArgsTy;
+    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::BlockCountX, ImplArgsSize,
+                           NumBlocks[0]);
+    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::BlockCountY, ImplArgsSize,
+                           NumBlocks[1]);
+    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::BlockCountZ, ImplArgsSize,
+                           NumBlocks[2]);
+
+    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GroupSizeX, ImplArgsSize,
+                           NumThreads[0]);
+    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GroupSizeY, ImplArgsSize,
+                           NumThreads[1]);
+    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GroupSizeZ, ImplArgsSize,
+                           NumThreads[2]);
+
+    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::GridDims, ImplArgsSize,
+                           NumBlocks[2] * NumThreads[2] > 1
+                               ? 3
+                               : 1 + (NumBlocks[1] * NumThreads[1] != 1));
+
+    hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::DynamicLdsSize, ImplArgsSize,
+                           KernelArgs.DynCGroupMem);
   }
 
   // Push the kernel launch into the stream.

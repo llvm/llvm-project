@@ -29,12 +29,9 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
-#include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
 
@@ -679,7 +676,8 @@ void Parser::ParseGNUAttributeArgs(
                          Form);
     return;
   } else if (AttrKind == ParsedAttr::AT_CXXAssume) {
-    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc, Form);
+    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, ScopeName,
+                               ScopeLoc, EndLoc, Form);
     return;
   }
 
@@ -737,7 +735,8 @@ unsigned Parser::ParseClangAttributeArgs(
     break;
 
   case ParsedAttr::AT_CXXAssume:
-    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc, Form);
+    ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, ScopeName,
+                               ScopeLoc, EndLoc, Form);
     break;
   }
   return !Attrs.empty() ? Attrs.begin()->getNumArgs() : 0;

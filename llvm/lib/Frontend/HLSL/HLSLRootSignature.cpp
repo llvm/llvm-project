@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -171,9 +172,15 @@ void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
 MDNode *MetadataBuilder::BuildRootSignature() {
   for (const RootElement &Element : Elements) {
     MDNode *ElementMD = nullptr;
-    if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
+    if (const auto &Flags = std::get_if<RootFlags>(&Element))
+      ElementMD = BuildRootFlags(*Flags);
+    else if (const auto &Constants = std::get_if<RootConstants>(&Element))
+      ElementMD = BuildRootConstants(*Constants);
+    else if (const auto &Descriptor = std::get_if<RootDescriptor>(&Element))
+      ElementMD = BuildRootDescriptor(*Descriptor);
+    else if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
       ElementMD = BuildDescriptorTableClause(*Clause);
-    if (const auto &Table = std::get_if<DescriptorTable>(&Element))
+    else if (const auto &Table = std::get_if<DescriptorTable>(&Element))
       ElementMD = BuildDescriptorTable(*Table);
 
     // FIXME(#126586): remove once all RootElemnt variants are handled in a
@@ -185,6 +192,46 @@ MDNode *MetadataBuilder::BuildRootSignature() {
   }
 
   return MDNode::get(Ctx, GeneratedMetadata);
+}
+
+MDNode *MetadataBuilder::BuildRootFlags(const RootFlags &Flags) {
+  IRBuilder<> Builder(Ctx);
+  Metadata *Operands[] = {
+      MDString::get(Ctx, "RootFlags"),
+      ConstantAsMetadata::get(Builder.getInt32(llvm::to_underlying(Flags))),
+  };
+  return MDNode::get(Ctx, Operands);
+}
+
+MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
+  IRBuilder<> Builder(Ctx);
+  Metadata *Operands[] = {
+      MDString::get(Ctx, "RootConstants"),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Constants.Visibility))),
+      ConstantAsMetadata::get(Builder.getInt32(Constants.Reg.Number)),
+      ConstantAsMetadata::get(Builder.getInt32(Constants.Space)),
+      ConstantAsMetadata::get(Builder.getInt32(Constants.Num32BitConstants)),
+  };
+  return MDNode::get(Ctx, Operands);
+}
+
+MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
+  IRBuilder<> Builder(Ctx);
+  llvm::SmallString<7> Name;
+  llvm::raw_svector_ostream OS(Name);
+  OS << "Root" << ClauseType(llvm::to_underlying(Descriptor.Type));
+
+  Metadata *Operands[] = {
+      MDString::get(Ctx, OS.str()),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Descriptor.Visibility))),
+      ConstantAsMetadata::get(Builder.getInt32(Descriptor.Reg.Number)),
+      ConstantAsMetadata::get(Builder.getInt32(Descriptor.Space)),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Descriptor.Flags))),
+  };
+  return MDNode::get(Ctx, Operands);
 }
 
 MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {

@@ -12,9 +12,7 @@
 #include "DAPForward.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBCompileUnit.h"
-#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
-#include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBType.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-types.h"
@@ -238,66 +236,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 protocol::ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 
-/// Create a "Source" JSON object as described in the debug adapter definition.
-///
-/// \param[in] file
-///     The SBFileSpec to use when populating out the "Source" object
-///
-/// \return
-///     A "Source" JSON object that follows the formal JSON
-///     definition outlined by Microsoft.
-protocol::Source CreateSource(const lldb::SBFileSpec &file);
-
-/// Create a "Source" JSON object as described in the debug adapter definition.
-///
-/// \param[in] line_entry
-///     The LLDB line table to use when populating out the "Source"
-///     object
-///
-/// \return
-///     A "Source" JSON object that follows the formal JSON
-///     definition outlined by Microsoft.
-protocol::Source CreateSource(const lldb::SBLineEntry &line_entry);
-
-/// Create a "Source" object for a given source path.
-///
-/// \param[in] source_path
-///     The path to the source to use when creating the "Source" object.
-///
-/// \return
-///     A "Source" JSON object that follows the formal JSON
-///     definition outlined by Microsoft.
-protocol::Source CreateSource(llvm::StringRef source_path);
-
-/// Create a "Source" object for a given frame, using its assembly for source.
-///
-/// \param[in] target
-///     The relevant target.
-///
-/// \param[in] address
-///     The address to use when creating the "Source" object.
-///
-/// \return
-///     A "Source" JSON object that follows the formal JSON
-///     definition outlined by Microsoft.
-protocol::Source CreateAssemblySource(const lldb::SBTarget &target,
-                                      lldb::SBAddress &address);
-
-/// Return true if the given line entry should be displayed as assembly.
-///
-/// \param[in] line_entry
-///     The LLDB line entry to check.
-///
-/// \param[in] stop_disassembly_display
-///     The value of the "stop-disassembly-display" setting.
-///
-/// \return
-///     True if the line entry should be displayed as assembly, false
-///     otherwise.
-bool ShouldDisplayAssemblySource(
-    const lldb::SBLineEntry &line_entry,
-    lldb::StopDisassemblyType stop_disassembly_display);
-
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
 /// This function will fill in the following keys in the returned
@@ -316,14 +254,11 @@ bool ShouldDisplayAssemblySource(
 ///     The LLDB format to use when populating out the "StackFrame"
 ///     object.
 ///
-/// \param[in] stop_disassembly_display
-///     The value of the "stop-disassembly-display" setting.
-///
 /// \return
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
-                                   lldb::StopDisassemblyType);
+llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
+                                   lldb::SBFormat &format);
 
 /// Create a "StackFrame" label object for a LLDB thread.
 ///

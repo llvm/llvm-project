@@ -957,3 +957,56 @@ entry:
   %res = call <vscale x 1 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 1 x i32> zeroinitializer, <vscale x 4 x i32> %mul)
   ret <vscale x 1 x i32> %res
 }
+
+
+define <vscale x 4 x i32> @partial_of_sext(<vscale x 16 x i8> %a) {
+; NODOT-LABEL: partial_of_sext:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; NODOT-NEXT:    vsext.vf4 v16, v8
+; NODOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vadd.vv v8, v22, v16
+; NODOT-NEXT:    vadd.vv v10, v18, v20
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_of_sext:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; DOT-NEXT:    vmv.v.i v12, 1
+; DOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; DOT-NEXT:    vmv.v.i v10, 0
+; DOT-NEXT:    vqdot.vv v10, v8, v12
+; DOT-NEXT:    vmv.v.v v8, v10
+; DOT-NEXT:    ret
+entry:
+  %a.ext = sext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %res = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i32> %a.ext)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @partial_of_zext(<vscale x 16 x i8> %a) {
+; NODOT-LABEL: partial_of_zext:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; NODOT-NEXT:    vzext.vf4 v16, v8
+; NODOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; NODOT-NEXT:    vadd.vv v8, v22, v16
+; NODOT-NEXT:    vadd.vv v10, v18, v20
+; NODOT-NEXT:    vadd.vv v8, v10, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: partial_of_zext:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; DOT-NEXT:    vmv.v.i v12, 1
+; DOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; DOT-NEXT:    vmv.v.i v10, 0
+; DOT-NEXT:    vqdotu.vv v10, v8, v12
+; DOT-NEXT:    vmv.v.v v8, v10
+; DOT-NEXT:    ret
+entry:
+  %a.ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i32>
+  %res = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i32> %a.ext)
+  ret <vscale x 4 x i32> %res
+}

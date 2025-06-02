@@ -321,6 +321,10 @@ public:
                                NodeBuilderWithSinks &nodeBuilder,
                                ExplodedNode *Pred);
 
+  void runCheckersForBlockEntrance(const NodeBuilderContext &BldCtx,
+                                   const BlockEntrance &Entrance,
+                                   ExplodedNode *Pred, ExplodedNodeSet &Dst);
+
   /// ProcessBranch - Called by CoreEngine. Used to generate successor nodes by
   /// processing the 'effects' of a branch condition. If the branch condition
   /// is a loop condition, IterationsCompletedInLoop is the number of completed

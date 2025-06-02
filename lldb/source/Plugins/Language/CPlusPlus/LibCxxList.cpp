@@ -388,7 +388,7 @@ lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(uint32_t idx) {
       return lldb::ValueObjectSP();
 
     // if we grabbed the __next_ pointer, then the child is one pointer deep-er
-    lldb::addr_t addr = current_sp->GetParent()->GetPointerValue();
+    lldb::addr_t addr = current_sp->GetParent()->GetPointerValue().address;
     addr = addr + 2 * process_sp->GetAddressByteSize();
     ExecutionContext exe_ctx(process_sp);
     current_sp =

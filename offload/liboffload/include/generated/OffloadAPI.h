@@ -320,6 +320,8 @@ typedef enum ol_device_type_t {
   OL_DEVICE_TYPE_GPU = 2,
   /// CPU device type
   OL_DEVICE_TYPE_CPU = 3,
+  /// Host device type
+  OL_DEVICE_TYPE_HOST = 4,
   /// @cond
   OL_DEVICE_TYPE_FORCE_UINT32 = 0x7fffffff
   /// @endcond

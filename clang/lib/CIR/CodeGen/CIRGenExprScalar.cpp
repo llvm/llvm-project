@@ -171,6 +171,28 @@ public:
     return emitLoadOfLValue(e);
   }
 
+  mlir::Value VisitShuffleVectorExpr(ShuffleVectorExpr *e) {
+    if (e->getNumSubExprs() == 2) {
+      // The undocumented form of __builtin_shufflevector.
+      mlir::Value inputVec = Visit(e->getExpr(0));
+      mlir::Value indexVec = Visit(e->getExpr(1));
+      return cgf.builder.create<cir::VecShuffleDynamicOp>(
+          cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
+    }
+
+    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
+                                   "ShuffleVectorExpr with indices");
+    return {};
+  }
+
+  mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *e) {
+    // __builtin_convertvector is an element-wise cast, and is implemented as a
+    // regular cast. The back end handles casts of vectors correctly.
+    return emitScalarConversion(Visit(e->getSrcExpr()),
+                                e->getSrcExpr()->getType(), e->getType(),
+                                e->getSourceRange().getBegin());
+  }
+
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
   mlir::Value VisitInitListExpr(InitListExpr *e);
@@ -263,7 +285,12 @@ public:
            "Obsolete code. Don't use mlir::IntegerType with CIR.");
 
     mlir::Type fullDstTy = dstTy;
-    assert(!cir::MissingFeatures::vectorType());
+    if (mlir::isa<cir::VectorType>(srcTy) &&
+        mlir::isa<cir::VectorType>(dstTy)) {
+      // Use the element types of the vectors to figure out the CastKind.
+      srcTy = mlir::dyn_cast<cir::VectorType>(srcTy).getElementType();
+      dstTy = mlir::dyn_cast<cir::VectorType>(dstTy).getElementType();
+    }
 
     std::optional<cir::CastKind> castKind;
 

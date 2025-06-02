@@ -5,6 +5,28 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+enum A {
+  A_one,
+  A_two
+};
+enum A a;
+
+// CHECK:   cir.global external @a = #cir.int<0> : !u32i
+
+enum B : int;
+enum B b;
+
+// CHECK:   cir.global external @b = #cir.int<0> : !u32i
+
+
+enum C : int {
+  C_one,
+  C_two
+};
+enum C c;
+
+// CHECK:   cir.global external @c = #cir.int<0> : !u32i
+
 int f1(int i);
 
 int f1(int i) {
@@ -12,8 +34,7 @@ int f1(int i) {
   return i;
 }
 
-//      CIR: module
-// CIR-NEXT: cir.func @f1(%arg0: !s32i loc({{.*}})) -> !s32i
+// CIR:      cir.func @f1(%arg0: !s32i loc({{.*}})) -> !s32i
 // CIR-NEXT:   %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT:   cir.store{{.*}} %arg0, %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
@@ -288,25 +309,3 @@ size_type max_size(void) {
 // CHECK:   %6 = cir.load{{.*}} %0 : !cir.ptr<!u64i>, !u64i
 // CHECK:   cir.return %6 : !u64i
 // CHECK:   }
-
-enum A {
-  A_one,
-  A_two
-};
-enum A a;
-
-// CHECK:   cir.global external @a = #cir.int<0> : !u32i
-
-enum B : int;
-enum B b;
-
-// CHECK:   cir.global external @b = #cir.int<0> : !u32i
-
-
-enum C : int {
-  C_one,
-  C_two
-};
-enum C c;
-
-// CHECK:   cir.global external @c = #cir.int<0> : !u32i

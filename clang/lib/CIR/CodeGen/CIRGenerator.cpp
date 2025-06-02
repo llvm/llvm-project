@@ -62,3 +62,10 @@ bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
 
   return true;
 }
+
+void CIRGenerator::CompleteTentativeDefinition(VarDecl *d) {
+  if (diags.hasErrorOccurred())
+    return;
+
+  cgm->emitTentativeDefinition(d);
+}

@@ -660,6 +660,11 @@ void DWARFUnit::clearDIEs(bool KeepCUDie, bool KeepDWODies) {
     if (!KeepDWODies && DWO) {
       DWO->clearDIEs(KeepCUDie, KeepDWODies);
     }
+    if (!IsDWO) {
+      RangeSectionBase = 0;
+      LocSectionBase = 0;
+      AddrOffsetSectionBase = std::nullopt;
+    }
     // Do not use resize() + shrink_to_fit() to free memory occupied by dies.
     // shrink_to_fit() is a *non-binding* request to reduce capacity() to
     // size(). It depends on the implementation whether the request is

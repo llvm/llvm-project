@@ -18,6 +18,7 @@
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -632,12 +633,25 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
       return true;
 
     auto &ST = MF.getSubtarget<AArch64Subtarget>();
+    const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     if (ST.hasSVE() || ST.isStreaming()) {
-      const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
       // Frames that have variable sized objects and scalable SVE objects,
       // should always use a basepointer.
       if (!AFI->hasCalculatedStackSizeSVE() || AFI->getStackSizeSVE())
         return true;
+    }
+
+    // Frames with hazard padding can have a large offset between the frame
+    // pointer and GPR locals, which includes the emergency spill slot. If the
+    // emergency spill slot is not within range of the load/store instructions
+    // (which have a signed 9-bit range), we will fail to compile if it is used.
+    // Since hasBasePointer() is called before we know if we have hazard padding
+    // or an emergency spill slot we need to enable the basepointer
+    // conservatively.
+    if (AFI->hasStackHazardSlotIndex() ||
+        (ST.getStreamingHazardSize() &&
+         !SMEAttrs(MF.getFunction()).hasNonStreamingInterfaceAndBody())) {
+      return true;
     }
 
     // Conservatively estimate whether the negative offset from the frame
@@ -764,7 +778,8 @@ AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   assert((!MF.getSubtarget<AArch64Subtarget>().hasSVE() ||
           AFI->hasCalculatedStackSizeSVE()) &&
          "Expected SVE area to be calculated by this point");
-  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->getStackSizeSVE();
+  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->getStackSizeSVE() &&
+         !AFI->hasStackHazardSlotIndex();
 }
 
 bool AArch64RegisterInfo::requiresFrameIndexScavenging(

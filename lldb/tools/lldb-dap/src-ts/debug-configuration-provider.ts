@@ -84,7 +84,7 @@ export class LLDBDapConfigurationProvider
         continue;
       }
       const value = config.get(key);
-      if (!value || value === cfg.default) {
+      if (value === undefined || value === cfg.default) {
         continue;
       }
       switch (cfg.type) {

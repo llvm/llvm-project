@@ -445,8 +445,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     if( ARCH STREQUAL amdgcn OR ARCH STREQUAL r600 OR ARCH STREQUAL amdgcn-amdhsa )
       set ( private_addrspace_val 5 )
     endif()
-    if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64
-        OR ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
+    if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
       set ( generic_addrspace_val 4 )
     endif()
     list( APPEND build_flags

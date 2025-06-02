@@ -2100,8 +2100,8 @@ static bool shouldMergeGEPs(GEPOperator &GEP, GEPOperator &Src) {
 ///
 /// A 1-to-1 mapping is not required. Example:
 /// ShMask = <1,1,2,2> and C = <5,5,6,6> --> NewC = <poison,5,6,poison>
-static Constant *unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
-                                   VectorType *NewCTy) {
+Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
+                                              VectorType *NewCTy) {
   if (isa<ScalableVectorType>(NewCTy)) {
     Constant *Splat = C->getSplatValue();
     if (!Splat)

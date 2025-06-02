@@ -23,7 +23,7 @@ using namespace offload::tblgen;
 static void EmitValidationFunc(const FunctionRec &F, raw_ostream &OS) {
   OS << CommentsHeader;
   // Emit preamble
-  OS << formatv("{0}_impl_result_t {1}_val(\n  ", PrefixLower, F.getName());
+  OS << formatv("llvm::Error {0}_val(\n  ", F.getName());
   // Emit arguments
   std::string ParamNameList = "";
   for (auto &Param : F.getParams()) {
@@ -42,7 +42,9 @@ static void EmitValidationFunc(const FunctionRec &F, raw_ostream &OS) {
       if (Condition.starts_with("`") && Condition.ends_with("`")) {
         auto ConditionString = Condition.substr(1, Condition.size() - 2);
         OS << formatv(TAB_2 "if ({0}) {{\n", ConditionString);
-        OS << formatv(TAB_3 "return {0};\n", Return.getValue());
+        OS << formatv(TAB_3 "return createOffloadError(error::ErrorCode::{0}, "
+                            "\"validation failure: {1}\");\n",
+                      Return.getUnprefixedValue(), ConditionString);
         OS << TAB_2 "}\n\n";
       }
     }
@@ -78,8 +80,9 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
 
   // Perform actual function call to the validation wrapper
   ParamNameList = ParamNameList.substr(0, ParamNameList.size() - 2);
-  OS << formatv(TAB_1 "{0}_result_t Result = {1}_val({2});\n\n", PrefixLower,
-                F.getName(), ParamNameList);
+  OS << formatv(
+      TAB_1 "{0}_result_t Result = llvmErrorToOffloadError({1}_val({2}));\n\n",
+      PrefixLower, F.getName(), ParamNameList);
 
   // Emit post-call prints
   OS << TAB_1 "if (offloadConfig().TracingEnabled) {\n";

@@ -3674,6 +3674,52 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
             foldAddLikeCommutative(I.getOperand(1), I.getOperand(0),
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
+
+    Value *Cond0 = nullptr, *Cond1 = nullptr;
+    const APInt *Op0Eq = nullptr, *Op0Ne = nullptr;
+    const APInt *Op1Eq = nullptr, *Op1Ne = nullptr;
+
+    //  (!(A & N) ? 0 : N * C) + (!(A & M) ? 0 : M * C) -> A & (N + M) * C
+    if (match(I.getOperand(0),
+              m_Select(m_Value(Cond0), m_APInt(Op0Eq), m_APInt(Op0Ne))) &&
+        match(I.getOperand(1),
+              m_Select(m_Value(Cond1), m_APInt(Op1Eq), m_APInt(Op1Ne)))) {
+
+      auto LHSDecompose =
+          decomposeBitTest(Cond0, /*LookThruTrunc=*/true,
+                           /*AllowNonZeroC=*/false, /*DecomposeAnd=*/true);
+      auto RHSDecompose =
+          decomposeBitTest(Cond1, /*LookThruTrunc=*/true,
+                           /*AllowNonZeroC=*/false, /*DecomposeAnd=*/true);
+
+      if (LHSDecompose && RHSDecompose && LHSDecompose->X == RHSDecompose->X &&
+          RHSDecompose->Mask.isPowerOf2() && LHSDecompose->Mask.isPowerOf2() &&
+          LHSDecompose->Mask != RHSDecompose->Mask &&
+          LHSDecompose->Mask.getBitWidth() == Op0Ne->getBitWidth() &&
+          RHSDecompose->Mask.getBitWidth() == Op1Ne->getBitWidth()) {
+        assert(Op0Ne->getBitWidth() == Op1Ne->getBitWidth());
+        assert(ICmpInst::isEquality(LHSDecompose->Pred));
+        if (LHSDecompose->Pred == ICmpInst::ICMP_NE)
+          std::swap(Op0Eq, Op0Ne);
+        if (RHSDecompose->Pred == ICmpInst::ICMP_NE)
+          std::swap(Op1Eq, Op1Ne);
+
+        if (!Op0Ne->isZero() && !Op1Ne->isZero() && Op0Eq->isZero() &&
+            Op1Eq->isZero() && Op0Ne->urem(LHSDecompose->Mask).isZero() &&
+            Op1Ne->urem(RHSDecompose->Mask).isZero() &&
+            Op0Ne->udiv(LHSDecompose->Mask) ==
+                Op1Ne->udiv(RHSDecompose->Mask)) {
+          auto NewAnd = Builder.CreateAnd(
+              LHSDecompose->X,
+              ConstantInt::get(LHSDecompose->X->getType(),
+                               (LHSDecompose->Mask + RHSDecompose->Mask)));
+
+          return BinaryOperator::CreateMul(
+              NewAnd, ConstantInt::get(NewAnd->getType(),
+                                       Op0Ne->udiv(LHSDecompose->Mask)));
+        }
+      }
+    }
   }
 
   Value *X, *Y;

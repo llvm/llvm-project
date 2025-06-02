@@ -5844,6 +5844,9 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
     KnownFPClass Known =
         computeKnownFPClass(Op0, FMF, fcInf | fcNan, /*Depth=*/0, Q);
     if (Known.isKnownNever(fcInf | fcNan)) {
+      // if nsz is set, return 0.0
+      if (FMF.noSignedZeros())
+        return ConstantFP::getZero(Op0->getType());
       // +normal number * (-)0.0 --> (-)0.0
       if (Known.SignBit == false)
         return Op1;

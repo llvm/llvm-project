@@ -67,3 +67,28 @@ def FeatureDiv32 : SubtargetFeature<"div32", "HasDiv32", "true",
                                     "Enable Xtensa Div32 option">;
 def HasDiv32 : Predicate<"Subtarget->hasDiv32()">,
                AssemblerPredicate<(all_of FeatureDiv32)>;
+
+def FeatureRegionProtection : SubtargetFeature<"regprotect", "HasRegionProtection", "true",
+                                               "Enable Xtensa Region Protection option">;
+def HasRegionProtection : Predicate<"Subtarget->hasRegionProtection()">,
+                          AssemblerPredicate<(all_of FeatureRegionProtection)>;
+
+def FeatureRelocatableVector : SubtargetFeature<"rvector", "HasRelocatableVector", "true",
+                                                "Enable Xtensa Relocatable Vector option">;
+def HasRelocatableVector : Predicate<"Subtarget->hasRelocatableVector()">,
+                           AssemblerPredicate<(all_of FeatureRelocatableVector)>;
+
+def FeatureMiscSR : SubtargetFeature<"miscsr", "HasMiscSR", "true",
+                                     "Enable Xtensa Miscellaneous SR option">;
+def HasMiscSR : Predicate<"Subtarget->hasMiscSR()">,
+                AssemblerPredicate<(all_of FeatureMiscSR)>;
+
+def FeatureExtendedL32R : SubtargetFeature<"extendedl32r", "HasExtendedL32R", "true",
+                                           "Enable Xtensa Extended L32R option">;
+def HasExtendedL32R : Predicate<"Subtarget->hasExtendedL32R()">,
+                      AssemblerPredicate<(all_of FeatureExtendedL32R)>;
+
+def FeatureDataCache : SubtargetFeature<"dcache", "HasDataCache", "true",
+                                        "Enable Xtensa Data Cache option">;
+def HasDataCache : Predicate<"Subtarget->hasDataCache()">,
+                   AssemblerPredicate<(all_of FeatureDataCache)>;

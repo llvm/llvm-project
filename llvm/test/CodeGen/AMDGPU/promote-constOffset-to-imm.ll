@@ -748,18 +748,18 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    global_load_dwordx2 v[12:13], v[12:13], off
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v15, vcc, -1, v7, vcc
 ; GFX90A-NEXT:    global_load_dwordx2 v[18:19], v[14:15], off offset:-2048
+; GFX90A-NEXT:    global_load_dwordx2 v[20:21], v[14:15], off
 ; GFX90A-NEXT:    v_add_co_u32_e32 v16, vcc, s0, v6
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v17, vcc, -1, v7, vcc
 ; GFX90A-NEXT:    global_load_dwordx2 v[16:17], v[16:17], off offset:-2048
-; GFX90A-NEXT:    v_add_co_u32_e32 v20, vcc, s1, v6
-; GFX90A-NEXT:    global_load_dwordx2 v[14:15], v[14:15], off
-; GFX90A-NEXT:    v_addc_co_u32_e32 v21, vcc, -1, v7, vcc
-; GFX90A-NEXT:    global_load_dwordx2 v[24:25], v[20:21], off offset:-4096
-; GFX90A-NEXT:    global_load_dwordx2 v[26:27], v[20:21], off offset:-2048
-; GFX90A-NEXT:    global_load_dwordx2 v[28:29], v[20:21], off
+; GFX90A-NEXT:    v_add_co_u32_e32 v14, vcc, s1, v6
+; GFX90A-NEXT:    v_addc_co_u32_e32 v15, vcc, -1, v7, vcc
+; GFX90A-NEXT:    global_load_dwordx2 v[24:25], v[14:15], off offset:-4096
+; GFX90A-NEXT:    global_load_dwordx2 v[26:27], v[14:15], off offset:-2048
+; GFX90A-NEXT:    global_load_dwordx2 v[28:29], v[14:15], off
 ; GFX90A-NEXT:    v_add_co_u32_e32 v22, vcc, s2, v6
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v23, vcc, -1, v7, vcc
-; GFX90A-NEXT:    global_load_dwordx2 v[20:21], v[22:23], off offset:-2048
+; GFX90A-NEXT:    global_load_dwordx2 v[14:15], v[22:23], off offset:-2048
 ; GFX90A-NEXT:    global_load_dwordx2 v[30:31], v[6:7], off
 ; GFX90A-NEXT:    v_add_co_u32_e32 v6, vcc, 0x10000, v6
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v7, vcc
@@ -771,9 +771,10 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(7)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v18, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v19, v4, vcc
+; GFX90A-NEXT:    s_waitcnt vmcnt(6)
+; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v20, v1
+; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v21, v4, vcc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(5)
-; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v14, v1
-; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v15, v4, vcc
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v16, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v17, v4, vcc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(4)
@@ -786,8 +787,8 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v28, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v29, v4, vcc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(1)
-; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v20, v1
-; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v21, v4, vcc
+; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v14, v1
+; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v15, v4, vcc
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v8, v1
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v4, vcc, v9, v4, vcc
 ; GFX90A-NEXT:    v_add_co_u32_e32 v1, vcc, v10, v1
@@ -847,14 +848,13 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v7, vcc_lo, v4, 0xffffc000
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v8, null, -1, v5, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v9, vcc_lo, 0xffffc000, v4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v10, null, -1, v5, vcc_lo
 ; GFX11-NEXT:    global_load_b64 v[13:14], v[7:8], off offset:-4096
 ; GFX11-NEXT:    v_add_co_u32 v11, vcc_lo, 0xffffd000, v4
-; GFX11-NEXT:    global_load_b64 v[9:10], v[9:10], off offset:-2048
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v12, null, -1, v5, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v15, vcc_lo, v4, 0xffffe000
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    global_load_b64 v[9:10], v[9:10], off offset:-2048
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v16, null, -1, v5, vcc_lo
 ; GFX11-NEXT:    global_load_b64 v[11:12], v[11:12], off offset:-2048
 ; GFX11-NEXT:    v_add_co_u32 v17, vcc_lo, 0xffffe000, v4

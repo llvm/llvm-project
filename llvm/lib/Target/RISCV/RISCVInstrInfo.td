@@ -379,7 +379,8 @@ def Simm21Lsb0JALAsmOperand : BareSImmNLsb0AsmOperand<21> {
 }
 
 // A 21-bit signed immediate where the least significant bit is zero.
-def simm21_lsb0_jal : Operand<OtherVT> {
+def simm21_lsb0_jal : Operand<OtherVT>,
+                      ImmLeaf<XLenVT, [{return isShiftedInt<20, 1>(Imm);}]>  {
   let ParserMatchClass = Simm21Lsb0JALAsmOperand;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsrN<1>";

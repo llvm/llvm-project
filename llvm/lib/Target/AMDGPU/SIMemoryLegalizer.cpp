@@ -700,8 +700,8 @@ void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
   ListSeparator LS;
   for (const auto &[Name, Val] : ASNames)
     OS << LS << '\'' << Name << '\'';
-  DiagnosticInfoUnsupported BadTag(Fn, Str.str(), MI.getDebugLoc(), DS_Warning);
-  Fn.getContext().diagnose(BadTag);
+  Fn.getContext().diagnose(
+      DiagnosticInfoUnsupported(Fn, Str.str(), MI.getDebugLoc(), DS_Warning));
 }
 
 /// Reads \p MI's MMRAs to parse the "amdgpu-as" MMRA.
@@ -734,8 +734,8 @@ static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
 void SIMemOpAccess::reportUnsupported(const MachineBasicBlock::iterator &MI,
                                       const char *Msg) const {
   const Function &Func = MI->getParent()->getParent()->getFunction();
-  DiagnosticInfoUnsupported Diag(Func, Msg, MI->getDebugLoc());
-  Func.getContext().diagnose(Diag);
+  Func.getContext().diagnose(
+      DiagnosticInfoUnsupported(Func, Msg, MI->getDebugLoc()));
 }
 
 std::optional<std::tuple<SIAtomicScope, SIAtomicAddrSpace, bool>>
