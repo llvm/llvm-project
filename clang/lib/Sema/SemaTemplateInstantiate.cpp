@@ -1476,16 +1476,6 @@ public:
     return Pack.pack_size() - 1 - *Index;
   }
 
-  bool TryExpandParameterPacks(SourceLocation EllipsisLoc,
-                               SourceRange PatternRange,
-                               ArrayRef<UnexpandedParameterPack> Unexpanded,
-                               bool &ShouldExpand, bool &RetainExpansion,
-                               UnsignedOrNone &NumExpansions) {
-    return getSema().CheckParameterPacksForExpansion(
-        EllipsisLoc, PatternRange, Unexpanded, TemplateArgs, ShouldExpand,
-        RetainExpansion, NumExpansions);
-  }
-
   void ExpandingFunctionParameterPack(ParmVarDecl *Pack) {
     SemaRef.CurrentInstantiationScope->MakeInstantiatedLocalArgPack(Pack);
   }
