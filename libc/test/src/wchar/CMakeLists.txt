@@ -76,6 +76,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcsrchr_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsrchr_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsrchr
+)
+
+add_libc_test(
   wcsspn_test
   SUITE
     libc_wchar_unittests
