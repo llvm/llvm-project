@@ -7211,6 +7211,8 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
 
 static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
   using namespace VPlanPatternMatch;
+  assert(RdxResult->getOpcode() == VPInstruction::ComputeFindLastIVResult &&
+         "RdxResult must be ComputeFindLastIVResult");
   VPValue *StartVPV = RdxResult->getOperand(1);
   match(StartVPV, m_Freeze(m_VPValue(StartVPV)));
   return StartVPV->getLiveInIRValue();
