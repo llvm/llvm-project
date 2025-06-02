@@ -116,9 +116,11 @@ def DeprecatedOFast : DiagGroup<"deprecated-ofast">;
 def ObjCSignedCharBoolImplicitIntConversion :
   DiagGroup<"objc-signed-char-bool-implicit-int-conversion">;
 def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
+def ImplicitIntConversionOnNegation : DiagGroup<"implicit-int-conversion-on-negation">;
 def ImplicitIntConversion : DiagGroup<"implicit-int-conversion",
                                      [Shorten64To32,
-                                      ObjCSignedCharBoolImplicitIntConversion]>;
+                                      ObjCSignedCharBoolImplicitIntConversion,
+                                      ImplicitIntConversionOnNegation]>;
 def ImplicitConstIntFloatConversion : DiagGroup<"implicit-const-int-float-conversion">;
 def ImplicitIntFloatConversion : DiagGroup<"implicit-int-float-conversion",
  [ImplicitConstIntFloatConversion]>;
