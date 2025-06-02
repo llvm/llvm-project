@@ -5164,6 +5164,13 @@ cc_library(
 )
 
 cc_library(
+    name = "TestingDemangle",
+    testonly = True,
+    copts = llvm_copts,
+    textual_hdrs = glob(["include/llvm/Testing/Demangle/*.inc"]),
+)
+
+cc_library(
     name = "TestingSupport",
     testonly = True,
     srcs = glob([
