@@ -2112,21 +2112,35 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
         << diag::TraitNotSatisfiedReason::DeletedDtr << 0
         << D->getDestructor()->getSourceRange();
 
-  if (!D->hasSimpleMoveConstructor() && !D->hasSimpleCopyConstructor()) {
-    const auto *Decl = cast<CXXConstructorDecl>(
-        LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false));
-    if (Decl && Decl->isUserProvided())
+  for (const CXXMethodDecl *Method : D->methods()) {
+    if (Method->isIneligibleOrNotSelected() || Method->isTrivial() ||
+        !Method->isUserProvided()) {
+      continue;
+    }
+    auto SpecialMemberKind =
+        SemaRef.getDefaultedFunctionKind(Method).asSpecialMember();
+    switch (SpecialMemberKind) {
+    case CXXSpecialMemberKind::CopyConstructor:
+    case CXXSpecialMemberKind::MoveConstructor:
+    case CXXSpecialMemberKind::CopyAssignment:
+    case CXXSpecialMemberKind::MoveAssignment: {
+      bool IsAssignment =
+          SpecialMemberKind == CXXSpecialMemberKind::CopyAssignment ||
+          SpecialMemberKind == CXXSpecialMemberKind::MoveAssignment;
+      bool IsMove =
+          SpecialMemberKind == CXXSpecialMemberKind::MoveConstructor ||
+          SpecialMemberKind == CXXSpecialMemberKind::MoveAssignment;
+
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::UserProvidedCtr
-          << Decl->isMoveConstructor() << Decl->getSourceRange();
-  }
-  if (!D->hasSimpleMoveAssignment() && !D->hasSimpleCopyAssignment()) {
-    CXXMethodDecl *Decl =
-        LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/true);
-    if (Decl && Decl->isUserProvided())
-      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::UserProvidedAssign
-          << Decl->isMoveAssignmentOperator() << Decl->getSourceRange();
+          << (IsAssignment ? diag::TraitNotSatisfiedReason::UserProvidedAssign
+                           : diag::TraitNotSatisfiedReason::UserProvidedCtr)
+          << IsMove << Method->getSourceRange();
+      break;
+    }
+    default: {
+      break;
+    }
+    }
   }
   CXXDestructorDecl *Dtr = D->getDestructor();
   if (Dtr && !Dtr->isTrivial())
