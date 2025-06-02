@@ -44,7 +44,7 @@ bool NoSanitizeList::containsPrefix(SanitizerMask Mask, StringRef Prefix,
 
 bool NoSanitizeList::containsGlobal(SanitizerMask Mask, StringRef GlobalName,
                                     StringRef Category) const {
-  return SSCL->inSection(Mask, "global", GlobalName, Category);
+  return containsPrefix(Mask, "global", GlobalName, Category);
 }
 
 bool NoSanitizeList::containsType(SanitizerMask Mask, StringRef MangledTypeName,
