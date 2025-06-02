@@ -217,3 +217,53 @@ body:             |
     $x11 = COPY %6
     PseudoTAILIndirect %7, csr_ilp32_lp64, implicit $x2, implicit $x10, implicit $x11
 ...
+---
+# The sext.w was erroneously removed in an earlier broken version of the patch
+# for RISCVOptWInstrs that added lui/addi handling.
+name:            lui_addi_2
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: lui_addi_2
+  ; CHECK: bb.0.entry:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[LUI:%[0-9]+]]:gpr = LUI 524289
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], -2048
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   [[LWU:%[0-9]+]]:gpr = LWU $x0, 0 :: (load (s32) from `ptr null`)
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:gpr = AND [[LWU]], [[ADDI]]
+  ; CHECK-NEXT:   [[ADDIW:%[0-9]+]]:gpr = ADDIW killed [[AND]], 0
+  ; CHECK-NEXT:   $x10 = COPY [[ADDIW]]
+  ; CHECK-NEXT:   PseudoRET implicit $x10
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+  ; CHECK-NEXT:   $x10 = COPY [[ADDIW]]
+  ; CHECK-NEXT:   %call_target_dummy:gprjalr = COPY $x0
+  ; CHECK-NEXT:   PseudoCALLIndirect %call_target_dummy, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+  ; CHECK-NEXT:   $x10 = COPY [[LWU]]
+  ; CHECK-NEXT:   PseudoRET implicit $x10
+  bb.0.entry:
+    %13:gpr = LUI 524289
+    %14:gpr = ADDI %13, -2048
+
+  bb.1:
+    %1:gpr = LWU $x0, 0 :: (load (s32) from `ptr null`)
+    %15:gpr = AND %1, %14
+    %16:gpr = ADDIW killed %15, 0
+
+    $x10 = COPY %16
+    PseudoRET implicit $x10
+
+  bb.2:
+    ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
+    $x10 = COPY %16
+    %call_target_dummy:gprjalr = COPY $x0
+    PseudoCALLIndirect %call_target_dummy, csr_ilp32_lp64, implicit-def $x1, implicit $x10
+    ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
+
+    $x10 = COPY %1
+    PseudoRET implicit $x10
+...
