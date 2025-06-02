@@ -787,7 +787,7 @@ class Base(unittest.TestCase):
             ),
             # Enable expensive validations in TypeSystemSwiftTypeRef.
             "settings set symbols.swift-validate-typesystem true",
-            "settings set symbols.swift-typesystem-compiler-fallback true",
+            "settings set symbols.swift-typesystem-compiler-fallback false",
         ]
 
         # Set any user-overridden settings.
