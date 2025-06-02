@@ -420,7 +420,7 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
     assert(PtrStorage && "Invalid pointer storage");
 
     *PtrStorage = MemoryManager->allocate(Size, nullptr);
-    if (*PtrStorage == nullptr)
+    if (Size && *PtrStorage == nullptr)
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failure to allocate from AMDGPU memory manager");
 
@@ -429,8 +429,6 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 
   /// Release an allocation to be reused.
   Error deallocate(void *Ptr) {
-    assert(Ptr && "Invalid pointer");
-
     if (MemoryManager->free(Ptr))
       return Plugin::error(ErrorCode::UNKNOWN,
                            "failure to deallocate from AMDGPU memory manager");
@@ -1204,7 +1202,6 @@ private:
     ReleaseBufferArgsTy *Args = reinterpret_cast<ReleaseBufferArgsTy *>(Data);
     assert(Args && "Invalid arguments");
     assert(Args->MemoryManager && "Invalid memory manager");
-    assert(Args->Buffer && "Invalid buffer");
 
     // Release the allocation to the memory manager.
     return Args->MemoryManager->deallocate(Args->Buffer);
