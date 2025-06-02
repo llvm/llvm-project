@@ -111,12 +111,12 @@ private:
   /// Check whether the given fragment needs relaxation.
   bool fragmentNeedsRelaxation(const MCRelaxableFragment *IF) const;
 
+  void layoutSection(MCSection &Sec);
   /// Perform one layout iteration and return true if any offsets
   /// were adjusted.
-  bool layoutOnce();
+  bool relaxOnce();
 
-  /// Perform relaxation on a single fragment - returns true if the fragment
-  /// changes as a result of relaxation.
+  /// Perform relaxation on a single fragment.
   bool relaxFragment(MCFragment &F);
   bool relaxInstruction(MCRelaxableFragment &IF);
   bool relaxLEB(MCLEBFragment &IF);
@@ -125,6 +125,7 @@ private:
   bool relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF);
   bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
+  bool relaxFill(MCFillFragment &F);
   bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
 
 public:
@@ -144,10 +145,9 @@ public:
   uint64_t computeFragmentSize(const MCFragment &F) const;
 
   void layoutBundle(MCFragment *Prev, MCFragment *F) const;
-  void ensureValid(MCSection &Sec) const;
 
   // Get the offset of the given fragment inside its containing section.
-  uint64_t getFragmentOffset(const MCFragment &F) const;
+  uint64_t getFragmentOffset(const MCFragment &F) const { return F.Offset; }
 
   uint64_t getSectionAddressSize(const MCSection &Sec) const;
   uint64_t getSectionFileSize(const MCSection &Sec) const;
