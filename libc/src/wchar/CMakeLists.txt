@@ -58,6 +58,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcscmp
+  SRCS
+    wcscmp.cpp
+  HDRS
+    wcscmp.h
+  DEPENDS
+    libc.hdr.wchar_macros
+)
+
+add_entrypoint_object(
   wcspbrk
   SRCS
     wcspbrk.cpp
