@@ -3455,6 +3455,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     case BuiltinType::BFloat16:
     case BuiltinType::VectorQuad:
     case BuiltinType::VectorPair:
+    case BuiltinType::VectorDmr:
       OS << "?";
       return;
 

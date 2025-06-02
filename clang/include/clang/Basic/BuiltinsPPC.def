@@ -1134,6 +1134,18 @@ UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2np, "vW512*VVi15i15i3", true,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2nn, "vW512*VVi15i15i3", true,
                          "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4, "vW1024*W256V", false,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4, "vW1024*W256Vi255i15i15", false,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4pp, "vW1024*W256V", true,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4pp, "vW1024*W256Vi255i15i15", true,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4spp,  "vW1024*W256V", true,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4spp, "vW1024*W256Vi255i15i15", true,
+                         "mma,paired-vector-memops")
 
 // FIXME: Obviously incomplete.
 
