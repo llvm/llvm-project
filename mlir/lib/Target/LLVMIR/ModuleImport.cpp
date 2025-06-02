@@ -164,11 +164,12 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
                            bool emitExpensiveWarnings,
                            bool importEmptyDICompositeTypes,
-                           bool preferUnregisteredIntrinsics)
+                           bool preferUnregisteredIntrinsics,
+                           bool importStructsAsLiterals)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
-      typeTranslator(*mlirModule->getContext()),
+      typeTranslator(*mlirModule->getContext(), importStructsAsLiterals),
       debugImporter(std::make_unique<DebugImporter>(
           mlirModule, importEmptyDICompositeTypes)),
       loopAnnotationImporter(
@@ -755,7 +756,6 @@ convertProfileSummaryModuleFlagValue(ModuleOp mlirModule,
 
   // Build ModuleFlagProfileSummaryAttr by sequentially fetching elements in
   // a fixed order: format, total count, etc.
-  SmallVector<Attribute> profileSummary;
   std::optional<ProfileSummaryFormatKind> format = convertProfileSummaryFormat(
       mlirModule, llvmModule, mdTuple->getOperand(summayIdx++));
   if (!format.has_value())
@@ -2200,6 +2200,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                 builder.getStringAttr(asmI->getAsmString()),
                 builder.getStringAttr(asmI->getConstraintString()),
                 asmI->hasSideEffects(), asmI->isAlignStack(),
+                convertTailCallKindFromLLVM(callInst->getTailCallKind()),
                 AsmDialectAttr::get(
                     mlirModule.getContext(),
                     convertAsmDialectFromLLVM(asmI->getDialect())),
@@ -2634,6 +2635,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setTargetFeaturesAttr(
         LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
+      attr.isStringAttribute())
+    funcOp.setPreferVectorWidth(attr.getValueAsString());
 
   if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
       attr.isStringAttribute())
@@ -3118,7 +3123,8 @@ ModuleImport::translateDereferenceableAttr(const llvm::MDNode *node,
 OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
     std::unique_ptr<llvm::Module> llvmModule, MLIRContext *context,
     bool emitExpensiveWarnings, bool dropDICompositeTypeElements,
-    bool loadAllDialects, bool preferUnregisteredIntrinsics) {
+    bool loadAllDialects, bool preferUnregisteredIntrinsics,
+    bool importStructsAsLiterals) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -3136,7 +3142,8 @@ OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
                             emitExpensiveWarnings, dropDICompositeTypeElements,
-                            preferUnregisteredIntrinsics);
+                            preferUnregisteredIntrinsics,
+                            importStructsAsLiterals);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))

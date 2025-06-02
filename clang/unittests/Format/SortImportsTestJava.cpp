@@ -31,8 +31,9 @@ protected:
 public:
   SortImportsTestJava() {
     FmtStyle = getGoogleStyle(FormatStyle::LK_Java);
+    EXPECT_TRUE(FmtStyle.SortIncludes.Enabled);
     FmtStyle.JavaImportGroups = {"com.test", "org", "com"};
-    FmtStyle.SortIncludes = FormatStyle::SI_CaseInsensitive;
+    FmtStyle.SortIncludes.IgnoreCase = true;
   }
 };
 

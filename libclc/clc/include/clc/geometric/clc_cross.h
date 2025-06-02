@@ -9,6 +9,8 @@
 #ifndef __CLC_GEOMETRIC_CLC_CROSS_H__
 #define __CLC_GEOMETRIC_CLC_CROSS_H__
 
+#include <clc/internal/clc.h>
+
 _CLC_OVERLOAD _CLC_DECL float3 __clc_cross(float3 p0, float3 p1);
 _CLC_OVERLOAD _CLC_DECL float4 __clc_cross(float4 p0, float4 p1);
 

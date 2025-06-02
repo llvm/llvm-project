@@ -68,12 +68,6 @@ FilterPID("pid",
   cl::Optional,
   cl::cat(AggregatorCategory));
 
-static cl::list<uint64_t>
-    HeatmapZoomOut("heatmap-zoom-out", cl::CommaSeparated,
-                   cl::desc("print secondary heatmaps with given bucket sizes"),
-                   cl::value_desc("bucket_size"), cl::Optional,
-                   cl::cat(HeatmapCategory));
-
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
   cl::desc("continue even if build-ids in input binary and perf.data mismatch"),
@@ -1350,8 +1344,9 @@ std::error_code DataAggregator::printLBRHeatMap() {
     opts::HeatmapMaxAddress = 0xffffffffffffffff;
     opts::HeatmapMinAddress = KernelBaseAddr;
   }
-  Heatmap HM(opts::HeatmapBlock, opts::HeatmapMinAddress,
-             opts::HeatmapMaxAddress, getTextSections(BC));
+  opts::HeatmapBlockSizes &HMBS = opts::HeatmapBlock;
+  Heatmap HM(HMBS[0], opts::HeatmapMinAddress, opts::HeatmapMaxAddress,
+             getTextSections(BC));
   auto getSymbolValue = [&](const MCSymbol *Symbol) -> uint64_t {
     if (Symbol)
       if (ErrorOr<uint64_t> SymValue = BC->getSymbolValue(*Symbol))
@@ -1401,10 +1396,9 @@ std::error_code DataAggregator::printLBRHeatMap() {
     HM.printCDF(opts::HeatmapOutput + ".csv");
     HM.printSectionHotness(opts::HeatmapOutput + "-section-hotness.csv");
   }
-  // Provide coarse-grained heatmap if requested via --heatmap-zoom-out
-  for (const uint64_t NewBucketSize : opts::HeatmapZoomOut) {
-    if (!HM.resizeBucket(NewBucketSize))
-      break;
+  // Provide coarse-grained heatmaps if requested via zoom-out scales
+  for (const uint64_t NewBucketSize : ArrayRef(HMBS).drop_front()) {
+    HM.resizeBucket(NewBucketSize);
     if (opts::HeatmapOutput == "-")
       HM.print(opts::HeatmapOutput);
     else

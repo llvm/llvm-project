@@ -55,6 +55,8 @@ void Heatmap::print(StringRef FileName) const {
     errs() << "error opening output file: " << EC.message() << '\n';
     exit(1);
   }
+  outs() << "HEATMAP: dumping heatmap with bucket size " << BucketSize << " to "
+         << FileName << '\n';
   print(OS);
 }
 
@@ -365,17 +367,12 @@ void Heatmap::printSectionHotness(raw_ostream &OS) const {
                   100.0 * UnmappedHotness / NumTotalCounts);
 }
 
-bool Heatmap::resizeBucket(uint64_t TargetSize) {
-  if (TargetSize <= BucketSize)
-    return false;
+void Heatmap::resizeBucket(uint64_t NewSize) {
   std::map<uint64_t, uint64_t> NewMap;
-  for (const auto [Bucket, Count] : Map) {
-    const uint64_t Address = Bucket * BucketSize;
-    NewMap[Address / TargetSize] += Count;
-  }
+  for (const auto [Bucket, Count] : Map)
+    NewMap[Bucket * BucketSize / NewSize] += Count;
   Map = NewMap;
-  BucketSize = TargetSize;
-  return true;
+  BucketSize = NewSize;
 }
 } // namespace bolt
 } // namespace llvm
