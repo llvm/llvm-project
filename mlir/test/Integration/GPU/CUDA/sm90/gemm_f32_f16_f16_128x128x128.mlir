@@ -106,7 +106,6 @@ func.func @main() {
   %matrixA:2 = gpu.alloc async [%token] () : memref<128x128xf16>
   %matrixB:2 = gpu.alloc async [%token]  () : memref<128x128xf16>
   %matrixD:2 = gpu.alloc async [%token] () : memref<128x128xf32>
-  %align_matrixD = memref.assume_alignment %matrixD, 16 : memref<128x128xf32>
   %1 = gpu.memcpy async [%token] %matrixA, %matrixAHost : memref<128x128xf16>, memref<128x128xf16>
   %2 = gpu.memcpy async [%token] %matrixB, %matrixBHost : memref<128x128xf16>, memref<128x128xf16>
   %castA = memref.cast %matrixA : memref<128x128xf16> to memref<*xf16>
@@ -121,6 +120,7 @@ func.func @main() {
             threads(%arg3, %arg4, %arg5) in (%arg9 = %hc128, %arg10 = %hc1, %arg11 = %hc1) 
             dynamic_shared_memory_size %shmemSize 
   {  
+    %align_matrixD = memref.assume_alignment %matrixD, 16 : memref<128x128xf32>
 
     %c256 = arith.constant 256 : index
     %c10000000 = arith.constant 10000000 : index
@@ -232,7 +232,7 @@ func.func @main() {
   }
 
   // Step 5. Copy D2H
-  %5 = gpu.memcpy async [%token] %matrixDHost, %align_matrixD  : memref<128x128xf32>, memref<128x128xf32>
+  %5 = gpu.memcpy async [%token] %matrixDHost, %matrixD  : memref<128x128xf32>, memref<128x128xf32>
   gpu.wait [%token]
 
   // Step 6. Compute on host
