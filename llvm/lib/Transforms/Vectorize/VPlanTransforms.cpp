@@ -2712,7 +2712,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
         const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
         const InstructionCost StridedLoadStoreCost =
             Ctx.TTI.getStridedMemoryOpCost(
-                Ingredient.getOpcode(), DataTy,
+                Instruction::Load, DataTy,
                 getLoadStorePointerOperand(&Ingredient), MemR->isMasked(),
                 Alignment, Ctx.CostKind, &Ingredient);
         return StridedLoadStoreCost < CurrentCost;
