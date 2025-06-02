@@ -90,6 +90,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcsncmp
+  SRCS
+    wcsncmp.cpp
+  HDRS
+    wcsncmp.h
+  DEPENDS
+    libc.hdr.wchar_macros
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
   wcsspn
   SRCS
     wcsspn.cpp
@@ -137,6 +148,18 @@ add_entrypoint_object(
     libc.hdr.wchar_macros
     libc.src.string.memory_utils.inline_memmove
     libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  wcsstr
+  SRCS
+    wcsstr.cpp
+  HDRS
+    wcsstr.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+    libc.src.string.string_utils
 )
 
 add_entrypoint_object(
