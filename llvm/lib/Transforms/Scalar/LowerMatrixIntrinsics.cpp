@@ -2164,46 +2164,38 @@ public:
 
   bool VisitPHI(PHINode *Inst) {
     auto I = ShapeMap.find(Inst);
-    if (I == ShapeMap.end())
-      return false;
+    assert(I != ShapeMap.end() &&
+           "must only visit instructions with shape info");
 
     const ShapeInfo &SI = I->second;
 
     IRBuilder<> Builder(Inst);
 
+    // Shim this->getMatrix to insert split phi's as needed.
     auto getMatrix = [this, &Builder, SI](Value *MatrixVal) -> MatrixTy {
-      // getMatrix() and embedInVector() may insert some instructions. The safe
-      // place to insert them is at the end of the parent block, where the
-      // register allocator would have inserted the copies that materialize the
-      // PHI.
+      IRBuilder<>::InsertPointGuard IPG(Builder);
+
+      auto I = Inst2ColumnMatrix.find(MatrixVal);
+      if (I == Inst2ColumnMatrix.end()) {
+        if (auto *PHI = dyn_cast<PHINode>(MatrixVal)) {
+          auto *EltTy = cast<VectorType>(PHI->getType())->getElementType();
+          MatrixTy PhiM{SI.NumRows, SI.NumColumns, EltTy};
+
+          Builder.SetInsertPoint(PHI);
+          for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI)
+            PhiM.setVector(VI, Builder.CreatePHI(PhiM.getVectorTy(),
+                                                PHI->getNumIncomingValues(),
+                                                PHI->getName()));
+
+          Inst2ColumnMatrix[PHI] = PhiM;
+        }
+      }
+
+      // getMatrix() may insert some instructions for reshaping. The safe place
+      // to insert them is at the end of the parent block, where the register
+      // allocator would have inserted the copies that materialize the PHI.
       if (auto *MatrixInst = dyn_cast<Instruction>(MatrixVal))
         Builder.SetInsertPoint(MatrixInst->getParent()->getTerminator());
-
-      auto Found = Inst2ColumnMatrix.find(MatrixVal);
-      if (Found != Inst2ColumnMatrix.end()) {
-        MatrixTy &M = Found->second;
-        // Return the found matrix, if its shape matches the requested shape
-        // information
-        if (SI.NumRows == M.getNumRows() && SI.NumColumns == M.getNumColumns())
-          return M;
-
-        MatrixVal = M.embedInVector(Builder);
-      }
-
-      if (auto *PHI = dyn_cast<PHINode>(MatrixVal)) {
-        auto *EltTy = cast<VectorType>(PHI->getType())->getElementType();
-        MatrixTy PhiM{SI.NumRows, SI.NumColumns, EltTy};
-
-        IRBuilder<>::InsertPointGuard IPG(Builder);
-        Builder.SetInsertPoint(PHI);
-        for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI)
-          PhiM.setVector(VI, Builder.CreatePHI(PhiM.getVectorTy(),
-                                               PHI->getNumIncomingValues(),
-                                               PHI->getName()));
-
-        Inst2ColumnMatrix[PHI] = PhiM;
-        return PhiM;
-      }
 
       return this->getMatrix(MatrixVal, SI, Builder);
     };
