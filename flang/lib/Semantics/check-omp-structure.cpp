@@ -3524,9 +3524,9 @@ bool OmpStructureChecker::CheckReductionOperator(
     // User-defined operators are OK if there has been a declared reduction
     // for that. We mangle those names to store the user details.
     if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
-      std::string mangled = MangleDefinedOperator(definedOp->v.symbol->name());
-      const Scope &scope = definedOp->v.symbol->owner();
-      if (const Symbol *symbol = scope.FindSymbol(mangled)) {
+      std::string mangled{MangleDefinedOperator(definedOp->v.symbol->name())};
+      const Scope &scope{definedOp->v.symbol->owner()};
+      if (const Symbol *symbol{scope.FindSymbol(mangled)}) {
         if (symbol->detailsIf<UserReductionDetails>()) {
           return true;
         }
