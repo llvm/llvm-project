@@ -8,15 +8,18 @@
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 namespace mlir {
 namespace xegpu {
@@ -314,6 +317,179 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
+// This pattern matches elementwise ops (unary/binary) in math/arith dialects
+// with 1D or 2D vector types
+template <typename Op>
+struct WgToSgElementwiseOp : public OpConversionPattern<Op> {
+  using OpConversionPattern<Op>::OpConversionPattern;
+  using OneToNOpAdaptor = typename OpConversionPattern<Op>::OneToNOpAdaptor;
+
+  LogicalResult
+  matchAndRewrite(Op op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // All operands/results must be 1D or 2D vectors
+    auto resultType = dyn_cast<VectorType>(op.getResult().getType());
+    if (!resultType || (resultType.getRank() != 1 && resultType.getRank() != 2))
+      return rewriter.notifyMatchFailure(
+          op, "Result type is not a 1D or 2D vector");
+
+    ArrayRef<int64_t> shape = resultType.getShape();
+    for (Value operand : op->getOperands()) {
+      auto operandType = dyn_cast<VectorType>(operand.getType());
+      if (!operandType || operandType.getRank() != resultType.getRank() ||
+          operandType.getShape() != shape) {
+        return rewriter.notifyMatchFailure(
+            op, "Operand type is not a 1D or 2D vector with the same shape as "
+                "result type");
+      }
+    }
+
+    // Check for layout attribute with sgLayout
+    auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
+    if (!layout || !layout.getSgLayout())
+      return rewriter.notifyMatchFailure(
+          op, "Operation does not have a valid layout attribute for subgroup "
+              "distribution");
+
+    // Extract sgShape from layout
+    SmallVector<int64_t> sgShape;
+    if (auto sgDataAttr = layout.getSgData()) {
+      sgShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
+    } else {
+      auto sgLayoutArr = layout.getSgLayout();
+      sgShape.reserve(shape.size());
+      for (size_t i = 0; i < shape.size(); ++i) {
+        assert(sgLayoutArr[i] != 0 && "sgLayout elements must be non-zero");
+        sgShape.push_back(shape[i] / sgLayoutArr[i]);
+      }
+    }
+
+    // Each operand is a list of values
+    size_t numVariants = adaptor.getOperands().empty()
+                             ? 0
+                             : adaptor.getOperands().front().size();
+    for (auto &operandVec : adaptor.getOperands())
+      if (operandVec.size() != numVariants)
+        return rewriter.notifyMatchFailure(
+            op, "Operand lists have mismatched sizes");
+
+    SmallVector<Value> newResults;
+
+    auto origResultType = dyn_cast<VectorType>(op->getResult(0).getType());
+    VectorType newResultType =
+        origResultType
+            ? VectorType::get(sgShape, origResultType.getElementType())
+            : VectorType::get(sgShape, resultType.getElementType());
+
+    for (size_t i = 0; i < numVariants; ++i) {
+      SmallVector<Value> operands;
+      for (auto &operandVec : adaptor.getOperands())
+        operands.push_back(operandVec[i]);
+
+      auto newOp = rewriter.create<Op>(op.getLoc(), newResultType, operands);
+
+      // Copy all attributes except "layout", and add "layout_result_0" with
+      // sgLayout/data dropped
+      for (auto attr : op->getAttrs()) {
+        if (attr.getName() != "layout")
+          newOp->setAttr(attr.getName(), attr.getValue());
+      }
+      newOp->setAttr("layout_result_0", layout.dropSgLayoutAndData());
+
+      newResults.push_back(newOp.getResult());
+    }
+
+    rewriter.replaceOpWithMultiple(op, {newResults});
+    return success();
+  }
+};
+
+// ---- ARITH ops ----
+using WgToSgAddFOp = WgToSgElementwiseOp<arith::AddFOp>;
+using WgToSgSubFOp = WgToSgElementwiseOp<arith::SubFOp>;
+using WgToSgNegFOp = WgToSgElementwiseOp<arith::NegFOp>;
+using WgToSgAddIOp = WgToSgElementwiseOp<arith::AddIOp>;
+using WgToSgSubIOp = WgToSgElementwiseOp<arith::SubIOp>;
+using WgToSgMulFOp = WgToSgElementwiseOp<arith::MulFOp>;
+using WgToSgMulIOp = WgToSgElementwiseOp<arith::MulIOp>;
+using WgToSgShLIOp = WgToSgElementwiseOp<arith::ShLIOp>;
+using WgToSgShRSIOp = WgToSgElementwiseOp<arith::ShRSIOp>;
+using WgToSgShRUIOp = WgToSgElementwiseOp<arith::ShRUIOp>;
+using WgToSgDivFOp = WgToSgElementwiseOp<arith::DivFOp>;
+using WgToSgDivSIOp = WgToSgElementwiseOp<arith::DivSIOp>;
+using WgToSgDivUIOp = WgToSgElementwiseOp<arith::DivUIOp>;
+using WgToSgMaximumFOp = WgToSgElementwiseOp<arith::MaximumFOp>;
+using WgToSgMinimumFOp = WgToSgElementwiseOp<arith::MinimumFOp>;
+using WgToSgRemSIOp = WgToSgElementwiseOp<arith::RemSIOp>;
+using WgToSgRemUIOp = WgToSgElementwiseOp<arith::RemUIOp>;
+using WgToSgTruncFOp = WgToSgElementwiseOp<arith::TruncFOp>;
+using WgToSgTruncIOp = WgToSgElementwiseOp<arith::TruncIOp>;
+using WgToSgExtFOp = WgToSgElementwiseOp<arith::ExtFOp>;
+using WgToSgExtSIOp = WgToSgElementwiseOp<arith::ExtSIOp>;
+using WgToSgExtUIOp = WgToSgElementwiseOp<arith::ExtUIOp>;
+using WgToSgSIToFPOp = WgToSgElementwiseOp<arith::SIToFPOp>;
+using WgToSgUIToFPOp = WgToSgElementwiseOp<arith::UIToFPOp>;
+using WgToSgFPToSIOp = WgToSgElementwiseOp<arith::FPToSIOp>;
+using WgToSgFPToUIOp = WgToSgElementwiseOp<arith::FPToUIOp>;
+using WgToSgIndexCastUIOp = WgToSgElementwiseOp<arith::IndexCastUIOp>;
+using WgToSgIndexCastOp = WgToSgElementwiseOp<arith::IndexCastOp>;
+using WgToSgBitcastOp = WgToSgElementwiseOp<arith::BitcastOp>;
+using WgToSgCmpIOp = WgToSgElementwiseOp<arith::CmpIOp>;
+using WgToSgCmpFOp = WgToSgElementwiseOp<arith::CmpFOp>;
+using WgToSgAndIOp = WgToSgElementwiseOp<arith::AndIOp>;
+using WgToSgCeilDivSIOp = WgToSgElementwiseOp<arith::CeilDivSIOp>;
+using WgToSgCeilDivUIOp = WgToSgElementwiseOp<arith::CeilDivUIOp>;
+using WgToSgFloorDivSIOp = WgToSgElementwiseOp<arith::FloorDivSIOp>;
+using WgToSgMaxNumFOp = WgToSgElementwiseOp<arith::MaxNumFOp>;
+using WgToSgMaxSIOp = WgToSgElementwiseOp<arith::MaxSIOp>;
+using WgToSgMaxUIOp = WgToSgElementwiseOp<arith::MaxUIOp>;
+using WgToSgMinNumFOp = WgToSgElementwiseOp<arith::MinNumFOp>;
+using WgToSgMinSIOp = WgToSgElementwiseOp<arith::MinSIOp>;
+using WgToSgMinUIOp = WgToSgElementwiseOp<arith::MinUIOp>;
+using WgToSgOrIOp = WgToSgElementwiseOp<arith::OrIOp>;
+using WgToSgRemFOp = WgToSgElementwiseOp<arith::RemFOp>;
+using WgToSgSelectOp = WgToSgElementwiseOp<arith::SelectOp>;
+using WgToSgXOrIOp = WgToSgElementwiseOp<arith::XOrIOp>;
+
+// ---- MATH ops ----
+using WgToSgExpOp = WgToSgElementwiseOp<math::ExpOp>;
+using WgToSgSqrtOp = WgToSgElementwiseOp<math::SqrtOp>;
+using WgToSgAbsFOp = WgToSgElementwiseOp<math::AbsFOp>;
+using WgToSgCosOp = WgToSgElementwiseOp<math::CosOp>;
+using WgToSgCoshOp = WgToSgElementwiseOp<math::CoshOp>;
+using WgToSgAcosOp = WgToSgElementwiseOp<math::AcosOp>;
+using WgToSgAcoshOp = WgToSgElementwiseOp<math::AcoshOp>;
+using WgToSgSinOp = WgToSgElementwiseOp<math::SinOp>;
+using WgToSgSinhOp = WgToSgElementwiseOp<math::SinhOp>;
+using WgToSgAsinOp = WgToSgElementwiseOp<math::AsinOp>;
+using WgToSgAsinhOp = WgToSgElementwiseOp<math::AsinhOp>;
+using WgToSgTanOp = WgToSgElementwiseOp<math::TanOp>;
+using WgToSgTanhOp = WgToSgElementwiseOp<math::TanhOp>;
+using WgToSgAtanOp = WgToSgElementwiseOp<math::AtanOp>;
+using WgToSgAtan2Op = WgToSgElementwiseOp<math::Atan2Op>;
+using WgToSgAtanhOp = WgToSgElementwiseOp<math::AtanhOp>;
+using WgToSgErfOp = WgToSgElementwiseOp<math::ErfOp>;
+using WgToSgLogOp = WgToSgElementwiseOp<math::LogOp>;
+using WgToSgLog2Op = WgToSgElementwiseOp<math::Log2Op>;
+using WgToSgFloorOp = WgToSgElementwiseOp<math::FloorOp>;
+using WgToSgCeilOp = WgToSgElementwiseOp<math::CeilOp>;
+using WgToSgPowFOp = WgToSgElementwiseOp<math::PowFOp>;
+using WgToSgRsqrtOp = WgToSgElementwiseOp<math::RsqrtOp>;
+using WgToSgAbsIOp = WgToSgElementwiseOp<math::AbsIOp>;
+using WgToSgCbrtOp = WgToSgElementwiseOp<math::CbrtOp>;
+using WgToSgCopySignOp = WgToSgElementwiseOp<math::CopySignOp>;
+using WgToSgCtPopOp = WgToSgElementwiseOp<math::CtPopOp>;
+using WgToSgErfcOp = WgToSgElementwiseOp<math::ErfcOp>;
+using WgToSgExp2Op = WgToSgElementwiseOp<math::Exp2Op>;
+using WgToSgExpM1Op = WgToSgElementwiseOp<math::ExpM1Op>;
+using WgToSgFPowIOp = WgToSgElementwiseOp<math::FPowIOp>;
+using WgToSgIPowIOp = WgToSgElementwiseOp<math::IPowIOp>;
+using WgToSgLog10Op = WgToSgElementwiseOp<math::Log10Op>;
+using WgToSgLog1pOp = WgToSgElementwiseOp<math::Log1pOp>;
+using WgToSgRoundOp = WgToSgElementwiseOp<math::RoundOp>;
+using WgToSgRoundEvenOp = WgToSgElementwiseOp<math::RoundEvenOp>;
+using WgToSgTruncOp = WgToSgElementwiseOp<math::TruncOp>;
+
 } // namespace
 
 namespace mlir {
@@ -321,6 +497,27 @@ namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
                WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp>(
+      patterns.getContext());
+  // Add elementwise operations that can be distributed to subgroups
+  patterns.add<
+      WgToSgAddFOp, WgToSgSubFOp, WgToSgExpOp, WgToSgSqrtOp, WgToSgAbsFOp,
+      WgToSgCosOp, WgToSgCoshOp, WgToSgAcosOp, WgToSgAcoshOp, WgToSgSinOp,
+      WgToSgSinhOp, WgToSgAsinOp, WgToSgAsinhOp, WgToSgTanOp, WgToSgTanhOp,
+      WgToSgAtanOp, WgToSgAtan2Op, WgToSgAtanhOp, WgToSgErfOp, WgToSgLogOp,
+      WgToSgLog2Op, WgToSgFloorOp, WgToSgCeilOp, WgToSgPowFOp, WgToSgRsqrtOp,
+      WgToSgNegFOp, WgToSgAddIOp, WgToSgSubIOp, WgToSgMulFOp, WgToSgMulIOp,
+      WgToSgShLIOp, WgToSgShRSIOp, WgToSgShRUIOp, WgToSgDivFOp, WgToSgDivSIOp,
+      WgToSgDivUIOp, WgToSgMaximumFOp, WgToSgMinimumFOp, WgToSgRemSIOp,
+      WgToSgRemUIOp, WgToSgTruncFOp, WgToSgTruncIOp, WgToSgExtFOp,
+      WgToSgExtSIOp, WgToSgExtUIOp, WgToSgSIToFPOp, WgToSgUIToFPOp,
+      WgToSgFPToSIOp, WgToSgFPToUIOp, WgToSgIndexCastUIOp, WgToSgIndexCastOp,
+      WgToSgBitcastOp, WgToSgCmpIOp, WgToSgCmpFOp, WgToSgAndIOp,
+      WgToSgCeilDivSIOp, WgToSgCeilDivUIOp, WgToSgFloorDivSIOp, WgToSgMaxNumFOp,
+      WgToSgMaxSIOp, WgToSgMaxUIOp, WgToSgMinNumFOp, WgToSgMinSIOp,
+      WgToSgMinUIOp, WgToSgOrIOp, WgToSgRemFOp, WgToSgSelectOp, WgToSgXOrIOp,
+      WgToSgAbsIOp, WgToSgCbrtOp, WgToSgCopySignOp, WgToSgCtPopOp, WgToSgErfcOp,
+      WgToSgExp2Op, WgToSgExpM1Op, WgToSgFPowIOp, WgToSgIPowIOp, WgToSgLog10Op,
+      WgToSgLog1pOp, WgToSgRoundOp, WgToSgRoundEvenOp, WgToSgTruncOp>(
       patterns.getContext());
 }
 } // namespace xegpu
@@ -368,6 +565,32 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
     return isLegal(layout);
   });
+  target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(
+      [=](Operation *op) -> std::optional<bool> {
+        // Handle unary and binary operations
+        if (op->getNumOperands() < 1 || op->getNumOperands() > 2)
+          return true;
+
+        // check if input and output are vectors
+        VectorType resultType =
+            dyn_cast<VectorType>(op->getResult(0).getType());
+        if (!resultType || resultType.getRank() != 2)
+          return true;
+
+        // Check if all operands are vectors
+        for (Value operand : op->getOperands()) {
+          VectorType operandType = dyn_cast<VectorType>(operand.getType());
+          if (!operandType || operandType.getRank() != 2 ||
+              operandType.getShape() != resultType.getShape()) {
+            return true;
+          }
+        }
+
+        // check layout attribute
+        auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(
+            op->getAttrOfType<xegpu::LayoutAttr>("layout"));
+        return isLegal(layout);
+      });
 
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
