@@ -27,6 +27,10 @@ body:             |
     ; CHECK-NEXT: [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs]], 0 :: (load (s64))
     ; CHECK-NEXT: [[ADDXrs1:%[0-9]+]]:gpr64common = ADDXrs [[COPY]], [[COPY1]], 32
     ; CHECK-NEXT: [[LDRXui1:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs1]], 0 :: (load (s64))
+    ; CHECK-NEXT: [[ADDXrs2:%[0-9]+]]:gpr64common = ADDXrs [[COPY]], [[COPY1]], 35
+    ; CHECK-NEXT: [[LDRXui2:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs1]], 0 :: (load (s64))
+    ; CHECK-NEXT: [[ADDXrs3:%[0-9]+]]:gpr64common = ADDXrs [[COPY]], [[COPY1]], 63
+    ; CHECK-NEXT: [[LDRXui3:%[0-9]+]]:gpr64 = LDRXui [[ADDXrs1]], 0 :: (load (s64))
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x0
     %1:gpr64 = COPY $x1
@@ -36,4 +40,8 @@ body:             |
     %5:gpr64 = LDRXui %4, 0 :: (load (s64))
     %6:gpr64common = ADDXrs %0, %1, 32
     %7:gpr64 = LDRXui %6, 0 :: (load (s64))
+    %8:gpr64common = ADDXrs %0, %1, 35
+    %9:gpr64 = LDRXui %6, 0 :: (load (s64))
+    %10:gpr64common = ADDXrs %0, %1, 63
+    %11:gpr64 = LDRXui %6, 0 :: (load (s64))
     RET_ReallyLR implicit $x0
