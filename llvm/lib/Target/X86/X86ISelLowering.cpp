@@ -2238,7 +2238,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::ZERO_EXTEND,        MVT::v32i8, Custom);
     setOperationAction(ISD::ANY_EXTEND,         MVT::v32i8, Custom);
 
-    for (auto VT : { MVT::v32i8, MVT::v16i8, MVT::v16i16, MVT::v8i16 }) {
+    for (auto VT : {MVT::v32i8, MVT::v16i8, MVT::v16i16, MVT::v8i16,
+                    MVT::v16f16, MVT::v8f16}) {
       setOperationAction(ISD::MLOAD,  VT, Subtarget.hasVLX() ? Legal : Custom);
       setOperationAction(ISD::MSTORE, VT, Subtarget.hasVLX() ? Legal : Custom);
     }
@@ -33192,8 +33193,8 @@ static SDValue LowerMLOAD(SDValue Op, const X86Subtarget &Subtarget,
          "Cannot lower masked load op.");
 
   assert((ScalarVT.getSizeInBits() >= 32 ||
-          (Subtarget.hasBWI() &&
-              (ScalarVT == MVT::i8 || ScalarVT == MVT::i16))) &&
+          (Subtarget.hasBWI() && (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
+                                  ScalarVT == MVT::f16))) &&
          "Unsupported masked load op.");
 
   // This operation is legal for targets with VLX, but without
@@ -33240,9 +33241,9 @@ static SDValue LowerMSTORE(SDValue Op, const X86Subtarget &Subtarget,
          "Cannot lower masked store op.");
 
   assert((ScalarVT.getSizeInBits() >= 32 ||
-          (Subtarget.hasBWI() &&
-              (ScalarVT == MVT::i8 || ScalarVT == MVT::i16))) &&
-          "Unsupported masked store op.");
+          (Subtarget.hasBWI() && (ScalarVT == MVT::i8 || ScalarVT == MVT::i16 ||
+                                  ScalarVT == MVT::f16))) &&
+         "Unsupported masked store op.");
 
   // This operation is legal for targets with VLX, but without
   // VLX the vector should be widened to 512 bit
