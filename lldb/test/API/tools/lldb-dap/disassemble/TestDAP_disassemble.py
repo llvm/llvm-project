@@ -16,18 +16,27 @@ class TestDAP_disassemble(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         source = "main.c"
-        self.set_source_breakpoints(source, [line_number(source, "// breakpoint 1")])
+        bp_line_no = line_number(source, "// breakpoint 1")
+        self.set_source_breakpoints(source, [bp_line_no])
         self.continue_to_next_stop()
 
         insts_with_bp, pc_with_bp_assembly = self.disassemble(frameIndex=0)
+        self.assertIn("location", pc_with_bp_assembly, "Source location missing.")
+        self.assertEqual(
+            pc_with_bp_assembly["line"], bp_line_no, "Expects the same line number"
+        )
         no_bp = self.set_source_breakpoints(source, [])
-        self.assertEqual(len(no_bp), 0, "expect no breakpoints.")
+        self.assertEqual(len(no_bp), 0, "Expects no breakpoints.")
         self.assertIn(
             "instruction", pc_with_bp_assembly, "Assembly instruction missing."
         )
 
-        # the disassembly instructions should be the same even if there is a breakpoint;
         insts_no_bp, pc_no_bp_assembly = self.disassemble(frameIndex=0)
+        self.assertIn("location", pc_no_bp_assembly, "Source location missing.")
+        self.assertEqual(
+            pc_with_bp_assembly["line"], bp_line_no, "Expects the same line number"
+        )
+        # the disassembly instructions should be the same with breakpoint and no breakpoint;
         self.assertDictEqual(
             insts_with_bp,
             insts_no_bp,
