@@ -1221,15 +1221,13 @@ void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred,
 
   for (BasicBlock *S : reverse(successors(BB)))
     if (VisitedSuccs.insert(S).second) {
-      if (VisitedSuccs.size() == 1) {
-        // Let the first successor to own allocated arrays.
-        Worklist.emplace_back(S, BB, std::move(IncomingVals),
-                              std::move(IncomingLocs));
-      } else {
-        // Other successors have to make a copy.
-        Worklist.emplace_back(S, BB, Worklist.back().Values,
-                              Worklist.back().Locations);
+      if (VisitedSuccs.size() > 1) {
+        // Let the first successor own allocated arrays, other will make a copy.
+        IncomingVals = Worklist.back().Values;
+        IncomingLocs = Worklist.back().Locations;
       }
+      Worklist.emplace_back(S, BB, std::move(IncomingVals),
+                            std::move(IncomingLocs));
     }
 }
 
