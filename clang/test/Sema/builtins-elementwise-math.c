@@ -3,6 +3,7 @@
 typedef double double2 __attribute__((ext_vector_type(2)));
 typedef double double4 __attribute__((ext_vector_type(4)));
 typedef float float2 __attribute__((ext_vector_type(2)));
+typedef float float3 __attribute__((ext_vector_type(3)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 
 typedef int int2 __attribute__((ext_vector_type(2)));
@@ -1201,4 +1202,14 @@ void test_builtin_elementwise_fma(int i32, int2 v2i32, short i16,
 
   c3 = __builtin_elementwise_fma(f32, f32, c3);
   // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was '_Complex float')}}
+}
+
+typedef struct {
+  float3 b;
+} struct_float3;
+// This example uncovered a bug #141397 :
+// Type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed
+float3 foo(float3 a,const struct_float3* hi) {
+  float3 b = __builtin_elementwise_max((float3)(0.0f), a);
+  return __builtin_elementwise_pow(b, hi->b.yyy);
 }
