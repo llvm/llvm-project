@@ -62,6 +62,8 @@ constexpr unsigned packedSizeInBitsForDefault =
     16; // Minimum packing size per register for DPAS A.
 constexpr unsigned packedSizeInBitsForDpasB =
     32; // Minimum packing size per register for DPAS B.
+static const char *const operandLayoutNamePrefix = "layout_operand_";
+static const char *const resultLayoutNamePrefix = "layout_result_";
 
 namespace {
 
@@ -727,7 +729,10 @@ private:
 void LayoutAttrAssignment::assignToUsers(Value v, xegpu::LayoutAttr layout) {
   for (OpOperand &user : v.getUses()) {
     Operation *owner = user.getOwner();
-    std::string attrName = xegpu::getLayoutName(user);
+    unsigned operandNumber = user.getOperandNumber();
+    // Use a generic name for ease of querying the layout attribute later.
+    std::string attrName =
+        operandLayoutNamePrefix + std::to_string(operandNumber);
     owner->setAttr(attrName, layout);
   }
 }
@@ -801,10 +806,10 @@ LogicalResult LayoutAttrAssignment::assign(Operation *op) {
     return success();
   }
   // Otherwise simply attach the layout to the op itself.
-  for (auto r : op->getOpResults()) {
+  for (auto [i, r] : llvm::enumerate(op->getResults())) {
     xegpu::LayoutAttr layoutInfo = getLayoutAttrForValue(r);
     if (layoutInfo) {
-      std::string attrName = xegpu::getLayoutName(r);
+      std::string attrName = resultLayoutNamePrefix + std::to_string(i);
       op->setAttr(attrName, layoutInfo);
       // Attach the layout attribute to the users of the result.
       assignToUsers(r, layoutInfo);
@@ -924,8 +929,11 @@ static SmallVector<NamedAttribute>
 removeTemporaryLayoutAttributes(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute> newAttrs;
   for (NamedAttribute attr : attrs) {
-    if (!isa<xegpu::LayoutAttr>(attr.getValue()))
-      newAttrs.push_back(attr);
+    if (attr.getName().strref().contains(operandLayoutNamePrefix) ||
+        attr.getName().strref().contains(resultLayoutNamePrefix)) {
+      continue;
+    }
+    newAttrs.push_back(attr);
   }
   return newAttrs;
 }
@@ -1328,10 +1336,11 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
 
     auto dpasOp = operand->get().getDefiningOp<xegpu::DpasOp>();
     unsigned operandIdx = operand->getOperandNumber();
-    std::string layoutAName = xegpu::getLayoutName(dpasOp->getOpOperand(0));
-    std::string layoutBName = xegpu::getLayoutName(dpasOp->getOpOperand(1));
-    std::string layoutCName = xegpu::getLayoutName(dpasOp->getOpResult(0));
-
+    std::string layoutAName =
+        llvm::formatv("{0}{1}", operandLayoutNamePrefix, 0).str();
+    std::string layoutBName =
+        llvm::formatv("{0}{1}", operandLayoutNamePrefix, 1).str();
+    auto layoutCName = llvm::formatv("{0}{1}", resultLayoutNamePrefix, 0).str();
     xegpu::LayoutAttr layoutA =
         dpasOp->getAttrOfType<xegpu::LayoutAttr>(layoutAName);
     xegpu::LayoutAttr layoutB =
