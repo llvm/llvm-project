@@ -61,7 +61,7 @@ b f2_\index
 # Folded, second instruction of the GOT code sequence
 .section .text.f2_\index,"ax",@progbits
 f2_\index:
-ldr x0, [x0, :got_lo12:g\index] 
+ldr x0, [x0, :got_lo12:g\index]
 b callee
 
 # Folded
