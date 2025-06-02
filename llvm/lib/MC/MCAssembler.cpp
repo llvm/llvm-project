@@ -90,6 +90,8 @@ MCAssembler::MCAssembler(MCContext &Context,
 }
 
 void MCAssembler::reset() {
+  HasLayout = false;
+  HasFinalLayout = false;
   RelaxAll = false;
   Sections.clear();
   Symbols.clear();
