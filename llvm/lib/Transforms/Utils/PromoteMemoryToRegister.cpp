@@ -399,7 +399,7 @@ struct PromoteMem2Reg {
   RenamePassData::LocationVector IncomingLocs;
 
   // DFS work stack.
-  SmallVector<RenamePassData, 8> WorkList;
+  SmallVector<RenamePassData, 8> Worklist;
 
   /// Whether the function has the no-signed-zeros-fp-math attribute set.
   bool NoSignedZeros = false;
@@ -448,12 +448,12 @@ private:
   void pushToWorklist(BasicBlock *BB, BasicBlock *Pred,
                       RenamePassData::ValVector IncVals,
                       RenamePassData::LocationVector IncLocs) {
-    WorkList.emplace_back(BB, Pred, std::move(IncVals), std::move(IncLocs));
+    Worklist.emplace_back(BB, Pred, std::move(IncVals), std::move(IncLocs));
   }
 
   RenamePassData popFromWorklist() {
-    RenamePassData R = std::move(WorkList.back());
-    WorkList.pop_back();
+    RenamePassData R = std::move(Worklist.back());
+    Worklist.pop_back();
     IncomingVals = std::move(R.Values);
     IncomingLocs = std::move(R.Locations);
     return R;
@@ -888,7 +888,7 @@ void PromoteMem2Reg::run() {
     RenamePassData RPD = popFromWorklist();
     // RenamePass may add new worklist entries.
     RenamePass(RPD.BB, RPD.Pred);
-  } while (!WorkList.empty());
+  } while (!Worklist.empty());
 
   // Remove the allocas themselves from the function.
   for (Instruction *A : Allocas) {
@@ -1235,14 +1235,12 @@ void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred) {
 
   for (BasicBlock *S : reverse(successors(BB)))
     if (VisitedSuccs.insert(S).second) {
-      if (VisitedSuccs.size() == 1) {
-        // Let the first successor to own allocated arrays.
-        pushToWorklist(S, BB, std::move(IncomingVals), std::move(IncomingLocs));
-      } else {
-        // Other successors have to make a copy.
-        pushToWorklist(S, BB, WorkList.back().Values,
-                       WorkList.back().Locations);
+      if (VisitedSuccs.size() > 1) {
+        // Let the first successor own allocated arrays, other will make a copy.
+        IncomingVals = Worklist.back().Values;
+        IncomingLocs = Worklist.back().Locations;
       }
+      pushToWorklist(S, BB, std::move(IncomingVals), std::move(IncomingLocs));
     }
 }
 
