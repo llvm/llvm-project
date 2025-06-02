@@ -16,11 +16,9 @@
 #include "Arch/Sparc.h"
 #include "Arch/SystemZ.h"
 #include "CommonArgs.h"
-#include "Linux.h"
 #include "clang/Config/config.h" // for GCC_INSTALL_PREFIX
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"

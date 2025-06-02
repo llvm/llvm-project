@@ -82,7 +82,6 @@
 
 #include <cstdio>
 
-#include <mutex>
 #include <optional>
 
 using namespace lldb;
@@ -4262,6 +4261,8 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::HLSLAttributedResource:
     break;
+  case clang::Type::HLSLInlineSpirv:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -5029,7 +5030,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
     // ARM -- Scalable Vector Extension
 #define SVE_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
       break;
 
     // RISC-V V builtin types.
@@ -5127,6 +5128,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     break;
 
   case clang::Type::HLSLAttributedResource:
+    break;
+  case clang::Type::HLSLInlineSpirv:
     break;
   }
   count = 0;
@@ -5292,21 +5295,19 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::HLSLAttributedResource:
     break;
+  case clang::Type::HLSLInlineSpirv:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eFormatBytes;
 }
 
-static bool ObjCDeclHasIVars(clang::ObjCInterfaceDecl *class_interface_decl,
-                             bool check_superclass) {
+static bool ObjCDeclHasIVars(clang::ObjCInterfaceDecl *class_interface_decl) {
   while (class_interface_decl) {
     if (class_interface_decl->ivar_size() > 0)
       return true;
 
-    if (check_superclass)
-      class_interface_decl = class_interface_decl->getSuperClass();
-    else
-      break;
+    class_interface_decl = class_interface_decl->getSuperClass();
   }
   return false;
 }
@@ -5381,7 +5382,7 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
               class_interface_decl->getSuperClass();
           if (superclass_interface_decl) {
             if (omit_empty_base_classes) {
-              if (ObjCDeclHasIVars(superclass_interface_decl, true))
+              if (ObjCDeclHasIVars(superclass_interface_decl))
                 ++num_children;
             } else
               ++num_children;
@@ -6835,7 +6836,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
               if (ivar_decl->getName() == name_sref) {
                 if ((!omit_empty_base_classes && superclass_interface_decl) ||
                     (omit_empty_base_classes &&
-                     ObjCDeclHasIVars(superclass_interface_decl, true)))
+                     ObjCDeclHasIVars(superclass_interface_decl)))
                   ++child_idx;
 
                 child_indexes.push_back(child_idx);
@@ -6991,7 +6992,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
               if (ivar_decl->getName() == name) {
                 if ((!omit_empty_base_classes && superclass_interface_decl) ||
                     (omit_empty_base_classes &&
-                     ObjCDeclHasIVars(superclass_interface_decl, true)))
+                     ObjCDeclHasIVars(superclass_interface_decl)))
                   ++child_idx;
 
                 return child_idx;
@@ -8110,14 +8111,6 @@ bool TypeSystemClang::AddObjCClassProperty(
   }
 
   return true;
-}
-
-bool TypeSystemClang::IsObjCClassTypeAndHasIVars(const CompilerType &type,
-                                                 bool check_superclass) {
-  clang::ObjCInterfaceDecl *class_interface_decl = GetAsObjCInterfaceDecl(type);
-  if (class_interface_decl)
-    return ObjCDeclHasIVars(class_interface_decl, check_superclass);
-  return false;
 }
 
 clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
