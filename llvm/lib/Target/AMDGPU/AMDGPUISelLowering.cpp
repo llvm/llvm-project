@@ -4749,9 +4749,12 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
     if (isFnegOrFabs(Op1) || isFnegOrFabs(Op2))
       continue;
 
-    if (!Op1->isDivergent() && Op2->isDivergent())
+    bool IsOp1Divergent = Op1->isDivergent();
+    bool IsOp2Divergent = Op2->isDivergent();
+
+    if (!IsOp1Divergent && IsOp2Divergent)
       ShouldSwap++;
-    else if (Op1->isDivergent() && !Op2->isDivergent())
+    else if (IsOp1Divergent && !IsOp2Divergent)
       ShouldSwap--;
   }
 
