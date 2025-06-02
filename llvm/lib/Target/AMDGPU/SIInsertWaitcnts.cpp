@@ -168,8 +168,8 @@ static const unsigned instrsForExtendedCounterTypes[NUM_EXTENDED_INST_CNTS] = {
     AMDGPU::S_WAIT_KMCNT};
 
 static bool updateVMCntOnly(const MachineInstr &Inst) {
-  return SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLATGlobal(Inst) ||
-         SIInstrInfo::isFLATScratch(Inst);
+  return (SIInstrInfo::isVMEM(Inst) && !SIInstrInfo::isFLAT(Inst)) ||
+         SIInstrInfo::isFLATGlobal(Inst) || SIInstrInfo::isFLATScratch(Inst);
 }
 
 #ifndef NDEBUG
@@ -189,9 +189,9 @@ VmemType getVmemType(const MachineInstr &Inst) {
   // We have to make an additional check for isVSAMPLE here since some
   // instructions don't have a sampler, but are still classified as sampler
   // instructions for the purposes of e.g. waitcnt.
-  return BaseInfo->BVH                                         ? VMEM_BVH
-         : (BaseInfo->Sampler || SIInstrInfo::isVSAMPLE(Inst)) ? VMEM_SAMPLER
-                                                               : VMEM_NOSAMPLER;
+  bool HasSampler =
+      BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst);
+  return BaseInfo->BVH ? VMEM_BVH : HasSampler ? VMEM_SAMPLER : VMEM_NOSAMPLER;
 }
 
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
@@ -695,8 +695,8 @@ public:
 #endif // NDEBUG
   }
 
-  // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM or
-  // FLAT instruction.
+  // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM
+  // instruction.
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
     switch (Inst.getOpcode()) {
     case AMDGPU::GLOBAL_INV:
@@ -712,7 +712,7 @@ public:
     static const WaitEventType VmemReadMapping[NUM_VMEM_TYPES] = {
         VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
 
-    assert(SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLAT(Inst));
+    assert(SIInstrInfo::isVMEM(Inst));
     // LDS DMA loads are also stores, but on the LDS side. On the VMEM side
     // these should use VM_CNT.
     if (!ST->hasVscnt() || SIInstrInfo::mayWriteLDSThroughDMA(Inst))
@@ -2466,8 +2466,9 @@ bool SIInsertWaitcnts::isPreheaderToFlush(
 }
 
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
-  return SIInstrInfo::isVMEM(MI) ||
-         (SIInstrInfo::isFLAT(MI) && mayAccessVMEMThroughFlat(MI));
+  if (SIInstrInfo::isFLAT(MI))
+    return mayAccessVMEMThroughFlat(MI);
+  return SIInstrInfo::isVMEM(MI);
 }
 
 // Return true if it is better to flush the vmcnt counter in the preheader of
@@ -2655,7 +2656,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   // Keep iterating over the blocks in reverse post order, inserting and
   // updating s_waitcnt where needed, until a fix point is reached.
   for (auto *MBB : ReversePostOrderTraversal<MachineFunction *>(&MF))
-    BlockInfos.insert({MBB, BlockInfo()});
+    BlockInfos.try_emplace(MBB);
 
   std::unique_ptr<WaitcntBrackets> Brackets;
   bool Repeat;

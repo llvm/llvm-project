@@ -630,6 +630,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
+#  include <__type_traits/is_replaceable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_standard_layout.h>
 #  include <__type_traits/is_trivially_constructible.h>
@@ -755,6 +756,9 @@ public:
   // external memory. In such cases, the destructor is responsible for unpoisoning
   // the memory to avoid triggering false positives.
   // Therefore it's crucial to ensure the destructor is called.
+  //
+  // However, it is replaceable since implementing move-assignment as a destroy + move-construct
+  // will maintain the right ASAN state.
   using __trivially_relocatable = void;
 #  else
   using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
@@ -762,6 +766,10 @@ public:
       basic_string,
       void>;
 #  endif
+  using __replaceable _LIBCPP_NODEBUG =
+      __conditional_t<__is_replaceable_v<pointer> && __container_allocator_is_replaceable<__alloc_traits>::value,
+                      basic_string,
+                      void>;
 
 #  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __asan_volatile_wrapper(pointer const& __ptr) const {
@@ -2223,7 +2231,7 @@ private:
   __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
     (void)__old_mid;
     (void)__new_mid;
-#  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
+#  if _LIBCPP_INSTRUMENTED_WITH_ASAN
 #    if defined(__APPLE__)
     // TODO: remove after addressing issue #96099 (https://github.com/llvm/llvm-project/issues/96099)
     if (!__is_long())
@@ -2234,34 +2242,19 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
-    (void)__current_size;
-#  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
-    if (!__libcpp_is_constant_evaluated())
-      __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
-#  endif
+    __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_delete() const _NOEXCEPT {
-#  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
-    if (!__libcpp_is_constant_evaluated())
-      __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
-#  endif
+    __annotate_contiguous_container(data() + size() + 1, data() + capacity() + 1);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_increase(size_type __n) const _NOEXCEPT {
-    (void)__n;
-#  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
-    if (!__libcpp_is_constant_evaluated())
-      __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
-#  endif
+    __annotate_contiguous_container(data() + size() + 1, data() + size() + 1 + __n);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
-    (void)__old_size;
-#  if _LIBCPP_HAS_ASAN && _LIBCPP_INSTRUMENTED_WITH_ASAN
-    if (!__libcpp_is_constant_evaluated())
-      __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
-#  endif
+    __annotate_contiguous_container(data() + __old_size + 1, data() + size() + 1);
   }
 
   // Disable ASan annotations and enable them again when going out of scope. It is assumed that the string is in a valid

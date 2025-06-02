@@ -32,7 +32,8 @@ FormatTokenLexer::FormatTokenLexer(
       LangOpts(getFormattingLangOpts(Style)), SourceMgr(SourceMgr), ID(ID),
       Style(Style), IdentTable(IdentTable), Keywords(IdentTable),
       Encoding(Encoding), Allocator(Allocator), FirstInLineIndex(0),
-      FormattingDisabled(false), MacroBlockBeginRegex(Style.MacroBlockBegin),
+      FormattingDisabled(false), FormatOffRegex(Style.OneLineFormatOffRegex),
+      MacroBlockBeginRegex(Style.MacroBlockBegin),
       MacroBlockEndRegex(Style.MacroBlockEnd) {
   Lex.reset(new Lexer(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts));
   Lex->SetKeepWhitespaceMode(true);
@@ -83,21 +84,54 @@ FormatTokenLexer::FormatTokenLexer(
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
   assert(Tokens.empty());
   assert(FirstInLineIndex == 0);
+  enum { FO_None, FO_CurrentLine, FO_NextLine } FormatOff = FO_None;
   do {
     Tokens.push_back(getNextToken());
+    auto &Tok = *Tokens.back();
+    const auto NewlinesBefore = Tok.NewlinesBefore;
+    switch (FormatOff) {
+    case FO_CurrentLine:
+      if (NewlinesBefore == 0)
+        Tok.Finalized = true;
+      else
+        FormatOff = FO_None;
+      break;
+    case FO_NextLine:
+      if (NewlinesBefore > 1) {
+        FormatOff = FO_None;
+      } else {
+        Tok.Finalized = true;
+        FormatOff = FO_CurrentLine;
+      }
+      break;
+    default:
+      if (!FormattingDisabled && FormatOffRegex.match(Tok.TokenText)) {
+        if (Tok.is(tok::comment) &&
+            (NewlinesBefore > 0 || Tokens.size() == 1)) {
+          Tok.Finalized = true;
+          FormatOff = FO_NextLine;
+        } else {
+          for (auto *Token : reverse(Tokens)) {
+            Token->Finalized = true;
+            if (Token->NewlinesBefore > 0)
+              break;
+          }
+          FormatOff = FO_CurrentLine;
+        }
+      }
+    }
     if (Style.isJavaScript()) {
       tryParseJSRegexLiteral();
       handleTemplateStrings();
-    }
-    if (Style.isTextProto())
+    } else if (Style.isTextProto()) {
       tryParsePythonComment();
+    }
     tryMergePreviousTokens();
     if (Style.isCSharp()) {
       // This needs to come after tokens have been merged so that C#
       // string literals are correctly identified.
       handleCSharpVerbatimAndInterpolatedStrings();
-    }
-    if (Style.isTableGen()) {
+    } else if (Style.isTableGen()) {
       handleTableGenMultilineString();
       handleTableGenNumericLikeIdentifier();
     }
@@ -155,23 +189,23 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     }
     if (tryMergeNullishCoalescingEqual())
       return;
-  }
 
-  if (Style.isCSharp()) {
-    static const tok::TokenKind CSharpNullConditionalLSquare[] = {
-        tok::question, tok::l_square};
+    if (Style.isCSharp()) {
+      static const tok::TokenKind CSharpNullConditionalLSquare[] = {
+          tok::question, tok::l_square};
 
-    if (tryMergeCSharpKeywordVariables())
-      return;
-    if (tryMergeCSharpStringLiteral())
-      return;
-    if (tryTransformCSharpForEach())
-      return;
-    if (tryMergeTokens(CSharpNullConditionalLSquare,
-                       TT_CSharpNullConditionalLSquare)) {
-      // Treat like a regular "[" operator.
-      Tokens.back()->Tok.setKind(tok::l_square);
-      return;
+      if (tryMergeCSharpKeywordVariables())
+        return;
+      if (tryMergeCSharpStringLiteral())
+        return;
+      if (tryTransformCSharpForEach())
+        return;
+      if (tryMergeTokens(CSharpNullConditionalLSquare,
+                         TT_CSharpNullConditionalLSquare)) {
+        // Treat like a regular "[" operator.
+        Tokens.back()->Tok.setKind(tok::l_square);
+        return;
+      }
     }
   }
 
@@ -211,16 +245,12 @@ void FormatTokenLexer::tryMergePreviousTokens() {
     }
     if (tryMergeJSPrivateIdentifier())
       return;
-  }
-
-  if (Style.isJava()) {
+  } else if (Style.isJava()) {
     static const tok::TokenKind JavaRightLogicalShiftAssign[] = {
         tok::greater, tok::greater, tok::greaterequal};
     if (tryMergeTokens(JavaRightLogicalShiftAssign, TT_BinaryOperator))
       return;
-  }
-
-  if (Style.isVerilog()) {
+  } else if (Style.isVerilog()) {
     // Merge the number following a base like `'h?a0`.
     if (Tokens.size() >= 3 && Tokens.end()[-3]->is(TT_VerilogNumberBase) &&
         Tokens.end()[-2]->is(tok::numeric_constant) &&
@@ -292,8 +322,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       Tokens.back()->ForcedPrecedence = prec::Comma;
       return;
     }
-  }
-  if (Style.isTableGen()) {
+  } else if (Style.isTableGen()) {
     // TableGen's Multi line string starts with [{
     if (tryMergeTokens({tok::l_square, tok::l_brace},
                        TT_TableGenMultiLineString)) {
@@ -665,6 +694,36 @@ bool FormatTokenLexer::canPrecedeRegexLiteral(FormatToken *Prev) {
   return true;
 }
 
+void FormatTokenLexer::tryParseJavaTextBlock() {
+  if (FormatTok->TokenText != "\"\"")
+    return;
+
+  const auto *S = Lex->getBufferLocation();
+  const auto *End = Lex->getBuffer().end();
+
+  if (S == End || *S != '\"')
+    return;
+
+  ++S; // Skip the `"""` that begins a text block.
+
+  // Find the `"""` that ends the text block.
+  for (int Count = 0; Count < 3 && S < End; ++S) {
+    switch (*S) {
+    case '\\':
+      Count = -1;
+      break;
+    case '\"':
+      ++Count;
+      break;
+    default:
+      Count = 0;
+    }
+  }
+
+  // Ignore the possibly invalid text block.
+  resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(S)));
+}
+
 // Tries to parse a JavaScript Regex literal starting at the current token,
 // if that begins with a slash and is in a location where JavaScript allows
 // regex literals. Changes the current token to a regex literal and updates
@@ -808,10 +867,7 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
 
   const char *StrBegin = Lex->getBufferLocation() - TokenText.size();
   const char *Offset = StrBegin;
-  if (Verbatim && Interpolated)
-    Offset += 3;
-  else
-    Offset += 2;
+  Offset += Verbatim && Interpolated ? 3 : 2;
 
   const auto End = Lex->getBuffer().end();
   Offset = lexCSharpString(Offset, End, Verbatim, Interpolated);
@@ -1342,16 +1398,14 @@ FormatToken *FormatTokenLexer::getNextToken() {
     } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
       FormatTok->Tok.setKind(tok::identifier);
     }
-  } else if (FormatTok->is(tok::greatergreater)) {
-    FormatTok->Tok.setKind(tok::greater);
+  } else if (const bool Greater = FormatTok->is(tok::greatergreater);
+             Greater || FormatTok->is(tok::lessless)) {
+    FormatTok->Tok.setKind(Greater ? tok::greater : tok::less);
     FormatTok->TokenText = FormatTok->TokenText.substr(0, 1);
     ++Column;
     StateStack.push(LexerState::TOKEN_STASHED);
-  } else if (FormatTok->is(tok::lessless)) {
-    FormatTok->Tok.setKind(tok::less);
-    FormatTok->TokenText = FormatTok->TokenText.substr(0, 1);
-    ++Column;
-    StateStack.push(LexerState::TOKEN_STASHED);
+  } else if (Style.isJava() && FormatTok->is(tok::string_literal)) {
+    tryParseJavaTextBlock();
   }
 
   if (Style.isVerilog() && Tokens.size() > 0 &&

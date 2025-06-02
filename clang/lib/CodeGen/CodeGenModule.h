@@ -1633,7 +1633,7 @@ public:
   llvm::Metadata *CreateMetadataIdentifierGeneralized(QualType T);
 
   /// Create and attach type metadata to the given function.
-  void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
+  void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
 
   /// Set type metadata to the given function.
@@ -1808,6 +1808,15 @@ public:
     // initializers or non empty initializers. This can provide a consistent
     // behavior. So projects like the Linux kernel can rely on it.
     return !getLangOpts().CPlusPlus;
+  }
+
+  // Helper to get the alignment for a variable.
+  unsigned getVtableGlobalVarAlignment(const VarDecl *D = nullptr) {
+    LangAS AS = GetGlobalVarAddressSpace(D);
+    unsigned PAlign = getItaniumVTableContext().isRelativeLayout()
+                          ? 32
+                          : getTarget().getPointerAlign(AS);
+    return PAlign;
   }
 
 private:

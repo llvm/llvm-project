@@ -1,11 +1,11 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes='amdgpu-attributor,function(amdgpu-lower-kernel-arguments)' -amdgpu-kernarg-preload-count=16 -S < %s 2>&1 \
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes='amdgpu-attributor,amdgpu-preload-kernel-arguments,function(amdgpu-lower-kernel-arguments)' -amdgpu-kernarg-preload-count=16 -S < %s 2>&1 \
 ; RUN: | FileCheck --match-full-lines --implicit-check-not='declare' %s
 
 ; Confirms we do not leave behind a declaration which references the same
 ; DISubprogram metadata.
 
 ; CHECK: define amdgpu_kernel void @preload_block_count_x{{.*}} !dbg ![[#]] !max_work_group_size ![[#]] {
-; CHECK: declare void @0{{.*}} #[[#]]
+; CHECK-NOT: declare void @0{{.*}} #[[#]]
 ; CHECK: declare noundef align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #[[#]]
 ; CHECK: declare noundef align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #[[#]]
 

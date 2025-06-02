@@ -38,6 +38,7 @@ function at-exit {
 
   ccache --print-stats > artifacts/ccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
+  cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
   # If building fails there will be no results files.
   shopt -s nullglob
@@ -59,9 +60,7 @@ lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-outpu
 
 echo "--- cmake"
 export PIP_BREAK_SYSTEM_PACKAGES=1
-pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
-pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
-pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt
+pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 # Set the system llvm-symbolizer as preferred.
 export LLVM_SYMBOLIZER_PATH=`which llvm-symbolizer`

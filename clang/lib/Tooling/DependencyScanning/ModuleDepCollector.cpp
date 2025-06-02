@@ -14,7 +14,6 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/BLAKE3.h"
-#include "llvm/Support/StringSaver.h"
 #include <optional>
 
 using namespace clang;
@@ -574,7 +573,6 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
                                         llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
-  SmallString<32> Scratch;
 
   // Hash the compiler version and serialization version to ensure the module
   // will be readable.
@@ -629,13 +627,6 @@ void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
                                             SourceLocation Loc) {
   if (Reason != LexedFileChangeReason::EnterFile)
     return;
-
-  // This has to be delayed as the context hash can change at the start of
-  // `CompilerInstance::ExecuteAction`.
-  if (MDC.ContextHash.empty()) {
-    MDC.ContextHash = MDC.ScanInstance.getInvocation().getModuleHash();
-    MDC.Consumer.handleContextHash(MDC.ContextHash);
-  }
 
   SourceManager &SM = MDC.ScanInstance.getSourceManager();
 
@@ -717,6 +708,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
 
   for (const Module *M : MDC.DirectModularDeps)
     handleTopLevelModule(M);
+
+  MDC.Consumer.handleContextHash(
+      MDC.ScanInstance.getInvocation().getModuleHash());
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 

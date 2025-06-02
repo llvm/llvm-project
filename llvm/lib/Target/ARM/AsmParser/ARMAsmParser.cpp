@@ -31,7 +31,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCAsmParserUtils.h"
@@ -55,7 +55,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/TargetParser.h"
-#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -5524,7 +5523,7 @@ ParseStatus ARMAsmParser::parseRotImm(OperandVector &Operands) {
 
 ParseStatus ARMAsmParser::parseModImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   int64_t Imm1, Imm2;
 
   SMLoc S = Parser.getTok().getLoc();
@@ -11654,7 +11653,7 @@ bool ARMAsmParser::parseDirectiveThumb(SMLoc L) {
   if (!isThumb())
     SwitchMode();
 
-  getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+  getTargetStreamer().emitCode16();
   getParser().getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
   return false;
 }
@@ -11667,7 +11666,7 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
 
   if (isThumb())
     SwitchMode();
-  getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
+  getTargetStreamer().emitCode32();
   getParser().getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
   return false;
 }
@@ -11715,7 +11714,7 @@ bool ARMAsmParser::parseDirectiveThumbFunc(SMLoc L) {
   if (!isThumb())
     SwitchMode();
 
-  getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+  getTargetStreamer().emitCode16();
 
   NextSymbolIsThumb = true;
   return false;
@@ -11768,14 +11767,14 @@ bool ARMAsmParser::parseDirectiveCode(SMLoc L) {
 
     if (!isThumb())
       SwitchMode();
-    getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+    getTargetStreamer().emitCode16();
   } else {
     if (!hasARM())
       return Error(L, "target does not support ARM mode");
 
     if (isThumb())
       SwitchMode();
-    getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
+    getTargetStreamer().emitCode32();
   }
 
   return false;
@@ -11788,9 +11787,8 @@ bool ARMAsmParser::parseDirectiveReq(StringRef Name, SMLoc L) {
   Parser.Lex(); // Eat the '.req' token.
   MCRegister Reg;
   SMLoc SRegLoc, ERegLoc;
-  if (check(parseRegister(Reg, SRegLoc, ERegLoc), SRegLoc,
-            "register name expected") ||
-      parseEOL())
+  const bool parseResult = parseRegister(Reg, SRegLoc, ERegLoc);
+  if (check(parseResult, SRegLoc, "register name expected") || parseEOL())
     return true;
 
   if (RegisterReqs.insert(std::make_pair(Name, Reg)).first->second != Reg)
@@ -11824,8 +11822,10 @@ void ARMAsmParser::FixModeAfterArchChange(bool WasThumb, SMLoc Loc) {
       SwitchMode();
     } else {
       // Mode switch forced, because the new arch doesn't support the old mode.
-      getParser().getStreamer().emitAssemblerFlag(isThumb() ? MCAF_Code16
-                                                            : MCAF_Code32);
+      if (isThumb())
+        getTargetStreamer().emitCode16();
+      else
+        getTargetStreamer().emitCode32();
       // Warn about the implcit mode switch. GAS does not switch modes here,
       // but instead stays in the old mode, reporting an error on any following
       // instructions as the mode does not exist on the target.
@@ -11846,7 +11846,6 @@ bool ARMAsmParser::parseDirectiveArch(SMLoc L) {
     return Error(L, "Unknown arch name");
 
   bool WasThumb = isThumb();
-  Triple T;
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures("", /*TuneCPU*/ "",
                          ("+" + ARM::getArchName(ID)).str());

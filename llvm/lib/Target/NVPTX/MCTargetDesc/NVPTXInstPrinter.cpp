@@ -311,17 +311,6 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     default:
       llvm_unreachable("Unknown register type");
     }
-  } else if (Modifier == "vec") {
-    switch (Imm) {
-    case NVPTX::PTXLdStInstCode::V2:
-      O << ".v2";
-      return;
-    case NVPTX::PTXLdStInstCode::V4:
-      O << ".v4";
-      return;
-    }
-    // TODO: evaluate whether cases not covered by this switch are bugs
-    return;
   }
   llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
 }

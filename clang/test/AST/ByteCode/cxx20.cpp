@@ -997,3 +997,21 @@ namespace NastyChar {
   template <ToNastyChar t> constexpr auto to_nasty_char() { return t; }
   constexpr auto result = to_nasty_char<"12345">();
 }
+
+namespace TempDtor {
+  struct A {
+    int n;
+  };
+  constexpr A &&a_ref = A(); // both-note {{temporary created here}}
+  constexpr void destroy_extern_2() { // both-error {{never produces a constant expression}}
+    a_ref.~A(); // both-note {{destruction of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+  }
+}
+
+namespace OnePastEndDtor {
+  struct A {int n; };
+  constexpr void destroy_past_end() { // both-error {{never produces a constant expression}}
+    A a;
+    (&a+1)->~A(); // both-note {{destruction of dereferenced one-past-the-end pointer}}
+  }
+}

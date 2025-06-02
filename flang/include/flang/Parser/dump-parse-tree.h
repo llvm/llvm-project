@@ -17,6 +17,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <type_traits>
@@ -483,6 +484,11 @@ public:
   NODE(parser, OldParameterStmt)
   NODE(parser, OmpTypeSpecifier)
   NODE(parser, OmpTypeNameList)
+  NODE(parser, OmpAdjustArgsClause)
+  NODE(OmpAdjustArgsClause, OmpAdjustOp)
+  NODE_ENUM(OmpAdjustArgsClause::OmpAdjustOp, Value)
+  NODE(parser, OmpAppendArgsClause)
+  NODE(OmpAppendArgsClause, OmpAppendOp)
   NODE(parser, OmpLocator)
   NODE(parser, OmpLocatorList)
   NODE(parser, OmpReductionSpecifier)
@@ -540,8 +546,8 @@ public:
   NODE(parser, OmpBeginSectionsDirective)
   NODE(parser, OmpBlockDirective)
   static std::string GetNodeName(const llvm::omp::Directive &x) {
-    return llvm::Twine(
-        "llvm::omp::Directive = ", llvm::omp::getOpenMPDirectiveName(x))
+    return llvm::Twine("llvm::omp::Directive = ",
+        llvm::omp::getOpenMPDirectiveName(x, llvm::omp::FallbackVersion))
         .str();
   }
   NODE(parser, OmpClause)
@@ -703,6 +709,7 @@ public:
   NODE(parser, OpenMPCriticalConstruct)
   NODE(parser, OpenMPDeclarativeAllocate)
   NODE(parser, OpenMPDeclarativeConstruct)
+  NODE(parser, OmpDeclareVariantDirective)
   NODE(parser, OpenMPDeclareReductionConstruct)
   NODE(parser, OpenMPDeclareSimdConstruct)
   NODE(parser, OpenMPDeclareTargetConstruct)

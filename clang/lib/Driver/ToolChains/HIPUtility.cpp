@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
-#include "Clang.h"
 #include "CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"

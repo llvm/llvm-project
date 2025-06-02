@@ -288,6 +288,7 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
     LLVM_DEBUG(dbgs() << "INDVARS: Turn to unsigned comparison: " << *ICmp
                       << '\n');
     ICmp->setPredicate(ICmpInst::getUnsignedPredicate(OriginalPred));
+    ICmp->setSameSign();
   } else
     return;
 

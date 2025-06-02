@@ -40,14 +40,15 @@ class AVX512_Op<string mnemonic, list<Trait> traits = []> :
 //----------------------------------------------------------------------------//
 
 def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
-  // TODO: Support optional arguments in `AllTypesMatch`. "type($src)" could
-  // then be removed from assemblyFormat.
-  AllTypesMatch<["a", "dst"]>,
-  TypesMatchWith<"`k` has the same number of bits as elements in `dst`",
-                 "dst", "k",
-                 "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
-                 "IntegerType::get($_self.getContext(), 1))">]> {
+    X86IntrinsicOpInterface,
+    // TODO: Support optional arguments in `AllTypesMatch`. "type($src)" could
+    // then be removed from assemblyFormat.
+    AllTypesMatch<["a", "dst"]>,
+    TypesMatchWith<"`k` has the same number of bits as elements in `dst`",
+                   "dst", "k",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
+                   "IntegerType::get($_self.getContext(), 1))">
+  ]> {
   let summary = "Masked compress op";
   let description = [{
   The mask.compress op is an AVX512 specific op that can lower to the
@@ -75,15 +76,17 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
                        " `:` type($dst) (`,` type($src)^)?";
   let hasVerifier = 1;
 
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
       // Call the baseline overloaded intrisic.
       // Final overload name mangling is resolved by the created function call.
       return "llvm.x86.avx512.mask.compress";
     }
-  }];
-  let extraClassDeclaration = [{
-    SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
+
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
   }];
 }
 
@@ -92,12 +95,13 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
 //----------------------------------------------------------------------------//
 
 def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
-  AllTypesMatch<["src", "a", "dst"]>,
-  TypesMatchWith<"imm has the same number of bits as elements in dst",
-                 "dst", "imm",
-                 "IntegerType::get($_self.getContext(), "
-                 "(::llvm::cast<VectorType>($_self).getShape()[0]))">]> {
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["src", "a", "dst"]>,
+    TypesMatchWith<"imm has the same number of bits as elements in dst",
+                   "dst", "imm",
+                   "IntegerType::get($_self.getContext(), "
+                   "(::llvm::cast<VectorType>($_self).getShape()[0]))">
+  ]> {
   let summary = "Masked roundscale op";
   let description = [{
     The mask.rndscale op is an AVX512 specific op that can lower to the proper
@@ -123,8 +127,8 @@ def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
   let assemblyFormat =
     "$src `,` $k `,` $a `,` $imm `,` $rounding attr-dict `:` type($dst)";
 
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
       std::string intr = "llvm.x86.avx512.mask.rndscale";
       VectorType vecType = getSrc().getType();
       Type elemType = vecType.getElementType();
@@ -143,12 +147,13 @@ def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
 //----------------------------------------------------------------------------//
 
 def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
-  AllTypesMatch<["src", "a", "b", "dst"]>,
-  TypesMatchWith<"k has the same number of bits as elements in dst",
-                 "dst", "k",
-                 "IntegerType::get($_self.getContext(), "
-                 "(::llvm::cast<VectorType>($_self).getShape()[0]))">]> {
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["src", "a", "b", "dst"]>,
+    TypesMatchWith<"k has the same number of bits as elements in dst",
+                   "dst", "k",
+                   "IntegerType::get($_self.getContext(), "
+                   "(::llvm::cast<VectorType>($_self).getShape()[0]))">
+  ]> {
   let summary = "ScaleF op";
   let description = [{
     The `mask.scalef` op is an AVX512 specific op that can lower to the proper
@@ -175,8 +180,8 @@ def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
   let assemblyFormat =
     "$src `,` $a `,` $b `,` $k `,` $rounding attr-dict `:` type($dst)";
 
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
       std::string intr = "llvm.x86.avx512.mask.scalef";
       VectorType vecType = getSrc().getType();
       Type elemType = vecType.getElementType();
@@ -195,18 +200,19 @@ def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
 //----------------------------------------------------------------------------//
 
 def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
-  AllTypesMatch<["a", "b"]>,
-  TypesMatchWith<"k1 has the same number of bits as elements in a",
-                 "a", "k1",
-                 "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
-                 "IntegerType::get($_self.getContext(), 1))">,
-  TypesMatchWith<"k2 has the same number of bits as elements in b",
-                 // Should use `b` instead of `a`, but that would require
-                 // adding `type($b)` to assemblyFormat.
-                 "a", "k2",
-                 "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
-                 "IntegerType::get($_self.getContext(), 1))">]> {
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["a", "b"]>,
+    TypesMatchWith<"k1 has the same number of bits as elements in a",
+                   "a", "k1",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
+                   "IntegerType::get($_self.getContext(), 1))">,
+    TypesMatchWith<"k2 has the same number of bits as elements in b",
+                   // Should use `b` instead of `a`, but that would require
+                   // adding `type($b)` to assemblyFormat.
+                   "a", "k2",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
+                   "IntegerType::get($_self.getContext(), 1))">
+  ]> {
   let summary = "Vp2Intersect op";
   let description = [{
     The `vp2intersect` op is an AVX512 specific op that can lower to the proper
@@ -231,8 +237,8 @@ def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
   let assemblyFormat =
     "$a `,` $b attr-dict `:` type($a)";
 
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
       std::string intr = "llvm.x86.avx512.vp2intersect";
       VectorType vecType = getA().getType();
       Type elemType = vecType.getElementType();
@@ -251,13 +257,14 @@ def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
 //----------------------------------------------------------------------------//
 
 def DotBF16Op : AVX512_Op<"dot", [Pure,
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
-  AllTypesMatch<["a", "b"]>,
-  AllTypesMatch<["src", "dst"]>,
-  TypesMatchWith<"`a` has twice an many elements as `src`",
-                 "src", "a",
-                 "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0] * 2}, "
-                 "BFloat16Type::get($_self.getContext()))">]> {
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["a", "b"]>,
+    AllTypesMatch<["src", "dst"]>,
+    TypesMatchWith<"`a` has twice an many elements as `src`",
+                   "src", "a",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0] * 2}, "
+                   "BFloat16Type::get($_self.getContext()))">
+  ]> {
   let summary = "Dot BF16 op";
   let description = [{
     The `dot` op is an AVX512-BF16 specific op that can lower to the proper
@@ -283,8 +290,8 @@ def DotBF16Op : AVX512_Op<"dot", [Pure,
   let assemblyFormat =
     "$src `,` $a `,` $b attr-dict `:` type($a) `->` type($src)";
 
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
       std::string intr = "llvm.x86.avx512bf16.dpbf16ps";
       VectorType vecType = getSrc().getType();
       unsigned elemBitWidth = vecType.getElementTypeBitWidth();
@@ -300,8 +307,9 @@ def DotBF16Op : AVX512_Op<"dot", [Pure,
 //----------------------------------------------------------------------------//
 
 def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
-  AllElementCountsMatch<["a", "dst"]>]> {
+    X86IntrinsicOpInterface,
+    AllElementCountsMatch<["a", "dst"]>
+  ]> {
   let summary = "Convert packed F32 to packed BF16 Data.";
   let description = [{
     The `convert_f32_to_bf16` op is an AVX512-BF16 specific op that can lower
@@ -323,8 +331,8 @@ def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
   let assemblyFormat =
     "$a attr-dict `:` type($a) `->` type($dst)";
 
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
       std::string intr = "llvm.x86.avx512bf16.cvtneps2bf16";
       VectorType vecType = getA().getType();
       unsigned elemBitWidth = vecType.getElementTypeBitWidth();
@@ -354,15 +362,16 @@ class AVX_LowOp<string mnemonic, list<Trait> traits = []> :
 //----------------------------------------------------------------------------//
 
 def RsqrtOp : AVX_Op<"rsqrt", [Pure,
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
-  SameOperandsAndResultType]> {
+    X86IntrinsicOpInterface,
+    SameOperandsAndResultType
+  ]> {
   let summary = "Rsqrt";
   let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a);
   let results = (outs VectorOfLengthAndType<[8], [F32]>:$b);
   let assemblyFormat = "$a attr-dict `:` type($a)";
 
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
       return "llvm.x86.avx.rsqrt.ps.256";
     }
   }];
@@ -373,8 +382,9 @@ def RsqrtOp : AVX_Op<"rsqrt", [Pure,
 //----------------------------------------------------------------------------//
 
 def DotOp : AVX_LowOp<"dot", [Pure,
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
-  SameOperandsAndResultType]> {
+    X86IntrinsicOpInterface,
+    SameOperandsAndResultType
+  ]> {
   let summary = "Dot";
   let description = [{
     Computes the 4-way dot products of the lower and higher parts of the source
@@ -397,134 +407,167 @@ def DotOp : AVX_LowOp<"dot", [Pure,
   let results = (outs VectorOfLengthAndType<[8], [F32]>:$res);
   let assemblyFormat = "$a `,` $b attr-dict `:` type($res)";
 
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
       // Only one variant is supported right now - no extra mangling.
       return "llvm.x86.avx.dp.ps.256";
     }
-  }];
-  let extraClassDeclaration = [{
-    SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
-  }];
-}
 
-
-//----------------------------------------------------------------------------//
-// AVX: Convert packed BF16 even-indexed/odd-indexed elements into packed F32
-//----------------------------------------------------------------------------//
-
-def CvtPackedEvenIndexedBF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.bf16_to_f32", [MemoryEffects<[MemRead]>, 
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
-  let summary = "AVX: Convert packed BF16 even-indexed elements into packed F32 Data.";
-  let description = [{
-    #### From the Intel Intrinsics Guide:
-
-    Convert packed BF16 (16-bit) floating-point even-indexed elements stored at
-    memory locations starting at location `__A` to packed single-precision
-    (32-bit) floating-point elements, and store the results in `dst`.
-
-    Example:
-    ```mlir
-    %dst = x86vector.avx.cvt.packed.even.indexed.bf16_to_f32 %a : memref<16xbf16> -> vector<8xf32>
-    ```
-  }];
-  let arguments = (ins AnyMemRef:$a);
-  let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
-  let assemblyFormat =
-    "$a  attr-dict`:` type($a)`->` type($dst)";
-
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
-      std::string intr = "llvm.x86.vcvtneebf162ps";
-      VectorType vecType = getDst().getType();
-      unsigned elemBitWidth = vecType.getElementTypeBitWidth();
-      unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
-      intr += std::to_string(opBitWidth);
-      return intr;
-    }
-  }];
-
-  let extraClassDeclaration = [{
-        SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
-  }];
-}
-
-def CvtPackedOddIndexedBF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.bf16_to_f32", [MemoryEffects<[MemRead]>, 
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
-  let summary = "AVX: Convert packed BF16 odd-indexed elements into packed F32 Data.";
-  let description = [{
-    #### From the Intel Intrinsics Guide:
-
-    Convert packed BF16 (16-bit) floating-point odd-indexed elements stored at
-    memory locations starting at location `__A` to packed single-precision
-    (32-bit) floating-point elements, and store the results in `dst`.
-
-    Example:
-    ```mlir
-    %dst = x86vector.avx.cvt.packed.odd.indexed.bf16_to_f32 %a : memref<16xbf16> -> vector<8xf32>
-    ```
-  }];
-  let arguments = (ins AnyMemRef:$a);
-  let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
-  let assemblyFormat =
-    "$a  attr-dict`:` type($a)`->` type($dst)";
-
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
-      std::string intr = "llvm.x86.vcvtneobf162ps";
-      VectorType vecType = getDst().getType();
-      unsigned elemBitWidth = vecType.getElementTypeBitWidth();
-      unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
-      intr += std::to_string(opBitWidth);
-      return intr;
-    }
-  }];
-
-  let extraClassDeclaration = [{
-        SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
   }];
 }
 
 //----------------------------------------------------------------------------//
-// AVX: Convert BF16 to F32 and broadcast into packed F32
+// AVX: Convert BF16/F16 to F32 and broadcast into packed F32
 //----------------------------------------------------------------------------//
 
-def BcstBF16ToPackedF32Op : AVX_Op<"bcst.bf16_to_f32.packed", [MemoryEffects<[MemRead]>,
-  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
-  let summary = "AVX: Broadcasts BF16 into packed F32 Data.";
+def BcstToPackedF32Op
+  : AVX_Op<"bcst_to_f32.packed", [
+    MemoryEffects<[MemRead]>,
+    X86IntrinsicOpInterface
+  ]> {
+  let summary = "AVX: Broadcasts BF16/F16 into packed F32 Data.";
   let description = [{
     #### From the Intel Intrinsics Guide:
 
-    Convert scalar BF16 (16-bit) floating-point element stored at memory locations
+    Convert scalar BF16 or F16 (16-bit) floating-point element stored at memory locations
     starting at location `__A` to a single-precision (32-bit) floating-point,
     broadcast it to packed single-precision (32-bit) floating-point elements,
     and store the results in `dst`.
 
     Example:
     ```mlir
-    %dst = x86vector.avx.bcst.bf16_to_f32.packed %a : memref<1xbf16> -> vector<8xf32>
+    %dst = x86vector.avx.bcst_to_f32.packed %a : memref<1xbf16> -> vector<8xf32>
+    %dst = x86vector.avx.bcst_to_f32.packed %a : memref<1xf16> -> vector<8xf32>
     ```
   }];
-  let arguments = (ins AnyMemRef:$a);
+  let arguments = (ins MemRefOf<[BF16, F16]>:$a);
   let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
   let assemblyFormat =
     "$a  attr-dict`:` type($a)`->` type($dst)";
 
-  let extraClassDefinition = [{
-    std::string $cppClass::getIntrinsicName() {
-      std::string intr = "llvm.x86.vbcstnebf162ps";
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
+      auto elementType =
+        getA().getType().getElementType();
+      std::string intr = "llvm.x86.";
+      if (elementType.isBF16())
+        intr += "vbcstnebf162ps";
+      if (elementType.isF16())
+        intr += "vbcstnesh2ps";
       VectorType vecType = getDst().getType();
       unsigned elemBitWidth = vecType.getElementTypeBitWidth();
       unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
       intr += std::to_string(opBitWidth);
       return intr;
     }
-  }];
 
-    let extraClassDeclaration = [{
-        SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
   }];
 
 }
 
+//------------------------------------------------------------------------------//
+// AVX: Convert packed BF16/F16 even-indexed/odd-indexed elements into packed F32
+//------------------------------------------------------------------------------//
+
+def CvtPackedEvenIndexedToF32Op
+  : AVX_Op<"cvt.packed.even.indexed_to_f32", [
+    MemoryEffects<[MemRead]>,
+    X86IntrinsicOpInterface
+  ]> {
+  let summary = "AVX: Convert packed BF16/F16 even-indexed elements into packed F32 Data.";
+  let description = [{
+    #### From the Intel Intrinsics Guide:
+
+    Convert packed BF16 or F16 (16-bit) floating-point even-indexed elements stored at
+    memory locations starting at location `__A` to packed single-precision
+    (32-bit) floating-point elements, and store the results in `dst`.
+
+    Example:
+    ```mlir
+    %dst = x86vector.avx.cvt.packed.even.indexed_to_f32 %a : memref<16xbf16> -> vector<8xf32>
+    %dst = x86vector.avx.cvt.packed.even.indexed_to_f32 %a : memref<16xf16> -> vector<8xf32>
+    ```
+  }];
+  let arguments = (ins MemRefOf<[BF16, F16]>:$a);
+  let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
+  let assemblyFormat =
+    "$a  attr-dict`:` type($a)`->` type($dst)";
+
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
+      auto elementType =
+        getA().getType().getElementType();
+      std::string intr = "llvm.x86.";
+      if (elementType.isBF16())
+        intr += "vcvtneebf162ps";
+      if (elementType.isF16())
+        intr += "vcvtneeph2ps";
+      VectorType vecType = getDst().getType();
+      unsigned elemBitWidth = vecType.getElementTypeBitWidth();
+      unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
+      intr += std::to_string(opBitWidth);
+      return intr;
+    }
+
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
+  }];
+}
+
+def CvtPackedOddIndexedToF32Op
+  : AVX_Op<"cvt.packed.odd.indexed_to_f32", [
+    MemoryEffects<[MemRead]>,
+    X86IntrinsicOpInterface
+  ]> {
+  let summary = "AVX: Convert packed BF16/F16 odd-indexed elements into packed F32 Data.";
+  let description = [{
+    #### From the Intel Intrinsics Guide:
+
+    Convert packed BF16 or F16 (16-bit) floating-point odd-indexed elements stored at
+    memory locations starting at location `__A` to packed single-precision
+    (32-bit) floating-point elements, and store the results in `dst`.
+
+    Example:
+    ```mlir
+    %dst = x86vector.avx.cvt.packed.odd.indexed_to_f32 %a : memref<16xbf16> -> vector<8xf32>
+    %dst = x86vector.avx.cvt.packed.odd.indexed_to_f32 %a : memref<16xf16> -> vector<8xf32>
+    ```
+  }];
+  let arguments = (ins MemRefOf<[BF16, F16]>:$a);
+  let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
+  let assemblyFormat =
+    "$a  attr-dict`:` type($a)`->` type($dst)";
+
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
+      auto elementType =
+        getA().getType().getElementType();
+      std::string intr = "llvm.x86.";
+      if (elementType.isBF16())
+        intr += "vcvtneobf162ps";
+      if (elementType.isF16())
+        intr += "vcvtneoph2ps";
+      VectorType vecType = getDst().getType();
+      unsigned elemBitWidth = vecType.getElementTypeBitWidth();
+      unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
+      intr += std::to_string(opBitWidth);
+      return intr;
+    }
+
+    SmallVector<Value> getIntrinsicOperands(
+        ::mlir::ArrayRef<Value> operands,
+        const ::mlir::LLVMTypeConverter &typeConverter,
+        ::mlir::RewriterBase &rewriter);
+  }];
+}
 #endif // X86VECTOR_OPS

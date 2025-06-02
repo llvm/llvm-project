@@ -520,7 +520,7 @@ void Sema::Initialize() {
        Context.getAuxTargetInfo()->hasAArch64SVETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId)                                        \
   addImplicitTypedef(#Name, Context.SingletonId);
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
   }
 
   if (Context.getTargetInfo().getTriple().isPPC64()) {
@@ -1457,7 +1457,12 @@ void Sema::ActOnEndOfTranslationUnit() {
       if (VD->getStorageDuration() == SD_Static ||
           VD->getStorageDuration() == SD_Thread)
         DiagID = diag::warn_default_init_const;
-      Diag(VD->getLocation(), DiagID) << Type << /*not a field*/ 0;
+
+      bool EmitCppCompat = !Diags.isIgnored(
+          diag::warn_cxx_compat_hack_fake_diagnostic_do_not_emit,
+          VD->getLocation());
+
+      Diag(VD->getLocation(), DiagID) << Type << EmitCppCompat;
     }
 
     // Notify the consumer that we've completed a tentative definition.
@@ -2057,11 +2062,14 @@ Sema::SemaDiagnosticBuilder::~SemaDiagnosticBuilder() {
   if (ImmediateDiag) {
     // Emit our diagnostic and, if it was a warning or error, output a callstack
     // if Fn isn't a priori known-emitted.
-    bool IsWarningOrError = S.getDiagnostics().getDiagnosticLevel(
-                                DiagID, Loc) >= DiagnosticsEngine::Warning;
     ImmediateDiag.reset(); // Emit the immediate diag.
-    if (IsWarningOrError && ShowCallStack)
-      emitCallStackNotes(S, Fn);
+
+    if (ShowCallStack) {
+      bool IsWarningOrError = S.getDiagnostics().getDiagnosticLevel(
+                                  DiagID, Loc) >= DiagnosticsEngine::Warning;
+      if (IsWarningOrError)
+        emitCallStackNotes(S, Fn);
+    }
   } else {
     assert((!PartialDiagId || ShowCallStack) &&
            "Must always show call stack for deferred diags.");
@@ -2379,8 +2387,8 @@ static void markEscapingByrefs(const FunctionScopeInfo &FSI, Sema &S) {
           CapType.hasNonTrivialToPrimitiveCopyCUnion())
         S.checkNonTrivialCUnion(BC.getVariable()->getType(),
                                 BD->getCaretLocation(),
-                                Sema::NTCUC_BlockCapture,
-                                Sema::NTCUK_Destruct|Sema::NTCUK_Copy);
+                                NonTrivialCUnionContext::BlockCapture,
+                                Sema::NTCUK_Destruct | Sema::NTCUK_Copy);
     }
   }
 

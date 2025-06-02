@@ -394,7 +394,9 @@ namespace llvm {
     /// \param OffsetInBits Member offset.
     /// \param Flags        Flags to encode member attribute, e.g. private
     /// \param Discriminant The discriminant for this branch; null for
-    ///                     the default branch
+    ///                     the default branch.  This may be a
+    ///                     ConstantDataArray if the variant applies
+    ///                     for multiple discriminants.
     /// \param Ty           Parent type.
     DIDerivedType *createVariantMemberType(DIScope *Scope, StringRef Name,
 					   DIFile *File, unsigned LineNo,
@@ -403,6 +405,19 @@ namespace llvm {
 					   uint64_t OffsetInBits,
 					   Constant *Discriminant,
 					   DINode::DIFlags Flags, DIType *Ty);
+
+    /// Create debugging information entry for a variant.  A variant
+    /// created this way "inlines" multiple members into the enclosing
+    /// variant part.
+    /// \param Scope        Scope in which this variant is defined.
+    /// \param Elements     Variant elements.
+    /// \param Discriminant The discriminant for this branch; null for
+    ///                     the default branch.  This may be a
+    ///                     ConstantDataArray if the variant applies
+    ///                     for multiple discriminants.
+    /// \param Ty           Parent type.
+    DIDerivedType *createVariantMemberType(DIScope *Scope, DINodeArray Elements,
+                                           Constant *Discriminant, DIType *Ty);
 
     /// Create debugging information entry for a bit field member.
     /// \param Scope               Member scope.

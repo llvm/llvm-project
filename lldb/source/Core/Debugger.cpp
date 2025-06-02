@@ -2031,6 +2031,9 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
 }
 
 bool Debugger::StatuslineSupported() {
+// We have trouble with the contol codes on Windows, see
+// https://github.com/llvm/llvm-project/issues/134846.
+#ifndef _WIN32
   if (GetShowStatusline()) {
     if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
       File &file = stream_sp->GetUnlockedFile();
@@ -2038,6 +2041,7 @@ bool Debugger::StatuslineSupported() {
              file.GetIsTerminalWithColors();
     }
   }
+#endif
   return false;
 }
 
@@ -2221,9 +2225,9 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   // progress reports.
   {
     std::lock_guard<std::mutex> guard(m_progress_reports_mutex);
-    auto it = std::find_if(
-        m_progress_reports.begin(), m_progress_reports.end(),
-        [&](const auto &report) { return report.id == progress_report.id; });
+    auto it = llvm::find_if(m_progress_reports, [&](const auto &report) {
+      return report.id == progress_report.id;
+    });
     if (it != m_progress_reports.end()) {
       const bool complete = data->GetCompleted() == data->GetTotal();
       if (complete)

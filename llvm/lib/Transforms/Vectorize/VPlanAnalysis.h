@@ -58,6 +58,8 @@ public:
   VPTypeAnalysis(Type *CanonicalIVTy)
       : CanonicalIVTy(CanonicalIVTy), Ctx(CanonicalIVTy->getContext()) {}
 
+  VPTypeAnalysis(const VPlan &Plan);
+
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);
 

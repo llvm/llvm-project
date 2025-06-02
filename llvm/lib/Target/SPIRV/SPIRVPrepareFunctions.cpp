@@ -67,7 +67,7 @@ static std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
   Function *IntrinsicFunc = II->getCalledFunction();
   assert(IntrinsicFunc && "Missing function");
   std::string FuncName = IntrinsicFunc->getName().str();
-  std::replace(FuncName.begin(), FuncName.end(), '.', '_');
+  llvm::replace(FuncName, '.', '_');
   FuncName = "spirv." + FuncName;
   return FuncName;
 }
@@ -357,8 +357,6 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
-
-  return;
 }
 
 static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,

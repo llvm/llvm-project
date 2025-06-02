@@ -32,7 +32,8 @@ def ApplyVectorToLLVMConversionPatternsOp : Op<Transform_Dialect,
 
   let arguments = (ins
       DefaultValuedAttr<BoolAttr, "false">:$reassociate_fp_reductions,
-      DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices);
+      DefaultValuedAttr<BoolAttr, "true">:$force_32bit_vector_indices,
+      DefaultValuedAttr<BoolAttr, "false">:$use_vector_alignment);
   let assemblyFormat = "attr-dict";
 }
 

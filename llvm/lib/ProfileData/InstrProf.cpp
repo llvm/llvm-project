@@ -537,7 +537,6 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
       return E;
   }
 
-  SmallVector<MDNode *, 2> Types;
   for (GlobalVariable &G : M.globals()) {
     if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;
@@ -557,8 +556,8 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
       return E;
 
     bool Inserted = true;
-    std::tie(std::ignore, Inserted) =
-        MD5VTableMap.try_emplace(GlobalValue::getGUID(Name), &VTable);
+    std::tie(std::ignore, Inserted) = MD5VTableMap.try_emplace(
+        GlobalValue::getGUIDAssumingExternalLinkage(Name), &VTable);
     if (!Inserted)
       LLVM_DEBUG(dbgs() << "GUID conflict within one module");
     return Error::success();
@@ -573,12 +572,8 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
   return Error::success();
 }
 
-/// \c NameStrings is a string composed of one of more possibly encoded
-/// sub-strings. The substrings are separated by 0 or more zero bytes. This
-/// method decodes the string and calls `NameCallback` for each substring.
-static Error
-readAndDecodeStrings(StringRef NameStrings,
-                     std::function<Error(StringRef)> NameCallback) {
+Error readAndDecodeStrings(StringRef NameStrings,
+                           std::function<Error(StringRef)> NameCallback) {
   const uint8_t *P = NameStrings.bytes_begin();
   const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
@@ -676,7 +671,7 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addFuncName(Name))
       return E;
-    MD5FuncMap.emplace_back(Function::getGUID(Name), &F);
+    MD5FuncMap.emplace_back(Function::getGUIDAssumingExternalLinkage(Name), &F);
     return Error::success();
   };
   if (Error E = NameToGUIDMap(PGOFuncName))

@@ -46,12 +46,14 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTilingInterfaceTestPasses
     MLIRTosaTestPasses
     MLIRVectorTestPasses
+    MLIRXeGPUTestPasses
     MLIRTestVectorToSPIRV
     MLIRLLVMTestPasses
     )
   set(test_libs ${test_libs}
     MLIRTestPDLL
     MLIRTestTransformDialect
+    MLIRTestIRDLToCppDialect
     )
 
   if (MLIR_ENABLE_PDL_IN_PATTERNMATCH)

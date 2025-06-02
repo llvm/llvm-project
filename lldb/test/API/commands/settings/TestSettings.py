@@ -905,6 +905,7 @@ class SettingsCommandTestCase(TestBase):
                 "target.use-hex-immediates",
                 "target.process.disable-memory-cache",
                 "target.process.extra-startup-command",
+                "target.process.track-memory-cache-changes",
                 "target.process.thread.trace-thread",
                 "target.process.thread.step-avoid-regexp",
             ],
@@ -1043,6 +1044,10 @@ class SettingsCommandTestCase(TestBase):
 
         # Test OptionValueEnumeration
         self.verify_setting_value_json("target.x86-disassembly-flavor", "intel")
+
+        # Test OptionValueArch
+        self.verify_setting_value_json("target.default-arch", "x86_64")
+        self.runCmd("settings clear target.default-arch")
 
     def test_global_option(self):
         # This command used to crash the settings because -g was signaled by a

@@ -68,12 +68,14 @@ defm RI_VUNZIP2B_V : VALU_IV_V<"ri.vunzip2b", 0b011000>;
 }
 
 // These are modeled after the int binop VL nodes
-def ri_vzipeven_vl : SDNode<"RISCVISD::RI_VZIPEVEN_VL", SDT_RISCVIntBinOp_VL>;
-def ri_vzipodd_vl : SDNode<"RISCVISD::RI_VZIPODD_VL", SDT_RISCVIntBinOp_VL>;
-def ri_vzip2a_vl : SDNode<"RISCVISD::RI_VZIP2A_VL", SDT_RISCVIntBinOp_VL>;
-def ri_vzip2b_vl : SDNode<"RISCVISD::RI_VZIP2B_VL", SDT_RISCVIntBinOp_VL>;
-def ri_vunzip2a_vl : SDNode<"RISCVISD::RI_VUNZIP2A_VL", SDT_RISCVIntBinOp_VL>;
-def ri_vunzip2b_vl : SDNode<"RISCVISD::RI_VUNZIP2B_VL", SDT_RISCVIntBinOp_VL>;
+let HasMaskOp = true in {
+  def ri_vzipeven_vl : RVSDNode<"RI_VZIPEVEN_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vzipodd_vl : RVSDNode<"RI_VZIPODD_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vzip2a_vl : RVSDNode<"RI_VZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vzip2b_vl : RVSDNode<"RI_VZIP2B_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vunzip2a_vl : RVSDNode<"RI_VUNZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+  def ri_vunzip2b_vl : RVSDNode<"RI_VUNZIP2B_VL", SDT_RISCVIntBinOp_VL>;
+}
 
 multiclass RIVPseudoVALU_VV {
   foreach m = MxList in
@@ -129,18 +131,21 @@ def RI_VEXTRACT : CustomRivosXVI<0b010111, OPMVV, (outs GPR:$rd),
                                 "ri.vextract.x.v", "$rd, $vs2, $imm">;
 }
 
+// RI_VEXTRACT matches the semantics of ri.vextract.x.v. The result is always
+// XLenVT sign extended from the vector element size.  VEXTRACT does *not*
+// have a VL operand.
+def ri_vextract : RVSDNode<"RI_VEXTRACT",
+                           SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
+                                                SDTCisInt<2>,
+                                                SDTCisInt<1>]>>;
 
-def ri_vextract : SDNode<"RISCVISD::RI_VEXTRACT",
-                         SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
-                                              SDTCisInt<2>,
-                                              SDTCisInt<1>]>>;
-
-def ri_vinsert_vl : SDNode<"RISCVISD::RI_VINSERT_VL",
-                           SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
-                                                SDTCisInt<0>,
-                                                SDTCisVT<2, XLenVT>,
-                                                SDTCisVT<3, XLenVT>,
-                                                SDTCisVT<4, XLenVT>]>>;
+// RI_VINSERT_VL matches the semantics of ri.vinsert.v.x. It carries a VL operand.
+def ri_vinsert_vl : RVSDNode<"RI_VINSERT_VL",
+                             SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
+                                                  SDTCisInt<0>,
+                                                  SDTCisVT<2, XLenVT>,
+                                                  SDTCisVT<3, XLenVT>,
+                                                  SDTCisVT<4, XLenVT>]>>;
 
 let Predicates = [HasVendorXRivosVisni], mayLoad = 0, mayStore = 0,
     hasSideEffects = 0, HasSEWOp = 1 in
