@@ -139,7 +139,7 @@ public:
   std::vector<lldb::DataBufferSP>
   GetASTData(lldb::LanguageType language) override;
 
-  void DumpClangAST(Stream &s) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter) override;
 
   /// List separate oso files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d,

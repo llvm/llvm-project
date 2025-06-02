@@ -2268,8 +2268,6 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
   if (attrs.is_forward_declaration)
     return true;
 
-  clang::DeclContext *decl_ctx = GetClangDeclContextContainingDIE(die, nullptr);
-
   // Start the definition if the type is not being defined already. This can
   // happen (e.g.) when adding nested types to a class type -- see
   // PrepareContextToReceiveMembers.

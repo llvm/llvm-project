@@ -1633,7 +1633,7 @@ size_t SymbolFileNativePDB::ParseSymbolArrayInScope(
   return count;
 }
 
-void SymbolFileNativePDB::DumpClangAST(Stream &s) {
+void SymbolFileNativePDB::DumpClangAST(Stream &s, llvm::StringRef filter) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
@@ -1641,7 +1641,7 @@ void SymbolFileNativePDB::DumpClangAST(Stream &s) {
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
-  clang->GetNativePDBParser()->Dump(s);
+  clang->GetNativePDBParser()->Dump(s, filter);
 }
 
 void SymbolFileNativePDB::FindGlobalVariables(
