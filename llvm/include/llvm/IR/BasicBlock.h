@@ -218,7 +218,7 @@ public:
 
   /// Return the enclosing method, or null if none.
   const Function *getParent() const { return Parent; }
-        Function *getParent()       { return Parent; }
+  Function *getParent() { return Parent; }
 
   /// Return the module owning the function this basic block belongs to, or
   /// nullptr if the function does not have a module.
@@ -227,7 +227,7 @@ public:
   const Module *getModule() const;
   Module *getModule() {
     return const_cast<Module *>(
-                            static_cast<const BasicBlock *>(this)->getModule());
+        static_cast<const BasicBlock *>(this)->getModule());
   }
 
   /// Get the data layout of the module this basic block belongs to.
@@ -253,16 +253,17 @@ public:
   const CallInst *getTerminatingDeoptimizeCall() const;
   CallInst *getTerminatingDeoptimizeCall() {
     return const_cast<CallInst *>(
-         static_cast<const BasicBlock *>(this)->getTerminatingDeoptimizeCall());
+        static_cast<const BasicBlock *>(this)->getTerminatingDeoptimizeCall());
   }
 
   /// Returns the call instruction calling \@llvm.experimental.deoptimize
   /// that is present either in current basic block or in block that is a unique
-  /// successor to current block, if such call is present. Otherwise, returns null.
+  /// successor to current block, if such call is present. Otherwise, returns
+  /// null.
   const CallInst *getPostdominatingDeoptimizeCall() const;
   CallInst *getPostdominatingDeoptimizeCall() {
-    return const_cast<CallInst *>(
-         static_cast<const BasicBlock *>(this)->getPostdominatingDeoptimizeCall());
+    return const_cast<CallInst *>(static_cast<const BasicBlock *>(this)
+                                      ->getPostdominatingDeoptimizeCall());
   }
 
   /// Returns the call instruction marked 'musttail' prior to the terminating
@@ -271,7 +272,7 @@ public:
   const CallInst *getTerminatingMustTailCall() const;
   CallInst *getTerminatingMustTailCall() {
     return const_cast<CallInst *>(
-           static_cast<const BasicBlock *>(this)->getTerminatingMustTailCall());
+        static_cast<const BasicBlock *>(this)->getTerminatingMustTailCall());
   }
 
   /// Returns a pointer to the first instruction in this block that is not a
@@ -336,7 +337,8 @@ public:
   const_iterator getFirstInsertionPt() const;
   iterator getFirstInsertionPt() {
     return static_cast<const BasicBlock *>(this)
-                                          ->getFirstInsertionPt().getNonConst();
+        ->getFirstInsertionPt()
+        .getNonConst();
   }
 
   /// Returns an iterator to the first instruction in this block that is
@@ -351,10 +353,10 @@ public:
   /// Returns the first potential AsynchEH faulty instruction
   /// currently it checks for loads/stores (which may dereference a null
   /// pointer) and calls/invokes (which may propagate exceptions)
-  const Instruction* getFirstMayFaultInst() const;
-  Instruction* getFirstMayFaultInst() {
-      return const_cast<Instruction*>(
-          static_cast<const BasicBlock*>(this)->getFirstMayFaultInst());
+  const Instruction *getFirstMayFaultInst() const;
+  Instruction *getFirstMayFaultInst() {
+    return const_cast<Instruction *>(
+        static_cast<const BasicBlock *>(this)->getFirstMayFaultInst());
   }
 
   /// Return a const iterator range over the instructions in the block, skipping
@@ -408,7 +410,7 @@ public:
   const BasicBlock *getSinglePredecessor() const;
   BasicBlock *getSinglePredecessor() {
     return const_cast<BasicBlock *>(
-                 static_cast<const BasicBlock *>(this)->getSinglePredecessor());
+        static_cast<const BasicBlock *>(this)->getSinglePredecessor());
   }
 
   /// Return the predecessor of this block if it has a unique predecessor
@@ -420,7 +422,7 @@ public:
   const BasicBlock *getUniquePredecessor() const;
   BasicBlock *getUniquePredecessor() {
     return const_cast<BasicBlock *>(
-                 static_cast<const BasicBlock *>(this)->getUniquePredecessor());
+        static_cast<const BasicBlock *>(this)->getUniquePredecessor());
   }
 
   /// Return true if this block has exactly N predecessors.
@@ -436,7 +438,7 @@ public:
   const BasicBlock *getSingleSuccessor() const;
   BasicBlock *getSingleSuccessor() {
     return const_cast<BasicBlock *>(
-                   static_cast<const BasicBlock *>(this)->getSingleSuccessor());
+        static_cast<const BasicBlock *>(this)->getSingleSuccessor());
   }
 
   /// Return the successor of this block if it has a unique successor.
@@ -446,7 +448,7 @@ public:
   const BasicBlock *getUniqueSuccessor() const;
   BasicBlock *getUniqueSuccessor() {
     return const_cast<BasicBlock *>(
-                   static_cast<const BasicBlock *>(this)->getUniqueSuccessor());
+        static_cast<const BasicBlock *>(this)->getUniqueSuccessor());
   }
 
   /// Print the basic block to an output stream with an optional
@@ -471,20 +473,20 @@ public:
     It.setHeadBit(true);
     return It;
   }
-  inline iterator                end  ()       { return InstList.end();   }
-  inline const_iterator          end  () const { return InstList.end();   }
+  inline iterator end() { return InstList.end(); }
+  inline const_iterator end() const { return InstList.end(); }
 
-  inline reverse_iterator        rbegin()       { return InstList.rbegin(); }
-  inline const_reverse_iterator  rbegin() const { return InstList.rbegin(); }
-  inline reverse_iterator        rend  ()       { return InstList.rend();   }
-  inline const_reverse_iterator  rend  () const { return InstList.rend();   }
+  inline reverse_iterator rbegin() { return InstList.rbegin(); }
+  inline const_reverse_iterator rbegin() const { return InstList.rbegin(); }
+  inline reverse_iterator rend() { return InstList.rend(); }
+  inline const_reverse_iterator rend() const { return InstList.rend(); }
 
-  inline size_t                   size() const { return InstList.size();  }
-  inline bool                    empty() const { return InstList.empty(); }
-  inline const Instruction      &front() const { return InstList.front(); }
-  inline       Instruction      &front()       { return InstList.front(); }
-  inline const Instruction       &back() const { return InstList.back();  }
-  inline       Instruction       &back()       { return InstList.back();  }
+  inline size_t size() const { return InstList.size(); }
+  inline bool empty() const { return InstList.empty(); }
+  inline const Instruction &front() const { return InstList.front(); }
+  inline Instruction &front() { return InstList.front(); }
+  inline const Instruction &back() const { return InstList.back(); }
+  inline Instruction &back() { return InstList.back(); }
 
   /// Iterator to walk just the phi nodes in the basic block.
   template <typename PHINodeT = PHINode, typename BBIteratorT = iterator>
@@ -677,12 +679,12 @@ public:
   /// Transfer a range of instructions that belong to \p FromBB from \p
   /// FromBeginIt to \p FromEndIt, to this basic block at \p ToIt.
   void splice(BasicBlock::iterator ToIt, BasicBlock *FromBB,
-              BasicBlock::iterator FromBeginIt,
-              BasicBlock::iterator FromEndIt);
+              BasicBlock::iterator FromBeginIt, BasicBlock::iterator FromEndIt);
 
   /// Erases a range of instructions from \p FromIt to (not including) \p ToIt.
   /// \Returns \p ToIt.
-  BasicBlock::iterator erase(BasicBlock::iterator FromIt, BasicBlock::iterator ToIt);
+  BasicBlock::iterator erase(BasicBlock::iterator FromIt,
+                             BasicBlock::iterator ToIt);
 
   /// Returns true if there are any uses of this basic block other than
   /// direct branches, switches, etc. to it.
@@ -715,7 +717,7 @@ public:
   const LandingPadInst *getLandingPadInst() const;
   LandingPadInst *getLandingPadInst() {
     return const_cast<LandingPadInst *>(
-                    static_cast<const BasicBlock *>(this)->getLandingPadInst());
+        static_cast<const BasicBlock *>(this)->getLandingPadInst());
   }
 
   /// Return true if it is legal to hoist instructions into this block.
