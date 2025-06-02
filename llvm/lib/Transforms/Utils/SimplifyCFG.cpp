@@ -198,6 +198,11 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
     "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
+static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
+    "max-jump-threading-live-blocks", cl::Hidden, cl::init(24),
+    cl::desc("Limit number of blocks a define in a threaded block is allowed "
+             "to be live in"));
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -3457,24 +3462,25 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
 
 using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
 
-static bool reachesUsed(BasicBlock *BB, BlocksSet &ReachesNonLocalUses,
-                        BlocksSet &VisitedBlocksSet) {
-  if (ReachesNonLocalUses.contains(BB))
+// Return false if number of blocks searched is too much.
+static bool findReaching(BasicBlock *BB, BasicBlock *DefBB,
+                         BlocksSet &ReachesNonLocalUses) {
+  if (BB == DefBB)
     return true;
-  if (!VisitedBlocksSet.insert(BB).second)
+  if (!ReachesNonLocalUses.insert(BB).second)
+    return true;
+
+  if (ReachesNonLocalUses.size() > MaxJumpThreadingLiveBlocks)
     return false;
-  for (BasicBlock *Succ : successors(BB))
-    if (reachesUsed(Succ, ReachesNonLocalUses, VisitedBlocksSet)) {
-      ReachesNonLocalUses.insert(BB);
-      return true;
-    }
-  return false;
+  for (BasicBlock *Pred : predecessors(BB))
+    if (!findReaching(Pred, DefBB, ReachesNonLocalUses))
+      return false;
+  return true;
 }
 
 /// Return true if we can thread a branch across this block.
-static bool
-blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
-                                   BlocksSet &UsedInNonLocalBlocksSet) {
+static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
+                                               BlocksSet &NonLocalUseBlocks) {
   int Size = 0;
   EphemeralValueTracker EphTracker;
 
@@ -3503,7 +3509,7 @@ blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
         if (isa<PHINode>(UI))
           return false;
       } else
-        UsedInNonLocalBlocksSet.insert(UsedInBB);
+        NonLocalUseBlocks.insert(UsedInBB);
     }
 
     // Looks ok, continue checking.
@@ -3565,9 +3571,18 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
   // Check that the block is small enough and record which non-local blocks use
   // values defined in the block.
 
-  BlocksSet ReachesNonLocalUses;
-  if (!blockIsSimpleEnoughToThreadThrough(BB, ReachesNonLocalUses))
+  BlocksSet NonLocalUseBlocks;
+  BlocksSet ReachesNonLocalUseBlocks;
+  if (!blockIsSimpleEnoughToThreadThrough(BB, NonLocalUseBlocks))
     return false;
+
+  if (NonLocalUseBlocks.contains(BI->getSuccessor(0)) &&
+      NonLocalUseBlocks.contains(BI->getSuccessor(1)))
+    return false;
+
+  for (BasicBlock *UseBB : NonLocalUseBlocks)
+    if (!findReaching(UseBB, BB, ReachesNonLocalUseBlocks))
+      return false;
 
   for (const auto &Pair : KnownValues) {
     ConstantInt *CB = Pair.first;
@@ -3586,8 +3601,7 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
       continue;
 
     // Only revector to RealDest if no values defined in BB are live.
-    BlocksSet VisitedBlocksSet;
-    if (reachesUsed(RealDest, ReachesNonLocalUses, VisitedBlocksSet))
+    if (ReachesNonLocalUseBlocks.contains(RealDest))
       continue;
 
     LLVM_DEBUG({
