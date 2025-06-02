@@ -886,7 +886,7 @@ bool isClangCache(StringRef DriverMode);
 /// See applyOneOverrideOption.
 void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           const char *OverrideOpts,
-                          llvm::StringSet<> &SavedStrings,
+                          llvm::StringSet<> &SavedStrings, StringRef EnvVar,
                           raw_ostream *OS = nullptr);
 
 } // end namespace driver
