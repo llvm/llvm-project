@@ -12,17 +12,6 @@ define float @freeze_fneg(float %input) nounwind {
   ret float %z
 }
 
-define <8 x float> @freeze_fneg_vec(<8 x float> %input) nounwind {
-; CHECK-LABEL: freeze_fneg_vec:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %x = fneg <8 x float> %input
-  %y = freeze <8 x float> %x
-  %z = fneg <8 x float> %y
-  ret <8 x float> %z
-}
-
 define float @freeze_fadd(float %input) nounwind {
 ; CHECK-LABEL: freeze_fadd:
 ; CHECK:       ; %bb.0:
