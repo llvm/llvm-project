@@ -1307,22 +1307,25 @@ struct EraseIdentityLinalgOp : public OpRewritePattern<OpTy> {
     if (linalgOp.hasPureBufferSemantics()) {
       if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1 ||
           linalgOp.getDpsInputOperand(0)->get() !=
-              linalgOp.getDpsInitOperand(0)->get())
+              linalgOp.getDpsInitOperand(0)->get()) {
         return rewriter.notifyMatchFailure(
             linalgOp, "expected single input and output to be the same value");
+      }
 
       auto yieldArg = dyn_cast<BlockArgument>(yieldOp.getOperand(0));
-      if (!yieldArg || yieldArg.getOwner() != &body)
+      if (!yieldArg || yieldArg.getOwner() != &body) {
         return rewriter.notifyMatchFailure(linalgOp,
                                            "cannot fold fill-like op");
+      }
 
       rewriter.eraseOp(linalgOp);
       return success();
     }
 
-    if (!linalgOp.hasPureTensorSemantics())
+    if (!linalgOp.hasPureTensorSemantics()) {
       return rewriter.notifyMatchFailure(
           linalgOp, "mixed semantics is not supported yet");
+    }
 
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
