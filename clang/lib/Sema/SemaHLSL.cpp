@@ -992,6 +992,14 @@ public:
     if (Res.has_value())
       return Res;
 
+    // If the range that we are inserting has ShaderVisiblity::All it needs to
+    // check for an overlap in all other visibility types as well.
+    // Otherwise, the range that is inserted needs to check that it does not
+    // overlap with ShaderVisibility::All.
+    //
+    // Maps will be an ArrayRef to all non-all visibility RangeMaps in the
+    // former case and it will be an ArrayRef to just the all visiblity
+    // RangeMap in the latter case.
     MutableArrayRef<MapT> Maps =
         Info.Vis == llvm::hlsl::rootsig::ShaderVisibility::All
             ? MutableArrayRef<MapT>{RangeMaps}.drop_front()
