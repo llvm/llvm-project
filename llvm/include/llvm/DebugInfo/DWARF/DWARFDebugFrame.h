@@ -311,9 +311,6 @@ public:
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindRow &Row);
 
-class CIE;
-class FDE;
-
 /// A class that contains all UnwindRow objects for an FDE or a single unwind
 /// row for a CIE. To unwind an address the rows, which are sorted by start
 /// address, can be searched to find the UnwindRow with the lowest starting
@@ -334,6 +331,12 @@ public:
     assert(Index < size());
     return Rows[Index];
   }
+  void insertRow(const UnwindRow &Row) { Rows.push_back(Row); }
+
+  /// Set the last address that this unwinding table refers to.
+  ///
+  /// This is used when this table is created based on a FDE.
+  void setEndAddress(uint64_t Addr) { EndAddress = Addr; }
 
   /// Dump the UnwindTable to the stream.
   ///
@@ -352,32 +355,6 @@ public:
   LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
                      unsigned IndentLevel = 0) const;
 
-  /// Create an UnwindTable from a Common Information Entry (CIE).
-  ///
-  /// \param Cie The Common Information Entry to extract the table from. The
-  /// CFIProgram is retrieved from the \a Cie object and used to create the
-  /// UnwindTable.
-  ///
-  /// \returns An error if the DWARF Call Frame Information opcodes have state
-  /// machine errors, or a valid UnwindTable otherwise.
-  LLVM_ABI static Expected<UnwindTable> create(const CIE *Cie);
-
-  /// Create an UnwindTable from a Frame Descriptor Entry (FDE).
-  ///
-  /// \param Fde The Frame Descriptor Entry to extract the table from. The
-  /// CFIProgram is retrieved from the \a Fde object and used to create the
-  /// UnwindTable.
-  ///
-  /// \returns An error if the DWARF Call Frame Information opcodes have state
-  /// machine errors, or a valid UnwindTable otherwise.
-  LLVM_ABI static Expected<UnwindTable> create(const FDE *Fde);
-
-private:
-  RowContainer Rows;
-  /// The end address when data is extracted from a FDE. This value will be
-  /// invalid when a UnwindTable is extracted from a CIE.
-  std::optional<uint64_t> EndAddress;
-
   /// Parse the information in the CFIProgram and update the CurrRow object
   /// that the state machine describes.
   ///
@@ -395,9 +372,39 @@ private:
   /// DW_CFA_restore and DW_CFA_restore_extended opcodes.
   Error parseRows(const CFIProgram &CFIP, UnwindRow &CurrRow,
                   const RegisterLocations *InitialLocs);
+
+private:
+  RowContainer Rows;
+  /// The end address when data is extracted from a FDE. This value will be
+  /// invalid when a UnwindTable is extracted from a CIE.
+  std::optional<uint64_t> EndAddress;
 };
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);
+
+class CIE;
+
+/// Create an UnwindTable from a Common Information Entry (CIE).
+///
+/// \param Cie The Common Information Entry to extract the table from. The
+/// CFIProgram is retrieved from the \a Cie object and used to create the
+/// UnwindTable.
+///
+/// \returns An error if the DWARF Call Frame Information opcodes have state
+/// machine errors, or a valid UnwindTable otherwise.
+Expected<UnwindTable> createUnwindTable(const CIE *Cie);
+
+class FDE;
+
+/// Create an UnwindTable from a Frame Descriptor Entry (FDE).
+///
+/// \param Fde The Frame Descriptor Entry to extract the table from. The
+/// CFIProgram is retrieved from the \a Fde object and used to create the
+/// UnwindTable.
+///
+/// \returns An error if the DWARF Call Frame Information opcodes have state
+/// machine errors, or a valid UnwindTable otherwise.
+Expected<UnwindTable> createUnwindTable(const FDE *Fde);
 
 /// An entry in either debug_frame or eh_frame. This entry can be a CIE or an
 /// FDE.

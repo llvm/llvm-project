@@ -203,7 +203,7 @@ raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindTable &Rows) {
   return OS;
 }
 
-Expected<UnwindTable> UnwindTable::create(const FDE *Fde) {
+Expected<UnwindTable> llvm::dwarf::createUnwindTable(const FDE *Fde) {
   const CIE *Cie = Fde->getLinkedCIE();
   if (Cie == nullptr)
     return createStringError(errc::invalid_argument,
@@ -217,7 +217,7 @@ Expected<UnwindTable> UnwindTable::create(const FDE *Fde) {
   UnwindTable UT;
   UnwindRow Row;
   Row.setAddress(Fde->getInitialLocation());
-  UT.EndAddress = Fde->getInitialLocation() + Fde->getAddressRange();
+  UT.setEndAddress(Fde->getInitialLocation() + Fde->getAddressRange());
   if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
     return std::move(CieError);
   // We need to save the initial locations of registers from the CIE parsing
@@ -229,11 +229,11 @@ Expected<UnwindTable> UnwindTable::create(const FDE *Fde) {
   // Do not add that to the unwind table.
   if (Row.getRegisterLocations().hasLocations() ||
       Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
-    UT.Rows.push_back(Row);
+    UT.insertRow(Row);
   return UT;
 }
 
-Expected<UnwindTable> UnwindTable::create(const CIE *Cie) {
+Expected<UnwindTable> llvm::dwarf::createUnwindTable(const CIE *Cie) {
   // Rows will be empty if there are no CFI instructions.
   if (Cie->cfis().empty())
     return UnwindTable();
@@ -246,7 +246,7 @@ Expected<UnwindTable> UnwindTable::create(const CIE *Cie) {
   // Do not add that to the unwind table.
   if (Row.getRegisterLocations().hasLocations() ||
       Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
-    UT.Rows.push_back(Row);
+    UT.insertRow(Row);
   return UT;
 }
 
@@ -605,7 +605,7 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   CFIs.dump(OS, DumpOpts, /*IndentLevel=*/1, /*InitialLocation=*/{});
   OS << "\n";
 
-  if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
+  if (Expected<UnwindTable> RowsOrErr = createUnwindTable(this))
     RowsOrErr->dump(OS, DumpOpts, 1);
   else {
     DumpOpts.RecoverableErrorHandler(joinErrors(
@@ -633,7 +633,7 @@ void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   CFIs.dump(OS, DumpOpts, /*IndentLevel=*/1, InitialLocation);
   OS << "\n";
 
-  if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
+  if (Expected<UnwindTable> RowsOrErr = createUnwindTable(this))
     RowsOrErr->dump(OS, DumpOpts, 1);
   else {
     DumpOpts.RecoverableErrorHandler(joinErrors(
