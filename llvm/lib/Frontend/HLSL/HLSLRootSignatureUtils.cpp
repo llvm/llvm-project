@@ -182,6 +182,8 @@ MDNode *MetadataBuilder::BuildRootSignature() {
       ElementMD = BuildDescriptorTableClause(*Clause);
     else if (const auto &Table = std::get_if<DescriptorTable>(&Element))
       ElementMD = BuildDescriptorTable(*Table);
+    else if (const auto &Sampler = std::get_if<StaticSampler>(&Element))
+      ElementMD = BuildStaticSampler(*Sampler);
 
     // FIXME(#126586): remove once all RootElemnt variants are handled in a
     // visit or otherwise
@@ -272,6 +274,37 @@ MDNode *MetadataBuilder::BuildDescriptorTableClause(
                ConstantAsMetadata::get(
                    Builder.getInt32(llvm::to_underlying(Clause.Flags))),
            });
+}
+
+MDNode *MetadataBuilder::BuildStaticSampler(const StaticSampler &Sampler) {
+  IRBuilder<> Builder(Ctx);
+  Metadata *Operands[] = {
+      MDString::get(Ctx, "StaticSampler"),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Sampler.Filter))),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Sampler.AddressU))),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Sampler.AddressV))),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Sampler.AddressW))),
+      ConstantAsMetadata::get(
+          llvm::ConstantFP::get(llvm::Type::getFloatTy(Ctx), Sampler.MipLODBias)),
+      ConstantAsMetadata::get(Builder.getInt32(Sampler.MaxAnisotropy)),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Sampler.CompFunc))),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Sampler.BorderColor))),
+      ConstantAsMetadata::get(
+          llvm::ConstantFP::get(llvm::Type::getFloatTy(Ctx), Sampler.MinLOD)),
+      ConstantAsMetadata::get(
+          llvm::ConstantFP::get(llvm::Type::getFloatTy(Ctx), Sampler.MaxLOD)),
+      ConstantAsMetadata::get(Builder.getInt32(Sampler.Reg.Number)),
+      ConstantAsMetadata::get(Builder.getInt32(Sampler.Space)),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Sampler.Visibility))),
+  };
+  return MDNode::get(Ctx, Operands);
 }
 
 } // namespace rootsig
