@@ -248,8 +248,8 @@ bool ICF<ELFT>::isTrivialRelocation(Symbol &s, RelTy reloc) {
   // for loc[-1] to loc[3] as various targets' getRelExpr() reference them.
   std::array<uint8_t, 5> fakeLocArray;
   uint8_t *fakeLoc = fakeLocArray.data() + 1;
-  RelExpr expr = ctx.target->getRelExpr(reloc.getType(ctx.arg.isMips64EL), s,
-                                        fakeLoc);
+  RelExpr expr =
+      ctx.target->getRelExpr(reloc.getType(ctx.arg.isMips64EL), s, fakeLoc);
 
   if (needsGot(expr) || needsTls(s, expr))
     return false;
