@@ -261,6 +261,14 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
     return Data.VPV2Scalars[Def][0];
   }
 
+  // Look through BuildVector to avoid redundant extracts.
+  // TODO: Remove once replicate regions are unrolled explicitly.
+  auto *BV = dyn_cast<VPInstruction>(Def);
+  if (Lane.getKind() == VPLane::Kind::First && BV &&
+      BV->getOpcode() == VPInstruction::BuildVector) {
+    return get(BV->getOperand(Lane.getKnownLane()), true);
+  }
+
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
   if (!VecPart->getType()->isVectorTy()) {
