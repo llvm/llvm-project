@@ -916,9 +916,6 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
         continue;
       }
 
-#ifndef NDEBUG
-      const uint64_t OrigOffset = Asm.getFragmentOffset(F);
-#endif
       const uint64_t OrigSize = Asm.computeFragmentSize(F);
 
       // To keep the effects local, prefer to relax instructions closest to
@@ -949,14 +946,6 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
       if (F.getKind() == MCFragment::FT_BoundaryAlign)
         cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
 
-#ifndef NDEBUG
-      const uint64_t FinalOffset = Asm.getFragmentOffset(F);
-      const uint64_t FinalSize = Asm.computeFragmentSize(F);
-      assert(OrigOffset + OrigSize == FinalOffset + FinalSize &&
-             "can't move start of next fragment!");
-      assert(FinalSize == RemainingSize && "inconsistent size computation?");
-#endif
-
       // If we're looking at a boundary align, make sure we don't try to pad
       // its target instructions for some following directive.  Doing so would
       // break the alignment of the current boundary align.
@@ -971,10 +960,8 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
   }
 
   // The layout is done. Mark every fragment as valid.
-  for (MCSection &Section : Asm) {
+  for (MCSection &Section : Asm)
     Asm.getFragmentOffset(*Section.curFragList()->Tail);
-    Asm.computeFragmentSize(*Section.curFragList()->Tail);
-  }
 }
 
 unsigned X86AsmBackend::getMaximumNopSize(const MCSubtargetInfo &STI) const {
