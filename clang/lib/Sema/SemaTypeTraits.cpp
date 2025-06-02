@@ -2112,23 +2112,6 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
         << diag::TraitNotSatisfiedReason::DeletedDtr << 0
         << D->getDestructor()->getSourceRange();
 
-  if (D->isUnion()) {
-    auto DiagSPM = [&](CXXSpecialMemberKind K, bool Has) {
-      if (Has)
-        SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-            << diag::TraitNotSatisfiedReason::UnionWithUserDeclaredSMF << K;
-    };
-    DiagSPM(CXXSpecialMemberKind::CopyConstructor,
-            D->hasUserDeclaredCopyConstructor());
-    DiagSPM(CXXSpecialMemberKind::CopyAssignment,
-            D->hasUserDeclaredCopyAssignment());
-    DiagSPM(CXXSpecialMemberKind::MoveConstructor,
-            D->hasUserDeclaredMoveConstructor());
-    DiagSPM(CXXSpecialMemberKind::MoveAssignment,
-            D->hasUserDeclaredMoveAssignment());
-    return;
-  }
-
   if (!D->hasSimpleMoveConstructor() && !D->hasSimpleCopyConstructor()) {
     const auto *Decl = cast<CXXConstructorDecl>(
         LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false));
@@ -2146,7 +2129,7 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
           << Decl->isMoveAssignmentOperator() << Decl->getSourceRange();
   }
   CXXDestructorDecl *Dtr = D->getDestructor();
-  if (Dtr && Dtr->isUserProvided() && !Dtr->isDefaulted())
+  if (Dtr && !Dtr->isTrivial())
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::DeletedDtr << 1
         << Dtr->getSourceRange();
