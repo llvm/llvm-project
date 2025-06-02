@@ -1958,6 +1958,27 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_CONCAT_VECTORS: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isScalableVector())
+      break;
+    FirstAnswer = std::numeric_limits<unsigned>::max();
+    // Determine the minimum number of sign bits across all demanded
+    // elts of the input vectors. Early out if the result is already 1.
+    unsigned NumSubVectorElts =
+        MRI.getType(MI.getOperand(1).getReg()).getNumElements();
+    unsigned NumSubVectors = MI.getNumOperands() - 1;
+    for (unsigned i = 0; (i < NumSubVectors); ++i) {
+      APInt DemandedSub =
+          DemandedElts.extractBits(NumSubVectorElts, i * NumSubVectorElts);
+      if (!DemandedSub)
+        continue;
+      unsigned Tmp2 = computeNumSignBits(MI.getOperand(i + 1).getReg(),
+                                         DemandedSub, Depth + 1);
+
+      FirstAnswer = std::min(FirstAnswer, Tmp2);
+    }
+    break;
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     // Collect the minimum number of sign bits that are shared by every vector
     // element referenced by the shuffle.
