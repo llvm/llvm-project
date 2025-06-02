@@ -1330,9 +1330,9 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (SalvageStaleProfile)
     UndriftMaps = computeUndriftMap(M, MemProfReader.get(), TLI);
 
-  // Map from the stack has of each allocation context in the function profiles
-  // to the total profiled size (bytes), allocation type, and whether we matched
-  // it to an allocation in the IR.
+  // Map from the stack hash and matched frame count of each allocation context
+  // in the function profiles to the total profiled size (bytes) and allocation
+  // type.
   std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
       FullStackIdToAllocMatchInfo;
 
