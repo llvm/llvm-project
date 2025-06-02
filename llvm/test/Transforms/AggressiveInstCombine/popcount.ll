@@ -191,3 +191,73 @@ define <4 x i32> @popcount32vec(<4 x i32> %0) {
   %13 = lshr <4 x i32> %12, <i32 24, i32 24, i32 24, i32 24>
   ret <4 x i32> %13
 }
+
+define signext i32 @popcount64_zext(i32 %x) {
+; CHECK-LABEL: @popcount64_zext(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[ZEXT]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 1431655765
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i64 [[ZEXT]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 3689348814741910323
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 3689348814741910323
+; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 1085102592571150095
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 72340172838076673
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 56
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc nuw nsw i64 [[TMP12]] to i32
+; CHECK-NEXT:    ret i32 [[TMP13]]
+;
+  %zext = zext i32 %x to i64
+  %1 = lshr i64 %zext, 1
+  %2 = and i64 %1, 1431655765
+  %3 = sub nsw i64 %zext, %2
+  %4 = and i64 %3, 3689348814741910323
+  %5 = lshr i64 %3, 2
+  %6 = and i64 %5, 3689348814741910323
+  %7 = add nuw nsw i64 %6, %4
+  %8 = lshr i64 %7, 4
+  %9 = add nuw nsw i64 %8, %7
+  %10 = and i64 %9, 1085102592571150095
+  %11 = mul i64 %10, 72340172838076673
+  %12 = lshr i64 %11, 56
+  %13 = trunc nuw nsw i64 %12 to i32
+  ret i32 %13
+}
+
+define signext i32 @popcount64_mask(i64 %x) {
+; CHECK-LABEL: @popcount64_mask(
+; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[X:%.*]], -281470681808896
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[MASK]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 6148820867675914240
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i64 [[MASK]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 3689348814741910323
+; CHECK-NEXT:    [[TMP5:%.*]] = lshr i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], 3689348814741910323
+; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = and i64 [[TMP9]], 1085102592571150095
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 72340172838076673
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 56
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc nuw nsw i64 [[TMP12]] to i32
+; CHECK-NEXT:    ret i32 [[TMP13]]
+;
+  %mask = and i64 %x, -281470681808896 ; 0xffff0000ffff0000
+  %1 = lshr i64 %mask, 1
+  %2 = and i64 %1, 6148820867675914240 ; 0x0x5555000055550000
+  %3 = sub nsw i64 %mask, %2
+  %4 = and i64 %3, 3689348814741910323
+  %5 = lshr i64 %3, 2
+  %6 = and i64 %5, 3689348814741910323
+  %7 = add nuw nsw i64 %6, %4
+  %8 = lshr i64 %7, 4
+  %9 = add nuw nsw i64 %8, %7
+  %10 = and i64 %9, 1085102592571150095
+  %11 = mul i64 %10, 72340172838076673
+  %12 = lshr i64 %11, 56
+  %13 = trunc nuw nsw i64 %12 to i32
+  ret i32 %13
+}
