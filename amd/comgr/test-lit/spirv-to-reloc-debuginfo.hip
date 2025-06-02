@@ -1,4 +1,4 @@
-// REQUIRES: comgr-has-spirv,fix-rhel-issue
+// REQUIRES: comgr-has-spirv
 
 // COM: Generate a debuginfo SPIR-V file from a HIP kernel
 // RUN: clang -x hip --offload-arch=amdgcnspirv -nogpulib -nogpuinc \
