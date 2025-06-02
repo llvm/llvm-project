@@ -231,45 +231,55 @@ PreservedAnalyses
 }
 
 static constexpr std::pair<StringLiteral, StringLiteral> ReplaceMap[]{
-  {"aligned_alloc",             "__hipstdpar_aligned_alloc"},
-  {"calloc",                    "__hipstdpar_calloc"},
-  {"free",                      "__hipstdpar_free"},
-  {"malloc",                    "__hipstdpar_malloc"},
-  {"memalign",                  "__hipstdpar_aligned_alloc"},
-  {"posix_memalign",            "__hipstdpar_posix_aligned_alloc"},
-  {"realloc",                   "__hipstdpar_realloc"},
-  {"reallocarray",              "__hipstdpar_realloc_array"},
-  {"_ZdaPv",                    "__hipstdpar_operator_delete"},
-  {"_ZdaPvm",                   "__hipstdpar_operator_delete_sized"},
-  {"_ZdaPvSt11align_val_t",     "__hipstdpar_operator_delete_aligned"},
-  {"_ZdaPvmSt11align_val_t",    "__hipstdpar_operator_delete_aligned_sized"},
-  {"_ZdlPv",                    "__hipstdpar_operator_delete"},
-  {"_ZdlPvm",                   "__hipstdpar_operator_delete_sized"},
-  {"_ZdlPvSt11align_val_t",     "__hipstdpar_operator_delete_aligned"},
-  {"_ZdlPvmSt11align_val_t",    "__hipstdpar_operator_delete_aligned_sized"},
-  {"_Znam",                     "__hipstdpar_operator_new"},
-  {"_ZnamRKSt9nothrow_t",       "__hipstdpar_operator_new_nothrow"},
-  {"_ZnamSt11align_val_t",      "__hipstdpar_operator_new_aligned"},
-  {"_ZnamSt11align_val_tRKSt9nothrow_t",
-                                "__hipstdpar_operator_new_aligned_nothrow"},
+    {"aligned_alloc", "__hipstdpar_aligned_alloc"},
+    {"calloc", "__hipstdpar_calloc"},
+    {"free", "__hipstdpar_free"},
+    {"malloc", "__hipstdpar_malloc"},
+    {"memalign", "__hipstdpar_aligned_alloc"},
+    {"mmap", "__hipstdpar_mmap"},
+    {"munmap", "__hipstdpar_munmap"},
+    {"posix_memalign", "__hipstdpar_posix_aligned_alloc"},
+    {"realloc", "__hipstdpar_realloc"},
+    {"reallocarray", "__hipstdpar_realloc_array"},
+    {"_ZdaPv", "__hipstdpar_operator_delete"},
+    {"_ZdaPvm", "__hipstdpar_operator_delete_sized"},
+    {"_ZdaPvSt11align_val_t", "__hipstdpar_operator_delete_aligned"},
+    {"_ZdaPvmSt11align_val_t", "__hipstdpar_operator_delete_aligned_sized"},
+    {"_ZdlPv", "__hipstdpar_operator_delete"},
+    {"_ZdlPvm", "__hipstdpar_operator_delete_sized"},
+    {"_ZdlPvSt11align_val_t", "__hipstdpar_operator_delete_aligned"},
+    {"_ZdlPvmSt11align_val_t", "__hipstdpar_operator_delete_aligned_sized"},
+    {"_Znam", "__hipstdpar_operator_new"},
+    {"_ZnamRKSt9nothrow_t", "__hipstdpar_operator_new_nothrow"},
+    {"_ZnamSt11align_val_t", "__hipstdpar_operator_new_aligned"},
+    {"_ZnamSt11align_val_tRKSt9nothrow_t",
+     "__hipstdpar_operator_new_aligned_nothrow"},
 
-  {"_Znwm",                     "__hipstdpar_operator_new"},
-  {"_ZnwmRKSt9nothrow_t",       "__hipstdpar_operator_new_nothrow"},
-  {"_ZnwmSt11align_val_t",      "__hipstdpar_operator_new_aligned"},
-  {"_ZnwmSt11align_val_tRKSt9nothrow_t",
-                                "__hipstdpar_operator_new_aligned_nothrow"},
-  {"__builtin_calloc",          "__hipstdpar_calloc"},
-  {"__builtin_free",            "__hipstdpar_free"},
-  {"__builtin_malloc",          "__hipstdpar_malloc"},
-  {"__builtin_operator_delete", "__hipstdpar_operator_delete"},
-  {"__builtin_operator_new",    "__hipstdpar_operator_new"},
-  {"__builtin_realloc",         "__hipstdpar_realloc"},
-  {"__libc_calloc",             "__hipstdpar_calloc"},
-  {"__libc_free",               "__hipstdpar_free"},
-  {"__libc_malloc",             "__hipstdpar_malloc"},
-  {"__libc_memalign",           "__hipstdpar_aligned_alloc"},
-  {"__libc_realloc",            "__hipstdpar_realloc"}
-};
+    {"_Znwm", "__hipstdpar_operator_new"},
+    {"_ZnwmRKSt9nothrow_t", "__hipstdpar_operator_new_nothrow"},
+    {"_ZnwmSt11align_val_t", "__hipstdpar_operator_new_aligned"},
+    {"_ZnwmSt11align_val_tRKSt9nothrow_t",
+     "__hipstdpar_operator_new_aligned_nothrow"},
+    {"__builtin_calloc", "__hipstdpar_calloc"},
+    {"__builtin_free", "__hipstdpar_free"},
+    {"__builtin_malloc", "__hipstdpar_malloc"},
+    {"__builtin_operator_delete", "__hipstdpar_operator_delete"},
+    {"__builtin_operator_new", "__hipstdpar_operator_new"},
+    {"__builtin_realloc", "__hipstdpar_realloc"},
+    {"__libc_calloc", "__hipstdpar_calloc"},
+    {"__libc_free", "__hipstdpar_free"},
+    {"__libc_malloc", "__hipstdpar_malloc"},
+    {"__libc_memalign", "__hipstdpar_aligned_alloc"},
+    {"__libc_realloc", "__hipstdpar_realloc"}};
+
+static constexpr std::pair<StringLiteral, StringLiteral> HiddenMap[]{
+    // hidden_malloc and hidden_free are only kept for backwards compatibility /
+    // legacy purposes, and we should remove them in the future
+    {"__hipstdpar_hidden_malloc", "__libc_malloc"},
+    {"__hipstdpar_hidden_free", "__libc_free"},
+    {"__hipstdpar_hidden_memalign", "__libc_memalign"},
+    {"__hipstdpar_hidden_mmap", "mmap"},
+    {"__hipstdpar_hidden_munmap", "munmap"}};
 
 PreservedAnalyses
 HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
@@ -299,19 +309,14 @@ HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
     }
   }
 
-  if (auto F = M.getFunction("__hipstdpar_hidden_malloc")) {
-    auto LibcMalloc = M.getOrInsertFunction(
-        "__libc_malloc", F->getFunctionType(), F->getAttributes());
-    F->replaceAllUsesWith(LibcMalloc.getCallee());
+  for (auto &&HR : HiddenMap) {
+    if (auto F = M.getFunction(HR.first)) {
+      auto R = M.getOrInsertFunction(HR.second, F->getFunctionType(),
+                                     F->getAttributes());
+      F->replaceAllUsesWith(R.getCallee());
 
-    eraseFromModule(*F);
-  }
-  if (auto F = M.getFunction("__hipstdpar_hidden_free")) {
-    auto LibcFree = M.getOrInsertFunction("__libc_free", F->getFunctionType(),
-                                          F->getAttributes());
-    F->replaceAllUsesWith(LibcFree.getCallee());
-
-    eraseFromModule(*F);
+      eraseFromModule(*F);
+    }
   }
 
   return PreservedAnalyses::none();

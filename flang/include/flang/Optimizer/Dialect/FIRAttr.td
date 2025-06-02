@@ -200,4 +200,23 @@ def fir_OpenMPSafeTempArrayCopyAttr : fir_Attr<"OpenMPSafeTempArrayCopy"> {
   }];
 }
 
+def LocalitySpecTypeLocal : I32EnumAttrCase<"Local", 0, "local">;
+def LocalitySpecTypeLocalInit
+    : I32EnumAttrCase<"LocalInit", 1, "local_init">;
+
+def LocalitySpecifierType : I32EnumAttr<
+    "LocalitySpecifierType",
+    "Type of a locality specifier", [
+      LocalitySpecTypeLocal,
+      LocalitySpecTypeLocalInit
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+
+def LocalitySpecifierTypeAttr : EnumAttr<FIROpsDialect, LocalitySpecifierType,
+                                                "locality_specifier_type"> {
+  let assemblyFormat = "`{` `type` `=` $value `}`";
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS

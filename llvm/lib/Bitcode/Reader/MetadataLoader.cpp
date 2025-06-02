@@ -21,7 +21,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/ADT/ilist_iterator.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
@@ -44,7 +43,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/type_traits.h"
 
 #include <algorithm>
 #include <cassert>
@@ -57,7 +55,6 @@
 #include <optional>
 #include <string>
 #include <tuple>
-#include <type_traits>
 #include <utility>
 #include <vector>
 namespace llvm {
@@ -558,7 +555,7 @@ class MetadataLoader::MetadataLoaderImpl {
           SetVector<Metadata *> EntitiesToRemove;
           for (Metadata *Op : CU->getImportedEntities()->operands()) {
             auto *IE = cast<DIImportedEntity>(Op);
-            if (dyn_cast_or_null<DILocalScope>(IE->getScope())) {
+            if (isa_and_nonnull<DILocalScope>(IE->getScope())) {
               EntitiesToRemove.insert(IE);
             }
           }

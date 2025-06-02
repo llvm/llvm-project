@@ -23,16 +23,40 @@ def SDT_StorePair : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
                                          SDTCisPtrTy<2>,
                                          SDTCisVT<3, XLenVT>]>;
 
-def th_lwud : SDNode<"RISCVISD::TH_LWUD", SDT_LoadPair,
-                     [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def th_lwd : SDNode<"RISCVISD::TH_LWD", SDT_LoadPair,
-                    [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def th_ldd : SDNode<"RISCVISD::TH_LDD", SDT_LoadPair,
-                    [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def th_swd : SDNode<"RISCVISD::TH_SWD", SDT_StorePair,
-                    [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def th_sdd : SDNode<"RISCVISD::TH_SDD", SDT_StorePair,
-                    [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def th_lwud : RVSDNode<"TH_LWUD", SDT_LoadPair,
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_lwd : RVSDNode<"TH_LWD", SDT_LoadPair,
+                      [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_ldd : RVSDNode<"TH_LDD", SDT_LoadPair,
+                      [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_swd : RVSDNode<"TH_SWD", SDT_StorePair,
+                      [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def th_sdd : RVSDNode<"TH_SDD", SDT_StorePair,
+                      [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+def ImmThreeAsmOperand : AsmOperandClass {
+  let Name = "ImmThree";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = !strconcat("Invalid", Name);
+  let DiagnosticString = "operand must be constant 3";
+}
+
+def immthree : RISCVOp {
+  let ParserMatchClass = ImmThreeAsmOperand;
+  let OperandType = "OPERAND_THREE";
+}
+
+def ImmFourAsmOperand : AsmOperandClass {
+  let Name = "ImmFour";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = !strconcat("Invalid", Name);
+  let DiagnosticString = "operand must be constant 4";
+}
+
+def immfour : RISCVOp {
+  let ParserMatchClass = ImmFourAsmOperand;
+  let OperandType = "OPERAND_FOUR";
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -131,10 +155,10 @@ class THMulAccumulate_rr<bits<7> funct7, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-class THLoadPair<bits<5> funct5, string opcodestr>
+class THLoadPair<bits<5> funct5, string opcodestr, Operand consttype>
   : RVInstRBase<0b100, OPC_CUSTOM_0,
                 (outs GPR:$rd, GPR:$rs2),
-                (ins GPR:$rs1, uimm2:$uimm2, uimm7:$const3or4),
+                (ins GPR:$rs1, uimm2:$uimm2, consttype:$const3or4),
                  opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
   bits<2> uimm2;
   let Inst{31-27} = funct5;
@@ -144,9 +168,9 @@ class THLoadPair<bits<5> funct5, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
-class THStorePair<bits<5> funct5, string opcodestr>
+class THStorePair<bits<5> funct5, string opcodestr, Operand consttype>
   : RVInstRBase<0b101, OPC_CUSTOM_0, (outs),
-              (ins GPR:$rd, GPR:$rs2, GPR:$rs1, uimm2:$uimm2, uimm7:$const3or4),
+              (ins GPR:$rd, GPR:$rs2, GPR:$rs1, uimm2:$uimm2, consttype:$const3or4),
               opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
   bits<2> uimm2;
   let Inst{31-27} = funct5;
@@ -290,19 +314,19 @@ def TH_MULSW : THMulAccumulate_rr<0b0010011, "th.mulsw">;
 } // Predicates = [HasVendorXTHeadMac, IsRV64]
 
 let Predicates = [HasVendorXTHeadMemPair] in {
-def TH_LWUD : THLoadPair<0b11110, "th.lwud">,
+def TH_LWUD : THLoadPair<0b11110, "th.lwud", immthree>,
               Sched<[WriteLDW, WriteLDW, ReadMemBase]>;
-def TH_SWD  : THStorePair<0b11100, "th.swd">,
+def TH_SWD  : THStorePair<0b11100, "th.swd", immthree>,
               Sched<[WriteSTW, WriteSTW, ReadStoreData, ReadMemBase]>;
 let IsSignExtendingOpW = 1 in
-def TH_LWD  : THLoadPair<0b11100, "th.lwd">,
+def TH_LWD  : THLoadPair<0b11100, "th.lwd", immthree>,
               Sched<[WriteLDW, WriteLDW, ReadMemBase]>;
 }
 
 let Predicates = [HasVendorXTHeadMemPair, IsRV64] in {
-def TH_LDD : THLoadPair<0b11111, "th.ldd">,
+def TH_LDD : THLoadPair<0b11111, "th.ldd", immfour>,
              Sched<[WriteLDD, WriteLDD, ReadMemBase]>;
-def TH_SDD : THStorePair<0b11111, "th.sdd">,
+def TH_SDD : THStorePair<0b11111, "th.sdd", immfour>,
              Sched<[WriteSTD, WriteSTD, ReadStoreData, ReadMemBase]>;
 }
 
@@ -554,7 +578,6 @@ def : PatGprImm<rotr, TH_SRRI, uimmlog2xlen>;
 // it can be implemented with th.srri by negating the immediate.
 def : Pat<(rotl (XLenVT GPR:$rs1), uimmlog2xlen:$shamt),
           (TH_SRRI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
-def : Pat<(sext_inreg (XLenVT GPR:$rs1), i32), (TH_EXT GPR:$rs1, 31, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (TH_EXT GPR:$rs1, 15, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (TH_EXT GPR:$rs1, 7, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i1), (TH_EXT GPR:$rs1, 0, 0)>;

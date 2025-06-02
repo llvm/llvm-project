@@ -17,7 +17,6 @@
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
 #include "X86SelectionDAGInfo.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/TargetParser/Triple.h"
@@ -114,6 +113,7 @@ public:
                const X86TargetMachine &TM, MaybeAlign StackAlignOverride,
                unsigned PreferVectorWidthOverride,
                unsigned RequiredVectorWidth);
+  ~X86Subtarget() override;
 
   const X86TargetLowering *getTargetLowering() const override {
     return &TLInfo;
@@ -331,7 +331,7 @@ public:
 
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
 
-  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
+  bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 
@@ -352,6 +352,7 @@ public:
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Tail:
+      return isTargetWin64() || isTargetUEFI64();
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
     case CallingConv::X86_FastCall:

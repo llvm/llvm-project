@@ -79,6 +79,28 @@ bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits) {
   switch (RegNo) {
   case Xtensa::BREG:
     return FeatureBits[Xtensa::FeatureBoolean];
+  case Xtensa::LBEG:
+  case Xtensa::LEND:
+  case Xtensa::LCOUNT:
+    return FeatureBits[Xtensa::FeatureLoop];
+  case Xtensa::LITBASE:
+    return FeatureBits[Xtensa::FeatureExtendedL32R];
+  case Xtensa::MEMCTL:
+    return FeatureBits[Xtensa::FeatureDataCache];
+  case Xtensa::ACCLO:
+  case Xtensa::ACCHI:
+  case Xtensa::M0:
+  case Xtensa::M1:
+  case Xtensa::M2:
+  case Xtensa::M3:
+    return FeatureBits[Xtensa::FeatureMAC16];
+  case Xtensa::MISC0:
+  case Xtensa::MISC1:
+  case Xtensa::MISC2:
+  case Xtensa::MISC3:
+    return FeatureBits[Xtensa::FeatureMiscSR];
+  case Xtensa::VECBASE:
+    return FeatureBits[Xtensa::FeatureRelocatableVector];
   case Xtensa::WINDOWBASE:
   case Xtensa::WINDOWSTART:
     return FeatureBits[Xtensa::FeatureWindowed];
@@ -159,7 +181,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
 
   // Register the MCAsmBackend.
   TargetRegistry::RegisterMCAsmBackend(getTheXtensaTarget(),
-                                       createXtensaMCAsmBackend);
+                                       createXtensaAsmBackend);
 
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheXtensaTarget(),

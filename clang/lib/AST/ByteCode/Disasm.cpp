@@ -28,7 +28,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Format.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -256,8 +255,6 @@ static const char *primTypeToString(PrimType T) {
     return "Float";
   case PT_Ptr:
     return "Ptr";
-  case PT_FnPtr:
-    return "FnPtr";
   case PT_MemberPtr:
     return "MemberPtr";
   case PT_FixedPoint:
@@ -376,6 +373,8 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   if (isDummy())
     OS << " dummy";
+  if (IsConstexprUnknown)
+    OS << " constexpr-unknown";
 }
 
 /// Dump descriptor, including all valid offsets.
@@ -422,6 +421,7 @@ LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
   OS << "IsActive: " << IsActive << "\n";
   OS << "InUnion: " << InUnion << "\n";
   OS << "IsFieldMutable: " << IsFieldMutable << "\n";
+  OS << "IsArrayElement: " << IsArrayElement << "\n";
   OS << "Desc: ";
   if (Desc)
     Desc->dump(OS);

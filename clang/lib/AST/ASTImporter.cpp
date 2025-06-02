@@ -1125,7 +1125,7 @@ ExpectedType ASTNodeImporter::VisitBuiltinType(const BuiltinType *T) {
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id: \
     return Importer.getToContext().SingletonId;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id: \
     return Importer.getToContext().Id##Ty;
@@ -1295,12 +1295,11 @@ ASTNodeImporter::VisitVariableArrayType(const VariableArrayType *T) {
   Error Err = Error::success();
   QualType ToElementType = importChecked(Err, T->getElementType());
   Expr *ToSizeExpr = importChecked(Err, T->getSizeExpr());
-  SourceRange ToBracketsRange = importChecked(Err, T->getBracketsRange());
   if (Err)
     return std::move(Err);
   return Importer.getToContext().getVariableArrayType(
       ToElementType, ToSizeExpr, T->getSizeModifier(),
-      T->getIndexTypeCVRQualifiers(), ToBracketsRange);
+      T->getIndexTypeCVRQualifiers());
 }
 
 ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
@@ -1308,7 +1307,6 @@ ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
   Error Err = Error::success();
   QualType ToElementType = importChecked(Err, T->getElementType());
   Expr *ToSizeExpr = importChecked(Err, T->getSizeExpr());
-  SourceRange ToBracketsRange = importChecked(Err, T->getBracketsRange());
   if (Err)
     return std::move(Err);
   // SizeExpr may be null if size is not specified directly.
@@ -1316,7 +1314,7 @@ ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
 
   return Importer.getToContext().getDependentSizedArrayType(
       ToElementType, ToSizeExpr, T->getSizeModifier(),
-      T->getIndexTypeCVRQualifiers(), ToBracketsRange);
+      T->getIndexTypeCVRQualifiers());
 }
 
 ExpectedType ASTNodeImporter::VisitDependentSizedExtVectorType(
@@ -1827,6 +1825,43 @@ ExpectedType clang::ASTNodeImporter::VisitHLSLAttributedResourceType(
       ToWrappedType, ToContainedType, ToAttrs);
 }
 
+ExpectedType clang::ASTNodeImporter::VisitHLSLInlineSpirvType(
+    const clang::HLSLInlineSpirvType *T) {
+  Error Err = Error::success();
+
+  uint32_t ToOpcode = T->getOpcode();
+  uint32_t ToSize = T->getSize();
+  uint32_t ToAlignment = T->getAlignment();
+
+  llvm::SmallVector<SpirvOperand> ToOperands;
+
+  for (auto &Operand : T->getOperands()) {
+    using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+    switch (Operand.getKind()) {
+    case SpirvOperandKind::ConstantId:
+      ToOperands.push_back(SpirvOperand::createConstant(
+          importChecked(Err, Operand.getResultType()), Operand.getValue()));
+      break;
+    case SpirvOperandKind::Literal:
+      ToOperands.push_back(SpirvOperand::createLiteral(Operand.getValue()));
+      break;
+    case SpirvOperandKind::TypeId:
+      ToOperands.push_back(SpirvOperand::createType(
+          importChecked(Err, Operand.getResultType())));
+      break;
+    default:
+      llvm_unreachable("Invalid SpirvOperand kind");
+    }
+
+    if (Err)
+      return std::move(Err);
+  }
+
+  return Importer.getToContext().getHLSLInlineSpirvType(
+      ToOpcode, ToSize, ToAlignment, ToOperands);
+}
+
 ExpectedType clang::ASTNodeImporter::VisitConstantMatrixType(
     const clang::ConstantMatrixType *T) {
   ExpectedType ToElementTypeOrErr = import(T->getElementType());
@@ -2185,7 +2220,7 @@ Error ASTNodeImporter::ImportFieldDeclDefinition(const FieldDecl *From,
   QualType FromType = From->getType();
   QualType ToType = To->getType();
   if (FromType->isArrayType()) {
-    // getBaseElementTypeUnsafe(...) handles multi-dimensonal arrays for us.
+    // getBaseElementTypeUnsafe(...) handles multi-dimensional arrays for us.
     FromRecordDecl = FromType->getBaseElementTypeUnsafe()->getAsRecordDecl();
     ToRecordDecl = ToType->getBaseElementTypeUnsafe()->getAsRecordDecl();
   }
@@ -2484,8 +2519,9 @@ bool ASTNodeImporter::IsStructuralMatch(Decl *From, Decl *To, bool Complain,
   }
 
   StructuralEquivalenceContext Ctx(
-      Importer.getFromContext(), Importer.getToContext(),
-      Importer.getNonEquivalentDecls(), getStructuralEquivalenceKind(Importer),
+      Importer.getToContext().getLangOpts(), Importer.getFromContext(),
+      Importer.getToContext(), Importer.getNonEquivalentDecls(),
+      getStructuralEquivalenceKind(Importer),
       /*StrictTypeSpelling=*/false, Complain, /*ErrorOnTagTypeMismatch=*/false,
       IgnoreTemplateParmDepth);
   return Ctx.IsEquivalent(From, To);
@@ -2629,11 +2665,12 @@ ExpectedDecl ASTNodeImporter::VisitNamespaceDecl(NamespaceDecl *D) {
   if (!Name) {
     // This is an anonymous namespace. Adopt an existing anonymous
     // namespace if we can.
-    // FIXME: Not testable.
-    if (auto *TU = dyn_cast<TranslationUnitDecl>(DC))
+    DeclContext *EnclosingDC = DC->getEnclosingNamespaceContext();
+    if (auto *TU = dyn_cast<TranslationUnitDecl>(EnclosingDC))
       MergeWithNamespace = TU->getAnonymousNamespace();
     else
-      MergeWithNamespace = cast<NamespaceDecl>(DC)->getAnonymousNamespace();
+      MergeWithNamespace =
+          cast<NamespaceDecl>(EnclosingDC)->getAnonymousNamespace();
   } else {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls = Importer.findDeclsInToCtx(DC, Name);
@@ -4343,7 +4380,8 @@ static bool IsEquivalentFriend(ASTImporter &Importer, FriendDecl *FD1,
 
   ASTImporter::NonEquivalentDeclSet NonEquivalentDecls;
   StructuralEquivalenceContext Ctx(
-      FD1->getASTContext(), FD2->getASTContext(), NonEquivalentDecls,
+      Importer.getToContext().getLangOpts(), FD1->getASTContext(),
+      FD2->getASTContext(), NonEquivalentDecls,
       StructuralEquivalenceKind::Default,
       /* StrictTypeSpelling = */ false, /* Complain = */ false);
   return Ctx.IsEquivalent(FD1, FD2);
@@ -6104,7 +6142,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
         if (!hasSameVisibilityContextAndLinkage(FoundTemplate, D))
           continue;
 
-        // FIXME: sufficient conditon for 'IgnoreTemplateParmDepth'?
+        // FIXME: sufficient condition for 'IgnoreTemplateParmDepth'?
         bool IgnoreTemplateParmDepth =
             (FoundTemplate->getFriendObjectKind() != Decl::FOK_None) !=
             (D->getFriendObjectKind() != Decl::FOK_None);
@@ -9427,34 +9465,6 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
                   From->args_size());
     break;
   }
-  case attr::AssertExclusiveLock: {
-    const auto *From = cast<AssertExclusiveLockAttr>(FromAttr);
-    AI.importAttr(From,
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::AssertSharedLock: {
-    const auto *From = cast<AssertSharedLockAttr>(FromAttr);
-    AI.importAttr(From,
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::ExclusiveTrylockFunction: {
-    const auto *From = cast<ExclusiveTrylockFunctionAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
-  case attr::SharedTrylockFunction: {
-    const auto *From = cast<SharedTrylockFunctionAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getSuccessValue()).value(),
-                  AI.importArrayArg(From->args(), From->args_size()).value(),
-                  From->args_size());
-    break;
-  }
   case attr::LockReturned: {
     const auto *From = cast<LockReturnedAttr>(FromAttr);
     AI.importAttr(From, AI.importArg(From->getArg()).value());
@@ -10570,8 +10580,8 @@ bool ASTImporter::IsStructurallyEquivalent(QualType From, QualType To,
     }
   }
 
-  StructuralEquivalenceContext Ctx(FromContext, ToContext, NonEquivalentDecls,
-                                   getStructuralEquivalenceKind(*this), false,
-                                   Complain);
+  StructuralEquivalenceContext Ctx(
+      getToContext().getLangOpts(), FromContext, ToContext, NonEquivalentDecls,
+      getStructuralEquivalenceKind(*this), false, Complain);
   return Ctx.IsEquivalent(From, To);
 }

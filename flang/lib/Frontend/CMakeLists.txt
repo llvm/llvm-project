@@ -74,3 +74,11 @@ add_flang_library(flangFrontend
   clangBasic
   clangDriver
 )
+
+target_precompile_headers(flangFrontend PRIVATE
+  [["flang/Parser/parsing.h"]]
+  [["flang/Parser/parse-tree.h"]]
+  [["flang/Parser/dump-parse-tree.h"]]
+  [["flang/Lower/PFTBuilder.h"]]
+  [["flang/Lower/Bridge.h"]]
+)

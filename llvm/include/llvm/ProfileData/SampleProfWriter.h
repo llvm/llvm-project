@@ -232,8 +232,6 @@ protected:
   std::error_code
   writeCallsiteVTableProf(const CallsiteTypeMap &CallsiteTypeMap,
                           raw_ostream &OS);
-  /// Write \p Map to the output stream \p OS.
-  std::error_code writeTypeMap(const TypeCountMap &Map, raw_ostream &OS);
 
   // TODO:This should be configurable by flag.
   bool WriteVTableProf = false;

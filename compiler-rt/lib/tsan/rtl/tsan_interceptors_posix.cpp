@@ -12,6 +12,9 @@
 // sanitizer_common/sanitizer_common_interceptors.inc
 //===----------------------------------------------------------------------===//
 
+#include <stdarg.h>
+
+#include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_errno.h"
@@ -24,16 +27,14 @@
 #include "sanitizer_common/sanitizer_posix.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
-#include "interception/interception.h"
+#include "sanitizer_common/sanitizer_vector.h"
+#include "tsan_fd.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
-#include "tsan_platform.h"
-#include "tsan_suppressions.h"
-#include "tsan_rtl.h"
 #include "tsan_mman.h"
-#include "tsan_fd.h"
-
-#include <stdarg.h>
+#include "tsan_platform.h"
+#include "tsan_rtl.h"
+#include "tsan_suppressions.h"
 
 using namespace __tsan;
 
@@ -177,7 +178,7 @@ struct ThreadSignalContext {
   SignalDesc pending_signals[kSigCount];
   // emptyset and oldset are too big for stack.
   __sanitizer_sigset_t emptyset;
-  __sanitizer_sigset_t oldset;
+  __sanitizer::Vector<__sanitizer_sigset_t> oldset;
 };
 
 void EnterBlockingFunc(ThreadState *thr) {
@@ -558,6 +559,7 @@ static void SetJmp(ThreadState *thr, uptr sp) {
   buf->shadow_stack_pos = thr->shadow_stack_pos;
   ThreadSignalContext *sctx = SigCtx(thr);
   buf->int_signal_send = sctx ? sctx->int_signal_send : 0;
+  buf->oldset_stack_size = sctx ? sctx->oldset.Size() : 0;
   buf->in_blocking_func = atomic_load(&thr->in_blocking_func, memory_order_relaxed);
   buf->in_signal_handler = atomic_load(&thr->in_signal_handler,
       memory_order_relaxed);
@@ -574,8 +576,11 @@ static void LongJmp(ThreadState *thr, uptr *env) {
       while (thr->shadow_stack_pos > buf->shadow_stack_pos)
         FuncExit(thr);
       ThreadSignalContext *sctx = SigCtx(thr);
-      if (sctx)
+      if (sctx) {
         sctx->int_signal_send = buf->int_signal_send;
+        while (sctx->oldset.Size() > buf->oldset_stack_size)
+          sctx->oldset.PopBack();
+      }
       atomic_store(&thr->in_blocking_func, buf->in_blocking_func,
           memory_order_relaxed);
       atomic_store(&thr->in_signal_handler, buf->in_signal_handler,
@@ -980,6 +985,7 @@ void PlatformCleanUpThreadState(ThreadState *thr) {
       &thr->signal_ctx, memory_order_relaxed);
   if (sctx) {
     atomic_store(&thr->signal_ctx, 0, memory_order_relaxed);
+    sctx->oldset.Reset();
     UnmapOrDie(sctx, sizeof(*sctx));
   }
 }
@@ -2176,7 +2182,8 @@ void ProcessPendingSignalsImpl(ThreadState *thr) {
     return;
   atomic_fetch_add(&thr->in_signal_handler, 1, memory_order_relaxed);
   internal_sigfillset(&sctx->emptyset);
-  int res = REAL(pthread_sigmask)(SIG_SETMASK, &sctx->emptyset, &sctx->oldset);
+  __sanitizer_sigset_t *oldset = sctx->oldset.PushBack();
+  int res = REAL(pthread_sigmask)(SIG_SETMASK, &sctx->emptyset, oldset);
   CHECK_EQ(res, 0);
   for (int sig = 0; sig < kSigCount; sig++) {
     SignalDesc *signal = &sctx->pending_signals[sig];
@@ -2186,8 +2193,9 @@ void ProcessPendingSignalsImpl(ThreadState *thr) {
                             &signal->ctx);
     }
   }
-  res = REAL(pthread_sigmask)(SIG_SETMASK, &sctx->oldset, 0);
+  res = REAL(pthread_sigmask)(SIG_SETMASK, oldset, 0);
   CHECK_EQ(res, 0);
+  sctx->oldset.PopBack();
   atomic_fetch_add(&thr->in_signal_handler, -1, memory_order_relaxed);
 }
 

@@ -802,7 +802,7 @@ entry:
   ret i32 %ret
 }
 
-declare hidden void @void_fastcc_multi_byval(i32 %a, ptr addrspace(5) byval([3 x i32]) align 16, ptr addrspace(5) byval([2 x i64]))
+declare hidden fastcc void @void_fastcc_multi_byval(i32 %a, ptr addrspace(5) byval([3 x i32]) align 16, ptr addrspace(5) byval([2 x i64]))
 
 define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
   ; GCN-LABEL: name: sibling_call_fastcc_multi_byval
@@ -969,7 +969,7 @@ entry:
   ret void
 }
 
-declare hidden void @void_fastcc_byval_and_stack_passed(ptr addrspace(5) byval([3 x i32]) align 16, [32 x i32], i32)
+declare hidden fastcc void @void_fastcc_byval_and_stack_passed(ptr addrspace(5) byval([3 x i32]) align 16, [32 x i32], i32)
 
 ; Callee has a byval and non-byval stack passed argument
 define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 x i32]) #1 {
@@ -1488,5 +1488,3 @@ entry:
 attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

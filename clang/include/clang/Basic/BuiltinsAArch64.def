@@ -139,7 +139,7 @@ TARGET_BUILTIN(__builtin_arm_st64bv0, "WUiv*WUiC*", "n", "ls64")
 
 // Armv9.3-A Guarded Control Stack
 TARGET_BUILTIN(__builtin_arm_gcspopm, "WUiWUi", "n", "gcs")
-TARGET_BUILTIN(__builtin_arm_gcsss, "vC*vC*", "n", "gcs")
+TARGET_BUILTIN(__builtin_arm_gcsss, "v*v*", "n", "gcs")
 
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")

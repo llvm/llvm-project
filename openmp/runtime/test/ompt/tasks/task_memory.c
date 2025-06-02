@@ -103,9 +103,9 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
 
 // Expects non-zero address, size, and result
 // CHECK-DAG: ompt_event_task_schedule: task_id=[[TASK_ID_0]],
-// memory_addr=0x{{[0-f]+}}, memory_size={{[1-9][0-9]*}}, result=1
+// memory_addr={{(0x)?[0-f]+}}, memory_size={{[1-9][0-9]*}}, result=1
 // CHECK-DAG: ompt_event_task_schedule: task_id=[[TASK_ID_1]],
-// memory_addr=0x{{[0-f]+}}, memory_size={{[1-9][0-9]*}}, result=1
+// memory_addr={{(0x)?[0-f]+}}, memory_size={{[1-9][0-9]*}}, result=1
 
 // CHECK: ompt_event_implicit_task_end: task_id=[[TASK_ID]]
 // CHECK-SAME: memory_addr=[[NULL]], memory_size=0, result=0

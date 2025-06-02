@@ -4,7 +4,9 @@
 # int bar() { return foo(0); }
 # int foo(int flag) { return flag ? bar() : baz(); }
 # int main() { return foo(1); }
-# The function bar has been placed "in the middle" of foo.
+# The function bar has been placed "in the middle" of foo. The functions are not
+# using the frame pointer register and the are deliberately adjusting the stack
+# pointer to test that we're using the correct unwind row.
 
         .text
 
@@ -17,29 +19,31 @@ baz:
 .Lbaz_end:
         .size   baz, .Lbaz_end-baz
 
-        .type   foo,@function
-foo:
+foo.__part.3:
         .cfi_startproc
-        pushq   %rbp
-        .cfi_def_cfa_offset 16
-        .cfi_offset %rbp, -16
-        movq    %rsp, %rbp
-        .cfi_def_cfa_register %rbp
-        subq    $16, %rsp
-        movl    %edi, -8(%rbp)
-        cmpl    $0, -8(%rbp)
-        je      foo.__part.2
-        jmp     foo.__part.1
+        .cfi_def_cfa_offset 32
+        .cfi_offset %rbx, -16
+        addq    $24, %rsp
+        .cfi_def_cfa %rsp, 8
+        retq
+.Lfoo.__part.3_end:
+        .size   foo.__part.3, .Lfoo.__part.3_end-foo.__part.3
         .cfi_endproc
-.Lfoo_end:
-        .size   foo, .Lfoo_end-foo
+
+# NB: Deliberately inserting padding to separate the two parts of the function
+# as we're currently only parsing a single FDE entry from a (coalesced) address
+# range.
+        nop
 
 foo.__part.1:
         .cfi_startproc
-        .cfi_def_cfa %rbp, 16
-        .cfi_offset %rbp, -16
+        .cfi_def_cfa_offset 32
+        .cfi_offset %rbx, -16
+        subq    $16, %rsp
+        .cfi_def_cfa_offset 48
         callq   bar
-        movl    %eax, -4(%rbp)
+        addq    $16, %rsp
+        .cfi_def_cfa_offset 32
         jmp     foo.__part.3
 .Lfoo.__part.1_end:
         .size   foo.__part.1, .Lfoo.__part.1_end-foo.__part.1
@@ -47,43 +51,49 @@ foo.__part.1:
 
 bar:
         .cfi_startproc
-# NB: Decrease the stack pointer to make the unwind info for this function
-# different from the surrounding foo function.
-        subq    $24, %rsp
-        .cfi_def_cfa_offset 32
+        subq    $88, %rsp
+        .cfi_def_cfa_offset 96
         xorl    %edi, %edi
         callq   foo
-        addq    $24, %rsp
+        addq    $88, %rsp
         .cfi_def_cfa %rsp, 8
         retq
         .cfi_endproc
 .Lbar_end:
         .size   bar, .Lbar_end-bar
 
+        .type   foo,@function
+foo:
+        .cfi_startproc
+        pushq   %rbx
+        .cfi_def_cfa_offset 16
+        .cfi_offset %rbx, -16
+        movl    %edi, %ebx
+        cmpl    $0, %ebx
+        je      foo.__part.2
+        subq    $16, %rsp
+        .cfi_def_cfa_offset 32
+        jmp     foo.__part.1
+        .cfi_endproc
+.Lfoo_end:
+        .size   foo, .Lfoo_end-foo
+
+# NB: Deliberately inserting padding to separate the two parts of the function
+# as we're currently only parsing a single FDE entry from a (coalesced) address
+# range.
+        nop
+
 foo.__part.2:
         .cfi_startproc
-        .cfi_def_cfa %rbp, 16
-        .cfi_offset %rbp, -16
+        .cfi_def_cfa_offset 16
+        .cfi_offset %rbx, -16
+        subq    $16, %rsp
+        .cfi_def_cfa_offset 32
         callq   baz
-        movl    %eax, -4(%rbp)
         jmp     foo.__part.3
 .Lfoo.__part.2_end:
         .size   foo.__part.2, .Lfoo.__part.2_end-foo.__part.2
         .cfi_endproc
-
-foo.__part.3:
-        .cfi_startproc
-        .cfi_def_cfa %rbp, 16
-        .cfi_offset %rbp, -16
-        movl    -4(%rbp), %eax
-        addq    $16, %rsp
-        popq    %rbp
-        .cfi_def_cfa %rsp, 8
-        retq
-.Lfoo.__part.3_end:
-        .size   foo.__part.3, .Lfoo.__part.3_end-foo.__part.3
-        .cfi_endproc
-
 
         .globl  main
         .type   main,@function
@@ -186,9 +196,8 @@ main:
         .byte   86
         .asciz  "foo"                           # DW_AT_name
         .byte   4                               # Abbrev [4] DW_TAG_formal_parameter
-        .byte   2                               # DW_AT_location
-        .byte   145
-        .byte   120
+        .byte   1                               # DW_AT_location
+        .byte   0x53                            # DW_OP_reg3
         .asciz  "flag"                          # DW_AT_name
         .long   .Lint-.Lcu_begin0               # DW_AT_type
         .byte   0                               # End Of Children Mark

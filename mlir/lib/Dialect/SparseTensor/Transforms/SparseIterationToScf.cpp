@@ -265,7 +265,7 @@ public:
                                      blockArgs);
           auto yield = llvm::cast<sparse_tensor::YieldOp>(dstBlock->back());
           // We can not use ValueRange as the operation holding the values will
-          // be destoryed.
+          // be destroyed.
           SmallVector<Value> result(yield.getResults());
           rewriter.eraseOp(yield);
           return result;

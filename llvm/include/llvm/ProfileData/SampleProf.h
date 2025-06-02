@@ -15,6 +15,7 @@
 #define LLVM_PROFILEDATA_SAMPLEPROF_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -291,7 +292,7 @@ struct LineLocation {
   void print(raw_ostream &OS) const;
   void dump() const;
 
-  /// Serialize the line location to \p OS using ULEB128 encoding.
+  // Serialize the line location to the output stream using ULEB128 encoding.
   void serialize(raw_ostream &OS) const;
 
   bool operator<(const LineLocation &O) const {
@@ -308,7 +309,7 @@ struct LineLocation {
   }
 
   uint64_t getHashCode() const {
-    return ((uint64_t) Discriminator << 32) | LineOffset;
+    return ((uint64_t)Discriminator << 32) | LineOffset;
   }
 
   uint32_t LineOffset;
@@ -326,6 +327,13 @@ raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 /// Key represents the id of a vtable and value represents its count.
 /// TODO: Rename class FunctionId to SymbolId in a separate PR.
 using TypeCountMap = std::map<FunctionId, uint64_t>;
+
+/// Write \p Map to the output stream. Keys are linearized using \p NameTable
+/// and written as ULEB128. Values are written as ULEB128 as well.
+std::error_code
+serializeTypeMap(const TypeCountMap &Map,
+                 const MapVector<FunctionId, uint32_t> &NameTable,
+                 raw_ostream &OS);
 
 /// Representation of a single sample record.
 ///
@@ -445,6 +453,11 @@ public:
   sampleprof_error merge(const SampleRecord &Other, uint64_t Weight = 1);
   void print(raw_ostream &OS, unsigned Indent) const;
   void dump() const;
+  /// Serialize the sample record to the output stream using ULEB128 encoding.
+  /// The \p NameTable is used to map function names to their IDs.
+  std::error_code serialize(raw_ostream &OS,
+                            const MapVector<FunctionId, uint32_t> &NameTable,
+                            bool SerializeVTableProf) const;
 
   bool operator==(const SampleRecord &Other) const {
     return NumSamples == Other.NumSamples && CallTargets == Other.CallTargets;
@@ -526,7 +539,7 @@ using SampleContextFrames = ArrayRef<SampleContextFrame>;
 
 struct SampleContextFrameHash {
   uint64_t operator()(const SampleContextFrameVector &S) const {
-    return hash_combine_range(S.begin(), S.end());
+    return hash_combine_range(S);
   }
 };
 
@@ -1395,7 +1408,7 @@ private:
 static inline FunctionId getRepInFormat(StringRef Name) {
   if (Name.empty() || !FunctionSamples::UseMD5)
     return FunctionId(Name);
-  return FunctionId(Function::getGUID(Name));
+  return FunctionId(Function::getGUIDAssumingExternalLinkage(Name));
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);

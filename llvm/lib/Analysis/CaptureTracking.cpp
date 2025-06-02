@@ -56,21 +56,6 @@ CaptureTracker::~CaptureTracker() = default;
 
 bool CaptureTracker::shouldExplore(const Use *U) { return true; }
 
-bool CaptureTracker::isDereferenceableOrNull(Value *O, const DataLayout &DL) {
-  // We want comparisons to null pointers to not be considered capturing,
-  // but need to guard against cases like gep(p, -ptrtoint(p2)) == null,
-  // which are equivalent to p == p2 and would capture the pointer.
-  //
-  // A dereferenceable pointer is a case where this is known to be safe,
-  // because the pointer resulting from such a construction would not be
-  // dereferenceable.
-  //
-  // It is not sufficient to check for inbounds GEP here, because GEP with
-  // zero offset is always inbounds.
-  bool CanBeNull, CanBeFreed;
-  return O->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
-}
-
 namespace {
 struct SimpleCaptureTracker : public CaptureTracker {
   explicit SimpleCaptureTracker(bool ReturnCaptures, CaptureComponents Mask,
@@ -281,9 +266,7 @@ Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
   return CB.EarliestCapture;
 }
 
-UseCaptureInfo llvm::DetermineUseCaptureKind(
-    const Use &U, const Value *Base,
-    function_ref<bool(Value *, const DataLayout &)> IsDereferenceableOrNull) {
+UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
   Instruction *I = dyn_cast<Instruction>(U.getUser());
 
   // TODO: Investigate non-instruction uses.
@@ -391,15 +374,6 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(
       if (U->getType()->getPointerAddressSpace() == 0)
         if (isNoAliasCall(U.get()->stripPointerCasts()))
           return CaptureComponents::None;
-      if (!I->getFunction()->nullPointerIsDefined()) {
-        auto *O = I->getOperand(Idx)->stripPointerCastsSameRepresentation();
-        // Comparing a dereferenceable_or_null pointer against null cannot
-        // lead to pointer escapes, because if it is not null it must be a
-        // valid (in-bounds) pointer.
-        const DataLayout &DL = I->getDataLayout();
-        if (IsDereferenceableOrNull && IsDereferenceableOrNull(O, DL))
-          return CaptureComponents::None;
-      }
 
       // Check whether this is a comparison of the base pointer against
       // null.
@@ -447,12 +421,9 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
   if (!AddUses(V))
     return;
 
-  auto IsDereferenceableOrNull = [Tracker](Value *V, const DataLayout &DL) {
-    return Tracker->isDereferenceableOrNull(V, DL);
-  };
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
-    UseCaptureInfo CI = DetermineUseCaptureKind(*U, V, IsDereferenceableOrNull);
+    UseCaptureInfo CI = DetermineUseCaptureKind(*U, V);
     if (capturesAnything(CI.UseCC)) {
       switch (Tracker->captured(U, CI)) {
       case CaptureTracker::Stop:

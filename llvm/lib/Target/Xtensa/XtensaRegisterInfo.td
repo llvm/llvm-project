@@ -73,15 +73,35 @@ class SRReg<bits<8> num, string n, list<string> alt = []> : XtensaReg<n> {
   let AltNames = alt;
 }
 
+// Loop Option Registers
+def LBEG : SRReg<0, "lbeg", ["LBEG", "0"]>;
+def LEND : SRReg<1, "lend", ["LEND", "1"]>;
+def LCOUNT : SRReg<2, "lcount", ["LCOUNT", "2"]>;
+
 // Shift Amount Register
 def SAR : SRReg<3, "sar", ["SAR","3"]>;
 
 // Boolean Register
 def BREG : SRReg<4, "br", ["BR","4"]>;
 
+// Literal base
+def LITBASE : SRReg<5, "litbase", ["LITBASE", "5"]>;
+
 // Windowed Register Option registers
 def WINDOWBASE : SRReg<72, "windowbase", ["WINDOWBASE", "72"]>;
 def WINDOWSTART : SRReg<73, "windowstart", ["WINDOWSTART", "73"]>;
+
+// Memory Control Register
+def MEMCTL : SRReg<97, "memctl", ["MEMCTL", "97"]>;
+
+// Vector base register
+def VECBASE : SRReg<231, "vecbase", ["VECBASE", "231"]>;
+
+// Xtensa Miscellaneous SR
+def MISC0 : SRReg<244, "misc0", ["MISC0", "244"]>;
+def MISC1 : SRReg<245, "misc1", ["MISC1", "245"]>;
+def MISC2 : SRReg<246, "misc2", ["MISC2", "246"]>;
+def MISC3 : SRReg<247, "misc3", ["MISC3", "247"]>;
 
 // MAC16 Option registers
 def ACCLO : SRReg<16, "acclo", ["ACCLO", "16"]>;
@@ -95,8 +115,9 @@ def MR01 :  RegisterClass<"Xtensa", [i32], 32, (add M0, M1)>;
 def MR23 :  RegisterClass<"Xtensa", [i32], 32, (add M2, M3)>;
 def MR   :  RegisterClass<"Xtensa", [i32], 32, (add MR01, MR23)>;
 
-def SR :  RegisterClass<"Xtensa", [i32], 32, (add SAR, BREG, MR,
-  WINDOWBASE, WINDOWSTART)>;
+def SR :  RegisterClass<"Xtensa", [i32], 32, (add
+  LBEG, LEND, LCOUNT, SAR, BREG, LITBASE, ACCLO, ACCHI, MR, WINDOWBASE, WINDOWSTART,
+  MEMCTL, VECBASE, MISC0, MISC1, MISC2, MISC3)>;
 
 //===----------------------------------------------------------------------===//
 // Boolean registers

@@ -18,7 +18,7 @@ declare void @bar()
 ; LOWERING: @[[GLOB4:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
 ; LOWERING: @[[GLOB5:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
 ; LOWERING: @[[GLOB6:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
-; LOWERING: @[[GLOB7:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB7:[0-9]+]] = internal global { ptr, ptr, ptr, ptr, i8 } { ptr null, ptr null, ptr inttoptr (i64 1 to ptr), ptr null, i8 0 }
 ;.
 define void @foo(i32 %a, ptr %fct) {
 ; INSTRUMENT-LABEL: define void @foo(
@@ -323,6 +323,18 @@ define void @does_not_return() noreturn {
 ;
   unreachable
 }
+
+define void @unreachable() {
+; INSTRUMENT-LABEL: define void @unreachable() {
+; INSTRUMENT-NEXT:    call void @llvm.instrprof.increment(ptr @unreachable, i64 742261418966908927, i32 1, i32 0)
+; INSTRUMENT-NEXT:    unreachable
+;
+; LOWERING-LABEL: define void @unreachable(
+; LOWERING-SAME: ) !guid [[META9:![0-9]+]] {
+; LOWERING-NEXT:    unreachable
+;
+  unreachable
+}
 ;.
 ; LOWERING: attributes #[[ATTR0]] = { noreturn }
 ; LOWERING: attributes #[[ATTR1:[0-9]+]] = { nounwind }
@@ -340,4 +352,5 @@ define void @does_not_return() noreturn {
 ; LOWERING: [[META6]] = !{i64 -3771893999295659109}
 ; LOWERING: [[META7]] = !{i64 -4680624981836544329}
 ; LOWERING: [[META8]] = !{i64 5519225910966780583}
+; LOWERING: [[META9]] = !{i64 -565652589829076809}
 ;.

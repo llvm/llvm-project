@@ -109,8 +109,8 @@ The source pattern is for matching a DAG of operations. Arguments in the `dag`
 object are intended to **capture** the op arguments. They can also be used to
 **further limit** the match criteria. The capturing is done by specifying a
 symbol starting with the `$` sign, while further constraints are introduced by
-specifying a `TypeConstraint` (for an operand) or a `AttrConstraint` (for an
-attribute).
+specifying a `TypeConstraint` (for an operand), an `AttrConstraint` (for an
+attribute, or a `PropConstraint` for a property).
 
 #### Binding op arguments and limiting the match
 
@@ -704,8 +704,8 @@ For example, we can write
 def HasNoUseOf: Constraint<CPred<"$_self.use_empty()">, "has no use">;
 
 def HasSameElementType : Constraint<
-    CPred<"$0.cast<ShapedType>().getElementType() == "
-          "$1.cast<ShapedType>().getElementType()">,
+    CPred<"cast<ShapedType>($0).getElementType() == "
+          "cast<ShapedType>($1).getElementType()">,
     "has same element type">;
 
 def : Pattern<(TwoResultOp:$results $input),

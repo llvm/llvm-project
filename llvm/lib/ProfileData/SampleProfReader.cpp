@@ -467,9 +467,6 @@ std::error_code SampleProfileReaderText::readImpl() {
       }
 
       case LineType::BodyProfile: {
-        while (InlineStack.size() > Depth) {
-          InlineStack.pop_back();
-        }
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TargetCountMap) {
           mergeSampleProfErrors(Result, FProfile.addCalledTargetSamples(
@@ -1027,7 +1024,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     DenseSet<uint64_t> FuncGuidsToUse;
     if (useMD5()) {
       for (auto Name : FuncsToUse)
-        FuncGuidsToUse.insert(Function::getGUID(Name));
+        FuncGuidsToUse.insert(Function::getGUIDAssumingExternalLinkage(Name));
     }
 
     // For each function in current module, load all context profiles for

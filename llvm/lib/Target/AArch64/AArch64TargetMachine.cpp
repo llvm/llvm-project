@@ -235,6 +235,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64A53Fix835769Pass(PR);
   initializeAArch64A57FPLoadBalancingPass(PR);
   initializeAArch64AdvSIMDScalarPass(PR);
+  initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsPass(PR);
   initializeAArch64CollectLOHPass(PR);
   initializeAArch64CompressJumpTablesPass(PR);
@@ -582,7 +583,7 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 TargetTransformInfo
 AArch64TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(AArch64TTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<AArch64TTIImpl>(this, F));
 }
 
 TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
