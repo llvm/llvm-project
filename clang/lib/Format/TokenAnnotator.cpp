@@ -14,7 +14,6 @@
 
 #include "TokenAnnotator.h"
 #include "FormatToken.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
@@ -1411,7 +1410,9 @@ private:
         assert(Prev);
         if (Prev->isPointerOrReference())
           Prev->setFinalizedType(TT_PointerOrReference);
-      } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
+      } else if ((CurrentToken && CurrentToken->is(tok::numeric_constant)) ||
+                 (Prev && Prev->is(TT_StartOfName) && !Scopes.empty() &&
+                  Scopes.back() == ST_Class)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
                  !Line.getFirstNonComment()->isOneOf(tok::kw_enum, tok::kw_case,

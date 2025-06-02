@@ -210,6 +210,16 @@ define float @round_f(float %a) {
   ret float %1
 }
 
+declare float     @llvm.roundeven.f32(float %Val)
+define float @roundeven_f(float %a) {
+; CHECK-LABEL: roundeven_f:
+; SOFT: bl roundevenf
+; VFP4: b roundevenf
+; FP-ARMv8: vrintn.f32
+  %1 = call float @llvm.roundeven.f32(float %a)
+  ret float %1
+}
+
 declare float     @llvm.fmuladd.f32(float %a, float %b, float %c)
 define float @fmuladd_f(float %a, float %b, float %c) {
 ; CHECK-LABEL: fmuladd_f:
