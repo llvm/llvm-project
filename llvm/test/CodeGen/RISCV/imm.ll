@@ -4674,8 +4674,7 @@ define i64 @imm64_0xFFFFFFFF0() {
 ;
 ; RV64IZBS-LABEL: imm64_0xFFFFFFFF0:
 ; RV64IZBS:       # %bb.0:
-; RV64IZBS-NEXT:    li a0, 1
-; RV64IZBS-NEXT:    slli a0, a0, 36
+; RV64IZBS-NEXT:    bseti a0, zero, 36
 ; RV64IZBS-NEXT:    addi a0, a0, -16
 ; RV64IZBS-NEXT:    ret
 ;
@@ -4737,8 +4736,7 @@ define i64 @imm64_0x1FFFFFF08() {
 ;
 ; RV64IZBS-LABEL: imm64_0x1FFFFFF08:
 ; RV64IZBS:       # %bb.0:
-; RV64IZBS-NEXT:    li a0, 1
-; RV64IZBS-NEXT:    slli a0, a0, 33
+; RV64IZBS-NEXT:    bseti a0, zero, 33
 ; RV64IZBS-NEXT:    addi a0, a0, -248
 ; RV64IZBS-NEXT:    ret
 ;
