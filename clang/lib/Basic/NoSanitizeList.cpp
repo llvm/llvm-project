@@ -54,7 +54,7 @@ bool NoSanitizeList::containsType(SanitizerMask Mask, StringRef MangledTypeName,
 
 bool NoSanitizeList::containsFunction(SanitizerMask Mask,
                                       StringRef FunctionName) const {
-  return SSCL->inSection(Mask, "fun", FunctionName);
+  return containsPrefix(Mask, "fun", FunctionName, {});
 }
 
 bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
