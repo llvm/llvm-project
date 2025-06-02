@@ -20,6 +20,7 @@
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -30,6 +31,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace PatternMatch;
 
 #define DEBUG_TYPE "sccp"
 
@@ -86,7 +88,7 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
 /// Try to use \p Inst's value range from \p Solver to infer the NUW flag.
 static bool refineInstruction(SCCPSolver &Solver,
                               const SmallPtrSetImpl<Value *> &InsertedValues,
-                              Instruction &Inst) {
+                              Instruction &Inst, Statistic &InstRemovedStat) {
   bool Changed = false;
   auto GetRange = [&Solver, &InsertedValues](Value *Op) {
     if (auto *Const = dyn_cast<Constant>(Op))
@@ -98,6 +100,9 @@ static bool refineInstruction(SCCPSolver &Solver,
     return Solver.getLatticeValueFor(Op).asConstantRange(
         Op->getType(), /*UndefAllowed=*/false);
   };
+
+  Value *X;
+  const APInt *RHSC;
 
   if (isa<OverflowingBinaryOperator>(Inst)) {
     if (Inst.hasNoSignedWrap() && Inst.hasNoUnsignedWrap())
@@ -157,6 +162,15 @@ static bool refineInstruction(SCCPSolver &Solver,
                           GEPNoWrapFlags::noUnsignedWrap());
       Changed = true;
     }
+  } else if (match(&Inst, m_And(m_Value(X), m_LowBitMask(RHSC)))) {
+    ConstantRange LRange = GetRange(Inst.getOperand(0));
+    if (!LRange.getUnsignedMax().ule(*RHSC))
+      return false;
+
+    Inst.replaceAllUsesWith(X);
+    Inst.eraseFromParent();
+    ++InstRemovedStat;
+    Changed = true;
   }
 
   return Changed;
@@ -249,7 +263,8 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     } else if (replaceSignedInst(*this, InsertedValues, Inst)) {
       MadeChanges = true;
       ++InstReplacedStat;
-    } else if (refineInstruction(*this, InsertedValues, Inst)) {
+    } else if (refineInstruction(*this, InsertedValues, Inst,
+                                 InstRemovedStat)) {
       MadeChanges = true;
     }
   }

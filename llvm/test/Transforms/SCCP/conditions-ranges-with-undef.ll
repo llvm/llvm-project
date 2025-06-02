@@ -46,8 +46,7 @@ define void @val_undef_range() {
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[A_127:%.*]] = and i32 [[A]], 127
-; CHECK-NEXT:    call void @use.i32(i32 [[A_127]])
+; CHECK-NEXT:    call void @use.i32(i32 [[A]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    ret void
@@ -82,8 +81,7 @@ define void @val_singlecrfromundef_range(i1 %cond) {
 ; CHECK-NEXT:    br label [[TRUE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[P_127:%.*]] = and i32 10, 127
-; CHECK-NEXT:    call void @use.i32(i32 [[P_127]])
+; CHECK-NEXT:    call void @use.i32(i32 10)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -131,8 +129,7 @@ define void @val_undef_to_cr_to_overdef_range(i32 %a, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[P_127:%.*]] = and i32 [[P]], 127
-; CHECK-NEXT:    call void @use.i32(i32 [[P_127]])
+; CHECK-NEXT:    call void @use.i32(i32 [[P]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    ret void
