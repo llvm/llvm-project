@@ -1572,7 +1572,7 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
       sanitizer = "ThreadSanitizer";
     }
     if (sanitizer) {
-      getDriver().Diag(diag::err_drv_unsupportedsanitizer)
+      getDriver().Diag(diag::err_drv_unsupported_sanitizer)
           << "static" << sanitizer << "darwin";
       return;
     }
