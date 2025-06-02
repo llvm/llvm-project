@@ -49,35 +49,37 @@ FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
 
 /// Return true if `vectorType` is a contiguous slice of `memrefType`.
 ///
-/// Only the N = vectorType.getRank() trailing dims of `memrefType` are
-/// checked (the other dims are not relevant). Note that for `vectorType` to be
-/// a contiguous slice of `memrefType`, the trailing dims of the latter have
-/// to be contiguous - this is checked by looking at the corresponding strides.
+/// The leading unit dimensions of the vector type are ignored as they
+/// are not relevant to the result. Let N be the number of the vector
+/// dimensions after ignoring a leading sequence of unit ones.
 ///
-/// There might be some restriction on the leading dim of `VectorType`:
+/// For `vectorType` to be a contiguous slice of `memrefType`
+///   a) the N trailing dimensions of the latter must be contiguous, and
+///   b) the trailing N dimensions of `vectorType` and `memrefType`,
+///      except the first of them, must match.
 ///
-/// Case 1. If all the trailing dims of `vectorType` match the trailing dims
-///         of `memrefType` then the leading dim of `vectorType` can be
-///         arbitrary.
+/// Examples:
 ///
-///        Ex. 1.1 contiguous slice, perfect match
-///          vector<4x3x2xi32> from memref<5x4x3x2xi32>
-///        Ex. 1.2 contiguous slice, the leading dim does not match (2 != 4)
-///          vector<2x3x2xi32> from memref<5x4x3x2xi32>
-///
-/// Case 2. If an "internal" dim of `vectorType` does not match the
-///         corresponding trailing dim in `memrefType` then the remaining
-///         leading dims of `vectorType` have to be 1 (the first non-matching
-///         dim can be arbitrary).
-///
-///        Ex. 2.1 non-contiguous slice, 2 != 3 and the leading dim != <1>
-///          vector<2x2x2xi32> from memref<5x4x3x2xi32>
-///        Ex. 2.2  contiguous slice, 2 != 3 and the leading dim == <1>
-///          vector<1x2x2xi32> from memref<5x4x3x2xi32>
-///        Ex. 2.3. contiguous slice, 2 != 3 and the leading dims == <1x1>
-///          vector<1x1x2x2xi32> from memref<5x4x3x2xi32>
-///        Ex. 2.4. non-contiguous slice, 2 != 3 and the leading dims != <1x1>
-///         vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
+///   Ex.1 contiguous slice, perfect match
+///     vector<4x3x2xi32> from memref<5x4x3x2xi32>
+///   Ex.2 contiguous slice, the leading dim does not match (2 != 4)
+///     vector<2x3x2xi32> from memref<5x4x3x2xi32>
+///   Ex.3 non-contiguous slice, 2 != 3
+///     vector<2x2x2xi32> from memref<5x4x3x2xi32>
+///   Ex.4 contiguous slice, leading unit dimension of the vector ignored,
+///        2 != 3 (allowed)
+///     vector<1x2x2xi32> from memref<5x4x3x2xi32>
+///   Ex.5. contiguous slice, leasing two unit dims of the vector ignored,
+///         2 != 3 (allowed)
+///     vector<1x1x2x2xi32> from memref<5x4x3x2xi32>
+///   Ex.6. non-contiguous slice, 2 != 3, no leading sequence of unit dims
+///     vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
+///   Ex.7 contiguous slice, memref needs to be contiguous only on the last
+///        dimension
+///     vector<1x1x2xi32> from memref<2x2x2xi32, strided<[8, 4, 1]>>
+///   Ex.8 non-contiguous slice, memref needs to be contiguous one the last
+///        two dimensions, and it isn't
+///     vector<1x2x2xi32> from memref<2x2x2xi32, strided<[8, 4, 1]>>
 bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
 
 /// Returns an iterator for all positions in the leading dimensions of `vType`

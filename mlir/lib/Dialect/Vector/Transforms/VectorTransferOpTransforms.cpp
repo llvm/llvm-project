@@ -630,7 +630,9 @@ public:
     if (transferReadOp.getMask())
       return failure();
 
-    int64_t firstDimToCollapse = sourceType.getRank() - vectorType.getRank();
+    // Determinine the first memref dimension to collapse
+    int64_t firstDimToCollapse =
+        sourceType.getRank() - sourceType.getMaxCollapsableTrailingDims();
 
     // 1. Collapse the source memref
     Value collapsedSource =
@@ -722,7 +724,9 @@ public:
     if (transferWriteOp.getMask())
       return failure();
 
-    int64_t firstDimToCollapse = sourceType.getRank() - vectorType.getRank();
+    // Determinine the first memref dimension to collapse
+    int64_t firstDimToCollapse =
+        sourceType.getRank() - sourceType.getMaxCollapsableTrailingDims();
 
     // 1. Collapse the source memref
     Value collapsedSource =
