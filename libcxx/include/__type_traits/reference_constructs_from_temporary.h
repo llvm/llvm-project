@@ -34,7 +34,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool reference_constructs_from_tempo
 template <class _Tp, class _Up>
 inline const bool __reference_constructs_from_temporary_v = __reference_constructs_from_temporary(_Tp, _Up);
 #else
-// TODO(LLVM 22): Remove this as all support compilers should have __reference_constructs_from_temporary implemented.
+// TODO(LLVM 22): Remove this as all supported compilers should have __reference_constructs_from_temporary implemented.
 template <class _Tp, class _Up>
 inline const bool __reference_constructs_from_temporary_v = __reference_binds_to_temporary(_Tp, _Up);
 #endif
