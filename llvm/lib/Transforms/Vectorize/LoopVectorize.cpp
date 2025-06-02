@@ -6594,6 +6594,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Type *ValTy = I->getOperand(0)->getType();
+    InstructionCost Cost = 0;
 
     if (canTruncateToMinimalBitwidth(I, VF)) {
       Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
@@ -6605,11 +6606,22 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       ValTy = IntegerType::get(ValTy->getContext(), MinBWs[I]);
     }
 
+    // If the Cmp instruction has multiple uses in the loop, it
+    // will generate a scalar Cmp for latch and a vector Cmp for other uses.
+    if (I == TheLoop->getLatchCmpInst() && !I->hasOneUse())
+      Cost += TTI.getCmpSelInstrCost(I->getOpcode(), ValTy,
+                                     CmpInst::makeCmpResultType(ValTy),
+                                     cast<CmpInst>(I)->getPredicate(), CostKind,
+                                     {TTI::OK_AnyValue, TTI::OP_None},
+                                     {TTI::OK_AnyValue, TTI::OP_None}, I);
+
     VectorTy = toVectorTy(ValTy, VF);
-    return TTI.getCmpSelInstrCost(
-        I->getOpcode(), VectorTy, CmpInst::makeCmpResultType(VectorTy),
-        cast<CmpInst>(I)->getPredicate(), CostKind,
-        {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, I);
+    return Cost + TTI.getCmpSelInstrCost(I->getOpcode(), VectorTy,
+                                         CmpInst::makeCmpResultType(VectorTy),
+                                         cast<CmpInst>(I)->getPredicate(),
+                                         CostKind,
+                                         {TTI::OK_AnyValue, TTI::OP_None},
+                                         {TTI::OK_AnyValue, TTI::OP_None}, I);
   }
   case Instruction::Store:
   case Instruction::Load: {
@@ -7317,12 +7329,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // The VPlan-based cost model is more accurate for partial reduction and
       // comparing against the legacy cost isn't desirable.
       if (isa<VPPartialReductionRecipe>(&R))
-        return true;
-
-      // The legacy cost model will under estimate the cost of BranchOnCount if
-      // exit condition were explicit contructed in the vplan.
-      if (VPInstruction *VPI = dyn_cast<VPInstruction>(&R);
-          VPI && VPI->getOpcode() == VPInstruction::BranchOnCount)
         return true;
 
       /// If a VPlan transform folded a recipe to one producing a single-scalar,

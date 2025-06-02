@@ -6,7 +6,7 @@ define void @small_trip_count_min_vlen_128(ptr nocapture %a) nounwind vscale_ran
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[TMP4:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
