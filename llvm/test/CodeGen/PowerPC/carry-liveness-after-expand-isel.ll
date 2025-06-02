@@ -17,7 +17,7 @@ define i32 @md_seq_show(i64 %0, i32 %1) #0 {
  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gprc = COPY $r3
  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gprc = COPY [[COPY1]]
  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gprc = COPY [[COPY2]]
- ; CHECK-NEXT:   [[ADDIC:%[0-9]+]]:gprc = ADDIC [[COPY1]], 1, implicit-def $carry
+ ; CHECK-NEXT:   [[ADDIC:%[0-9]+]]:gprc = ADDIC [[COPY1]], 1, implicit-def $xer
  ; CHECK-NEXT:   [[CMPLWI:%[0-9]+]]:crrc = CMPLWI killed [[ADDIC]], 1
  ; CHECK-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 0
  ; CHECK-NEXT:   [[LI1:%[0-9]+]]:gprc_and_gprc_nor0 = LI 1
@@ -25,16 +25,16 @@ define i32 @md_seq_show(i64 %0, i32 %1) #0 {
  ; CHECK-NEXT: {{  $}}
  ; CHECK-NEXT: bb.3.entry:
  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
- ; CHECK-NEXT:   liveins: $carry
+ ; CHECK-NEXT:   liveins: $xer
  ; CHECK-NEXT: {{  $}}
  ; CHECK-NEXT: bb.4.entry:
  ; CHECK-NEXT:   successors: %bb.5(0x40000000), %bb.6(0x40000000)
- ; CHECK-NEXT:   liveins: $carry
+ ; CHECK-NEXT:   liveins: $xer
  ; CHECK-NEXT: {{  $}}
  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gprc_and_gprc_nor0 = PHI [[LI]], %bb.3, [[LI1]], %bb.0
- ; CHECK-NEXT:   [[ADDZE:%[0-9]+]]:gprc = ADDZE [[COPY2]], implicit-def dead $carry, implicit $carry
- ; CHECK-NEXT:   [[ADDIC1:%[0-9]+]]:gprc = ADDIC [[ADDZE]], -1, implicit-def $carry
- ; CHECK-NEXT:   [[SUBFE:%[0-9]+]]:gprc_and_gprc_nor0 = SUBFE killed [[ADDIC1]], [[ADDZE]], implicit-def dead $carry, implicit $carry
+ ; CHECK-NEXT:   [[ADDZE:%[0-9]+]]:gprc = ADDZE [[COPY2]], implicit-def dead $xer, implicit $xer
+ ; CHECK-NEXT:   [[ADDIC1:%[0-9]+]]:gprc = ADDIC [[ADDZE]], -1, implicit-def $xer
+ ; CHECK-NEXT:   [[SUBFE:%[0-9]+]]:gprc_and_gprc_nor0 = SUBFE killed [[ADDIC1]], [[ADDZE]], implicit-def dead $xer, implicit $xer
  ; CHECK-NEXT:   [[CMPLWI1:%[0-9]+]]:crrc = CMPLWI [[ADDZE]], 0
  ; CHECK-NEXT:   BCC 76, [[CMPLWI1]], %bb.6
  ; CHECK-NEXT: {{  $}}
@@ -55,8 +55,8 @@ define i32 @md_seq_show(i64 %0, i32 %1) #0 {
  ; CHECK-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3
  ; CHECK-NEXT: {{  $}}
  ; CHECK-NEXT: bb.2.status_resync.exit:
- ; CHECK-NEXT:   [[ADDIC2:%[0-9]+]]:gprc = ADDIC [[COPY]], -1, implicit-def $carry
- ; CHECK-NEXT:   [[SUBFE1:%[0-9]+]]:gprc = SUBFE killed [[ADDIC2]], [[COPY]], implicit-def dead $carry, implicit $carry
+ ; CHECK-NEXT:   [[ADDIC2:%[0-9]+]]:gprc = ADDIC [[COPY]], -1, implicit-def $xer
+ ; CHECK-NEXT:   [[SUBFE1:%[0-9]+]]:gprc = SUBFE killed [[ADDIC2]], [[COPY]], implicit-def dead $xer, implicit $xer
  ; CHECK-NEXT:   [[LIS:%[0-9]+]]:gprc_and_gprc_nor0 = LIS target-flags(ppc-ha) @md_seq_show___trans_tmp_57
  ; CHECK-NEXT:   STB killed [[SUBFE1]], target-flags(ppc-lo) @md_seq_show___trans_tmp_57, killed [[LIS]] :: (store (s8) into @md_seq_show___trans_tmp_57)
  ; CHECK-NEXT:   [[LI3:%[0-9]+]]:gprc = LI 0

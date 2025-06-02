@@ -20,9 +20,9 @@ body:             |
     liveins: $r3, $r4
   
     $r5 = OR $r4, $r4
-    renamable $r4 = ADDIC killed $r4, 1, implicit-def $carry
+    renamable $r4 = ADDIC killed $r4, 1, implicit-def $xer
     $r6 = OR $r3, $r3
-    renamable $r3 = ADDZE killed $r3, implicit-def dead $carry, implicit killed $carry
+    renamable $r3 = ADDZE killed $r3, implicit-def dead $xer, implicit killed $xer
     renamable $cr0 = CMPLW renamable $r3, killed renamable $r6
     renamable $cr5lt = CRANDC renamable $cr0lt, renamable $cr0eq
     renamable $cr1 = CMPLW renamable $r4, killed renamable $r5
@@ -46,9 +46,9 @@ body:             |
   ; CHECK:   renamable $r4 = IMPLICIT_DEF
   ; CHECK: bb.2:
   ; CHECK:   $r5 = OR $r4, $r4
-  ; CHECK:   renamable $r4 = ADDIC killed $r4, 1, implicit-def $carry
+  ; CHECK:   renamable $r4 = ADDIC killed $r4, 1, implicit-def $xer
   ; CHECK:   $r6 = OR $r3, $r3
-  ; CHECK:   renamable $r3 = ADDZE killed $r3, implicit-def dead $carry, implicit killed $carry
+  ; CHECK:   renamable $r3 = ADDZE killed $r3, implicit-def dead $xer, implicit killed $xer
   ; CHECK:   renamable $cr0 = CMPLW renamable $r3, killed renamable $r6
   ; CHECK:   renamable $cr5lt = CRANDC renamable $cr0lt, renamable $cr0eq
   ; CHECK:   renamable $cr1 = CMPLW renamable $r4, killed renamable $r5
