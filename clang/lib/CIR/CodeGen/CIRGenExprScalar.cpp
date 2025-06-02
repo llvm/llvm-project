@@ -951,7 +951,7 @@ public:
       return {};
     }
 
-    bool instrumentRegions = cgf.cgm.getCodeGenOpts().hasProfileClangInstr();
+    assert(!cir::MissingFeatures::instrumentation());
     mlir::Type resTy = cgf.convertType(e->getType());
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
 
@@ -983,7 +983,7 @@ public:
       return {};
     }
 
-    bool instrumentRegions = cgf.cgm.getCodeGenOpts().hasProfileClangInstr();
+    assert(!cir::MissingFeatures::instrumentation());
     mlir::Type resTy = cgf.convertType(e->getType());
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
 
@@ -1932,7 +1932,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
   // If the condition constant folds and can be elided, try to avoid emitting
   // the condition and the dead arm.
   bool condExprBool;
-  if (cgf.constantFoldsToSimpleInteger(condExpr, condExprBool)) {
+  if (cgf.constantFoldsToBool(condExpr, condExprBool)) {
     Expr *live = lhsExpr, *dead = rhsExpr;
     if (!condExprBool)
       std::swap(live, dead);

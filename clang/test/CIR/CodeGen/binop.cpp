@@ -575,47 +575,75 @@ void b1(bool a, bool b) {
 
 
 // LLVM-LABEL: define void @_Z2b1bb(
-// LLVM-SAME: i1 %[[ARG0:[0-9]+]], i1 %[[ARG1:[0-9]+]])
-// LLVM: %[[A_ADDR:.*]] = alloca i8, i64 1
-// LLVM: %[[B_ADDR:.*]] = alloca i8, i64 1
-// LLVM: %[[X:.*]] = alloca i8, i64 1
+// LLVM-SAME: i1 %[[ARG0:.+]], i1 %[[ARG1:.+]])
+// LLVM: %[[A_ADDR:.*]] = alloca i8
+// LLVM: %[[B_ADDR:.*]] = alloca i8
+// LLVM: %[[X:.*]] = alloca i8
 // LLVM: %[[ZEXT0:.*]] = zext i1 %[[ARG0]] to i8
 // LLVM: store i8 %[[ZEXT0]], ptr %[[A_ADDR]]
 // LLVM: %[[ZEXT1:.*]] = zext i1 %[[ARG1]] to i8
 // LLVM: store i8 %[[ZEXT1]], ptr %[[B_ADDR]]
 // LLVM: %[[A_VAL:.*]] = load i8, ptr %[[A_ADDR]]
 // LLVM: %[[A_BOOL:.*]] = trunc i8 %[[A_VAL]] to i1
-// LLVM: br i1 %[[A_BOOL]], label %[[AND_TRUE:[0-9]+]], label %[[AND_FALSE:[0-9]+]]
+// LLVM: br i1 %[[A_BOOL]], label %[[AND_TRUE:.+]], label %[[AND_FALSE:.+]]
 // LLVM: [[AND_TRUE]]:
 // LLVM: %[[B_VAL:.*]] = load i8, ptr %[[B_ADDR]]
 // LLVM: %[[B_BOOL:.*]] = trunc i8 %[[B_VAL]] to i1
-// LLVM: br label %[[AND_MERGE:[0-9]+]]
+// LLVM: br label %[[AND_MERGE:.+]]
 // LLVM: [[AND_FALSE]]:
 // LLVM: br label %[[AND_MERGE]]
 // LLVM: [[AND_MERGE]]:
 // LLVM: %[[AND_PHI:.*]] = phi i1 [ false, %[[AND_FALSE]] ], [ %[[B_BOOL]], %[[AND_TRUE]] ]
-// LLVM: br label %[[AND_CONT:[0-9]+]]
-// LLVM: [[AND_CONT]]:
 // LLVM: %[[ZEXT_AND:.*]] = zext i1 %[[AND_PHI]] to i8
 // LLVM: store i8 %[[ZEXT_AND]], ptr %[[X]]
 // LLVM: %[[X_VAL:.*]] = load i8, ptr %[[X]]
 // LLVM: %[[X_BOOL:.*]] = trunc i8 %[[X_VAL]] to i1
-// LLVM: br i1 %[[X_BOOL]], label %[[OR_TRUE:[0-9]+]], label %[[OR_FALSE:[0-9]+]]
+// LLVM: br i1 %[[X_BOOL]], label %[[OR_TRUE:.+]], label %[[OR_FALSE:.+]]
 // LLVM: [[OR_TRUE]]:
-// LLVM: br label %[[OR_MERGE:[0-9]+]]
+// LLVM: br label %[[OR_MERGE:.+]]
 // LLVM: [[OR_FALSE]]:
 // LLVM: %[[B_VAL2:.*]] = load i8, ptr %[[B_ADDR]]
 // LLVM: %[[B_BOOL2:.*]] = trunc i8 %[[B_VAL2]] to i1
 // LLVM: br label %[[OR_MERGE]]
 // LLVM: [[OR_MERGE]]:
 // LLVM: %[[OR_PHI:.*]] = phi i1 [ %[[B_BOOL2]], %[[OR_FALSE]] ], [ true, %[[OR_TRUE]] ]
-// LLVM: br label %[[OR_CONT:[0-9]+]]
-// LLVM: [[OR_CONT]]:
 // LLVM: %[[ZEXT_OR:.*]] = zext i1 %[[OR_PHI]] to i8
 // LLVM: store i8 %[[ZEXT_OR]], ptr %[[X]]
 // LLVM: ret void
 
-
+// OGCG-LABEL: define dso_local void @_Z2b1bb
+// OGCG-SAME: (i1 {{.*}} %[[ARG0:.+]], i1 {{.*}} %[[ARG1:.+]])
+// OGCG: [[ENTRY:.*]]:
+// OGCG: %[[A_ADDR:.*]] = alloca i8
+// OGCG: %[[B_ADDR:.*]] = alloca i8
+// OGCG: %[[X:.*]] = alloca i8
+// OGCG: %[[ZEXT0:.*]] = zext i1 %[[ARG0]] to i8
+// OGCG: store i8 %[[ZEXT0]], ptr %[[A_ADDR]]
+// OGCG: %[[ZEXT1:.*]] = zext i1 %[[ARG1]] to i8
+// OGCG: store i8 %[[ZEXT1]], ptr %[[B_ADDR]]
+// OGCG: %[[A_VAL:.*]] = load i8, ptr %[[A_ADDR]]
+// OGCG: %[[A_BOOL:.*]] = trunc i8 %[[A_VAL]] to i1
+// OGCG: br i1 %[[A_BOOL]], label %[[AND_TRUE:.+]], label %[[AND_MERGE:.+]]
+// OGCG: [[AND_TRUE]]:
+// OGCG: %[[B_VAL:.*]] = load i8, ptr %[[B_ADDR]]
+// OGCG: %[[B_BOOL:.*]] = trunc i8 %[[B_VAL]] to i1
+// OGCG: br label %[[AND_MERGE:.+]]
+// OGCG: [[AND_MERGE]]:
+// OGCG: %[[AND_PHI:.*]] = phi i1 [ false, %[[ENTRY]] ], [ %[[B_BOOL]], %[[AND_TRUE]] ]
+// OGCG: %[[ZEXT_AND:.*]] = zext i1 %[[AND_PHI]] to i8
+// OGCG: store i8 %[[ZEXT_AND]], ptr %[[X]]
+// OGCG: %[[X_VAL:.*]] = load i8, ptr %[[X]]
+// OGCG: %[[X_BOOL:.*]] = trunc i8 %[[X_VAL]] to i1
+// OGCG: br i1 %[[X_BOOL]], label %[[OR_MERGE:.+]], label %[[OR_FALSE:.+]]
+// OGCG: [[OR_FALSE]]:
+// OGCG: %[[B_VAL2:.*]] = load i8, ptr %[[B_ADDR]]
+// OGCG: %[[B_BOOL2:.*]] = trunc i8 %[[B_VAL2]] to i1
+// OGCG: br label %[[OR_MERGE]]
+// OGCG: [[OR_MERGE]]:
+// OGCG: %[[OR_PHI:.*]] = phi i1 [ true, %[[AND_MERGE]] ], [ %[[B_BOOL2]], %[[OR_FALSE]] ]
+// OGCG: %[[ZEXT_OR:.*]] = zext i1 %[[OR_PHI]] to i8
+// OGCG: store i8 %[[ZEXT_OR]], ptr %[[X]]
+// OGCG: ret void
 
 void b3(int a, int b, int c, int d) {
   bool x = (a == b) && (c == d);
@@ -663,7 +691,7 @@ void b3(int a, int b, int c, int d) {
 
 
 // LLVM-LABEL: define void @_Z2b3iiii(
-// LLVM-SAME: i32 %[[ARG0:[0-9]+]], i32 %[[ARG1:[0-9]+]], i32 %[[ARG2:[0-9]+]], i32 %[[ARG3:[0-9]+]])
+// LLVM-SAME: i32 %[[ARG0:.+]], i32 %[[ARG1:.+]], i32 %[[ARG2:.+]], i32 %[[ARG3:.+]])
 // LLVM: %[[A_ADDR:.*]] = alloca i32, i64 1
 // LLVM: %[[B_ADDR:.*]] = alloca i32, i64 1
 // LLVM: %[[C_ADDR:.*]] = alloca i32, i64 1
@@ -676,26 +704,24 @@ void b3(int a, int b, int c, int d) {
 // LLVM: %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]]
 // LLVM: %[[B_VAL:.*]] = load i32, ptr %[[B_ADDR]]
 // LLVM: %[[CMP1:.*]] = icmp eq i32 %[[A_VAL]], %[[B_VAL]]
-// LLVM: br i1 %[[CMP1]], label %[[AND_TRUE:[0-9]+]], label %[[AND_FALSE:[0-9]+]]
+// LLVM: br i1 %[[CMP1]], label %[[AND_TRUE:.+]], label %[[AND_FALSE:.+]]
 // LLVM: [[AND_TRUE]]:
 // LLVM: %[[C_VAL:.*]] = load i32, ptr %[[C_ADDR]]
 // LLVM: %[[D_VAL:.*]] = load i32, ptr %[[D_ADDR]]
 // LLVM: %[[CMP2:.*]] = icmp eq i32 %[[C_VAL]], %[[D_VAL]]
-// LLVM: br label %[[AND_MERGE:[0-9]+]]
+// LLVM: br label %[[AND_MERGE:.+]]
 // LLVM: [[AND_FALSE]]:
 // LLVM: br label %[[AND_MERGE]]
 // LLVM: [[AND_MERGE]]:
 // LLVM: %[[AND_PHI:.*]] = phi i1 [ false, %[[AND_FALSE]] ], [ %[[CMP2]], %[[AND_TRUE]] ]
-// LLVM: br label %[[AND_CONT:[0-9]+]]
-// LLVM: [[AND_CONT]]:
 // LLVM: %[[ZEXT_AND:.*]] = zext i1 %[[AND_PHI]] to i8
 // LLVM: store i8 %[[ZEXT_AND]], ptr %[[X]]
 // LLVM: %[[A_VAL2:.*]] = load i32, ptr %[[A_ADDR]]
 // LLVM: %[[B_VAL2:.*]] = load i32, ptr %[[B_ADDR]]
 // LLVM: %[[CMP3:.*]] = icmp eq i32 %[[A_VAL2]], %[[B_VAL2]]
-// LLVM: br i1 %[[CMP3]], label %[[OR_TRUE:[0-9]+]], label %[[OR_FALSE:[0-9]+]]
+// LLVM: br i1 %[[CMP3]], label %[[OR_TRUE:.+]], label %[[OR_FALSE:.+]]
 // LLVM: [[OR_TRUE]]:
-// LLVM: br label %[[OR_MERGE:[0-9]+]]
+// LLVM: br label %[[OR_MERGE:.+]]
 // LLVM: [[OR_FALSE]]:
 // LLVM: %[[C_VAL2:.*]] = load i32, ptr %[[C_ADDR]]
 // LLVM: %[[D_VAL2:.*]] = load i32, ptr %[[D_ADDR]]
@@ -703,8 +729,46 @@ void b3(int a, int b, int c, int d) {
 // LLVM: br label %[[OR_MERGE]]
 // LLVM: [[OR_MERGE]]:
 // LLVM: %[[OR_PHI:.*]] = phi i1 [ %[[CMP4]], %[[OR_FALSE]] ], [ true, %[[OR_TRUE]] ]
-// LLVM: br label %[[OR_CONT:[0-9]+]]
-// LLVM: [[OR_CONT]]:
 // LLVM: %[[ZEXT_OR:.*]] = zext i1 %[[OR_PHI]] to i8
 // LLVM: store i8 %[[ZEXT_OR]], ptr %[[X]]
 // LLVM: ret void
+
+// OGCG-LABEL: define dso_local void @_Z2b3iiii(
+// OGCG-SAME: i32 {{.*}} %[[ARG0:.+]], i32 {{.*}} %[[ARG1:.+]], i32 {{.*}} %[[ARG2:.+]], i32 {{.*}} %[[ARG3:.+]])
+// OGCG: [[ENTRY:.*]]:
+// OGCG: %[[A_ADDR:.*]] = alloca i32
+// OGCG: %[[B_ADDR:.*]] = alloca i32
+// OGCG: %[[C_ADDR:.*]] = alloca i32
+// OGCG: %[[D_ADDR:.*]] = alloca i32
+// OGCG: %[[X:.*]] = alloca i8
+// OGCG: store i32 %[[ARG0]], ptr %[[A_ADDR]]
+// OGCG: store i32 %[[ARG1]], ptr %[[B_ADDR]]
+// OGCG: store i32 %[[ARG2]], ptr %[[C_ADDR]]
+// OGCG: store i32 %[[ARG3]], ptr %[[D_ADDR]]
+// OGCG: %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]]
+// OGCG: %[[B_VAL:.*]] = load i32, ptr %[[B_ADDR]]
+// OGCG: %[[CMP1:.*]] = icmp eq i32 %[[A_VAL]], %[[B_VAL]]
+// OGCG: br i1 %[[CMP1]], label %[[AND_TRUE:.+]], label %[[AND_MERGE:.+]]
+// OGCG: [[AND_TRUE]]:
+// OGCG: %[[C_VAL:.*]] = load i32, ptr %[[C_ADDR]]
+// OGCG: %[[D_VAL:.*]] = load i32, ptr %[[D_ADDR]]
+// OGCG: %[[CMP2:.*]] = icmp eq i32 %[[C_VAL]], %[[D_VAL]]
+// OGCG: br label %[[AND_MERGE:.+]]
+// OGCG: [[AND_MERGE]]:
+// OGCG: %[[AND_PHI:.*]] = phi i1 [ false, %[[ENTRY]] ], [ %[[CMP2]], %[[AND_TRUE]] ]
+// OGCG: %[[ZEXT_AND:.*]] = zext i1 %[[AND_PHI]] to i8
+// OGCG: store i8 %[[ZEXT_AND]], ptr %[[X]]
+// OGCG: %[[A_VAL2:.*]] = load i32, ptr %[[A_ADDR]]
+// OGCG: %[[B_VAL2:.*]] = load i32, ptr %[[B_ADDR]]
+// OGCG: %[[CMP3:.*]] = icmp eq i32 %[[A_VAL2]], %[[B_VAL2]]
+// OGCG: br i1 %[[CMP3]], label %[[OR_MERGE:.+]], label %[[OR_FALSE:.+]]
+// OGCG: [[OR_FALSE]]:
+// OGCG: %[[C_VAL2:.*]] = load i32, ptr %[[C_ADDR]]
+// OGCG: %[[D_VAL2:.*]] = load i32, ptr %[[D_ADDR]]
+// OGCG: %[[CMP4:.*]] = icmp eq i32 %[[C_VAL2]], %[[D_VAL2]]
+// OGCG: br label %[[OR_MERGE]]
+// OGCG: [[OR_MERGE]]:
+// OGCG: %[[OR_PHI:.*]] = phi i1 [ true, %[[AND_MERGE]] ], [ %[[CMP4]], %[[OR_FALSE]] ]
+// OGCG: %[[ZEXT_OR:.*]] = zext i1 %[[OR_PHI]] to i8
+// OGCG: store i8 %[[ZEXT_OR]], ptr %[[X]]
+// OGCG: ret void
