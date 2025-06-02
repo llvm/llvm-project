@@ -750,20 +750,8 @@ public:
   }
 };
 
-template <class _TreeIterator>
-class __map_const_iterator;
-
 template <class _Key, class _Tp>
 struct __value_type;
-
-template <class _Tp>
-struct __extract_key_value_types;
-
-template <class _Key, class _Tp>
-struct __extract_key_value_types<__value_type<_Key, _Tp> > {
-  typedef _Key const __key_type;
-  typedef _Tp __mapped_type;
-};
 
 template <class _TreeIterator>
 class __map_iterator {
