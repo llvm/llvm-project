@@ -8366,18 +8366,17 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   // Offset with branch control flow protection enabled:
   //      0: lpad    <imm20>
   //      4: auipc   t3, 0
-  //      8: ld      t0, 28(t3)
+  //      8: ld      t2, 28(t3)
   //     12: ld      t3, 20(t3)
-  //     16: lui     t2, <imm20>
-  //     20: jalr    t0
-  //     24: <StaticChainOffset>
-  //     32: <FunctionAddressOffset>
-  //     40:
+  //     16: jalr    t2
+  //     20: <StaticChainOffset>
+  //     28: <FunctionAddressOffset>
+  //     36:
 
   const bool HasCFBranch =
       Subtarget.hasStdExtZicfilp() &&
       DAG.getMMI()->getModule()->getModuleFlag("cf-protection-branch");
-  const unsigned StaticChainIdx = HasCFBranch ? 6 : 4;
+  const unsigned StaticChainIdx = HasCFBranch ? 5 : 4;
   const unsigned StaticChainOffset = StaticChainIdx * 4;
   const unsigned FunctionAddressOffset = StaticChainOffset + 8;
 
@@ -8392,7 +8391,7 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   };
 
   SDValue OutChains[6];
-  SDValue OutChainsLPAD[8];
+  SDValue OutChainsLPAD[7];
   if (HasCFBranch)
     assert(std::size(OutChainsLPAD) == StaticChainIdx + 2);
   else
@@ -8431,11 +8430,11 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
          // auipc t3, 0
          // Loads the current PC into t3.
          GetEncoding(MCInstBuilder(RISCV::AUIPC).addReg(RISCV::X28).addImm(0)),
-         // ld t0, (FunctionAddressOffset - 4)(t3)
-         // Loads the function address into t0. Note that we are using offsets
+         // ld t2, (FunctionAddressOffset - 4)(t3)
+         // Loads the function address into t2. Note that we are using offsets
          // pc-relative to the SECOND instruction of the trampoline.
          GetEncoding(MCInstBuilder(RISCV::LD)
-                         .addReg(RISCV::X5)
+                         .addReg(RISCV::X7)
                          .addReg(RISCV::X28)
                          .addImm(FunctionAddressOffset - 4)),
          // ld t3, (StaticChainOffset - 4)(t3)
@@ -8444,14 +8443,11 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
                          .addReg(RISCV::X28)
                          .addReg(RISCV::X28)
                          .addImm(StaticChainOffset - 4)),
-         // lui t2, <imm20>
-         // Setup the landing pad value.
-         GetEncoding(MCInstBuilder(RISCV::LUI).addReg(RISCV::X7).addImm(0)),
-         // jalr t0
-         // Jump to the function.
+         // jalr t2
+         // Software-guarded jump to the function.
          GetEncoding(MCInstBuilder(RISCV::JALR)
                          .addReg(RISCV::X0)
-                         .addReg(RISCV::X5)
+                         .addReg(RISCV::X7)
                          .addImm(0))});
   }
 

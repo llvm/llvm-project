@@ -17,25 +17,27 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-NEXT:    sd a0, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    lui a0, %hi(f)
 ; RV64-NEXT:    addi a0, a0, %lo(f)
-; RV64-NEXT:    sd a0, 48(sp)
-; RV64-NEXT:    sd a1, 40(sp)
-; RV64-NEXT:    li a0, 951
-; RV64-NEXT:    sw a0, 32(sp)
+; RV64-NEXT:    sw a0, 44(sp)
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    sw a0, 48(sp)
+; RV64-NEXT:    sw a1, 36(sp)
+; RV64-NEXT:    srli a0, a1, 32
+; RV64-NEXT:    sw a0, 40(sp)
 ; RV64-NEXT:    li a0, 23
 ; RV64-NEXT:    sw a0, 16(sp)
-; RV64-NEXT:    lui a0, 40
+; RV64-NEXT:    lui a0, 56
 ; RV64-NEXT:    addiw a0, a0, 103
-; RV64-NEXT:    sw a0, 36(sp)
-; RV64-NEXT:    lui a0, 5348
+; RV64-NEXT:    sw a0, 32(sp)
+; RV64-NEXT:    lui a0, 4324
 ; RV64-NEXT:    addiw a0, a0, -509
 ; RV64-NEXT:    sw a0, 28(sp)
-; RV64-NEXT:    lui a0, 7395
-; RV64-NEXT:    addiw a0, a0, 643
+; RV64-NEXT:    lui a0, 6371
+; RV64-NEXT:    addiw a0, a0, 899
 ; RV64-NEXT:    sw a0, 24(sp)
 ; RV64-NEXT:    lui a0, 1
 ; RV64-NEXT:    addiw a0, a0, -489
 ; RV64-NEXT:    sw a0, 20(sp)
-; RV64-NEXT:    addi a1, sp, 40
+; RV64-NEXT:    addi a1, sp, 36
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    call __clear_cache
@@ -54,25 +56,27 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-LINUX-NEXT:    sd a0, 0(sp) # 8-byte Folded Spill
 ; RV64-LINUX-NEXT:    lui a0, %hi(f)
 ; RV64-LINUX-NEXT:    addi a0, a0, %lo(f)
-; RV64-LINUX-NEXT:    sd a0, 48(sp)
-; RV64-LINUX-NEXT:    sd a1, 40(sp)
-; RV64-LINUX-NEXT:    li a0, 951
-; RV64-LINUX-NEXT:    sw a0, 32(sp)
+; RV64-LINUX-NEXT:    sw a0, 44(sp)
+; RV64-LINUX-NEXT:    srli a0, a0, 32
+; RV64-LINUX-NEXT:    sw a0, 48(sp)
+; RV64-LINUX-NEXT:    sw a1, 36(sp)
+; RV64-LINUX-NEXT:    srli a0, a1, 32
+; RV64-LINUX-NEXT:    sw a0, 40(sp)
 ; RV64-LINUX-NEXT:    li a0, 23
 ; RV64-LINUX-NEXT:    sw a0, 16(sp)
-; RV64-LINUX-NEXT:    lui a0, 40
+; RV64-LINUX-NEXT:    lui a0, 56
 ; RV64-LINUX-NEXT:    addiw a0, a0, 103
-; RV64-LINUX-NEXT:    sw a0, 36(sp)
-; RV64-LINUX-NEXT:    lui a0, 5348
+; RV64-LINUX-NEXT:    sw a0, 32(sp)
+; RV64-LINUX-NEXT:    lui a0, 4324
 ; RV64-LINUX-NEXT:    addiw a0, a0, -509
 ; RV64-LINUX-NEXT:    sw a0, 28(sp)
-; RV64-LINUX-NEXT:    lui a0, 7395
-; RV64-LINUX-NEXT:    addiw a0, a0, 643
+; RV64-LINUX-NEXT:    lui a0, 6371
+; RV64-LINUX-NEXT:    addiw a0, a0, 899
 ; RV64-LINUX-NEXT:    sw a0, 24(sp)
 ; RV64-LINUX-NEXT:    lui a0, 1
 ; RV64-LINUX-NEXT:    addiw a0, a0, -489
 ; RV64-LINUX-NEXT:    sw a0, 20(sp)
-; RV64-LINUX-NEXT:    addi a1, sp, 40
+; RV64-LINUX-NEXT:    addi a1, sp, 36
 ; RV64-LINUX-NEXT:    addi a0, sp, 16
 ; RV64-LINUX-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
 ; RV64-LINUX-NEXT:    li a2, 0
@@ -83,7 +87,7 @@ define i64 @test0(i64 %n, ptr %p) nounwind {
 ; RV64-LINUX-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; RV64-LINUX-NEXT:    addi sp, sp, 64
 ; RV64-LINUX-NEXT:    ret
-  %alloca = alloca [40 x i8], align 8
+  %alloca = alloca [36 x i8], align 8
   call void @llvm.init.trampoline(ptr %alloca, ptr @f, ptr %p)
   %tramp = call ptr @llvm.adjust.trampoline(ptr %alloca)
   %ret = call i64 %tramp(i64 %n)
