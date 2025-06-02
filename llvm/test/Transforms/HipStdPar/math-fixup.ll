@@ -405,17 +405,17 @@ entry:
   ret void
 }
 
-declare hidden double @remainder(double, double) local_unnamed_addr
+declare hidden double @remainder(double, double)
 
-declare hidden float @remainderf(float, float) local_unnamed_addr
+declare hidden float @remainderf(float, float)
 
-declare hidden double @remquo(double, double, ptr) local_unnamed_addr
+declare hidden double @remquo(double, double, ptr)
 
-declare hidden float @remquof(float, float, ptr) local_unnamed_addr
+declare hidden float @remquof(float, float, ptr)
 
-declare hidden double @fdim(double, double) local_unnamed_addr
+declare hidden double @fdim(double, double)
 
-declare hidden float @fdimf(float, float) local_unnamed_addr
+declare hidden float @fdimf(float, float)
 
 declare double @llvm.exp.f64(double)
 
@@ -425,9 +425,9 @@ declare double @llvm.exp2.f64(double)
 
 declare float @llvm.exp2.f32(float)
 
-declare hidden double @expm1(double) local_unnamed_addr
+declare hidden double @expm1(double)
 
-declare hidden float @expm1f(float) local_unnamed_addr
+declare hidden float @expm1f(float)
 
 declare double @llvm.log.f64(double)
 
@@ -435,19 +435,19 @@ declare double @llvm.log10.f64(double)
 
 declare double @llvm.log2.f64(double)
 
-declare hidden double @log1p(double) local_unnamed_addr
+declare hidden double @log1p(double)
 
-declare hidden float @log1pf(float) local_unnamed_addr
+declare hidden float @log1pf(float)
 
 declare double @llvm.pow.f64(double, double)
 
-declare hidden double @cbrt(double) local_unnamed_addr
+declare hidden double @cbrt(double)
 
-declare hidden float @cbrtf(float) local_unnamed_addr
+declare hidden float @cbrtf(float)
 
-declare hidden double @hypot(double, double) local_unnamed_addr
+declare hidden double @hypot(double, double)
 
-declare hidden float @hypotf(float, float) local_unnamed_addr
+declare hidden float @hypotf(float, float)
 
 declare double @llvm.sin.f64(double)
 
@@ -469,30 +469,30 @@ declare double @llvm.cosh.f64(double)
 
 declare double @llvm.tanh.f64(double)
 
-declare hidden double @asinh(double) local_unnamed_addr
+declare hidden double @asinh(double)
 
-declare hidden float @asinhf(float) local_unnamed_addr
+declare hidden float @asinhf(float)
 
-declare hidden double @acosh(double) local_unnamed_addr
+declare hidden double @acosh(double)
 
-declare hidden float @acoshf(float) local_unnamed_addr
+declare hidden float @acoshf(float)
 
-declare hidden double @atanh(double) local_unnamed_addr
+declare hidden double @atanh(double)
 
-declare hidden float @atanhf(float) local_unnamed_addr
+declare hidden float @atanhf(float)
 
-declare hidden double @erf(double) local_unnamed_addr
+declare hidden double @erf(double)
 
-declare hidden float @erff(float) local_unnamed_addr
+declare hidden float @erff(float)
 
-declare hidden double @erfc(double) local_unnamed_addr
+declare hidden double @erfc(double)
 
-declare hidden float @erfcf(float) local_unnamed_addr
+declare hidden float @erfcf(float)
 
-declare hidden double @tgamma(double) local_unnamed_addr
+declare hidden double @tgamma(double)
 
-declare hidden float @tgammaf(float) local_unnamed_addr
+declare hidden float @tgammaf(float)
 
-declare hidden double @lgamma(double) local_unnamed_addr
+declare hidden double @lgamma(double)
 
-declare hidden float @lgammaf(float) local_unnamed_addr
+declare hidden float @lgammaf(float)
