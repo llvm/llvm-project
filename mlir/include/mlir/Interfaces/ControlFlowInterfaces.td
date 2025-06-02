@@ -385,12 +385,12 @@ def WeightedBranchOpInterface : OpInterface<"WeightedBranchOpInterface"> {
     operations, i.e. terminator operations with successors.
 
     This interface provides methods for getting/setting integer non-negative
-    weight of each branch in the range from 0 to 100. The sum of weights
-    must be 100. The number of weights must match the number of successors
-    of the operation.
-
-    The weights specify the probability (in percents) of taking
-    a particular branch.
+    weight of each branch. The probability of executing a branch
+    is computed as the ratio between the branch's weight and the total
+    sum of the weights.
+    The number of weights must match the number of successors of the operation,
+    with one exception for CallOpInterface operations, which may only
+    have on weight when they do not have any successors.
 
     The default implementations of the methods expect the operation
     to have an attribute of type DenseI32ArrayAttr named branch_weights.
@@ -440,15 +440,16 @@ def WeightedRegionBranchOpInterface
     that exhibit branching behavior between held regions.
 
     This interface provides methods for getting/setting integer non-negative
-    weight of each branch in the range from 0 to 100. The sum of weights
-    must be 100. The number of weights must match the number of regions
+    weight of each branch. The probability of executing a region is computed
+    as the ratio between the region branch's weight and the total sum
+    of the weights.
+    The number of weights must match the number of regions
     held by the operation (including empty regions).
 
-    The weights specify the probability (in percents) of branching
-    to a particular region when first executing the operation.
+    The weights specify the probability of branching to a particular
+    region when first executing the operation.
     For example, for loop-like operations with a single region
     the weight specifies the probability of entering the loop.
-    In this case, the weight must be either 0 or 100.
 
     The default implementations of the methods expect the operation
     to have an attribute of type DenseI32ArrayAttr named branch_weights.

@@ -660,12 +660,12 @@ def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "FPTrunc",
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 
 // Call-related operations.
-def LLVM_InvokeOp : LLVM_Op<"invoke", [
-                      AttrSizedOperandSegments,
-                      DeclareOpInterfaceMethods<BranchOpInterface>,
-                      DeclareOpInterfaceMethods<CallOpInterface>,
-                      DeclareOpInterfaceMethods<BranchWeightOpInterface>,
-                      Terminator]> {
+def LLVM_InvokeOp
+    : LLVM_Op<"invoke", [AttrSizedOperandSegments,
+                         DeclareOpInterfaceMethods<BranchOpInterface>,
+                         DeclareOpInterfaceMethods<CallOpInterface>,
+                         DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
+                         Terminator]> {
   let arguments = (ins
                    OptionalAttr<TypeAttrOf<LLVM_FunctionType>>:$var_callee_type,
                    OptionalAttr<FlatSymbolRefAttr>:$callee,
@@ -734,12 +734,13 @@ def LLVM_VaArgOp : LLVM_Op<"va_arg"> {
 // CallOp
 //===----------------------------------------------------------------------===//
 
-def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
-                    [AttrSizedOperandSegments,
-                     DeclareOpInterfaceMethods<FastmathFlagsInterface>,
-                     DeclareOpInterfaceMethods<CallOpInterface>,
-                     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
-                     DeclareOpInterfaceMethods<BranchWeightOpInterface>]> {
+def LLVM_CallOp
+    : LLVM_MemAccessOpBase<
+          "call", [AttrSizedOperandSegments,
+                   DeclareOpInterfaceMethods<FastmathFlagsInterface>,
+                   DeclareOpInterfaceMethods<CallOpInterface>,
+                   DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+                   DeclareOpInterfaceMethods<WeightedBranchOpInterface>]> {
   let summary = "Call to an LLVM function.";
   let description = [{
     In LLVM IR, functions may return either 0 or 1 value. LLVM IR dialect
@@ -1047,11 +1048,12 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
     LLVM_TerminatorPassthroughOpBuilder
   ];
 }
-def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
-    [AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<BranchOpInterface>,
-     DeclareOpInterfaceMethods<BranchWeightOpInterface>,
-     Pure]> {
+def LLVM_CondBrOp
+    : LLVM_TerminatorOp<
+          "cond_br", [AttrSizedOperandSegments,
+                      DeclareOpInterfaceMethods<BranchOpInterface>,
+                      DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
+                      Pure]> {
   let arguments = (ins I1:$condition,
                    Variadic<LLVM_Type>:$trueDestOperands,
                    Variadic<LLVM_Type>:$falseDestOperands,
@@ -1136,11 +1138,12 @@ def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable"> {
   }];
 }
 
-def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
-    [AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<BranchOpInterface>,
-     DeclareOpInterfaceMethods<BranchWeightOpInterface>,
-     Pure]> {
+def LLVM_SwitchOp
+    : LLVM_TerminatorOp<
+          "switch", [AttrSizedOperandSegments,
+                     DeclareOpInterfaceMethods<BranchOpInterface>,
+                     DeclareOpInterfaceMethods<WeightedBranchOpInterface>,
+                     Pure]> {
   let arguments = (ins
     AnySignlessInteger:$value,
     Variadic<AnyType>:$defaultOperands,
