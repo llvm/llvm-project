@@ -25,8 +25,6 @@ concept HasConstBegin = requires(const T& ct) { ct.begin(); };
 template <class T>
 concept HasBegin = requires(T& t) { t.begin(); };
 
-// _View has const-qualified begin and end methods and
-// is _not_ a simple view.
 template <class T>
 concept HasConstAndNonConstBegin = requires(T& t, const T& ct) {
   // The return types for begin are different when this is const or not:
@@ -35,30 +33,26 @@ concept HasConstAndNonConstBegin = requires(T& t, const T& ct) {
   requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>;
 };
 
-// _View does not have const-qualified begin and end methods and
-// is _not_ a simple view.
 template <class T>
 // There is a begin but it's not const qualified => Only non-const qualified begin.
 concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
 
-// _View does have const-qualified begin and end methods and
-// is a simple view.
 template <class T>
 // There is a const-qualified begin and there are not both const- and non-const qualified begin => Only const-qualified begin.
 concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
 
 static_assert(HasOnlyNonConstBegin<std::ranges::stride_view<UnSimpleNoConstCommonView>>);
-static_assert(HasOnlyConstBegin<std::ranges::stride_view<BasicTestView<int*, int*>>>);
+static_assert(HasOnlyConstBegin<std::ranges::stride_view<SimpleCommonConstView>>);
 static_assert(HasConstAndNonConstBegin<std::ranges::stride_view<UnSimpleConstView>>);
 
 constexpr bool test() {
-  const auto const_basic    = UnSimpleConstView();
-  const auto sv_const_basic = std::ranges::stride_view(const_basic, 1);
-  static_assert(std::same_as<decltype(*sv_const_basic.begin()), double&>);
+  const auto unsimple_const_view    = UnSimpleConstView();
+  const auto sv_unsimple_const = std::ranges::stride_view(unsimple_const_view, 1);
+  static_assert(std::same_as<decltype(*sv_unsimple_const.begin()), double&>);
 
-  auto non_const_basic    = SimpleCommonConstView();
-  auto sv_non_const_basic = std::ranges::stride_view(non_const_basic, 1);
-  static_assert(std::same_as<decltype(*sv_non_const_basic.begin()), int&>);
+  auto simple_const_view    = SimpleCommonConstView();
+  auto sv_simple_const = std::ranges::stride_view(simple_const_view, 1);
+  static_assert(std::same_as<decltype(*sv_simple_const.begin()), int&>);
 
   return true;
 }
