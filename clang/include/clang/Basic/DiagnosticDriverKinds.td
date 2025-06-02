@@ -254,10 +254,8 @@ def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
   "malformed sanitizer coverage ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_metadata_ignorelist : Error<
   "malformed sanitizer metadata ignorelist: '%0'">;
-def err_drv_unsupported_static_sanitizer_darwin : Error<
-  "static %0 runtime is not supported on darwin">;
-def err_drv_unsupported_shared_sanitizer_aix : Error<
-  "shared %0 runtime is not supported on AIX">;
+def err_drv_unsupported_sanitizer : Error<
+  "%0 %1 runtime is not supported on %3">;
 def err_drv_duplicate_config : Error<
   "no more than one option '--config' is allowed">;
 def err_drv_cannot_open_config_file : Error<

@@ -270,8 +270,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (sanitizer) {
     if (Sanitize.needsSharedRt()) {
-      ToolChain.getDriver().Diag(diag::err_drv_unsupported_shared_sanitizer_aix)
-          << sanitizer;
+      ToolChain.getDriver().Diag(diag::err_drv_unsupported_sanitizer)
+          << "shared" << sanitizer << "AIX";
       return;
     }
     NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
