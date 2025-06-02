@@ -6275,11 +6275,10 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
   // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
   SyncScope::ID SSID = cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID();
   if (isReleaseOrStronger(Ord))
-    return Builder.CreateFence(
-        Ord == AtomicOrdering::SequentiallyConsistent
-            ? AtomicOrdering::SequentiallyConsistent
-            : AtomicOrdering::Release,
-        SSID);
+    return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
+                                   ? AtomicOrdering::SequentiallyConsistent
+                                   : AtomicOrdering::Release,
+                               SSID);
 
   return nullptr;
 }
