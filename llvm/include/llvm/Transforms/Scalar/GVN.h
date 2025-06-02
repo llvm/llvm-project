@@ -198,7 +198,7 @@ public:
     Expression createExtractvalueExpr(ExtractValueInst *EI);
     Expression createGEPExpr(GetElementPtrInst *GEP);
     uint32_t lookupOrAddCall(CallInst *C);
-    uint32_t lookupOrAddLoadStore(Instruction *I);
+    uint32_t computeLoadStoreVN(Instruction *I);
     uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
                               uint32_t Num, GVNPass &GVN);
     bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,

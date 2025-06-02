@@ -608,7 +608,7 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
     return V;
   }
 
-  if (MSSA && AA->onlyReadsMemory(C)) {
+  if (MSSA && IsMSSAEnabled && AA->onlyReadsMemory(C)) {
     Expression Exp = createExpr(C);
     addMemoryStateToExp(C, Exp);
     auto [V, _] = assignExpNewValueNum(Exp);
@@ -621,7 +621,7 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
 }
 
 /// Returns the value number for the specified load or store instruction.
-uint32_t GVNPass::ValueTable::lookupOrAddLoadStore(Instruction *I) {
+uint32_t GVNPass::ValueTable::computeLoadStoreVN(Instruction *I) {
   if (!MSSA || !IsMSSAEnabled) {
     ValueNumbering[I] = NextValueNumber;
     return NextValueNumber++;
@@ -723,7 +723,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
       return NextValueNumber++;
     case Instruction::Load:
     case Instruction::Store:
-      return lookupOrAddLoadStore(I);
+      return computeLoadStoreVN(I);
     default:
       ValueNumbering[V] = NextValueNumber;
       return NextValueNumber++;
