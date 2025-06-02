@@ -116,8 +116,12 @@ private:
     std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressV;
     std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressW;
     std::optional<uint32_t> MaxAnisotropy;
+    std::optional<llvm::hlsl::rootsig::ComparisonFunc> CompFunc;
+    std::optional<llvm::hlsl::rootsig::StaticBorderColor> BorderColor;
     std::optional<float> MinLOD;
     std::optional<float> MaxLOD;
+    std::optional<uint32_t> Space;
+    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
   };
   std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 
@@ -130,6 +134,9 @@ private:
   std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
   std::optional<llvm::hlsl::rootsig::TextureAddressMode>
   parseTextureAddressMode();
+  std::optional<llvm::hlsl::rootsig::ComparisonFunc> parseComparisonFunc();
+  std::optional<llvm::hlsl::rootsig::StaticBorderColor>
+  parseStaticBorderColor();
   std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
   parseRootDescriptorFlags();
   std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
