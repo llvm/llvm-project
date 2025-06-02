@@ -185,6 +185,8 @@ void MCContext::reset() {
   XCOFFUniquingMap.clear();
   DXCUniquingMap.clear();
 
+  RelSecNames.clear();
+  MacroMap.clear();
   ELFEntrySizeMap.clear();
   ELFSeenGenericMergeableSections.clear();
 
