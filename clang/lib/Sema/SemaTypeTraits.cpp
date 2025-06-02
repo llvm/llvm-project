@@ -2158,12 +2158,6 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::Ref;
 
-  T = T.getNonReferenceType();
-
-  if (T.hasNonTrivialObjCLifetime())
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::HasArcLifetime;
-
   const CXXRecordDecl *D = T->getAsCXXRecordDecl();
   if (!D || D->isInvalidDecl())
     return;
