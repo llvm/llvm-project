@@ -26,6 +26,14 @@
 
 using namespace mlir;
 
+/// convert ArrayRef<ValueRange> into SmallVector<Value>
+static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
+  SmallVector<Value> result;
+  for (const auto &vals : values)
+    llvm::append_range(result, vals);
+  return result;
+}
+
 FailureOr<VectorType>
 mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   auto layout = llvm::dyn_cast_if_present<LayoutAttr>(tdescTy.getLayout());
@@ -164,13 +172,6 @@ void xegpu::setLayoutAttrs(Operation *op,
       setLayoutAttr(result, layout);
     }
   });
-}
-
-SmallVector<Value> xegpu::flattenValues(ArrayRef<ValueRange> values) {
-  SmallVector<Value> result;
-  for (const auto &vals : values)
-    llvm::append_range(result, vals);
-  return result;
 }
 
 SmallVector<Value>

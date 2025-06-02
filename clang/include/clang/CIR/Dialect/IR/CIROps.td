@@ -417,11 +417,15 @@ def LoadOp : CIR_Op<"load", [
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr, UnitAttr:$isDeref);
+                           [MemRead]>:$addr,
+                       UnitAttr:$isDeref,
+                       OptionalAttr<I64Attr>:$alignment
+                       );
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
     (`deref` $isDeref^)?
+    (`align` `(` $alignment^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
@@ -458,9 +462,11 @@ def StoreOp : CIR_Op<"store", [
 
   let arguments = (ins CIR_AnyType:$value,
                        Arg<CIR_PointerType, "the address to store the value",
-                           [MemWrite]>:$addr);
+                           [MemWrite]>:$addr,
+                           OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
+    (`align` `(` $alignment^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
 
@@ -1628,7 +1634,8 @@ def GlobalLinkageKind : I32EnumAttr<
 // properties of a global variable will be added over time as more of ClangIR
 // is upstreamed.
 
-def GlobalOp : CIR_Op<"global"> {
+def GlobalOp : CIR_Op<"global",
+                      [DeclareOpInterfaceMethods<CIRGlobalValueInterface>]> {
   let summary = "Declare or define a global variable";
   let description = [{
     The `cir.global` operation declares or defines a named global variable.
@@ -1637,16 +1644,31 @@ def GlobalOp : CIR_Op<"global"> {
     described by the type of the variable.
 
     The `linkage` tracks C/C++ linkage types, currently very similar to LLVM's.
+    Symbol visibility in `sym_visibility` is defined in terms of MLIR's visibility
+    and verified to be in accordance to `linkage`.
   }];
 
+  // Note that both sym_name and sym_visibility are tied to Symbol trait.
+  // TODO: sym_visibility can possibly be represented by implementing the
+  // necessary Symbol's interface in terms of linkage instead.
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       DefaultValuedAttr<
+                        CIR_VisibilityAttr,
+                        "VisibilityKind::Default"
+                       >:$global_visibility,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        Arg<GlobalLinkageKind, "linkage type">:$linkage,
                        OptionalAttr<AnyAttr>:$initial_value,
-                       UnitAttr:$dsolocal);
+                       UnitAttr:$comdat,
+                       UnitAttr:$dsolocal,
+                       OptionalAttr<I64Attr>:$alignment);
 
   let assemblyFormat = [{
+    ($sym_visibility^)?
+    (`` $global_visibility^)?
     $linkage
+    (`comdat` $comdat^)?
     (`dsolocal` $dsolocal^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
@@ -2103,6 +2125,69 @@ def VecExtractOp : CIR_Op<"vec.extract", [Pure,
   }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VecCmpOp
+//===----------------------------------------------------------------------===//
+
+def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
+
+  let summary = "Compare two vectors";
+  let description = [{
+    The `cir.vec.cmp` operation does an element-wise comparison of two vectors
+    of the same type. The result is a vector of the same size as the operands
+    whose element type is the signed integral type that is the same size as the
+    element type of the operands. The values in the result are 0 or -1.
+
+    ```mlir
+    %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins Arg<CmpOpKind, "cmp kind">:$kind, CIR_VectorType:$lhs,
+                       CIR_VectorType:$rhs);
+  let results = (outs CIR_VectorType:$result);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
+    qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VecShuffleDynamicOp
+//===----------------------------------------------------------------------===//
+
+def VecShuffleDynamicOp : CIR_Op<"vec.shuffle.dynamic",
+                          [Pure, AllTypesMatch<["vec", "result"]>]> {
+  let summary = "Shuffle a vector using indices in another vector";
+  let description = [{
+    The `cir.vec.shuffle.dynamic` operation implements the undocumented form of
+    Clang's __builtin_shufflevector, where the indices of the shuffled result
+    can be runtime values.
+
+    There are two input vectors, which must have the same number of elements.
+    The second input vector must have an integral element type. The elements of
+    the second vector are interpreted as indices into the first vector. The
+    result vector is constructed by taking the elements from the first input
+    vector from the indices indicated by the elements of the second vector.
+
+    ```mlir
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<4 x !s32i>, %indices
+        : !cir.vector<4 x !s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_VectorType:$vec, IntegerVector:$indices);
+  let results = (outs CIR_VectorType:$result);
+  let assemblyFormat = [{
+    $vec `:` qualified(type($vec)) `,` $indices `:` qualified(type($indices))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

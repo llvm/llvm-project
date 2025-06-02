@@ -29,7 +29,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -3080,6 +3080,7 @@ void AMDGPUAsmParser::initializeGprCountSymbol(RegisterKind RegKind) {
   assert(SymbolName && "initializing invalid register kind");
   MCSymbol *Sym = getContext().getOrCreateSymbol(*SymbolName);
   Sym->setVariableValue(MCConstantExpr::create(0, getContext()));
+  Sym->setRedefinable(true);
 }
 
 bool AMDGPUAsmParser::updateGprCountSymbols(RegisterKind RegKind,
@@ -3100,7 +3101,7 @@ bool AMDGPUAsmParser::updateGprCountSymbols(RegisterKind RegKind,
   if (!Sym->isVariable())
     return !Error(getLoc(),
                   ".amdgcn.next_free_{v,s}gpr symbols must be variable");
-  if (!Sym->getVariableValue(false)->evaluateAsAbsolute(OldCount))
+  if (!Sym->getVariableValue()->evaluateAsAbsolute(OldCount))
     return !Error(
         getLoc(),
         ".amdgcn.next_free_{v,s}gpr symbols must be absolute expressions");
@@ -9231,8 +9232,7 @@ bool AMDGPUAsmParser::parseDimId(unsigned &Encoding) {
   Token += Suffix;
 
   StringRef DimId = Token;
-  if (DimId.starts_with("SQ_RSRC_IMG_"))
-    DimId = DimId.drop_front(12);
+  DimId.consume_front("SQ_RSRC_IMG_");
 
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByAsmSuffix(DimId);
   if (!DimInfo)

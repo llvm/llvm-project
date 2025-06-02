@@ -78,7 +78,14 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   }
 }
 
-/// Unroll XeGPU ops to their instruction-level representation.
+//===------------------------------------------------------------------------===//
+// The XeGPUBlockingPass leverages the unroll patterns for XeGPU and Vector ops
+// to partition operations that process large shapes into multiple operations on
+// smaller shapes, as specified by the inst_data in the layout attribute. This
+// enables each resulting operation to be efficiently mapped to a hardware
+// instruction.
+//===------------------------------------------------------------------------===//
+
 class XeGPUBlockingPass final
     : public xegpu::impl::XeGPUBlockingBase<XeGPUBlockingPass> {
 public:
@@ -306,15 +313,18 @@ void XeGPUBlockingPass::runOnOperation() {
   (void)applyPatternsGreedily(op, std::move(patterns));
 
   op->walk([](Operation *op) {
+    // Resolve unrealized conversion cast ops emulating pack/unpack
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);
 
+    // Remove the layout attributes cached per operands.
     for (OpOperand &opr : op->getOpOperands()) {
       std::string name = xegpu::getLayoutName(opr);
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name))
         op->removeAttr(name);
     }
 
+    // Update the layout attributes per result.
     for (OpResult result : op->getOpResults()) {
       std::string name = xegpu::getLayoutName(result);
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {

@@ -48,9 +48,10 @@ def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute"> {
 def XeGPUBlocking: Pass<"xegpu-blocking"> {
   let summary = "Block XeGPU ops into smaller size.";
   let description = [{
-    The pass unrolls XeGPU ops working on large shapes into ops working on small shapes
-    (given by the inst_data in the layout attr), such that each of them can be dispatch
-    into a hardware instruction.
+    This pass partitions operations that process large shapes into multiple
+    operations on smaller shapes, as specified by the inst_data in the layout
+    attribute. This enables each resulting operation to be efficiently mapped
+    to a hardware instruction.
   }];
   let dependentDialects = [
       "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect"

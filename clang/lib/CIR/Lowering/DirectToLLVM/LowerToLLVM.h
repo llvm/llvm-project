@@ -342,6 +342,27 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMVecCmpOpLowering
+    : public mlir::OpConversionPattern<cir::VecCmpOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecCmpOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecCmpOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecShuffleDynamicOpLowering
+    : public mlir::OpConversionPattern<cir::VecShuffleDynamicOp> {
+public:
+  using mlir::OpConversionPattern<
+      cir::VecShuffleDynamicOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecShuffleDynamicOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 } // namespace direct
 } // namespace cir
 
