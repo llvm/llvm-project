@@ -379,3 +379,25 @@ TEST_F(PluginManagerTest, UnRegisterSystemRuntimePluginChangesOrder) {
   ASSERT_EQ(PluginManager::GetSystemRuntimeCreateCallbackAtIndex(2),
             CreateSystemRuntimePluginB);
 }
+
+TEST_F(PluginManagerTest, MatchPluginName) {
+  PluginNamespace Foo{"foo", nullptr, nullptr};
+  RegisteredPluginInfo Bar{"bar", "bar plugin ", true};
+  RegisteredPluginInfo Baz{"baz", "baz plugin ", true};
+
+  // Empty pattern matches everything.
+  ASSERT_TRUE(PluginManager::MatchPluginName("", Foo, Bar));
+
+  // Plugin namespace matches all plugins in that namespace.
+  ASSERT_TRUE(PluginManager::MatchPluginName("foo", Foo, Bar));
+  ASSERT_TRUE(PluginManager::MatchPluginName("foo", Foo, Baz));
+
+  // Fully qualified plugin name matches only that plugin.
+  ASSERT_TRUE(PluginManager::MatchPluginName("foo.bar", Foo, Bar));
+  ASSERT_FALSE(PluginManager::MatchPluginName("foo.baz", Foo, Bar));
+
+  // Prefix match should not match.
+  ASSERT_FALSE(PluginManager::MatchPluginName("f", Foo, Bar));
+  ASSERT_FALSE(PluginManager::MatchPluginName("foo.", Foo, Bar));
+  ASSERT_FALSE(PluginManager::MatchPluginName("foo.ba", Foo, Bar));
+}
