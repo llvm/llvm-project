@@ -4411,6 +4411,9 @@ v_cvt_f32_bf16_e64 v5, -1 op_sel:[1]
 v_cvt_f32_bf16_e64 v5, src_scc op_sel:[1]
 // GFX1250: v_cvt_f32_bf16_e64 v5, src_scc op_sel:[1,0] ; encoding: [0x05,0x08,0xf2,0xd5,0xfd,0x00,0x00,0x00]
 
+v_cvt_f32_bf16_e64 v5, v128.h
+// GFX1250: v_cvt_f32_bf16_e64 v5, v128.h op_sel:[1,0] ; encoding: [0x05,0x08,0xf2,0xd5,0x80,0x01,0x00,0x00]
+
 v_cvt_f16_bf8 v150.l, v2
 // GFX1250: v_cvt_f16_bf8_e64 v150.l, v2            ; encoding: [0x96,0x00,0xf8,0xd5,0x02,0x01,0x00,0x00]
 
