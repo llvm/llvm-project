@@ -126,6 +126,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcsstr_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcsstr_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsstr
+)
+
+add_libc_test(
   wcsncat_test
   SUITE
     libc_wchar_unittests
