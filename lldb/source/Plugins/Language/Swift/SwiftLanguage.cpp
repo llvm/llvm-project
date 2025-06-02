@@ -522,9 +522,9 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
 
   TypeSummaryImpl::Flags optional_summary_flags;
   optional_summary_flags.SetCascades(true)
-      .SetDontShowChildren(false) // this one will actually be calculated at
-                                  // runtime, what you pass here doesn't matter
-      .SetDontShowValue(true)
+      .SetDontShowChildren(true) // this one will actually be calculated at
+                                 // runtime, what you pass here doesn't matter
+      .SetDontShowValue(false)
       .SetHideItemNames(false)
       .SetShowMembersOneLiner(false)
       .SetSkipPointers(true)
@@ -974,10 +974,6 @@ SwiftLanguage::GetHardcodedSynthetics() {
       CompilerType type(valobj.GetCompilerType());
       Flags type_flags(type.GetTypeInfo());
       if (type_flags.AllSet(eTypeIsSwift | eTypeIsEnumeration)) {
-        // FIXME: The classification of clang-imported enums may
-        // change based on whether a Swift module is present or not.
-        if (!valobj.GetValueAsCString())
-          return nullptr;
         if (!swift_enum_synth)
           swift_enum_synth = lldb::SyntheticChildrenSP(new CXXSyntheticChildren(
               SyntheticChildren::Flags()

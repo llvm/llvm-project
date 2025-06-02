@@ -745,9 +745,9 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
-  ExecutionContextRef m_exe_ctx_ref;
-  ConstString m_element_name;
-  size_t m_child_index;
+  ValueObjectSP m_projected;
+  lldb::DynamicValueType m_dynamic = eNoDynamicValues;
+  bool m_indirect = false;
 };
 
 static std::string mangledTypenameForTasksTuple(size_t count) {
@@ -1516,50 +1516,83 @@ private:
 
 lldb_private::formatters::swift::EnumSyntheticFrontEnd::EnumSyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp.get()), m_exe_ctx_ref(),
-      m_element_name(nullptr), m_child_index(UINT32_MAX) {
+    : SyntheticChildrenFrontEnd(*valobj_sp.get()) {
   if (valobj_sp)
     Update();
 }
 
 llvm::Expected<uint32_t>
 lldb_private::formatters::swift::EnumSyntheticFrontEnd::CalculateNumChildren() {
-  return m_child_index != UINT32_MAX ? 1 : 0;
+  if (m_indirect && m_projected)
+    return m_projected->GetNumChildren();
+  return m_projected ? 1 : 0;
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::swift::EnumSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
-  if (idx)
-    return ValueObjectSP();
-  if (m_child_index == UINT32_MAX)
-    return ValueObjectSP();
-  return m_backend.GetChildAtIndex(m_child_index, true);
+  ValueObjectSP value_sp;
+  // Hide the indirection.
+  if (m_indirect && m_projected) {
+    value_sp = m_projected->GetChildAtIndex(idx);
+  } else {
+    if (idx != 0)
+      return {};
+    value_sp = m_projected;
+  }
+  if (!value_sp)
+    return {};
+
+  return value_sp;
 }
 
 lldb::ChildCacheState
 lldb_private::formatters::swift::EnumSyntheticFrontEnd::Update() {
-  m_element_name.Clear();
-  m_child_index = UINT32_MAX;
-  m_exe_ctx_ref = m_backend.GetExecutionContextRef();
-  m_element_name.SetCString(m_backend.GetValueAsCString());
-  auto index_or_err = m_backend.GetIndexOfChildWithName(m_element_name);
-  if (!index_or_err)
-    llvm::consumeError(index_or_err.takeError());
+  auto *runtime = SwiftLanguageRuntime::Get(m_backend.GetProcessSP());
+  if (!runtime)
+    return ChildCacheState::eRefetch;
+
+  llvm::Expected<ValueObjectSP> projected =
+      runtime->SwiftLanguageRuntime::ProjectEnum(m_backend);
+  if (!projected) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), projected.takeError(),
+                   "{0}");
+    return ChildCacheState::eRefetch;
+  }
+
+  m_dynamic = m_backend.GetDynamicValueType();
+  m_projected = *projected;
+  if (m_projected &&
+      m_projected->GetName().GetStringRef().starts_with("$indirect."))
+    m_indirect = true;
   else
-    m_child_index = *index_or_err;
+    m_indirect = false;
+
+  if (!m_projected)
+    return ChildCacheState::eRefetch;
+
+  if ((m_projected->GetCompilerType().GetTypeInfo() & eTypeIsEnumeration))
+    if (auto synthetic_sp = m_projected->GetSyntheticValue())
+      m_projected = synthetic_sp;
+
+  if (m_dynamic != eNoDynamicValues)
+    if (auto dynamic_sp = m_projected->GetDynamicValue(m_dynamic))
+      m_projected = dynamic_sp;
   return ChildCacheState::eRefetch;
 }
 
 bool lldb_private::formatters::swift::EnumSyntheticFrontEnd::
     MightHaveChildren() {
-  return m_child_index != UINT32_MAX;
+  return m_projected ? true : false;
 }
 
 llvm::Expected<size_t>
 lldb_private::formatters::swift::EnumSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
-  if (name == m_element_name)
+  // Hide the indirection.
+  if (m_indirect && m_projected)
+    return m_projected->GetIndexOfChildWithName(name);
+  if (m_projected && name == m_projected->GetName())
     return 0;
   return llvm::createStringError("Type has no child named '%s'",
                                  name.AsCString());

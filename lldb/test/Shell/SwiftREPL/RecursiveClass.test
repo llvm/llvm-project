@@ -20,6 +20,6 @@ var a = Foo()
 a.aFoo = a
 a
 // CHECK: $R0: Foo = {
-// CHECK-NEXT:   aFoo = 0x{{[0-9a-fA-F]+}} {...}
+// CHECK-NEXT:   aFoo = 0x{{[0-9a-fA-F]+}}
 // CHECK-NEXT:   x = "Hello World"
 // CHECK-NEXT: }

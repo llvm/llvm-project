@@ -6848,11 +6848,8 @@ SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
         .GetNumChildren(omit_empty_base_classes, exe_ctx);
 
   case swift::TypeKind::Enum:
-  case swift::TypeKind::BoundGenericEnum: {
-    SwiftEnumDescriptor *cached_enum_info = GetCachedEnumInfo(type);
-    if (cached_enum_info)
-      return cached_enum_info->GetNumElementsWithPayload();
-  } break;
+  case swift::TypeKind::BoundGenericEnum:
+    return 0;
 
   case swift::TypeKind::BoundGenericStruct:
   case swift::TypeKind::BuiltinFixedArray:
@@ -6983,11 +6980,8 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
     break;
 
   case swift::TypeKind::Enum:
-  case swift::TypeKind::BoundGenericEnum: {
-    SwiftEnumDescriptor *cached_enum_info = GetCachedEnumInfo(type);
-    if (cached_enum_info)
-      return cached_enum_info->GetNumElementsWithPayload();
-  } break;
+  case swift::TypeKind::BoundGenericEnum:
+    return 0;
 
   case swift::TypeKind::Tuple:
     return swift::cast<swift::TupleType>(swift_can_type)->getNumElements();
@@ -7591,6 +7585,20 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
 
   case swift::TypeKind::Enum:
   case swift::TypeKind::BoundGenericEnum: {
+    ExecutionContextScope *exe_scope = nullptr;
+    if (exe_ctx)
+      exe_scope = exe_ctx->GetBestExecutionContextScope();
+    if (exe_scope)
+      if (auto *runtime =
+              SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
+        return runtime->GetChildCompilerTypeAtIndex(
+            {weak_from_this(), type}, idx, transparent_pointers,
+            omit_empty_base_classes, ignore_array_bounds, child_name,
+            child_byte_size, child_byte_offset, child_bitfield_bit_size,
+            child_bitfield_bit_offset, child_is_base_class,
+            child_is_deref_of_parent, valobj, language_flags);
+    return llvm::createStringError("cannot project enum type without process");
+
     SwiftEnumDescriptor *cached_enum_info = GetCachedEnumInfo(type);
     if (cached_enum_info &&
         idx < cached_enum_info->GetNumElementsWithPayload()) {
@@ -7972,6 +7980,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
 
     case swift::TypeKind::Enum:
     case swift::TypeKind::BoundGenericEnum: {
+      return 0;
       SwiftEnumDescriptor *cached_enum_info = GetCachedEnumInfo(type);
       if (cached_enum_info) {
         ConstString const_name(name);

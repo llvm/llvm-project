@@ -28,6 +28,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObjectCast.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -607,39 +608,6 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
 }
 
 namespace {
-CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts, CompilerType type) {
-  // FIXME: This is very similar to TypeSystemSwiftTypeRef::GetReferentType().
-  using namespace swift::Demangle;
-  Demangler dem;
-  auto mangled = type.GetMangledTypeName().GetStringRef();
-  NodePointer n = dem.demangleSymbol(mangled);
-  if (!n || n->getKind() != Node::Kind::Global || !n->hasChildren())
-    return {};
-  n = n->getFirstChild();
-  if (!n || n->getKind() != Node::Kind::TypeMangling || !n->hasChildren())
-    return {};
-  n = n->getFirstChild();
-  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
-    return {};
-  n = n->getFirstChild();
-  if (!n ||
-      (n->getKind() != Node::Kind::Weak &&
-       n->getKind() != Node::Kind::Unowned &&
-       n->getKind() != Node::Kind::Unmanaged) ||
-      !n->hasChildren())
-    return {};
-  n = n->getFirstChild();
-  if (!n || n->getKind() != Node::Kind::Type || !n->hasChildren())
-    return {};
-  // FIXME: We only need to canonicalize this node, not the entire type.
-  n = ts.CanonicalizeSugar(dem, n->getFirstChild());
-  if (!n || n->getKind() != Node::Kind::SugaredOptional || !n->hasChildren())
-    return {};
-  n = n->getFirstChild();
-  return ts.RemangleAsType(
-      dem, n,
-      SwiftLanguageRuntime::GetManglingFlavor(type.GetMangledTypeName()));
-}
 
 CompilerType GetTypeFromTypeRef(TypeSystemSwiftTypeRef &ts,
                                 const swift::reflection::TypeRef *type_ref) {
@@ -763,6 +731,7 @@ public:
     uint32_t bitfield_bit_offset = 0;
     bool is_base_class = false;
     bool is_deref_of_parent = false;
+    bool is_enum = false;
     uint64_t language_flags = 0;
   };
   using GetChildInfoClosure = std::function<llvm::Expected<ChildInfo>(void)>;
@@ -884,95 +853,12 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     }
   }
 
-  auto visit_indirect_enum =
-      [&](GetChildNameClosure get_name) -> llvm::Expected<unsigned> {
-    if (count_only)
-      return 1;
-    ThreadSafeReflectionContext reflection_ctx =
-        m_runtime.GetReflectionContext();
-    if (!m_valobj)
-      return llvm::createStringError(
-          "Cannot project an enum without an instance pointer.");
-    if (!reflection_ctx)
-      return llvm::createStringError("no reflection context");
-    // The indirect enum field should point to a closure context.
-    LLDBTypeInfoProvider tip(m_runtime, ts);
-    lldb::addr_t instance = ::MaskMaybeBridgedPointer(
-        m_runtime.GetProcess(), m_valobj->GetPointerValue());
-    auto ti_or_err = reflection_ctx->GetTypeInfoFromInstance(
-        instance, &tip, ts.GetDescriptorFinder());
-    if (!ti_or_err)
-      return ti_or_err.takeError();
-
-    auto *ti = &*ti_or_err;
-    if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
-      switch (rti->getRecordKind()) {
-      case swift::reflection::RecordKind::ClosureContext: {
-        if (!rti->getFields().size())
-          return llvm::createStringError("closure context has no fields");
-        auto &field = rti->getFields()[0];
-        auto *type_ref = field.TR;
-        auto get_info = [&]() -> llvm::Expected<ChildInfo> {
-          ChildInfo child;
-          child.language_flags |=
-              TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
-          child.byte_offset = field.Offset;
-          child.byte_size = field.TI.getSize();
-          return child;
-        };
-        CompilerType type = GetTypeFromTypeRef(ts, type_ref);
-        if (auto err = visit_callback(type, 0, get_name, get_info))
-          return err;
-        return success;
-      }
-      case swift::reflection::RecordKind::Tuple: {
-        std::vector<TypeSystemSwift::TupleElement> elts;
-        for (auto &field : rti->getFields())
-          elts.emplace_back(ConstString(), GetTypeFromTypeRef(ts, field.TR));
-        CompilerType type = ts.CreateTupleType(elts);
-        auto get_info = [&]() -> llvm::Expected<ChildInfo> {
-          ChildInfo child;
-          child.language_flags |=
-              TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
-          child.byte_offset = 0;
-          child.byte_size = rti->getSize();
-          return child;
-        };
-        if (auto err = visit_callback(type, 0, get_name, get_info))
-          return err;
-        return success;
-      }
-      default:
-        return llvm::createStringError(
-            "unexpected kind of indirect record enum");
-      }
-    }
-    auto get_info = [&]() -> llvm::Expected<ChildInfo> {
-      ChildInfo child;
-      child.language_flags |=
-          TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
-      child.byte_offset = 0;
-      child.byte_size = ti->getSize();
-      return child;
-    };
-    CompilerType type = ts.GetBuiltinRawPointerType();
-    if (auto err = visit_callback(type, 0, get_name, get_info))
-      return err;
-    return success;
-  };
-
   // The actual conversion from the FieldInfo record.
   auto visit_field_info =
       [&](const swift::reflection::FieldInfo &field,
           std::optional<TypeSystemSwift::TupleElement> tuple,
           bool hide_existentials, bool is_enum,
           unsigned depth = 0) -> llvm::Expected<unsigned> {
-    bool is_indirect_enum =
-        is_enum && !field.Offset && field.TR &&
-        llvm::isa<swift::reflection::BuiltinTypeRef>(field.TR) &&
-        llvm::isa<swift::reflection::ReferenceTypeInfo>(field.TI) &&
-        llvm::cast<swift::reflection::ReferenceTypeInfo>(field.TI)
-                .getReferenceKind() == swift::reflection::ReferenceKind::Strong;
     auto get_name = [&]() {
       return tuple ? tuple->element_name.GetStringRef().str() : field.Name;
     };
@@ -988,9 +874,6 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
         child.is_base_class = false;
         child.is_deref_of_parent = false;
         child.language_flags = 0;
-        if (is_indirect_enum)
-          child.language_flags |=
-              TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
         return child;
       };
       CompilerType type = ts.GetRawPointerType();
@@ -1002,14 +885,6 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     if (tuple)
       field_type = tuple->element_type;
     else {
-      if (is_indirect_enum) {
-        return visit_indirect_enum(get_name);
-        // // Only if this couldn't be resolved as an instance pointer, carry
-        // on. if (!type_or_err)
-        //   return type_or_err;
-        // if (*type_or_err)
-        //   field_type = *type_or_err;
-      }
       if (!field_type)
         field_type = GetTypeFromTypeRef(ts, field.TR);
     }
@@ -1026,9 +901,6 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
       child.is_base_class = false;
       child.is_deref_of_parent = false;
       child.language_flags = 0;
-      if (is_indirect_enum)
-        child.language_flags |=
-            TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
       return child;
     };
     if (auto err = visit_callback(field_type, depth, get_name, get_info))
@@ -1151,23 +1023,9 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
   }
 
   // Enums.
-  if (auto *eti = llvm::dyn_cast_or_null<swift::reflection::EnumTypeInfo>(ti)) {
-    unsigned i = 0;
-    if (count_only)
-      return eti->getNumPayloadCases();
-    for (auto &enum_case : eti->getCases()) {
-      // Skip non-payload cases.
-      if (!enum_case.TR)
-        continue;
-      if (!visit_only || *visit_only == i) {
-        auto result =
-            visit_field_info(enum_case, {}, /*hide_existentials=*/true,
-                             /*is_enum=*/true);
-        if (!result)
-          return result.takeError();
-      }
-      ++i;
-    }
+  if (llvm::dyn_cast_or_null<swift::reflection::EnumTypeInfo>(ti)) {
+    // The dynamic "child" of a payload-carrying enum is provided by
+    // the Enum synthetic child provider.
     return success;
   }
 
@@ -1207,29 +1065,12 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     case swift::reflection::ReferenceKind::Weak:
     case swift::reflection::ReferenceKind::Unowned:
     case swift::reflection::ReferenceKind::Unmanaged:
-      // Weak references are implicitly Optionals, so report the one
-      // child of Optional here.
+      // Weak references are implicitly Optionals, optionals have only synthetic
+      // children.
       if (count_only)
-        return 1;
+        return 0;
       if (!visit_only || *visit_only == 0) {
-        // Maybe assert that type is not an Optional?
-        auto get_name = [&]() { return "some"; };
-        auto get_info = [&]() -> llvm::Expected<ChildInfo> {
-          ChildInfo child;
-          child.byte_size = ts.GetPointerByteSize();
-          child.byte_offset = 0;
-          child.bitfield_bit_size = 0;
-          child.bitfield_bit_offset = 0;
-          child.is_base_class = false;
-          child.is_deref_of_parent = false;
-          child.language_flags = 0;
-          return child;
-        };
-        if (CompilerType optional = GetWeakReferent(ts, m_type)) {
-          if (auto err = visit_callback(optional, 0, get_name, get_info))
-            return err;
-          return success;
-        }
+        return success;
       }
       break;
     default:
@@ -1248,10 +1089,6 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
         m_runtime.GetReflectionContext();
     if (!reflection_ctx)
       return llvm::createStringError("no reflection context");
-
-    // Indirect enums.
-    if (m_type.GetTypeInfo() & lldb::eTypeIsEnumeration)
-      return visit_indirect_enum([]() { return ""; });
 
     // Try the instance type metadata.
     if (!m_valobj) {
@@ -1624,6 +1461,137 @@ llvm::Expected<std::string> SwiftLanguageRuntime::GetEnumCaseName(
   return llvm::createStringError("unimplemented enum kind");
 }
 
+llvm::Expected<ValueObjectSP>
+SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
+  TypeSystemSwiftTypeRefSP ts_sp;
+  if (auto target_sp = valobj.GetTargetSP()) {
+    auto type_system_or_err =
+        target_sp->GetScratchTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+    if (!type_system_or_err)
+      return type_system_or_err.takeError();
+    auto ts_ptr = type_system_or_err->get();
+    ts_sp = llvm::cast<TypeSystemSwift>(ts_ptr)->GetTypeSystemSwiftTypeRef();
+  }
+  if (!ts_sp)
+    return llvm::createStringError("no target");
+  auto &ts = *ts_sp;
+  auto exe_ctx = valobj.GetExecutionContextRef().Lock(true);
+  CompilerType enum_type = valobj.GetCompilerType();
+
+  auto ti_or_err = GetSwiftRuntimeTypeInfo(
+      enum_type, exe_ctx.GetBestExecutionContextScope());
+  if (!ti_or_err)
+    return ti_or_err.takeError();
+  auto *ti = &*ti_or_err;
+
+  auto project_indirect_enum =
+      [&](uint64_t offset, std::string name) -> llvm::Expected<ValueObjectSP> {
+    lldb::addr_t pointer =
+        ::MaskMaybeBridgedPointer(GetProcess(), valobj.GetPointerValue());
+    lldb::addr_t payload = pointer + offset;
+
+    ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
+    // The indirect enum field should point to a closure context.
+    LLDBTypeInfoProvider tip(*this, ts);
+    auto ti_or_err = reflection_ctx->GetTypeInfoFromInstance(
+        payload, &tip, ts.GetDescriptorFinder());
+    if (!ti_or_err)
+      return ti_or_err.takeError();
+
+    CompilerType payload_type;
+    auto *ti = &*ti_or_err;
+    if (auto *rti = llvm::dyn_cast<swift::reflection::RecordTypeInfo>(ti)) {
+      switch (rti->getRecordKind()) {
+      case swift::reflection::RecordKind::ClosureContext: {
+        if (!rti->getFields().size())
+          return llvm::createStringError("closure context has no fields");
+        auto &field = rti->getFields()[0];
+        auto *type_ref = field.TR;
+        payload += field.Offset;
+        payload_type = GetTypeFromTypeRef(ts, type_ref);
+        break;
+      }
+      case swift::reflection::RecordKind::Tuple: {
+        std::vector<TypeSystemSwift::TupleElement> elts;
+        for (auto &field : rti->getFields())
+          elts.emplace_back(ConstString(), GetTypeFromTypeRef(ts, field.TR));
+        payload_type = ts.CreateTupleType(elts);
+        break;
+      }
+      default:
+        return llvm::createStringError(
+            "unexpected kind of indirect record enum");
+      }
+    } else {
+      payload_type = ts.GetBuiltinRawPointerType();
+    }
+
+    return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
+                                     "$indirect." + name, payload,
+                                     payload_type);
+  };
+
+  // Is this single-case indirect enum? These get lowered into their payload
+  // type.
+  if (ti->getKind() != swift::reflection::TypeInfoKind::Enum)
+    return project_indirect_enum(0, "$single_case");
+
+  // Prepare to project the enum to get the active case.
+  MemoryReaderLocalBufferHolder holder;
+  AddressType address_type;
+  lldb::addr_t addr = valobj.GetAddressOf(false, &address_type);
+  if (addr == LLDB_INVALID_ADDRESS || addr == 0) {
+    Value &value = valobj.GetValue();
+    switch (value.GetValueType()) {
+    default:
+      return llvm::createStringError("unexpected address space");
+    case Value::ValueType::HostAddress: {
+      addr = value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+      if (addr == LLDB_INVALID_ADDRESS)
+        return llvm::createStringError("could not get address");
+      auto size = valobj.GetByteSize();
+      if (!size)
+        return size.takeError();
+      holder = PushLocalBuffer(addr, *size);
+      break;
+    }
+    case Value::ValueType::Scalar: {
+      addr = value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+      holder = PushLocalBuffer((uint64_t)&addr, sizeof(addr));
+      break;
+    }
+    }
+  }
+
+  swift::reflection::RemoteAddress remote_addr(addr);
+  int case_index;
+  auto *eti = llvm::cast<swift::reflection::EnumTypeInfo>(ti);
+  if (!eti->projectEnumValue(*GetMemoryReader(), remote_addr, &case_index))
+    return llvm::createStringError("could not project enum case");
+  const swift::reflection::FieldInfo &field_info = eti->getCases()[case_index];
+
+  // Is there a payload?
+  if (!field_info.TR)
+    return ValueObjectSP();
+
+  bool is_indirect_enum =
+      !field_info.Offset && field_info.TR &&
+      llvm::isa<swift::reflection::BuiltinTypeRef>(field_info.TR) &&
+      llvm::isa<swift::reflection::ReferenceTypeInfo>(field_info.TI) &&
+      llvm::cast<swift::reflection::ReferenceTypeInfo>(field_info.TI)
+              .getReferenceKind() == swift::reflection::ReferenceKind::Strong;
+  if (is_indirect_enum)
+    return project_indirect_enum(field_info.Offset, field_info.Name);
+
+  CompilerType projected_type = GetTypeFromTypeRef(ts, field_info.TR);
+  if (field_info.Offset != 0) {
+    assert(false);
+    return llvm::createStringError("enum with unexpected offset");
+  }
+  return ValueObjectCast::Create(valobj, ConstString(field_info.Name),
+                                 projected_type);
+}
+
 std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
 SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
     CompilerType type, llvm::StringRef name, ExecutionContext *exe_ctx,
@@ -1643,7 +1611,8 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
         auto info_or_err = get_child_info();
         if (!info_or_err)
           return info_or_err.takeError();
-        if (name == get_child_name()) {
+        // All enum children are index 0.
+        if (info_or_err->is_enum || name == get_child_name()) {
           // The only access paths supperted are into base classes,
           // which are always at index 0.
           for (unsigned j = 0; j < depth; ++j)
@@ -2815,50 +2784,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Value(
   return true;
 }
 
-bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_IndirectEnumCase(
-    ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
-  Status error;
-  CompilerType child_type = in_value.GetCompilerType();
-  class_type_or_name.SetCompilerType(child_type);
-
-  auto *enum_obj = in_value.GetParent();
-  lldb::addr_t box_addr = enum_obj->GetPointerValue();
-  if (box_addr == LLDB_INVALID_ADDRESS)
-    return false;
-
-  box_addr = ::MaskMaybeBridgedPointer(GetProcess(), box_addr);
-  lldb::addr_t box_location =
-      GetProcess().ReadPointerFromMemory(box_addr, error);
-  if (box_location == LLDB_INVALID_ADDRESS)
-    return false;
-
-  ABISP abi_sp = GetProcess().GetABI();
-  if (abi_sp)
-    box_location = abi_sp->FixCodeAddress(box_location);
-
-  box_location = ::MaskMaybeBridgedPointer(GetProcess(), box_location);
-  lldb::addr_t box_value = box_addr + in_value.GetByteOffset();
-  Flags type_info(child_type.GetTypeInfo());
-  if (type_info.AllSet(eTypeIsSwift) &&
-      type_info.AnySet(eTypeIsClass | eTypeIsProtocol)) {
-    ExecutionContext exe_ctx = in_value.GetExecutionContextRef();
-    ValueObjectSP valobj_sp = ValueObjectMemory::Create(
-        exe_ctx.GetBestExecutionContextScope(), "_", box_value, child_type);
-    if (!valobj_sp)
-      return false;
-
-    return GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
-                                    address, value_type, local_buffer);
-  }
-
-  // This is most likely a statically known type.
-  address.SetLoadAddress(box_value, &GetProcess().GetTarget());
-  value_type = Value::GetValueTypeFromAddressType(eAddressTypeLoad);
-  return true;
-}
-
 void SwiftLanguageRuntime::DumpTyperef(CompilerType type,
                                        TypeSystemSwiftTypeRef *module_holder,
                                        Stream *s) {
@@ -2878,8 +2803,7 @@ void SwiftLanguageRuntime::DumpTyperef(CompilerType type,
 
 Value::ValueType SwiftLanguageRuntime::GetValueType(
     ValueObject &in_value, CompilerType dynamic_type,
-    Value::ValueType static_value_type, bool is_indirect_enum_case,
-    llvm::ArrayRef<uint8_t> &local_buffer) {
+    Value::ValueType static_value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
   CompilerType static_type = in_value.GetCompilerType();
   Flags static_type_flags(static_type.GetTypeInfo());
   Flags dynamic_type_flags(dynamic_type.GetTypeInfo());
@@ -2956,7 +2880,7 @@ Value::ValueType SwiftLanguageRuntime::GetValueType(
     if (static_type_flags.AllSet(eTypeIsSwift | eTypeIsPointer) &&
         static_type_flags.AllClear(eTypeIsGenericTypeParam)) {
       // FIXME: This branch is not covered by any testcases in the test suite.
-      if (is_indirect_enum_case || static_type_flags.AllClear(eTypeIsBuiltIn))
+      if (static_type_flags.AllClear(eTypeIsBuiltIn))
         return Value::ValueType::LoadAddress;
     }
   }
@@ -3143,15 +3067,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_ClangType(
   return true;
 }
 
-static bool IsIndirectEnumCase(ValueObject &valobj) {
-  return (valobj.GetLanguageFlags() &
-          TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase) ==
-         TypeSystemSwift::LanguageFlags::eIsIndirectEnumCase;
-}
-
 static bool CouldHaveDynamicValue(ValueObject &in_value) {
-  if (IsIndirectEnumCase(in_value))
-    return true;
   CompilerType var_type(in_value.GetCompilerType());
   Flags var_type_flags(var_type.GetTypeInfo());
   if (var_type_flags.AllSet(eTypeIsSwift | eTypeInstanceIsPointer)) {
@@ -3171,7 +3087,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
   class_type_or_name.Clear();
   if (use_dynamic == lldb::eNoDynamicValues)
     return false;
-
   CompilerType val_type(in_value.GetCompilerType());
   Value::ValueType static_value_type = Value::ValueType::Invalid;
 
@@ -3194,13 +3109,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     return false;
 
   bool success = false;
-  bool is_indirect_enum_case = IsIndirectEnumCase(in_value);
-  // Type kinds with instance metadata don't need generic type resolution.
-  if (is_indirect_enum_case)
-    success = GetDynamicTypeAndAddress_IndirectEnumCase(
-        in_value, use_dynamic, class_type_or_name, address, static_value_type,
-        local_buffer);
-  else if (type_info.AnySet(eTypeIsPack))
+  if (type_info.AnySet(eTypeIsPack))
     success = GetDynamicTypeAndAddress_Pack(in_value, val_type, use_dynamic,
                                             class_type_or_name, address,
                                             static_value_type);
@@ -3258,9 +3167,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress(
     if (static_value_type == Value::ValueType::Invalid)
       static_value_type = in_value.GetValue().GetValueType();
 
-    value_type =
-        GetValueType(in_value, class_type_or_name.GetCompilerType(),
-                     static_value_type, is_indirect_enum_case, local_buffer);
+    value_type = GetValueType(in_value, class_type_or_name.GetCompilerType(),
+                              static_value_type, local_buffer);
   }
   return success;
 }
@@ -3286,8 +3194,7 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
   // made into a pointer
   if (type_flags.AnySet(eTypeIsPointer))
     should_be_made_into_ptr =
-        (type_flags.AllClear(eTypeIsGenericTypeParam | eTypeIsBuiltIn) &&
-         !IsIndirectEnumCase(static_value));
+        type_flags.AllClear(eTypeIsGenericTypeParam | eTypeIsBuiltIn);
   else if (type_flags.AnySet(eTypeInstanceIsPointer))
     should_be_made_into_ptr = !type_andor_name_flags.AllSet(eTypeIsSwift);
   else if (type_flags.AnySet(eTypeIsReference))
@@ -3389,6 +3296,21 @@ lldb::addr_t SwiftLanguageRuntime::FixupAddress(lldb::addr_t addr,
     return refd_addr;
   }
   return addr;
+}
+
+bool SwiftLanguageRuntime::IsObjCInstance(ValueObject &instance) {
+  bool found = false;
+  ForEachSuperClassType(instance, [&](SuperClassType sc) -> bool {
+    auto *tr = sc.get_typeref();
+    if (!tr)
+      return true;
+    if (llvm::isa<swift::reflection::ObjCClassTypeRef>(tr)) {
+      found = true;
+      return true;
+    }
+    return false;
+  });
+  return found;
 }
 
 llvm::Expected<const swift::reflection::TypeRef &>

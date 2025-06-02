@@ -249,8 +249,11 @@ public:
     while (tr) {
       if (fn({[=]() -> const swift::reflection::RecordTypeInfo * {
                 auto ti_or_err = GetRecordTypeInfo(*tr, tip, descriptor_finder);
-                LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), ti_or_err.takeError(),
-                                "ForEachSuperClassType: {0}");
+                if (!ti_or_err) {
+                  LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), ti_or_err.takeError(),
+                                  "ForEachSuperClassType: {0}");
+                  return nullptr;
+                }
                 return &*ti_or_err;
               },
               [=]() -> const swift::reflection::TypeRef * { return tr; }}))

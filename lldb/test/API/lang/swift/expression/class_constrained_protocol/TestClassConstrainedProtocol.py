@@ -58,6 +58,7 @@ class TestClassConstrainedProtocol(TestBase):
         f_ivar = result.GetChildMemberWithName("f")
         self.assertTrue(f_ivar.IsValid(),
                         "Could not find 'f' in self at '%s'"%(bkpt_pattern))
+
         self.assertTrue(f_ivar.GetValueAsSigned() == 12345,
                         "Wrong value for f: %d"%(f_ivar.GetValueAsSigned()))
 

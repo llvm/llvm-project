@@ -51,12 +51,16 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
   lldb::ChildCacheState Update() override;
   bool MightHaveChildren() override;
+  /// Returns the optional child, this is only used by other
+  /// dataformatters that need direct access.
+  /// For example, for an Int??, this returns an Int? child.
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  /// Returns the optional value's synthetic value.
+  /// For example, for an Int??, this returns an Int.
   lldb::ValueObjectSP GetSyntheticValue() override;
 
 private:
-  bool m_is_none;
-  bool m_children;
+  bool m_is_none = false;
   lldb::ValueObjectSP m_some;
 
   bool IsEmpty() const;

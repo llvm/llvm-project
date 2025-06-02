@@ -52,7 +52,12 @@ SwiftUnsafeType::SwiftUnsafeType(ValueObject &valobj, UnsafePointerKind kind)
 lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
   ConstString name(child_name);
   ValueObjectSP optional_value_sp(m_valobj.GetChildMemberWithName(name, true));
-  if (!optional_value_sp || !optional_value_sp->GetNumChildren()) {
+  assert(optional_value_sp && optional_value_sp->GetCompilerType()
+                                  .GetTypeName()
+                                  .GetStringRef()
+                                  .starts_with("Swift.Optional"));
+
+  if (!optional_value_sp || !optional_value_sp->GetSyntheticValue()) {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't unwrap the 'Swift.Optional' ValueObject child "
              "named {1}.",
@@ -60,9 +65,16 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
     return false;
   }
 
-  ValueObjectSP unsafe_ptr_value_sp =
-      optional_value_sp->GetChildAtIndex(0, true);
-  if (!unsafe_ptr_value_sp || !unsafe_ptr_value_sp->GetNumChildren()) {
+  lldb::SyntheticChildrenSP synth_children_sp =
+      optional_value_sp->GetSyntheticChildren();
+  if (!synth_children_sp)
+    return false;
+  auto frontend = synth_children_sp->GetFrontEnd(*optional_value_sp);
+  if (!frontend)
+    return false;
+  ValueObjectSP synth_optional_sp = frontend->GetSyntheticValue();
+
+  if (!synth_optional_sp || !synth_optional_sp->GetNumChildren()) {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't unwrap the 'Swift.UnsafePointer' ValueObject child "
              "named 'some'.",
@@ -70,7 +82,18 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
     return false;
   }
 
-  CompilerType type = unsafe_ptr_value_sp->GetCompilerType();
+  CompilerType type = synth_optional_sp->GetCompilerType();
+  ValueObjectSP unsafe_ptr_value_sp = synth_optional_sp;
+  // Work around a bug in GetSyntheticValue(), which doesn't return
+  // the result of SyntheticFrontend::GetSyntheticValue().
+  if (type.GetTypeName().GetStringRef().starts_with("Swift.Optional")) {
+    // type = TypeSystemSwiftTypeRef::GetOptionalType(type);
+
+    // if (auto v = synth_optional_sp->GetChildAtIndex(0))
+    //   unsafe_ptr_value_sp = v->GetSP();
+    // type = unsafe_ptr_value_sp->GetCompilerType();
+  }
+  assert(type.GetTypeName().GetStringRef().starts_with("Swift.Unsafe"));
   if (!type.IsValid()) {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
              "{0}: Couldn't get the compiler type for the "
@@ -92,6 +115,10 @@ lldb::addr_t SwiftUnsafeType::GetAddress(llvm::StringRef child_name) {
 
   if (argument_type.IsValid())
     m_elem_type = argument_type;
+
+  assert(
+      !m_elem_type.GetTypeName().GetStringRef().starts_with("Swift.Optional"));
+  assert(!m_elem_type.GetTypeName().GetStringRef().starts_with("Swift.Unsafe"));
 
   ValueObjectSP pointer_value_sp =
       unsafe_ptr_value_sp->GetChildAtIndex(0, true);
@@ -155,6 +182,7 @@ lldb::ChildCacheState SwiftUnsafeBufferPointer::Update() {
     value_provided_child_sp = synthetic->GetChildAtIndex(0, true);
   if (!value_provided_child_sp)
     value_provided_child_sp = count_value_sp->GetChildAtIndex(0, true);
+
   // If neither child exists, fail.
   if (!value_provided_child_sp) {
     LLDB_LOG(GetLog(LLDBLog::DataFormatters),
@@ -326,6 +354,15 @@ lldb::ChildCacheState SwiftUnsafePointer::Update() {
 
   if (argument_type.IsValid())
     m_elem_type = argument_type;
+
+  if (type.GetTypeInfo() & eTypeIsEnumeration) {
+    CompilerType argument_type =
+        type_system->GetGenericArgumentType(type.GetOpaqueQualType(), 0);
+    if (argument_type.IsValid())
+      m_elem_type = argument_type;
+  }
+  assert(
+      !m_elem_type.GetTypeName().GetStringRef().starts_with("Swift.Optional"));
 
   ValueObjectSP pointer_value_sp(m_valobj.GetChildAtIndex(0, true));
   if (!pointer_value_sp) {

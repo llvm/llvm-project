@@ -35,8 +35,7 @@ class TestBulkyEnumVariables(TestBase):
         self.expect(
             'frame variable e',
             substrs=[
-                'e = X ',
+                'e = X',
                 '0 = "hello world"',
                 'b = (a = 100, b = 200)',
                 'a = (a = 300, b = 400)'])
-
