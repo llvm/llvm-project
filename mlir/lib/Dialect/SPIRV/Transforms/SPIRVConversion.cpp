@@ -1020,35 +1020,37 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     SmallVector<Location> locs(convertedTypes.size(), newFuncOp.getLoc());
     entryBlock.addArguments(convertedTypes, locs);
 
-    // Replace the placeholder values with the new arguments. We assume there is
-    // only one block for now.
+    // Replace the placeholder values with the new arguments.
     size_t unrolledInputIdx = 0;
-    for (auto [count, op] : enumerate(entryBlock.getOperations())) {
+    newFuncOp.walk([&](Operation *op) {
       // We first look for operands that are placeholders for initially legal
       // arguments.
-      Operation &curOp = op;
-      for (auto [operandIdx, operandVal] : llvm::enumerate(op.getOperands())) {
+      for (auto [operandIdx, operandVal] : llvm::enumerate(op->getOperands())) {
         Operation *operandOp = operandVal.getDefiningOp();
         if (auto it = tmpOps.find(operandOp); it != tmpOps.end()) {
           size_t idx = operandIdx;
-          rewriter.modifyOpInPlace(&curOp, [&curOp, &newFuncOp, it, idx] {
-            curOp.setOperand(idx, newFuncOp.getArgument(it->second));
+          rewriter.modifyOpInPlace(op, [&] {
+            op->setOperand(idx, newFuncOp.getArgument(it->second));
           });
         }
       }
+
       // Since all newly created operations are in the beginning, reaching the
       // end of them means that any later `vector.insert_strided_slice` should
       // not be touched.
-      if (count >= newOpCount)
-        continue;
+      if (op->getBlock() == &entryBlock &&
+          static_cast<size_t>(std::distance(entryBlock.begin(),
+                                            op->getIterator())) >= newOpCount)
+        return;
+
       if (auto vecOp = dyn_cast<vector::InsertStridedSliceOp>(op)) {
         size_t unrolledInputNo = unrolledInputNums[unrolledInputIdx];
-        rewriter.modifyOpInPlace(&curOp, [&] {
-          curOp.setOperand(0, newFuncOp.getArgument(unrolledInputNo));
+        rewriter.modifyOpInPlace(op, [&] {
+          op->setOperand(0, newFuncOp.getArgument(unrolledInputNo));
         });
         ++unrolledInputIdx;
       }
-    }
+    });
 
     // Erase the original funcOp. The `tmpOps` do not need to be erased since
     // they have no uses and will be handled by dead-code elimination.
