@@ -749,6 +749,9 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     return;
 
   auto CheckHandler = SanitizerHandler::TypeMismatch;
+  // SO_Vptr's corresponding handler is DynamicTypeCacheMiss, not TypeMismatch.
+  // However, it relies upon IsGuaranteedNonNull, hence the instructions cannot
+  // be fully separated from the TypeMismatch.
   SanitizerScope SanScope(this,
                           {SanitizerKind::SO_Null, SanitizerKind::SO_ObjectSize,
                            SanitizerKind::SO_Alignment, SanitizerKind::SO_Vptr},
