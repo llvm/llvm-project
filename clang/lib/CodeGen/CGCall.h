@@ -96,8 +96,6 @@ class CGCallee {
     VirtualInfoStorage VirtualInfo;
   };
 
-  QualType ExprType;
-
   explicit CGCallee(SpecialKind kind) : KindOrFunctionPointer(kind) {}
 
   CGCallee(const FunctionDecl *builtinDecl, unsigned builtinID)
@@ -222,11 +220,6 @@ public:
     assert(isVirtual());
     return VirtualInfo.FTy;
   }
-
-  /// Retain the full type of the callee before canonicalization. This may have
-  /// attributes important for later processing (e.g. KCFI).
-  QualType getExprType() const { return ExprType; }
-  void setExprType(QualType Ty) { ExprType = Ty; }
 
   /// If this is a delayed callee computation of some sort, prepare
   /// a concrete callee.

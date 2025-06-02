@@ -470,14 +470,16 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
 
   // Ask the ABI to load the callee.  Note that This is modified.
   llvm::Value *ThisPtrForCall = nullptr;
-  CGCallee Callee = CGM.getCXXABI().EmitLoadOfMemberFunctionPointer(
-      *this, BO, This, ThisPtrForCall, MemFnPtr, MPT);
-  Callee.setExprType(MemFnExpr->getType());
+  CGCallee Callee =
+    CGM.getCXXABI().EmitLoadOfMemberFunctionPointer(*this, BO, This,
+                                             ThisPtrForCall, MemFnPtr, MPT);
+
+  CallArgList Args;
+
+  QualType ThisType =
+    getContext().getPointerType(getContext().getTagDeclType(RD));
 
   // Push the this ptr.
-  QualType ThisType =
-      getContext().getPointerType(getContext().getTagDeclType(RD));
-  CallArgList Args;
   Args.add(RValue::get(ThisPtrForCall), ThisType);
 
   RequiredArgs required = RequiredArgs::forPrototypePlus(FPT, 1);

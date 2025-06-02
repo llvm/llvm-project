@@ -2892,30 +2892,9 @@ void CodeGenFunction::EmitKCFIOperandBundle(
   if (!FP)
     return;
 
-  const AttributedType *AT = nullptr;
-  GlobalDecl GD = CI.getCalleeDecl();
   StringRef Salt;
-
-  auto GetAttributedType = [](QualType Ty) {
-    if (const auto *ET = dyn_cast<ElaboratedType>(Ty))
-      if (const auto *TT = dyn_cast<TypedefType>(ET->desugar()))
-        return dyn_cast<AttributedType>(TT->desugar());
-
-    return dyn_cast<AttributedType>(Ty);
-  };
-
-  if (GD) {
-    if (const auto *D = dyn_cast<ValueDecl>(GD.getDecl()))
-      AT = GetAttributedType(D->getType());
-  } else {
-    QualType ExprTy = Callee.getExprType();
-    if (!ExprTy.isNull())
-      AT = GetAttributedType(ExprTy);
-  }
-
-  if (AT)
-    if (const auto *CFISalt = dyn_cast<CFISaltAttr>(AT->getAttr()))
-      Salt = CFISalt->getSalt();
+  if (const auto &Info = FP->getExtraAttributeInfo())
+    Salt = Info.CFISalt;
 
   Bundles.emplace_back("kcfi", CGM.CreateKCFITypeId(FP->desugar(), Salt));
 }

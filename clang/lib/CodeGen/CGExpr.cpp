@@ -6260,12 +6260,11 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
           !cast<FunctionDecl>(TargetDecl)->isImmediateFunction()) &&
          "trying to emit a call to an immediate function");
 
-  CGCallee Callee = OrigCallee;
-  Callee.setExprType(CalleeType);
-
   CalleeType = getContext().getCanonicalType(CalleeType);
 
   auto PointeeType = cast<PointerType>(CalleeType)->getPointeeType();
+
+  CGCallee Callee = OrigCallee;
 
   if (SanOpts.has(SanitizerKind::Function) &&
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl)) &&

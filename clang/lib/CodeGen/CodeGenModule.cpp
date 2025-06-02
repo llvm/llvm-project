@@ -2903,9 +2903,9 @@ void CodeGenModule::setKCFIType(const FunctionDecl *FD, llvm::Function *F) {
   llvm::MDBuilder MDB(Ctx);
   llvm::StringRef Salt;
 
-  if (const auto *AT = dyn_cast<AttributedType>(FD->getType()))
-    if (const auto *CFISalt = dyn_cast<CFISaltAttr>(AT->getAttr()))
-      Salt = CFISalt->getSalt();
+  if (const auto *FP = FD->getType()->getAs<FunctionProtoType>())
+    if (const auto &Info = FP->getExtraAttributeInfo())
+      Salt = Info.CFISalt;
 
   F->setMetadata(llvm::LLVMContext::MD_kcfi_type,
                  llvm::MDNode::get(Ctx, MDB.createConstant(CreateKCFITypeId(

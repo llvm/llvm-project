@@ -5058,10 +5058,12 @@ QualType ASTContext::getFunctionTypeInternal(
       EPI.ExceptionSpec.Type, EPI.ExceptionSpec.Exceptions.size());
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
+      FunctionType::FunctionTypeExtraAttributeInfo,
       FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
       Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers,
       FunctionEffect, EffectConditionExpr>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
+      EPI.requiresFunctionProtoTypeExtraAttributeInfo(),
       EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
       EPI.ExtParameterInfos ? NumArgs : 0,

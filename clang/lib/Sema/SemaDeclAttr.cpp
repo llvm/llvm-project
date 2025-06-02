@@ -6671,29 +6671,6 @@ static void handleEnforceTCBAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(AttrTy::Create(S.Context, Argument, AL));
 }
 
-static void handleCFISaltAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  StringRef Argument;
-  if (!S.checkStringLiteralArgumentAttr(AL, 0, Argument))
-    return;
-
-  auto *Attr = CFISaltAttr::Create(S.Context, Argument, AL);
-
-  if (auto *DD = dyn_cast<ValueDecl>(D)) {
-    QualType Ty = DD->getType();
-    if (!Ty->getAs<AttributedType>())
-      DD->setType(S.Context.getAttributedType(Attr, Ty, Ty));
-  } else if (auto *TD = dyn_cast<TypedefDecl>(D)) {
-    TypeSourceInfo *TSI = TD->getTypeSourceInfo();
-    QualType Ty = TD->getUnderlyingType();
-
-    if (!Ty->hasAttr(attr::CFISalt))
-      TD->setModedTypeSourceInfo(TSI,
-                                 S.Context.getAttributedType(Attr, Ty, Ty));
-  } else {
-    llvm_unreachable("Unexpected Decl argument type!");
-  }
-}
-
 template <typename AttrTy, typename ConflictingAttrTy>
 static AttrTy *mergeEnforceTCBAttrImpl(Sema &S, Decl *D, const AttrTy &AL) {
   // Check if the new redeclaration has different leaf-ness in the same TCB.
@@ -7494,10 +7471,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_SizedBy:
   case ParsedAttr::AT_SizedByOrNull:
     handleCountedByAttrField(S, D, AL);
-    break;
-
-  case ParsedAttr::AT_CFISalt:
-    handleCFISaltAttr(S, D, AL);
     break;
 
   // Microsoft attributes:
