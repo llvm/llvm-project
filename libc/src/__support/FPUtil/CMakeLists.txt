@@ -257,4 +257,17 @@ add_header_library(
     libc.src.__support.macros.properties.types
 )
 
+add_header_library(
+  bfloat16
+  HDRS
+    bfloat16.h
+  DEPENDS
+    .fenv_impl
+    .fp_bits
+    .rounding_mode
+    libc.src.__support.CPP.bit
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.type_traits
+)
+
 add_subdirectory(generic)
