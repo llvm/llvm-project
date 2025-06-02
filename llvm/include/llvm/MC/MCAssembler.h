@@ -71,6 +71,8 @@ private:
 
   SmallVector<const MCSymbol *, 0> Symbols;
 
+  mutable SmallVector<std::pair<SMLoc, std::string>, 0> PendingErrors;
+
   MCDwarfLineTableParams LTParams;
 
   /// The set of function symbols for which a .thumb_func directive has
@@ -230,6 +232,10 @@ public:
                             uint64_t FSize) const;
 
   void reportError(SMLoc L, const Twine &Msg) const;
+  // Record pending errors during layout iteration, as they may go away once the
+  // layout is finalized.
+  void recordError(SMLoc L, const Twine &Msg) const;
+  void flushPendingErrors() const;
 
   void dump() const;
 };
