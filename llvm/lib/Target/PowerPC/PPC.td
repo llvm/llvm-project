@@ -444,7 +444,7 @@ def ProcessorFeatures {
   // dispatch for vector operations than scalar ones. For the time being,
   // this list also includes scheduling-related features since we do not have
   // enough info to create custom scheduling strategies for future CPUs.
-  list<SubtargetFeature> P9SpecificFeatures = [FeatureVectorsUseTwoUnits,FeatureHTM];
+  list<SubtargetFeature> P9SpecificFeatures = [FeatureVectorsUseTwoUnits, FeatureHTM];
   list<SubtargetFeature> P9InheritableFeatures =
     !listconcat(P8InheritableFeatures, P9AdditionalFeatures);
   list<SubtargetFeature> P9Features =
