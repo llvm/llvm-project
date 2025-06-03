@@ -26,6 +26,9 @@ class TensorDescType;
 
 namespace xegpu {
 
+/// Flatten a set of ValueRange into a single SmallVector<Value>
+SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
+
 /// If tensor descriptor has a layout attribute it is used in SIMT mode.
 /// In this mode, the distributed vector shape is determined as follows:
 /// Definitions:
@@ -79,9 +82,6 @@ template <typename T,
           typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
                                       std::is_same_v<T, OpResult>>>
 void setLayoutAttr(const T &operandOrResult, const LayoutAttr layout);
-
-/// Flatten a set of ValueRange into a single SmallVector<Value>
-SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
 
 /// Set the LayoutAttr for each OpOperand and OpResult of the given operation.
 /// If the operation contains regions, it is also applied recursively to the
