@@ -14,7 +14,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
 
 using namespace clang;
@@ -138,6 +137,11 @@ bool LoongArchTargetInfo::validateAsmConstraint(
   case 'l':
     // A signed 16-bit constant.
     Info.setRequiresImmediate(-32768, 32767);
+    return true;
+  case 'q':
+    // A general-purpose register except for $r0 and $r1 (for the csrxchg
+    // instruction)
+    Info.setAllowsRegister();
     return true;
   case 'I':
     // A signed 12-bit constant (for arithmetic instructions).

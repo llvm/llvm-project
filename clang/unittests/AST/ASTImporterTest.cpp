@@ -308,8 +308,10 @@ TEST_P(ImportExpr, ImportShuffleVectorExpr) {
   const auto Pattern = functionDecl(hasDescendant(shuffleVectorExpr(
       allOf(has(declRefExpr(to(parmVarDecl(hasName("a"))))),
             has(declRefExpr(to(parmVarDecl(hasName("b"))))),
-            has(integerLiteral(equals(0))), has(integerLiteral(equals(1))),
-            has(integerLiteral(equals(2))), has(integerLiteral(equals(3)))))));
+            has(constantExpr(has(integerLiteral(equals(0))))),
+            has(constantExpr(has(integerLiteral(equals(1))))),
+            has(constantExpr(has(integerLiteral(equals(2))))),
+            has(constantExpr(has(integerLiteral(equals(3)))))))));
   testImport(Code, Lang_C99, "", Lang_C99, Verifier, Pattern);
 }
 
@@ -7991,6 +7993,15 @@ TEST_P(ImportAttributes, ImportLocksExcluded) {
       "void test(int A1, int A2) __attribute__((locks_excluded(A1, A2)));",
       FromAttr, ToAttr);
   checkImportVariadicArg(FromAttr->args(), ToAttr->args());
+}
+
+TEST_P(ImportAttributes, ImportReentrantCapability) {
+  ReentrantCapabilityAttr *FromAttr, *ToAttr;
+  importAttr<CXXRecordDecl>(
+      R"(
+      struct __attribute__((capability("x"), reentrant_capability)) test {};
+      )",
+      FromAttr, ToAttr);
 }
 
 TEST_P(ImportAttributes, ImportC99NoThrowAttr) {

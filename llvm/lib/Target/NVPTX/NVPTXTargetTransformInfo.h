@@ -173,6 +173,8 @@ public:
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;
 
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override;
+
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const override;
   unsigned getAssumedAddrSpace(const Value *V) const override;

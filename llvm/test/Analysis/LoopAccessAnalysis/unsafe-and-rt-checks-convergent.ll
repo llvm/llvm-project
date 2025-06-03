@@ -18,26 +18,26 @@ define void @rtchecks_needed(ptr %a, ptr %b, ptr %c) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %storemerge3
 ; CHECK-NEXT:          %arrayidxA_plus_2 = getelementptr inbounds i16, ptr %a, i64 %add
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidxB = getelementptr inbounds i16, ptr %b, i64 %storemerge3
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP1]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %storemerge3
 ; CHECK-NEXT:          %arrayidxA_plus_2 = getelementptr inbounds i16, ptr %a, i64 %add
-; CHECK-NEXT:        Against group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %arrayidxC = getelementptr inbounds i16, ptr %c, i64 %storemerge3
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: (42 + %a))
 ; CHECK-NEXT:            Member: {%a,+,2}<nuw><%for.body>
 ; CHECK-NEXT:            Member: {(2 + %a),+,2}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %b High: (40 + %b))
 ; CHECK-NEXT:            Member: {%b,+,2}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %c High: (40 + %c))
 ; CHECK-NEXT:            Member: {%c,+,2}<nuw><%for.body>
 ; CHECK-EMPTY:

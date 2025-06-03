@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -o %t1.exe -Ttext=0x10000
+# RUN: ld.lld %t.o -o %t1.exe --image-base=0x10000 -Ttext=0x10000
 
 # RUN: ld.lld --just-symbols=%t1.exe -o %t2.exe --cref | FileCheck %s
 

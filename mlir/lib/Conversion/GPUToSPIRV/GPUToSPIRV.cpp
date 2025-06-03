@@ -747,6 +747,8 @@ void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       spirv::BuiltIn::NumSubgroups>,
       SingleDimLaunchConfigConversion<gpu::SubgroupSizeOp,
                                       spirv::BuiltIn::SubgroupSize>,
+      SingleDimLaunchConfigConversion<
+          gpu::LaneIdOp, spirv::BuiltIn::SubgroupLocalInvocationId>,
       WorkGroupSizeConversion, GPUAllReduceConversion,
       GPUSubgroupReduceConversion, GPUPrintfConversion>(typeConverter,
                                                         patterns.getContext());

@@ -1190,6 +1190,8 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
   return IsWave32 ? 8 : 4;
 }
 
+unsigned getArchVGPRAllocGranule() { return 4; }
+
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureGFX90AInsts))
     return 512;
@@ -1360,7 +1362,7 @@ getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
                         bool OnlyFirstRequired) {
   if (auto Attr = getIntegerPairAttribute(F, Name, OnlyFirstRequired))
-    return {Attr->first, Attr->second ? *(Attr->second) : Default.second};
+    return {Attr->first, Attr->second.value_or(Default.second)};
   return Default;
 }
 

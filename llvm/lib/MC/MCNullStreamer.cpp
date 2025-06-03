@@ -9,7 +9,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/SMLoc.h"
 namespace llvm {
 class MCContext;
 class MCExpr;
@@ -38,6 +37,7 @@ namespace {
 
     void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                           Align ByteAlignment) override {}
+    void emitSubsectionsViaSymbols() override {};
     void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
     void emitCOFFSymbolStorageClass(int StorageClass) override {}
     void emitCOFFSymbolType(int Type) override {}

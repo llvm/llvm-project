@@ -55,6 +55,15 @@ public:
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
 
+  /// CXXThisDecl - When generating code for a C++ member function,
+  /// this will hold the implicit 'this' declaration.
+  ImplicitParamDecl *cxxabiThisDecl = nullptr;
+  mlir::Value cxxabiThisValue = nullptr;
+  mlir::Value cxxThisValue = nullptr;
+
+  // Holds the Decl for the current outermost non-closure context
+  const clang::Decl *curFuncDecl = nullptr;
+
   /// The function for which code is currently being generated.
   cir::FuncOp curFn;
 
@@ -106,6 +115,7 @@ public:
 
   CIRGenTypes &getTypes() const { return cgm.getTypes(); }
 
+  const TargetInfo &getTarget() const { return cgm.getTarget(); }
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
 
 private:
@@ -282,6 +292,8 @@ public:
     // TODO: Add symbol table support
   }
 
+  LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
+
   /// Construct an address with the natural alignment of T. If a pointer to T
   /// is expected to be signed, the pointer passed to this function must have
   /// been signed, and the returned Address will have the pointer authentication
@@ -302,6 +314,22 @@ public:
 
   LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
     return LValue::makeAddr(addr, ty, baseInfo);
+  }
+
+  /// Return the address of a local variable.
+  Address getAddrOfLocalVar(const clang::VarDecl *vd) {
+    auto it = localDeclMap.find(vd);
+    assert(it != localDeclMap.end() &&
+           "Invalid argument to getAddrOfLocalVar(), no decl!");
+    return it->second;
+  }
+
+  /// Load the value for 'this'. This function is only valid while generating
+  /// code for an C++ member function.
+  /// FIXME(cir): this should return a mlir::Value!
+  mlir::Value loadCXXThis() {
+    assert(cxxThisValue && "no 'this' value for this function");
+    return cxxThisValue;
   }
 
   /// Get an appropriate 'undef' rvalue for the given type.
@@ -515,6 +543,7 @@ public:
       AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
+  LValue emitCallExprLValue(const clang::CallExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>
@@ -527,12 +556,33 @@ public:
                                    mlir::Type condType,
                                    bool buildingTopLevelCase);
 
+  LValue emitCastLValue(const CastExpr *e);
+
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
 
   mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
                                           llvm::ArrayRef<const Attr *> attrs);
+
+  RValue emitCXXMemberCallExpr(const clang::CXXMemberCallExpr *e,
+                               ReturnValueSlot returnValue);
+
+  RValue emitCXXMemberOrOperatorCall(
+      const clang::CXXMethodDecl *md, const CIRGenCallee &callee,
+      ReturnValueSlot returnValue, mlir::Value thisPtr,
+      mlir::Value implicitParam, clang::QualType implicitParamTy,
+      const clang::CallExpr *ce, CallArgList *rtlArgs);
+
+  RValue emitCXXMemberOrOperatorMemberCallExpr(
+      const clang::CallExpr *ce, const clang::CXXMethodDecl *md,
+      ReturnValueSlot returnValue, bool hasQualifier,
+      clang::NestedNameSpecifier *qualifier, bool isArrow,
+      const clang::Expr *base);
+
+  RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
+                                       const CXXMethodDecl *md,
+                                       ReturnValueSlot returnValue);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -671,6 +721,8 @@ public:
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
+  LValue emitStringLiteralLValue(const StringLiteral *e);
+
   mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
   mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
                                      bool buildingTopLevelCase);
@@ -724,6 +776,21 @@ private:
       SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
       const Stmt *loopStmt);
 
+  template <typename Op>
+  void emitOpenACCClauses(Op &op, OpenACCDirectiveKind dirKind,
+                          SourceLocation dirLoc,
+                          ArrayRef<const OpenACCClause *> clauses);
+  // The second template argument doesn't need to be a template, since it should
+  // always be an mlir::acc::LoopOp, but as this is a template anyway, we make
+  // it a template argument as this way we can avoid including the OpenACC MLIR
+  // headers here. We will count on linker failures/explicit instantiation to
+  // ensure we don't mess this up, but it is only called from 1 place, and
+  // instantiated 3x.
+  template <typename ComputeOp, typename LoopOp>
+  void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
+                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+                          ArrayRef<const OpenACCClause *> clauses);
+
 public:
   mlir::LogicalResult
   emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
@@ -750,6 +817,9 @@ public:
 
   void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
   void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
+
+private:
+  QualType getVarArgType(const Expr *arg);
 };
 
 } // namespace clang::CIRGen

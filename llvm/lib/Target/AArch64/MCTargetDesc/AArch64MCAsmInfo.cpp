@@ -33,7 +33,6 @@ static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
 
 const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
     {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
-    {MCSymbolRefExpr::VK_WEAKREF, "WEAKREF"},
     {AArch64MCExpr::M_PAGEOFF, "PAGEOFF"},
 };
 
@@ -108,7 +107,6 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   CommentString = "//";
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
-  Code32Directive = ".code\t32";
 
   Data16bitsDirective = "\t.hword\t";
   Data32bitsDirective = "\t.word\t";

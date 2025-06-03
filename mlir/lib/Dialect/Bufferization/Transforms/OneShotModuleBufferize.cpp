@@ -280,13 +280,15 @@ static void removeBufferizationAttributes(BlockArgument bbArg) {
 }
 
 /// Return the func::FuncOp called by `callOp`.
-static func::FuncOp getCalledFunction(func::CallOp callOp) {
+static func::FuncOp
+getCalledFunction(func::CallOp callOp,
+                  mlir::SymbolTableCollection &symbolTable) {
   SymbolRefAttr sym =
       llvm::dyn_cast_if_present<SymbolRefAttr>(callOp.getCallableForCallee());
   if (!sym)
     return nullptr;
   return dyn_cast_or_null<func::FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom(callOp, sym));
+      symbolTable.lookupNearestSymbolFrom(callOp, sym));
 }
 
 /// Return "true" if the given function signature has tensor semantics.
@@ -314,11 +316,15 @@ static LogicalResult getFuncOpsOrderedByCalls(
   DenseMap<func::FuncOp, DenseSet<func::FuncOp>> calledBy;
   // For each FuncOp, the number of func::CallOp it contains.
   DenseMap<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
+
+  // TODO Avoid recomputing the symbol tables every time.
+  mlir::SymbolTableCollection symbolTable;
+
   for (func::FuncOp funcOp : moduleOp.getOps<func::FuncOp>()) {
     // Collect function calls and populate the caller map.
     numberCallOpsContainedInFuncOp[funcOp] = 0;
     WalkResult res = funcOp.walk([&](func::CallOp callOp) -> WalkResult {
-      func::FuncOp calledFunction = getCalledFunction(callOp);
+      func::FuncOp calledFunction = getCalledFunction(callOp, symbolTable);
       assert(calledFunction && "could not retrieved called func::FuncOp");
       // If the called function does not have any tensors in its signature, then
       // it is not necessary to bufferize the callee before the caller.
@@ -506,7 +512,7 @@ void mlir::bufferization::removeBufferizationAttributesInModule(
 
 LogicalResult mlir::bufferization::bufferizeModuleOp(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationStatistics *statistics) {
+    BufferizationState &state, BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   IRRewriter rewriter(moduleOp.getContext());
@@ -542,10 +548,10 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
       // Buffer copies must be inserted before every write.
       OneShotBufferizationOptions updatedOptions = options;
       updatedOptions.copyBeforeWrite = true;
-      if (failed(bufferizeOp(funcOp, updatedOptions, statistics)))
+      if (failed(bufferizeOp(funcOp, updatedOptions, state, statistics)))
         return failure();
     } else {
-      if (failed(bufferizeOp(funcOp, options, statistics)))
+      if (failed(bufferizeOp(funcOp, options, state, statistics)))
         return failure();
     }
 
@@ -559,7 +565,7 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
     // Functions were already bufferized.
     if (isa<func::FuncOp>(&op) || op.hasTrait<OpTrait::SymbolTable>())
       continue;
-    if (failed(bufferizeOp(&op, options, statistics)))
+    if (failed(bufferizeOp(&op, options, state, statistics)))
       return failure();
   }
 
@@ -571,14 +577,14 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
 
 LogicalResult mlir::bufferization::runOneShotModuleBufferize(
     ModuleOp moduleOp, const OneShotBufferizationOptions &options,
-    BufferizationStatistics *statistics) {
+    BufferizationState &state, BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
          "invalid combination of bufferization flags");
   if (!options.copyBeforeWrite) {
     if (options.noAnalysisFuncFilter.empty()) {
-      if (failed(insertTensorCopies(moduleOp, options, statistics)))
+      if (failed(insertTensorCopies(moduleOp, options, state, statistics)))
         return failure();
     } else {
       // FuncOps whose names are specified in options.noAnalysisFuncFilter will
@@ -594,13 +600,14 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
       };
       OneShotBufferizationOptions updatedOptions(options);
       updatedOptions.opFilter.denyOperation(analysisFilterFn);
-      if (failed(insertTensorCopies(moduleOp, updatedOptions, statistics)))
+      if (failed(
+              insertTensorCopies(moduleOp, updatedOptions, state, statistics)))
         return failure();
     }
   }
   if (options.testAnalysisOnly)
     return success();
-  if (failed(bufferizeModuleOp(moduleOp, options, statistics)))
+  if (failed(bufferizeModuleOp(moduleOp, options, state, statistics)))
     return failure();
   return success();
 }

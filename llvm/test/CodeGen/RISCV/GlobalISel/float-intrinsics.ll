@@ -1002,7 +1002,7 @@ define i1 @fpclass(float %x) {
 ; RV64I-NEXT:    lui a4, 2048
 ; RV64I-NEXT:    lui a5, 520192
 ; RV64I-NEXT:    srli a2, a2, 33
-; RV64I-NEXT:    addiw a6, a4, -1
+; RV64I-NEXT:    addi a6, a4, -1
 ; RV64I-NEXT:    xor a0, a0, a2
 ; RV64I-NEXT:    subw a3, a2, a3
 ; RV64I-NEXT:    sltu a3, a3, a6

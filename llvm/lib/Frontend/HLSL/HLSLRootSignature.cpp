@@ -11,7 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 
 namespace llvm {
 namespace hlsl {
@@ -66,11 +70,6 @@ static raw_ostream &operator<<(raw_ostream &OS,
   }
 
   return OS;
-}
-
-void DescriptorTable::dump(raw_ostream &OS) const {
-  OS << "DescriptorTable(numClauses = " << NumClauses
-     << ", visibility = " << Visibility << ")";
 }
 
 static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
@@ -134,14 +133,145 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-void DescriptorTableClause::dump(raw_ostream &OS) const {
-  OS << Type << "(" << Reg << ", numDescriptors = " << NumDescriptors
-     << ", space = " << Space << ", offset = ";
-  if (Offset == DescriptorTableOffsetAppend)
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table) {
+  OS << "DescriptorTable(numClauses = " << Table.NumClauses
+     << ", visibility = " << Table.Visibility << ")";
+
+  return OS;
+}
+
+raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause) {
+  OS << Clause.Type << "(" << Clause.Reg
+     << ", numDescriptors = " << Clause.NumDescriptors
+     << ", space = " << Clause.Space << ", offset = ";
+  if (Clause.Offset == DescriptorTableOffsetAppend)
     OS << "DescriptorTableOffsetAppend";
   else
-    OS << Offset;
-  OS << ", flags = " << Flags << ")";
+    OS << Clause.Offset;
+  OS << ", flags = " << Clause.Flags << ")";
+
+  return OS;
+}
+
+void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
+  OS << "RootElements{";
+  bool First = true;
+  for (const RootElement &Element : Elements) {
+    if (!First)
+      OS << ",";
+    OS << " ";
+    if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
+      OS << *Clause;
+    if (const auto &Table = std::get_if<DescriptorTable>(&Element))
+      OS << *Table;
+    First = false;
+  }
+  OS << "}";
+}
+
+MDNode *MetadataBuilder::BuildRootSignature() {
+  for (const RootElement &Element : Elements) {
+    MDNode *ElementMD = nullptr;
+    if (const auto &Flags = std::get_if<RootFlags>(&Element))
+      ElementMD = BuildRootFlags(*Flags);
+    else if (const auto &Constants = std::get_if<RootConstants>(&Element))
+      ElementMD = BuildRootConstants(*Constants);
+    else if (const auto &Descriptor = std::get_if<RootDescriptor>(&Element))
+      ElementMD = BuildRootDescriptor(*Descriptor);
+    else if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
+      ElementMD = BuildDescriptorTableClause(*Clause);
+    else if (const auto &Table = std::get_if<DescriptorTable>(&Element))
+      ElementMD = BuildDescriptorTable(*Table);
+
+    // FIXME(#126586): remove once all RootElemnt variants are handled in a
+    // visit or otherwise
+    assert(ElementMD != nullptr &&
+           "Constructed an unhandled root element type.");
+
+    GeneratedMetadata.push_back(ElementMD);
+  }
+
+  return MDNode::get(Ctx, GeneratedMetadata);
+}
+
+MDNode *MetadataBuilder::BuildRootFlags(const RootFlags &Flags) {
+  IRBuilder<> Builder(Ctx);
+  Metadata *Operands[] = {
+      MDString::get(Ctx, "RootFlags"),
+      ConstantAsMetadata::get(Builder.getInt32(llvm::to_underlying(Flags))),
+  };
+  return MDNode::get(Ctx, Operands);
+}
+
+MDNode *MetadataBuilder::BuildRootConstants(const RootConstants &Constants) {
+  IRBuilder<> Builder(Ctx);
+  Metadata *Operands[] = {
+      MDString::get(Ctx, "RootConstants"),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Constants.Visibility))),
+      ConstantAsMetadata::get(Builder.getInt32(Constants.Reg.Number)),
+      ConstantAsMetadata::get(Builder.getInt32(Constants.Space)),
+      ConstantAsMetadata::get(Builder.getInt32(Constants.Num32BitConstants)),
+  };
+  return MDNode::get(Ctx, Operands);
+}
+
+MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
+  IRBuilder<> Builder(Ctx);
+  llvm::SmallString<7> Name;
+  llvm::raw_svector_ostream OS(Name);
+  OS << "Root" << ClauseType(llvm::to_underlying(Descriptor.Type));
+
+  Metadata *Operands[] = {
+      MDString::get(Ctx, OS.str()),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Descriptor.Visibility))),
+      ConstantAsMetadata::get(Builder.getInt32(Descriptor.Reg.Number)),
+      ConstantAsMetadata::get(Builder.getInt32(Descriptor.Space)),
+      ConstantAsMetadata::get(
+          Builder.getInt32(llvm::to_underlying(Descriptor.Flags))),
+  };
+  return MDNode::get(Ctx, Operands);
+}
+
+MDNode *MetadataBuilder::BuildDescriptorTable(const DescriptorTable &Table) {
+  IRBuilder<> Builder(Ctx);
+  SmallVector<Metadata *> TableOperands;
+  // Set the mandatory arguments
+  TableOperands.push_back(MDString::get(Ctx, "DescriptorTable"));
+  TableOperands.push_back(ConstantAsMetadata::get(
+      Builder.getInt32(llvm::to_underlying(Table.Visibility))));
+
+  // Remaining operands are references to the table's clauses. The in-memory
+  // representation of the Root Elements created from parsing will ensure that
+  // the previous N elements are the clauses for this table.
+  assert(Table.NumClauses <= GeneratedMetadata.size() &&
+         "Table expected all owned clauses to be generated already");
+  // So, add a refence to each clause to our operands
+  TableOperands.append(GeneratedMetadata.end() - Table.NumClauses,
+                       GeneratedMetadata.end());
+  // Then, remove those clauses from the general list of Root Elements
+  GeneratedMetadata.pop_back_n(Table.NumClauses);
+
+  return MDNode::get(Ctx, TableOperands);
+}
+
+MDNode *MetadataBuilder::BuildDescriptorTableClause(
+    const DescriptorTableClause &Clause) {
+  IRBuilder<> Builder(Ctx);
+  std::string Name;
+  llvm::raw_string_ostream OS(Name);
+  OS << Clause.Type;
+  return MDNode::get(
+      Ctx, {
+               MDString::get(Ctx, OS.str()),
+               ConstantAsMetadata::get(Builder.getInt32(Clause.NumDescriptors)),
+               ConstantAsMetadata::get(Builder.getInt32(Clause.Reg.Number)),
+               ConstantAsMetadata::get(Builder.getInt32(Clause.Space)),
+               ConstantAsMetadata::get(Builder.getInt32(Clause.Offset)),
+               ConstantAsMetadata::get(
+                   Builder.getInt32(llvm::to_underlying(Clause.Flags))),
+           });
 }
 
 } // namespace rootsig

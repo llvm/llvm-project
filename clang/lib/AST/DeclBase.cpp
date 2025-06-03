@@ -886,6 +886,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ObjCProperty:
     case MSProperty:
     case HLSLBuffer:
+    case HLSLRootSignature:
       return IDNS_Ordinary;
     case Label:
       return IDNS_Label;
@@ -1923,8 +1924,7 @@ DeclContext::lookupImpl(DeclarationName Name,
       Map = CreateStoredDeclsMap(getParentASTContext());
 
     // If we have a lookup result with no external decls, we are done.
-    std::pair<StoredDeclsMap::iterator, bool> R =
-        Map->insert(std::make_pair(Name, StoredDeclsList()));
+    std::pair<StoredDeclsMap::iterator, bool> R = Map->try_emplace(Name);
     if (!R.second && !R.first->second.hasExternalDecls())
       return R.first->second.getLookupResult();
 

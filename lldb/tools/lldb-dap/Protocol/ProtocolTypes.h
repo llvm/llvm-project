@@ -27,6 +27,8 @@
 #include <optional>
 #include <string>
 
+#define LLDB_DAP_INVALID_VARRERF UINT64_MAX
+
 namespace lldb_dap::protocol {
 
 /// An `ExceptionBreakpointsFilter` is shown in the UI as an filter option for
@@ -55,6 +57,8 @@ struct ExceptionBreakpointsFilter {
   /// shown as the placeholder text for a text box and can be translated.
   std::optional<std::string> conditionDescription;
 };
+bool fromJSON(const llvm::json::Value &, ExceptionBreakpointsFilter &,
+              llvm::json::Path);
 llvm::json::Value toJSON(const ExceptionBreakpointsFilter &);
 
 enum ColumnType : unsigned {
@@ -63,6 +67,8 @@ enum ColumnType : unsigned {
   eColumnTypeBoolean,
   eColumnTypeTimestamp
 };
+bool fromJSON(const llvm::json::Value &, ColumnType &, llvm::json::Path);
+llvm::json::Value toJSON(const ColumnType &);
 
 /// A ColumnDescriptor specifies what module attribute to show in a column of
 /// the modules view, how to format it, and what the column’s label should be.
@@ -87,6 +93,7 @@ struct ColumnDescriptor {
   /// Width of this column in characters (hint only).
   std::optional<int> width;
 };
+bool fromJSON(const llvm::json::Value &, ColumnDescriptor &, llvm::json::Path);
 llvm::json::Value toJSON(const ColumnDescriptor &);
 
 /// Names of checksum algorithms that may be supported by a debug adapter.
@@ -97,6 +104,7 @@ enum ChecksumAlgorithm : unsigned {
   eChecksumAlgorithmSHA256,
   eChecksumAlgorithmTimestamp
 };
+bool fromJSON(const llvm::json::Value &, ChecksumAlgorithm &, llvm::json::Path);
 llvm::json::Value toJSON(const ChecksumAlgorithm &);
 
 /// Describes one or more type of breakpoint a BreakpointMode applies to. This
@@ -112,6 +120,8 @@ enum BreakpointModeApplicability : unsigned {
   /// In `InstructionBreakpoint`'s.
   eBreakpointModeApplicabilityInstruction
 };
+bool fromJSON(const llvm::json::Value &, BreakpointModeApplicability &,
+              llvm::json::Path);
 llvm::json::Value toJSON(const BreakpointModeApplicability &);
 
 /// A `BreakpointMode` is provided as a option when setting breakpoints on
@@ -131,6 +141,7 @@ struct BreakpointMode {
   /// Describes one or more type of breakpoint this mode applies to.
   std::vector<BreakpointModeApplicability> appliesTo;
 };
+bool fromJSON(const llvm::json::Value &, BreakpointMode &, llvm::json::Path);
 llvm::json::Value toJSON(const BreakpointMode &);
 
 /// Debug Adapter Features flags supported by lldb-dap.
@@ -229,7 +240,11 @@ enum AdapterFeature : unsigned {
   /// The debug adapter supports the `terminateDebuggee` attribute on the
   /// `disconnect` request.
   eAdapterFeatureTerminateDebuggee,
+  eAdapterFeatureFirst = eAdapterFeatureANSIStyling,
+  eAdapterFeatureLast = eAdapterFeatureTerminateDebuggee,
 };
+bool fromJSON(const llvm::json::Value &, AdapterFeature &, llvm::json::Path);
+llvm::json::Value toJSON(const AdapterFeature &);
 
 /// Information about the capabilities of a debug adapter.
 struct Capabilities {
@@ -267,19 +282,19 @@ struct Capabilities {
 
   /// @}
 };
+bool fromJSON(const llvm::json::Value &, Capabilities &, llvm::json::Path);
 llvm::json::Value toJSON(const Capabilities &);
-
-enum PresentationHint : unsigned {
-  ePresentationHintNormal,
-  ePresentationHintEmphasize,
-  ePresentationHintDeemphasize,
-};
-llvm::json::Value toJSON(PresentationHint hint);
 
 /// A `Source` is a descriptor for source code. It is returned from the debug
 /// adapter as part of a `StackFrame` and it is used by clients when specifying
 /// breakpoints.
 struct Source {
+  enum PresentationHint : unsigned {
+    eSourcePresentationHintNormal,
+    eSourcePresentationHintEmphasize,
+    eSourcePresentationHintDeemphasize,
+  };
+
   /// The short name of the source. Every source returned from the debug adapter
   /// has a name. When sending a source to the debug adapter this name is
   /// optional.
@@ -303,8 +318,81 @@ struct Source {
 
   // unsupported keys: origin, sources, adapterData, checksums
 };
+bool fromJSON(const llvm::json::Value &, Source::PresentationHint &,
+              llvm::json::Path);
+llvm::json::Value toJSON(Source::PresentationHint);
 bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
 llvm::json::Value toJSON(const Source &);
+
+/// A `Scope` is a named container for variables. Optionally a scope can map to
+/// a source or a range within a source.
+struct Scope {
+  enum PresentationHint : unsigned {
+    eScopePresentationHintArguments,
+    eScopePresentationHintLocals,
+    eScopePresentationHintRegisters,
+    eScopePresentationHintReturnValue
+  };
+  /// Name of the scope such as 'Arguments', 'Locals', or 'Registers'. This
+  /// string is shown in the UI as is and can be translated.
+  ////
+  std::string name;
+
+  /// A hint for how to present this scope in the UI. If this attribute is
+  /// missing, the scope is shown with a generic UI.
+  /// Values:
+  /// 'arguments': Scope contains method arguments.
+  /// 'locals': Scope contains local variables.
+  /// 'registers': Scope contains registers. Only a single `registers` scope
+  /// should be returned from a `scopes` request.
+  /// 'returnValue': Scope contains one or more return values.
+  /// etc.
+  std::optional<PresentationHint> presentationHint;
+
+  /// The variables of this scope can be retrieved by passing the value of
+  /// `variablesReference` to the `variables` request as long as execution
+  /// remains suspended. See 'Lifetime of Object References' in the Overview
+  /// section for details.
+  ////
+  uint64_t variablesReference = LLDB_DAP_INVALID_VARRERF;
+
+  /// The number of named variables in this scope.
+  /// The client can use this information to present the variables in a paged UI
+  /// and fetch them in chunks.
+  std::optional<uint64_t> namedVariables;
+
+  /// The number of indexed variables in this scope.
+  /// The client can use this information to present the variables in a paged UI
+  /// and fetch them in chunks.
+  std::optional<uint64_t> indexedVariables;
+
+  /// The source for this scope.
+  std::optional<Source> source;
+
+  /// If true, the number of variables in this scope is large or expensive to
+  /// retrieve.
+  bool expensive = false;
+
+  /// The start line of the range covered by this scope.
+  std::optional<uint64_t> line;
+
+  /// Start position of the range covered by the scope. It is measured in UTF-16
+  /// code units and the client capability `columnsStartAt1` determines whether
+  /// it is 0- or 1-based.
+  std::optional<uint64_t> column;
+
+  /// The end line of the range covered by this scope.
+  std::optional<uint64_t> endLine;
+
+  /// End position of the range covered by the scope. It is measured in UTF-16
+  /// code units and the client capability `columnsStartAt1` determines whether
+  /// it is 0- or 1-based.
+  std::optional<uint64_t> endColumn;
+};
+bool fromJSON(const llvm::json::Value &Params, Scope::PresentationHint &PH,
+              llvm::json::Path);
+bool fromJSON(const llvm::json::Value &, Scope &, llvm::json::Path);
+llvm::json::Value toJSON(const Scope &);
 
 /// The granularity of one `step` in the stepping requests `next`, `stepIn`,
 /// `stepOut` and `stepBack`.
@@ -324,6 +412,7 @@ enum SteppingGranularity : unsigned {
 };
 bool fromJSON(const llvm::json::Value &, SteppingGranularity &,
               llvm::json::Path);
+llvm::json::Value toJSON(const SteppingGranularity &);
 
 /// Provides formatting information for a value.
 struct ValueFormat {
@@ -362,6 +451,7 @@ enum class BreakpointReason : unsigned {
   /// adapter does not believe it can be verified without intervention.
   eBreakpointReasonFailed,
 };
+bool fromJSON(const llvm::json::Value &, BreakpointReason &, llvm::json::Path);
 llvm::json::Value toJSON(const BreakpointReason &);
 
 /// Information about a breakpoint created in `setBreakpoints`,
@@ -413,6 +503,7 @@ struct Breakpoint {
   /// should omit this property.
   std::optional<BreakpointReason> reason;
 };
+bool fromJSON(const llvm::json::Value &, Breakpoint &, llvm::json::Path);
 llvm::json::Value toJSON(const Breakpoint &);
 
 /// Properties of a breakpoint or logpoint passed to the `setBreakpoints`
@@ -454,6 +545,7 @@ struct SourceBreakpoint {
   std::optional<std::string> mode;
 };
 bool fromJSON(const llvm::json::Value &, SourceBreakpoint &, llvm::json::Path);
+llvm::json::Value toJSON(const SourceBreakpoint &);
 
 /// Properties of a breakpoint passed to the `setFunctionBreakpoints` request.
 struct FunctionBreakpoint {
@@ -473,6 +565,7 @@ struct FunctionBreakpoint {
 };
 bool fromJSON(const llvm::json::Value &, FunctionBreakpoint &,
               llvm::json::Path);
+llvm::json::Value toJSON(const FunctionBreakpoint &);
 
 /// This enumeration defines all possible access types for data breakpoints.
 /// Values: ‘read’, ‘write’, ‘readWrite’
@@ -486,7 +579,7 @@ bool fromJSON(const llvm::json::Value &, DataBreakpointAccessType &,
 llvm::json::Value toJSON(const DataBreakpointAccessType &);
 
 /// Properties of a data breakpoint passed to the `setDataBreakpoints` request.
-struct DataBreakpointInfo {
+struct DataBreakpoint {
   /// An id representing the data. This id is returned from the
   /// `dataBreakpointInfo` request.
   std::string dataId;
@@ -501,8 +594,8 @@ struct DataBreakpointInfo {
   /// The debug adapter is expected to interpret the expression as needed.
   std::optional<std::string> hitCondition;
 };
-bool fromJSON(const llvm::json::Value &, DataBreakpointInfo &,
-              llvm::json::Path);
+bool fromJSON(const llvm::json::Value &, DataBreakpoint &, llvm::json::Path);
+llvm::json::Value toJSON(const DataBreakpoint &);
 
 /// Properties of a breakpoint passed to the `setInstructionBreakpoints` request
 struct InstructionBreakpoint {
@@ -533,6 +626,66 @@ struct InstructionBreakpoint {
 };
 bool fromJSON(const llvm::json::Value &, InstructionBreakpoint &,
               llvm::json::Path);
+
+/// Properties of a single disassembled instruction, returned by `disassemble`
+/// request.
+struct DisassembledInstruction {
+  enum PresentationHint : unsigned {
+    eDisassembledInstructionPresentationHintNormal,
+    eDisassembledInstructionPresentationHintInvalid,
+  };
+
+  /// The address of the instruction. Treated as a hex value if prefixed with
+  /// `0x`, or as a decimal value otherwise.
+  lldb::addr_t address;
+
+  /// Raw bytes representing the instruction and its operands, in an
+  /// implementation-defined format.
+  std::optional<std::string> instructionBytes;
+
+  /// Text representing the instruction and its operands, in an
+  /// implementation-defined format.
+  std::string instruction;
+
+  /// Name of the symbol that corresponds with the location of this instruction,
+  /// if any.
+  std::optional<std::string> symbol;
+
+  /// Source location that corresponds to this instruction, if any.
+  /// Should always be set (if available) on the first instruction returned,
+  /// but can be omitted afterwards if this instruction maps to the same source
+  /// file as the previous instruction.
+  std::optional<protocol::Source> location;
+
+  /// The line within the source location that corresponds to this instruction,
+  /// if any.
+  std::optional<uint32_t> line;
+
+  /// The column within the line that corresponds to this instruction, if any.
+  std::optional<uint32_t> column;
+
+  /// The end line of the range that corresponds to this instruction, if any.
+  std::optional<uint32_t> endLine;
+
+  /// The end column of the range that corresponds to this instruction, if any.
+  std::optional<uint32_t> endColumn;
+
+  /// A hint for how to present the instruction in the UI.
+  ///
+  /// A value of `invalid` may be used to indicate this instruction is 'filler'
+  /// and cannot be reached by the program. For example, unreadable memory
+  /// addresses may be presented is 'invalid.'
+  /// Values: 'normal', 'invalid'
+  std::optional<PresentationHint> presentationHint;
+
+  DisassembledInstruction() : address(0) {}
+};
+bool fromJSON(const llvm::json::Value &,
+              DisassembledInstruction::PresentationHint &, llvm::json::Path);
+llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &);
+bool fromJSON(const llvm::json::Value &, DisassembledInstruction &,
+              llvm::json::Path);
+llvm::json::Value toJSON(const DisassembledInstruction &);
 
 } // namespace lldb_dap::protocol
 
