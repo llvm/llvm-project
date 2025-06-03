@@ -2107,10 +2107,11 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
           << diag::TraitNotSatisfiedReason::NTCField << Field
           << Field->getType() << Field->getSourceRange();
   }
-  if (D->hasDeletedDestructor())
+  CXXDestructorDecl *Dtr = D->getDestructor();
+  if (D->hasDeletedDestructor() || (Dtr && !Dtr->isTrivial()))
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::DeletedDtr << 0
-        << D->getDestructor()->getSourceRange();
+        << diag::TraitNotSatisfiedReason::DeletedDtr
+        << !D->hasDeletedDestructor() << D->getDestructor()->getSourceRange();
 
   for (const CXXMethodDecl *Method : D->methods()) {
     if (Method->isTrivial() || !Method->isUserProvided()) {
@@ -2136,16 +2137,10 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
           << IsMove << Method->getSourceRange();
       break;
     }
-    default: {
+    default:
       break;
     }
-    }
   }
-  CXXDestructorDecl *Dtr = D->getDestructor();
-  if (Dtr && !Dtr->isTrivial())
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::DeletedDtr << 1
-        << Dtr->getSourceRange();
 }
 
 static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,

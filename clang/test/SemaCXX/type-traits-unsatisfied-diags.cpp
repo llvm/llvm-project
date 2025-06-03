@@ -279,4 +279,14 @@ static_assert(__is_trivially_copyable(S11));
 // expected-note@-1 {{because it has a non-trivially-copyable base 'B6'}} \
 // expected-note@-1 {{'S11' is not trivially copyable}} \
 // expected-note@#tc-S11 {{'S11' defined here}}
+
+struct S12 : B6 { // #tc-S12
+    ~S12() = delete;
+};
+static_assert(__is_trivially_copyable(S12));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S12)'}} \
+// expected-note@-1 {{because it has a non-trivially-copyable base 'B6'}} \
+// expected-note@-1 {{because it has a deleted destructor}} \
+// expected-note@-1 {{'S12' is not trivially copyable}} \
+// expected-note@#tc-S12 {{'S12' defined here}}
 }
