@@ -16,27 +16,27 @@
 namespace mlir {
 namespace vector {
 
-/// Initialize `typeConverter` with source and target materialization logic
-/// using shape_casts to/from 1D vectors.
+/// Initialize `typeConverter` with source and target materializations that
+/// use shape_casts to/from 1D vectors.
 void initializeForVectorLinearize(TypeConverter &typeConverter);
 
-/// Initialize `conversionTarget`, and `patterns` for linearization. Here
+/// Initialize `conversionTarget` and `patterns` for linearization. Here
 /// linearization means converting a single operation with 1+ vector
 /// operand/result of rank>1, into a new single operation whose vector operands
-/// and results are all of rank<=1.
+/// and results are all rank<=1.
 ///
-/// This function initializes `conversionTarget` with the set of operations that
-/// are illegal and consequently must be converted to a linearized form. It
-/// also populates the set of patterns that can be run to convert illegal
-/// operations, and what priority/benefit they have.
+/// This function initializes `conversionTarget` with a definition of which
+/// operations are illegal and consequently must be converted to a linearized
+/// (legal) form. It also populates `patterns` with the patterns that will be
+/// run to convert illegal operations, and what sets what priority/benefit they
+/// have.
 ///
-/// Note: the set of legal operations can be extended by a user if, for example,
-/// certain rank>1 vectors are considered valid, by adding additional
-/// dynamically legal ops to `conversionTarget`.
+/// Note: the set of legal operations can be extended by a user by adding
+/// additional legality rules to `conversionTarget`.
 ///
 /// Further note: the choice to use a dialect conversion design for
-/// linearization is to make it easy to reuse generic structural type
-/// conversions for linearizing scf/cf/func operations
+/// linearization is to enable reuse of generic structural type conversions for
+/// linearizing scf/cf/func operations.
 void populateForFullVectorLinearize(const TypeConverter &,
                                     ConversionTarget &conversionTarget,
                                     RewritePatternSet &patterns);
@@ -233,7 +233,7 @@ private:
 };
 
 /// Consider inserting a vector of shape `small` into a vector of shape `large`,
-/// at position `offsets`: this function enumeratates all the indices in `large`
+/// at position `offsets`: this function enumerates all the indices in `large`
 /// that are written to. The enumeration is with row-major ordering.
 ///
 /// Example: insert a 1x2 vector into a 4x5 vector at position (1,3). The 2
