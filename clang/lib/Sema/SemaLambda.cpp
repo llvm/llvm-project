@@ -2102,7 +2102,7 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
 }
 
 static SourceRange
-constructFixItRangeForUnusedCapture(Sema &S, SourceRange CaptureRange,
+ConstructFixItRangeForUnusedCapture(Sema &S, SourceRange CaptureRange,
                                     SourceLocation PrevCaptureLoc,
                                     bool CurHasPreviousCapture, bool IsLast) {
   if (!CaptureRange.isValid())
@@ -2201,7 +2201,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
             IsGenericLambda && From.isNonODRUsed() && From.isInitCapture();
         if (!NonODRUsedInitCapture) {
           bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
-          SourceRange FixItRange = constructFixItRangeForUnusedCapture(
+          SourceRange FixItRange = ConstructFixItRangeForUnusedCapture(
               *this, CaptureRange, PrevCaptureLoc, CurHasPreviousCapture,
               IsLast);
           IsCaptureUsed =

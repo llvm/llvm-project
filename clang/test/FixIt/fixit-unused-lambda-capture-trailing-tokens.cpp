@@ -55,7 +55,7 @@ int main() {
     // POINTER-NEXT:{{^.*}}|         , &b]() {
     // POINTER-NEXT:{{^.*}}|         ~
          // POINTER:{{^.*}}|     auto F4 = [&a
-    // POINTER-NEXT:{{^.*}}|                  
+    // POINTER-NEXT:{{^.*}}|                  {{$}}
     // POINTER-NEXT:{{^.*}}|         , &b]() {
     // POINTER-NEXT:{{^.*}}|         ~~~^
     };
@@ -102,7 +102,7 @@ int main() {
         , &b]() {
     // CHECK: auto F4a = [&a]() {
          // POINTER:{{^.*}}|     auto F4a = [&a
-    // POINTER-NEXT:{{^.*}}|                   
+    // POINTER-NEXT:{{^.*}}|                   {{$}}
     // POINTER-NEXT:{{^.*}}|         , &b]() {
     // POINTER-NEXT:{{^.*}}|         ~~~^
         a++;
@@ -283,7 +283,7 @@ int main() {
 
         a++;
     };
-    
+
     auto F19 = [&a /* comment */, &b /* comment */]() {
     // CHECK: auto F19 = [&a /* comment */]() {
          // POINTER:{{^.*}}|     auto F19 = [&a /* comment */, &b /* comment */]() {
@@ -423,7 +423,7 @@ int main() {
          // POINTER:{{^.*}}|     auto F25amb = [&a, &M_B]() {
     // POINTER-NEXT:{{^.*}}|                      ~~~^~~
     };
-    
+
     auto F26 = [&a, &b, &c, &d]() {
     // CHECK: auto F26 = [&a, &b]() {
          // POINTER:{{^.*}}|     auto F26 = [&a, &b, &c, &d]() {

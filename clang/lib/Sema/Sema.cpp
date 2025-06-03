@@ -100,10 +100,9 @@ Sema::getRangeForNextToken(SourceLocation Loc, bool IncludeMacros,
   SourceLocation TokenEnd = NextToken->getLastLoc();
   if (!TokenStart.isValid() || !TokenEnd.isValid())
     return SourceRange();
-  if (!IncludeMacros) {
-    if (TokenStart.isMacroID() || TokenEnd.isMacroID())
-      return SourceRange();
-  }
+  if (!IncludeMacros && (TokenStart.isMacroID() || TokenEnd.isMacroID()))
+    return SourceRange();
+
   return SourceRange(TokenStart, TokenEnd);
 }
 
