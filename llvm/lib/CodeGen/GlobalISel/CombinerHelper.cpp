@@ -388,39 +388,34 @@ void CombinerHelper::applyCombineConcatVectors(
 
 bool CombinerHelper::matchCombineBuildVectorOfBitcast(
     MachineInstr &MI, SmallVector<Register> &Ops) const {
-  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
-         "Invalid instruction");
+  auto &BV = cast<GBuildVector>(MI);
 
   // Look at the first operand for a unmerge(bitcast) from a scalar type.
-  GUnmerge *Unmerge =
-      dyn_cast<GUnmerge>(MRI.getVRegDef(MI.getOperand(1).getReg()));
-  if (!Unmerge || Unmerge->getReg(0) != MI.getOperand(1).getReg())
+  GUnmerge *Unmerge = getOpcodeDef<GUnmerge>(BV.getSourceReg(0), MRI);
+  if (!Unmerge || Unmerge->getReg(0) != BV.getSourceReg(0))
     return false;
   MachineInstr *BC = MRI.getVRegDef(Unmerge->getSourceReg());
   if (BC->getOpcode() != TargetOpcode::G_BITCAST)
     return false;
   LLT InputTy = MRI.getType(BC->getOperand(1).getReg());
   unsigned Factor = Unmerge->getNumDefs();
-  if (!InputTy.isScalar() || (MI.getNumOperands() - 1) % Factor != 0)
+  if (!InputTy.isScalar() || BV.getNumSources() % Factor != 0)
     return false;
 
   // Check if the build_vector is legal
-  LLT BVDstTy = LLT::fixed_vector((MI.getNumOperands() - 1) / Factor, InputTy);
+  LLT BVDstTy = LLT::fixed_vector(BV.getNumSources() / Factor, InputTy);
   if (!isLegalOrBeforeLegalizer(
           {TargetOpcode::G_BUILD_VECTOR, {BVDstTy, InputTy}}))
     return false;
 
   // Check all other operands are bitcasts or undef.
-  for (unsigned Idx = 0; Idx < MI.getNumOperands() - 1; Idx += Factor) {
-    GUnmerge *Unmerge =
-        dyn_cast<GUnmerge>(MRI.getVRegDef(MI.getOperand(Idx + 1).getReg()));
+  for (unsigned Idx = 0; Idx < BV.getNumSources(); Idx += Factor) {
+    GUnmerge *Unmerge = getOpcodeDef<GUnmerge>(BV.getSourceReg(Idx), MRI);
     if (!all_of(iota_range<unsigned>(0, Factor, false), [&](unsigned J) {
-          MachineInstr *Src =
-              MRI.getVRegDef(MI.getOperand(Idx + J + 1).getReg());
+          MachineInstr *Src = MRI.getVRegDef(BV.getSourceReg(Idx + J));
           if (Src->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
             return true;
-          return Unmerge &&
-                 MI.getOperand(Idx + J + 1).getReg() == Unmerge->getReg(J);
+          return Unmerge && BV.getSourceReg(Idx + J) == Unmerge->getReg(J);
         }))
       return false;
     if (!Unmerge)
