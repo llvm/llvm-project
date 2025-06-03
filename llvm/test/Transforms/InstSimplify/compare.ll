@@ -3471,8 +3471,8 @@ define <vscale x 8 x i1> @icmp_ne_i1_vec_constant_expr() {
 ; CHECK-NEXT:    ret <vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0)
 ;
 entry:
-  %1 = icmp ne <vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), zeroinitializer
-  ret <vscale x 8 x i1> %1
+  %cmp = icmp ne <vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), zeroinitializer
+  ret <vscale x 8 x i1> %cmp
 }
 
 define <vscale x 8 x i1> @icmp_eq_i1_vec_constant_expr_commuted() {
@@ -3481,8 +3481,8 @@ define <vscale x 8 x i1> @icmp_eq_i1_vec_constant_expr_commuted() {
 ; CHECK-NEXT:    ret <vscale x 8 x i1> xor (<vscale x 8 x i1> insertelement (<vscale x 8 x i1> poison, i1 true, i64 0), <vscale x 8 x i1> splat (i1 true))
 ;
 entry:
-  %1 = icmp eq <vscale x 8 x i1> zeroinitializer, insertelement (<vscale x 8 x i1> poison, i1 true, i64 0)
-  ret <vscale x 8 x i1> %1
+  %cmp = icmp eq <vscale x 8 x i1> zeroinitializer, insertelement (<vscale x 8 x i1> poison, i1 true, i64 0)
+  ret <vscale x 8 x i1> %cmp
 }
 
 declare i64 @llvm.vscale.i64()
