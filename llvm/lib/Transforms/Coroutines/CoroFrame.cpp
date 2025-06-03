@@ -1212,14 +1212,26 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   Builder.SetInsertPoint(Shape.AllocaSpillBlock,
                          Shape.AllocaSpillBlock->begin());
   SmallVector<Instruction *, 4> UsersToUpdate;
+  SmallVector<Instruction *, 4> Lifetimes;
   for (const auto &A : FrameData.Allocas) {
     AllocaInst *Alloca = A.Alloca;
     UsersToUpdate.clear();
+    Lifetimes.clear();
     for (User *U : Alloca->users()) {
       auto *I = cast<Instruction>(U);
-      if (DT.dominates(Shape.CoroBegin, I))
+      if (I->isLifetimeStartOrEnd())
+        Lifetimes.push_back(I);
+      else if (DT.dominates(Shape.CoroBegin, I))
         UsersToUpdate.push_back(I);
     }
+
+    // If it is hard to analyze, we will give up and put allocas to frame,
+    // even if they never cross suspend points.
+    // Lifetime intrinsics referring to alloca may fail guard storing to frame.
+    // Lifetime intrinsics referring to frames may block further optimizations.
+    for (auto *I : Lifetimes)
+      I->eraseFromParent();
+
     if (UsersToUpdate.empty())
       continue;
     auto *G = GetFramePointer(Alloca);
@@ -1233,17 +1245,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     for (auto *DVR : DbgVariableRecords)
       DVR->replaceVariableLocationOp(Alloca, G);
 
-    for (Instruction *I : UsersToUpdate) {
-      // It is meaningless to retain the lifetime intrinsics refer for the
-      // member of coroutine frames and the meaningless lifetime intrinsics
-      // are possible to block further optimizations.
-      if (I->isLifetimeStartOrEnd()) {
-        I->eraseFromParent();
-        continue;
-      }
-
+    for (Instruction *I : UsersToUpdate)
       I->replaceUsesOfWith(Alloca, G);
-    }
   }
   Builder.SetInsertPoint(&*Shape.getInsertPtAfterFramePtr());
   for (const auto &A : FrameData.Allocas) {
