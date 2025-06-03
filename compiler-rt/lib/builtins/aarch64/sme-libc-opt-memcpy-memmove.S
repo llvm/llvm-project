@@ -1,8 +1,20 @@
+//===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-
-// Routines taken from libc/AOR_v20.02/string/aarch64
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains assembly-optimized implementations of Scalable Matrix
+/// Extension (SME) compatible memcpy and memmove functions.
+///
+/// These implementations depend on unaligned access support.
+///
+/// Routines taken from libc/AOR_v20.02/string/aarch64.
+///
+//===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
 
@@ -234,116 +246,3 @@ END_COMPILERRT_FUNCTION(__arm_sc_memcpy)
 
 DEFINE_COMPILERRT_FUNCTION_ALIAS(__arm_sc_memmove, __arm_sc_memcpy)
 
-// This version uses FP registers. Use this only on targets with them
-#if (defined(__aarch64__) && __ARM_FP != 0) || defined(__arm64ec__)
-//
-//  __arm_sc_memset
-//
-
-#define dstin    x0
-#define val      x1
-#define valw     w1
-#define count    x2
-#define dst      x3
-#define dstend2  x4
-#define zva_val  x5
-
-DEFINE_COMPILERRT_FUNCTION(__arm_sc_memset)
-#ifdef __ARM_FEATURE_SVE
-        mov     z0.b, valw
-#else
-        bfi valw, valw, #8, #8
-        bfi valw, valw, #16, #16
-        bfi val, val, #32, #32
-        fmov d0, val
-        fmov v0.d[1], val
-#endif
-        add     dstend2, dstin, count
-
-        cmp     count, 96
-        b.hi    7f  // set_long
-        cmp     count, 16
-        b.hs    4f  // set_medium
-        mov     val, v0.D[0]
-
-        /* Set 0..15 bytes.  */
-        tbz     count, 3, 1f
-        str     val, [dstin]
-        str     val, [dstend2, -8]
-        ret
-        nop
-1:      tbz     count, 2, 2f
-        str     valw, [dstin]
-        str     valw, [dstend2, -4]
-        ret
-2:      cbz     count, 3f
-        strb    valw, [dstin]
-        tbz     count, 1, 3f
-        strh    valw, [dstend2, -2]
-3:      ret
-
-        /* Set 17..96 bytes.  */
-4:  // set_medium
-        str     q0, [dstin]
-        tbnz    count, 6, 6f  // set96
-        str     q0, [dstend2, -16]
-        tbz     count, 5, 5f
-        str     q0, [dstin, 16]
-        str     q0, [dstend2, -32]
-5:      ret
-
-        .p2align 4
-        /* Set 64..96 bytes.  Write 64 bytes from the start and
-           32 bytes from the end.  */
-6:  // set96
-        str     q0, [dstin, 16]
-        stp     q0, q0, [dstin, 32]
-        stp     q0, q0, [dstend2, -32]
-        ret
-
-        .p2align 4
-7:  // set_long
-        and     valw, valw, 255
-        bic     dst, dstin, 15
-        str     q0, [dstin]
-        cmp     count, 160
-        ccmp    valw, 0, 0, hs
-        b.ne    9f  // no_zva
-
-#ifndef SKIP_ZVA_CHECK
-        mrs     zva_val, dczid_el0
-        and     zva_val, zva_val, 31
-        cmp     zva_val, 4              /* ZVA size is 64 bytes.  */
-        b.ne    9f  // no_zva
-#endif
-        str     q0, [dst, 16]
-        stp     q0, q0, [dst, 32]
-        bic     dst, dst, 63
-        sub     count, dstend2, dst      /* Count is now 64 too large.  */
-        sub     count, count, 128       /* Adjust count and bias for loop.  */
-
-        .p2align 4
-8:  // zva_loop
-        add     dst, dst, 64
-        dc      zva, dst
-        subs    count, count, 64
-        b.hi    8b  // zva_loop
-        stp     q0, q0, [dstend2, -64]
-        stp     q0, q0, [dstend2, -32]
-        ret
-
-9:  // no_zva
-        sub     count, dstend2, dst      /* Count is 16 too large.  */
-        sub     dst, dst, 16            /* Dst is biased by -32.  */
-        sub     count, count, 64 + 16   /* Adjust count and bias for loop.  */
-10: // no_zva_loop
-        stp     q0, q0, [dst, 32]
-        stp     q0, q0, [dst, 64]!
-        subs    count, count, 64
-        b.hi    10b  // no_zva_loop
-        stp     q0, q0, [dstend2, -64]
-        stp     q0, q0, [dstend2, -32]
-        ret
-END_COMPILERRT_FUNCTION(__arm_sc_memset)
-
-#endif // __aarch64__
