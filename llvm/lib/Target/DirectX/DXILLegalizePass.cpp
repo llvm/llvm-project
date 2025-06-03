@@ -87,9 +87,8 @@ static void fixI8UseChain(Instruction &I,
     return;
   }
 
-  if (auto *Load = dyn_cast<LoadInst>(&I)) {
-    if (!I.getType()->isIntegerTy(8))
-      return;
+  if (auto *Load = dyn_cast<LoadInst>(&I);
+      Load && I.getType()->isIntegerTy(8)) {
     SmallVector<Value *> NewOperands;
     ProcessOperands(NewOperands);
     Type *ElementType = NewOperands[0]->getType();
@@ -99,6 +98,31 @@ static void fixI8UseChain(Instruction &I,
       ElementType = GEP->getSourceElementType();
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
     ReplacedValues[Load] = NewLoad;
+    ToRemove.push_back(Load);
+    return;
+  }
+
+  if (auto *Load = dyn_cast<LoadInst>(&I);
+      Load && isa<ConstantExpr>(Load->getPointerOperand())) {
+    auto *CE = dyn_cast<ConstantExpr>(Load->getPointerOperand());
+    if (!(CE->getOpcode() == Instruction::GetElementPtr))
+      return;
+    auto *GEP = dyn_cast<GEPOperator>(CE);
+    if (!GEP->getSourceElementType()->isIntegerTy(8))
+      return;
+
+    Type *ElementType = Load->getType();
+    ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
+    uint32_t ByteOffset = Offset->getZExtValue();
+    uint32_t ElemSize = Load->getDataLayout().getTypeAllocSize(ElementType);
+    uint32_t Index = ByteOffset / ElemSize;
+    Value *NewGEP = Builder.CreateGEP(ElementType, GEP->getPointerOperand(),
+                                      Builder.getInt32(Index), GEP->getName(),
+                                      GEP->getNoWrapFlags());
+
+    LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewGEP);
+    ReplacedValues[Load] = NewLoad;
+    Load->replaceAllUsesWith(NewLoad);
     ToRemove.push_back(Load);
     return;
   }
@@ -178,6 +202,8 @@ static void fixI8UseChain(Instruction &I,
     Type *ElementType = BasePtr->getType();
     if (auto *AI = dyn_cast<AllocaInst>(BasePtr))
       ElementType = AI->getAllocatedType();
+    if (auto *GV = dyn_cast<GlobalVariable>(BasePtr))
+      ElementType = GV->getValueType();
     if (auto *ArrTy = dyn_cast<ArrayType>(ElementType))
       ElementType = ArrTy->getArrayElementType();
 
