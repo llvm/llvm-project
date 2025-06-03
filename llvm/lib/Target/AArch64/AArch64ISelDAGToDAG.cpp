@@ -4637,15 +4637,38 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
 
   if (!IsXOROperand) {
     SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i64);
-    SDNode *MOV = CurDAG->getMachineNode(AArch64::MOVIv2d_ns, DL, VT, Zero);
+    SDNode *MOV =
+        CurDAG->getMachineNode(AArch64::MOVIv2d_ns, DL, MVT::v2i64, Zero);
     SDValue MOVIV = SDValue(MOV, 0);
     R1 = N1->getOperand(0);
     R2 = MOVIV;
   }
 
-  SDValue Ops[] = {R1, R2, Imm};
-  CurDAG->SelectNodeTo(N, AArch64::XAR, N0.getValueType(), Ops);
+  // If the input is a v1i64, widen to a v2i64 to use XAR.
+  assert((VT == MVT::v1i64 || VT == MVT::v2i64) && "Unexpected XAR type!");
+  if (VT == MVT::v1i64) {
+    EVT SVT = MVT::v2i64;
+    SDValue Undef =
+        SDValue(CurDAG->getMachineNode(AArch64::IMPLICIT_DEF, DL, SVT), 0);
+    SDValue DSub = CurDAG->getTargetConstant(AArch64::dsub, DL, MVT::i32);
+    R1 = SDValue(CurDAG->getMachineNode(AArch64::INSERT_SUBREG, DL, SVT, Undef,
+                                        R1, DSub),
+                 0);
+    if (R2.getValueType() == MVT::v1i64)
+      R2 = SDValue(CurDAG->getMachineNode(AArch64::INSERT_SUBREG, DL, SVT,
+                                          Undef, R2, DSub),
+                   0);
+  }
 
+  SDValue Ops[] = {R1, R2, Imm};
+  SDNode *XAR = CurDAG->getMachineNode(AArch64::XAR, DL, MVT::v2i64, Ops);
+
+  if (VT == MVT::v1i64) {
+    SDValue DSub = CurDAG->getTargetConstant(AArch64::dsub, DL, MVT::i32);
+    XAR = CurDAG->getMachineNode(AArch64::EXTRACT_SUBREG, DL, VT,
+                                 SDValue(XAR, 0), DSub);
+  }
+  ReplaceNode(N, XAR);
   return true;
 }
 
@@ -7216,57 +7239,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
-  case AArch64ISD::SVE_LD2_MERGE_ZERO: {
-    if (VT == MVT::nxv16i8) {
-      SelectPredicatedLoad(Node, 2, 0, AArch64::LD2B_IMM, AArch64::LD2B);
-      return;
-    } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-               VT == MVT::nxv8bf16) {
-      SelectPredicatedLoad(Node, 2, 1, AArch64::LD2H_IMM, AArch64::LD2H);
-      return;
-    } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-      SelectPredicatedLoad(Node, 2, 2, AArch64::LD2W_IMM, AArch64::LD2W);
-      return;
-    } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-      SelectPredicatedLoad(Node, 2, 3, AArch64::LD2D_IMM, AArch64::LD2D);
-      return;
-    }
-    break;
-  }
-  case AArch64ISD::SVE_LD3_MERGE_ZERO: {
-    if (VT == MVT::nxv16i8) {
-      SelectPredicatedLoad(Node, 3, 0, AArch64::LD3B_IMM, AArch64::LD3B);
-      return;
-    } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-               VT == MVT::nxv8bf16) {
-      SelectPredicatedLoad(Node, 3, 1, AArch64::LD3H_IMM, AArch64::LD3H);
-      return;
-    } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-      SelectPredicatedLoad(Node, 3, 2, AArch64::LD3W_IMM, AArch64::LD3W);
-      return;
-    } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-      SelectPredicatedLoad(Node, 3, 3, AArch64::LD3D_IMM, AArch64::LD3D);
-      return;
-    }
-    break;
-  }
-  case AArch64ISD::SVE_LD4_MERGE_ZERO: {
-    if (VT == MVT::nxv16i8) {
-      SelectPredicatedLoad(Node, 4, 0, AArch64::LD4B_IMM, AArch64::LD4B);
-      return;
-    } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
-               VT == MVT::nxv8bf16) {
-      SelectPredicatedLoad(Node, 4, 1, AArch64::LD4H_IMM, AArch64::LD4H);
-      return;
-    } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-      SelectPredicatedLoad(Node, 4, 2, AArch64::LD4W_IMM, AArch64::LD4W);
-      return;
-    } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-      SelectPredicatedLoad(Node, 4, 3, AArch64::LD4D_IMM, AArch64::LD4D);
-      return;
-    }
-    break;
-  }
   }
 
   // Select the default instruction
@@ -7340,15 +7312,6 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
     return cast<VTSDNode>(Root->getOperand(3))->getVT();
   case AArch64ISD::ST1_PRED:
     return cast<VTSDNode>(Root->getOperand(4))->getVT();
-  case AArch64ISD::SVE_LD2_MERGE_ZERO:
-    return getPackedVectorTypeFromPredicateType(
-        Ctx, Root->getOperand(1)->getValueType(0), /*NumVec=*/2);
-  case AArch64ISD::SVE_LD3_MERGE_ZERO:
-    return getPackedVectorTypeFromPredicateType(
-        Ctx, Root->getOperand(1)->getValueType(0), /*NumVec=*/3);
-  case AArch64ISD::SVE_LD4_MERGE_ZERO:
-    return getPackedVectorTypeFromPredicateType(
-        Ctx, Root->getOperand(1)->getValueType(0), /*NumVec=*/4);
   default:
     break;
   }

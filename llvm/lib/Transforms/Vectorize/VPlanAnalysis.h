@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/IR/Type.h"
 
 namespace llvm {
@@ -27,6 +28,8 @@ struct VPWidenSelectRecipe;
 class VPReplicateRecipe;
 class VPRecipeBase;
 class VPlan;
+class Value;
+class TargetTransformInfo;
 class Type;
 
 /// An analysis for type-inference for VPValues.
@@ -58,6 +61,8 @@ public:
   VPTypeAnalysis(Type *CanonicalIVTy)
       : CanonicalIVTy(CanonicalIVTy), Ctx(CanonicalIVTy->getContext()) {}
 
+  VPTypeAnalysis(const VPlan &Plan);
+
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);
 
@@ -68,6 +73,30 @@ public:
 // Collect a VPlan's ephemeral recipes (those used only by an assume).
 void collectEphemeralRecipesForVPlan(VPlan &Plan,
                                      DenseSet<VPRecipeBase *> &EphRecipes);
+
+/// A struct that represents some properties of the register usage
+/// of a loop.
+struct VPRegisterUsage {
+  /// Holds the number of loop invariant values that are used in the loop.
+  /// The key is ClassID of target-provided register class.
+  SmallMapVector<unsigned, unsigned, 4> LoopInvariantRegs;
+  /// Holds the maximum number of concurrent live intervals in the loop.
+  /// The key is ClassID of target-provided register class.
+  SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
+
+  /// Check if any of the tracked live intervals exceeds the number of
+  /// available registers for the target.
+  bool exceedsMaxNumRegs(const TargetTransformInfo &TTI) const;
+};
+
+/// Estimate the register usage for \p Plan and vectorization factors in \p VFs
+/// by calculating the highest number of values that are live at a single
+/// location as a rough estimate. Returns the register usage for each VF in \p
+/// VFs.
+SmallVector<VPRegisterUsage, 8> calculateRegisterUsageForPlan(
+    VPlan &Plan, ArrayRef<ElementCount> VFs, const TargetTransformInfo &TTI,
+    const SmallPtrSetImpl<const Value *> &ValuesToIgnore);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H

@@ -1345,8 +1345,14 @@ void bar();
 #pragma acc routine seq bind
 void BCP1();
 
-  // expected-error@+1{{expected identifier or string literal}}
+  // expected-error@+1{{expected identifier or string literal in OpenACC 'bind' clause}}
 #pragma acc routine(BCP1) seq bind()
+
+  // expected-error@+1{{expected identifier or string literal in OpenACC 'bind' clause}}
+#pragma acc routine(BCP1) seq bind(1)
+
+  // expected-error@+1{{expected identifier or string literal in OpenACC 'bind' clause}}
+#pragma acc routine(BCP1) gang bind(0xF)
 
 // expected-error@+1{{expected function or lambda declaration for 'routine' construct}}
 #pragma acc routine seq bind("ReductionClauseParsing")

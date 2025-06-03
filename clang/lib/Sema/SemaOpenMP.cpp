@@ -2307,7 +2307,7 @@ bool SemaOpenMP::isInOpenMPTargetExecutionDirective() const {
 
 bool SemaOpenMP::isOpenMPRebuildMemberExpr(ValueDecl *D) {
   // Only rebuild for Field.
-  if (!dyn_cast<FieldDecl>(D))
+  if (!isa<FieldDecl>(D))
     return false;
   DSAStackTy::DSAVarData DVarPrivate = DSAStack->hasDSA(
       D,
@@ -9648,6 +9648,13 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                 DSAStackTy &DSA,
                 SemaOpenMP::VarsWithInheritedDSAType &VarsWithImplicitDSA,
                 OMPLoopBasedDirective::HelperExprs &Built) {
+  // If either of the loop expressions exist and contain errors, we bail out
+  // early because diagnostics have already been emitted and we can't reliably
+  // check more about the loop.
+  if ((CollapseLoopCountExpr && CollapseLoopCountExpr->containsErrors()) ||
+      (OrderedLoopCountExpr && OrderedLoopCountExpr->containsErrors()))
+    return 0;
+
   unsigned NestedLoopCount = 1;
   bool SupportsNonPerfectlyNested = (SemaRef.LangOpts.OpenMP >= 50) &&
                                     !isOpenMPLoopTransformationDirective(DKind);
@@ -11756,51 +11763,61 @@ bool OpenMPAtomicCompareChecker::checkCondUpdateStmt(IfStmt *S,
   X = BO->getLHS();
 
   auto *Cond = dyn_cast<BinaryOperator>(S->getCond());
-  if (!Cond) {
+  auto *Call = dyn_cast<CXXOperatorCallExpr>(S->getCond());
+  Expr *LHS = nullptr;
+  Expr *RHS = nullptr;
+  if (Cond) {
+    LHS = Cond->getLHS();
+    RHS = Cond->getRHS();
+  } else if (Call) {
+    LHS = Call->getArg(0);
+    RHS = Call->getArg(1);
+  } else {
     ErrorInfo.Error = ErrorTy::NotABinaryOp;
     ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = S->getCond()->getExprLoc();
     ErrorInfo.ErrorRange = ErrorInfo.NoteRange = S->getCond()->getSourceRange();
     return false;
   }
 
-  switch (Cond->getOpcode()) {
-  case BO_EQ: {
-    C = Cond;
+  if ((Cond && Cond->getOpcode() == BO_EQ) ||
+      (Call && Call->getOperator() == OverloadedOperatorKind::OO_EqualEqual)) {
+    C = S->getCond();
     D = BO->getRHS();
-    if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS())) {
-      E = Cond->getRHS();
-    } else if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getRHS())) {
-      E = Cond->getLHS();
+    if (checkIfTwoExprsAreSame(ContextRef, X, LHS)) {
+      E = RHS;
+    } else if (checkIfTwoExprsAreSame(ContextRef, X, RHS)) {
+      E = LHS;
     } else {
       ErrorInfo.Error = ErrorTy::InvalidComparison;
-      ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
-      ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
+      ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = S->getCond()->getExprLoc();
+      ErrorInfo.ErrorRange = ErrorInfo.NoteRange =
+          S->getCond()->getSourceRange();
       return false;
     }
-    break;
-  }
-  case BO_LT:
-  case BO_GT: {
+  } else if ((Cond &&
+              (Cond->getOpcode() == BO_LT || Cond->getOpcode() == BO_GT)) ||
+             (Call &&
+              (Call->getOperator() == OverloadedOperatorKind::OO_Less ||
+               Call->getOperator() == OverloadedOperatorKind::OO_Greater))) {
     E = BO->getRHS();
-    if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS()) &&
-        checkIfTwoExprsAreSame(ContextRef, E, Cond->getRHS())) {
-      C = Cond;
-    } else if (checkIfTwoExprsAreSame(ContextRef, E, Cond->getLHS()) &&
-               checkIfTwoExprsAreSame(ContextRef, X, Cond->getRHS())) {
-      C = Cond;
+    if (checkIfTwoExprsAreSame(ContextRef, X, LHS) &&
+        checkIfTwoExprsAreSame(ContextRef, E, RHS)) {
+      C = S->getCond();
+    } else if (checkIfTwoExprsAreSame(ContextRef, E, LHS) &&
+               checkIfTwoExprsAreSame(ContextRef, X, RHS)) {
+      C = S->getCond();
       IsXBinopExpr = false;
     } else {
       ErrorInfo.Error = ErrorTy::InvalidComparison;
-      ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
-      ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
+      ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = S->getCond()->getExprLoc();
+      ErrorInfo.ErrorRange = ErrorInfo.NoteRange =
+          S->getCond()->getSourceRange();
       return false;
     }
-    break;
-  }
-  default:
+  } else {
     ErrorInfo.Error = ErrorTy::InvalidBinaryOp;
-    ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
-    ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
+    ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = S->getCond()->getExprLoc();
+    ErrorInfo.ErrorRange = ErrorInfo.NoteRange = S->getCond()->getSourceRange();
     return false;
   }
 
@@ -11850,7 +11867,16 @@ bool OpenMPAtomicCompareChecker::checkCondExprStmt(Stmt *S,
   }
 
   auto *Cond = dyn_cast<BinaryOperator>(CO->getCond());
-  if (!Cond) {
+  auto *Call = dyn_cast<CXXOperatorCallExpr>(CO->getCond());
+  Expr *LHS = nullptr;
+  Expr *RHS = nullptr;
+  if (Cond) {
+    LHS = Cond->getLHS();
+    RHS = Cond->getRHS();
+  } else if (Call) {
+    LHS = Call->getArg(0);
+    RHS = Call->getArg(1);
+  } else {
     ErrorInfo.Error = ErrorTy::NotABinaryOp;
     ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = CO->getCond()->getExprLoc();
     ErrorInfo.ErrorRange = ErrorInfo.NoteRange =
@@ -11858,44 +11884,47 @@ bool OpenMPAtomicCompareChecker::checkCondExprStmt(Stmt *S,
     return false;
   }
 
-  switch (Cond->getOpcode()) {
-  case BO_EQ: {
-    C = Cond;
+  if ((Cond && Cond->getOpcode() == BO_EQ) ||
+      (Call && Call->getOperator() == OverloadedOperatorKind::OO_EqualEqual)) {
+    C = CO->getCond();
     D = CO->getTrueExpr();
-    if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS())) {
-      E = Cond->getRHS();
-    } else if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getRHS())) {
-      E = Cond->getLHS();
+    if (checkIfTwoExprsAreSame(ContextRef, X, LHS)) {
+      E = RHS;
+    } else if (checkIfTwoExprsAreSame(ContextRef, X, RHS)) {
+      E = LHS;
     } else {
       ErrorInfo.Error = ErrorTy::InvalidComparison;
-      ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
-      ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
+      ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = CO->getCond()->getExprLoc();
+      ErrorInfo.ErrorRange = ErrorInfo.NoteRange =
+          CO->getCond()->getSourceRange();
       return false;
     }
-    break;
-  }
-  case BO_LT:
-  case BO_GT: {
+  } else if ((Cond &&
+              (Cond->getOpcode() == BO_LT || Cond->getOpcode() == BO_GT)) ||
+             (Call &&
+              (Call->getOperator() == OverloadedOperatorKind::OO_Less ||
+               Call->getOperator() == OverloadedOperatorKind::OO_Greater))) {
+
     E = CO->getTrueExpr();
-    if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS()) &&
-        checkIfTwoExprsAreSame(ContextRef, E, Cond->getRHS())) {
-      C = Cond;
-    } else if (checkIfTwoExprsAreSame(ContextRef, E, Cond->getLHS()) &&
-               checkIfTwoExprsAreSame(ContextRef, X, Cond->getRHS())) {
-      C = Cond;
+    if (checkIfTwoExprsAreSame(ContextRef, X, LHS) &&
+        checkIfTwoExprsAreSame(ContextRef, E, RHS)) {
+      C = CO->getCond();
+    } else if (checkIfTwoExprsAreSame(ContextRef, E, LHS) &&
+               checkIfTwoExprsAreSame(ContextRef, X, RHS)) {
+      C = CO->getCond();
       IsXBinopExpr = false;
     } else {
       ErrorInfo.Error = ErrorTy::InvalidComparison;
-      ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
-      ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
+      ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = CO->getCond()->getExprLoc();
+      ErrorInfo.ErrorRange = ErrorInfo.NoteRange =
+          CO->getCond()->getSourceRange();
       return false;
     }
-    break;
-  }
-  default:
+  } else {
     ErrorInfo.Error = ErrorTy::InvalidBinaryOp;
-    ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
-    ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
+    ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = CO->getCond()->getExprLoc();
+    ErrorInfo.ErrorRange = ErrorInfo.NoteRange =
+        CO->getCond()->getSourceRange();
     return false;
   }
 
@@ -12056,31 +12085,41 @@ bool OpenMPAtomicCompareCaptureChecker::checkForm3(IfStmt *S,
   D = BO->getRHS();
 
   auto *Cond = dyn_cast<BinaryOperator>(S->getCond());
-  if (!Cond) {
+  auto *Call = dyn_cast<CXXOperatorCallExpr>(S->getCond());
+  Expr *LHS = nullptr;
+  Expr *RHS = nullptr;
+  if (Cond) {
+    LHS = Cond->getLHS();
+    RHS = Cond->getRHS();
+  } else if (Call) {
+    LHS = Call->getArg(0);
+    RHS = Call->getArg(1);
+  } else {
     ErrorInfo.Error = ErrorTy::NotABinaryOp;
     ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = S->getCond()->getExprLoc();
     ErrorInfo.ErrorRange = ErrorInfo.NoteRange = S->getCond()->getSourceRange();
     return false;
   }
-  if (Cond->getOpcode() != BO_EQ) {
+  if ((Cond && Cond->getOpcode() != BO_EQ) ||
+      (Call && Call->getOperator() != OverloadedOperatorKind::OO_EqualEqual)) {
     ErrorInfo.Error = ErrorTy::NotEQ;
-    ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
-    ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
+    ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = S->getCond()->getExprLoc();
+    ErrorInfo.ErrorRange = ErrorInfo.NoteRange = S->getCond()->getSourceRange();
     return false;
   }
 
-  if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getLHS())) {
-    E = Cond->getRHS();
-  } else if (checkIfTwoExprsAreSame(ContextRef, X, Cond->getRHS())) {
-    E = Cond->getLHS();
+  if (checkIfTwoExprsAreSame(ContextRef, X, LHS)) {
+    E = RHS;
+  } else if (checkIfTwoExprsAreSame(ContextRef, X, RHS)) {
+    E = LHS;
   } else {
     ErrorInfo.Error = ErrorTy::InvalidComparison;
-    ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = Cond->getExprLoc();
-    ErrorInfo.ErrorRange = ErrorInfo.NoteRange = Cond->getSourceRange();
+    ErrorInfo.ErrorLoc = ErrorInfo.NoteLoc = S->getCond()->getExprLoc();
+    ErrorInfo.ErrorRange = ErrorInfo.NoteRange = S->getCond()->getSourceRange();
     return false;
   }
 
-  C = Cond;
+  C = S->getCond();
 
   if (!S->getElse()) {
     ErrorInfo.Error = ErrorTy::NoElse;
@@ -14544,7 +14583,10 @@ StmtResult SemaOpenMP::ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
 
   const auto *SizesClause =
       OMPExecutableDirective::getSingleClause<OMPSizesClause>(Clauses);
-  if (!SizesClause || llvm::is_contained(SizesClause->getSizesRefs(), nullptr))
+  if (!SizesClause ||
+      llvm::any_of(SizesClause->getSizesRefs(), [](const Expr *SizeExpr) {
+        return !SizeExpr || SizeExpr->containsErrors();
+      }))
     return StmtError();
   unsigned NumLoops = SizesClause->getNumSizes();
 
@@ -15937,6 +15979,13 @@ ExprResult SemaOpenMP::VerifyPositiveIntegerConstantInClause(
         << E->getSourceRange();
     return ExprError();
   }
+
+  if (!Result.isRepresentableByInt64()) {
+    Diag(E->getExprLoc(), diag::err_omp_large_expression_in_clause)
+        << getOpenMPClauseNameForDiag(CKind) << E->getSourceRange();
+    return ExprError();
+  }
+
   if (CKind == OMPC_collapse && DSAStack->getAssociatedLoops() == 1)
     DSAStack->setAssociatedLoops(Result.getExtValue());
   else if (CKind == OMPC_ordered)

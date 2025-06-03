@@ -251,8 +251,8 @@ TokenVerifier::TokenVerifier(std::string body) {
   // We only care about tokens and not their original source locations. If we
   // move the whole expression to only be in one line we can simplify the
   // following code that extracts the token contents.
-  std::replace(body.begin(), body.end(), '\n', ' ');
-  std::replace(body.begin(), body.end(), '\r', ' ');
+  llvm::replace(body, '\n', ' ');
+  llvm::replace(body, '\r', ' ');
 
   FileSystemOptions file_opts;
   FileManager file_mgr(file_opts,
@@ -261,8 +261,7 @@ TokenVerifier::TokenVerifier(std::string body) {
   // Let's build the actual source code Clang needs and setup some utility
   // objects.
   llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_ids(new DiagnosticIDs());
-  llvm::IntrusiveRefCntPtr<DiagnosticOptions> diags_opts(
-      new DiagnosticOptions());
+  DiagnosticOptions diags_opts;
   DiagnosticsEngine diags(diag_ids, diags_opts);
   clang::SourceManager SM(diags, file_mgr);
   auto buf = llvm::MemoryBuffer::getMemBuffer(body);

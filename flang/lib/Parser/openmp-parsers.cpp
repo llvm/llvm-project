@@ -98,10 +98,12 @@ struct OmpDirectiveNameParser {
   using Token = TokenStringMatch<false, false>;
 
   std::optional<resultType> Parse(ParseState &state) const {
+    auto begin{state.GetLocation()};
     for (const NameWithId &nid : directives()) {
       if (attempt(Token(nid.first.data())).Parse(state)) {
         OmpDirectiveName n;
         n.v = nid.second;
+        n.source = parser::CharBlock(begin, state.GetLocation());
         return n;
       }
     }
@@ -705,7 +707,7 @@ TYPE_PARSER(construct<OmpMapClause>(
 // [OpenMP 5.0]
 // 2.19.7.2 defaultmap(implicit-behavior[:variable-category])
 //  implicit-behavior -> ALLOC | TO | FROM | TOFROM | FIRSRTPRIVATE | NONE |
-//  DEFAULT
+//  DEFAULT | PRESENT
 //  variable-category -> ALL | SCALAR | AGGREGATE | ALLOCATABLE | POINTER
 TYPE_PARSER(construct<OmpDefaultmapClause>(
     construct<OmpDefaultmapClause::ImplicitBehavior>(
@@ -716,7 +718,8 @@ TYPE_PARSER(construct<OmpDefaultmapClause>(
         "FIRSTPRIVATE" >>
             pure(OmpDefaultmapClause::ImplicitBehavior::Firstprivate) ||
         "NONE" >> pure(OmpDefaultmapClause::ImplicitBehavior::None) ||
-        "DEFAULT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Default)),
+        "DEFAULT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Default) ||
+        "PRESENT" >> pure(OmpDefaultmapClause::ImplicitBehavior::Present)),
     maybe(":" >> nonemptyList(Parser<OmpDefaultmapClause::Modifier>{}))))
 
 TYPE_PARSER(construct<OmpScheduleClause::Kind>(
@@ -1103,18 +1106,8 @@ TYPE_PARSER( //
     "WHEN" >> construct<OmpClause>(construct<OmpClause::When>(
                   parenthesized(Parser<OmpWhenClause>{}))) ||
     // Cancellable constructs
-    "DO"_id >=
-        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-            Parser<OmpCancellationConstructTypeClause>{})) ||
-    "PARALLEL"_id >=
-        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-            Parser<OmpCancellationConstructTypeClause>{})) ||
-    "SECTIONS"_id >=
-        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-            Parser<OmpCancellationConstructTypeClause>{})) ||
-    "TASKGROUP"_id >=
-        construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
-            Parser<OmpCancellationConstructTypeClause>{})))
+    construct<OmpClause>(construct<OmpClause::CancellationConstructType>(
+        Parser<OmpCancellationConstructTypeClause>{})))
 
 // [Clause, [Clause], ...]
 TYPE_PARSER(sourced(construct<OmpClauseList>(
@@ -1396,8 +1389,28 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<OpenMPDeclareTargetConstruct>(
     verbatim("DECLARE TARGET"_tok), Parser<OmpDeclareTargetSpecifier>{})))
 
+static OmpMapperSpecifier ConstructOmpMapperSpecifier(
+    std::optional<Name> &&mapperName, TypeSpec &&typeSpec, Name &&varName) {
+  // If a name is present, parse: name ":" typeSpec "::" name
+  // This matches the syntax: <mapper-name> : <type-spec> :: <variable-name>
+  if (mapperName.has_value() && mapperName->ToString() != "default") {
+    return OmpMapperSpecifier{
+        mapperName->ToString(), std::move(typeSpec), std::move(varName)};
+  }
+  // If the name is missing, use the DerivedTypeSpec name to construct the
+  // default mapper name.
+  // This matches the syntax: <type-spec> :: <variable-name>
+  if (DerivedTypeSpec * derived{std::get_if<DerivedTypeSpec>(&typeSpec.u)}) {
+    return OmpMapperSpecifier{
+        std::get<Name>(derived->t).ToString() + llvm::omp::OmpDefaultMapperName,
+        std::move(typeSpec), std::move(varName)};
+  }
+  return OmpMapperSpecifier{std::string("omp.default.mapper"),
+      std::move(typeSpec), std::move(varName)};
+}
+
 // mapper-specifier
-TYPE_PARSER(construct<OmpMapperSpecifier>(
+TYPE_PARSER(applyFunction<OmpMapperSpecifier>(ConstructOmpMapperSpecifier,
     maybe(name / ":" / !":"_tok), typeSpec / "::", name))
 
 // OpenMP 5.2: 5.8.8 Declare Mapper Construct

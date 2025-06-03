@@ -1087,10 +1087,7 @@ public:
   }
   virtual bool preferAlternateOpcodeVectorization() const { return true; }
 
-  virtual bool preferPredicatedReductionSelect(unsigned Opcode,
-                                               Type *Ty) const {
-    return false;
-  }
+  virtual bool preferPredicatedReductionSelect() const { return false; }
 
   virtual bool preferEpilogueVectorization() const { return true; }
 

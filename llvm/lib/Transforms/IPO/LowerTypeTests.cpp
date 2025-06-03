@@ -285,8 +285,6 @@ class GlobalTypeMember final : TrailingObjects<GlobalTypeMember, MDNode *> {
   // module and its jumptable entry needs to be exported to thinlto backends.
   bool IsExported;
 
-  size_t numTrailingObjects(OverloadToken<MDNode *>) const { return NTypes; }
-
 public:
   static GlobalTypeMember *create(BumpPtrAllocator &Alloc, GlobalObject *GO,
                                   bool IsJumpTableCanonical, bool IsExported,
@@ -297,7 +295,7 @@ public:
     GTM->NTypes = Types.size();
     GTM->IsJumpTableCanonical = IsJumpTableCanonical;
     GTM->IsExported = IsExported;
-    llvm::copy(Types, GTM->getTrailingObjects<MDNode *>());
+    llvm::copy(Types, GTM->getTrailingObjects());
     return GTM;
   }
 
@@ -313,9 +311,7 @@ public:
     return IsExported;
   }
 
-  ArrayRef<MDNode *> types() const {
-    return ArrayRef(getTrailingObjects<MDNode *>(), NTypes);
-  }
+  ArrayRef<MDNode *> types() const { return getTrailingObjects(NTypes); }
 };
 
 struct ICallBranchFunnel final
@@ -329,13 +325,13 @@ struct ICallBranchFunnel final
     Call->CI = CI;
     Call->UniqueId = UniqueId;
     Call->NTargets = Targets.size();
-    llvm::copy(Targets, Call->getTrailingObjects<GlobalTypeMember *>());
+    llvm::copy(Targets, Call->getTrailingObjects());
     return Call;
   }
 
   CallInst *CI;
   ArrayRef<GlobalTypeMember *> targets() const {
-    return ArrayRef(getTrailingObjects<GlobalTypeMember *>(), NTargets);
+    return getTrailingObjects(NTargets);
   }
 
   unsigned UniqueId;
@@ -783,15 +779,9 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   // result, causing the comparison to fail if they are nonzero. The rotate
   // also conveniently gives us a bit offset to use during the load from
   // the bitset.
-  Value *OffsetSHR =
-      B.CreateLShr(PtrOffset, B.CreateZExt(TIL.AlignLog2, IntPtrTy));
-  Value *OffsetSHL = B.CreateShl(
-      PtrOffset, B.CreateZExt(
-                     ConstantExpr::getSub(
-                         ConstantInt::get(Int8Ty, DL.getPointerSizeInBits(0)),
-                         TIL.AlignLog2),
-                     IntPtrTy));
-  Value *BitOffset = B.CreateOr(OffsetSHR, OffsetSHL);
+  Value *BitOffset = B.CreateIntrinsic(
+      IntPtrTy, Intrinsic::fshr,
+      {PtrOffset, PtrOffset, B.CreateZExt(TIL.AlignLog2, IntPtrTy)});
 
   Value *OffsetInRange = B.CreateICmpULE(BitOffset, TIL.SizeM1);
 
@@ -987,11 +977,10 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
   auto ImportGlobal = [&](StringRef Name) {
     // Give the global a type of length 0 so that it is not assumed not to alias
     // with any other global.
-    Constant *C = M.getOrInsertGlobal(("__typeid_" + TypeId + "_" + Name).str(),
-                                      Int8Arr0Ty);
-    if (auto *GV = dyn_cast<GlobalVariable>(C))
-      GV->setVisibility(GlobalValue::HiddenVisibility);
-    return C;
+    GlobalVariable *GV = M.getOrInsertGlobal(
+        ("__typeid_" + TypeId + "_" + Name).str(), Int8Arr0Ty);
+    GV->setVisibility(GlobalValue::HiddenVisibility);
+    return GV;
   };
 
   auto ImportConstant = [&](StringRef Name, uint64_t Const, unsigned AbsWidth,
@@ -1024,8 +1013,22 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
     return C;
   };
 
-  if (TIL.TheKind != TypeTestResolution::Unsat)
-    TIL.OffsetedGlobal = ImportGlobal("global_addr");
+  if (TIL.TheKind != TypeTestResolution::Unsat) {
+    auto *GV = ImportGlobal("global_addr");
+    // This is either a vtable (in .data.rel.ro) or a jump table (in .text).
+    // Either way it's expected to be in the low 2 GiB, so set the small code
+    // model.
+    //
+    // For .data.rel.ro, we currently place all such sections in the low 2 GiB
+    // [1], and for .text the sections are expected to be in the low 2 GiB under
+    // the small and medium code models [2] and this pass only supports those
+    // code models (e.g. jump tables use jmp instead of movabs/jmp).
+    //
+    // [1]https://github.com/llvm/llvm-project/pull/137742
+    // [2]https://maskray.me/blog/2023-05-14-relocation-overflow-and-code-models
+    GV->setCodeModel(CodeModel::Small);
+    TIL.OffsetedGlobal = GV;
+  }
 
   if (TIL.TheKind == TypeTestResolution::ByteArray ||
       TIL.TheKind == TypeTestResolution::Inline ||
@@ -1715,8 +1718,22 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
           F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
       FAlias->takeName(F);
-      if (FAlias->hasName())
+      if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
+        // For COFF we should also rename the comdat if this function also
+        // happens to be the key function. Even if the comdat name changes, this
+        // should still be fine since comdat and symbol resolution happens
+        // before LTO, so all symbols which would prevail have been selected.
+        if (F->hasComdat() && ObjectFormat == Triple::COFF &&
+            F->getComdat()->getName() == FAlias->getName()) {
+          Comdat *OldComdat = F->getComdat();
+          Comdat *NewComdat = M.getOrInsertComdat(F->getName());
+          for (GlobalObject &GO : M.global_objects()) {
+            if (GO.getComdat() == OldComdat)
+              GO.setComdat(NewComdat);
+          }
+        }
+      }
       replaceCfiUses(F, FAlias, IsJumpTableCanonical);
       if (!F->hasLocalLinkage())
         F->setVisibility(GlobalVariable::HiddenVisibility);

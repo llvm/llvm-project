@@ -386,10 +386,9 @@ bool LiveRegOptimizer::optimizeLiveType(
         Value *NextDeadValue = PHIWorklist.pop_back_val();
         VisitedPhis.insert(NextDeadValue);
         auto OriginalPhi =
-            std::find_if(PhiNodes.begin(), PhiNodes.end(),
-                         [this, &NextDeadValue](PHINode *CandPhi) {
-                           return ValMap[CandPhi] == NextDeadValue;
-                         });
+            llvm::find_if(PhiNodes, [this, &NextDeadValue](PHINode *CandPhi) {
+              return ValMap[CandPhi] == NextDeadValue;
+            });
         // This PHI may have already been removed from maps when
         // unwinding a previous Phi
         if (OriginalPhi != PhiNodes.end())

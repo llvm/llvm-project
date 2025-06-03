@@ -12,7 +12,7 @@ RUN: llvm-objdump -s out.dll | FileCheck --check-prefix=CONTENTS %s
 
 IMPORTS:      Import {
 IMPORTS-NEXT:   Name: test.dll
-IMPORTS-NEXT:   ImportLookupTableRVA: 0x40E0
+IMPORTS-NEXT:   ImportLookupTableRVA: 0x4100
 IMPORTS-NEXT:   ImportAddressTableRVA: 0x3000
 IMPORTS-NEXT:   Symbol: variable (0)
 IMPORTS-NEXT: }
