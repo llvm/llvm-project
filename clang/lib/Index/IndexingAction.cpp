@@ -22,7 +22,6 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
-#include "llvm/ADT/STLExtras.h"
 #include <memory>
 
 using namespace clang;
