@@ -118,7 +118,7 @@ bool tryToFindPtrOrigin(
           }
         }
       }
-      
+
       if (call->isCallToStdMove() && call->getNumArgs() == 1) {
         E = call->getArg(0)->IgnoreParenCasts();
         continue;
