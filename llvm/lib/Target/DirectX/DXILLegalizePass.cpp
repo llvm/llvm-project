@@ -527,13 +527,15 @@ legalizeGetHighLowi64Bytes(Instruction &I,
   }
 
   if (auto *Extract = dyn_cast<ExtractElementInst>(&I)) {
+    if (!dyn_cast<BitCastInst>(Extract->getVectorOperand()))
+      return;
     auto *VecTy = dyn_cast<FixedVectorType>(Extract->getVectorOperandType());
     if (VecTy && VecTy->getElementType()->isIntegerTy(32) &&
         VecTy->getNumElements() == 2) {
       if (auto *Index = dyn_cast<ConstantInt>(Extract->getIndexOperand())) {
         unsigned Idx = Index->getZExtValue();
         IRBuilder<> Builder(&I);
-        assert(dyn_cast<BitCastInst>(Extract->getVectorOperand()));
+
         auto *Replacement = ReplacedValues[Extract->getVectorOperand()];
         assert(Replacement && "The BitCast replacement should have been set "
                               "before working on ExtractElementInst.");
@@ -600,6 +602,11 @@ private:
     LegalizationPipeline[Stage1].push_back(legalizeMemCpy);
     LegalizationPipeline[Stage1].push_back(removeMemSet);
     LegalizationPipeline[Stage1].push_back(updateFnegToFsub);
+    // Note: legalizeGetHighLowi64Bytes and
+    // downcastI64toI32InsertExtractElements both modify extractelement, so they
+    // must run staggered stages. legalizeGetHighLowi64Bytes runs first b\c it
+    // removes extractelements, reducing the number that
+    // downcastI64toI32InsertExtractElements needs to handle.
     LegalizationPipeline[Stage2].push_back(
         downcastI64toI32InsertExtractElements);
   }
