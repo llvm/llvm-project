@@ -431,7 +431,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
            << "Register Space: " << Descriptor.RegisterSpace << "\n";
         OS << indent(Space + 2)
            << "Shader Register: " << Descriptor.ShaderRegister << "\n";
-        if(RS.Version > 1)
+        if (RS.Version > 1)
           OS << indent(Space + 2) << "Flags: " << Descriptor.Flags << "\n";
         break;
       }
