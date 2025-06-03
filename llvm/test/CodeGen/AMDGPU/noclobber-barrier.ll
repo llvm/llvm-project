@@ -609,13 +609,14 @@ define protected amdgpu_kernel void @no_alias_atomic_cmpxchg(ptr addrspace(1) %i
 ;
 ; GCN-LABEL: no_alias_atomic_cmpxchg:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s6, s[4:5], 0x34
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x34
 ; GCN-NEXT:    v_mov_b32_e32 v0, 7
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v2, s6
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    ds_cmpst_b32 v1, v0, v2
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
@@ -646,11 +647,11 @@ define protected amdgpu_kernel void @no_alias_atomic_rmw(ptr addrspace(1) %in, p
 ;
 ; GCN-LABEL: no_alias_atomic_rmw:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_add_u32 v1, v0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
@@ -797,14 +798,15 @@ define protected amdgpu_kernel void @no_alias_atomic_rmw_then_no_alias_store(ptr
 ;
 ; GCN-LABEL: no_alias_atomic_rmw_then_no_alias_store:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 5
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_store_dword v1, v0, s[6:7]
+; GCN-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GCN-NEXT:    ds_add_u32 v1, v2
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
