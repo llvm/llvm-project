@@ -65,7 +65,7 @@ class LoopVectorizeHints {
     HK_ISVECTORIZED,
     HK_PREDICATE,
     HK_SCALABLE,
-    HK_REASSOCIATE,
+    HK_REASSOCIATE_FP_REDUCTIONS,
   };
 
   /// Hint - associates name and validation with the hint value.
@@ -98,9 +98,9 @@ class LoopVectorizeHints {
   /// Says whether we should use fixed width or scalable vectorization.
   Hint Scalable;
 
-  /// Says whether unsafe reassociation of computations is allowed
+  /// Says whether unsafe reassociation of reductions is allowed
   /// during the loop vectorization.
-  Hint Reassociate;
+  Hint ReassociateFPReductions;
 
   /// Return the loop metadata prefix.
   static StringRef Prefix() { return "llvm.loop."; }
@@ -167,11 +167,11 @@ public:
     return (ScalableForceKind)Scalable.Value == SK_FixedWidthOnly;
   }
 
-  enum ForceKind getReassociate() const {
-    if ((ForceKind)Reassociate.Value == FK_Undefined &&
+  enum ForceKind getReassociateFPReductions() const {
+    if ((ForceKind)ReassociateFPReductions.Value == FK_Undefined &&
         hasDisableAllTransformsHint(TheLoop))
       return FK_Disabled;
-    return (ForceKind)Reassociate.Value;
+    return (ForceKind)ReassociateFPReductions.Value;
   }
 
   /// If hints are provided that force vectorization, use the AlwaysPrint
@@ -184,6 +184,10 @@ public:
   /// reordering floating-point operations will change the way round-off
   /// error accumulates in the loop.
   bool allowReordering() const;
+
+  /// Returns true iff the loop hints allow reassociating floating-point
+  /// reductions for the purpose of vectorization.
+  bool allowFPReductionReassociation() const;
 
   bool isPotentiallyUnsafe() const {
     // Avoid FP vectorization if the target is unsure about proper support.

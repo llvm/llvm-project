@@ -1,5 +1,5 @@
 ; Check that the loop with a floating-point reduction is vectorized
-; due to llvm.loop.vectorize.reassociation.enable metadata.
+; due to llvm.loop.vectorize.reassociate_fpreductions.enable metadata.
 ; RUN: opt -passes=loop-vectorize -S < %s 2>&1 | FileCheck %s
 
 source_filename = "FIRModule"
@@ -40,8 +40,8 @@ attributes #0 = { nofree norecurse nosync nounwind memory(argmem: readwrite) "ta
 !0 = !{!"flang version 21.0.0"}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = distinct !{!2, !3}
-!3 = !{!"llvm.loop.vectorize.reassociation.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.reassociate_fpreductions.enable", i1 true}
 
-; CHECK-NOT: llvm.loop.vectorize.reassociation.enable
+; CHECK-NOT: llvm.loop.vectorize.reassociate_fpreductions.enable
 ; CHECK: !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: !{!"llvm.loop.unroll.runtime.disable"}
