@@ -981,9 +981,10 @@ TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
   }
   // Create a copy constructor.
   {
-    CompilerType param_type = t.GetLValueReferenceType().AddConstModifier();
+    std::array<CompilerType, 1> args{
+        t.GetLValueReferenceType().AddConstModifier()};
     CompilerType function_type =
-        m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
+        m_ast->CreateFunctionType(return_type, args,
                                   /*variadic=*/false, /*quals*/ 0U);
     m_ast->AddMethodToCXXRecordType(
         t.GetOpaqueQualType(), class_name, nullptr, function_type,
@@ -1093,9 +1094,9 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
   llvm::SmallVector<CompilerType> param_types{
       m_ast->GetBasicType(lldb::eBasicTypeInt),
       m_ast->GetBasicType(lldb::eBasicTypeShort)};
-  CompilerType function_type = m_ast->CreateFunctionType(
-      return_type, param_types.data(), /*num_params*/ param_types.size(),
-      /*variadic=*/false, /*quals*/ 0U);
+  CompilerType function_type =
+      m_ast->CreateFunctionType(return_type, param_types,
+                                /*variadic=*/false, /*quals*/ 0U);
   m_ast->AddMethodToCXXRecordType(
       t.GetOpaqueQualType(), "myFunc", nullptr, function_type,
       lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
