@@ -310,6 +310,8 @@ Non-comprehensive list of changes in this release
   different than before.
 - Fixed a crash when a VLA with an invalid size expression was used within a
   ``sizeof`` or ``typeof`` expression. (#GH138444)
+- Deprecation warning is emitted for the deprecated ``__reference_binds_to_temporary`` intrinsic.
+  ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
 
 New Compiler Flags
 ------------------
@@ -600,6 +602,10 @@ Improvements to Clang's diagnostics
   ``case Blue:``. Since the enumerator is deprecated, the latter approach will
   trigger a ``'Blue' is deprecated`` warning, which can be turned off with
   ``-Wno-deprecated-declarations-switch-case``.
+
+- Split diagnosis of implicit integer comparison on negation to a new
+  diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
+  ``-Wimplicit-int-conversion``, so user can turn it off independently.
 
 Improvements to Clang's time-trace
 ----------------------------------
