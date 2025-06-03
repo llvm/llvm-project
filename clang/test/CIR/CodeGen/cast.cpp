@@ -11,10 +11,10 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 // CIR:    %[[XPTR:[0-9]+]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
 // CIR:    %[[RV:[0-9]+]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["__retval"] {alignment = 1 : i64}
 // CIR:    cir.store %arg0, %[[XPTR]] : !u32i, !cir.ptr<!u32i>
-// CIR:    %[[XVAL:[0-9]+]] = cir.load %[[XPTR]] : !cir.ptr<!u32i>, !u32i
+// CIR:    %[[XVAL:[0-9]+]] = cir.load{{.*}} %[[XPTR]] : !cir.ptr<!u32i>, !u32i
 // CIR:    %[[CASTED:[0-9]+]] = cir.cast(integral, %[[XVAL]] : !u32i), !u8i
 // CIR:    cir.store %[[CASTED]], %[[RV]] : !u8i, !cir.ptr<!u8i>
-// CIR:    %[[R:[0-9]+]] = cir.load %1 : !cir.ptr<!u8i>, !u8i
+// CIR:    %[[R:[0-9]+]] = cir.load{{.*}} %1 : !cir.ptr<!u8i>, !u8i
 // CIR:    cir.return %[[R]] : !u8i
 // CIR:  }
 
@@ -84,7 +84,7 @@ bool cptr(void *d) {
 // CIR: cir.func @_Z4cptrPv(%arg0: !cir.ptr<!void>
 // CIR:   %[[DPTR:[0-9]+]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["d", init] {alignment = 8 : i64}
 
-// CIR:   %[[DVAL:[0-9]+]] = cir.load %[[DPTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR:   %[[DVAL:[0-9]+]] = cir.load{{.*}} %[[DPTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:   %{{[0-9]+}} = cir.cast(ptr_to_bool, %[[DVAL]] : !cir.ptr<!void>), !cir.bool
 
 // LLVM-LABEL: define i1 @_Z4cptrPv(ptr %0)
@@ -118,7 +118,7 @@ void bitcast() {
   vi4 b = (vi4)a;
 }
 
-// CIR: %[[D_VEC:.*]] = cir.load {{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double>
+// CIR: %[[D_VEC:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double>
 // CIR: %[[I_VEC:.*]] = cir.cast(bitcast, %[[D_VEC]] : !cir.vector<2 x !cir.double>), !cir.vector<4 x !s32i>
 
 // LLVM: %[[D_VEC:.*]] = load <2 x double>, ptr {{.*}}, align 16

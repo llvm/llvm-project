@@ -62,49 +62,8 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
     ConversionPatternRewriter &rewriter, Location loc, MemRefType type,
     Value memRefDesc, ValueRange indices,
     LLVM::GEPNoWrapFlags noWrapFlags) const {
-
-  auto [strides, offset] = type.getStridesAndOffset();
-
-  MemRefDescriptor memRefDescriptor(memRefDesc);
-  // Use a canonical representation of the start address so that later
-  // optimizations have a longer sequence of instructions to CSE.
-  // If we don't do that we would sprinkle the memref.offset in various
-  // position of the different address computations.
-  Value base =
-      memRefDescriptor.bufferPtr(rewriter, loc, *getTypeConverter(), type);
-
-  LLVM::IntegerOverflowFlags intOverflowFlags =
-      LLVM::IntegerOverflowFlags::none;
-  if (LLVM::bitEnumContainsAny(noWrapFlags, LLVM::GEPNoWrapFlags::nusw)) {
-    intOverflowFlags = intOverflowFlags | LLVM::IntegerOverflowFlags::nsw;
-  }
-  if (LLVM::bitEnumContainsAny(noWrapFlags, LLVM::GEPNoWrapFlags::nuw)) {
-    intOverflowFlags = intOverflowFlags | LLVM::IntegerOverflowFlags::nuw;
-  }
-
-  Type indexType = getIndexType();
-  Value index;
-  for (int i = 0, e = indices.size(); i < e; ++i) {
-    Value increment = indices[i];
-    if (strides[i] != 1) { // Skip if stride is 1.
-      Value stride =
-          ShapedType::isDynamic(strides[i])
-              ? memRefDescriptor.stride(rewriter, loc, i)
-              : createIndexAttrConstant(rewriter, loc, indexType, strides[i]);
-      increment = rewriter.create<LLVM::MulOp>(loc, increment, stride,
-                                               intOverflowFlags);
-    }
-    index = index ? rewriter.create<LLVM::AddOp>(loc, index, increment,
-                                                 intOverflowFlags)
-                  : increment;
-  }
-
-  Type elementPtrType = memRefDescriptor.getElementPtrType();
-  return index ? rewriter.create<LLVM::GEPOp>(
-                     loc, elementPtrType,
-                     getTypeConverter()->convertType(type.getElementType()),
-                     base, index, noWrapFlags)
-               : base;
+  return LLVM::getStridedElementPtr(rewriter, loc, *getTypeConverter(), type,
+                                    memRefDesc, indices, noWrapFlags);
 }
 
 // Check if the MemRefType `type` is supported by the lowering. We currently
@@ -523,4 +482,53 @@ Value mlir::LLVM::composeValue(OpBuilder &builder, Location loc, ValueRange src,
     res = builder.create<LLVM::BitcastOp>(loc, dstType, res);
 
   return res;
+}
+
+Value mlir::LLVM::getStridedElementPtr(OpBuilder &builder, Location loc,
+                                       const LLVMTypeConverter &converter,
+                                       MemRefType type, Value memRefDesc,
+                                       ValueRange indices,
+                                       LLVM::GEPNoWrapFlags noWrapFlags) {
+  auto [strides, offset] = type.getStridesAndOffset();
+
+  MemRefDescriptor memRefDescriptor(memRefDesc);
+  // Use a canonical representation of the start address so that later
+  // optimizations have a longer sequence of instructions to CSE.
+  // If we don't do that we would sprinkle the memref.offset in various
+  // position of the different address computations.
+  Value base = memRefDescriptor.bufferPtr(builder, loc, converter, type);
+
+  LLVM::IntegerOverflowFlags intOverflowFlags =
+      LLVM::IntegerOverflowFlags::none;
+  if (LLVM::bitEnumContainsAny(noWrapFlags, LLVM::GEPNoWrapFlags::nusw)) {
+    intOverflowFlags = intOverflowFlags | LLVM::IntegerOverflowFlags::nsw;
+  }
+  if (LLVM::bitEnumContainsAny(noWrapFlags, LLVM::GEPNoWrapFlags::nuw)) {
+    intOverflowFlags = intOverflowFlags | LLVM::IntegerOverflowFlags::nuw;
+  }
+
+  Type indexType = converter.getIndexType();
+  Value index;
+  for (int i = 0, e = indices.size(); i < e; ++i) {
+    Value increment = indices[i];
+    if (strides[i] != 1) { // Skip if stride is 1.
+      Value stride =
+          ShapedType::isDynamic(strides[i])
+              ? memRefDescriptor.stride(builder, loc, i)
+              : builder.create<LLVM::ConstantOp>(
+                    loc, indexType, builder.getIndexAttr(strides[i]));
+      increment =
+          builder.create<LLVM::MulOp>(loc, increment, stride, intOverflowFlags);
+    }
+    index = index ? builder.create<LLVM::AddOp>(loc, index, increment,
+                                                intOverflowFlags)
+                  : increment;
+  }
+
+  Type elementPtrType = memRefDescriptor.getElementPtrType();
+  return index ? builder.create<LLVM::GEPOp>(
+                     loc, elementPtrType,
+                     converter.convertType(type.getElementType()), base, index,
+                     noWrapFlags)
+               : base;
 }

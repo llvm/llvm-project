@@ -18,7 +18,6 @@
 #include "SPIRV.h"
 #include "SPIRVBuiltins.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
@@ -963,7 +962,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeOpaque(const StructType *Ty,
 SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(
     const StructType *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual,
-    bool ExplicitLayoutRequired, bool EmitIR) {
+    StructOffsetDecorator Decorator, bool EmitIR) {
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   SmallVector<Register, 4> FieldTypes;
@@ -979,8 +978,9 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(
   }
 
   for (const auto &Elem : Ty->elements()) {
-    SPIRVType *ElemTy = findSPIRVType(toTypedPointer(Elem), MIRBuilder, AccQual,
-                                      ExplicitLayoutRequired, EmitIR);
+    SPIRVType *ElemTy = findSPIRVType(
+        toTypedPointer(Elem), MIRBuilder, AccQual,
+        /* ExplicitLayoutRequired= */ Decorator != nullptr, EmitIR);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
            "Invalid struct element type");
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
@@ -1007,9 +1007,8 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(
         return MIBStruct;
       });
 
-  if (ExplicitLayoutRequired)
-    addStructOffsetDecorations(SPVType->defs().begin()->getReg(),
-                               const_cast<StructType *>(Ty), MIRBuilder);
+  if (Decorator)
+    Decorator(SPVType->defs().begin()->getReg());
 
   return SPVType;
 }
@@ -1148,8 +1147,15 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
   if (auto SType = dyn_cast<StructType>(Ty)) {
     if (SType->isOpaque())
       return getOpTypeOpaque(SType, MIRBuilder);
-    return getOpTypeStruct(SType, MIRBuilder, AccQual, ExplicitLayoutRequired,
-                           EmitIR);
+
+    StructOffsetDecorator Decorator = nullptr;
+    if (ExplicitLayoutRequired) {
+      Decorator = [&MIRBuilder, SType, this](Register Reg) {
+        addStructOffsetDecorations(Reg, const_cast<StructType *>(SType),
+                                   MIRBuilder);
+      };
+    }
+    return getOpTypeStruct(SType, MIRBuilder, AccQual, Decorator, EmitIR);
   }
   if (auto FType = dyn_cast<FunctionType>(Ty)) {
     SPIRVType *RetTy = findSPIRVType(FType->getReturnType(), MIRBuilder,
@@ -1464,6 +1470,32 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
   SPIRVType *R = getOrCreateSPIRVPointerTypeInternal(BlockType, MIRBuilder, SC);
   add(Key, R);
   return R;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateLayoutType(
+    MachineIRBuilder &MIRBuilder, const TargetExtType *T, bool EmitIr) {
+  auto Key = SPIRV::handle(T);
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  StructType *ST = cast<StructType>(T->getTypeParameter(0));
+  ArrayRef<uint32_t> Offsets = T->int_params().slice(1);
+  assert(ST->getNumElements() == Offsets.size());
+
+  StructOffsetDecorator Decorator = [&MIRBuilder, &Offsets](Register Reg) {
+    for (uint32_t I = 0; I < Offsets.size(); ++I) {
+      buildOpMemberDecorate(Reg, MIRBuilder, SPIRV::Decoration::Offset, I,
+                            {Offsets[I]});
+    }
+  };
+
+  // We need a new OpTypeStruct instruction because decorations will be
+  // different from a struct with an explicit layout created from a different
+  // entry point.
+  SPIRVType *SPIRVStructType = getOpTypeStruct(
+      ST, MIRBuilder, SPIRV::AccessQualifier::None, Decorator, EmitIr);
+  add(Key, SPIRVStructType);
+  return SPIRVStructType;
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(

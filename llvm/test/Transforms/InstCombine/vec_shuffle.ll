@@ -652,6 +652,17 @@ define <4 x i8> @widening_shuffle_add_1(<2 x i8> %x) {
   ret <4 x i8> %r
 }
 
+define <vscale x 4 x i8> @widening_shuffle_add_1_scalable(<vscale x 2 x i8> %x) {
+; CHECK-LABEL: @widening_shuffle_add_1_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = add <vscale x 2 x i8> [[X:%.*]], splat (i8 42)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i8> [[TMP1]], <vscale x 2 x i8> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 4 x i8> [[R]]
+;
+  %widex = shufflevector <vscale x 2 x i8> %x, <vscale x 2 x i8> poison, <vscale x 4 x i32> zeroinitializer
+  %r = add <vscale x 4 x i8> %widex, splat (i8 42)
+  ret <vscale x 4 x i8> %r
+}
+
 ; Reduce the width of the binop by moving it ahead of a shuffle.
 
 define <4 x i8> @widening_shuffle_add_2(<2 x i8> %x) {
@@ -732,8 +743,11 @@ define <4 x i16> @widening_shuffle_shl_constant_op1_non0(<2 x i16> %v) {
   ret <4 x i16> %bo
 }
 
-; A binop that does not produce undef in the high lanes can not be moved before the shuffle.
-; This is not ok because 'or -1, undef --> -1' but moving the shuffle results in undef instead.
+; Previously, a shufflevector would produce an undef element from an undef mask
+; index, which meant that pulling the shuffle out wasn't correct if the original
+; binary op produced a non-undef result, e.g. or -1, undef --> -1.
+;
+; However nowadays shufflevector produces poison, which is safe to propagate.
 
 define <4 x i16> @widening_shuffle_or(<2 x i16> %v) {
 ; CHECK-LABEL: @widening_shuffle_or(
@@ -926,13 +940,35 @@ define <2 x i32> @shl_splat_constant0(<2 x i32> %x) {
 
 define <2 x i32> @shl_splat_constant1(<2 x i32> %x) {
 ; CHECK-LABEL: @shl_splat_constant1(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X:%.*]], <i32 5, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[X:%.*]], <i32 5, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %splat = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> zeroinitializer
   %r = shl <2 x i32> %splat, <i32 5, i32 5>
   ret <2 x i32> %r
+}
+
+define <vscale x 2 x i32> @shl_splat_constant0_scalable(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @shl_splat_constant0_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <vscale x 2 x i32> splat (i32 5), [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
+;
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %r = shl <vscale x 2 x i32> splat (i32 5), %splat
+  ret <vscale x 2 x i32> %r
+}
+
+define <vscale x 2 x i32> @shl_splat_constant1_scalable(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @shl_splat_constant1_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <vscale x 2 x i32> [[X:%.*]], splat (i32 5)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
+;
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %r = shl <vscale x 2 x i32> %splat, splat (i32 5)
+  ret <vscale x 2 x i32> %r
 }
 
 define <2 x i32> @ashr_splat_constant0(<2 x i32> %x) {
@@ -948,7 +984,7 @@ define <2 x i32> @ashr_splat_constant0(<2 x i32> %x) {
 
 define <2 x i32> @ashr_splat_constant1(<2 x i32> %x) {
 ; CHECK-LABEL: @ashr_splat_constant1(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 5, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 5, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -970,7 +1006,7 @@ define <2 x i32> @lshr_splat_constant0(<2 x i32> %x) {
 
 define <2 x i32> @lshr_splat_constant1(<2 x i32> %x) {
 ; CHECK-LABEL: @lshr_splat_constant1(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 5, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -1043,6 +1079,28 @@ define <2 x i32> @udiv_splat_constant1(<2 x i32> %x) {
   %splat = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> zeroinitializer
   %r = udiv <2 x i32> %splat, <i32 42, i32 42>
   ret <2 x i32> %r
+}
+
+define <vscale x 2 x i32> @udiv_splat_constant0_scalable(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @udiv_splat_constant0_scalable(
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[X:%.*]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = udiv <vscale x 2 x i32> splat (i32 42), [[SPLAT]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
+;
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %r = udiv <vscale x 2 x i32> splat (i32 42), %splat
+  ret <vscale x 2 x i32> %r
+}
+
+define <vscale x 2 x i32> @udiv_splat_constant1_scalable(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @udiv_splat_constant1_scalable(
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <vscale x 2 x i32> [[X:%.*]], splat (i32 42)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <vscale x 2 x i32> [[TMP1]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[R]]
+;
+  %splat = shufflevector <vscale x 2 x i32> %x, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
+  %r = udiv <vscale x 2 x i32> %splat, splat (i32 42)
+  ret <vscale x 2 x i32> %r
 }
 
 define <2 x i32> @sdiv_splat_constant0(<2 x i32> %x) {
@@ -1207,7 +1265,7 @@ entry:
 define <4 x i16> @shl_constant_mask_undef(<4 x i16> %in) {
 ; CHECK-LABEL: @shl_constant_mask_undef(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i16> [[IN:%.*]], <i16 10, i16 0, i16 0, i16 0>
+; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i16> [[IN:%.*]], <i16 10, i16 0, i16 poison, i16 poison>
 ; CHECK-NEXT:    [[SHL:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x i16> [[SHL]]
 ;

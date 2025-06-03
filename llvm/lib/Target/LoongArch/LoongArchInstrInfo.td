@@ -524,22 +524,22 @@ def ImmSubFrom32 : SDNodeXForm<imm, [{
 
 // Return the lowest 12 bits of the signed immediate.
 def LO12: SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(SignExtend64<12>(N->getSExtValue()),
-                                   SDLoc(N), N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(SignExtend64<12>(N->getSExtValue()),
+                                         SDLoc(N), N->getValueType(0));
 }]>;
 
 // Return the higher 16 bits of the signed immediate.
 def HI16 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() >> 16, SDLoc(N),
-                                   N->getValueType(0));
+  return CurDAG->getSignedTargetConstant(N->getSExtValue() >> 16, SDLoc(N),
+                                         N->getValueType(0));
 }]>;
 
 // Return the higher 16 bits of the signed immediate, adjusted for use within an
 // `addu16i.d + addi` pair.
 def HI16ForAddu16idAddiPair: SDNodeXForm<imm, [{
   auto Imm = N->getSExtValue();
-  return CurDAG->getTargetConstant((Imm - SignExtend64<12>(Imm)) >> 16,
-                                   SDLoc(N), N->getValueType(0));
+  return CurDAG->getSignedTargetConstant((Imm - SignExtend64<12>(Imm)) >> 16,
+                                          SDLoc(N), N->getValueType(0));
 }]>;
 
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
