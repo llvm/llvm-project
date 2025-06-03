@@ -40,6 +40,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/LogicalResult.h"
@@ -905,59 +906,140 @@ void RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
 // ///    be resolved using a layout conversion?
 // LogicalResult LayoutAttrAssignment::resolveConflicts() { return success(); }
 using GetLayoutCallbackFnTy = function_ref<xegpu::LayoutAttr(Value)>;
+static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
+                     GetLayoutCallbackFnTy getLayoutOfValue) {
+
+  // Iterate over all the results.
+  for (OpResult result : op->getResults()) {
+    Type resultType = result.getType();
+    // Layouts are needed only for vector and tensor descriptor types.
+    if (!isa<VectorType, xegpu::TensorDescType>(resultType))
+      continue;
+    // If the result has any users, we expect it to have a layout.
+    xegpu::LayoutAttr layout = getLayoutOfValue(result);
+    if (!layout && result.getNumUses() > 0) {
+      LLVM_DEBUG(DBGS() << "Expecting layout for result: " << result
+                        << " but got none.\n");
+      continue;
+    }
+    if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
+      // TODO: Handle error.
+      auto typeWithLayout = xegpu::TensorDescType::get(
+          tensorDescTy.getContext(), tensorDescTy.getShape(),
+          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
+      result.setType(typeWithLayout);
+      continue;
+    }
+    // If the result is a vector type, add a temporary layout attribute to the
+    // op.
+    std::string resultLayoutName =
+        resultLayoutNamePrefix + std::to_string(result.getResultNumber());
+    op->setAttr(resultLayoutName, layout);
+    // Update all users of the result with the layout.
+    for (OpOperand &user : result.getUses()) {
+      Operation *owner = user.getOwner();
+      unsigned operandNumber = user.getOperandNumber();
+      // Add temorary layout attribute at the user op.
+      std::string attrName =
+          operandLayoutNamePrefix + std::to_string(operandNumber);
+      owner->setAttr(attrName, layout);
+    }
+  }
+}
 static void handleBranchTerminatorOpInterface(
     mlir::OpBuilder &builder,
     mlir::RegionBranchTerminatorOpInterface terminator,
     GetLayoutCallbackFnTy getLayoutOfValue) {}
 static void handleBranchOpInterface(mlir::OpBuilder &builder,
                                     mlir::RegionBranchOpInterface branch,
-                                    GetLayoutCallbackFnTy getLayoutOfValue) {}
-static void updateBlockTypes(mlir::OpBuilder &builder, mlir::Block &block,
-                             GetLayoutCallbackFnTy getLayoutOfValue) {}
-static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
-                     GetLayoutCallbackFnTy getLayoutOfValue) {
+                                    GetLayoutCallbackFnTy getLayoutOfValue) {
+  mlir::Operation *op = branch.getOperation();
+  llvm::SmallVector<mlir::RegionSuccessor> successors;
+  llvm::SmallVector<mlir::Attribute> operands(op->getNumOperands(), nullptr);
+  branch.getEntrySuccessorRegions(operands, successors);
+  DenseMap<Value, xegpu::LayoutAttr> resultToLayouts;
+  mlir::ValueRange results = op->getResults();
 
-  auto updateValue = [&](Value v, unsigned vIndex,
-                         const std::string &layoutAttrName) {
-    // Layouts are needed only for vector and tensor descriptor types.
-    if (!isa<VectorType, xegpu::TensorDescType>(v.getType()))
-      return;
-    xegpu::LayoutAttr layout = getLayoutOfValue(v);
-    if (!layout) {
-      // TODO : handle error.
-      LLVM_DEBUG(DBGS() << "Expecting layout for value: " << v
-                        << " but got none.\n");
-      return;
+  for (mlir::RegionSuccessor &successor : successors) {
+    if (successor.isParent())
+      continue;
+
+    mlir::OperandRange initArgs = branch.getEntrySuccessorOperands(successor);
+    mlir::ValueRange blockArgs = successor.getSuccessorInputs();
+    unsigned index = 0;
+
+    for (auto [initArg, blockArg, result] :
+         llvm::zip(initArgs, blockArgs, results)) {
+      Type inputType = blockArg.getType();
+      if (!isa<xegpu::TensorDescType>(inputType))
+        continue;
+      xegpu::LayoutAttr blockArgLayout = getLayoutOfValue(blockArg);
+      xegpu::LayoutAttr initArgLayout = getLayoutOfValue(initArg);
+
+      if (!blockArgLayout || !initArgLayout) {
+        LLVM_DEBUG(DBGS() << "No layout assigned for block arg: " << blockArg
+                          << " or init arg: " << initArg << "\n");
+        continue;
+      }
+
+      // TOOD: We expect these two to match. Data flow analysis will ensure
+      // this.
+      assert(blockArgLayout == initArgLayout &&
+             "Expexing block arg and init arg to have the same layout.");
+      // Get tensor descriptor type with the layout.
+      auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType);
+      auto newTdescTy = xegpu::TensorDescType::get(
+          tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
+          tdescTy.getEncoding(), blockArgLayout);
+      blockArg.setType(newTdescTy);
+      // Store the layout for the result.
+      if (resultToLayouts.count(result) != 0 &&
+          resultToLayouts[result] != blockArgLayout) {
+        LLVM_DEBUG(DBGS() << "Conflicting layouts for result: " << result
+                          << " - " << resultToLayouts[result] << " vs "
+                          << blockArgLayout << "\n");
+      } else {
+        resultToLayouts[result] = blockArgLayout;
+      }
     }
-    auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(v.getType());
-
-    if (tensorDescTy) {
-      auto newTensorDescTy = xegpu::TensorDescType::get(
+  }
+  for (auto [i, r] : llvm::enumerate(op->getResults())) {
+    Type resultType = r.getType();
+    if (!isa<xegpu::TensorDescType, VectorType>(resultType))
+      continue;
+    xegpu::LayoutAttr layout = getLayoutOfValue(r);
+    if (!layout)
+      layout = resultToLayouts[r];
+    if (!layout) {
+      LLVM_DEBUG(DBGS() << "No layout assigned for vector/tensor desc result: "
+                        << r << "\n");
+      continue;
+    }
+    if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
+      auto newTdescTy = xegpu::TensorDescType::get(
           tensorDescTy.getContext(), tensorDescTy.getShape(),
           tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
-      v.setType(newTensorDescTy);
-      return;
+      r.setType(newTdescTy);
+      continue;
     }
-    // If type is vector, add a temporary layout attribute to the op.
-    op->setAttr(layoutAttrName, layout);
-  };
-
-  // Iterate over all the operands.
-  for (OpOperand &operand : op->getOpOperands()) {
-    unsigned operandIndex = operand.getOperandNumber();
-    std::string operandLayoutName =
-        operandLayoutNamePrefix + std::to_string(operandIndex);
-    updateValue(operand.get(), operandIndex, operandLayoutName);
-  }
-
-  // Iterate over all the results.
-  for (OpResult result : op->getResults()) {
-    unsigned resultIndex = result.getResultNumber();
+    // If the result is a vector type, add a temporary layout attribute to the
+    // op.
     std::string resultLayoutName =
-        resultLayoutNamePrefix + std::to_string(resultIndex);
-    updateValue(result, resultIndex, resultLayoutName);
+        resultLayoutNamePrefix + std::to_string(r.getResultNumber());
+    op->setAttr(resultLayoutName, layout);
+    // Update all users of the result with the layout.
+    for (OpOperand &user : r.getUses()) {
+      Operation *owner = user.getOwner();
+      unsigned operandNumber = user.getOperandNumber();
+      // Add temporary layout attribute at the user op.
+      std::string attrName =
+          operandLayoutNamePrefix + std::to_string(operandNumber);
+      owner->setAttr(attrName, layout);
+    }
   }
 }
+static void updateBlockTypes(mlir::OpBuilder &builder, mlir::Block &block,
+                             GetLayoutCallbackFnTy getLayoutOfValue) {}
 
 namespace {
 
@@ -1722,7 +1804,6 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   auto getXeGPULayoutForValue = [&](Value val) -> xegpu::LayoutAttr {
     LayoutInfo layout = analyis.getLayoutInfo(val);
     if (!layout.isAssigned()) {
-      llvm::errs() << "No layout assigned for value" << val << "\n";
       return {};
     }
     SmallVector<int, 2> laneLayout, laneData;
