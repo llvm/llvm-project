@@ -1555,10 +1555,10 @@ define amdgpu_kernel void @dynamic_insertelement_v3i16(ptr addrspace(1) %out, <3
 ; SI-NEXT:    s_lshl_b32 s0, s8, 4
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_lshl_b64 s[0:1], 0xffff, s0
-; SI-NEXT:    s_and_b32 s9, s1, 0x50005
-; SI-NEXT:    s_and_b32 s8, s0, 0x50005
-; SI-NEXT:    s_andn2_b64 s[0:1], s[2:3], s[0:1]
-; SI-NEXT:    s_or_b64 s[0:1], s[8:9], s[0:1]
+; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[0:1]
+; SI-NEXT:    s_and_b32 s1, s1, 0x50005
+; SI-NEXT:    s_and_b32 s0, s0, 0x50005
+; SI-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
 ; SI-NEXT:    v_mov_b32_e32 v0, s1
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0 offset:4
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
