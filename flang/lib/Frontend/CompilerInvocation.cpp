@@ -1656,6 +1656,10 @@ void CompilerInvocation::setDefaultPredefinitions() {
       fortranOptions.predefinitions.emplace_back("__64BIT__", "1");
     }
     break;
+  case llvm::Triple::ArchType::aarch64:
+    fortranOptions.predefinitions.emplace_back("__aarch64__", "1");
+    fortranOptions.predefinitions.emplace_back("__aarch64", "1");
+    break;
   }
 }
 
