@@ -5351,9 +5351,9 @@ static SDValue performMOVFR2GR_SCombine(SDNode *N, SelectionDAG &DAG,
   // conversion is unnecessary and can be replaced with the MOVGR2FR_W_LA64
   // operand.
   SDValue Op0 = N->getOperand(0);
-  MVT VT = N->getSimpleValueType(0);
   if (Op0->getOpcode() == LoongArchISD::MOVGR2FR_W_LA64) {
-    assert(Op0.getOperand(0).getValueType() == VT && "Unexpected value type!");
+    assert(Op0.getOperand(0).getValueType() == N->getSimpleValueType(0) &&
+           "Unexpected value type!");
     return Op0.getOperand(0);
   }
   return SDValue();
