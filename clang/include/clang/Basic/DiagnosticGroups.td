@@ -823,6 +823,7 @@ As well as one of the following:
 
 The warning can be resolved by removing one of the conditions above. In rough
 order of preference, this may be done by:
+
   1. Marking the object ``const`` (if possible)
   2. Moving the object's definition to a source file
   3. Giving the object non-hidden visibility, e.g. using ``__attribute((visibility("default")))``.
