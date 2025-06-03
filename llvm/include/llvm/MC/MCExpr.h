@@ -514,9 +514,9 @@ protected:
       : MCExpr(Specifier, Loc), Expr(Expr), specifier(S) {}
 
 public:
-  LLVM_ABI static const MCSpecifierExpr *
+  static const MCSpecifierExpr *
   create(const MCExpr *Expr, Spec S, MCContext &Ctx, SMLoc Loc = SMLoc());
-  LLVM_ABI static const MCSpecifierExpr *
+  static const MCSpecifierExpr *
   create(const MCSymbol *Sym, Spec S, MCContext &Ctx, SMLoc Loc = SMLoc());
 
   Spec getSpecifier() const { return specifier; }
