@@ -66,3 +66,9 @@ int f10(int) {
 }
 // CHECK: fix-it:"{{.*}}":{[[@LINE-5]]:16-[[@LINE-5]]:20}:"const"
 // CHECK: fix-it:"{{.*}}":{[[@LINE-6]]:22-[[@LINE-6]]:31}:"deprecated"
+
+[[using gnu: noretyrn, address_spaci(0)]] // expected-warning {{unknown attribute 'gnu::noretyrn' ignored; did you mean 'gnu::noreturn'?}} \
+                                          // expected-warning {{unknown attribute 'gnu::address_spaci' ignored}}
+void f11(void) {
+}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:14-[[@LINE-4]]:22}:"noreturn"
