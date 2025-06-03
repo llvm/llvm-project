@@ -1204,60 +1204,74 @@ ErrorOr<Location> DataAggregator::parseLocationOrOffset() {
 }
 
 std::error_code DataAggregator::parseAggregatedLBREntry() {
-  while (checkAndConsumeFS()) {
-  }
+  enum AggregatedLBREntry : char {
+    INVALID = 0,
+    EVENT_NAME,        // E
+    TRACE,             // T
+    SAMPLE,            // S
+    BRANCH,            // B
+    FT,                // F
+    FT_EXTERNAL_ORIGIN // f
+  } Type = INVALID;
 
-  ErrorOr<StringRef> TypeOrErr = parseString(FieldSeparator);
-  if (std::error_code EC = TypeOrErr.getError())
-    return EC;
-  enum AggregatedLBREntry { TRACE, BRANCH, FT, FT_EXTERNAL_ORIGIN, INVALID };
-  auto Type = StringSwitch<AggregatedLBREntry>(TypeOrErr.get())
-                  .Case("T", TRACE)
-                  .Case("B", BRANCH)
-                  .Case("F", FT)
-                  .Case("f", FT_EXTERNAL_ORIGIN)
-                  .Default(INVALID);
-  if (Type == INVALID) {
-    reportError("expected T, B, F or f");
-    return make_error_code(llvm::errc::io_error);
-  }
+  // The number of fields to parse, set based on Type.
+  int AddrNum = 0;
+  int CounterNum = 0;
+  // Storage for parsed fields.
+  StringRef EventName;
+  std::optional<Location> Addr[3];
+  int64_t Counters[2];
 
-  while (checkAndConsumeFS()) {
-  }
-  ErrorOr<Location> From = parseLocationOrOffset();
-  if (std::error_code EC = From.getError())
-    return EC;
-
-  while (checkAndConsumeFS()) {
-  }
-  ErrorOr<Location> To = parseLocationOrOffset();
-  if (std::error_code EC = To.getError())
-    return EC;
-
-  ErrorOr<Location> TraceFtEnd = std::error_code();
-  if (Type == AggregatedLBREntry::TRACE) {
+  while (Type == INVALID || Type == EVENT_NAME) {
     while (checkAndConsumeFS()) {
     }
-    TraceFtEnd = parseLocationOrOffset();
-    if (std::error_code EC = TraceFtEnd.getError())
+    ErrorOr<StringRef> StrOrErr =
+        parseString(FieldSeparator, Type == EVENT_NAME);
+    if (std::error_code EC = StrOrErr.getError())
       return EC;
+    StringRef Str = StrOrErr.get();
+
+    if (Type == EVENT_NAME) {
+      EventName = Str;
+      break;
+    }
+
+    Type = StringSwitch<AggregatedLBREntry>(Str)
+               .Case("T", TRACE)
+               .Case("S", SAMPLE)
+               .Case("E", EVENT_NAME)
+               .Case("B", BRANCH)
+               .Case("F", FT)
+               .Case("f", FT_EXTERNAL_ORIGIN)
+               .Default(INVALID);
+
+    if (Type == INVALID) {
+      reportError("expected T, S, E, B, F or f");
+      return make_error_code(llvm::errc::io_error);
+    }
+
+    using SSI = StringSwitch<int>;
+    AddrNum = SSI(Str).Case("T", 3).Case("S", 1).Case("E", 0).Default(2);
+    CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
   }
 
-  while (checkAndConsumeFS()) {
-  }
-  ErrorOr<int64_t> Frequency =
-      parseNumberField(FieldSeparator, Type != AggregatedLBREntry::BRANCH);
-  if (std::error_code EC = Frequency.getError())
-    return EC;
-
-  uint64_t Mispreds = 0;
-  if (Type == AggregatedLBREntry::BRANCH) {
+  for (int I = 0; I < AddrNum; ++I) {
     while (checkAndConsumeFS()) {
     }
-    ErrorOr<int64_t> MispredsOrErr = parseNumberField(FieldSeparator, true);
-    if (std::error_code EC = MispredsOrErr.getError())
+    ErrorOr<Location> AddrOrErr = parseLocationOrOffset();
+    if (std::error_code EC = AddrOrErr.getError())
       return EC;
-    Mispreds = static_cast<uint64_t>(MispredsOrErr.get());
+    Addr[I] = AddrOrErr.get();
+  }
+
+  for (int I = 0; I < CounterNum; ++I) {
+    while (checkAndConsumeFS()) {
+    }
+    ErrorOr<int64_t> CountOrErr =
+        parseNumberField(FieldSeparator, I + 1 == CounterNum);
+    if (std::error_code EC = CountOrErr.getError())
+      return EC;
+    Counters[I] = CountOrErr.get();
   }
 
   if (!checkAndConsumeNewLine()) {
@@ -1265,16 +1279,31 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From->Offset);
-  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To->Offset);
+  if (Type == EVENT_NAME) {
+    EventNames.insert(EventName);
+    return std::error_code();
+  }
 
-  for (BinaryFunction *BF : {FromFunc, ToFunc})
-    if (BF)
-      BF->setHasProfileAvailable();
+  const uint64_t FromOffset = Addr[0]->Offset;
+  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(FromOffset);
+  if (FromFunc)
+    FromFunc->setHasProfileAvailable();
 
-  uint64_t Count = static_cast<uint64_t>(Frequency.get());
+  int64_t Count = Counters[0];
+  int64_t Mispreds = Counters[1];
 
-  Trace Trace(From->Offset, To->Offset);
+  if (Type == SAMPLE) {
+    BasicSamples[FromOffset] += Count;
+    NumTotalSamples += Count;
+    return std::error_code();
+  }
+
+  const uint64_t ToOffset = Addr[1]->Offset;
+  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(ToOffset);
+  if (ToFunc)
+    ToFunc->setHasProfileAvailable();
+
+  Trace Trace(FromOffset, ToOffset);
   // Taken trace
   if (Type == TRACE || Type == BRANCH) {
     TakenBranchInfo &Info = BranchLBRs[Trace];
@@ -1285,8 +1314,9 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
   // Construct fallthrough part of the trace
   if (Type == TRACE) {
-    Trace.From = To->Offset;
-    Trace.To = TraceFtEnd->Offset;
+    const uint64_t TraceFtEndOffset = Addr[2]->Offset;
+    Trace.From = ToOffset;
+    Trace.To = TraceFtEndOffset;
     Type = FromFunc == ToFunc ? FT : FT_EXTERNAL_ORIGIN;
   }
   // Add fallthrough trace
