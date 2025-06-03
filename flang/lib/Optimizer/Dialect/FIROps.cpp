@@ -4485,21 +4485,19 @@ llvm::LogicalResult fir::BoxOffsetOp::verify() {
   auto boxType = mlir::dyn_cast_or_null<fir::BaseBoxType>(
       fir::dyn_cast_ptrEleTy(getBoxRef().getType()));
   mlir::Type boxCharType;
-  bool isBoxChar = false;
   if (!boxType) {
     boxCharType = mlir::dyn_cast_or_null<fir::BoxCharType>(
         fir::dyn_cast_ptrEleTy(getBoxRef().getType()));
     if (!boxCharType)
       return emitOpError("box_ref operand must have !fir.ref<!fir.box<T>> or "
                          "!fir.ref<!fir.boxchar<k>> type");
-    isBoxChar = true;
+    if (getField() == fir::BoxFieldAttr::derived_type)
+      return emitOpError("cannot address derived_type field of a fir.boxchar");
   }
   if (getField() != fir::BoxFieldAttr::base_addr &&
       getField() != fir::BoxFieldAttr::derived_type)
     return emitOpError("cannot address provided field");
   if (getField() == fir::BoxFieldAttr::derived_type) {
-    if (isBoxChar)
-      return emitOpError("cannot address derived_type field of a fir.boxchar");
     if (!fir::boxHasAddendum(boxType))
       return emitOpError("can only address derived_type field of derived type "
                          "or unlimited polymorphic fir.box");

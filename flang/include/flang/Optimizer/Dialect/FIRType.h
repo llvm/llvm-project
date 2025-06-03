@@ -278,9 +278,8 @@ inline mlir::Type unwrapRefType(mlir::Type t) {
 /// If `t` conforms with a pass-by-reference type (box, ref, ptr, etc.) then
 /// return the element type of `t`. Otherwise, return `t`.
 inline mlir::Type unwrapPassByRefType(mlir::Type t) {
-  if (conformsWithPassByRef(t))
-    if (auto eleTy = dyn_cast_ptrOrBoxEleTy(t))
-      return eleTy;
+  if (auto eleTy = dyn_cast_ptrOrBoxEleTy(t))
+    return eleTy;
   return t;
 }
 
