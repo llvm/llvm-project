@@ -128,6 +128,8 @@ add_lldb_library(liblldb SHARED ${option_framework}
   DEPENDS
     lldb-sbapi-dwarf-enums
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -142,8 +144,6 @@ add_lldb_library(liblldb SHARED ${option_framework}
     lldbValueObject
     lldbVersion
     ${LLDB_ALL_PLUGINS}
-  LINK_COMPONENTS
-    Support
 
   ${option_install_prefix}
 )
