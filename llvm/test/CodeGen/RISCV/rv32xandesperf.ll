@@ -2,6 +2,10 @@
 ; RUN: llc -O0 -mtriple=riscv32 -mattr=+xandesperf -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
+; NDS.BFOZ
+
+; MSB >= LSB
+
 define i32 @bfoz_from_and_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_and_i32:
 ; CHECK:       # %bb.0:
@@ -69,6 +73,58 @@ define i64 @bfoz_from_lshr_and_i64(i64 %x) {
   %shifted = lshr i64 %masked, 24
   ret i64 %shifted
 }
+
+; MSB = 0
+
+define i32 @bfoz_from_and_shl_with_msb_zero_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_with_msb_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 31
+; CHECK-NEXT:    srli a0, a0, 16
+; CHECK-NEXT:    ret
+  %shifted = shl i32 %x, 15
+  %masked = and i32 %shifted, 32768
+  ret i32 %masked
+}
+
+define i32 @bfoz_from_lshr_shl_with_msb_zero_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_with_msb_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 31
+; CHECK-NEXT:    srli a0, a0, 13
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 31
+  %lshr = lshr i32 %shl, 13
+  ret i32 %lshr
+}
+
+; MSB < LSB
+
+define i32 @bfoz_from_and_shl_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_and_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 20
+; CHECK-NEXT:    srli a0, a0, 8
+; CHECK-NEXT:    ret
+  %shifted = shl i32 %x, 12
+  %masked = and i32 %shifted, 16773120
+  ret i32 %masked
+}
+
+define i32 @bfoz_from_lshr_shl_i32(i32 %x) {
+; CHECK-LABEL: bfoz_from_lshr_shl_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 26
+; CHECK-NEXT:    srli a0, a0, 7
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 26
+  %lshr = lshr i32 %shl, 7
+  ret i32 %lshr
+}
+
+; NDS.BFOS
+
+; MSB >= LSB
 
 define i32 @bfos_from_ashr_shl_i32(i32 %x) {
 ; CHECK-LABEL: bfos_from_ashr_shl_i32:
