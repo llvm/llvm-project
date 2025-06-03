@@ -8859,7 +8859,7 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
     Inst.getOperand(CbszInsIdx).setImm(CbszVal);
   }
 
-  auto BlgpInsIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
+  int BlgpInsIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
   auto BlgpIdx = OptionalIdx.find(AMDGPUOperand::ImmTyBLGP);
   if (BlgpIdx != OptionalIdx.end()) {
     int BlgpVal = ((AMDGPUOperand &)*Operands[BlgpIdx->second]).getImm();
