@@ -11,7 +11,6 @@ program allocate_align_tree
     integer :: z, t, xx
     t = 2
     z = 3
-    !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
     !ERROR: The alignment value should be a constant positive integer
 !$omp allocate(j) align(xx)
     !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.

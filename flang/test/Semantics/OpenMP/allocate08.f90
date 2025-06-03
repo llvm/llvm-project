@@ -25,30 +25,20 @@ use AllocateModule
   trait(1)%value = default_mem_fb
   custom_allocator = omp_init_allocator(memspace, 1, trait)
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(x) allocator(omp_default_mem_alloc)
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(y) allocator(omp_default_mem_alloc)
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(z) allocator(omp_default_mem_alloc)
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(x)
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(y)
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(z)
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(w) allocator(custom_allocator)
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: If list items within the ALLOCATE directive have the SAVE attribute, are a common block name, or are declared in the scope of a module, then only predefined memory allocator parameters can be used in the allocator clause
   !$omp allocate(x) allocator(custom_allocator)
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: If list items within the ALLOCATE directive have the SAVE attribute, are a common block name, or are declared in the scope of a module, then only predefined memory allocator parameters can be used in the allocator clause
   !$omp allocate(y) allocator(custom_allocator)
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: If list items within the ALLOCATE directive have the SAVE attribute, are a common block name, or are declared in the scope of a module, then only predefined memory allocator parameters can be used in the allocator clause
   !$omp allocate(z) allocator(custom_allocator)
 end subroutine allocate

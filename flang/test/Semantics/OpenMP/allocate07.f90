@@ -18,23 +18,18 @@ use omp_lib
   CHARACTER(LEN=32) :: w
   INTEGER, DIMENSION(:), ALLOCATABLE :: y
   
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: A type parameter inquiry cannot appear on the ALLOCATE directive
   !$omp allocate(x%KIND)
   
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: A type parameter inquiry cannot appear on the ALLOCATE directive
   !$omp allocate(w%LEN)
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: A type parameter inquiry cannot appear on the ALLOCATE directive
   !$omp allocate(y%KIND)
   
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: A type parameter inquiry cannot appear on the ALLOCATE directive
   !$omp allocate(my_var%kind_param)
  
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: A type parameter inquiry cannot appear on the ALLOCATE directive
   !$omp allocate(my_var%len_param)
 

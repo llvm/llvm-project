@@ -15,7 +15,6 @@ use omp_lib
     integer :: a, b
     real, dimension (:,:), allocatable :: darray
 
-    !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
     !ERROR: List items must be declared in the same scoping unit in which the ALLOCATE directive appears
     !$omp allocate(y)
         print *, a

@@ -20,9 +20,7 @@ use omp_lib
   !$omp allocate(c, d) allocator(omp_default_mem_alloc)
     allocate(c(3), d(4))
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(e) allocator(omp_default_mem_alloc)
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(f, g) allocator(omp_default_mem_alloc)
   !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate
@@ -33,7 +31,6 @@ use omp_lib
   !$omp allocate(h, i) allocator(omp_default_mem_alloc)
     allocate(h(8))
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: Object 'j' in ALLOCATE directive not found in corresponding ALLOCATE statement
   !$omp allocate(j, k) allocator(omp_default_mem_alloc)
   !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
