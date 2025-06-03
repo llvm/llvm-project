@@ -15,11 +15,16 @@
 
 include "mlir/IR/CommonAttrConstraints.td"
 
+class CIR_IsAttrPred<code attr> : CPred<"::mlir::isa<" # attr # ">($_self)">;
+
+class CIR_AttrConstraint<code attr, string summary = "">
+    : Attr<CIR_IsAttrPred<attr>, summary>;
+
 //===----------------------------------------------------------------------===//
 // IntAttr constraints
 //===----------------------------------------------------------------------===//
 
-def CIR_AnyIntAttr : Attr<CPred<"mlir::isa<cir::IntAttr>($_self)">, "integer attribute">;
+def CIR_AnyIntAttr : CIR_AttrConstraint<"::cir::IntAttr", "integer attribute">;
 
 //===----------------------------------------------------------------------===//
 // FPAttr constraints
