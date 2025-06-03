@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c++ %s -debug-info-kind=line-tables-only -emit-llvm -o - \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions -gno-column-info -x c++ %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --check-prefixes=CHECK,CHECK-CXX
 
-// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c %s -debug-info-kind=line-tables-only -emit-llvm -o - \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions -gno-column-info -x c %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s
 
 // Check the stores to `retval` allocas and branches to `return` block are in
@@ -57,6 +57,7 @@ nomangle int d() { return g = 1; }
 
 // The implicit return here get the line number of the closing brace; make it
 // key to match existing behaviour.
+// CHECK: void @e()
 // CHECK: ret void, !dbg [[E_G1R1:!.*]]
 nomangle void e() {}
 
@@ -66,10 +67,17 @@ int &f(int &r) {
 // Include ctrl-flow to stop ret value store being elided.
     if (r)
 // CHECK-CXX: if.then:
-// CHECK-CXX-NEXT: %2 = load ptr, ptr %r.addr{{.*}}, !dbg [[F_G2R2:!.*]]
+// CHECK-CXX-NEXT: %2 = load ptr, ptr %r.addr{{.*}}, !dbg [[F_G2R2:!.*]], !nonnull
 // CHECK-CXX-NEXT: store ptr %2, ptr %retval{{.*}}, !dbg [[F_G2R1:!.*]]
 // CHECK-CXX-NEXT: br label %return, !dbg [[F_G2R1:!.*]]
     return r;
+
+// CHECK-CXX: if.end:
+// CHECK-CXX-NEXT: store ptr @g, ptr %retval{{.*}}, !dbg [[F_G3R1:!.*]]
+// CHECK-CXX-NEXT: br label %return, !dbg [[F_G3R1:!.*]]
+// CHECK-CXX: return:
+// CHECK-CXX-NEXT: %3 = load ptr, ptr %retval{{.*}}, !dbg [[F_G4R2:!.*]]
+// CHECK-CXX-NEXT: ret ptr %3, !dbg [[F_G4R1:!.*]]
   return g;
 }
 #endif
@@ -88,3 +96,6 @@ int &f(int &r) {
 // CHECK: [[E_G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK-CXX: [[F_G2R2]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
 // CHECK-CXX: [[F_G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
+// CHECK-CXX: [[F_G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
+// CHECK-CXX: [[F_G4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
+// CHECK-CXX: [[F_G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)

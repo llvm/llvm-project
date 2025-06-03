@@ -96,5 +96,4 @@ void test() {
 // CHECK-C: [[G10R1]] = !DILocation({{.*}}, atomGroup: 10, atomRank: 1)
 // CHECK-C: [[G11R2]] = !DILocation({{.*}}, atomGroup: 11, atomRank: 2)
 // CHECK-C: [[G11R1]] = !DILocation({{.*}}, atomGroup: 11, atomRank: 1)
-// CHECK: [[RET:!.*]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])
 // CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])
