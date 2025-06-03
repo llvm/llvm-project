@@ -11,26 +11,30 @@ define fastcc ptr @test_function(i1 %0, ptr %_Fmtfl.i.i, i1 %1) personality ptr 
 ; CHECK-NEXT:  .seh_proc test_function
 ; CHECK-NEXT:    .seh_handler __CxxFrameHandler3, @unwind, @except
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    .seh_save_fplr_x 32
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    .seh_set_fp
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    .seh_stackalloc 48
+; CHECK-NEXT:    stp x29, x30, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_fplr 16
+; CHECK-NEXT:    add x29, sp, #16
+; CHECK-NEXT:    .seh_add_fp 16
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    mov x3, #-2 // =0xfffffffffffffffe
 ; CHECK-NEXT:    stur x3, [x29, #16]
-; CHECK-NEXT:    tbz w0, #0, .LBB0_3
+; CHECK-NEXT:    tbz w0, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %invoke.cont.i124
-; CHECK-NEXT:    mov x0, x1
-; CHECK-NEXT:    b .LBB0_4
-; CHECK-NEXT:  .LBB0_2: // Block address taken
-; CHECK-NEXT:    // %some-block
-; CHECK-NEXT:  $ehgcr_0_2:
-; CHECK-NEXT:  .LBB0_3: // %left-block526
-; CHECK-NEXT:    mov x0, xzr
-; CHECK-NEXT:  .LBB0_4: // %common.ret1
+; CHECK-NEXT:    stur x1, [x29, #-8] // 8-byte Folded Spill
+; CHECK-NEXT:    b .LBB0_3
+; CHECK-NEXT:  .LBB0_2: // %left-block526
+; CHECK-NEXT:    stur xzr, [x29, #-8] // 8-byte Folded Spill
+; CHECK-NEXT:  .LBB0_3: // Block address taken
+; CHECK-NEXT:    // %common.ret1
+; CHECK-NEXT:  $ehgcr_0_3:
+; CHECK-NEXT:    ldur x0, [x29, #-8] // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
-; CHECK-NEXT:    .seh_save_fplr_x 32
+; CHECK-NEXT:    ldp x29, x30, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_fplr 16
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    .seh_stackalloc 48
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .seh_endfunclet
@@ -38,20 +42,21 @@ define fastcc ptr @test_function(i1 %0, ptr %_Fmtfl.i.i, i1 %1) personality ptr 
 ; CHECK-NEXT:    .word $cppxdata$test_function@IMGREL
 ; CHECK-NEXT:    .text
 ; CHECK-NEXT:    .seh_endproc
-; CHECK-NEXT:    .def "?catch$5@?0?test_function@4HA";
+; CHECK-NEXT:    .def "?catch$4@?0?test_function@4HA";
 ; CHECK-NEXT:    .scl 3;
 ; CHECK-NEXT:    .type 32;
 ; CHECK-NEXT:    .endef
 ; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  "?catch$5@?0?test_function@4HA":
-; CHECK-NEXT:  .seh_proc "?catch$5@?0?test_function@4HA"
+; CHECK-NEXT:  "?catch$4@?0?test_function@4HA":
+; CHECK-NEXT:  .seh_proc "?catch$4@?0?test_function@4HA"
 ; CHECK-NEXT:    .seh_handler __CxxFrameHandler3, @unwind, @except
-; CHECK-NEXT:  .LBB0_5: // %catch.i
+; CHECK-NEXT:  .LBB0_4: // %catch.i
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_fplr_x 16
 ; CHECK-NEXT:    .seh_endprologue
-; CHECK-NEXT:    adrp x0, .LBB0_2
-; CHECK-NEXT:    add x0, x0, .LBB0_2
+; CHECK-NEXT:    stur xzr, [x29, #-8] // 8-byte Folded Spill
+; CHECK-NEXT:    adrp x0, .LBB0_3
+; CHECK-NEXT:    add x0, x0, .LBB0_3
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr_x 16

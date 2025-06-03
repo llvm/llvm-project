@@ -11,15 +11,14 @@
 define dso_local i32 @and_sink1(i32 %a, i1 %c) {
 ; CHECK-LABEL: and_sink1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    tbz w1, #0, .LBB0_3
+; CHECK-NEXT:    tbz w1, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %bb0
+; CHECK-NEXT:    tst w0, #0x4
 ; CHECK-NEXT:    adrp x8, A
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    str wzr, [x8, :lo12:A]
-; CHECK-NEXT:    tbnz w0, #2, .LBB0_3
-; CHECK-NEXT:  // %bb.2:
-; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_3: // %bb2
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 

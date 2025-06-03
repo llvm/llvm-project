@@ -17,11 +17,11 @@ define i32 @test(i64 %idx, i32 %val) {
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp sgt i32 [[VAL]], 0
 ; CHECK-NEXT:    [[COND_FR:%.*]] = freeze i1 [[CMP_I]]
-; CHECK-NEXT:    br i1 [[COND_FR]], label [[COND_END_THREAD]], label [[TMP0:%.*]]
-; CHECK:       cond.end.thread:
-; CHECK-NEXT:    br label [[TMP0]]
+; CHECK-NEXT:    br i1 [[COND_FR]], label [[TMP0:%.*]], label [[COND_END_THREAD]]
 ; CHECK:       0:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 0, [[COND_END_THREAD]] ], [ [[VAL]], [[COND_END]] ]
+; CHECK-NEXT:    br label [[COND_END_THREAD]]
+; CHECK:       cond.end.thread:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[VAL]], [[COND_END]] ], [ 0, [[TMP0]] ], [ 0, [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[F_IDX:%.*]] = getelementptr inbounds i32, ptr @f, i64 [[IDX]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[F_IDX]], align 4
 ; CHECK-NEXT:    [[F_RELOAD:%.*]] = load i32, ptr @f, align 4

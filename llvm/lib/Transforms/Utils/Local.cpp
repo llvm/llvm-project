@@ -1021,7 +1021,7 @@ CanRedirectPredsOfEmptyBBToSucc(BasicBlock *BB, BasicBlock *Succ,
                                 BasicBlock *&CommonPred) {
 
   // There must be phis in BB, otherwise BB will be merged into Succ directly
-  if (BB->phis().empty() || Succ->phis().empty())
+  if (BB->phis().empty() && Succ->phis().empty())
     return false;
 
   // BB must have predecessors not shared that can be redirected to Succ

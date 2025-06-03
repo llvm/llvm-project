@@ -4,7 +4,7 @@
 ; which replaces the select instruction in .exit block.
 
 define i32 @unfold3(i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z, i32 %j) !dbg !5 {
-; CHECK:       .exit.thread4:
+; CHECK:       .exit.thread:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 {{.*}}, !dbg [[DBG29:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[TMP0]], !dbg [[DBG30:![0-9]+]]
 ;
