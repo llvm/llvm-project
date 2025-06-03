@@ -216,7 +216,7 @@ define i32 @popcount64_zext(i32 %x) {
   ret i32 %13
 }
 
-define signext i32 @popcount64_mask(i64 %x) {
+define i32 @popcount64_mask(i64 %x) {
 ; CHECK-LABEL: @popcount64_mask(
 ; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[X:%.*]], -281470681808896
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.ctpop.i64(i64 [[MASK]])
