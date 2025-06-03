@@ -162,9 +162,9 @@ public:
   ExegesisAArch64Target()
       : ExegesisTarget(AArch64CpuPfmCounters, AArch64_MC::isOpcodeAvailable) {}
 
-  Error randomizeTargetMCOperand(
-      const Instruction &Instr, const Variable &Var, MCOperand &AssignedValue,
-      const BitVector &ForbiddenRegs) const override;
+  Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
+                                 MCOperand &AssignedValue,
+                                 const BitVector &ForbiddenRegs) const override;
 
 private:
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
@@ -241,25 +241,25 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
   // Introducing some illegal instructions for (15) a few opcodes
   // TODO: Look into immediate values to be opcode specific
   switch (OperandType) {
-    case MCOI::OperandType::OPERAND_UNKNOWN: {
-      unsigned Opcode = Instr.getOpcode();
-      switch (Opcode) {
-        case AArch64::MOVIv2s_msl:
-        case AArch64::MOVIv4s_msl:
-        case AArch64::MVNIv2s_msl:
-        case AArch64::MVNIv4s_msl:
-          AssignedValue = MCOperand::createImm(8); // or 16, as needed
-          return Error::success();
-        default:
-          AssignedValue = MCOperand::createImm(0);
-          return Error::success();
-      }
-    }
-    case MCOI::OperandType::OPERAND_PCREL:
-      AssignedValue = MCOperand::createImm(0);
+  case MCOI::OperandType::OPERAND_UNKNOWN: {
+    unsigned Opcode = Instr.getOpcode();
+    switch (Opcode) {
+    case AArch64::MOVIv2s_msl:
+    case AArch64::MOVIv4s_msl:
+    case AArch64::MVNIv2s_msl:
+    case AArch64::MVNIv4s_msl:
+      AssignedValue = MCOperand::createImm(8); // or 16, as needed
       return Error::success();
     default:
-      break;
+      AssignedValue = MCOperand::createImm(0);
+      return Error::success();
+    }
+  }
+  case MCOI::OperandType::OPERAND_PCREL:
+    AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  default:
+    break;
   }
 
   return make_error<Failure>(
