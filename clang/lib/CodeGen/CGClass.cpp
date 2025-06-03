@@ -2876,7 +2876,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
                                          llvm::Value *VTable,
                                          CFITypeCheckKind TCK,
                                          SourceLocation Loc) {
-  // N.B. all callers have established SanitizerDebugLocation
+  assert(IsSanitizerScope);
 
   if (!CGM.getCodeGenOpts().SanitizeCfiCrossDso &&
       !CGM.HasHiddenLTOVisibility(RD))
