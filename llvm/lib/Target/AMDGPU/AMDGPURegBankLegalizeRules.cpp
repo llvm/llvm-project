@@ -203,8 +203,8 @@ UniformityLLTOpPredicateID LLTToBId(LLT Ty) {
       Ty == LLT::pointer(6, 32))
     return B32;
   if (Ty == LLT::scalar(64) || Ty == LLT::fixed_vector(2, 32) ||
-      Ty == LLT::fixed_vector(4, 16) || Ty == LLT::pointer(1, 64) ||
-      Ty == LLT::pointer(4, 64) ||
+      Ty == LLT::fixed_vector(4, 16) || Ty == LLT::pointer(0, 64) ||
+      Ty == LLT::pointer(1, 64) || Ty == LLT::pointer(4, 64) ||
       (Ty.isPointer() && Ty.getAddressSpace() > AMDGPUAS::MAX_AMDGPU_ADDRESS))
     return B64;
   if (Ty == LLT::fixed_vector(3, 32))
