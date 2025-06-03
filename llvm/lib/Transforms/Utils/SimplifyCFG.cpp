@@ -8109,6 +8109,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
 
 /// Check if passing a value to an instruction will cause undefined behavior.
 static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValueMayBeModified) {
+  assert(V->getType() == I->getType() && "Mismatched types");
   Constant *C = dyn_cast<Constant>(V);
   if (!C)
     return false;
@@ -8177,6 +8178,10 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
              NullPointerIsDefined(GEP->getFunction(),
                                   GEP->getPointerAddressSpace())))
           PtrValueMayBeModified = true;
+        // The type of GEP may differ from the type of base pointer.
+        if (V->getType() != GEP->getType())
+          V = ConstantVector::getSplat(
+              cast<VectorType>(GEP->getType())->getElementCount(), C);
         return passingValueIsAlwaysUndefined(V, GEP, PtrValueMayBeModified);
       }
 
