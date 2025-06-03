@@ -17,6 +17,7 @@ include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 
 include "clang/CIR/Dialect/IR/CIRDialect.td"
+include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Attrs
@@ -301,7 +302,9 @@ def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
 
   let parameters = (ins
     AttributeSelfTypeParameter<"", "cir::ComplexType">:$type,
-    "mlir::TypedAttr":$real, "mlir::TypedAttr":$imag);
+    CIR_AnyIntOrFloatAttr:$real,
+    CIR_AnyIntOrFloatAttr:$imag
+  );
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "cir::ComplexType":$type,

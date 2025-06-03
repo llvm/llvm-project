@@ -173,6 +173,8 @@ def CIR_ComplexType : CIR_Type<"Complex", "complex",
     CIR type that represents a C complex number. `cir.complex` models the C type
     `T _Complex`.
 
+    `cir.complex` type is not directly mapped to `std::complex`.
+
     The type models complex values, per C99 6.2.5p11. It supports the C99
     complex float types as well as the GCC integer complex extensions.
 
