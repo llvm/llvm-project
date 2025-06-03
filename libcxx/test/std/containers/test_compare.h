@@ -9,6 +9,7 @@
 #ifndef TEST_COMPARE_H
 #define TEST_COMPARE_H
 
+#include "test_macros.h"
 template <class T>
 struct test_equal_to {
   int data_;
@@ -21,10 +22,10 @@ struct test_equal_to {
 template <class T>
 struct test_less {
   int data_;
-  explicit test_less() : data_(0) {}
-  explicit test_less(int data) : data_(data) {}
-  bool operator()(const T& a, const T& b) const { return a < b; }
-  friend bool operator==(const test_less& a, const test_less& b) { return a.data_ == b.data_; }
+  TEST_CONSTEXPR_CXX14 explicit test_less() : data_(0) {}
+  TEST_CONSTEXPR_CXX14 explicit test_less(int data) : data_(data) {}
+  TEST_CONSTEXPR_CXX14 bool operator()(const T& a, const T& b) const { return a < b; }
+  TEST_CONSTEXPR_CXX14 friend bool operator==(const test_less& a, const test_less& b) { return a.data_ == b.data_; }
 };
 
 #endif // TEST_COMPARE_H
