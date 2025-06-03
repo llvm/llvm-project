@@ -1516,7 +1516,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
     EmitStmt(S.getBody());
   }
 
-  // The last block in the loop's body (which unconditionally branches to theAdd commentMore actions
+  // The last block in the loop's body (which unconditionally branches to the
   // `inc` block if there is one).
   auto *FinalBodyBB = Builder.GetInsertBlock();
 
