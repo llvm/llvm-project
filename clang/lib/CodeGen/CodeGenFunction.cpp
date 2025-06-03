@@ -1635,7 +1635,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     if (SanOpts.has(SanitizerKind::Return)) {
       auto CheckOrdinal = SanitizerKind::SO_Return;
       auto CheckHandler = SanitizerHandler::MissingReturn;
-      SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
+      SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
       llvm::Value *IsFalse = Builder.getFalse();
       EmitCheck(std::make_pair(IsFalse, CheckOrdinal), CheckHandler,
                 EmitCheckSourceLocation(FD->getLocation()), {});
@@ -2541,7 +2541,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
           if (SanOpts.has(SanitizerKind::VLABound)) {
             auto CheckOrdinal = SanitizerKind::SO_VLABound;
             auto CheckHandler = SanitizerHandler::VLABoundNotPositive;
-            SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
+            SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
             llvm::Value *Zero = llvm::Constant::getNullValue(size->getType());
             clang::QualType SEType = sizeExpr->getType();
             llvm::Value *CheckCondition =
@@ -2759,14 +2759,6 @@ CodeGenFunction::SanitizerScope::SanitizerScope(CodeGenFunction *CGF)
     : CGF(CGF) {
   assert(!CGF->IsSanitizerScope);
   CGF->IsSanitizerScope = true;
-}
-
-CodeGenFunction::SanitizerScope::SanitizerScope(
-    CodeGenFunction *CGF, ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
-    SanitizerHandler Handler)
-    : SanitizerScope(CGF) {
-  ApplyTrapDI = std::make_unique<ApplyDebugLocation>(
-      *CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler));
 }
 
 CodeGenFunction::SanitizerScope::~SanitizerScope() {
@@ -3205,7 +3197,7 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
   {
     auto CheckOrdinal = SanitizerKind::SO_Alignment;
     auto CheckHandler = SanitizerHandler::AlignmentAssumption;
-    SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
+    SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
 
     if (!OffsetValue)
       OffsetValue = Builder.getInt1(false); // no offset.

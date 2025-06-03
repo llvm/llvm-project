@@ -1001,7 +1001,7 @@ void ScalarExprEmitter::EmitFloatConversionCheck(
 
   auto CheckOrdinal = SanitizerKind::SO_FloatCastOverflow;
   auto CheckHandler = SanitizerHandler::FloatCastOverflow;
-  CodeGenFunction::SanitizerScope SanScope(&CGF, {CheckOrdinal}, CheckHandler);
+  SanitizerDebugLocation SanScope(&CGF, {CheckOrdinal}, CheckHandler);
   using llvm::APFloat;
   using llvm::APSInt;
 
@@ -1145,7 +1145,7 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
     // We don't know the check kind until we call
     // EmitIntegerTruncationCheckHelper, but we want to annotate
     // EmitIntegerTruncationCheckHelper's instructions too.
-    CodeGenFunction::SanitizerScope SanScope(
+    SanitizerDebugLocation SanScope(
         &CGF,
         {SanitizerKind::SO_ImplicitUnsignedIntegerTruncation,
          SanitizerKind::SO_ImplicitSignedIntegerTruncation},
@@ -1159,8 +1159,7 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
   if (!CGF.SanOpts.has(Check.second.second))
     return;
 
-  CodeGenFunction::SanitizerScope SanScope(&CGF, {Check.second.second},
-                                           CheckHandler);
+  SanitizerDebugLocation SanScope(&CGF, {Check.second.second}, CheckHandler);
 
   // Does some SSCL ignore this type?
   if (CGF.getContext().isTypeIgnoredBySanitizer(
@@ -1288,7 +1287,7 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
   // That's it. We can't rule out any more cases with the data we have.
 
   auto CheckHandler = SanitizerHandler::ImplicitConversion;
-  CodeGenFunction::SanitizerScope SanScope(
+  SanitizerDebugLocation SanScope(
       &CGF,
       {SanitizerKind::SO_ImplicitIntegerSignChange,
        SanitizerKind::SO_ImplicitUnsignedIntegerTruncation,
@@ -1414,7 +1413,7 @@ void CodeGenFunction::EmitBitfieldConversionCheck(Value *Src, QualType SrcType,
   bool DstSigned = DstType->isSignedIntegerOrEnumerationType();
 
   auto CheckHandler = SanitizerHandler::ImplicitConversion;
-  CodeGenFunction::SanitizerScope SanScope(
+  SanitizerDebugLocation SanScope(
       this, {SanitizerKind::SO_ImplicitBitfieldConversion}, CheckHandler);
 
   std::pair<ScalarExprEmitter::ImplicitConversionCheckKind,
@@ -3996,12 +3995,11 @@ void ScalarExprEmitter::EmitUndefinedBehaviorIntegerDivAndRemCheck(
 
 Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
   {
-    CodeGenFunction::SanitizerScope SanScope(
-        &CGF,
-        {SanitizerKind::SO_IntegerDivideByZero,
-         SanitizerKind::SO_SignedIntegerOverflow,
-         SanitizerKind::SO_FloatDivideByZero},
-        SanitizerHandler::DivremOverflow);
+    SanitizerDebugLocation SanScope(&CGF,
+                                    {SanitizerKind::SO_IntegerDivideByZero,
+                                     SanitizerKind::SO_SignedIntegerOverflow,
+                                     SanitizerKind::SO_FloatDivideByZero},
+                                    SanitizerHandler::DivremOverflow);
     if ((CGF.SanOpts.has(SanitizerKind::IntegerDivideByZero) ||
          CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
         Ops.Ty->isIntegerType() &&
@@ -4055,11 +4053,10 @@ Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
        CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow)) &&
       Ops.Ty->isIntegerType() &&
       (Ops.mayHaveIntegerDivisionByZero() || Ops.mayHaveIntegerOverflow())) {
-    CodeGenFunction::SanitizerScope SanScope(
-        &CGF,
-        {SanitizerKind::SO_IntegerDivideByZero,
-         SanitizerKind::SO_SignedIntegerOverflow},
-        SanitizerHandler::DivremOverflow);
+    SanitizerDebugLocation SanScope(&CGF,
+                                    {SanitizerKind::SO_IntegerDivideByZero,
+                                     SanitizerKind::SO_SignedIntegerOverflow},
+                                    SanitizerHandler::DivremOverflow);
     llvm::Value *Zero = llvm::Constant::getNullValue(ConvertType(Ops.Ty));
     EmitUndefinedBehaviorIntegerDivAndRemCheck(Ops, Zero, false);
   }
@@ -4108,11 +4105,10 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   if (isSigned)
     OpID |= 1;
 
-  CodeGenFunction::SanitizerScope SanScope(
-      &CGF,
-      {SanitizerKind::SO_SignedIntegerOverflow,
-       SanitizerKind::SO_UnsignedIntegerOverflow},
-      OverflowKind);
+  SanitizerDebugLocation SanScope(&CGF,
+                                  {SanitizerKind::SO_SignedIntegerOverflow,
+                                   SanitizerKind::SO_UnsignedIntegerOverflow},
+                                  OverflowKind);
   llvm::Type *opTy = CGF.CGM.getTypes().ConvertType(Ops.Ty);
 
   llvm::Function *intrinsic = CGF.CGM.getIntrinsic(IID, opTy);
@@ -4240,8 +4236,7 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
     // The inbounds GEP of null is valid iff the index is zero.
     auto CheckOrdinal = SanitizerKind::SO_PointerOverflow;
     auto CheckHandler = SanitizerHandler::PointerOverflow;
-    CodeGenFunction::SanitizerScope SanScope(&CGF, {CheckOrdinal},
-                                             CheckHandler);
+    SanitizerDebugLocation SanScope(&CGF, {CheckOrdinal}, CheckHandler);
     Value *IsZeroIndex = CGF.Builder.CreateIsNull(index);
     llvm::Constant *StaticArgs[] = {
         CGF.EmitCheckSourceLocation(op.E->getExprLoc())};
@@ -4779,8 +4774,8 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
     if (SanitizeExponent)
       Ordinals.push_back(SanitizerKind::SO_ShiftExponent);
 
-    CodeGenFunction::SanitizerScope SanScope(
-        &CGF, Ordinals, SanitizerHandler::ShiftOutOfBounds);
+    SanitizerDebugLocation SanScope(&CGF, Ordinals,
+                                    SanitizerHandler::ShiftOutOfBounds);
     SmallVector<std::pair<Value *, SanitizerKind::SanitizerOrdinal>, 2> Checks;
     bool RHSIsSigned = Ops.rhsHasSignedIntegerRepresentation();
     llvm::Value *WidthMinusOne =
@@ -4851,9 +4846,8 @@ Value *ScalarExprEmitter::EmitShr(const BinOpInfo &Ops) {
     RHS = ConstrainShiftValue(Ops.LHS, RHS, "shr.mask");
   else if (CGF.SanOpts.has(SanitizerKind::ShiftExponent) &&
            isa<llvm::IntegerType>(Ops.LHS->getType())) {
-    CodeGenFunction::SanitizerScope SanScope(
-        &CGF, {SanitizerKind::SO_ShiftExponent},
-        SanitizerHandler::ShiftOutOfBounds);
+    SanitizerDebugLocation SanScope(&CGF, {SanitizerKind::SO_ShiftExponent},
+                                    SanitizerHandler::ShiftOutOfBounds);
     bool RHSIsSigned = Ops.rhsHasSignedIntegerRepresentation();
     llvm::Value *Valid = Builder.CreateICmpULE(
         Ops.RHS, GetMaximumShiftAmount(Ops.LHS, Ops.RHS, RHSIsSigned));
@@ -6087,7 +6081,7 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
 
   auto CheckOrdinal = SanitizerKind::SO_PointerOverflow;
   auto CheckHandler = SanitizerHandler::PointerOverflow;
-  SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
+  SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
   llvm::Type *IntPtrTy = DL.getIntPtrType(PtrTy);
 
   GEPOffsetAndOverflow EvaluatedGEP =

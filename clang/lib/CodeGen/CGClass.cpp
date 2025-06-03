@@ -2890,7 +2890,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
     return;
 
   auto CheckHandler = SanitizerHandler::CFICheckFail;
-  SanitizerScope SanScope(this, {M}, CheckHandler);
+  SanitizerDebugLocation SanScope(this, {M}, CheckHandler);
   EmitSanitizerStatReport(SSK);
 
   llvm::Metadata *MD =
@@ -2949,7 +2949,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
     uint64_t VTableByteOffset) {
   auto CheckOrdinal = SanitizerKind::SO_CFIVCall;
   auto CheckHandler = SanitizerHandler::CFICheckFail;
-  SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
+  SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
 
   EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
 

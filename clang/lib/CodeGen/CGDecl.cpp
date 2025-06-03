@@ -768,7 +768,7 @@ void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
   // hand side must be nonnull.
   auto CheckOrdinal = SanitizerKind::SO_NullabilityAssign;
   auto CheckHandler = SanitizerHandler::TypeMismatch;
-  SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
+  SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
   llvm::Value *IsNotNull = Builder.CreateIsNotNull(RHS);
   llvm::Constant *StaticData[] = {
       EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(LHS.getType()),

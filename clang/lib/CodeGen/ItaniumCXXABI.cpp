@@ -704,8 +704,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   {
     auto CheckOrdinal = SanitizerKind::SO_CFIMFCall;
     auto CheckHandler = SanitizerHandler::CFICheckFail;
-    CodeGenFunction::SanitizerScope SanScope(&CGF, {CheckOrdinal},
-                                             CheckHandler);
+    SanitizerDebugLocation SanScope(&CGF, {CheckOrdinal}, CheckHandler);
 
     llvm::Value *TypeId = nullptr;
     llvm::Value *CheckResult = nullptr;
@@ -804,8 +803,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
     if (RD->hasDefinition()) {
       auto CheckOrdinal = SanitizerKind::SO_CFIMFCall;
       auto CheckHandler = SanitizerHandler::CFICheckFail;
-      CodeGenFunction::SanitizerScope SanScope(&CGF, {CheckOrdinal},
-                                               CheckHandler);
+      SanitizerDebugLocation SanScope(&CGF, {CheckOrdinal}, CheckHandler);
 
       llvm::Constant *StaticData[] = {
           llvm::ConstantInt::get(CGF.Int8Ty, CodeGenFunction::CFITCK_NVMFCall),

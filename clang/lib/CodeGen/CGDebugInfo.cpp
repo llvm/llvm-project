@@ -58,6 +58,13 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
+// TODO: consider deprecating ClArrayBoundsPseudoFn; functionality is subsumed
+//       by -fsanitize-annotate-debug-info
+static llvm::cl::opt<bool> ClArrayBoundsPseudoFn(
+    "array-bounds-pseudofn", llvm::cl::Hidden, llvm::cl::Optional,
+    llvm::cl::desc("Emit debug info that places array-bounds instrumentation "
+                   "in an inline function called __ubsan_check_array_bounds."));
+
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
   if (TI.isAlignRequired())
@@ -6412,4 +6419,48 @@ CodeGenFunction::LexicalScope::~LexicalScope() {
     ApplyDebugLocation DL(CGF, Range.getEnd());
     ForceCleanup();
   }
+}
+
+llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
+    ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler) {
+  std::string Label;
+  switch (Handler) {
+#define SANITIZER_CHECK(Enum, Name, Version)                                   \
+  case Enum:                                                                   \
+    Label = "__ubsan_check_" #Name;                                            \
+    break;
+
+    LIST_SANITIZER_CHECKS
+#undef SANITIZER_CHECK
+  };
+
+  llvm::DILocation *CheckDI = Builder.getCurrentDebugLocation();
+
+  // TODO: the annotation could be more precise e.g.,
+  //       use the ordinal name if there is only one ordinal
+  for (auto Ord : Ordinals) {
+    // TODO: deprecate ClArrayBoundsPseudoFn
+    if (((ClArrayBoundsPseudoFn && Ord == SanitizerKind::SO_ArrayBounds) ||
+         CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo.has(Ord)) &&
+        CheckDI) {
+      return getDebugInfo()->CreateSyntheticInlineAt(CheckDI, Label);
+    }
+  }
+
+  return CheckDI;
+}
+
+SanitizerDebugLocation::SanitizerDebugLocation(
+    CodeGenFunction *CGF, ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+    SanitizerHandler Handler)
+    : CGF(CGF),
+      Apply(*CGF, CGF->SanitizerAnnotateDebugInfo(Ordinals, Handler)) {
+  assert(!CGF->IsSanitizerScope);
+  CGF->IsSanitizerScope = true;
+}
+
+SanitizerDebugLocation::~SanitizerDebugLocation() {
+  assert(CGF->IsSanitizerScope);
+  CGF->IsSanitizerScope = false;
 }

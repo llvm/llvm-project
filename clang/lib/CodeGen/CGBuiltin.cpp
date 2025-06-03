@@ -2010,7 +2010,7 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
 
   auto CheckOrdinal = SanitizerKind::SO_Builtin;
   auto CheckHandler = SanitizerHandler::InvalidBuiltin;
-  SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
+  SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
   Value *Cond = Builder.CreateICmpNE(
       ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
   EmitCheck(std::make_pair(Cond, CheckOrdinal), CheckHandler,
@@ -2027,7 +2027,7 @@ Value *CodeGenFunction::EmitCheckedArgForAssume(const Expr *E) {
 
   auto CheckOrdinal = SanitizerKind::SO_Builtin;
   auto CheckHandler = SanitizerHandler::InvalidBuiltin;
-  SanitizerScope SanScope(this, {CheckOrdinal}, CheckHandler);
+  SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
   EmitCheck(
       std::make_pair(ArgValue, CheckOrdinal), CheckHandler,
       {EmitCheckSourceLocation(E->getExprLoc()),
@@ -2060,7 +2060,7 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
   } else
     CheckHandler = SanitizerHandler::SubOverflow;
 
-  CodeGenFunction::SanitizerScope SanScope(&CGF, Ordinals, CheckHandler);
+  SanitizerDebugLocation SanScope(&CGF, Ordinals, CheckHandler);
 
   Constant *Zero = Constant::getNullValue(ArgValue->getType());
   Value *ResultAndOverflow = CGF.Builder.CreateBinaryIntrinsic(
