@@ -3232,6 +3232,8 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
           ExtAddrMode::Formula Form = ExtAddrMode::Formula::Basic) -> bool {
     if (MemI.getOperand(2).getImm() != 0)
       return false;
+    if ((unsigned)Scale != Scale)
+      return false;
     if (!isLegalAddressingMode(NumBytes, /* Offset */ 0, Scale))
       return false;
     AM.BaseReg = AddrI.getOperand(1).getReg();
