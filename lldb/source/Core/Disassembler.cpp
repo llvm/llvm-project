@@ -1037,8 +1037,7 @@ void InstructionList::Dump(Stream *s, bool show_address, bool show_bytes,
   const FormatEntity::Entry *disassembly_format = nullptr;
   FormatEntity::Entry format;
   if (exe_ctx && exe_ctx->HasTargetScope()) {
-    format =
-        exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+    format = exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
     disassembly_format = &format;
   } else {
     FormatEntity::Parse("${addr}: ", format);

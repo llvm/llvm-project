@@ -1537,7 +1537,8 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
 
   if (format == nullptr) {
     if (exe_ctx != nullptr && exe_ctx->HasTargetScope()) {
-      format_entry = exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
+      format_entry =
+          exe_ctx->GetTargetRef().GetDebugger().GetDisassemblyFormat();
       format = &format_entry;
     }
     if (format == nullptr) {
