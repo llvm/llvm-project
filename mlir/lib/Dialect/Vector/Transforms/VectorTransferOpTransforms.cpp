@@ -582,6 +582,15 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
 
 namespace {
 
+/// Helper functon to return the index of the last dynamic dimension in `shape`.
+int64_t lastDynIndex(ArrayRef<int64_t> shape) {
+  return static_cast<int64_t>(
+      std::distance(
+          std::find(shape.rbegin(), shape.rend(), ShapedType::kDynamic),
+          shape.rend()) -
+      1);
+}
+
 /// Rewrites contiguous row-major vector.transfer_read ops by inserting
 /// memref.collapse_shape on the source so that the resulting
 /// vector.transfer_read has a 1D source. Requires the source shape to be
@@ -631,8 +640,9 @@ public:
       return failure();
 
     // Determinine the first memref dimension to collapse
-    int64_t firstDimToCollapse =
-        sourceType.getRank() - sourceType.getMaxCollapsableTrailingDims();
+    int64_t firstDimToCollapse = std::max(
+        lastDynIndex(sourceType.getShape()),
+        sourceType.getRank() - sourceType.getMaxCollapsableTrailingDims());
 
     // 1. Collapse the source memref
     Value collapsedSource =
@@ -725,8 +735,9 @@ public:
       return failure();
 
     // Determinine the first memref dimension to collapse
-    int64_t firstDimToCollapse =
-        sourceType.getRank() - sourceType.getMaxCollapsableTrailingDims();
+    int64_t firstDimToCollapse = std::max(
+        lastDynIndex(sourceType.getShape()),
+        sourceType.getRank() - sourceType.getMaxCollapsableTrailingDims());
 
     // 1. Collapse the source memref
     Value collapsedSource =
