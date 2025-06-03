@@ -612,7 +612,8 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
          isPCRelFixupResolved(AUIPCTarget.getAddSym(), *AUIPCDF);
 }
 
-void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F, const MCFixup &Fixup) {
+void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
+                                          const MCFixup &Fixup) {
   MCContext &Ctx = Asm->getContext();
 
   StringRef VendorIdentifier;
@@ -629,9 +630,11 @@ void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F, const MCFixup &Fi
     break;
   }
 
-  // Create a local symbol for the vendor relocation to reference. It's fine if the symbol has the same name as an existing symbol.
+  // Create a local symbol for the vendor relocation to reference. It's fine if
+  // the symbol has the same name as an existing symbol.
   MCSymbol *VendorSymbol = Ctx.createLocalSymbol(VendorIdentifier);
-  auto [It, Inserted] = VendorSymbols.try_emplace(VendorIdentifier, VendorSymbol);
+  auto [It, Inserted] =
+      VendorSymbols.try_emplace(VendorIdentifier, VendorSymbol);
 
   if (Inserted) {
     // Setup the just-created symbol
@@ -645,8 +648,9 @@ void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F, const MCFixup &Fi
   const MCExpr *VendorExpr = MCSymbolRefExpr::create(VendorSymbol, Ctx);
   MCFixup VendorFixup =
       MCFixup::create(Fixup.getOffset(), VendorExpr, ELF::R_RISCV_VENDOR);
-  // Explicitly create MCValue rather than using `VendorExpr->evaluateAsRelocatable`
-  // so that the absolute symbol is not evaluated to a constant.
+  // Explicitly create MCValue rather than using
+  // `VendorExpr->evaluateAsRelocatable` so that the absolute symbol is not
+  // evaluated to constant 0.
   MCValue VendorTarget = MCValue::get(VendorSymbol);
   uint64_t VendorValue;
   Asm->getWriter().recordRelocation(F, VendorFixup, VendorTarget, VendorValue);
