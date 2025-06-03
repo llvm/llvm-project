@@ -55,6 +55,15 @@ public:
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
 
+  /// CXXThisDecl - When generating code for a C++ member function,
+  /// this will hold the implicit 'this' declaration.
+  ImplicitParamDecl *cxxabiThisDecl = nullptr;
+  mlir::Value cxxabiThisValue = nullptr;
+  mlir::Value cxxThisValue = nullptr;
+
+  // Holds the Decl for the current outermost non-closure context
+  const clang::Decl *curFuncDecl = nullptr;
+
   /// The function for which code is currently being generated.
   cir::FuncOp curFn;
 
@@ -305,6 +314,22 @@ public:
 
   LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
     return LValue::makeAddr(addr, ty, baseInfo);
+  }
+
+  /// Return the address of a local variable.
+  Address getAddrOfLocalVar(const clang::VarDecl *vd) {
+    auto it = localDeclMap.find(vd);
+    assert(it != localDeclMap.end() &&
+           "Invalid argument to getAddrOfLocalVar(), no decl!");
+    return it->second;
+  }
+
+  /// Load the value for 'this'. This function is only valid while generating
+  /// code for an C++ member function.
+  /// FIXME(cir): this should return a mlir::Value!
+  mlir::Value loadCXXThis() {
+    assert(cxxThisValue && "no 'this' value for this function");
+    return cxxThisValue;
   }
 
   /// Get an appropriate 'undef' rvalue for the given type.

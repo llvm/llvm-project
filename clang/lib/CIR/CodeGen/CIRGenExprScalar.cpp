@@ -569,6 +569,8 @@ public:
 
   mlir::Value VisitUnaryLNot(const UnaryOperator *e);
 
+  mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another

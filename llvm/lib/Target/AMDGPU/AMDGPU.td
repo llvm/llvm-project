@@ -1284,6 +1284,12 @@ def FeatureIndexedResources : SubtargetFeature<"indexed-resources",
   "Has indexed resources."
 >;
 
+def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
+  "HasSetPrioIncWgInst",
+  "true",
+  "Has s_setprio_inc_wg instruction."
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -2192,6 +2198,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
    FeatureLdsBarrierArriveAtomic,
+   FeatureSetPrioIncWgInst,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2271,6 +2278,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
    FeatureWMMA128bInsts,
+   FeatureSetPrioIncWgInst,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -3133,6 +3141,9 @@ def HasParallelBitInsts : Predicate<"Subtarget->hasParallelBitInsts()">,
 
 def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
   AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;
+
+def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
+ AssemblerPredicate<(all_of FeatureSetPrioIncWgInst)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"
