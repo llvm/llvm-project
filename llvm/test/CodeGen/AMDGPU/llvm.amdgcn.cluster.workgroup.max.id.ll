@@ -73,7 +73,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -161,7 +161,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-G-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -252,7 +252,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %o
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -336,7 +336,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %o
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-G-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -427,7 +427,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -515,7 +515,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-G-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -606,7 +606,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %o
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -690,7 +690,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %o
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-G-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -781,7 +781,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -869,7 +869,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-G-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -960,7 +960,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z_optimized(ptr addrspace(1) %o
 ; CHECK-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-MESA3D-NEXT:     reserved_vgpr_count = 0
@@ -1044,7 +1044,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z_optimized(ptr addrspace(1) %o
 ; CHECK-G-MESA3D-NEXT:     gds_segment_byte_size = 0
 ; CHECK-G-MESA3D-NEXT:     kernarg_segment_byte_size = 24
 ; CHECK-G-MESA3D-NEXT:     workgroup_fbarrier_count = 0
-; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 6
+; CHECK-G-MESA3D-NEXT:     wavefront_sgpr_count = 8
 ; CHECK-G-MESA3D-NEXT:     workitem_vgpr_count = 2
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_first = 0
 ; CHECK-G-MESA3D-NEXT:     reserved_vgpr_count = 0
