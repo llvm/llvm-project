@@ -1226,9 +1226,12 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     }
 
     // If it is hard to analyze, we will give up and put allocas to frame,
-    // even if they never cross suspend points.
-    // Lifetime intrinsics referring to alloca may fail guard storing to frame.
-    // Lifetime intrinsics referring to frames may block further optimizations.
+    // even if they never cross suspend points.Lifetime intrinsics referring
+    // to alloca may fail guard storing to frame.
+    //
+    // It is meaningless to retain the lifetime intrinsics refer for the
+    // member of coroutine frames and the meaningless lifetime intrinsics
+    // are possible to block further optimizations.
     for (auto *I : Lifetimes)
       I->eraseFromParent();
 
