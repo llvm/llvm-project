@@ -1,0 +1,82 @@
+# REQUIRES: x86
+
+# Test that a DTLTO link succeeds and outputs the expected set of files
+# correctly when thin archives are present.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+# Generate ThinLTO bitcode files.
+RUN: opt -thinlto-bc t1.ll -o t1.bc -O2
+RUN: opt -thinlto-bc t2.ll -o t2.bc -O2
+RUN: opt -thinlto-bc t3.ll -o t3.bc -O2
+
+# Generate object files for mock.py to return.
+RUN: llc t1.ll --filetype=obj -o t1.o --relocation-model=pic
+RUN: llc t2.ll --filetype=obj -o t2.o --relocation-model=pic
+RUN: llc t3.ll --filetype=obj -o t3.o --relocation-model=pic
+
+RUN: llvm-ar rcs t1.a t1.bc --thin
+# Create this bitcode thin archive in a subdirectory to test the expansion of
+# the path to a bitcode file that is referenced using "..", e.g., in this case
+# "../t2.bc".
+RUN: mkdir lib
+RUN: llvm-ar rcs lib/t2.a t2.bc --thin
+# Create this bitcode thin archive with an absolute path entry containing "..".
+RUN: llvm-ar rcs t3.a %t/lib/../t3.bc --thin
+RUN: llvm-ar rcs t4.a t1.bc --thin
+
+RUN: mkdir %t/out && cd %t/out
+
+# Note that mock.py does not do any compilation, instead it simply writes the
+# contents of the object files supplied on the command line into the output
+# object files in job order.
+RUN: ld.lld --whole-archive %t/t1.a %t/lib/t2.a ../t3.a \
+RUN:   --no-whole-archive %t/t4.a \ 
+RUN:   --thinlto-distributor=%python \
+RUN:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
+RUN:   --thinlto-distributor-arg=../t1.o \
+RUN:   --thinlto-distributor-arg=../t2.o \
+RUN:   --thinlto-distributor-arg=../t3.o \
+RUN:   --save-temps
+
+RUN: ls | FileCheck %s --implicit-check-not=4
+
+# JSON jobs description.
+CHECK-DAG: a.{{[0-9]+}}.dist-file.json
+
+# Individual summary index files.
+CHECK-DAG: t1.{{[0-9]+}}.{{[0-9]+}}.native.o.thinlto.bc{{$}}
+CHECK-DAG: t2.{{[0-9]+}}.{{[0-9]+}}.native.o.thinlto.bc{{$}}
+CHECK-DAG: t3.{{[0-9]+}}.{{[0-9]+}}.native.o.thinlto.bc{{$}}
+
+# Native output object files.
+CHECK-DAG: t1.{{[0-9]+}}.{{[0-9]+}}.native.o{{$}}
+CHECK-DAG: t2.{{[0-9]+}}.{{[0-9]+}}.native.o{{$}}
+CHECK-DAG: t3.{{[0-9]+}}.{{[0-9]+}}.native.o{{$}}
+
+#--- t1.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @t1() {
+entry:
+  ret void
+}
+
+#--- t2.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @t2() {
+entry:
+  ret void
+}
+
+#--- t3.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @t3() {
+entry:
+  ret void
+}
