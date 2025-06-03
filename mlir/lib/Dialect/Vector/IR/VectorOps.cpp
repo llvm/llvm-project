@@ -5726,13 +5726,21 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
   VectorType resultType = getType();
 
-  // No-op shape cast.
-  if (getSource().getType() == resultType)
-    return getSource();
 
-  // shape_cast(shape_cast(x)) -> shape_cast(x)
-  if (auto precedingShapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
-    setOperand(precedingShapeCast.getSource());
+  // y = shape_cast(shape_cast(shape_cast(x))) 
+  //    -> shape_cast(x) # if x and y different types
+  //    -> x             # if x and y same type
+  // Value newSource  = getSource();
+  ShapeCastOp parent = *this;
+  while (auto precedingShapeCast = parent.getSource().getDefiningOp<ShapeCastOp>()) {
+    parent = precedingShapeCast;
+  }
+
+  if (parent.getSource().getType() == resultType)
+    return parent.getSource();
+
+  if (parent != *this){
+    setOperand(parent.getSource());
     return getResult();
   }
 
