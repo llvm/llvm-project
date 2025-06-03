@@ -866,8 +866,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
   clang::TranslationUnitDecl *TU = m_ast->GetTranslationUnitDecl();
 
   // Prepare the declarations/types we need for the template.
-  CompilerType clang_type =
-      m_ast->CreateFunctionType(int_type, nullptr, 0U, false, 0U);
+  CompilerType clang_type = m_ast->CreateFunctionType(int_type, {}, false, 0U);
   FunctionDecl *func = m_ast->CreateFunctionDeclaration(
       TU, OptionalClangModuleID(), "foo", clang_type, StorageClass::SC_None,
       false);
@@ -895,8 +894,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
   clang::TagDecl *record = ClangUtil::GetAsTagDecl(record_type);
 
   // Prepare the declarations/types we need for the template.
-  CompilerType clang_type =
-      m_ast->CreateFunctionType(int_type, nullptr, 0U, false, 0U);
+  CompilerType clang_type = m_ast->CreateFunctionType(int_type, {}, false, 0U);
   // We create the FunctionDecl for the template in the TU DeclContext because:
   // 1. FunctionDecls can't be in a Record (only CXXMethodDecls can).
   // 2. It is mirroring the behavior of DWARFASTParserClang::ParseSubroutine.
@@ -930,10 +928,9 @@ TEST_F(TestTypeSystemClang, TestDeletingImplicitCopyCstrDueToMoveCStr) {
 
   // Create a move constructor that will delete the implicit copy constructor.
   CompilerType return_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
-  CompilerType param_type = t.GetRValueReferenceType();
-  CompilerType function_type =
-      m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
-                                /*variadic=*/false, /*quals*/ 0U);
+  std::array<CompilerType, 1> args{t.GetRValueReferenceType()};
+  CompilerType function_type = m_ast->CreateFunctionType(
+      return_type, args, /*variadic=*/false, /*quals*/ 0U);
   bool is_virtual = false;
   bool is_static = false;
   bool is_inline = false;
@@ -974,10 +971,9 @@ TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
   bool is_artificial = false;
   // Create a move constructor.
   {
-    CompilerType param_type = t.GetRValueReferenceType();
-    CompilerType function_type =
-        m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
-                                  /*variadic=*/false, /*quals*/ 0U);
+    std::array<CompilerType, 1> args{t.GetRValueReferenceType()};
+    CompilerType function_type = m_ast->CreateFunctionType(
+        return_type, args, /*variadic=*/false, /*quals*/ 0U);
     m_ast->AddMethodToCXXRecordType(
         t.GetOpaqueQualType(), class_name, nullptr, function_type,
         lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
@@ -1012,10 +1008,9 @@ TEST_F(TestTypeSystemClang, AddMethodToObjCObjectType) {
 
   // Add a method to the interface.
   std::vector<CompilerType> args;
-  CompilerType func_type =
-      m_ast->CreateFunctionType(m_ast->GetBasicType(lldb::eBasicTypeInt),
-                                args.data(), args.size(), /*variadic*/ false,
-                                /*quals*/ 0, clang::CallingConv::CC_C);
+  CompilerType func_type = m_ast->CreateFunctionType(
+      m_ast->GetBasicType(lldb::eBasicTypeInt), args, /*variadic*/ false,
+      /*quals*/ 0, clang::CallingConv::CC_C);
   bool variadic = false;
   bool artificial = false;
   bool objc_direct = false;
