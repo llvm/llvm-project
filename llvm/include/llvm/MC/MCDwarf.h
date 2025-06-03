@@ -216,6 +216,9 @@ public:
 
   // Override the label with the given EndLabel.
   void setEndLabel(MCSymbol *EndLabel) {
+    // If we're setting this to be an end entry, make sure we don't have
+    // LineStreamLabel set.
+    assert(LineStreamLabel == nullptr);
     Label = EndLabel;
     IsEndEntry = true;
   }
