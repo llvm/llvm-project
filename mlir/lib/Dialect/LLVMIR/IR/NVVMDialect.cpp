@@ -1206,15 +1206,27 @@ LogicalResult NVVM::VoteSyncOp::verify() {
 }
 
 LogicalResult NVVM::PrefetchOp::verify() {
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
   auto evictPriority = getEvictPriority();
+
+  if (getUniform()) {
+    if (!(getCacheLevel() == NVVM::PrefetchCacheLevel::L1)) {
+      return emitOpError("unsupported cache level, the only supported uniform "
+                         "cache level is L1");
+    }
+    if (addressSpace != NVVM::NVVMMemorySpace::kGenericMemorySpace) {
+      return emitOpError(
+          "prefetch to uniform cache requires a generic pointer");
+    }
+  }
 
   if (evictPriority && getCacheLevel() != NVVM::PrefetchCacheLevel::L2)
     return emitOpError(
         "cache eviction priority supported only for cache level L2");
 
   if (evictPriority &&
-      (llvm::cast<LLVM::LLVMPointerType>(getAddr().getType())
-           .getAddressSpace() != NVVM::NVVMMemorySpace::kGlobalMemorySpace))
+      (addressSpace != NVVM::NVVMMemorySpace::kGlobalMemorySpace))
     return emitOpError("cache eviction priority requires a global pointer");
 
   if (evictPriority &&
@@ -1224,13 +1236,6 @@ LogicalResult NVVM::PrefetchOp::verify() {
         "unsupported cache eviction priority, only evict_last and "
         "evict_normal are supported");
 
-  return success();
-}
-
-LogicalResult NVVM::PrefetchUniformOp::verify() {
-  if (getCacheLevel() != NVVM::PrefetchCacheLevel::L1)
-    return emitOpError(
-        "unsupported cache level, the only supported level is L1");
   return success();
 }
 
@@ -1770,6 +1775,13 @@ llvm::Intrinsic::ID PrefetchOp::getIntrinsicID(Operation &op) {
       curOp.getEvictPriority();
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
+
+  if (curOp.getUniform()) {
+    if (cacheLevel == NVVM::PrefetchCacheLevel::L1)
+      return llvm::Intrinsic::nvvm_prefetchu_L1;
+    else
+      llvm_unreachable("Invalid uniform cache level");
+  }
 
   if (cacheLevel == NVVM::PrefetchCacheLevel::L1) {
     switch (as) {

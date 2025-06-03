@@ -2378,6 +2378,9 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
 
     The `cacheLevel` attribute specifies the cache level to which the cache line
     containing the specified address is brought.
+    
+    `uniform` can be specified after the `cacheLevel` to indicate that the 
+    prefetch is performed to the specified uniform cache level. If `uniform` is specified, `addr` must be a generic address pointer and no operation is performed if `addr` maps to a `const`, `local`, or `shared` memory location.
 
     The `evictPriority` attribute is optional and specifies the cache eviction
     priority when `cacheLevel` is L2.
@@ -2385,11 +2388,12 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu)
   }];
   let arguments = (ins PrefetchCacheLevelAttr:$cacheLevel,
+                       UnitAttr:$uniform,
                        AnyTypeOf<[LLVM_PointerGlobal,
                                   LLVM_PointerLocal,
                                   LLVM_PointerGeneric]>:$addr,
                        OptionalAttr<CacheEvictionPriorityAttr>:$evictPriority);
-  let assemblyFormat = "`level` `=` $cacheLevel `,` $addr (`,` `evict_priority` `=` $evictPriority^)? attr-dict `:` type($addr)";
+  let assemblyFormat = "`level` `=` $cacheLevel (`uniform` $uniform^)? `,` $addr (`,` `evict_priority` `=` $evictPriority^)? attr-dict `:` type($addr)";
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
@@ -2398,27 +2402,6 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
   let llvmBuilder = [{
     auto intId = NVVM::PrefetchOp::getIntrinsicID(*op);
     createIntrinsicCall(builder, intId, $addr);
-  }];
-}
-
-def NVVM_PrefetchUniformOp : NVVM_Op<"prefetch.uniform"> {
-  let summary = "Brings the cache line containing an address into the specified uniform cache level";
-  let description = [{
-    Operand `addr` must be a generic address pointer and no operation is 
-    performed if `addr` maps to a `const`, `local`, or `shared` memory location.
-    
-    The `cacheLevel` attribute specifies the cache level to which the cache line
-    containing the specified address is brought. The only supported level is L1.
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu)
-  }];
-  let arguments = (ins PrefetchCacheLevelAttr:$cacheLevel, 
-                       LLVM_PointerGeneric:$addr);
-  let assemblyFormat = "`level` `=` $cacheLevel `,` $addr attr-dict `:` type($addr)";
-  let hasVerifier = 1;
-
-  let llvmBuilder = [{
-    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_prefetchu_L1, $addr);
   }];
 }
 

@@ -42,6 +42,6 @@ llvm.func @prefetch_L1_uniform(%gen_ptr: !llvm.ptr) {
   // CHECK-NEXT: call void @llvm.nvvm.prefetchu.L1(ptr %0)
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
-  nvvm.prefetch.uniform level = L1, %gen_ptr : !llvm.ptr
+  nvvm.prefetch level = L1 uniform, %gen_ptr : !llvm.ptr
   llvm.return
 }

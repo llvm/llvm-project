@@ -300,7 +300,15 @@ llvm.func @nvvm_prefetch_L2_with_invalid_no_allocate(%global_ptr: !llvm.ptr<1>) 
 // -----
 
 llvm.func @nvvm_prefetch_uniform_with_L2(%gen_ptr: !llvm.ptr) {
-  // expected-error @below {{unsupported cache level, the only supported level is L1}}
-  nvvm.prefetch.uniform level = L2, %gen_ptr : !llvm.ptr
+  // expected-error @below {{unsupported cache level, the only supported uniform cache level is L1}}
+  nvvm.prefetch level = L2 uniform, %gen_ptr : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_uniform_with_invalid_addr_space(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{prefetch to uniform cache requires a generic pointer}}
+  nvvm.prefetch level = L1 uniform, %global_ptr : !llvm.ptr<1>
   llvm.return
 }

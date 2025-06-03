@@ -614,8 +614,8 @@ func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: 
   nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_last : !llvm.ptr<1>
   // CHECK:   nvvm.prefetch level = L2, %{{.*}}
   nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_normal : !llvm.ptr<1>
-  // CHECK:   nvvm.prefetch.uniform level = L1, %{{.*}}
-  nvvm.prefetch.uniform level = L1, %gen_ptr : !llvm.ptr
+  // CHECK:   nvvm.prefetch level = L1 uniform, %{{.*}}
+  nvvm.prefetch level = L1 uniform, %gen_ptr : !llvm.ptr
   return
 }
 
