@@ -565,6 +565,43 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
   return nullptr;
 }
 
+/// Try to fold a select to a min/max intrinsic. Many cases are already handled
+/// by matchDecomposedSelectPattern but here we handle the cases where more
+/// exensive modification of the IR is required.
+static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
+                                   Value *FVal,
+                                   InstCombiner::BuilderTy &Builder) {
+  const Value *CmpLHS = Cmp->getOperand(0);
+  const Value *CmpRHS = Cmp->getOperand(1);
+  const ICmpInst::Predicate Pred = Cmp->getPredicate();
+
+  // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
+  // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
+  // This transformation is valid when overflow corresponding to the sign of
+  // the comparison is poison and we must drop the non-matching overflow flag.
+  // Note: that the UMIN case is not possible as we canonicalize to addition.
+  if (CmpLHS == TVal) {
+    if (Pred == CmpInst::ICMP_SGT &&
+        match(FVal, m_NSWAddLike(m_Specific(CmpRHS), m_One()))) {
+      cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
+      return Builder.CreateBinaryIntrinsic(Intrinsic::smax, TVal, FVal);
+    }
+
+    if (Pred == CmpInst::ICMP_SLT &&
+        match(FVal, m_NSWAddLike(m_Specific(CmpRHS), m_AllOnes()))) {
+      cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
+      return Builder.CreateBinaryIntrinsic(Intrinsic::smin, TVal, FVal);
+    }
+
+    if (Pred == CmpInst::ICMP_UGT &&
+        match(FVal, m_NUWAddLike(m_Specific(CmpRHS), m_One()))) {
+      cast<Instruction>(FVal)->setHasNoSignedWrap(false);
+      return Builder.CreateBinaryIntrinsic(Intrinsic::umax, TVal, FVal);
+    }
+  }
+  return nullptr;
+}
+
 /// We want to turn:
 ///   (select (icmp eq (and X, Y), 0), (and (lshr X, Z), 1), 1)
 /// into:
@@ -1916,6 +1953,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     SI.swapProfMetadata();
     return &SI;
   }
+
+  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
 
   if (Instruction *V =
           foldSelectICmpAndAnd(SI.getType(), ICI, TrueVal, FalseVal, Builder))

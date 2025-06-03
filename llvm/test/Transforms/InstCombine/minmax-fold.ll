@@ -1673,8 +1673,8 @@ define <2 x i16> @test_umax_add1_nsw_vec(<2 x i16> %x, <2 x i16> %w) {
 
 define i32 @test_smin_sub1_nsw_drop_flags(i32 %x, i32 %w) {
 ; CHECK-LABEL: @test_smin_sub1_nsw_drop_flags(
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[W:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i32 [[X]], i32 -1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp = icmp slt i32 %x, %w
