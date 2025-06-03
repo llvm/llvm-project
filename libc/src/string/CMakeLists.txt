@@ -110,7 +110,6 @@ add_entrypoint_object(
   HDRS
     strcat.h
   DEPENDS
-    .strcpy
     .string_utils
     libc.include.llvm-libc-types.size_t
 )
@@ -267,7 +266,6 @@ add_entrypoint_object(
   HDRS
     strncat.h
   DEPENDS
-    .strncpy
     .string_utils
     libc.include.llvm-libc-types.size_t
 )
