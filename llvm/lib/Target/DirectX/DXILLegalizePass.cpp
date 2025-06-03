@@ -195,6 +195,7 @@ static void fixI8UseChain(Instruction &I,
         Builder.CreateGEP(ElementType, BasePtr, Builder.getInt32(Index),
                           GEP->getName(), GEP->getNoWrapFlags());
     ReplacedValues[GEP] = NewGEP;
+    GEP->replaceAllUsesWith(NewGEP);
     ToRemove.push_back(GEP);
   }
 }
