@@ -93,6 +93,27 @@ void d() {
   }
 }
 
+int x, i;
+void ee();
+void e() {
+// - Check we assign an atom group to `for.body`s `br`, even without braces.
+// - TODO: Investigate whether this is needed.
+// CHECK: entry:
+
+// CHECK: for.cond:
+// CHECK-NEXT: %0 = load i32, ptr @i
+// CHECK-NEXT: %cmp = icmp slt i32 %0, 3, !dbg [[eG1R1:!.*]]
+// CHECK-NEXT: br i1 %cmp, label %for.body, label %for.end, !dbg [[eG2R1:!.*]]
+
+// CHECK: for.body:
+// CHECK-NEXT: %1 = load i32, ptr @i{{.*}}, !dbg [[eG3R2:!.*]]
+// CHECK-NEXT: store i32 %1, ptr @x{{.*}}, !dbg [[eG3R1:!.*]]
+// CHECK-NEXT: br label %for.inc, !dbg [[eG4R1:!.*]]
+  for (; i < 3; ee())
+    x = i;
+}
+
+
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
@@ -116,3 +137,9 @@ void d() {
 // CHECK: [[cG2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 
 // CHECK: [[dG1R1]] = !DILocation(line: 91, column: 3, scope: ![[#]], atomGroup: 1, atomRank: 1)
+
+// CHECK: [[eG1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
+// CHECK: [[eG2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
+// CHECK: [[eG3R2]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 2)
+// CHECK: [[eG3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
+// CHECK: [[eG4R1]] = !DILocation(line: 113, column: 5, scope: ![[#]], atomGroup: 4, atomRank: 1)
