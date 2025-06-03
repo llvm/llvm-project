@@ -23,6 +23,7 @@
 //
 // Preconditions: other.required_span_size() is representable as a value of type index_type
 
+#include <span> // dynamic_extent
 #include <mdspan>
 #include <cassert>
 
