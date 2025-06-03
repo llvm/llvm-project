@@ -1623,15 +1623,27 @@ define i32 @test_smax_add1_nsw(i32 %x, i32 %w) {
   ret i32 %r
 }
 
-define i32 @test_umax_add1_nsw(i32 %x, i32 %w) {
-; CHECK-LABEL: @test_umax_add1_nsw(
-; CHECK-NEXT:    [[X2:%.*]] = add nuw i32 [[W:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[X2]])
+define i32 @test_umax_add1_nuw(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_umax_add1_nuw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[W:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[ADD]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %cmp = icmp ugt i32 %x, %w
   %add = add nuw i32 %w, 1
   %r = select i1 %cmp, i32 %x, i32 %add
+  ret i32 %r
+}
+
+define i32 @test_umin_sub1_nuw(i32 %x, i32 range(i32 1, 0) %w) {
+; CHECK-LABEL: @test_umin_sub1_nuw(
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[W:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp ult i32 %x, %w
+  %sub = add i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
   ret i32 %r
 }
 
@@ -1659,8 +1671,8 @@ define <2 x i16> @test_smax_add1_nsw_vec(<2 x i16> %x, <2 x i16> %w) {
   ret <2 x i16> %r
 }
 
-define <2 x i16> @test_umax_add1_nsw_vec(<2 x i16> %x, <2 x i16> %w) {
-; CHECK-LABEL: @test_umax_add1_nsw_vec(
+define <2 x i16> @test_umax_add1_nuw_vec(<2 x i16> %x, <2 x i16> %w) {
+; CHECK-LABEL: @test_umax_add1_nuw_vec(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i16> [[W:%.*]], splat (i16 1)
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.umax.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[ADD]])
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
@@ -1670,6 +1682,19 @@ define <2 x i16> @test_umax_add1_nsw_vec(<2 x i16> %x, <2 x i16> %w) {
   %r = select <2 x i1> %cmp, <2 x i16> %x, <2 x i16> %add
   ret <2 x i16> %r
 }
+
+define <2 x i16> @test_umin_sub1_nuw_vec(<2 x i16> %x, <2 x i16> range(i16 1, 0) %w) {
+; CHECK-LABEL: @test_umin_sub1_nuw_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i16> [[W:%.*]], splat (i16 -1)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i16> @llvm.umin.v2i16(<2 x i16> [[X:%.*]], <2 x i16> [[SUB]])
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %cmp = icmp ult <2 x i16> %x, %w
+  %sub = add <2 x i16> %w, splat (i16 -1)
+  %r = select <2 x i1> %cmp, <2 x i16> %x, <2 x i16> %sub
+  ret <2 x i16> %r
+}
+
 
 define i32 @test_smin_sub1_nsw_drop_flags(i32 %x, i32 %w) {
 ; CHECK-LABEL: @test_smin_sub1_nsw_drop_flags(
@@ -1695,8 +1720,8 @@ define i32 @test_smax_add1_nsw_drop_flags(i32 %x, i32 %w) {
   ret i32 %r
 }
 
-define i32 @test_umax_add1_nsw_drop_flags(i32 %x, i32 %w) {
-; CHECK-LABEL: @test_umax_add1_nsw_drop_flags(
+define i32 @test_umax_add1_nuw_drop_flags(i32 %x, i32 %w) {
+; CHECK-LABEL: @test_umax_add1_nuw_drop_flags(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[W:%.*]], 1
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 [[ADD]])
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -1704,5 +1729,17 @@ define i32 @test_umax_add1_nsw_drop_flags(i32 %x, i32 %w) {
   %cmp = icmp ugt i32 %x, %w
   %add = add nuw nsw i32 %w, 1
   %r = select i1 %cmp, i32 %x, i32 %add
+  ret i32 %r
+}
+
+define i32 @test_umin_sub1_nuw_drop_flags(i32 %x, i32 range(i32 1, 0) %w) {
+; CHECK-LABEL: @test_umin_sub1_nuw_drop_flags(
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[W:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 [[SUB]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = icmp ult i32 %x, %w
+  %sub = add nsw i32 %w, -1
+  %r = select i1 %cmp, i32 %x, i32 %sub
   ret i32 %r
 }

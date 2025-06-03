@@ -570,7 +570,8 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
 /// exensive modification of the IR is required.
 static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
                                    Value *FVal,
-                                   InstCombiner::BuilderTy &Builder) {
+                                   InstCombiner::BuilderTy &Builder,
+                                   const SimplifyQuery &SQ) {
   const Value *CmpLHS = Cmp->getOperand(0);
   const Value *CmpRHS = Cmp->getOperand(1);
   const ICmpInst::Predicate Pred = Cmp->getPredicate();
@@ -579,7 +580,6 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
   // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
   // This transformation is valid when overflow corresponding to the sign of
   // the comparison is poison and we must drop the non-matching overflow flag.
-  // Note: that the UMIN case is not possible as we canonicalize to addition.
   if (CmpLHS == TVal) {
     if (Pred == CmpInst::ICMP_SGT &&
         match(FVal, m_NSWAddLike(m_Specific(CmpRHS), m_One()))) {
@@ -597,6 +597,15 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
         match(FVal, m_NUWAddLike(m_Specific(CmpRHS), m_One()))) {
       cast<Instruction>(FVal)->setHasNoSignedWrap(false);
       return Builder.CreateBinaryIntrinsic(Intrinsic::umax, TVal, FVal);
+    }
+
+    // Note: We must use isKnownNonZero here because "sub nuw %x, 1" will be
+    // canonicalize to "add %x, -1" discarding the nuw flag.
+    if (Pred == CmpInst::ICMP_ULT &&
+        match(FVal, m_AddLike(m_Specific(CmpRHS), m_AllOnes())) &&
+        isKnownNonZero(CmpRHS, SQ)) {
+      cast<Instruction>(FVal)->setHasNoSignedWrap(false);
+      return Builder.CreateBinaryIntrinsic(Intrinsic::umin, TVal, FVal);
     }
   }
   return nullptr;
@@ -1954,7 +1963,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return &SI;
   }
 
-  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder))
+  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder, SQ))
     return replaceInstUsesWith(SI, V);
 
   if (Instruction *V =
