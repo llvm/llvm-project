@@ -1001,24 +1001,22 @@ static void findForkedSCEVs(
       break;
     }
 
-    // Find the pointer type we need to extend to.
-    Type *IntPtrTy = SE->getEffectiveSCEVType(
-        SE->getSCEV(GEP->getPointerOperand())->getType());
+    Type *IntPtrTy = SE->getEffectiveSCEVType(GEP->getPointerOperandType());
 
     // Find the size of the type being pointed to. We only have a single
     // index term (guarded above) so we don't need to index into arrays or
     // structures, just get the size of the scalar value.
     const SCEV *Size = SE->getSizeOfExpr(IntPtrTy, SourceTy);
 
-    // Scale up the offsets by the size of the type, then add to the bases.
-    const SCEV *Scaled1 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[0]), IntPtrTy));
-    const SCEV *Scaled2 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[1]), IntPtrTy));
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[0]), Scaled1),
-                          NeedsFreeze);
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[1]), Scaled2),
-                          NeedsFreeze);
+    for (auto [B, O] : zip(BaseScevs, OffsetScevs)) {
+      const SCEV *Base = get<0>(B);
+      const SCEV *Offset = get<0>(O);
+
+      // Scale up the offsets by the size of the type, then add to the bases.
+      const SCEV *Scaled =
+          SE->getMulExpr(Size, SE->getTruncateOrSignExtend(Offset, IntPtrTy));
+      ScevList.emplace_back(SE->getAddExpr(Base, Scaled), NeedsFreeze);
+    }
     break;
   }
   case Instruction::Select: {
@@ -1028,10 +1026,9 @@ static void findForkedSCEVs(
     // then we just bail out and return the generic SCEV.
     findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
     findForkedSCEVs(SE, L, I->getOperand(2), ChildScevs, Depth);
-    if (ChildScevs.size() == 2) {
-      ScevList.push_back(ChildScevs[0]);
-      ScevList.push_back(ChildScevs[1]);
-    } else
+    if (ChildScevs.size() == 2)
+      append_range(ScevList, ChildScevs);
+    else
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
@@ -1044,10 +1041,9 @@ static void findForkedSCEVs(
       findForkedSCEVs(SE, L, I->getOperand(0), ChildScevs, Depth);
       findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
     }
-    if (ChildScevs.size() == 2) {
-      ScevList.push_back(ChildScevs[0]);
-      ScevList.push_back(ChildScevs[1]);
-    } else
+    if (ChildScevs.size() == 2)
+      append_range(ScevList, ChildScevs);
+    else
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
@@ -1074,12 +1070,9 @@ static void findForkedSCEVs(
       break;
     }
 
-    ScevList.emplace_back(
-        GetBinOpExpr(Opcode, get<0>(LScevs[0]), get<0>(RScevs[0])),
-        NeedsFreeze);
-    ScevList.emplace_back(
-        GetBinOpExpr(Opcode, get<0>(LScevs[1]), get<0>(RScevs[1])),
-        NeedsFreeze);
+    for (auto [L, R] : zip(LScevs, RScevs))
+      ScevList.emplace_back(GetBinOpExpr(Opcode, get<0>(L), get<0>(R)),
+                            NeedsFreeze);
     break;
   }
   default:

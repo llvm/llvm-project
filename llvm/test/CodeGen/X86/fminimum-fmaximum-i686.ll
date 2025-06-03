@@ -239,7 +239,7 @@ define fp128 @maximum_fp128(fp128 %x, fp128 %y) nounwind {
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    calll fmaximuml
+; CHECK-NEXT:    calll fmaximumf128
 ; CHECK-NEXT:    addl $44, %esp
 ; CHECK-NEXT:    movl (%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -496,7 +496,7 @@ define fp128 @minimum_fp128(fp128 %x, fp128 %y) nounwind {
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    calll fminimuml
+; CHECK-NEXT:    calll fminimumf128
 ; CHECK-NEXT:    addl $44, %esp
 ; CHECK-NEXT:    movl (%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -533,7 +533,7 @@ define fp128 @maximumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    calll fmaximum_numl
+; CHECK-NEXT:    calll fmaximum_numf128
 ; CHECK-NEXT:    addl $44, %esp
 ; CHECK-NEXT:    movl (%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -570,7 +570,7 @@ define fp128 @minimumnum_fp128(fp128 %x, fp128 %y) nounwind {
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    calll fminimum_numl
+; CHECK-NEXT:    calll fminimum_numf128
 ; CHECK-NEXT:    addl $44, %esp
 ; CHECK-NEXT:    movl (%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
