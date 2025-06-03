@@ -166,26 +166,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       addBypassSlowDiv(64, 32);
   }
 
-  // Setup Windows compiler runtime calls.
-  if (Subtarget.isTargetWindowsMSVC() || Subtarget.isTargetWindowsItanium()) {
-    static const struct {
-      const RTLIB::Libcall Op;
-      const char * const Name;
-      const CallingConv::ID CC;
-    } LibraryCalls[] = {
-      { RTLIB::SDIV_I64, "_alldiv", CallingConv::X86_StdCall },
-      { RTLIB::UDIV_I64, "_aulldiv", CallingConv::X86_StdCall },
-      { RTLIB::SREM_I64, "_allrem", CallingConv::X86_StdCall },
-      { RTLIB::UREM_I64, "_aullrem", CallingConv::X86_StdCall },
-      { RTLIB::MUL_I64, "_allmul", CallingConv::X86_StdCall },
-    };
-
-    for (const auto &LC : LibraryCalls) {
-      setLibcallName(LC.Op, LC.Name);
-      setLibcallCallingConv(LC.Op, LC.CC);
-    }
-  }
-
   if (Subtarget.canUseCMPXCHG16B())
     setMaxAtomicSizeInBitsSupported(128);
   else if (Subtarget.canUseCMPXCHG8B())
@@ -532,6 +512,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
+
+  // FIXME: This should be set in RuntimeLibcallsInfo
   if (TM.Options.ExceptionModel == ExceptionHandling::SjLj)
     setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
 
@@ -42618,9 +42600,11 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     return SDValue();
   }
   case X86ISD::VPERM2X128: {
-    // Fold vperm2x128(bitcast(x),bitcast(y),c) -> bitcast(vperm2x128(x,y,c)).
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
+    unsigned Imm = N.getConstantOperandVal(2);
+
+    // Fold vperm2x128(bitcast(x),bitcast(y),c) -> bitcast(vperm2x128(x,y,c)).
     if (LHS.getOpcode() == ISD::BITCAST &&
         (RHS.getOpcode() == ISD::BITCAST || RHS.isUndef())) {
       EVT SrcVT = LHS.getOperand(0).getValueType();
@@ -42653,7 +42637,6 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       }
       return SDValue();
     };
-    unsigned Imm = N.getConstantOperandVal(2);
     if (SDValue SubLo = FindSubVector128(Imm & 0x0F)) {
       if (SDValue SubHi = FindSubVector128((Imm & 0xF0) >> 4)) {
         MVT SubVT = VT.getHalfNumVectorElementsVT();
@@ -42662,6 +42645,24 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, SubLo, SubHi);
       }
     }
+
+    // Attempt to match VBROADCAST*128 subvector broadcast load.
+    if (RHS.isUndef()) {
+      SmallVector<int, 4> Mask;
+      DecodeVPERM2X128Mask(4, Imm, Mask);
+      if (isUndefOrInRange(Mask, 0, 4)) {
+        bool SplatLo = isShuffleEquivalent(Mask, {0, 1, 0, 1}, LHS);
+        bool SplatHi = isShuffleEquivalent(Mask, {2, 3, 2, 3}, LHS);
+        if ((SplatLo || SplatHi) && !Subtarget.hasAVX512() &&
+            X86::mayFoldLoad(LHS, Subtarget, /*AssumeSingleUse=*/true)) {
+          MVT MemVT = VT.getHalfNumVectorElementsVT();
+          unsigned Ofs = SplatLo ? 0 : MemVT.getStoreSize();
+          return getBROADCAST_LOAD(X86ISD::SUBV_BROADCAST_LOAD, DL, VT, MemVT,
+                                   cast<LoadSDNode>(LHS), Ofs, DAG);
+        }
+      }
+    }
+
     return SDValue();
   }
   case X86ISD::PSHUFD:
@@ -53016,7 +53017,7 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
         (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
          User->getOpcode() == X86ISD::VBROADCAST_LOAD ||
          ISD::isNormalLoad(User)) &&
-        UserLd->getChain() == Chain && !User->hasAnyUseOfValue(1) &&
+        UserLd->getChain() == Chain && User->hasAnyUseOfValue(0) &&
         User->getValueSizeInBits(0).getFixedValue() >
             RegVT.getFixedSizeInBits()) {
       EVT UserVT = User->getValueType(0);
@@ -53038,6 +53039,7 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
               getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
                                             UserUndefs, UserBits)) {
             if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
+              DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
               SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
                                                  RegVT.getSizeInBits());
               Extract = DAG.getBitcast(RegVT, Extract);
@@ -53124,9 +53126,10 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
           UserLd->getChain() == Chain && UserLd->getBasePtr() == Ptr &&
           UserLd->getMemoryVT().getSizeInBits() == MemVT.getSizeInBits() &&
-          !User->hasAnyUseOfValue(1) &&
+          User->hasAnyUseOfValue(0) &&
           User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
+        DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
         SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
                                            RegVT.getSizeInBits());
         Extract = DAG.getBitcast(RegVT, Extract);
@@ -59422,10 +59425,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   // If we're splatting the lower half subvector of a full vector load into the
   // upper half, just splat the subvector directly, potentially creating a
   // subvector broadcast.
-  // TODO: Drop hasOneUse checks.
   if ((int)IdxVal == (VecNumElts / 2) &&
-      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits()) &&
-      (Vec.hasOneUse() || SubVec.hasOneUse())) {
+      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits())) {
     auto *VecLd = dyn_cast<LoadSDNode>(Vec);
     auto *SubLd = dyn_cast<LoadSDNode>(SubVec);
     if (VecLd && SubLd &&
