@@ -366,9 +366,6 @@ public:
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                         Type *Ty) const override;
 
-  // bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-  //                                           EVT VT) const override;
-
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                unsigned Index) const override;
   bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;

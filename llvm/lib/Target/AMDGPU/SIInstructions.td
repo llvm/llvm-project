@@ -2376,10 +2376,6 @@ def : AMDGPUPat <
                $src1), sub1)
 >;
 
-def : AMDGPUPat <
-  (fneg (select i1:$src0, (f32 (bitconvert i32:$src1)), (f32 (bitconvert i32:$src2)))),
-    (V_CNDMASK_B32_e64 (i32 1), $src2, (i32 1), $src1, $src0)>;
-
 let True16Predicate = NotHasTrue16BitInsts in {
 def : ROTRPattern <V_ALIGNBIT_B32_e64>;
 
@@ -2394,11 +2390,6 @@ def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
 } // end True16Predicate = NotHasTrue16BitInsts
 
 let True16Predicate = UseRealTrue16Insts in {
-
-// Prevents regression in fneg-modifier-casting.ll along with modifications to XorCombine() when v2i32 or is legal.
-def : AMDGPUPat <
-  (fneg (select i1:$src0, (f32 (bitconvert i32:$src1)), (f32 (bitconvert i32:$src2)))),
-    (V_CNDMASK_B32_e64 (i32 1), $src2, (i32 1), $src1, $src0)>;
 
 def : GCNPat <
   (rotr i32:$src0, i32:$src1),
