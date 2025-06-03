@@ -377,6 +377,9 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   Sampler.Reg = Params->Reg.value();
 
   // Fill in optional values
+  if (Params->Filter.has_value())
+    Sampler.Filter = Params->Filter.value();
+
   if (Params->AddressU.has_value())
     Sampler.AddressU = Params->AddressU.value();
 
@@ -403,6 +406,12 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
 
   if (Params->MaxLOD.has_value())
     Sampler.MaxLOD = Params->MaxLOD.value();
+
+  if (Params->Space.has_value())
+    Sampler.Space = Params->Space.value();
+
+  if (Params->Visibility.has_value())
+    Sampler.Visibility = Params->Visibility.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -690,6 +699,23 @@ RootSignatureParser::parseStaticSamplerParams() {
       Params.Reg = Reg;
     }
 
+    // `filter` `=` FILTER
+    if (tryConsumeExpectedToken(TokenKind::kw_filter)) {
+      if (Params.Filter.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Filter = parseSamplerFilter();
+      if (!Filter.has_value())
+        return std::nullopt;
+      Params.Filter = Filter;
+    }
+
     // `addressU` `=` TEXTURE_ADDRESS
     if (tryConsumeExpectedToken(TokenKind::kw_addressU)) {
       if (Params.AddressU.has_value()) {
@@ -842,6 +868,40 @@ RootSignatureParser::parseStaticSamplerParams() {
         return std::nullopt;
       Params.MaxLOD = MaxLOD;
     }
+
+    // `space` `=` POS_INT
+    if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+      if (Params.Space.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Space = parseUIntParam();
+      if (!Space.has_value())
+        return std::nullopt;
+      Params.Space = Space;
+    }
+
+    // `visibility` `=` SHADER_VISIBILITY
+    if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+      if (Params.Visibility.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Visibility = parseShaderVisibility();
+      if (!Visibility.has_value())
+        return std::nullopt;
+      Params.Visibility = Visibility;
+    }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
 
   return Params;
@@ -940,6 +1000,32 @@ RootSignatureParser::parseShaderVisibility() {
 #define SHADER_VISIBILITY_ENUM(NAME, LIT)                                      \
   case TokenKind::en_##NAME:                                                   \
     return ShaderVisibility::NAME;                                             \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  default:
+    llvm_unreachable("Switch for consumed enum token was not provided");
+  }
+
+  return std::nullopt;
+}
+
+std::optional<llvm::hlsl::rootsig::SamplerFilter>
+RootSignatureParser::parseSamplerFilter() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind Expected[] = {
+#define FILTER_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  if (!tryConsumeExpectedToken(Expected))
+    return std::nullopt;
+
+  switch (CurToken.TokKind) {
+#define FILTER_ENUM(NAME, LIT)                                                 \
+  case TokenKind::en_##NAME:                                                   \
+    return SamplerFilter::NAME;                                                \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
