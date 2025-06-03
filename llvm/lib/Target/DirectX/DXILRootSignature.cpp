@@ -234,6 +234,8 @@ static bool verifyRegisterValue(uint32_t RegisterValue) {
   return RegisterValue != ~0U;
 }
 
+// This Range is reserverved, therefore invalid, according to the spec
+// https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#all-the-values-should-be-legal
 static bool verifyRegisterSpace(uint32_t RegisterSpace) {
   return !(RegisterSpace >= 0xFFFFFFF0 && RegisterSpace <= 0xFFFFFFFF);
 }
