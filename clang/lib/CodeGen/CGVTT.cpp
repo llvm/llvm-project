@@ -10,8 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenModule.h"
 #include "CGCXXABI.h"
+#include "CGVTables.h"
+#include "CodeGenModule.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/VTTBuilder.h"
 using namespace clang;
