@@ -441,7 +441,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   }
   // This one would have been set up to be right at the end.
   if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-    *ModelRunner->getTensor<int64_t>(InlineCostFeatureIndex::NumberOfFeatures) =
+    *ModelRunner->getTensor<int64_t>(FeatureIndex::NumberOfFeatures) =
         GetDefaultAdvice(CB);
   return getAdviceFromModel(CB, ORE);
 }

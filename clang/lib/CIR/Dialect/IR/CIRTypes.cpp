@@ -353,6 +353,12 @@ uint64_t RecordType::getElementOffset(const ::mlir::DataLayout &dataLayout,
     offset += dataLayout.getTypeSize(ty);
   }
 
+  // Account for padding, if necessary, for the alignment of the field whose
+  // offset we are calculating.
+  const llvm::Align tyAlign = llvm::Align(
+      getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[idx]));
+  offset = llvm::alignTo(offset, tyAlign);
+
   return offset;
 }
 
@@ -547,15 +553,6 @@ LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
-// Floating-point and Float-point Vector type helpers
-//===----------------------------------------------------------------------===//
-
-bool cir::isFPOrFPVectorTy(mlir::Type t) {
-  assert(!cir::MissingFeatures::vectorType());
-  return isAnyFloatingPointType(t);
-}
-
-//===----------------------------------------------------------------------===//
 // FuncType Definitions
 //===----------------------------------------------------------------------===//
 
@@ -687,17 +684,7 @@ mlir::LogicalResult cir::VectorType::verify(
     mlir::Type elementType, uint64_t size) {
   if (size == 0)
     return emitError() << "the number of vector elements must be non-zero";
-
-  // Check if it a valid FixedVectorType
-  if (mlir::isa<cir::PointerType, cir::FP128Type>(elementType))
-    return success();
-
-  // Check if it a valid VectorType
-  if (mlir::isa<cir::IntType>(elementType) ||
-      isAnyFloatingPointType(elementType))
-    return success();
-
-  return emitError() << "unsupported element type for CIR vector";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

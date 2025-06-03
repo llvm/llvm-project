@@ -203,7 +203,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
   // a bit so that if fixup is unresolved, a R_LARCH_RELAX relocation will be
   // appended.
   if (EnableRelax && RelaxCandidate)
-    Fixups.back().setNeedsRelax();
+    Fixups.back().setLinkerRelaxable();
 
   return 0;
 }
@@ -254,7 +254,7 @@ void LoongArchMCCodeEmitter::expandAddTPRel(const MCInst &MI,
   Fixups.push_back(
       MCFixup::create(0, Expr, ELF::R_LARCH_TLS_LE_ADD_R, MI.getLoc()));
   if (STI.hasFeature(LoongArch::FeatureRelax))
-    Fixups.back().setNeedsRelax();
+    Fixups.back().setLinkerRelaxable();
 
   // Emit a normal ADD instruction with the given operands.
   unsigned ADD = MI.getOpcode() == LoongArch::PseudoAddTPRel_D

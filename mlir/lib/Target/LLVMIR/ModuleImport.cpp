@@ -2200,6 +2200,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                 builder.getStringAttr(asmI->getAsmString()),
                 builder.getStringAttr(asmI->getConstraintString()),
                 asmI->hasSideEffects(), asmI->isAlignStack(),
+                convertTailCallKindFromLLVM(callInst->getTailCallKind()),
                 AsmDialectAttr::get(
                     mlirModule.getContext(),
                     convertAsmDialectFromLLVM(asmI->getDialect())),
@@ -2634,6 +2635,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setTargetFeaturesAttr(
         LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
+      attr.isStringAttribute())
+    funcOp.setPreferVectorWidth(attr.getValueAsString());
 
   if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
       attr.isStringAttribute())

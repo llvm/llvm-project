@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "OwningMemoryCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <string>
-#include <vector>
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;

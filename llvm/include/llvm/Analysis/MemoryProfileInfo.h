@@ -15,35 +15,37 @@
 
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 
 namespace llvm {
-namespace memprof {
 
-/// Return the allocation type for a given set of memory profile values.
-AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
-                            uint64_t AllocCount, uint64_t TotalLifetime);
+class OptimizationRemarkEmitter;
+
+namespace memprof {
 
 /// Build callstack metadata from the provided list of call stack ids. Returns
 /// the resulting metadata node.
-MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack, LLVMContext &Ctx);
+LLVM_ABI MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
+                                        LLVMContext &Ctx);
 
 /// Build metadata from the provided list of full stack id and profiled size, to
 /// use when reporting of hinted sizes is enabled.
-MDNode *buildContextSizeMetadata(ArrayRef<ContextTotalSize> ContextSizeInfo,
-                                 LLVMContext &Ctx);
+LLVM_ABI MDNode *
+buildContextSizeMetadata(ArrayRef<ContextTotalSize> ContextSizeInfo,
+                         LLVMContext &Ctx);
 
 /// Returns the stack node from an MIB metadata node.
-MDNode *getMIBStackNode(const MDNode *MIB);
+LLVM_ABI MDNode *getMIBStackNode(const MDNode *MIB);
 
 /// Returns the allocation type from an MIB metadata node.
-AllocationType getMIBAllocType(const MDNode *MIB);
+LLVM_ABI AllocationType getMIBAllocType(const MDNode *MIB);
 
 /// Returns the string to use in attributes with the given type.
-std::string getAllocTypeAttributeString(AllocationType Type);
+LLVM_ABI std::string getAllocTypeAttributeString(AllocationType Type);
 
 /// True if the AllocTypes bitmask contains just a single type.
-bool hasSingleAllocType(uint8_t AllocTypes);
+LLVM_ABI bool hasSingleAllocType(uint8_t AllocTypes);
 
 /// Class to build a trie of call stack contexts for a particular profiled
 /// allocation call, along with their associated allocation types.
@@ -81,6 +83,10 @@ private:
   // The allocation's leaf stack id.
   uint64_t AllocStackId = 0;
 
+  // If the client provides a remarks emitter object, we will emit remarks on
+  // allocations for which we apply non-context sensitive allocation hints.
+  OptimizationRemarkEmitter *ORE;
+
   void deleteTrieNode(CallStackTrieNode *Node) {
     if (!Node)
       return;
@@ -107,7 +113,7 @@ private:
                      uint64_t &ColdBytes);
 
 public:
-  CallStackTrie() = default;
+  CallStackTrie(OptimizationRemarkEmitter *ORE = nullptr) : ORE(ORE) {}
   ~CallStackTrie() { deleteTrieNode(Alloc); }
 
   bool empty() const { return Alloc == nullptr; }
@@ -117,12 +123,13 @@ public:
   /// matching via a debug location hash), expected to be in order from the
   /// allocation call down to the bottom of the call stack (i.e. callee to
   /// caller order).
-  void addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds,
-                    std::vector<ContextTotalSize> ContextSizeInfo = {});
+  LLVM_ABI void
+  addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds,
+               std::vector<ContextTotalSize> ContextSizeInfo = {});
 
   /// Add the call stack context along with its allocation type from the MIB
   /// metadata to the Trie.
-  void addCallStack(MDNode *MIB);
+  LLVM_ABI void addCallStack(MDNode *MIB);
 
   /// Build and attach the minimal necessary MIB metadata. If the alloc has a
   /// single allocation type, add a function attribute instead. The reason for
@@ -131,13 +138,13 @@ public:
   /// cloning or another optimization to distinguish the allocation types,
   /// which is lower overhead and more direct than maintaining this metadata.
   /// Returns true if memprof metadata attached, false if not (attribute added).
-  bool buildAndAttachMIBMetadata(CallBase *CI);
+  LLVM_ABI bool buildAndAttachMIBMetadata(CallBase *CI);
 
   /// Add an attribute for the given allocation type to the call instruction.
   /// If hinted by reporting is enabled, a message is emitted with the given
   /// descriptor used to identify the category of single allocation type.
-  void addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
-                                   StringRef Descriptor);
+  LLVM_ABI void addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                            StringRef Descriptor);
 };
 
 /// Helper class to iterate through stack ids in both metadata (memprof MIB and
@@ -215,11 +222,14 @@ CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(const CallStack &Other) {
 
 /// Specializations for iterating through IR metadata stack contexts.
 template <>
+LLVM_ABI
 CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::CallStackIterator(
     const MDNode *N, bool End);
 template <>
-uint64_t CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*();
-template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const;
+LLVM_ABI uint64_t
+CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*();
+template <>
+LLVM_ABI uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const;
 
 } // end namespace memprof
 } // end namespace llvm

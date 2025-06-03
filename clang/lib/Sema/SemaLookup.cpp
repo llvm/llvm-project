@@ -927,13 +927,25 @@ bool Sema::LookupBuiltin(LookupResult &R) {
       NameKind == Sema::LookupRedeclarationWithLinkage) {
     IdentifierInfo *II = R.getLookupName().getAsIdentifierInfo();
     if (II) {
-      if (getLangOpts().CPlusPlus && NameKind == Sema::LookupOrdinaryName) {
-#define BuiltinTemplate(BIName)                                                \
+      if (NameKind == Sema::LookupOrdinaryName) {
+        if (getLangOpts().CPlusPlus) {
+#define BuiltinTemplate(BIName)
+#define CPlusPlusBuiltinTemplate(BIName)                                       \
   if (II == getASTContext().get##BIName##Name()) {                             \
     R.addDecl(getASTContext().get##BIName##Decl());                            \
     return true;                                                               \
   }
 #include "clang/Basic/BuiltinTemplates.inc"
+        }
+        if (getLangOpts().HLSL) {
+#define BuiltinTemplate(BIName)
+#define HLSLBuiltinTemplate(BIName)                                            \
+  if (II == getASTContext().get##BIName##Name()) {                             \
+    R.addDecl(getASTContext().get##BIName##Decl());                            \
+    return true;                                                               \
+  }
+#include "clang/Basic/BuiltinTemplates.inc"
+        }
       }
 
       // Check if this is an OpenCL Builtin, and if so, insert its overloads.
@@ -3270,6 +3282,11 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
 
     case Type::HLSLAttributedResource:
       T = cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr();
+      break;
+
+    // Inline SPIR-V types are treated as fundamental types.
+    case Type::HLSLInlineSpirv:
+      break;
     }
 
     if (Queue.empty())
