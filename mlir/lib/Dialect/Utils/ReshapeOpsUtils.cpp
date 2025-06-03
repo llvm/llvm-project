@@ -260,6 +260,9 @@ findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
                                    bool iterateRightToLeft) {
   if (!iterateRightToLeft)
     return findReassociationRangesForCollapse(sourceShape, targetShape);
+  // NB: To iterate right-to-left, we currently reverse the shapes and then
+  // reverse the result back. The reversed shapes must not be temporary, as
+  // we're passing through an ArrayRef.
   // FIXME: It would be preferable to avoid the expensive copies. At the moment,
   // this approach is chosen for readability of the main implementation.
   std::vector<int64_t> sourceToReverse = sourceShape.vec(),
@@ -321,9 +324,6 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   // be found by iterating in a certain direction, e.g. 2x2x? into 2x? - without
   // backtracking, the algorithm will fail right-to-left. However, this is the
   // best way to preserve correctness.
-  //
-  // NB: The reversed shapes must not be temporary as we're passing through an
-  // ArrayRef.
   auto maybeReverseRanges = findReassociationRangesForCollapse(
       sourceShape, targetShape, /*iterateRightToLeft=*/true);
   if (failed(maybeReverseRanges))
