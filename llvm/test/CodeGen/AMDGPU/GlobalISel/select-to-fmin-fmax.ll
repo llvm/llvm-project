@@ -5,8 +5,8 @@ define half @test_s16(half %a) #0 {
 ; GCN-LABEL: test_s16:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cmp_ngt_f16_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %fcmp = fcmp olt half %a, 0.0
@@ -18,8 +18,8 @@ define float @test_s32(float %a) #0 {
 ; GCN-LABEL: test_s32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %fcmp = fcmp olt float %a, 0.0
@@ -31,9 +31,9 @@ define double @test_s64(double %a) #0 {
 ; GCN-LABEL: test_s64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_gt_f64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GCN-NEXT:    v_cmp_ngt_f64_e32 vcc, 0, v[0:1]
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %fcmp = fcmp olt double %a, 0.0
@@ -45,20 +45,19 @@ define <4 x half> @test_v4s16(<4 x half> %a) #0 {
 ; GCN-LABEL: test_v4s16:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v4, 0
-; GCN-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v0
-; GCN-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v5, v0, 0, vcc
-; GCN-NEXT:    v_cmp_lt_f16_sdwa s[4:5], v0, v4 src0_sel:WORD_1 src1_sel:DWORD
-; GCN-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v1
-; GCN-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, 0, s[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v1, 0, vcc
-; GCN-NEXT:    v_cmp_lt_f16_sdwa s[4:5], v1, v4 src0_sel:WORD_1 src1_sel:DWORD
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, s[4:5]
-; GCN-NEXT:    v_and_b32_e32 v3, 0xffff, v5
-; GCN-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GCN-NEXT:    v_lshl_or_b32 v0, v0, 16, v3
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    v_cmp_nlt_f16_sdwa vcc, v0, v2 src0_sel:WORD_1 src1_sel:DWORD
+; GCN-NEXT:    v_cmp_ngt_f16_e64 s[6:7], 0, v0
+; GCN-NEXT:    v_cmp_nlt_f16_sdwa s[4:5], v1, v2 src0_sel:WORD_1 src1_sel:DWORD
+; GCN-NEXT:    v_cndmask_b32_e64 v3, 0, v0, s[6:7]
+; GCN-NEXT:    v_cndmask_b32_sdwa v0, v2, v0, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GCN-NEXT:    v_cmp_ngt_f16_e32 vcc, 0, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
+; GCN-NEXT:    s_mov_b64 vcc, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_sdwa v1, v2, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GCN-NEXT:    v_and_b32_e32 v2, 0xffff, v3
+; GCN-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
+; GCN-NEXT:    v_and_b32_e32 v2, 0xffff, v4
 ; GCN-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -72,29 +71,29 @@ define <8 x half> @test_v8s16(<8 x half> %a) #0 {
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
-; GCN-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v0
+; GCN-NEXT:    v_cmp_ngt_f16_e32 vcc, 0, v0
 ; GCN-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v9, v0, 0, vcc
-; GCN-NEXT:    v_cmp_lt_f16_sdwa s[4:5], v0, v8 src0_sel:WORD_1 src1_sel:DWORD
-; GCN-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v9, 0, v0, vcc
+; GCN-NEXT:    v_cmp_nlt_f16_sdwa vcc, v0, v8 src0_sel:WORD_1 src1_sel:DWORD
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
+; GCN-NEXT:    v_cmp_ngt_f16_e32 vcc, 0, v1
 ; GCN-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v4, 0, s[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v4, v1, 0, vcc
-; GCN-NEXT:    v_cmp_lt_f16_sdwa s[4:5], v1, v8 src0_sel:WORD_1 src1_sel:DWORD
-; GCN-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v2
+; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc
+; GCN-NEXT:    v_cmp_nlt_f16_sdwa vcc, v1, v8 src0_sel:WORD_1 src1_sel:DWORD
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v5, vcc
+; GCN-NEXT:    v_cmp_ngt_f16_e32 vcc, 0, v2
 ; GCN-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v5, 0, s[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v5, v2, 0, vcc
-; GCN-NEXT:    v_cmp_lt_f16_sdwa s[4:5], v2, v8 src0_sel:WORD_1 src1_sel:DWORD
-; GCN-NEXT:    v_cmp_gt_f16_e32 vcc, 0, v3
+; GCN-NEXT:    v_cndmask_b32_e32 v5, 0, v2, vcc
+; GCN-NEXT:    v_cmp_nlt_f16_sdwa vcc, v2, v8 src0_sel:WORD_1 src1_sel:DWORD
+; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v6, vcc
+; GCN-NEXT:    v_cmp_ngt_f16_e32 vcc, 0, v3
 ; GCN-NEXT:    v_and_b32_e32 v4, 0xffff, v4
 ; GCN-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v6, 0, s[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v6, v3, 0, vcc
-; GCN-NEXT:    v_cmp_lt_f16_sdwa s[4:5], v3, v8 src0_sel:WORD_1 src1_sel:DWORD
+; GCN-NEXT:    v_cndmask_b32_e32 v6, 0, v3, vcc
+; GCN-NEXT:    v_cmp_nlt_f16_sdwa vcc, v3, v8 src0_sel:WORD_1 src1_sel:DWORD
 ; GCN-NEXT:    v_lshl_or_b32 v1, v1, 16, v4
 ; GCN-NEXT:    v_and_b32_e32 v4, 0xffff, v5
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v7, 0, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e32 v3, 0, v7, vcc
 ; GCN-NEXT:    v_and_b32_e32 v7, 0xffff, v9
 ; GCN-NEXT:    v_lshl_or_b32 v2, v2, 16, v4
 ; GCN-NEXT:    v_and_b32_e32 v4, 0xffff, v6
@@ -111,10 +110,10 @@ define <2 x float> @test_v2s32(<2 x float> %a) #0 {
 ; GCN-LABEL: test_v2s32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %fcmp = fcmp olt <2 x float> %a, zeroinitializer
@@ -126,14 +125,14 @@ define <4 x float> @test_v4s32(<4 x float> %a) #0 {
 ; GCN-LABEL: test_v4s32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v3
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
+; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v2
+; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v3
+; GCN-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %fcmp = fcmp olt <4 x float> %a, zeroinitializer
@@ -145,12 +144,12 @@ define <2 x double> @test_v2s64(<2 x double> %a) #0 {
 ; GCN-LABEL: test_v2s64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_gt_f64_e32 vcc, 0, v[0:1]
-; GCN-NEXT:    v_cmp_gt_f64_e64 s[4:5], 0, v[2:3]
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v3, 0, s[4:5]
+; GCN-NEXT:    v_cmp_ngt_f64_e32 vcc, 0, v[0:1]
+; GCN-NEXT:    v_cmp_ngt_f64_e64 s[4:5], 0, v[2:3]
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 0, v2, s[4:5]
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v3, 0, v3, s[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %fcmp = fcmp olt <2 x double> %a, zeroinitializer
