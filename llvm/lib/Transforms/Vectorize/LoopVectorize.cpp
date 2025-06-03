@@ -7218,9 +7218,9 @@ static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
   return StartVPV->getLiveInIRValue();
 }
 
-// If \p R is a ComputeReductionResult when vectorizing the epilog loop,
-// fix the reduction's scalar PHI node by adding the incoming value from the
-// main vector loop.
+// If \p R is a Compute{Reduction,AnyOf,FindLastIV}Result when vectorizing the
+// epilog loop, fix the reduction's scalar PHI node by adding the incoming value
+// from the main vector loop.
 static void fixReductionScalarResumeWhenVectorizingEpilog(
     VPRecipeBase *R, VPTransformState &State, BasicBlock *LoopMiddleBlock,
     BasicBlock *BypassBlock) {
@@ -7251,7 +7251,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
                  RdxDesc.getRecurrenceKind())) {
     Value *StartV = getStartValueFromReductionResult(EpiRedResult);
-    (void)StartV;
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
     bool IsExpectedPattern =
@@ -9198,7 +9197,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                     VPInstruction::ComputeAnyOfResult ||
                 cast<VPInstruction>(&U)->getOpcode() ==
                     VPInstruction::ComputeReductionResult ||
-
                 cast<VPInstruction>(&U)->getOpcode() ==
                     VPInstruction::ComputeFindLastIVResult);
       });
@@ -9788,7 +9786,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
           cast<VPInstruction>(*find_if(ReductionPhi->users(), [](VPUser *U) {
             auto *VPI = dyn_cast<VPInstruction>(U);
             return VPI &&
-                   (VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
+                   (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+                    VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
                     VPI->getOpcode() == VPInstruction::ComputeFindLastIVResult);
           }));
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
