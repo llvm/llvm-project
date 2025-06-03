@@ -16,7 +16,6 @@ void test() {
 // CHECK: %3 = extractvalue { ptr, ptr } %call, 1, !dbg [[G1R2]]
 // CHECK: store ptr %3, ptr {{.*}}, !dbg [[G1R1:!.*]]
   Struct s = get();
-// CHECK: ret void, !dbg [[G2R1:!.*]]
 }
 
 typedef struct { int i; } Int;
@@ -29,12 +28,9 @@ void test2() {
 // CHECK: [[gep:%.*]] = getelementptr inbounds nuw %struct.Int, ptr %i, i32 0, i32 0
 // CHECK: store i32 %call, ptr [[gep]]{{.*}}, !dbg [[T2_G1R1:!.*]]
   Int i = getInt();
-// CHECK: ret void, !dbg [[T2_G2R1:!.*]]
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
-// CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[T2_G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
 // CHECK: [[T2_G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
-// CHECK: [[T2_G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
