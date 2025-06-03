@@ -1509,7 +1509,7 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
   // If RP is not reduced in the unclustered reschedule stage, revert to the
   // old schedule.
   if ((WavesAfter <=
-           PressureBefore.getOccupancy(ST, DAG.MFI.isDynamicVGPREnabled()) &&
+           PressureBefore.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize()) &&
        mayCauseSpilling(WavesAfter)) ||
       GCNSchedStage::shouldRevertScheduling(WavesAfter)) {
     LLVM_DEBUG(dbgs() << "Unclustered reschedule did not help.\n");

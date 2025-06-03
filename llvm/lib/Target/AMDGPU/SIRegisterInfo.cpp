@@ -3751,7 +3751,7 @@ unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
     return std::min(
         ST.getMaxNumVGPRs(
             MinOcc,
-            MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled()),
+            MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize()),
         ST.getMaxNumVGPRs(MF));
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::SGPR_LO16RegClassID:
