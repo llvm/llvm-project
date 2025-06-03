@@ -544,7 +544,8 @@ static void computeFunctionSummary(
           }
           // If we have context size information, collect it for inclusion in
           // the summary.
-          assert(MIBMD->getNumOperands() > 2 || !MemProfReportHintedSizes);
+          assert(MIBMD->getNumOperands() > 2 ||
+                 !metadataIncludesAllContextSizeInfo());
           if (MIBMD->getNumOperands() > 2) {
             std::vector<ContextTotalSize> ContextSizes;
             for (unsigned I = 2; I < MIBMD->getNumOperands(); I++) {
@@ -558,7 +559,21 @@ static void computeFunctionSummary(
                                 ->getZExtValue();
               ContextSizes.push_back({FullStackId, TS});
             }
+            // The ContextSizeInfos must be in the same relative position as the
+            // associated MIB. In some cases we only include a ContextSizeInfo
+            // for a subset of MIBs in an allocation. In those cases we insert
+            // 0s for the other MIBs. Handle the case where the first
+            // ContextSizeInfo being inserted is not for the first MIB, insert
+            // a pair of 0s for each of the prior MIBs.
+            if (ContextSizeInfos.empty() && !MIBs.empty())
+              ContextSizeInfos.insert(ContextSizeInfos.begin(), MIBs.size(),
+                                      {{0, 0}});
             ContextSizeInfos.push_back(std::move(ContextSizes));
+          } else if (!ContextSizeInfos.empty()) {
+            // See earlier comment about handling case of ContextSizeInfos only
+            // for a subset of MIBs. Insert a pair of 0s for this MIB as it does
+            // not have a ContextSizeInfo but other MIBs did.
+            ContextSizeInfos.push_back({{0, 0}});
           }
           MIBs.push_back(
               MIBInfo(getMIBAllocType(MIBMD), std::move(StackIdIndices)));
