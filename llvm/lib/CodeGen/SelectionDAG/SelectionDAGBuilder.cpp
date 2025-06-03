@@ -3281,7 +3281,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
            LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
            LLVMContext::OB_clang_arc_attachedcall}))
     reportFatalUsageError(
-        "Cannot lower invokes with arbitrary operand bundles!");
+        "cannot lower invokes with arbitrary operand bundles!");
 
   const Value *Callee(I.getCalledOperand());
   const Function *Fn = dyn_cast<Function>(Callee);
@@ -3384,7 +3384,7 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   if (I.hasOperandBundlesOtherThan(
           {LLVMContext::OB_deopt, LLVMContext::OB_funclet}))
     reportFatalUsageError(
-        "Cannot lower callbrs with arbitrary operand bundles!");
+        "cannot lower callbrs with arbitrary operand bundles!");
 
   assert(I.isInlineAsm() && "Only know how to handle inlineasm callbr");
   visitInlineAsm(I);
@@ -9556,7 +9556,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
            LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
            LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
            LLVMContext::OB_convergencectrl}))
-    reportFatalUsageError("Cannot lower calls with arbitrary operand bundles!");
+    reportFatalUsageError("cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());
 
