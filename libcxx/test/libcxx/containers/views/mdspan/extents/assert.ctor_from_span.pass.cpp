@@ -28,6 +28,7 @@
 //       for every rank index r.
 //
 
+#include <span> // dynamic_extent
 #include <mdspan>
 #include <cassert>
 
