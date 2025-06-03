@@ -53,6 +53,13 @@
 
 using namespace mlir;
 
+static ParseResult parseApplyRegisteredPassOptions(
+    OpAsmParser &parser,
+    std::optional<OpAsmParser::UnresolvedOperand> &dynamicOptions,
+    StringAttr &staticOptions);
+static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
+                                            Operation *op, Value dynamicOptions,
+                                            StringAttr staticOptions);
 static ParseResult parseSequenceOpOperands(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &root,
     Type &rootType,
@@ -766,17 +773,38 @@ void transform::ApplyLoopInvariantCodeMotionOp::getEffects(
 // ApplyRegisteredPassOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
-    transform::TransformRewriter &rewriter, Operation *target,
-    ApplyToEachResultList &results, transform::TransformState &state) {
-  // Make sure that this transform is not applied to itself. Modifying the
-  // transform IR while it is being interpreted is generally dangerous. Even
-  // more so when applying passes because they may perform a wide range of IR
-  // modifications.
-  DiagnosedSilenceableFailure payloadCheck =
-      ensurePayloadIsSeparateFromTransform(*this, target);
-  if (!payloadCheck.succeeded())
-    return payloadCheck;
+void transform::ApplyRegisteredPassOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getDynamicOptionsMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
+  modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
+  // Check whether pass options are specified, either as a dynamic param or
+  // a static attribute. In either case, options are passed as a single string.
+  StringRef options;
+  if (auto dynamicOptions = getDynamicOptions()) {
+    ArrayRef<Attribute> dynamicOptionsParam = state.getParams(dynamicOptions);
+    if (dynamicOptionsParam.size() != 1) {
+      return emitSilenceableError()
+             << "options passed as a param must be a single value, got "
+             << dynamicOptionsParam.size();
+    }
+    if (auto optionsStrAttr = dyn_cast<StringAttr>(dynamicOptionsParam[0])) {
+      options = optionsStrAttr.getValue();
+    } else {
+      return emitSilenceableError()
+             << "options passed as a param must be a string, got "
+             << dynamicOptionsParam[0];
+    }
+  } else {
+    options = getStaticOptions();
+  }
 
   // Get pass or pass pipeline from registry.
   const PassRegistryEntry *info = PassPipelineInfo::lookup(getPassName());
@@ -786,9 +814,9 @@ DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
     return emitDefiniteFailure()
            << "unknown pass or pass pipeline: " << getPassName();
 
-  // Create pass manager and run the pass or pass pipeline.
+  // Create pass manager and add the pass or pass pipeline.
   PassManager pm(getContext());
-  if (failed(info->addToPipeline(pm, getOptions(), [&](const Twine &msg) {
+  if (failed(info->addToPipeline(pm, options, [&](const Twine &msg) {
         emitError(msg);
         return failure();
       }))) {
@@ -796,14 +824,67 @@ DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
            << "failed to add pass or pass pipeline to pipeline: "
            << getPassName();
   }
-  if (failed(pm.run(target))) {
-    auto diag = emitSilenceableError() << "pass pipeline failed";
-    diag.attachNote(target->getLoc()) << "target op";
-    return diag;
+
+  auto targets = SmallVector<Operation *>(state.getPayloadOps(getTarget()));
+  for (Operation *target : targets) {
+    // Make sure that this transform is not applied to itself. Modifying the
+    // transform IR while it is being interpreted is generally dangerous. Even
+    // more so when applying passes because they may perform a wide range of IR
+    // modifications.
+    DiagnosedSilenceableFailure payloadCheck =
+        ensurePayloadIsSeparateFromTransform(*this, target);
+    if (!payloadCheck.succeeded())
+      return payloadCheck;
+
+    // Run the pass or pass pipeline on the current target operation.
+    if (failed(pm.run(target))) {
+      auto diag = emitSilenceableError() << "pass pipeline failed";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
   }
 
-  results.push_back(target);
+  // The applied pass will have directly modified the payload IR(s).
+  results.set(llvm::cast<OpResult>(getResult()), targets);
   return DiagnosedSilenceableFailure::success();
+}
+
+static ParseResult parseApplyRegisteredPassOptions(
+    OpAsmParser &parser,
+    std::optional<OpAsmParser::UnresolvedOperand> &dynamicOptions,
+    StringAttr &staticOptions) {
+  dynamicOptions = std::nullopt;
+  OpAsmParser::UnresolvedOperand dynamicOptionsOperand;
+  OptionalParseResult hasDynamicOptions =
+      parser.parseOptionalOperand(dynamicOptionsOperand);
+
+  if (hasDynamicOptions.has_value()) {
+    if (failed(hasDynamicOptions.value()))
+      return failure();
+
+    dynamicOptions = dynamicOptionsOperand;
+    return success();
+  }
+
+  OptionalParseResult hasStaticOptions =
+      parser.parseOptionalAttribute(staticOptions);
+  if (hasStaticOptions.has_value()) {
+    if (failed(hasStaticOptions.value()))
+      return failure();
+    return success();
+  }
+
+  return success();
+}
+
+static void printApplyRegisteredPassOptions(OpAsmPrinter &printer,
+                                            Operation *op, Value dynamicOptions,
+                                            StringAttr staticOptions) {
+  if (dynamicOptions) {
+    printer.printOperand(dynamicOptions);
+  } else if (!staticOptions.getValue().empty()) {
+    printer.printAttribute(staticOptions);
+  }
 }
 
 //===----------------------------------------------------------------------===//
