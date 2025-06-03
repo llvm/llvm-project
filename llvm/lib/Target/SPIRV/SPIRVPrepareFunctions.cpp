@@ -405,13 +405,13 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       case Intrinsic::lifetime_start:
-        if (STI.isOpenCLEnv()) {
+        if (!STI.isShader()) {
           Changed |= toSpvOverloadedIntrinsic(
               II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
         }
         break;
       case Intrinsic::lifetime_end:
-        if (STI.isOpenCLEnv()) {
+        if (!STI.isShader()) {
           Changed |= toSpvOverloadedIntrinsic(
               II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
         }
