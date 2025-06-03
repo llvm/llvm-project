@@ -2510,6 +2510,13 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
       exit(1);
     }
 
+    // Workaround for AArch64 issue with hot text.
+    if (BC->isAArch64() && (SymbolName == "__hot_start" ||
+          SymbolName == "__hot_end")) {
+      BC->addRelocation(Rel.getOffset(), Symbol, ELF::R_AARCH64_ABS64, Addend);
+      continue;
+    }
+
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
   }
 }
@@ -3917,15 +3924,41 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       return Address;
     };
 
+    // Try to allocate sections before the \p Address and return an address for
+    // the allocation of the first section or 0 if \p is not big enough.
+    auto allocateBefore = [&](uint64_t Address) -> uint64_t {
+      for (auto SI = CodeSections.rbegin(), SE = CodeSections.rend(); SI != SE;
+           ++SI) {
+        BinarySection *Section = *SI;
+        if (Section->getOutputSize() > Address)
+          return 0;
+        Address -= Section->getOutputSize();
+        Address = alignDown(Address, Section->getAlignment());
+        Section->setOutputAddress(Address);
+      }
+      return Address;
+    };
+
     // Check if we can fit code in the original .text
     bool AllocationDone = false;
     if (opts::UseOldText) {
-      const uint64_t CodeSize =
-          allocateAt(BC->OldTextSectionAddress) - BC->OldTextSectionAddress;
+      uint64_t StartAddress;
+      uint64_t EndAddress;
+      if (opts::HotFunctionsAtEnd) {
+        EndAddress = BC->OldTextSectionAddress + BC->OldTextSectionSize;
+        StartAddress = allocateBefore(EndAddress);
+      } else {
+        StartAddress = BC->OldTextSectionAddress;
+        EndAddress = allocateAt(BC->OldTextSectionAddress);
+      }
 
+      const uint64_t CodeSize = EndAddress - StartAddress;
       if (CodeSize <= BC->OldTextSectionSize) {
         BC->outs() << "BOLT-INFO: using original .text for new code with 0x"
-                   << Twine::utohexstr(opts::AlignText) << " alignment\n";
+                   << Twine::utohexstr(opts::AlignText) << " alignment";
+        if (StartAddress != BC->OldTextSectionAddress)
+          BC->outs() << " at 0x" << Twine::utohexstr(StartAddress);
+        BC->outs() << '\n';
         AllocationDone = true;
       } else {
         BC->errs()
@@ -4194,6 +4227,11 @@ void RewriteInstance::patchELFPHDRTable() {
       NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
   } else {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
+  }
+
+  if (!NewTextSegmentSize && !NewWritableSegmentSize) {
+    BC->outs() << "BOLT-INFO: not adding new segments\n";
+    return;
   }
 
   const uint64_t SavedPos = OS.tell();
