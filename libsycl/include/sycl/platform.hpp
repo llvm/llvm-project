@@ -17,15 +17,15 @@
 
 #include <sycl/detail/config.hpp>
 
-__SYCL_BEGIN_VERSIONED_NAMESPACE
+__LIBSYCL_BEGIN_VERSIONED_NAMESPACE
 
-class __SYCL_EXPORT platform {
+class __LIBSYCL_EXPORT platform {
 public:
   /// Constructs a SYCL platform using the default device.
   platform();
 
 }; // class platform
 
-__SYCL_END_VERSIONED_NAMESPACE
+__LIBSYCL_END_VERSIONED_NAMESPACE
 
 #endif // __LIBSYCL_PLATFORM_HPP

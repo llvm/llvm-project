@@ -6,7 +6,7 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
   add_library(${LIB_OBJ_NAME} OBJECT ${ARG_SOURCES})
 
   # Common compilation step setup
-  target_compile_definitions(${LIB_OBJ_NAME} PRIVATE $<$<BOOL:${MSVC}>:__SYCL_BUILD_SYCL_DLL>)
+  target_compile_definitions(${LIB_OBJ_NAME} PRIVATE $<$<BOOL:${MSVC}>:__LIBSYCL_BUILD_SYCL_DLL>)
   target_include_directories(
     ${LIB_OBJ_NAME}
     PRIVATE
