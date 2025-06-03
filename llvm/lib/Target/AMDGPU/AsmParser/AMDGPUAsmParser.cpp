@@ -8836,9 +8836,9 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands[I]);
     int NumOperands = Inst.getNumOperands();
-    // the order of operands in MCInst and parsed operands are different.
+    // The order of operands in MCInst and parsed operands are different.
     // Adding dummy cbsz and blgp operands at corresponding MCInst operand
-    // indeces for parsing scale values correctly.
+    // indices for parsing scale values correctly.
     if (NumOperands == CbszInsIdx) {
       Inst.addOperand(MCOperand::createImm(0));
       Inst.addOperand(MCOperand::createImm(0));
