@@ -3568,14 +3568,14 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     EVT VecVT = Node->getValueType(0);
     SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
     // Deinterleave at Factor/2 so each result contains two factors interleaved:
-    // ab cd ab cd -> [ac bd] [ac bd]
+    // a0b0 c0d0 a1b1 c1d1 -> [a0c0 b0d0] [a1c1 b1d1]
     SDValue L = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, HalfVTs,
                             ArrayRef(Ops).take_front(Factor / 2));
     SDValue R = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, HalfVTs,
                             ArrayRef(Ops).take_back(Factor / 2));
     Results.resize(Factor);
     // Deinterleave the 2 factors out:
-    // [ac ac] [bd bd] -> aa bb cc dd
+    // [a0c0 a1c1] [b0d0 b1d1] -> a0a1 b0b1 c0c1 d0d1
     for (unsigned I = 0; I < Factor / 2; I++) {
       SDValue Deinterleave =
           DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl, {VecVT, VecVT},
@@ -3593,7 +3593,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
     SmallVector<SDValue, 8> LOps, ROps;
     // Interleave so we have 2 factors per result:
-    // aa bb cc dd -> [ac bd] [ac bd]
+    // a0a1 b0b1 c0c1 d0d1 -> [a0c0 b0d0] [a1c1 b1d1]
     for (unsigned I = 0; I < Factor / 2; I++) {
       SDValue Interleave =
           DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, {VecVT, VecVT},
@@ -3602,7 +3602,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       ROps.push_back(Interleave.getValue(1));
     }
     // Interleave at Factor/2:
-    // [ac bd] [ac bd] -> ab cd ab cd
+    // [a0c0 b0d0] [a1c1 b1d1] -> a0b0 c0d0 a1b1 c1d1
     SDValue L = DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, HalfVTs, LOps);
     SDValue R = DAG.getNode(ISD::VECTOR_INTERLEAVE, dl, HalfVTs, ROps);
     for (unsigned I = 0; I < Factor / 2; I++)
