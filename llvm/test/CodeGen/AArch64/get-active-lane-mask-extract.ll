@@ -272,9 +272,8 @@ define void @test_2x16bit_mask_with_32bit_index_and_trip_count_ext8(i32 %i, i32 
   ret void
 }
 
-; Negative test for when not extracting exactly two halves of the source vector
-define void @test_illegal_type_with_partial_extracts(i32 %i, i32 %n) #0 {
-; CHECK-SVE-LABEL: test_illegal_type_with_partial_extracts:
+define void @test_2x16bit_mask_with_32bit_index_and_trip_count_part_extracts(i32 %i, i32 %n) #0 {
+; CHECK-SVE-LABEL: test_2x16bit_mask_with_32bit_index_and_trip_count_part_extracts:
 ; CHECK-SVE:       // %bb.0:
 ; CHECK-SVE-NEXT:    rdvl x8, #1
 ; CHECK-SVE-NEXT:    adds w8, w0, w8
@@ -285,7 +284,7 @@ define void @test_illegal_type_with_partial_extracts(i32 %i, i32 %n) #0 {
 ; CHECK-SVE-NEXT:    punpkhi p1.h, p1.b
 ; CHECK-SVE-NEXT:    b use
 ;
-; CHECK-SVE2p1-LABEL: test_illegal_type_with_partial_extracts:
+; CHECK-SVE2p1-LABEL: test_2x16bit_mask_with_32bit_index_and_trip_count_part_extracts:
 ; CHECK-SVE2p1:       // %bb.0:
 ; CHECK-SVE2p1-NEXT:    mov w8, w1
 ; CHECK-SVE2p1-NEXT:    mov w9, w0
