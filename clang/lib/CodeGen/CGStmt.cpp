@@ -1599,7 +1599,6 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(SLocPtr);
     assert(ReturnLocation.isValid() && "No valid return location");
     Builder.CreateStore(SLocPtr, ReturnLocation);
-    //*OCH?*//
   }
 
   // Returning from an outlined SEH helper is UB, and we already warn on it.
