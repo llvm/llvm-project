@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c++ %s %clang_cc1-debug-info-kind=line-tables-only -emit-llvm -o - -target x86_64-windows-msvc \
+// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c++ %s -debug-info-kind=line-tables-only -emit-llvm -o - -triple x86_64-windows-msvc \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c %s %clang_cc1-debug-info-kind=line-tables-only -emit-llvm -o - -target x86_64-windows-msvc \
+// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c %s -debug-info-kind=line-tables-only -emit-llvm -o - -triple x86_64-windows-msvc \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 typedef struct { int *p; } Ptr;

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c++ %s %clang_cc1-debug-info-kind=line-tables-only -emit-llvm -o - -target arm64-apple-ios11 \
+// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c++ %s -debug-info-kind=line-tables-only -emit-llvm -o - -triple arm64-apple-ios11 \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c %s %clang_cc1-debug-info-kind=line-tables-only -emit-llvm -o - -target arm64-apple-ios11 \
+// RUN: %clang_cc1 -gkey-instructions -gno-column-info -x c %s -debug-info-kind=line-tables-only -emit-llvm -o - -triple arm64-apple-ios11 \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 typedef struct {
