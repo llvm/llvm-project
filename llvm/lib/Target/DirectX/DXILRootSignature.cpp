@@ -420,7 +420,7 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
            << "Num 32 Bit Values: " << Constants.Num32BitValues << "\n";
         break;
       }
-            case llvm::to_underlying(dxbc::RootParameterType::CBV):
+      case llvm::to_underlying(dxbc::RootParameterType::CBV):
       case llvm::to_underlying(dxbc::RootParameterType::UAV):
       case llvm::to_underlying(dxbc::RootParameterType::SRV): {
                 const dxbc::RTS0::v2::RootDescriptor &Descriptor =
