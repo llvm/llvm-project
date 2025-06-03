@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/Support/Mustache.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <sstream>
 
@@ -610,13 +608,13 @@ void ASTNode::render(const json::Value &CurrentCtx, raw_ostream &OS) {
     auto SectionLambda = SectionLambdas.find(AccessorValue[0]);
     bool IsLambda = SectionLambda != SectionLambdas.end();
 
-    if (isContextFalsey(ContextPtr) && !IsLambda)
-      return;
-
     if (IsLambda) {
       renderSectionLambdas(CurrentCtx, OS, SectionLambda->getValue());
       return;
     }
+
+    if (isContextFalsey(ContextPtr))
+      return;
 
     if (const json::Array *Arr = ContextPtr->getAsArray()) {
       for (const json::Value &V : *Arr)
@@ -629,8 +627,8 @@ void ASTNode::render(const json::Value &CurrentCtx, raw_ostream &OS) {
   case InvertSection: {
     bool IsLambda = SectionLambdas.contains(AccessorValue[0]);
     if (isContextFalsey(ContextPtr) && !IsLambda) {
-      // The context for the children remains UNCHANGED from the parent's.
-      // We pass 'Data', which is this node's original incoming context.
+      // The context for the children remains unchanged from the parent's, so
+      // we pass this node's original incoming context.
       renderChild(CurrentCtx, OS);
     }
     return;
