@@ -39,11 +39,11 @@ functions:
     standards:
       - stdc
     return_type: const wchar_t *
-    arguments: 
+    arguments:
       - type: const wchar_t *
       - type: wchar_t
   - name: wcsncmp
-  standards:
+    standards:
       - stdc
     return_type: int
     arguments:
@@ -75,22 +75,22 @@ functions:
     standards:
       - stdc
     return_type: size_t
-    arguments: 
+    arguments:
       - type: const wchar_t *
       - type: const wchar_t *
   - name: wmemcmp
     standards:
       - stdc
     return_type: int
-    arguments: 
+    arguments:
       - type: const wchar_t *
       - type: const wchar_t *
       - type: size_t
   - name: wmempcpy
     standards:
       - gnu
-    return_type: wchar_t * 
-    arguments: 
+    return_type: wchar_t *
+    arguments:
       - type: wchar_t *
       - type: const wchar_t *
       - type: size_t
@@ -98,7 +98,7 @@ functions:
     standards:
       - stdc
     return_type: wchar_t *
-    arguments: 
+    arguments:
       - type: __restrict wchar_t *
       - type: const __restrict wchar_t *
       - type: size_t
@@ -106,14 +106,14 @@ functions:
     standards:
       - stdc
     return_type: const wchar_t *
-    arguments: 
+    arguments:
       - type: const wchar_t *
       - type: const wchar_t *
   - name: wcsncat
     standards:
       - stdc
     return_type: wchar_t *
-    arguments: 
+    arguments:
       - type: __restrict wchar_t *
       - type: const __restrict wchar_t *
       - type: size_t
@@ -121,6 +121,6 @@ functions:
     standards:
       - stdc
     return_type: wchar_t *
-    arguments: 
+    arguments:
       - type: __restrict wchar_t *
       - type: const __restrict wchar_t *
