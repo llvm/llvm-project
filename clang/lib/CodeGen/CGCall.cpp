@@ -1426,7 +1426,8 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
         SrcSize == CGM.getDataLayout().getTypeAllocSize(Dst.getElementType())) {
       // If the value is supposed to be a pointer, convert it before storing it.
       Src = CoerceIntOrPtrToIntOrPtr(Src, Dst.getElementType(), *this);
-      Builder.CreateStore(Src, Dst, DstIsVolatile);
+      auto *I = Builder.CreateStore(Src, Dst, DstIsVolatile);
+      addInstToCurrentSourceAtom(I, Src);
     } else if (llvm::StructType *STy =
                    dyn_cast<llvm::StructType>(Src->getType())) {
       // Prefer scalar stores to first-class aggregate stores.
@@ -1434,16 +1435,21 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
       for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
         Address EltPtr = Builder.CreateStructGEP(Dst, i);
         llvm::Value *Elt = Builder.CreateExtractValue(Src, i);
-        Builder.CreateStore(Elt, EltPtr, DstIsVolatile);
+        auto *I = Builder.CreateStore(Elt, EltPtr, DstIsVolatile);
+        addInstToCurrentSourceAtom(I, Elt);
       }
     } else {
-      Builder.CreateStore(Src, Dst.withElementType(SrcTy), DstIsVolatile);
+      auto *I =
+          Builder.CreateStore(Src, Dst.withElementType(SrcTy), DstIsVolatile);
+      addInstToCurrentSourceAtom(I, Src);
     }
   } else if (SrcTy->isIntegerTy()) {
     // If the source is a simple integer, coerce it directly.
     llvm::Type *DstIntTy = Builder.getIntNTy(DstSize.getFixedValue() * 8);
     Src = CoerceIntOrPtrToIntOrPtr(Src, DstIntTy, *this);
-    Builder.CreateStore(Src, Dst.withElementType(DstIntTy), DstIsVolatile);
+    auto *I =
+        Builder.CreateStore(Src, Dst.withElementType(DstIntTy), DstIsVolatile);
+    addInstToCurrentSourceAtom(I, Src);
   } else {
     // Otherwise do coercion through memory. This is stupid, but
     // simple.
@@ -1457,10 +1463,11 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
     RawAddress Tmp =
         CreateTempAllocaForCoercion(*this, SrcTy, Dst.getAlignment());
     Builder.CreateStore(Src, Tmp);
-    Builder.CreateMemCpy(Dst.emitRawPointer(*this),
-                         Dst.getAlignment().getAsAlign(), Tmp.getPointer(),
-                         Tmp.getAlignment().getAsAlign(),
-                         Builder.CreateTypeSize(IntPtrTy, DstSize));
+    auto *I = Builder.CreateMemCpy(
+        Dst.emitRawPointer(*this), Dst.getAlignment().getAsAlign(),
+        Tmp.getPointer(), Tmp.getAlignment().getAsAlign(),
+        Builder.CreateTypeSize(IntPtrTy, DstSize));
+    addInstToCurrentSourceAtom(I, Src);
   }
 }
 
