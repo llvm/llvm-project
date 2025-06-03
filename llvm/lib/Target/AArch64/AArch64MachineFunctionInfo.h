@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -245,6 +246,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   int64_t VGIdx = std::numeric_limits<int>::max();
   int64_t StreamingVGIdx = std::numeric_limits<int>::max();
 
+  // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
+  SMEAttrs SMEFnAttrs;
+
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
@@ -448,6 +452,8 @@ public:
     assert(StackHazardCSRSlotIndex == std::numeric_limits<int>::max());
     StackHazardCSRSlotIndex = Index;
   }
+
+  SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
 
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }

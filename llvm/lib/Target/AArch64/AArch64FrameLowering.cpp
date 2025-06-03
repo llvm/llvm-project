@@ -599,7 +599,7 @@ void AArch64FrameLowering::emitCalleeSavedGPRLocations(
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  SMEAttrs Attrs(MF.getFunction());
+  SMEAttrs Attrs = AFI->getSMEFnAttrs();
   bool LocallyStreaming =
       Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface();
 
@@ -3026,7 +3026,7 @@ bool enableMultiVectorSpillFill(const AArch64Subtarget &Subtarget,
   if (DisableMultiVectorSpillFill)
     return false;
 
-  SMEAttrs FuncAttrs(MF.getFunction());
+  SMEAttrs FuncAttrs = MF.getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
   bool IsLocallyStreaming =
       FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface();
 
@@ -3357,7 +3357,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       // Find an available register to store value of VG to.
       Reg1 = findScratchNonCalleeSaveRegister(&MBB);
       assert(Reg1 != AArch64::NoRegister);
-      SMEAttrs Attrs(MF.getFunction());
+      SMEAttrs Attrs = AFI->getSMEFnAttrs();
 
       if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface() &&
           AFI->getStreamingVGIdx() == std::numeric_limits<int>::max()) {
@@ -3686,12 +3686,13 @@ static std::optional<int> getLdStFrameID(const MachineInstr &MI,
 void AArch64FrameLowering::determineStackHazardSlot(
     MachineFunction &MF, BitVector &SavedRegs) const {
   unsigned StackHazardSize = getStackHazardSize(MF);
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   if (StackHazardSize == 0 || StackHazardSize % 16 != 0 ||
-      MF.getInfo<AArch64FunctionInfo>()->hasStackHazardSlotIndex())
+      AFI->hasStackHazardSlotIndex())
     return;
 
   // Stack hazards are only needed in streaming functions.
-  SMEAttrs Attrs(MF.getFunction());
+  SMEAttrs Attrs = AFI->getSMEFnAttrs();
   if (!StackHazardInNonStreaming && Attrs.hasNonStreamingInterfaceAndBody())
     return;
 
@@ -3728,7 +3729,7 @@ void AArch64FrameLowering::determineStackHazardSlot(
     int ID = MFI.CreateStackObject(StackHazardSize, Align(16), false);
     LLVM_DEBUG(dbgs() << "Created Hazard slot at " << ID << " size "
                       << StackHazardSize << "\n");
-    MF.getInfo<AArch64FunctionInfo>()->setStackHazardSlotIndex(ID);
+    AFI->setStackHazardSlotIndex(ID);
   }
 }
 
@@ -3881,8 +3882,7 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // changes, as we will need to spill the value of the VG register.
   // For locally streaming functions, we spill both the streaming and
   // non-streaming VG value.
-  const Function &F = MF.getFunction();
-  SMEAttrs Attrs(F);
+  SMEAttrs Attrs = AFI->getSMEFnAttrs();
   if (requiresSaveVG(MF)) {
     if (Attrs.hasStreamingBody() && !Attrs.hasStreamingInterface())
       CSStackSize += 16;
@@ -4039,7 +4039,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   // Insert VG into the list of CSRs, immediately before LR if saved.
   if (requiresSaveVG(MF)) {
     std::vector<CalleeSavedInfo> VGSaves;
-    SMEAttrs Attrs(MF.getFunction());
+    SMEAttrs Attrs = AFI->getSMEFnAttrs();
 
     auto VGInfo = CalleeSavedInfo(AArch64::VG);
     VGInfo.setRestored(false);
@@ -5056,10 +5056,10 @@ static void emitVGSaveRestore(MachineBasicBlock::iterator II,
       MI.getOpcode() != AArch64::VGRestorePseudo)
     return;
 
-  SMEAttrs FuncAttrs(MF->getFunction());
+  auto *AFI = MF->getInfo<AArch64FunctionInfo>();
+  SMEAttrs FuncAttrs = AFI->getSMEFnAttrs();
   bool LocallyStreaming =
       FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface();
-  const AArch64FunctionInfo *AFI = MF->getInfo<AArch64FunctionInfo>();
 
   int64_t VGFrameIdx =
       LocallyStreaming ? AFI->getStreamingVGIdx() : AFI->getVGIdx();
@@ -5549,8 +5549,8 @@ static inline raw_ostream &operator<<(raw_ostream &OS, const StackAccess &SA) {
 void AArch64FrameLowering::emitRemarks(
     const MachineFunction &MF, MachineOptimizationRemarkEmitter *ORE) const {
 
-  SMEAttrs Attrs(MF.getFunction());
-  if (Attrs.hasNonStreamingInterfaceAndBody())
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (AFI->getSMEFnAttrs().hasNonStreamingInterfaceAndBody())
     return;
 
   unsigned StackHazardSize = getStackHazardSize(MF);

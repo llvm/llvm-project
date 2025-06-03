@@ -42672,7 +42672,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         bool SplatLo = isShuffleEquivalent(Mask, {0, 1, 0, 1}, LHS);
         bool SplatHi = isShuffleEquivalent(Mask, {2, 3, 2, 3}, LHS);
         if ((SplatLo || SplatHi) && !Subtarget.hasAVX512() &&
-            X86::mayFoldLoad(LHS, Subtarget)) {
+            X86::mayFoldLoad(LHS, Subtarget, /*AssumeSingleUse=*/true)) {
           MVT MemVT = VT.getHalfNumVectorElementsVT();
           unsigned Ofs = SplatLo ? 0 : MemVT.getStoreSize();
           return getBROADCAST_LOAD(X86ISD::SUBV_BROADCAST_LOAD, DL, VT, MemVT,
@@ -53144,9 +53144,10 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
           UserLd->getChain() == Chain && UserLd->getBasePtr() == Ptr &&
           UserLd->getMemoryVT().getSizeInBits() == MemVT.getSizeInBits() &&
-          !User->hasAnyUseOfValue(1) &&
+          User->hasAnyUseOfValue(0) &&
           User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
+        DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
         SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
                                            RegVT.getSizeInBits());
         Extract = DAG.getBitcast(RegVT, Extract);
@@ -59442,10 +59443,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   // If we're splatting the lower half subvector of a full vector load into the
   // upper half, just splat the subvector directly, potentially creating a
   // subvector broadcast.
-  // TODO: Drop hasOneUse checks.
   if ((int)IdxVal == (VecNumElts / 2) &&
-      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits()) &&
-      (Vec.hasOneUse() || SubVec.hasOneUse())) {
+      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits())) {
     auto *VecLd = dyn_cast<LoadSDNode>(Vec);
     auto *SubLd = dyn_cast<LoadSDNode>(SubVec);
     if (VecLd && SubLd &&

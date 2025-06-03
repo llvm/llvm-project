@@ -7751,7 +7751,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     (void)Res;
   }
 
-  SMEAttrs Attrs(MF.getFunction());
+  SMEAttrs Attrs = FuncInfo->getSMEFnAttrs();
   bool IsLocallyStreaming =
       !Attrs.hasStreamingInterface() && Attrs.hasStreamingBody();
   assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
@@ -8105,7 +8105,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
 
   // Create a 16 Byte TPIDR2 object. The dynamic buffer
   // will be expanded and stored in the static object later using a pseudonode.
-  if (SMEAttrs(MF.getFunction()).hasZAState()) {
+  if (Attrs.hasZAState()) {
     TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
     SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
@@ -8125,7 +8125,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     Chain = DAG.getNode(
         AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
         {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
-  } else if (SMEAttrs(MF.getFunction()).hasAgnosticZAInterface()) {
+  } else if (Attrs.hasAgnosticZAInterface()) {
     // Call __arm_sme_state_size().
     SDValue BufferSize =
         DAG.getNode(AArch64ISD::GET_SME_SAVE_SIZE, DL,
@@ -9610,7 +9610,7 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   // Emit SMSTOP before returning from a locally streaming function
-  SMEAttrs FuncAttrs(MF.getFunction());
+  SMEAttrs FuncAttrs = FuncInfo->getSMEFnAttrs();
   if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface()) {
     if (FuncAttrs.hasStreamingCompatibleInterface()) {
       Register Reg = FuncInfo->getPStateSMReg();
