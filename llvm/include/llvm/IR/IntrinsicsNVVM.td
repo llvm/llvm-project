@@ -2025,10 +2025,10 @@ foreach dim = 1...5 in {
                       [llvm_i16_ty,                 // cta_mask
                        llvm_i64_ty]),               // cache_hint
           [llvm_i1_ty,                              // Flag for cta_mask
-           llvm_i1_ty],                             // Flag for cache_hint
+           llvm_i1_ty,                              // Flag for cache_hint
+           llvm_i1_ty],                             // Flag for is_2cta_mode
           [IntrConvergent,
-           WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
-           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>, NoCapture<ArgIndex<2>>]>;
+           WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>]>;
 
     def int_nvvm_cp_async_bulk_tensor_s2g_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[],
