@@ -84,6 +84,10 @@ public:
     return true;
   }
 
+  void HandleInlineFunctionDefinition(FunctionDecl *D) override {
+    Gen->HandleInlineFunctionDefinition(D);
+  }
+
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
 
