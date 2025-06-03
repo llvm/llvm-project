@@ -19,11 +19,11 @@ if(LLVM_HAVE_LINK_VERSION_SCRIPT)
 endif()
 
 target_include_directories(LLVMOffload PUBLIC
-                            ${CMAKE_CURRENT_BINARY_DIR}/../include
-                            ${CMAKE_CURRENT_SOURCE_DIR}/include
-                            ${CMAKE_CURRENT_SOURCE_DIR}/include/generated
-                            ${CMAKE_CURRENT_SOURCE_DIR}/../include
-                            ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include)
+                           ${CMAKE_CURRENT_BINARY_DIR}/../include
+                           ${CMAKE_CURRENT_SOURCE_DIR}/include
+                           ${CMAKE_CURRENT_SOURCE_DIR}/include/generated
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../include
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include)
 
 target_compile_options(LLVMOffload PRIVATE ${offload_compile_flags})
 target_link_options(LLVMOffload PRIVATE ${offload_link_flags})
@@ -32,6 +32,11 @@ target_compile_definitions(LLVMOffload PRIVATE
   TARGET_NAME="Liboffload"
   DEBUG_PREFIX="Liboffload"
 )
+
+# Make sure these are up-to-date if modified.
+if(TARGET OffloadAPI)
+  add_dependencies(LLVMOffload OffloadAPI)
+endif()
 
 set_target_properties(LLVMOffload PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
