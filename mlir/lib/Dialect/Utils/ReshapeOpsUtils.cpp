@@ -217,8 +217,7 @@ findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
     int64_t targetSize = targetShape[targetDimIdx];
     // Simply check if there are any subsequent target dimensions left - if not,
     // the match must be made greedily.
-    bool isLastTargetDim = targetDimIdx == numTargetDims - 1;
-    bool shouldMatchGreedily = isLastTargetDim;
+    bool shouldMatchGreedily = targetDimIdx == numTargetDims - 1;
     FailureOr<ReassociationIndexRange> sourceRange;
     if (targetSize == ShapedType::kDynamic) {
       sourceRange = findReassociationRangeForDynamicDim(
@@ -263,14 +262,15 @@ findReassociationRangesForCollapse(ArrayRef<int64_t> sourceShape,
     return findReassociationRangesForCollapse(sourceShape, targetShape);
   // FIXME: It would be preferable to avoid the expensive copies. At the moment,
   // this approach is chosen for readability of the main implementation.
-  auto sourceToReverse = sourceShape.vec(), targetToReverse = targetShape.vec();
+  std::vector<int64_t> sourceToReverse = sourceShape.vec(),
+                       targetToReverse = targetShape.vec();
   std::reverse(sourceToReverse.begin(), sourceToReverse.end());
   std::reverse(targetToReverse.begin(), targetToReverse.end());
   auto invertedRanges =
       findReassociationRangesForCollapse(sourceToReverse, targetToReverse);
   if (failed(invertedRanges))
     return failure();
-  auto rangesToInvert = *invertedRanges;
+  SmallVector<ReassociationIndexRange> &rangesToInvert = *invertedRanges;
   unsigned numSourceDims = sourceShape.size();
   // We have received the ranges for inverted shapes. Now we have to invert
   // the ranges back to correspond with the original source shape.
@@ -312,7 +312,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
       findReassociationRangesForCollapse(sourceShape, targetShape);
   if (failed(maybeForwardRanges))
     return std::nullopt;
-  auto &ranges = *maybeForwardRanges;
+  SmallVector<ReassociationIndexRange> &ranges = *maybeForwardRanges;
   // Now do the same in reverse. We need to get another valid reassociation
   // through some other strategy, and then compare the results in order to
   // disambiguate mixed subshapes, such as:
@@ -328,7 +328,7 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
       sourceShape, targetShape, /*iterateRightToLeft=*/true);
   if (failed(maybeReverseRanges))
     return std::nullopt;
-  auto &reverseRanges = *maybeReverseRanges;
+  SmallVector<ReassociationIndexRange> &reverseRanges = *maybeReverseRanges;
 
   if (ranges.size() != numTargetDims || reverseRanges.size() != numTargetDims)
     return std::nullopt;
@@ -338,8 +338,8 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   SmallVector<ReassociationIndices> reassociationMap(numTargetDims);
   for (unsigned targetDimIdx = 0; targetDimIdx < numTargetDims;
        ++targetDimIdx) {
-    auto &range = ranges[targetDimIdx];
-    auto &reverseRange = reverseRanges[targetDimIdx];
+    ReassociationIndexRange &range = ranges[targetDimIdx];
+    ReassociationIndexRange &reverseRange = reverseRanges[targetDimIdx];
     // Get non-overlapping indices between the ranges
     ReassociationIndices nonMatchingIndices =
         range.getNonOverlappingIndicesWith(reverseRange);
