@@ -1852,7 +1852,7 @@ static ExprResult GetVTablePointer(Sema &S, CallExpr *Call) {
 
   if (!SubjectRecord->isPolymorphic()) {
     S.Diag(ThisArg->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
-        << /*isPolymorphic=*/ 1 << SubjectRecord;
+        << /*isPolymorphic=*/1 << SubjectRecord;
     return ExprError();
   }
   QualType ReturnType = S.Context.getPointerType(S.Context.VoidTy.withConst());
