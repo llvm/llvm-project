@@ -23,6 +23,11 @@ public:
 
 const char *JSONGenerator::Format = "json";
 
+static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
+                          std::optional<StringRef> RepositoryUrl);
+static void serializeInfo(const EnumInfo &I, json::Object &Obj,
+                          std::optional<StringRef> RepositoryUrl);
+
 static json::Object serializeLocation(const Location &Loc,
                                       std::optional<StringRef> RepositoryUrl) {
   Object LocationObj = Object();
@@ -103,7 +108,58 @@ static void serializeCommonAttributes(const Info &I, json::Object &Obj,
   }
 }
 
-static void serializeTypeInfo(const TypeInfo &I, Object &Obj) {
+static void serializeReference(const Reference &Ref, Object &ReferenceObj,
+                               SmallString<64> CurrentDirectory) {
+  SmallString<64> Path = Ref.getRelativeFilePath(CurrentDirectory);
+  sys::path::append(Path, Ref.getFileBaseName() + ".json");
+  sys::path::native(Path, sys::path::Style::posix);
+  ReferenceObj["Link"] = Path;
+  ReferenceObj["Name"] = Ref.Name;
+  ReferenceObj["QualName"] = Ref.QualName;
+  ReferenceObj["ID"] = toHex(toStringRef(Ref.USR));
+}
+
+// Although namespaces and records both have ScopeChildren, they serialize them
+// differently. Only enums, records, and typedefs are handled here.
+static void serializeCommonChildren(const ScopeChildren &Children,
+                                    json::Object &Obj,
+                                    std::optional<StringRef> RepositoryUrl) {
+  if (!Children.Enums.empty()) {
+    json::Value EnumsArray = Array();
+    auto &EnumsArrayRef = *EnumsArray.getAsArray();
+    for (const auto &Enum : Children.Enums) {
+      json::Object EnumObj;
+      serializeInfo(Enum, EnumObj, RepositoryUrl);
+      EnumsArrayRef.push_back(std::move(EnumObj));
+    }
+    Obj["Enums"] = std::move(EnumsArray);
+  }
+
+  if (!Children.Typedefs.empty()) {
+    json::Value TypedefsArray = Array();
+    auto &TypedefsArrayRef = *TypedefsArray.getAsArray();
+    for (const auto &Typedef : Children.Typedefs) {
+      json::Object TypedefObj;
+      serializeInfo(Typedef, TypedefObj, RepositoryUrl);
+      TypedefsArrayRef.push_back(std::move(TypedefObj));
+    }
+    Obj["Typedefs"] = std::move(TypedefsArray);
+  }
+
+  if (!Children.Records.empty()) {
+    json::Value RecordsArray = Array();
+    auto &RecordsArrayRef = *RecordsArray.getAsArray();
+    for (const auto &Record : Children.Records) {
+      json::Object RecordObj;
+      SmallString<64> BasePath = Record.getRelativeFilePath("");
+      serializeReference(Record, RecordObj, BasePath);
+      RecordsArrayRef.push_back(std::move(RecordObj));
+    }
+    Obj["Records"] = std::move(RecordsArray);
+  }
+}
+
+static void serializeInfo(const TypeInfo &I, Object &Obj) {
   Obj["Name"] = I.Type.Name;
   Obj["QualName"] = I.Type.QualName;
   Obj["ID"] = toHex(toStringRef(I.Type.USR));
@@ -117,7 +173,7 @@ static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
   Obj["IsStatic"] = F.IsStatic;
 
   auto ReturnTypeObj = Object();
-  serializeTypeInfo(F.ReturnType, ReturnTypeObj);
+  serializeInfo(F.ReturnType, ReturnTypeObj);
   Obj["ReturnType"] = std::move(ReturnTypeObj);
 
   if (!F.Params.empty()) {
@@ -168,7 +224,7 @@ static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
   Obj["TypeDeclaration"] = I.TypeDeclaration;
   Obj["IsUsing"] = I.IsUsing;
   Object TypeObj = Object();
-  serializeTypeInfo(I.Underlying, TypeObj);
+  serializeInfo(I.Underlying, TypeObj);
   Obj["Underlying"] = std::move(TypeObj);
 }
 
@@ -224,27 +280,7 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
       Obj["ProtectedMembers"] = std::move(ProtectedMembers);
   }
 
-  if (!I.Children.Enums.empty()) {
-    json::Value EnumsArray = Array();
-    auto &EnumsArrayRef = *EnumsArray.getAsArray();
-    for (const auto &Enum : I.Children.Enums) {
-      json::Object EnumObj;
-      serializeInfo(Enum, EnumObj, RepositoryUrl);
-      EnumsArrayRef.push_back(std::move(EnumObj));
-    }
-    Obj["Enums"] = std::move(EnumsArray);
-  }
-
-  if (!I.Children.Typedefs.empty()) {
-    json::Value TypedefsArray = Array();
-    auto &TypedefsArrayRef = *TypedefsArray.getAsArray();
-    for (const auto &Typedef : I.Children.Typedefs) {
-      json::Object TypedefObj;
-      serializeInfo(Typedef, TypedefObj, RepositoryUrl);
-      TypedefsArrayRef.push_back(std::move(TypedefObj));
-    }
-    Obj["Typedefs"] = std::move(TypedefsArray);
-  }
+  serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
 
 Error JSONGenerator::generateDocs(

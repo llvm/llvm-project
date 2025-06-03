@@ -21,6 +21,8 @@ struct MyClass {
   };
   
   typedef int MyTypedef;
+  
+  class NestedClass;
 protected:
   int protectedMethod();
 
@@ -158,6 +160,14 @@ protected:
 // CHECK-NEXT:        "Type": "int"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
+// CHECK-NEXT:    "Records": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "ID": "{{[0-9A-F]*}}",
+// CHECK-NEXT:        "Link": "NestedClass.json",
+// CHECK-NEXT:        "Name": "NestedClass",
+// CHECK-NEXT:        "QualName": "NestedClass"
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:    "TagType": "struct",
 // CHECK-NEXT:    "Typedefs": [
 // CHECK-NEXT:      {
