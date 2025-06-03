@@ -136,6 +136,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  wmemmove_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wmemmove_test.cpp
+  DEPENDS
+    libc.src.wchar.wmemmove
+)
+
+add_libc_test(
   wcsstr_test
   SUITE
     libc_wchar_unittests

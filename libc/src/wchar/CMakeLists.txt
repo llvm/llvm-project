@@ -138,6 +138,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wmemmove
+  SRCS
+    wmemmove.cpp
+  HDRS
+    wmemmove.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+    libc.src.string.memory_utils.inline_memmove
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
   wcsstr
   SRCS
     wcsstr.cpp
