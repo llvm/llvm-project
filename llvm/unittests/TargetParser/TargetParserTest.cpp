@@ -1843,8 +1843,8 @@ TEST(TargetParserTest, testAArch64ReconstructFromParsedFeatures) {
   ASSERT_THAT(NonExtensions, testing::ContainerEq(NonExtensionsExpected));
   std::vector<StringRef> Features;
   Extensions.toLLVMFeatureList(Features);
-  std::vector<StringRef> FeaturesExpected = {"+sve2", "+neon", "-sve"};
-  ASSERT_THAT(FeaturesExpected, testing::ContainerEq(FeaturesExpected));
+  std::vector<StringRef> FeaturesExpected = {"+neon", "-sve", "+sve2"};
+  ASSERT_THAT(Features, testing::ContainerEq(FeaturesExpected));
 }
 
 AArch64ExtensionDependenciesBaseArchTestParams
