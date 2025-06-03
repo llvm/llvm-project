@@ -118,14 +118,10 @@ public:
   std::unique_ptr<Module> takeModule() { return std::move(Mod); }
 
   /// Return the Module's target triple.
-  const std::string &getTargetTriple() {
-    return getModule().getTargetTriple();
-  }
+  const Triple &getTargetTriple() { return getModule().getTargetTriple(); }
 
   /// Set the Module's target triple.
-  void setTargetTriple(StringRef Triple) {
-    getModule().setTargetTriple(Triple);
-  }
+  void setTargetTriple(Triple T) { getModule().setTargetTriple(T); }
 
   /// Get the number of symbols
   uint32_t getSymbolCount() {
@@ -195,7 +191,7 @@ private:
 
   /// Add a function symbol as defined to the list.
   void addDefinedFunctionSymbol(ModuleSymbolTable::Symbol Sym);
-  void addDefinedFunctionSymbol(StringRef Name, const Function *F);
+  void addDefinedFunctionSymbol(StringRef Name, const GlobalValue *F);
 
   /// Add a global symbol from module-level ASM to the defined list.
   void addAsmGlobalSymbol(StringRef, lto_symbol_attributes scope);

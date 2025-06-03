@@ -361,7 +361,7 @@ protected:
               Trace::FindPluginSchema(plugin_name))
         result.AppendMessage(*schemaOrErr);
       else
-        error = schemaOrErr.takeError();
+        error = Status::FromError(schemaOrErr.takeError());
     }
 
     if (error.Success()) {

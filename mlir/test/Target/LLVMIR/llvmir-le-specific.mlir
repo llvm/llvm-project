@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
 // Decoding the attribute does not work on big-endian platforms currently
-// XFAIL: target=s390x-{{.*}}
+// XFAIL: target={{(s390x|sparc.*)-.*}}
 
 // CHECK{LITERAL}: @dense_resource_tensor_constant = internal constant [5 x float] [float 0x3FCA034080000000, float 0xBFD0466300000000, float 0xBFD75DDF80000000, float 0xBFDE074F40000000, float 0x3FDDD3A1C0000000]
 llvm.mlir.global internal constant @dense_resource_tensor_constant(dense_resource<dense_resource_test_5xf32> : tensor<5xf32>) : !llvm.array<5 x f32>

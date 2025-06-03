@@ -1,8 +1,8 @@
 ; RUN: opt -verify-memoryssa -passes=loop-rotate %s -S | FileCheck %s
 ; REQUIRES: asserts
 
-; CHECK-LABEL: @test()
-define dso_local void @test() {
+; CHECK-LABEL: @test(i1 %arg)
+define dso_local void @test(i1 %arg) {
 entry:
   br label %preheader
 
@@ -13,7 +13,7 @@ l39:
   %v40 = phi ptr [ @foo, %preheader ], [ %v43, %crit_edge ]
   %v41 = call float %v40(float undef)
   %v42 = load i32, ptr undef, align 8
-  br i1 undef, label %crit_edge, label %loopexit
+  br i1 %arg, label %crit_edge, label %loopexit
 
 crit_edge:
   %v43 = load ptr, ptr undef, align 8

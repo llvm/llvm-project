@@ -8,6 +8,7 @@ static_library("DataFormatters") {
     #"//lldb/source/Symbol", # FIXME: 3-hop Dependency cycle (DataFormatters->Symbol->Expression->Interpreter->DataFormatters)
     #"//lldb/source/Target",  # FIXME: 3-hop Dependency cycle (DataFormatters->Target->Expression->Interpreter->DataFormatters)
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//llvm/lib/Support",
   ]
   sources = [
@@ -17,6 +18,8 @@ static_library("DataFormatters") {
     "FormatCache.cpp",
     "FormatClasses.cpp",
     "FormatManager.cpp",
+    "FormatterBytecode.cpp",
+    "FormatterSection.cpp",
     "FormattersHelpers.cpp",
     "LanguageCategory.cpp",
     "StringPrinter.cpp",

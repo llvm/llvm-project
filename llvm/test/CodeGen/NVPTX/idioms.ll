@@ -1,9 +1,9 @@
 ; Check that various LLVM idioms get lowered to NVPTX as expected.
 
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 %struct.S16 = type { i16, i16 }
 %struct.S32 = type { i32, i32 }
@@ -40,7 +40,7 @@ define %struct.S16 @i32_to_2xi16(i32 noundef %in) {
   %low = trunc i32 %in to i16
   %high32 = lshr i32 %in, 16
   %high = trunc i32 %high32 to i16
-; CHECK:       ld.param.u32  %[[R32:r[0-9]+]], [i32_to_2xi16_param_0];
+; CHECK:       ld.param.b32  %[[R32:r[0-9]+]], [i32_to_2xi16_param_0];
 ; CHECK-DAG:   cvt.u16.u32   %rs{{[0-9+]}}, %[[R32]];
 ; CHECK-DAG    mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32]];
   %s1 = insertvalue %struct.S16 poison, i16 %low, 0
@@ -54,7 +54,7 @@ define %struct.S16 @i32_to_2xi16_lh(i32 noundef %in) {
   %high32 = lshr i32 %in, 16
   %high = trunc i32 %high32 to i16
   %low = trunc i32 %in to i16
-; CHECK:       ld.param.u32  %[[R32:r[0-9]+]], [i32_to_2xi16_lh_param_0];
+; CHECK:       ld.param.b32  %[[R32:r[0-9]+]], [i32_to_2xi16_lh_param_0];
 ; CHECK-DAG:   cvt.u16.u32   %rs{{[0-9+]}}, %[[R32]];
 ; CHECK-DAG    mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32]];
   %s1 = insertvalue %struct.S16 poison, i16 %low, 0
@@ -82,7 +82,7 @@ define %struct.S32 @i64_to_2xi32(i64 noundef %in) {
   %low = trunc i64 %in to i32
   %high64 = lshr i64 %in, 32
   %high = trunc i64 %high64 to i32
-; CHECK:       ld.param.u64  %[[R64:rd[0-9]+]], [i64_to_2xi32_param_0];
+; CHECK:       ld.param.b64  %[[R64:rd[0-9]+]], [i64_to_2xi32_param_0];
 ; CHECK-DAG:   cvt.u32.u64   %r{{[0-9+]}}, %[[R64]];
 ; CHECK-DAG    mov.b64       {tmp, %r{{[0-9+]}}}, %[[R64]];
   %s1 = insertvalue %struct.S32 poison, i32 %low, 0
@@ -112,7 +112,7 @@ define %struct.S16 @i32_to_2xi16_shr(i32 noundef %i){
   %l = trunc i32 %i1 to i16
   %h32 = ashr i32 %i1, 16
   %h = trunc i32 %h32 to i16
-; CHECK:      ld.param.u32    %[[R32:r[0-9]+]], [i32_to_2xi16_shr_param_0];
+; CHECK:      ld.param.b32    %[[R32:r[0-9]+]], [i32_to_2xi16_shr_param_0];
 ; CHECK:      shr.s32         %[[R32H:r[0-9]+]], %[[R32]], 16;
 ; CHECK-DAG    mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32]];
 ; CHECK-DAG    mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32H]];

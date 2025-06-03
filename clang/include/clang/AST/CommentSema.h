@@ -80,7 +80,7 @@ public:
   ArrayRef<T> copyArray(ArrayRef<T> Source) {
     if (!Source.empty())
       return Source.copy(Allocator);
-    return std::nullopt;
+    return {};
   }
 
   ParagraphComment *actOnParagraphComment(

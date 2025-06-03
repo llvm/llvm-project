@@ -144,10 +144,11 @@ struct MCCVFunctionInfo {
 class CodeViewContext {
 public:
   CodeViewContext(MCContext *MCCtx) : MCCtx(MCCtx) {}
-  ~CodeViewContext();
 
   CodeViewContext &operator=(const CodeViewContext &other) = delete;
   CodeViewContext(const CodeViewContext &other) = delete;
+
+  void finish();
 
   bool isValidFileNumber(unsigned FileNumber) const;
   bool addFile(MCStreamer &OS, unsigned FileNumber, StringRef Filename,
@@ -230,9 +231,7 @@ private:
 
   /// The fragment that ultimately holds our strings.
   MCDataFragment *StrTabFragment = nullptr;
-  bool InsertedStrTabFragment = false;
-
-  MCDataFragment *getStringTableFragment();
+  SmallVector<char, 0> StrTab = {'\0'};
 
   /// Get a string table offset.
   unsigned getStringTableOffset(StringRef S);

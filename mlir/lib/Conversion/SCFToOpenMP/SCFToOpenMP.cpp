@@ -450,7 +450,9 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         /* num_threads = */ numThreadsVar,
         /* private_vars = */ ValueRange(),
         /* private_syms = */ nullptr,
+        /* private_needs_barrier = */ nullptr,
         /* proc_bind_kind = */ omp::ClauseProcBindKindAttr{},
+        /* reduction_mod = */ nullptr,
         /* reduction_vars = */ llvm::SmallVector<Value>{},
         /* reduction_byref = */ DenseBoolArrayAttr{},
         /* reduction_syms = */ ArrayAttr{});
@@ -487,9 +489,6 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
             &wsloopOp.getRegion(), {}, reductionTypes,
             llvm::SmallVector<mlir::Location>(reductionVariables.size(),
                                               parallelOp.getLoc()));
-
-        rewriter.setInsertionPoint(
-            rewriter.create<omp::TerminatorOp>(parallelOp.getLoc()));
 
         // Create loop nest and populate region with contents of scf.parallel.
         auto loopOp = rewriter.create<omp::LoopNestOp>(

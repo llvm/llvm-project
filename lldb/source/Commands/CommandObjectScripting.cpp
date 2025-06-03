@@ -56,8 +56,8 @@ public:
             option_arg, GetDefinitions()[option_idx].enum_values,
             eScriptLanguageNone, error);
         if (!error.Success())
-          error.SetErrorStringWithFormat("unrecognized value for language '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat(
+              "unrecognized value for language '%s'", option_arg.str().c_str());
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -159,7 +159,7 @@ public:
             option_arg, GetDefinitions()[option_idx].enum_values,
             eScriptLanguageNone, error);
         if (!error.Success())
-          error.SetErrorStringWithFormatv(
+          error = Status::FromErrorStringWithFormatv(
               "unrecognized value for language '{0}'", option_arg);
         break;
       default:
@@ -254,7 +254,7 @@ CommandObjectMultiwordScripting::CommandObjectMultiwordScripting(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(
           interpreter, "scripting",
-          "Commands for operating on the scripting functionnalities.",
+          "Commands for operating on the scripting functionalities.",
           "scripting <subcommand> [<subcommand-options>]") {
   LoadSubCommand("run",
                  CommandObjectSP(new CommandObjectScriptingRun(interpreter)));

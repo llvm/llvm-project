@@ -286,7 +286,7 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB6_2: # %bb15
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    incq %r12
@@ -338,7 +338,7 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; PPX-NEXT:    xorl %ebp, %ebp
 ; PPX-NEXT:    xorl %r12d, %r12d
 ; PPX-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; PPX-NEXT:    .p2align 4, 0x90
+; PPX-NEXT:    .p2align 4
 ; PPX-NEXT:  .LBB6_2: # %bb15
 ; PPX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; PPX-NEXT:    incq %r12
@@ -390,7 +390,7 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; FRAME-NEXT:    xorl %r13d, %r13d
 ; FRAME-NEXT:    xorl %r14d, %r14d
 ; FRAME-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; FRAME-NEXT:    .p2align 4, 0x90
+; FRAME-NEXT:    .p2align 4
 ; FRAME-NEXT:  .LBB6_2: # %bb15
 ; FRAME-NEXT:    # =>This Inner Loop Header: Depth=1
 ; FRAME-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill

@@ -1,14 +1,14 @@
 // RUN: %clangxx_nsan -O0 -mllvm -nsan-shadow-type-mapping=dqq -g -DSUM=NaiveSum -DFLT=float %s -o %t
-// RUN: NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 not %run %t 2>&1 | FileCheck %s
+// RUN: env NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 not %run %t 2>&1 | FileCheck %s
 
 // RUN: %clangxx_nsan -O3 -mllvm -nsan-shadow-type-mapping=dqq -g -DSUM=NaiveSum -DFLT=float %s -o %t
-// RUN: NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 not %run %t 2>&1 | FileCheck %s
+// RUN: env NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 not %run %t 2>&1 | FileCheck %s
 
 // RUN: %clangxx_nsan -O0 -mllvm -nsan-shadow-type-mapping=dqq -g -DSUM=KahanSum -DFLT=float %s -o %t
-// RUN: NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 %run %t
+// RUN: env NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 %run %t
 
 // RUN: %clangxx_nsan -O3 -mllvm -nsan-shadow-type-mapping=dqq -g -DSUM=KahanSum -DFLT=float %s -o %t
-// RUN: NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 %run %t
+// RUN: env NSAN_OPTIONS=halt_on_error=1,log2_max_relative_error=19 %run %t
 
 #include <chrono>
 #include <iostream>

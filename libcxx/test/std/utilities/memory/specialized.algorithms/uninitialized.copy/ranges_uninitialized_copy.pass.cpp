@@ -278,39 +278,6 @@ int main(int, char**) {
   Counted::reset();
 #endif // TEST_HAS_NO_EXCEPTIONS
 
-  // Works with const iterators, (iter, sentinel) overload.
-  {
-    constexpr int N = 5;
-    Counted in[N] = {Counted(1), Counted(2), Counted(3), Counted(4), Counted(5)};
-    Buffer<Counted, N> out;
-    Counted::reset();
-
-    std::ranges::uninitialized_copy(in, in + N, out.cbegin(), out.cend());
-    assert(Counted::current_objects == N);
-    assert(Counted::total_objects == N);
-    assert(std::equal(in, in + N, out.begin(), out.end()));
-
-    std::destroy(out.begin(), out.end());
-  }
-  Counted::reset();
-
-  // Works with const iterators, (range) overload.
-  {
-    constexpr int N = 5;
-    Counted in[N] = {Counted(1), Counted(2), Counted(3), Counted(4), Counted(5)};
-    Buffer<Counted, N> out;
-    Counted::reset();
-
-    std::ranges::subrange out_range(out.cbegin(), out.cend());
-    std::ranges::uninitialized_copy(in, out_range);
-    assert(Counted::current_objects == N);
-    assert(Counted::total_objects == N);
-    assert(std::equal(in, in + N, out.begin(), out.end()));
-
-    std::destroy(out.begin(), out.end());
-  }
-  Counted::reset();
-
   // Conversions, (iter, sentinel) overload.
   {
     constexpr int N = 3;

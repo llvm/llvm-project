@@ -33,36 +33,24 @@ void transform::QueryOp::getEffects(
 DiagnosedSilenceableFailure transform::QueryOp::applyToOne(
     transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results, TransformState &state) {
-  StringAttr deviceId = getDeviceAttr();
-  StringAttr key = getKeyAttr();
-
-  DataLayoutEntryInterface entry;
-  if (deviceId) {
-    TargetSystemSpecInterface sysSpec = dlti::getTargetSystemSpec(target);
-    if (!sysSpec)
-      return mlir::emitDefiniteFailure(target->getLoc())
-             << "no target system spec associated to: " << target;
-
-    if (auto targetSpec = sysSpec.getDeviceSpecForDeviceID(deviceId))
-      entry = targetSpec->getSpecForIdentifier(key);
+  SmallVector<DataLayoutEntryKey> keys;
+  for (Attribute key : getKeys()) {
+    if (auto strKey = dyn_cast<StringAttr>(key))
+      keys.push_back(strKey);
+    else if (auto typeKey = dyn_cast<TypeAttr>(key))
+      keys.push_back(typeKey.getValue());
     else
-      return mlir::emitDefiniteFailure(target->getLoc())
-             << "no " << deviceId << " target device spec found";
-  } else {
-    DataLayoutSpecInterface dlSpec = dlti::getDataLayoutSpec(target);
-    if (!dlSpec)
-      return mlir::emitDefiniteFailure(target->getLoc())
-             << "no data layout spec associated to: " << target;
-
-    entry = dlSpec.getSpecForIdentifier(key);
+      return emitDefiniteFailure("'transform.dlti.query' keys of wrong type: "
+                                 "only StringAttr and TypeAttr are allowed");
   }
 
-  if (!entry)
-    return mlir::emitDefiniteFailure(target->getLoc())
-           << "no DLTI entry for key: " << key;
+  FailureOr<Attribute> result = dlti::query(target, keys, /*emitError=*/true);
 
-  results.push_back(entry.getValue());
+  if (failed(result))
+    return emitSilenceableFailure(getLoc(),
+                                  "'transform.dlti.query' op failed to apply");
 
+  results.push_back(*result);
   return DiagnosedSilenceableFailure::success();
 }
 

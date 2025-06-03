@@ -567,7 +567,8 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(BBI))
       if (II->getIntrinsicID() == Intrinsic::lifetime_end ||
           II->getIntrinsicID() == Intrinsic::assume ||
-          II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl)
+          II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl ||
+          II->getIntrinsicID() == Intrinsic::fake_use)
         continue;
     if (BBI->mayHaveSideEffects() || BBI->mayReadFromMemory() ||
         !isSafeToSpeculativelyExecute(&*BBI))
@@ -595,10 +596,10 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
 
   // Following attributes are completely benign as far as calling convention
   // goes, they shouldn't affect whether the call is a tail call.
-  for (const auto &Attr :
-       {Attribute::Alignment, Attribute::Dereferenceable,
-        Attribute::DereferenceableOrNull, Attribute::NoAlias,
-        Attribute::NonNull, Attribute::NoUndef, Attribute::Range}) {
+  for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
+                           Attribute::DereferenceableOrNull, Attribute::NoAlias,
+                           Attribute::NonNull, Attribute::NoUndef,
+                           Attribute::Range, Attribute::NoFPClass}) {
     CallerAttrs.removeAttribute(Attr);
     CalleeAttrs.removeAttribute(Attr);
   }

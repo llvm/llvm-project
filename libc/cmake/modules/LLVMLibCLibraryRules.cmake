@@ -112,7 +112,7 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
   endforeach()
 
   add_executable(${target_name} ${objects})
-  target_link_options(${target_name} PRIVATE
+  target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
                       "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
 endfunction(add_bitcode_entrypoint_library)
 

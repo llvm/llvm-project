@@ -50,6 +50,9 @@ module m
   !ERROR: BIND_C attribute was already specified on 's5'
   integer, bind(c, name="ss2") :: s5
 
+  integer, bind(c, name="s6explicit") :: s6
+  dimension s6(10) ! caused spurious error
+
 end
 
 subroutine common1()

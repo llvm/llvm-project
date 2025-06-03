@@ -2338,7 +2338,7 @@ define <2 x i1> @strict_vector_fptosi_v2f64_to_v2i1(<2 x double> %a) #0 {
 ; AVX512F-NEXT:    vcvttpd2dq %xmm0, %xmm0
 ; AVX512F-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    ret{{[l|q]}}
@@ -2563,7 +2563,7 @@ define <2 x i1> @strict_vector_fptoui_v2f64_to_v2i1(<2 x double> %a) #0 {
 ; AVX512F-NEXT:    vcvttpd2udq %zmm0, %ymm0
 ; AVX512F-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    ret{{[l|q]}}
@@ -2695,7 +2695,7 @@ define <2 x i1> @strict_vector_fptosi_v2f32_to_v2i1(<2 x float> %a) #0 {
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    kshiftlw $1, %k1, %k1
 ; AVX512F-NEXT:    korw %k1, %k0, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    ret{{[l|q]}}
@@ -2941,7 +2941,7 @@ define <2 x i1> @strict_vector_fptoui_v2f32_to_v2i1(<2 x float> %a) #0 {
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    kshiftlw $1, %k1, %k1
 ; AVX512F-NEXT:    korw %k1, %k0, %k1
-; AVX512F-NEXT:    vpternlogq $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    ret{{[l|q]}}
@@ -3228,7 +3228,7 @@ define <4 x i1> @strict_vector_fptosi_v4f32_to_v4i1(<4 x float> %a) #0 {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    ret{{[l|q]}}
@@ -3282,7 +3282,7 @@ define <4 x i1> @strict_vector_fptoui_v4f32_to_v4i1(<4 x float> %a) #0 {
 ; AVX512F-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; AVX512F-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    ret{{[l|q]}}

@@ -10,7 +10,6 @@
 #include "Perf.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Procfs.h"
-#include "lldb/Host/linux/Support.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"

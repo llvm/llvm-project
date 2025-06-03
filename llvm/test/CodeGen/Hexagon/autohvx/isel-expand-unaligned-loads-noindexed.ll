@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 
 ; Check for successful compilation.
 ; CHECK: vmem

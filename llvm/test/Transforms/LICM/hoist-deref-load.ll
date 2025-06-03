@@ -420,7 +420,7 @@ for.end:                                          ; preds = %for.inc, %entry
 define void @test7(ptr noalias %a, ptr %b, ptr %cptr, i32 %n) #0 {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable !0, !align !0
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable [[META0:![0-9]+]], !align [[META0]]
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
@@ -492,7 +492,7 @@ for.end:                                          ; preds = %for.inc, %entry
 define void @test8(ptr noalias %a, ptr %b, ptr %cptr, i32 %n) #0 {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable_or_null !0, !align !0
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable_or_null [[META0]], !align [[META0]]
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne ptr [[C]], null
 ; CHECK-NEXT:    br i1 [[NOT_NULL]], label [[NOT_NULL:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       not.null:
@@ -562,7 +562,7 @@ for.end:                                          ; preds = %for.inc, %entry, %n
 define void @test9(ptr noalias %a, ptr %b, ptr %cptr, i32 %n) #0 {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable_or_null !0
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable_or_null [[META0]]
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
@@ -693,7 +693,7 @@ define void @test11(ptr noalias %a, ptr %b, ptr dereferenceable(8) %cptr, i32 %n
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable !0
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable [[META0]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -1164,5 +1164,78 @@ for.end:                                          ; preds = %for.inc, %entry
   ret void
 }
 
+declare void @use(i64)
+
+define void @licm_deref_no_hoist(i1 %c1, i1 %c2, ptr align 8 dereferenceable(8) %p1) {
+; CHECK-LABEL: @licm_deref_no_hoist(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P1:%.*]], align 8, !align [[META1:![0-9]+]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF:%.*]], label [[LOOP_LATCH:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P2]], align 8
+; CHECK-NEXT:    call void @use(i64 [[V]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  br i1 %c1, label %if, label %loop.latch
+
+if:
+  %p2 = load ptr, ptr %p1, align 8, !dereferenceable !1, !align !1
+  %v = load i64, ptr %p2, align 8
+  call void @use(i64 %v) memory(none)
+  br label %loop.latch
+
+loop.latch:
+  br i1 %c2, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @licm_deref_hoist(i1 %c1, i1 %c2, ptr align 8 dereferenceable(8) %p1) {
+; CHECK-LABEL: @licm_deref_hoist(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr [[P1:%.*]], align 8, !dereferenceable [[META1]], !align [[META1]]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[P2]], align 8
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[IF:%.*]], label [[LOOP_LATCH:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @use(i64 [[V]]) #[[ATTR1]]
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p2 = load ptr, ptr %p1, align 8, !dereferenceable !1, !align !1
+  br label %loop
+
+loop:
+  br i1 %c1, label %if, label %loop.latch
+
+if:
+  %v = load i64, ptr %p2, align 8
+  call void @use(i64 %v) memory(none)
+  br label %loop.latch
+
+loop.latch:
+  br i1 %c2, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 attributes #0 = { nounwind uwtable nofree nosync }
 !0 = !{i64 4}
+!1 = !{i64 8}

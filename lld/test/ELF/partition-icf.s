@@ -1,6 +1,9 @@
 // REQUIRES: x86
+/// Link against a DSO to ensure that sections are not discarded by --gc-sections.
+// RUN: llvm-mc -filetype=obj -triple=x86_64 %S/Inputs/shared.s -o %ts.o
+// RUN: ld.lld -shared -soname=ts %ts.o -o %ts.so
 // RUN: llvm-mc %s -o %t.o -filetype=obj --triple=x86_64-unknown-linux
-// RUN: ld.lld %t.o -o %t --export-dynamic --gc-sections --icf=all
+// RUN: ld.lld %t.o %ts.so -o %t --export-dynamic --gc-sections --icf=all
 // RUN: llvm-readelf -S -s %t | FileCheck %s
 
 // CHECK: part1

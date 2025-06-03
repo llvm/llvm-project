@@ -8,7 +8,6 @@
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include <optional>
 
@@ -106,6 +105,33 @@ DependencyScanningFilesystemSharedCache::getShardForUID(
     llvm::sys::fs::UniqueID UID) const {
   auto Hash = llvm::hash_combine(UID.getDevice(), UID.getFile());
   return CacheShards[Hash % NumShards];
+}
+
+std::vector<StringRef>
+DependencyScanningFilesystemSharedCache::getInvalidNegativeStatCachedPaths(
+    llvm::vfs::FileSystem &UnderlyingFS) const {
+  // Iterate through all shards and look for cached stat errors.
+  std::vector<StringRef> InvalidPaths;
+  for (unsigned i = 0; i < NumShards; i++) {
+    const CacheShard &Shard = CacheShards[i];
+    std::lock_guard<std::mutex> LockGuard(Shard.CacheLock);
+    for (const auto &[Path, CachedPair] : Shard.CacheByFilename) {
+      const CachedFileSystemEntry *Entry = CachedPair.first;
+
+      if (Entry->getError()) {
+        // Only examine cached errors.
+        llvm::ErrorOr<llvm::vfs::Status> Stat = UnderlyingFS.status(Path);
+        if (Stat) {
+          // This is the case where we have cached the non-existence
+          // of the file at Path first, and a a file at the path is created
+          // later. The cache entry is not invalidated (as we have no good
+          // way to do it now), which may lead to missing file build errors.
+          InvalidPaths.push_back(Path);
+        }
+      }
+    }
+  }
+  return InvalidPaths;
 }
 
 const CachedFileSystemEntry *

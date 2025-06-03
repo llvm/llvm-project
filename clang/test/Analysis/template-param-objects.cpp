@@ -11,7 +11,7 @@ bool operator ==(Box lhs, Box rhs) {
   return lhs.value == rhs.value;
 }
 template <Box V> void dumps() {
-  clang_analyzer_dump(V);        // expected-warning {{lazyCompoundVal}}
+  clang_analyzer_dump(V);        // expected-warning {{Unknown}}
   clang_analyzer_dump(&V);       // expected-warning {{Unknown}}
   clang_analyzer_dump(V.value);  // expected-warning {{Unknown}} FIXME: It should be '6 S32b'.
   clang_analyzer_dump(&V.value); // expected-warning {{Unknown}}

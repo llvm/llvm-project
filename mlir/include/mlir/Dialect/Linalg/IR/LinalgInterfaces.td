@@ -245,6 +245,18 @@ def LinalgStructuredInterface
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return true if all loops are parallel.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isAllParallelLoops",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return getNumParallelLoops() ==  getNumLoops();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the dims that are parallel loops.
       }],
       /*retTy=*/"void",
@@ -325,6 +337,18 @@ def LinalgStructuredInterface
         unsigned bbArgNumber = opOperand->getOperandNumber();
         // Init tensors have uses.
         return !getBlock()->getArgument(bbArgNumber).use_empty();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true only if linalgOp takes one input and produces one result.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isSingleInputOutput",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op.getNumDpsInputs() == 1 && $_op.getNumDpsInits() == 1;
       }]
     >,
     InterfaceMethod<
@@ -684,6 +708,19 @@ def LinalgStructuredInterface
         return;
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true if the user has supplied explicit indexing maps that are
+        different from default indexing maps for this op. Returns `false` otherwise.
+        Note, if the user define maps that are identical to the default maps,
+        this method returns `false`.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasUserDefinedMaps",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return false; }]
+    >,
     //===------------------------------------------------------------------===//
     // Linalg generalization hooks.
     //===------------------------------------------------------------------===//
@@ -707,7 +744,7 @@ def LinalgStructuredInterface
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         auto maps =  $_op.getIndexingMapsArray();
-        return concatAffineMaps(maps);
+        return concatAffineMaps(maps, $_op.getContext());
       }]
     >,
     InterfaceMethod<
@@ -825,11 +862,6 @@ def LinalgStructuredInterface
     /// operands. This is done by applying `getShapesToLoopsMap` to
     /// `createFlatListOfOperandDims`.
     SmallVector<Range, 4> createLoopRanges(OpBuilder &b, Location loc);
-
-    /// Compute the static loop sizes necessary to vectorize the computation.
-    /// This is done by applying `getShapesToLoopsMap` to
-    /// `createFlatListOfOperandStaticDims`.
-    SmallVector<int64_t, 4> computeStaticLoopSizes();
 
     /// Returns the value that expresses the shape of the output in terms of
     /// shape of the input operands where possible

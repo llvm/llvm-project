@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
 // RUN: | mlir-opt -gpu-lower-to-nvvm-pipeline="cubin-format=%gpu_compilation_format" \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -14,7 +14,7 @@ module attributes {gpu.container_module} {
             %0 = gpu.thread_id x
             %csti8 = arith.constant 2 : i8
             %cstf32 = arith.constant 3.0 : f32
-            gpu.printf "Hello from %lld, %d, %f\n" %0, %csti8, %cstf32  : index, i8, f32
+            gpu.printf "Hello from %lld, %d, %f\n", %0, %csti8, %cstf32  : index, i8, f32
             gpu.return
         }
     }

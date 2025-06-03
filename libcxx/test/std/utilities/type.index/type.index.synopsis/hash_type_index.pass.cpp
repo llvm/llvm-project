@@ -34,7 +34,7 @@ int main(int, char**)
   }
 #if TEST_STD_VER >= 11
   {
-    test_hash_enabled_for_type<std::type_index>(std::type_index(typeid(int)));
+    test_hash_enabled<std::type_index>(std::type_index(typeid(int)));
   }
 #endif
 

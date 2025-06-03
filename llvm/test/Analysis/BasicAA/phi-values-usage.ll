@@ -20,10 +20,10 @@ declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 ; This function is one where if we didn't free basicaa after memcpyopt then the
 ; usage of basicaa in instcombine would cause a segfault due to stale phi-values
 ; results being used.
-define void @fn(ptr %this, ptr %ptr) personality ptr @__gxx_personality_v0 {
+define void @fn(ptr %this, ptr %ptr, i1 %arg) personality ptr @__gxx_personality_v0 {
 entry:
   %arr = alloca [4 x i8], align 8
-  br i1 undef, label %then, label %if
+  br i1 %arg, label %then, label %if
 
 if:
   br label %then
@@ -50,7 +50,7 @@ lpad:
 ; When running instcombine after memdep, the basicaa used by instcombine uses
 ; the phivalues that memdep used. This would then cause a segfault due to
 ; instcombine deleting a phi whose values had been cached.
-define void @fn2() {
+define void @fn2(i1 %arg) {
 entry:
   %a = alloca i8, align 1
   %0 = load ptr, ptr @c, align 1
@@ -58,7 +58,7 @@ entry:
 
 for.cond:                                         ; preds = %for.body, %entry
   %d.0 = phi ptr [ %0, %entry ], [ null, %for.body ]
-  br i1 undef, label %for.body, label %for.cond.cleanup
+  br i1 %arg, label %for.body, label %for.cond.cleanup
 
 for.body:                                         ; preds = %for.cond
   store volatile i8 undef, ptr %a, align 1

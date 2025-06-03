@@ -9,7 +9,7 @@ define void @test1(ptr %p) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  invoke.cont:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, ptr [[P]], align 8
+; CHECK-NEXT:    [[LOAD1:%.*]] = extractelement <2 x i64> [[TMP0]], i32 0
 ; CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[P]], align 8
 ; CHECK-NEXT:    invoke void @throw()
 ; CHECK-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH:%.*]]

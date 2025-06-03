@@ -36,37 +36,37 @@ define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask) {
 define <4 x i32> @test_compress_v4i32_with_passthru(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> %passthru) {
 ; CHECK-LABEL: test_compress_v4i32_with_passthru:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    str q2, [sp, #-16]!
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ushll.4s v1, v1, #0
 ; CHECK-NEXT:    movi.4s v3, #1
+; CHECK-NEXT:    mov x12, sp
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    mov x14, sp
+; CHECK-NEXT:    mov w15, #3 ; =0x3
 ; CHECK-NEXT:    shl.4s v1, v1, #31
 ; CHECK-NEXT:    cmlt.4s v1, v1, #0
 ; CHECK-NEXT:    and.16b v3, v1, v3
-; CHECK-NEXT:    str q2, [sp, #-16]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    mov.s w8, v1[1]
 ; CHECK-NEXT:    fmov w16, s1
-; CHECK-NEXT:    mov x12, sp
 ; CHECK-NEXT:    mov.s w11, v1[2]
-; CHECK-NEXT:    addv.4s s2, v3
-; CHECK-NEXT:    mov x10, sp
 ; CHECK-NEXT:    mov.s w13, v1[3]
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    mov x14, sp
+; CHECK-NEXT:    addv.4s s2, v3
 ; CHECK-NEXT:    bfi x12, x16, #2, #1
 ; CHECK-NEXT:    and x16, x16, #0x1
-; CHECK-NEXT:    mov w15, #3 ; =0x3
 ; CHECK-NEXT:    and x8, x8, #0x1
 ; CHECK-NEXT:    add x8, x16, x8
-; CHECK-NEXT:    fmov w16, s2
 ; CHECK-NEXT:    and x11, x11, #0x1
 ; CHECK-NEXT:    and x13, x13, #0x1
+; CHECK-NEXT:    fmov w16, s2
 ; CHECK-NEXT:    add x11, x8, x11
 ; CHECK-NEXT:    orr x8, x9, x8, lsl #2
 ; CHECK-NEXT:    add x13, x11, x13
 ; CHECK-NEXT:    bfi x14, x11, #2, #2
+; CHECK-NEXT:    cmp x13, #3
 ; CHECK-NEXT:    bfi x10, x16, #2, #2
 ; CHECK-NEXT:    mov.s w16, v0[3]
-; CHECK-NEXT:    cmp x13, #3
 ; CHECK-NEXT:    csel x11, x13, x15, lo
 ; CHECK-NEXT:    ldr w10, [x10]
 ; CHECK-NEXT:    str s0, [sp]
@@ -109,7 +109,7 @@ define <16 x i8> @test_compress_v16i8(<16 x i8> %vec, <16 x i1> %mask) {
 ; CHECK-NEXT:    shl.16b v1, v1, #7
 ; CHECK-NEXT:    mov x12, sp
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    st1.b { v0 }[0], [x8]
+; CHECK-NEXT:    str b0, [sp]
 ; CHECK-NEXT:    mov x13, sp
 ; CHECK-NEXT:    cmlt.16b v1, v1, #0
 ; CHECK-NEXT:    umov.b w9, v1[0]
@@ -209,44 +209,44 @@ define <8 x i32> @test_compress_large(<8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK-NEXT:    ; kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    umov.b w9, v2[0]
 ; CHECK-NEXT:    umov.b w10, v2[1]
-; CHECK-NEXT:    mov x12, sp
-; CHECK-NEXT:    umov.b w11, v2[2]
+; CHECK-NEXT:    mov x11, sp
+; CHECK-NEXT:    umov.b w12, v2[2]
 ; CHECK-NEXT:    umov.b w13, v2[3]
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    umov.b w14, v2[4]
+; CHECK-NEXT:    umov.b w15, v2[4]
 ; CHECK-NEXT:    str s0, [sp]
+; CHECK-NEXT:    mov s3, v0[3]
 ; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    and x15, x9, #0x1
-; CHECK-NEXT:    bfi x12, x9, #2, #1
-; CHECK-NEXT:    and x9, x11, #0x1
-; CHECK-NEXT:    add x10, x15, x10
-; CHECK-NEXT:    umov.b w11, v2[5]
-; CHECK-NEXT:    add x9, x10, x9
-; CHECK-NEXT:    orr x15, x8, x10, lsl #2
-; CHECK-NEXT:    umov.b w10, v2[6]
-; CHECK-NEXT:    st1.s { v0 }[1], [x12]
-; CHECK-NEXT:    add x12, x8, x9, lsl #2
-; CHECK-NEXT:    and x13, x13, #0x1
-; CHECK-NEXT:    st1.s { v0 }[2], [x15]
-; CHECK-NEXT:    add x9, x9, x13
-; CHECK-NEXT:    st1.s { v0 }[3], [x12]
-; CHECK-NEXT:    and x12, x14, #0x1
-; CHECK-NEXT:    and x11, x11, #0x1
+; CHECK-NEXT:    and x14, x9, #0x1
+; CHECK-NEXT:    bfi x11, x9, #2, #1
+; CHECK-NEXT:    add x9, x14, x10
+; CHECK-NEXT:    umov.b w10, v2[5]
+; CHECK-NEXT:    st1.s { v0 }[1], [x11]
+; CHECK-NEXT:    and x11, x12, #0x1
+; CHECK-NEXT:    orr x14, x8, x9, lsl #2
+; CHECK-NEXT:    and x12, x13, #0x1
+; CHECK-NEXT:    add x9, x9, x11
+; CHECK-NEXT:    umov.b w11, v2[6]
+; CHECK-NEXT:    and x13, x15, #0x1
 ; CHECK-NEXT:    add x12, x9, x12
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    and x9, x9, #0x7
-; CHECK-NEXT:    add x11, x12, x11
+; CHECK-NEXT:    st1.s { v0 }[2], [x14]
+; CHECK-NEXT:    str s3, [x8, x9, lsl #2]
+; CHECK-NEXT:    and x9, x10, #0x1
+; CHECK-NEXT:    add x10, x12, x13
 ; CHECK-NEXT:    and x12, x12, #0x7
-; CHECK-NEXT:    str s1, [x8, x9, lsl #2]
-; CHECK-NEXT:    add w10, w11, w10
-; CHECK-NEXT:    and x11, x11, #0x7
-; CHECK-NEXT:    add x12, x8, x12, lsl #2
+; CHECK-NEXT:    add x9, x10, x9
 ; CHECK-NEXT:    and x10, x10, #0x7
-; CHECK-NEXT:    add x9, x8, x11, lsl #2
-; CHECK-NEXT:    add x8, x8, x10, lsl #2
-; CHECK-NEXT:    st1.s { v1 }[1], [x12]
-; CHECK-NEXT:    st1.s { v1 }[2], [x9]
-; CHECK-NEXT:    st1.s { v1 }[3], [x8]
+; CHECK-NEXT:    str s1, [x8, x12, lsl #2]
+; CHECK-NEXT:    and x12, x9, #0x7
+; CHECK-NEXT:    mov s0, v1[3]
+; CHECK-NEXT:    and w11, w11, #0x1
+; CHECK-NEXT:    add x10, x8, x10, lsl #2
+; CHECK-NEXT:    add x12, x8, x12, lsl #2
+; CHECK-NEXT:    add w9, w9, w11
+; CHECK-NEXT:    and x9, x9, #0x7
+; CHECK-NEXT:    st1.s { v1 }[1], [x10]
+; CHECK-NEXT:    st1.s { v1 }[2], [x12]
+; CHECK-NEXT:    str s0, [x8, x9, lsl #2]
 ; CHECK-NEXT:    ldp q0, q1, [sp], #32
 ; CHECK-NEXT:    ret
     %out = call <8 x i32> @llvm.experimental.vector.compress(<8 x i32> %vec, <8 x i1> %mask, <8 x i32> undef)

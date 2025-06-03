@@ -5,7 +5,7 @@
 define void @deinterleave4(ptr %src) {
 ; CHECK-LABEL: define void @deinterleave4
 ; CHECK-SAME: (ptr [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), ptr [[SRC]])
+; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> splat (i1 true), ptr [[SRC]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 2
@@ -34,7 +34,7 @@ define void @wide_deinterleave4(ptr %src) {
 ; CHECK-LABEL: define void @wide_deinterleave4
 ; CHECK-SAME: (ptr [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[SRC]], i64 0
-; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), ptr [[TMP1]])
+; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> splat (i1 true), ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP2]], i64 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 1
@@ -44,7 +44,7 @@ define void @wide_deinterleave4(ptr %src) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP8]], i64 0)
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[LDN1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), ptr [[TMP10]])
+; CHECK-NEXT:    [[LDN1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> splat (i1 true), ptr [[TMP10]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP11]], i64 4)
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 1
@@ -75,12 +75,12 @@ define void @wide_deinterleave4(ptr %src) {
 define void @mix_deinterleave4_deinterleave2(ptr %src) {
 ; CHECK-LABEL: define void @mix_deinterleave4_deinterleave2
 ; CHECK-SAME: (ptr [[SRC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), ptr [[SRC]])
+; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> splat (i1 true), ptr [[SRC]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 3
-; CHECK-NEXT:    [[LDN1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv4i32(<vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), ptr [[SRC]])
+; CHECK-NEXT:    [[LDN1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv4i32(<vscale x 4 x i1> splat (i1 true), ptr [[SRC]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 1
 ; CHECK-NEXT:    ret void
@@ -108,13 +108,13 @@ define void @negative_deinterleave4_test(ptr %src) {
 ; CHECK-LABEL: define void @negative_deinterleave4_test
 ; CHECK-SAME: (ptr [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[SRC]], i64 0
-; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv4i32(<vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), ptr [[TMP1]])
+; CHECK-NEXT:    [[LDN:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv4i32(<vscale x 4 x i1> splat (i1 true), ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP2]], i64 0)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP4]], i64 0)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[SRC]], i64 2
-; CHECK-NEXT:    [[LDN1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv4i32(<vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), ptr [[TMP6]])
+; CHECK-NEXT:    [[LDN1:%.*]] = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv4i32(<vscale x 4 x i1> splat (i1 true), ptr [[TMP6]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP7]], i64 4)
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[LDN1]], 1

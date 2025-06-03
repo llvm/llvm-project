@@ -2142,7 +2142,7 @@ void bar() {
 // CK10-NEXT:    [[G_ADDR:%.*]] = alloca ptr, align 8
 // CK10-NEXT:    store ptr [[G]], ptr [[G_ADDR]], align 8
 // CK10-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[G_ADDR]], align 8
-// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // CK10-NEXT:    store ptr [[INCDEC_PTR]], ptr [[G_ADDR]], align 8
 // CK10-NEXT:    ret void
 //
@@ -2153,7 +2153,7 @@ void bar() {
 // CK10-NEXT:    [[L_ADDR:%.*]] = alloca ptr, align 8
 // CK10-NEXT:    store ptr [[L]], ptr [[L_ADDR]], align 8
 // CK10-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[L_ADDR]], align 8
-// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i32 1
+// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i32 1
 // CK10-NEXT:    store ptr [[INCDEC_PTR]], ptr [[L_ADDR]], align 8
 // CK10-NEXT:    ret void
 //
@@ -2164,7 +2164,7 @@ void bar() {
 // CK10-NEXT:    [[T_ADDR:%.*]] = alloca ptr, align 8
 // CK10-NEXT:    store ptr [[T]], ptr [[T_ADDR]], align 8
 // CK10-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[T_ADDR]], align 8
-// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
+// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i32 1
 // CK10-NEXT:    store ptr [[INCDEC_PTR]], ptr [[T_ADDR]], align 8
 // CK10-NEXT:    ret void
 //
@@ -2178,7 +2178,7 @@ void bar() {
 // CK10-NEXT:    store ptr [[LR_ADDR]], ptr [[TMP]], align 8
 // CK10-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 8
 // CK10-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 1
+// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw float, ptr [[TMP1]], i32 1
 // CK10-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CK10-NEXT:    ret void
 //
@@ -2192,7 +2192,7 @@ void bar() {
 // CK10-NEXT:    store ptr [[TR_ADDR]], ptr [[TMP]], align 8
 // CK10-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 8
 // CK10-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK10-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CK10-NEXT:    ret void
 //
@@ -2206,7 +2206,7 @@ void bar() {
 // CK10-NEXT:    store ptr [[TR_ADDR]], ptr [[TMP]], align 8
 // CK10-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 8
 // CK10-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK10-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CK10-NEXT:    ret void
 //
@@ -2224,11 +2224,11 @@ void bar() {
 // CK10-NEXT:    store ptr [[LR_ADDR]], ptr [[_TMP1]], align 8
 // CK10-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 8
 // CK10-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK10-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CK10-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP1]], align 8
 // CK10-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CK10-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 1
+// CK10-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP3]], i32 1
 // CK10-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[TMP2]], align 8
 // CK10-NEXT:    ret void
 //
@@ -2613,7 +2613,7 @@ void bar() {
 // CK11-NEXT:    [[G_ADDR:%.*]] = alloca ptr, align 8
 // CK11-NEXT:    store ptr [[G]], ptr [[G_ADDR]], align 8
 // CK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[G_ADDR]], align 8
-// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // CK11-NEXT:    store ptr [[INCDEC_PTR]], ptr [[G_ADDR]], align 8
 // CK11-NEXT:    ret void
 //
@@ -2624,7 +2624,7 @@ void bar() {
 // CK11-NEXT:    [[L_ADDR:%.*]] = alloca ptr, align 8
 // CK11-NEXT:    store ptr [[L]], ptr [[L_ADDR]], align 8
 // CK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[L_ADDR]], align 8
-// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i32 1
+// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i32 1
 // CK11-NEXT:    store ptr [[INCDEC_PTR]], ptr [[L_ADDR]], align 8
 // CK11-NEXT:    ret void
 //
@@ -2635,7 +2635,7 @@ void bar() {
 // CK11-NEXT:    [[T_ADDR:%.*]] = alloca ptr, align 8
 // CK11-NEXT:    store ptr [[T]], ptr [[T_ADDR]], align 8
 // CK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[T_ADDR]], align 8
-// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
+// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i32 1
 // CK11-NEXT:    store ptr [[INCDEC_PTR]], ptr [[T_ADDR]], align 8
 // CK11-NEXT:    ret void
 //
@@ -2649,7 +2649,7 @@ void bar() {
 // CK11-NEXT:    store ptr [[LR_ADDR]], ptr [[TMP]], align 8
 // CK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 8
 // CK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 1
+// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw float, ptr [[TMP1]], i32 1
 // CK11-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CK11-NEXT:    ret void
 //
@@ -2663,7 +2663,7 @@ void bar() {
 // CK11-NEXT:    store ptr [[TR_ADDR]], ptr [[TMP]], align 8
 // CK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 8
 // CK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK11-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CK11-NEXT:    ret void
 //
@@ -2677,7 +2677,7 @@ void bar() {
 // CK11-NEXT:    store ptr [[TR_ADDR]], ptr [[TMP]], align 8
 // CK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 8
 // CK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK11-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CK11-NEXT:    ret void
 //
@@ -2695,11 +2695,11 @@ void bar() {
 // CK11-NEXT:    store ptr [[LR_ADDR]], ptr [[_TMP1]], align 8
 // CK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 8
 // CK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK11-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 8
 // CK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP1]], align 8
 // CK11-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CK11-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 1
+// CK11-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP3]], i32 1
 // CK11-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[TMP2]], align 8
 // CK11-NEXT:    ret void
 //
@@ -3084,7 +3084,7 @@ void bar() {
 // CK12-NEXT:    [[G_ADDR:%.*]] = alloca ptr, align 4
 // CK12-NEXT:    store ptr [[G]], ptr [[G_ADDR]], align 4
 // CK12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[G_ADDR]], align 4
-// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // CK12-NEXT:    store ptr [[INCDEC_PTR]], ptr [[G_ADDR]], align 4
 // CK12-NEXT:    ret void
 //
@@ -3095,7 +3095,7 @@ void bar() {
 // CK12-NEXT:    [[L_ADDR:%.*]] = alloca ptr, align 4
 // CK12-NEXT:    store ptr [[L]], ptr [[L_ADDR]], align 4
 // CK12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[L_ADDR]], align 4
-// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i32 1
+// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i32 1
 // CK12-NEXT:    store ptr [[INCDEC_PTR]], ptr [[L_ADDR]], align 4
 // CK12-NEXT:    ret void
 //
@@ -3106,7 +3106,7 @@ void bar() {
 // CK12-NEXT:    [[T_ADDR:%.*]] = alloca ptr, align 4
 // CK12-NEXT:    store ptr [[T]], ptr [[T_ADDR]], align 4
 // CK12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[T_ADDR]], align 4
-// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
+// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i32 1
 // CK12-NEXT:    store ptr [[INCDEC_PTR]], ptr [[T_ADDR]], align 4
 // CK12-NEXT:    ret void
 //
@@ -3120,7 +3120,7 @@ void bar() {
 // CK12-NEXT:    store ptr [[LR_ADDR]], ptr [[TMP]], align 4
 // CK12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 4
 // CK12-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
-// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 1
+// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw float, ptr [[TMP1]], i32 1
 // CK12-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 4
 // CK12-NEXT:    ret void
 //
@@ -3134,7 +3134,7 @@ void bar() {
 // CK12-NEXT:    store ptr [[TR_ADDR]], ptr [[TMP]], align 4
 // CK12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 4
 // CK12-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
-// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK12-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 4
 // CK12-NEXT:    ret void
 //
@@ -3148,7 +3148,7 @@ void bar() {
 // CK12-NEXT:    store ptr [[TR_ADDR]], ptr [[TMP]], align 4
 // CK12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 4
 // CK12-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
-// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK12-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 4
 // CK12-NEXT:    ret void
 //
@@ -3166,11 +3166,11 @@ void bar() {
 // CK12-NEXT:    store ptr [[LR_ADDR]], ptr [[_TMP1]], align 4
 // CK12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 4
 // CK12-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
-// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK12-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 4
 // CK12-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP1]], align 4
 // CK12-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
-// CK12-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 1
+// CK12-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP3]], i32 1
 // CK12-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[TMP2]], align 4
 // CK12-NEXT:    ret void
 //
@@ -3555,7 +3555,7 @@ void bar() {
 // CK13-NEXT:    [[G_ADDR:%.*]] = alloca ptr, align 4
 // CK13-NEXT:    store ptr [[G]], ptr [[G_ADDR]], align 4
 // CK13-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[G_ADDR]], align 4
-// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // CK13-NEXT:    store ptr [[INCDEC_PTR]], ptr [[G_ADDR]], align 4
 // CK13-NEXT:    ret void
 //
@@ -3566,7 +3566,7 @@ void bar() {
 // CK13-NEXT:    [[L_ADDR:%.*]] = alloca ptr, align 4
 // CK13-NEXT:    store ptr [[L]], ptr [[L_ADDR]], align 4
 // CK13-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[L_ADDR]], align 4
-// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i32 1
+// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i32 1
 // CK13-NEXT:    store ptr [[INCDEC_PTR]], ptr [[L_ADDR]], align 4
 // CK13-NEXT:    ret void
 //
@@ -3577,7 +3577,7 @@ void bar() {
 // CK13-NEXT:    [[T_ADDR:%.*]] = alloca ptr, align 4
 // CK13-NEXT:    store ptr [[T]], ptr [[T_ADDR]], align 4
 // CK13-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[T_ADDR]], align 4
-// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
+// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i32 1
 // CK13-NEXT:    store ptr [[INCDEC_PTR]], ptr [[T_ADDR]], align 4
 // CK13-NEXT:    ret void
 //
@@ -3591,7 +3591,7 @@ void bar() {
 // CK13-NEXT:    store ptr [[LR_ADDR]], ptr [[TMP]], align 4
 // CK13-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 4
 // CK13-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
-// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 1
+// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw float, ptr [[TMP1]], i32 1
 // CK13-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 4
 // CK13-NEXT:    ret void
 //
@@ -3605,7 +3605,7 @@ void bar() {
 // CK13-NEXT:    store ptr [[TR_ADDR]], ptr [[TMP]], align 4
 // CK13-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 4
 // CK13-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
-// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK13-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 4
 // CK13-NEXT:    ret void
 //
@@ -3619,7 +3619,7 @@ void bar() {
 // CK13-NEXT:    store ptr [[TR_ADDR]], ptr [[TMP]], align 4
 // CK13-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 4
 // CK13-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
-// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK13-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 4
 // CK13-NEXT:    ret void
 //
@@ -3637,11 +3637,11 @@ void bar() {
 // CK13-NEXT:    store ptr [[LR_ADDR]], ptr [[_TMP1]], align 4
 // CK13-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP]], align 4
 // CK13-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 4
-// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 1
+// CK13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i32 1
 // CK13-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP0]], align 4
 // CK13-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[_TMP1]], align 4
 // CK13-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
-// CK13-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 1
+// CK13-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP3]], i32 1
 // CK13-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[TMP2]], align 4
 // CK13-NEXT:    ret void
 //
@@ -3674,34 +3674,34 @@ void bar() {
 // SIMD-ONLY00-NEXT:    store ptr [[LR]], ptr [[LR_ADDR]], align 8
 // SIMD-ONLY00-NEXT:    store ptr [[TR]], ptr [[TR_ADDR]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP0:%.*]] = load ptr, ptr @g, align 8
-// SIMD-ONLY00-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY00-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY00-NEXT:    store ptr [[INCDEC_PTR]], ptr @g, align 8
 // SIMD-ONLY00-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[L]], align 8
-// SIMD-ONLY00-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 1
+// SIMD-ONLY00-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP1]], i32 1
 // SIMD-ONLY00-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[L]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[T]], align 8
-// SIMD-ONLY00-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 1
+// SIMD-ONLY00-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP2]], i32 1
 // SIMD-ONLY00-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[T]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[LR_ADDR]], align 8
 // SIMD-ONLY00-NEXT:    store ptr [[TMP3]], ptr [[TMP]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LR_ADDR]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 8
-// SIMD-ONLY00-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i32 1
+// SIMD-ONLY00-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i32 1
 // SIMD-ONLY00-NEXT:    store ptr [[INCDEC_PTR3]], ptr [[TMP5]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TR_ADDR]], align 8
 // SIMD-ONLY00-NEXT:    store ptr [[TMP7]], ptr [[_TMP4]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TR_ADDR]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[_TMP4]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8
-// SIMD-ONLY00-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 1
+// SIMD-ONLY00-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP10]], i32 1
 // SIMD-ONLY00-NEXT:    store ptr [[INCDEC_PTR5]], ptr [[TMP9]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TR_ADDR]], align 8
 // SIMD-ONLY00-NEXT:    store ptr [[TMP11]], ptr [[_TMP6]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TR_ADDR]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[_TMP6]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 8
-// SIMD-ONLY00-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i32 1
+// SIMD-ONLY00-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP14]], i32 1
 // SIMD-ONLY00-NEXT:    store ptr [[INCDEC_PTR7]], ptr [[TMP13]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TR_ADDR]], align 8
 // SIMD-ONLY00-NEXT:    store ptr [[TMP15]], ptr [[_TMP8]], align 8
@@ -3711,11 +3711,11 @@ void bar() {
 // SIMD-ONLY00-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[LR_ADDR]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[_TMP8]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 8
-// SIMD-ONLY00-NEXT:    [[INCDEC_PTR10:%.*]] = getelementptr inbounds i32, ptr [[TMP20]], i32 1
+// SIMD-ONLY00-NEXT:    [[INCDEC_PTR10:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP20]], i32 1
 // SIMD-ONLY00-NEXT:    store ptr [[INCDEC_PTR10]], ptr [[TMP19]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[_TMP9]], align 8
 // SIMD-ONLY00-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
-// SIMD-ONLY00-NEXT:    [[INCDEC_PTR11:%.*]] = getelementptr inbounds float, ptr [[TMP22]], i32 1
+// SIMD-ONLY00-NEXT:    [[INCDEC_PTR11:%.*]] = getelementptr inbounds nuw float, ptr [[TMP22]], i32 1
 // SIMD-ONLY00-NEXT:    store ptr [[INCDEC_PTR11]], ptr [[TMP21]], align 8
 // SIMD-ONLY00-NEXT:    ret void
 //
@@ -3748,34 +3748,34 @@ void bar() {
 // SIMD-ONLY01-NEXT:    store ptr [[LR]], ptr [[LR_ADDR]], align 8
 // SIMD-ONLY01-NEXT:    store ptr [[TR]], ptr [[TR_ADDR]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP0:%.*]] = load ptr, ptr @g, align 8
-// SIMD-ONLY01-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY01-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY01-NEXT:    store ptr [[INCDEC_PTR]], ptr @g, align 8
 // SIMD-ONLY01-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[L]], align 8
-// SIMD-ONLY01-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 1
+// SIMD-ONLY01-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP1]], i32 1
 // SIMD-ONLY01-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[L]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[T]], align 8
-// SIMD-ONLY01-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 1
+// SIMD-ONLY01-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP2]], i32 1
 // SIMD-ONLY01-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[T]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[LR_ADDR]], align 8
 // SIMD-ONLY01-NEXT:    store ptr [[TMP3]], ptr [[TMP]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LR_ADDR]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 8
-// SIMD-ONLY01-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i32 1
+// SIMD-ONLY01-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i32 1
 // SIMD-ONLY01-NEXT:    store ptr [[INCDEC_PTR3]], ptr [[TMP5]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TR_ADDR]], align 8
 // SIMD-ONLY01-NEXT:    store ptr [[TMP7]], ptr [[_TMP4]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TR_ADDR]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[_TMP4]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8
-// SIMD-ONLY01-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 1
+// SIMD-ONLY01-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP10]], i32 1
 // SIMD-ONLY01-NEXT:    store ptr [[INCDEC_PTR5]], ptr [[TMP9]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TR_ADDR]], align 8
 // SIMD-ONLY01-NEXT:    store ptr [[TMP11]], ptr [[_TMP6]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TR_ADDR]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[_TMP6]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 8
-// SIMD-ONLY01-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i32 1
+// SIMD-ONLY01-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP14]], i32 1
 // SIMD-ONLY01-NEXT:    store ptr [[INCDEC_PTR7]], ptr [[TMP13]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TR_ADDR]], align 8
 // SIMD-ONLY01-NEXT:    store ptr [[TMP15]], ptr [[_TMP8]], align 8
@@ -3785,11 +3785,11 @@ void bar() {
 // SIMD-ONLY01-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[LR_ADDR]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[_TMP8]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 8
-// SIMD-ONLY01-NEXT:    [[INCDEC_PTR10:%.*]] = getelementptr inbounds i32, ptr [[TMP20]], i32 1
+// SIMD-ONLY01-NEXT:    [[INCDEC_PTR10:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP20]], i32 1
 // SIMD-ONLY01-NEXT:    store ptr [[INCDEC_PTR10]], ptr [[TMP19]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[_TMP9]], align 8
 // SIMD-ONLY01-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
-// SIMD-ONLY01-NEXT:    [[INCDEC_PTR11:%.*]] = getelementptr inbounds float, ptr [[TMP22]], i32 1
+// SIMD-ONLY01-NEXT:    [[INCDEC_PTR11:%.*]] = getelementptr inbounds nuw float, ptr [[TMP22]], i32 1
 // SIMD-ONLY01-NEXT:    store ptr [[INCDEC_PTR11]], ptr [[TMP21]], align 8
 // SIMD-ONLY01-NEXT:    ret void
 //
@@ -3822,34 +3822,34 @@ void bar() {
 // SIMD-ONLY02-NEXT:    store ptr [[LR]], ptr [[LR_ADDR]], align 4
 // SIMD-ONLY02-NEXT:    store ptr [[TR]], ptr [[TR_ADDR]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP0:%.*]] = load ptr, ptr @g, align 4
-// SIMD-ONLY02-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY02-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY02-NEXT:    store ptr [[INCDEC_PTR]], ptr @g, align 4
 // SIMD-ONLY02-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[L]], align 4
-// SIMD-ONLY02-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 1
+// SIMD-ONLY02-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP1]], i32 1
 // SIMD-ONLY02-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[L]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[T]], align 4
-// SIMD-ONLY02-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 1
+// SIMD-ONLY02-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP2]], i32 1
 // SIMD-ONLY02-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[T]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[LR_ADDR]], align 4
 // SIMD-ONLY02-NEXT:    store ptr [[TMP3]], ptr [[TMP]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LR_ADDR]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 4
-// SIMD-ONLY02-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i32 1
+// SIMD-ONLY02-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i32 1
 // SIMD-ONLY02-NEXT:    store ptr [[INCDEC_PTR3]], ptr [[TMP5]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TR_ADDR]], align 4
 // SIMD-ONLY02-NEXT:    store ptr [[TMP7]], ptr [[_TMP4]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TR_ADDR]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[_TMP4]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 4
-// SIMD-ONLY02-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 1
+// SIMD-ONLY02-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP10]], i32 1
 // SIMD-ONLY02-NEXT:    store ptr [[INCDEC_PTR5]], ptr [[TMP9]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TR_ADDR]], align 4
 // SIMD-ONLY02-NEXT:    store ptr [[TMP11]], ptr [[_TMP6]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TR_ADDR]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[_TMP6]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 4
-// SIMD-ONLY02-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i32 1
+// SIMD-ONLY02-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP14]], i32 1
 // SIMD-ONLY02-NEXT:    store ptr [[INCDEC_PTR7]], ptr [[TMP13]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TR_ADDR]], align 4
 // SIMD-ONLY02-NEXT:    store ptr [[TMP15]], ptr [[_TMP8]], align 4
@@ -3859,11 +3859,11 @@ void bar() {
 // SIMD-ONLY02-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[LR_ADDR]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[_TMP8]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 4
-// SIMD-ONLY02-NEXT:    [[INCDEC_PTR10:%.*]] = getelementptr inbounds i32, ptr [[TMP20]], i32 1
+// SIMD-ONLY02-NEXT:    [[INCDEC_PTR10:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP20]], i32 1
 // SIMD-ONLY02-NEXT:    store ptr [[INCDEC_PTR10]], ptr [[TMP19]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[_TMP9]], align 4
 // SIMD-ONLY02-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 4
-// SIMD-ONLY02-NEXT:    [[INCDEC_PTR11:%.*]] = getelementptr inbounds float, ptr [[TMP22]], i32 1
+// SIMD-ONLY02-NEXT:    [[INCDEC_PTR11:%.*]] = getelementptr inbounds nuw float, ptr [[TMP22]], i32 1
 // SIMD-ONLY02-NEXT:    store ptr [[INCDEC_PTR11]], ptr [[TMP21]], align 4
 // SIMD-ONLY02-NEXT:    ret void
 //
@@ -3896,34 +3896,34 @@ void bar() {
 // SIMD-ONLY03-NEXT:    store ptr [[LR]], ptr [[LR_ADDR]], align 4
 // SIMD-ONLY03-NEXT:    store ptr [[TR]], ptr [[TR_ADDR]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP0:%.*]] = load ptr, ptr @g, align 4
-// SIMD-ONLY03-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY03-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY03-NEXT:    store ptr [[INCDEC_PTR]], ptr @g, align 4
 // SIMD-ONLY03-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[L]], align 4
-// SIMD-ONLY03-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 1
+// SIMD-ONLY03-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP1]], i32 1
 // SIMD-ONLY03-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[L]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[T]], align 4
-// SIMD-ONLY03-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 1
+// SIMD-ONLY03-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP2]], i32 1
 // SIMD-ONLY03-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[T]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[LR_ADDR]], align 4
 // SIMD-ONLY03-NEXT:    store ptr [[TMP3]], ptr [[TMP]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[LR_ADDR]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 4
-// SIMD-ONLY03-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i32 1
+// SIMD-ONLY03-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i32 1
 // SIMD-ONLY03-NEXT:    store ptr [[INCDEC_PTR3]], ptr [[TMP5]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TR_ADDR]], align 4
 // SIMD-ONLY03-NEXT:    store ptr [[TMP7]], ptr [[_TMP4]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TR_ADDR]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[_TMP4]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 4
-// SIMD-ONLY03-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i32 1
+// SIMD-ONLY03-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP10]], i32 1
 // SIMD-ONLY03-NEXT:    store ptr [[INCDEC_PTR5]], ptr [[TMP9]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TR_ADDR]], align 4
 // SIMD-ONLY03-NEXT:    store ptr [[TMP11]], ptr [[_TMP6]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TR_ADDR]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[_TMP6]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 4
-// SIMD-ONLY03-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i32 1
+// SIMD-ONLY03-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP14]], i32 1
 // SIMD-ONLY03-NEXT:    store ptr [[INCDEC_PTR7]], ptr [[TMP13]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TR_ADDR]], align 4
 // SIMD-ONLY03-NEXT:    store ptr [[TMP15]], ptr [[_TMP8]], align 4
@@ -3933,11 +3933,11 @@ void bar() {
 // SIMD-ONLY03-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[LR_ADDR]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[_TMP8]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 4
-// SIMD-ONLY03-NEXT:    [[INCDEC_PTR10:%.*]] = getelementptr inbounds i32, ptr [[TMP20]], i32 1
+// SIMD-ONLY03-NEXT:    [[INCDEC_PTR10:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP20]], i32 1
 // SIMD-ONLY03-NEXT:    store ptr [[INCDEC_PTR10]], ptr [[TMP19]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[_TMP9]], align 4
 // SIMD-ONLY03-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 4
-// SIMD-ONLY03-NEXT:    [[INCDEC_PTR11:%.*]] = getelementptr inbounds float, ptr [[TMP22]], i32 1
+// SIMD-ONLY03-NEXT:    [[INCDEC_PTR11:%.*]] = getelementptr inbounds nuw float, ptr [[TMP22]], i32 1
 // SIMD-ONLY03-NEXT:    store ptr [[INCDEC_PTR11]], ptr [[TMP21]], align 4
 // SIMD-ONLY03-NEXT:    ret void
 //
@@ -3951,7 +3951,7 @@ void bar() {
 // CK20-NEXT:    call void @_ZN2STIdEC1ERPd(ptr noundef nonnull align 8 dereferenceable(16) [[A]], ptr noundef nonnull align 8 dereferenceable(8) [[ARG_ADDR]])
 // CK20-NEXT:    call void @_ZN2STIdE3fooERPd(ptr noundef nonnull align 8 dereferenceable(16) [[A]], ptr noundef nonnull align 8 dereferenceable(8) [[ARG_ADDR]])
 // CK20-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARG_ADDR]], align 8
-// CK20-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// CK20-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // CK20-NEXT:    store ptr [[INCDEC_PTR]], ptr [[ARG_ADDR]], align 8
 // CK20-NEXT:    ret void
 //
@@ -4185,7 +4185,7 @@ void bar() {
 // CK20-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CK20-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CK20-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A]], align 8
-// CK20-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 1
+// CK20-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP1]], i32 1
 // CK20-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 8
 // CK20-NEXT:    ret void
 //
@@ -4199,7 +4199,7 @@ void bar() {
 // CK20-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 1
 // CK20-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B]], align 8
 // CK20-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CK20-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 1
+// CK20-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 1
 // CK20-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP1]], align 8
 // CK20-NEXT:    ret void
 //
@@ -4212,12 +4212,12 @@ void bar() {
 // CK20-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CK20-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CK20-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A]], align 8
-// CK20-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 1
+// CK20-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP1]], i32 1
 // CK20-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 8
 // CK20-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[TMP0]], i32 0, i32 1
 // CK20-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[B]], align 8
 // CK20-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CK20-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
+// CK20-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw double, ptr [[TMP3]], i32 1
 // CK20-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP2]], align 8
 // CK20-NEXT:    ret void
 //
@@ -4231,7 +4231,7 @@ void bar() {
 // CK21-NEXT:    call void @_ZN2STIdEC1ERPd(ptr noundef nonnull align 8 dereferenceable(16) [[A]], ptr noundef nonnull align 8 dereferenceable(8) [[ARG_ADDR]])
 // CK21-NEXT:    call void @_ZN2STIdE3fooERPd(ptr noundef nonnull align 8 dereferenceable(16) [[A]], ptr noundef nonnull align 8 dereferenceable(8) [[ARG_ADDR]])
 // CK21-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARG_ADDR]], align 8
-// CK21-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// CK21-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // CK21-NEXT:    store ptr [[INCDEC_PTR]], ptr [[ARG_ADDR]], align 8
 // CK21-NEXT:    ret void
 //
@@ -4465,7 +4465,7 @@ void bar() {
 // CK21-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CK21-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CK21-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A]], align 8
-// CK21-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 1
+// CK21-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP1]], i32 1
 // CK21-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 8
 // CK21-NEXT:    ret void
 //
@@ -4479,7 +4479,7 @@ void bar() {
 // CK21-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 1
 // CK21-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B]], align 8
 // CK21-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
-// CK21-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 1
+// CK21-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 1
 // CK21-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP1]], align 8
 // CK21-NEXT:    ret void
 //
@@ -4492,12 +4492,12 @@ void bar() {
 // CK21-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CK21-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CK21-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A]], align 8
-// CK21-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 1
+// CK21-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP1]], i32 1
 // CK21-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 8
 // CK21-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[TMP0]], i32 0, i32 1
 // CK21-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[B]], align 8
 // CK21-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
-// CK21-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
+// CK21-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw double, ptr [[TMP3]], i32 1
 // CK21-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP2]], align 8
 // CK21-NEXT:    ret void
 //
@@ -4511,7 +4511,7 @@ void bar() {
 // CK22-NEXT:    call void @_ZN2STIdEC1ERPd(ptr noundef nonnull align 4 dereferenceable(8) [[A]], ptr noundef nonnull align 4 dereferenceable(4) [[ARG_ADDR]])
 // CK22-NEXT:    call void @_ZN2STIdE3fooERPd(ptr noundef nonnull align 4 dereferenceable(8) [[A]], ptr noundef nonnull align 4 dereferenceable(4) [[ARG_ADDR]])
 // CK22-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARG_ADDR]], align 4
-// CK22-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// CK22-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // CK22-NEXT:    store ptr [[INCDEC_PTR]], ptr [[ARG_ADDR]], align 4
 // CK22-NEXT:    ret void
 //
@@ -4745,7 +4745,7 @@ void bar() {
 // CK22-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CK22-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CK22-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A]], align 4
-// CK22-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 1
+// CK22-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP1]], i32 1
 // CK22-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 4
 // CK22-NEXT:    ret void
 //
@@ -4759,7 +4759,7 @@ void bar() {
 // CK22-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 1
 // CK22-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B]], align 4
 // CK22-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
-// CK22-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 1
+// CK22-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 1
 // CK22-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP1]], align 4
 // CK22-NEXT:    ret void
 //
@@ -4772,12 +4772,12 @@ void bar() {
 // CK22-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CK22-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CK22-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A]], align 4
-// CK22-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 1
+// CK22-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP1]], i32 1
 // CK22-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 4
 // CK22-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[TMP0]], i32 0, i32 1
 // CK22-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[B]], align 4
 // CK22-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
-// CK22-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
+// CK22-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw double, ptr [[TMP3]], i32 1
 // CK22-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP2]], align 4
 // CK22-NEXT:    ret void
 //
@@ -4791,7 +4791,7 @@ void bar() {
 // CK23-NEXT:    call void @_ZN2STIdEC1ERPd(ptr noundef nonnull align 4 dereferenceable(8) [[A]], ptr noundef nonnull align 4 dereferenceable(4) [[ARG_ADDR]])
 // CK23-NEXT:    call void @_ZN2STIdE3fooERPd(ptr noundef nonnull align 4 dereferenceable(8) [[A]], ptr noundef nonnull align 4 dereferenceable(4) [[ARG_ADDR]])
 // CK23-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARG_ADDR]], align 4
-// CK23-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// CK23-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // CK23-NEXT:    store ptr [[INCDEC_PTR]], ptr [[ARG_ADDR]], align 4
 // CK23-NEXT:    ret void
 //
@@ -5025,7 +5025,7 @@ void bar() {
 // CK23-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CK23-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CK23-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A]], align 4
-// CK23-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 1
+// CK23-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP1]], i32 1
 // CK23-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 4
 // CK23-NEXT:    ret void
 //
@@ -5039,7 +5039,7 @@ void bar() {
 // CK23-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 1
 // CK23-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B]], align 4
 // CK23-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
-// CK23-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 1
+// CK23-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 1
 // CK23-NEXT:    store ptr [[INCDEC_PTR]], ptr [[TMP1]], align 4
 // CK23-NEXT:    ret void
 //
@@ -5052,12 +5052,12 @@ void bar() {
 // CK23-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CK23-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CK23-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A]], align 4
-// CK23-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 1
+// CK23-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP1]], i32 1
 // CK23-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 4
 // CK23-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[TMP0]], i32 0, i32 1
 // CK23-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[B]], align 4
 // CK23-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
-// CK23-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
+// CK23-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds nuw double, ptr [[TMP3]], i32 1
 // CK23-NEXT:    store ptr [[INCDEC_PTR1]], ptr [[TMP2]], align 4
 // CK23-NEXT:    ret void
 //
@@ -5071,7 +5071,7 @@ void bar() {
 // SIMD-ONLY10-NEXT:    call void @_ZN2STIdEC1ERPd(ptr noundef nonnull align 8 dereferenceable(16) [[A]], ptr noundef nonnull align 8 dereferenceable(8) [[ARG_ADDR]])
 // SIMD-ONLY10-NEXT:    call void @_ZN2STIdE3fooERPd(ptr noundef nonnull align 8 dereferenceable(16) [[A]], ptr noundef nonnull align 8 dereferenceable(8) [[ARG_ADDR]])
 // SIMD-ONLY10-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARG_ADDR]], align 8
-// SIMD-ONLY10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY10-NEXT:    store ptr [[INCDEC_PTR]], ptr [[ARG_ADDR]], align 8
 // SIMD-ONLY10-NEXT:    ret void
 //
@@ -5101,21 +5101,21 @@ void bar() {
 // SIMD-ONLY10-NEXT:    store ptr null, ptr [[LA]], align 8
 // SIMD-ONLY10-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY10-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A]], align 8
-// SIMD-ONLY10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY10-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY10-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 8
 // SIMD-ONLY10-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // SIMD-ONLY10-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B]], align 8
 // SIMD-ONLY10-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
-// SIMD-ONLY10-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 1
+// SIMD-ONLY10-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 1
 // SIMD-ONLY10-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[TMP1]], align 8
 // SIMD-ONLY10-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY10-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A3]], align 8
-// SIMD-ONLY10-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
+// SIMD-ONLY10-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds nuw double, ptr [[TMP3]], i32 1
 // SIMD-ONLY10-NEXT:    store ptr [[INCDEC_PTR4]], ptr [[A3]], align 8
 // SIMD-ONLY10-NEXT:    [[B5:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // SIMD-ONLY10-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B5]], align 8
 // SIMD-ONLY10-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
-// SIMD-ONLY10-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 1
+// SIMD-ONLY10-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds nuw double, ptr [[TMP5]], i32 1
 // SIMD-ONLY10-NEXT:    store ptr [[INCDEC_PTR6]], ptr [[TMP4]], align 8
 // SIMD-ONLY10-NEXT:    ret void
 //
@@ -5145,7 +5145,7 @@ void bar() {
 // SIMD-ONLY11-NEXT:    call void @_ZN2STIdEC1ERPd(ptr noundef nonnull align 8 dereferenceable(16) [[A]], ptr noundef nonnull align 8 dereferenceable(8) [[ARG_ADDR]])
 // SIMD-ONLY11-NEXT:    call void @_ZN2STIdE3fooERPd(ptr noundef nonnull align 8 dereferenceable(16) [[A]], ptr noundef nonnull align 8 dereferenceable(8) [[ARG_ADDR]])
 // SIMD-ONLY11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARG_ADDR]], align 8
-// SIMD-ONLY11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY11-NEXT:    store ptr [[INCDEC_PTR]], ptr [[ARG_ADDR]], align 8
 // SIMD-ONLY11-NEXT:    ret void
 //
@@ -5175,21 +5175,21 @@ void bar() {
 // SIMD-ONLY11-NEXT:    store ptr null, ptr [[LA]], align 8
 // SIMD-ONLY11-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A]], align 8
-// SIMD-ONLY11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY11-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY11-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 8
 // SIMD-ONLY11-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // SIMD-ONLY11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B]], align 8
 // SIMD-ONLY11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
-// SIMD-ONLY11-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 1
+// SIMD-ONLY11-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 1
 // SIMD-ONLY11-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[TMP1]], align 8
 // SIMD-ONLY11-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY11-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A3]], align 8
-// SIMD-ONLY11-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
+// SIMD-ONLY11-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds nuw double, ptr [[TMP3]], i32 1
 // SIMD-ONLY11-NEXT:    store ptr [[INCDEC_PTR4]], ptr [[A3]], align 8
 // SIMD-ONLY11-NEXT:    [[B5:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // SIMD-ONLY11-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B5]], align 8
 // SIMD-ONLY11-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
-// SIMD-ONLY11-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 1
+// SIMD-ONLY11-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds nuw double, ptr [[TMP5]], i32 1
 // SIMD-ONLY11-NEXT:    store ptr [[INCDEC_PTR6]], ptr [[TMP4]], align 8
 // SIMD-ONLY11-NEXT:    ret void
 //
@@ -5219,7 +5219,7 @@ void bar() {
 // SIMD-ONLY12-NEXT:    call void @_ZN2STIdEC1ERPd(ptr noundef nonnull align 4 dereferenceable(8) [[A]], ptr noundef nonnull align 4 dereferenceable(4) [[ARG_ADDR]])
 // SIMD-ONLY12-NEXT:    call void @_ZN2STIdE3fooERPd(ptr noundef nonnull align 4 dereferenceable(8) [[A]], ptr noundef nonnull align 4 dereferenceable(4) [[ARG_ADDR]])
 // SIMD-ONLY12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARG_ADDR]], align 4
-// SIMD-ONLY12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY12-NEXT:    store ptr [[INCDEC_PTR]], ptr [[ARG_ADDR]], align 4
 // SIMD-ONLY12-NEXT:    ret void
 //
@@ -5249,21 +5249,21 @@ void bar() {
 // SIMD-ONLY12-NEXT:    store ptr null, ptr [[LA]], align 4
 // SIMD-ONLY12-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY12-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A]], align 4
-// SIMD-ONLY12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY12-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY12-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 4
 // SIMD-ONLY12-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // SIMD-ONLY12-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B]], align 4
 // SIMD-ONLY12-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
-// SIMD-ONLY12-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 1
+// SIMD-ONLY12-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 1
 // SIMD-ONLY12-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[TMP1]], align 4
 // SIMD-ONLY12-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY12-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A3]], align 4
-// SIMD-ONLY12-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
+// SIMD-ONLY12-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds nuw double, ptr [[TMP3]], i32 1
 // SIMD-ONLY12-NEXT:    store ptr [[INCDEC_PTR4]], ptr [[A3]], align 4
 // SIMD-ONLY12-NEXT:    [[B5:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // SIMD-ONLY12-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B5]], align 4
 // SIMD-ONLY12-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 4
-// SIMD-ONLY12-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 1
+// SIMD-ONLY12-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds nuw double, ptr [[TMP5]], i32 1
 // SIMD-ONLY12-NEXT:    store ptr [[INCDEC_PTR6]], ptr [[TMP4]], align 4
 // SIMD-ONLY12-NEXT:    ret void
 //
@@ -5293,7 +5293,7 @@ void bar() {
 // SIMD-ONLY13-NEXT:    call void @_ZN2STIdEC1ERPd(ptr noundef nonnull align 4 dereferenceable(8) [[A]], ptr noundef nonnull align 4 dereferenceable(4) [[ARG_ADDR]])
 // SIMD-ONLY13-NEXT:    call void @_ZN2STIdE3fooERPd(ptr noundef nonnull align 4 dereferenceable(8) [[A]], ptr noundef nonnull align 4 dereferenceable(4) [[ARG_ADDR]])
 // SIMD-ONLY13-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARG_ADDR]], align 4
-// SIMD-ONLY13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY13-NEXT:    store ptr [[INCDEC_PTR]], ptr [[ARG_ADDR]], align 4
 // SIMD-ONLY13-NEXT:    ret void
 //
@@ -5323,21 +5323,21 @@ void bar() {
 // SIMD-ONLY13-NEXT:    store ptr null, ptr [[LA]], align 4
 // SIMD-ONLY13-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY13-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A]], align 4
-// SIMD-ONLY13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i32 1
+// SIMD-ONLY13-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[TMP0]], i32 1
 // SIMD-ONLY13-NEXT:    store ptr [[INCDEC_PTR]], ptr [[A]], align 4
 // SIMD-ONLY13-NEXT:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // SIMD-ONLY13-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B]], align 4
 // SIMD-ONLY13-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
-// SIMD-ONLY13-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i32 1
+// SIMD-ONLY13-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds nuw double, ptr [[TMP2]], i32 1
 // SIMD-ONLY13-NEXT:    store ptr [[INCDEC_PTR2]], ptr [[TMP1]], align 4
 // SIMD-ONLY13-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 0
 // SIMD-ONLY13-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[A3]], align 4
-// SIMD-ONLY13-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 1
+// SIMD-ONLY13-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds nuw double, ptr [[TMP3]], i32 1
 // SIMD-ONLY13-NEXT:    store ptr [[INCDEC_PTR4]], ptr [[A3]], align 4
 // SIMD-ONLY13-NEXT:    [[B5:%.*]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[THIS1]], i32 0, i32 1
 // SIMD-ONLY13-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B5]], align 4
 // SIMD-ONLY13-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 4
-// SIMD-ONLY13-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i32 1
+// SIMD-ONLY13-NEXT:    [[INCDEC_PTR6:%.*]] = getelementptr inbounds nuw double, ptr [[TMP5]], i32 1
 // SIMD-ONLY13-NEXT:    store ptr [[INCDEC_PTR6]], ptr [[TMP4]], align 4
 // SIMD-ONLY13-NEXT:    ret void
 //

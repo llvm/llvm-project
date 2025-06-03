@@ -667,7 +667,7 @@ directly.
 
 This facility is currently in flight and is intended to subsume the above when
 ready. See the C++ class to YAML mapping traits in
-`mlir-mlinalg-ods-yaml-gen.cpp` as the source of truth for the schema.
+`mlir-linalg-ods-yaml-gen.cpp` as the source of truth for the schema.
 
 Most of the above documentation roughly applies to this path and will be ported
 as migration continues.

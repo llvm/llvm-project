@@ -92,22 +92,18 @@ public:
       StructuredData::GenericSP implementor_sp) override;
 
   StructuredData::GenericSP
-  CreateScriptedStopHook(lldb::TargetSP target_sp, const char *class_name,
-                         const StructuredDataImpl &args_data,
-                         Status &error) override;
-
-  bool ScriptedStopHookHandleStop(StructuredData::GenericSP implementor_sp,
-                                  ExecutionContext &exc_ctx,
-                                  lldb::StreamSP stream_sp) override;
-
-  StructuredData::GenericSP
   CreateFrameRecognizer(const char *class_name) override;
 
   lldb::ValueObjectListSP
   GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
                          lldb::StackFrameSP frame_sp) override;
 
+  bool ShouldHide(const StructuredData::ObjectSP &implementor,
+                  lldb::StackFrameSP frame_sp) override;
+
   lldb::ScriptedProcessInterfaceUP CreateScriptedProcessInterface() override;
+
+  lldb::ScriptedStopHookInterfaceSP CreateScriptedStopHookInterface() override;
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 
@@ -132,8 +128,9 @@ public:
   GetChildAtIndex(const StructuredData::ObjectSP &implementor,
                   uint32_t idx) override;
 
-  int GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
-                              const char *child_name) override;
+  llvm::Expected<int>
+  GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
+                          const char *child_name) override;
 
   bool UpdateSynthProviderInstance(
       const StructuredData::ObjectSP &implementor) override;
@@ -169,6 +166,14 @@ public:
   std::optional<std::string>
   GetRepeatCommandForScriptedCommand(StructuredData::GenericSP impl_obj_sp,
                                      Args &args) override;
+
+  StructuredData::DictionarySP HandleArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, std::vector<llvm::StringRef> &args,
+      size_t args_pos, size_t char_in_arg) override;
+
+  StructuredData::DictionarySP HandleOptionArgumentCompletionForScriptedCommand(
+      StructuredData::GenericSP impl_obj_sp, llvm::StringRef &long_options,
+      size_t char_in_arg) override;
 
   Status GenerateFunction(const char *signature, const StringList &input,
                           bool is_callback) override;
@@ -241,7 +246,8 @@ public:
                            const LoadScriptOptions &options,
                            lldb_private::Status &error,
                            StructuredData::ObjectSP *module_sp = nullptr,
-                           FileSpec extra_search_dir = {}) override;
+                           FileSpec extra_search_dir = {},
+                           lldb::TargetSP loaded_into_target_sp = {}) override;
 
   bool IsReservedWord(const char *word) override;
 

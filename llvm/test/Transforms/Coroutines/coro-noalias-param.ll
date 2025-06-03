@@ -24,7 +24,7 @@ suspend:
 }
 
 ; check that the noalias attribute is removed from the argument
-; CHECK: define void @f(ptr nocapture readonly align 8 %a)
+; CHECK: define void @f(ptr readonly align 8 captures(none) %a)
 
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)

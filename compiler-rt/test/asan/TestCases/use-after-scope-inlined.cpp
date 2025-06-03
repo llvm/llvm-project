@@ -4,9 +4,13 @@
 //
 // RUN: %clangxx_asan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
+// MSVC marks this as xfail because it doesn't generate the metadata to display the "x.i" offset.
+// XFAIL: msvc
+#include "defines.h"
+
 int *arr;
 
-__attribute__((always_inline))
+ATTRIBUTE_ALWAYS_INLINE
 void inlined(int arg) {
   int x[5];
   for (int i = 0; i < arg; i++) x[i] = i;
@@ -23,5 +27,5 @@ int main(int argc, char *argv[]) {
   // CHECK: Address 0x{{.*}} is located in stack of thread T0 at offset [[OFFSET:[^ ]*]] in frame
   // CHECK:      {{.*}} in main
   // CHECK:   This frame has
-  // CHECK:     {{\[}}[[OFFSET]], {{.*}}) 'x.i' (line [[@LINE-15]])
+  // CHECK:     {{\[}}[[OFFSET]], {{.*}}) 'x' (line [[@LINE-15]])
 }

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -simplifycfg-require-and-preserve-domtree=1 < %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -simplifycfg-require-and-preserve-domtree=1 < %s
 ; REQUIRES: asserts
 
 define void @test(ptr noalias nocapture readonly %src, i32 %srcStride) local_unnamed_addr #0 {

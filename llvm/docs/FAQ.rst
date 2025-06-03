@@ -22,6 +22,13 @@ Yes. This is why we distribute LLVM under a less restrictive license than GPL,
 as explained in the first question above.
 
 
+Can I use AI coding tools, such as GitHub co-pilot, to write LLVM patches?
+--------------------------------------------------------------------------
+Yes, as long as the resulting work can be licensed under the project license, as
+covered in the :doc:`DeveloperPolicy`. Using an AI tool to reproduce copyrighted
+work does not rinse it of copyright and grant you the right to relicense it.
+
+
 Source Code
 ===========
 

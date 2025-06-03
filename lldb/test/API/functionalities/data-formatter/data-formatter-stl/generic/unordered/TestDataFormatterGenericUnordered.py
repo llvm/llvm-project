@@ -33,7 +33,6 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
             self.runCmd("settings set auto-one-line-summaries true", check=False)
 
         # Execute the cleanup function during test case tear down.
@@ -54,7 +53,7 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.look_for_content_and_continue(
             "map",
             [
-                "%s::unordered_map" % ns,
+                "UnorderedMap",
                 children_are_key_value,
                 "size=5 {",
                 "hello",
@@ -68,7 +67,7 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.look_for_content_and_continue(
             "mmap",
             [
-                "%s::unordered_multimap" % ns,
+                "UnorderedMultiMap",
                 children_are_key_value,
                 "size=6 {",
                 "first = 3",
@@ -81,49 +80,49 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
         self.look_for_content_and_continue(
             "iset",
             [
-                "%s::unordered_set" % ns,
+                "IntsUnorderedSet",
                 "size=5 {",
-                "\[\d\] = 5",
-                "\[\d\] = 3",
-                "\[\d\] = 2",
+                r"\[\d\] = 5",
+                r"\[\d\] = 3",
+                r"\[\d\] = 2",
             ],
         )
 
         self.look_for_content_and_continue(
             "sset",
             [
-                "%s::unordered_set" % ns,
+                "StringsUnorderedSet",
                 "size=5 {",
-                '\[\d\] = "is"',
-                '\[\d\] = "world"',
-                '\[\d\] = "hello"',
+                r'\[\d\] = "is"',
+                r'\[\d\] = "world"',
+                r'\[\d\] = "hello"',
             ],
         )
 
         self.look_for_content_and_continue(
             "imset",
             [
-                "%s::unordered_multiset" % ns,
+                "IntsUnorderedMultiSet",
                 "size=6 {",
-                "(\[\d\] = 3(\\n|.)+){3}",
-                "\[\d\] = 2",
-                "\[\d\] = 1",
+                "(\\[\\d\\] = 3(\\n|.)+){3}",
+                r"\[\d\] = 2",
+                r"\[\d\] = 1",
             ],
         )
 
         self.look_for_content_and_continue(
             "smset",
             [
-                "%s::unordered_multiset" % ns,
+                "StringsUnorderedMultiSet",
                 "size=5 {",
-                '(\[\d\] = "is"(\\n|.)+){2}',
-                '(\[\d\] = "world"(\\n|.)+){2}',
+                '(\\[\\d\\] = "is"(\\n|.)+){2}',
+                '(\\[\\d\\] = "world"(\\n|.)+){2}',
             ],
         )
 
     def look_for_content_and_continue(self, var_name, patterns):
-        self.expect(("frame variable %s" % var_name), patterns=patterns)
-        self.expect(("frame variable %s" % var_name), patterns=patterns)
+        self.expect(("frame variable %s" % var_name), ordered=False, patterns=patterns)
+        self.expect(("frame variable %s" % var_name), ordered=False, patterns=patterns)
         self.runCmd("continue")
 
     @add_test_categories(["libstdcxx"])
