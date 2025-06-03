@@ -159,8 +159,8 @@ body:            |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[LUI:%[0-9]+]]:gpr = LUI 524288
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LUI]], 648
-    ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], 648
+    ; CHECK-NEXT: $x10 = COPY [[ADDI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = G_CONSTANT i64 -2147483000
     $x10 = COPY %0(s64)
