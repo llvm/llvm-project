@@ -347,9 +347,8 @@ define void @vnsrl_0_i64(ptr %in, ptr %out) {
 ; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZIP-NEXT:    vle64.v v8, (a0)
 ; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZIP-NEXT:    vslidedown.vi v9, v8, 2
-; ZIP-NEXT:    vslideup.vi v8, v9, 1
-; ZIP-NEXT:    vse64.v v8, (a1)
+; ZIP-NEXT:    ri.vunzip2a.vv v10, v8, v9
+; ZIP-NEXT:    vse64.v v10, (a1)
 ; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x i64>, ptr %in, align 8
@@ -383,8 +382,7 @@ define void @vnsrl_64_i64(ptr %in, ptr %out) {
 ; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZIP-NEXT:    vle64.v v8, (a0)
 ; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZIP-NEXT:    vslidedown.vi v9, v8, 2
-; ZIP-NEXT:    ri.vzipodd.vv v10, v8, v9
+; ZIP-NEXT:    ri.vunzip2b.vv v10, v8, v9
 ; ZIP-NEXT:    vse64.v v10, (a1)
 ; ZIP-NEXT:    ret
 entry:
@@ -417,10 +415,9 @@ define void @vnsrl_0_double(ptr %in, ptr %out) {
 ; ZIP:       # %bb.0: # %entry
 ; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZIP-NEXT:    vle64.v v8, (a0)
+; ZIP-NEXT:    ri.vunzip2a.vv v10, v8, v9
 ; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZIP-NEXT:    vslidedown.vi v9, v8, 2
-; ZIP-NEXT:    vslideup.vi v8, v9, 1
-; ZIP-NEXT:    vse64.v v8, (a1)
+; ZIP-NEXT:    vse64.v v10, (a1)
 ; ZIP-NEXT:    ret
 entry:
   %0 = load <4 x double>, ptr %in, align 8
@@ -453,9 +450,8 @@ define void @vnsrl_64_double(ptr %in, ptr %out) {
 ; ZIP:       # %bb.0: # %entry
 ; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZIP-NEXT:    vle64.v v8, (a0)
+; ZIP-NEXT:    ri.vunzip2b.vv v10, v8, v9
 ; ZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZIP-NEXT:    vslidedown.vi v9, v8, 2
-; ZIP-NEXT:    ri.vzipodd.vv v10, v8, v9
 ; ZIP-NEXT:    vse64.v v10, (a1)
 ; ZIP-NEXT:    ret
 entry:

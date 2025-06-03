@@ -1676,7 +1676,7 @@ public:
         auto flattenedIndex = sourceAttr.getFlattenedIndex(indices);
         std::vector<Attribute> updatedValues;
         updatedValues.reserve(sourceAttr.getNumElements());
-        for (auto i = 0; i < sourceAttr.getNumElements(); ++i) {
+        for (unsigned i = 0; i < sourceAttr.getNumElements(); ++i) {
           updatedValues.push_back(i == flattenedIndex ? scalarAttr
                                                       : sourceValues[i]);
         }
