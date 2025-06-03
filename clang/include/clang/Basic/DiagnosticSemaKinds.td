@@ -4288,6 +4288,9 @@ def warn_impcast_integer_sign_conditional : Warning<
 def warn_impcast_integer_precision : Warning<
   "implicit conversion loses integer precision: %0 to %1">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
+def warn_impcast_integer_precision_on_negation : Warning<
+  "implicit conversion loses integer precision: %0 to %1 on negation">,
+  InGroup<ImplicitIntConversionOnNegation>, DefaultIgnore;
 def warn_impcast_high_order_zero_bits : Warning<
   "higher order bits are zeroes after implicit conversion">,
   InGroup<ImplicitIntConversion>, DefaultIgnore;
