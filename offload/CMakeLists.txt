@@ -447,6 +447,8 @@ if(OFFLOAD_ENABLE_EMISSARY_APIS)
     DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
 endif()
 
+add_subdirectory(tools/offload-tblgen)
+
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
 
@@ -456,9 +458,7 @@ add_subdirectory(DeviceRTL)
 # Build target agnostic offloading library.
 add_subdirectory(libomptarget)
 
-# FIXME: Re-enable once OMPT design allows
-# add_subdirectory(tools/offload-tblgen)
-# add_subdirectory(liboffload)
+add_subdirectory(liboffload)
 
 # Add tests.
 if(OFFLOAD_INCLUDE_TESTS)
