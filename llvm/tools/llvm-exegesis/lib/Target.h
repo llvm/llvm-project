@@ -268,8 +268,7 @@ public:
 
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
-  createSnippetGenerator(Benchmark::ModeE Mode,
-                         const LLVMState &State,
+  createSnippetGenerator(Benchmark::ModeE Mode, const LLVMState &State,
                          const SnippetGenerator::Options &Opts) const;
   // Creates a benchmark runner for the given mode.
   Expected<std::unique_ptr<BenchmarkRunner>> createBenchmarkRunner(
@@ -308,7 +307,8 @@ public:
     return std::make_unique<SavedState>();
   }
 
-  virtual std::vector<MCInst> _generateRegisterStackPop(MCRegister Reg, int imm = 0) const {
+  virtual std::vector<MCInst> _generateRegisterStackPop(MCRegister Reg,
+                                                        int imm = 0) const {
     return {};
   }
 

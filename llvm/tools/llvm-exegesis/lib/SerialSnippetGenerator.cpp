@@ -136,8 +136,8 @@ static void appendCodeTemplates(const LLVMState &State,
       // TODO: Get a valid scratch memory register,
 
       // Do we need to set scratch memory register based on reg class ?
-      // Or is this code flow even required i.e. would setting register requiring 
-      // memory address from stack correct approach ?
+      // Or is this code flow even required i.e. would setting register
+      // requiring memory address from stack correct approach ?
       if (!RegClass.contains(ScratchMemoryRegister))
         return;
 
