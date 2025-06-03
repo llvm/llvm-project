@@ -45,14 +45,14 @@ Error SnippetGenerator::generateConfigurations(
   ForbiddenRegs |= ExtraForbiddenRegs;
   // If the instruction has memory registers, prevent the generator from
   // using the scratch register and its aliasing registers.
-  
-  // hasMemoryOperands(): if any register is an explicit memory register, 
+
+  // hasMemoryOperands(): if any register is an explicit memory register,
   // then the instruction has memory operands
   if (Variant.getInstr().hasMemoryOperands()) {
     const auto &ET = State.getExegesisTarget();
     MCRegister ScratchSpacePointerInReg =
         ET.getScratchMemoryRegister(State.getTargetMachine().getTargetTriple());
-    
+
     // TODO: Get a valid scratch memory register,
     // if MCRegister() is used, code flow exits here with below error,
     // else if hardcoded X14 is used as scratch memory register,

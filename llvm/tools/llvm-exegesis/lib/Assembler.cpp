@@ -258,7 +258,8 @@ ArrayRef<MCRegister> FunctionFiller::getRegistersSetUp() const {
 }
 
 static std::unique_ptr<Module>
-createModule(const std::unique_ptr<LLVMContext> &Context, const DataLayout &DL) {
+createModule(const std::unique_ptr<LLVMContext> &Context,
+             const DataLayout &DL) {
   auto Mod = std::make_unique<Module>(ModuleID, *Context);
   Mod->setDataLayout(DL);
   return Mod;

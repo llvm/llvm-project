@@ -371,10 +371,11 @@ private:
 } // namespace
 
 // Implementation follows RISCV pattern for memory operand handling.
-// Note: This implementation requires validation for AArch64-specific requirements.
+// Note: This implementation requires validation for AArch64-specific
+// requirements.
 void ExegesisAArch64Target::fillMemoryOperands(InstructionTemplate &IT,
-                        MCRegister Reg,
-                        unsigned Offset) const {  
+                                               MCRegister Reg,
+                                               unsigned Offset) const {
   LLVM_DEBUG(dbgs() << "Executing fillMemoryOperands");
   // AArch64 memory operands typically have the following structure:
   // [base_register, offset]
@@ -401,9 +402,8 @@ MCRegister
 ExegesisAArch64Target::getScratchMemoryRegister(const Triple &TT) const {
   // return MCRegister();   // Implemented in target.h
   // return hardcoded scratch memory register, similar to RISCV (uses a0)
-  return ScratchMemoryRegister::X ; 
+  return ScratchMemoryRegister::X;
 }
-
 
 #ifdef __linux__
 // true : let use of fixed address to Virtual Address Space Ceiling

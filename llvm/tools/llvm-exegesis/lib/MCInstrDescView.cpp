@@ -52,14 +52,17 @@ bool Operand::isVariable() const { return VariableIndex.has_value(); }
 
 bool Operand::isEarlyClobber() const { return IsEarlyClobber; }
 
-// FIXME: Verify if mayLoadOrStore check is necessary for AArch64 memory operand detection
+// FIXME: Verify if mayLoadOrStore check is necessary for AArch64 memory operand
+// detection
 bool Operand::isMemory() const {
-  return (isExplicit() && getExplicitOperandInfo().OperandType == MCOI::OPERAND_MEMORY) 
-        //  || mayLoadOrStore 
-         ;
-  // AArch64 has no operands with MCOI::OPERAND_MEMORY thus also adding mayLoadOrStore
-  // to check for mayLoad and mayStore which potentially have memory operands
-  // Uncommenting this check will cause illegal instruction error for AArch64
+  return (isExplicit() &&
+          getExplicitOperandInfo().OperandType == MCOI::OPERAND_MEMORY)
+      //  || mayLoadOrStore
+      ;
+  // AArch64 has no operands with MCOI::OPERAND_MEMORY thus also adding
+  // mayLoadOrStore to check for mayLoad and mayStore which potentially have
+  // memory operands Uncommenting this check will cause illegal instruction
+  // error for AArch64
 }
 
 bool Operand::isImmediate() const {
@@ -331,13 +334,13 @@ const Instruction &InstructionsCache::getInstr(unsigned Opcode) const {
   return *Found;
 }
 
-bool RegisterOperandAssignment::
-operator==(const RegisterOperandAssignment &Other) const {
+bool RegisterOperandAssignment::operator==(
+    const RegisterOperandAssignment &Other) const {
   return std::tie(Op, Reg) == std::tie(Other.Op, Other.Reg);
 }
 
-bool AliasingRegisterOperands::
-operator==(const AliasingRegisterOperands &Other) const {
+bool AliasingRegisterOperands::operator==(
+    const AliasingRegisterOperands &Other) const {
   return std::tie(Defs, Uses) == std::tie(Other.Defs, Other.Uses);
 }
 
