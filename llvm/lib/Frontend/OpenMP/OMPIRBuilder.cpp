@@ -7151,9 +7151,8 @@ static Expected<Function *> createOutlinedFunction(
   return Func;
 }
 /// Given a task descriptor, TaskWithPrivates, return the pointer to the block
-/// of pointers contain shared data between the parent task and the created
+/// of pointers containing shared data between the parent task and the created
 /// task.
-///
 static LoadInst *loadSharedDataFromTaskDescriptor(OpenMPIRBuilder &OMPIRBuilder,
                                                   IRBuilderBase &Builder,
                                                   Value *TaskWithPrivates,
