@@ -94,8 +94,11 @@ static void fixI8UseChain(Instruction &I,
     Type *ElementType = NewOperands[0]->getType();
     if (auto *AI = dyn_cast<AllocaInst>(NewOperands[0]))
       ElementType = AI->getAllocatedType();
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(NewOperands[0]))
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(NewOperands[0])) {
       ElementType = GEP->getSourceElementType();
+      if (ElementType->isArrayTy())
+        ElementType = ElementType->getArrayElementType();
+    }
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
     ReplacedValues[Load] = NewLoad;
     ToRemove.push_back(Load);
@@ -116,9 +119,23 @@ static void fixI8UseChain(Instruction &I,
     uint32_t ByteOffset = Offset->getZExtValue();
     uint32_t ElemSize = Load->getDataLayout().getTypeAllocSize(ElementType);
     uint32_t Index = ByteOffset / ElemSize;
-    Value *NewGEP = Builder.CreateGEP(ElementType, GEP->getPointerOperand(),
-                                      Builder.getInt32(Index), GEP->getName(),
-                                      GEP->getNoWrapFlags());
+
+    Value *PtrOperand = GEP->getPointerOperand();
+    Type *GEPType = GEP->getPointerOperandType();
+
+    if (auto *GV = dyn_cast<GlobalVariable>(PtrOperand))
+      GEPType = GV->getValueType();
+    if (auto *AI = dyn_cast<AllocaInst>(PtrOperand))
+      GEPType = AI->getAllocatedType();
+
+    if (auto *ArrTy = dyn_cast<ArrayType>(GEPType))
+      GEPType = ArrTy;
+    else
+      GEPType = ArrayType::get(ElementType, 1); // its a scalar
+
+    Value *NewGEP = Builder.CreateGEP(
+        GEPType, PtrOperand, {Builder.getInt32(0), Builder.getInt32(Index)},
+        GEP->getName(), GEP->getNoWrapFlags());
 
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewGEP);
     ReplacedValues[Load] = NewLoad;
@@ -181,6 +198,7 @@ static void fixI8UseChain(Instruction &I,
       Cast->replaceAllUsesWith(Replacement);
       return;
     }
+
     Value *AdjustedCast = nullptr;
     if (Cast->getOpcode() == Instruction::ZExt)
       AdjustedCast = Builder.CreateZExtOrTrunc(Replacement, Cast->getType());
@@ -200,12 +218,17 @@ static void fixI8UseChain(Instruction &I,
       BasePtr = ReplacedValues[BasePtr];
 
     Type *ElementType = BasePtr->getType();
+
     if (auto *AI = dyn_cast<AllocaInst>(BasePtr))
       ElementType = AI->getAllocatedType();
     if (auto *GV = dyn_cast<GlobalVariable>(BasePtr))
       ElementType = GV->getValueType();
+
+    Type *GEPType = ElementType;
     if (auto *ArrTy = dyn_cast<ArrayType>(ElementType))
       ElementType = ArrTy->getArrayElementType();
+    else
+      GEPType = ArrayType::get(ElementType, 1); // its a scalar
 
     ConstantInt *Offset = dyn_cast<ConstantInt>(GEP->getOperand(1));
     // Note: i8 to i32 offset conversion without emitting IR requires constant
@@ -217,9 +240,9 @@ static void fixI8UseChain(Instruction &I,
     uint32_t ElemSize = GEP->getDataLayout().getTypeAllocSize(ElementType);
     assert(ElemSize > 0 && "ElementSize must be set");
     uint32_t Index = ByteOffset / ElemSize;
-    Value *NewGEP =
-        Builder.CreateGEP(ElementType, BasePtr, Builder.getInt32(Index),
-                          GEP->getName(), GEP->getNoWrapFlags());
+    Value *NewGEP = Builder.CreateGEP(
+        GEPType, BasePtr, {Builder.getInt32(0), Builder.getInt32(Index)},
+        GEP->getName(), GEP->getNoWrapFlags());
     ReplacedValues[GEP] = NewGEP;
     GEP->replaceAllUsesWith(NewGEP);
     ToRemove.push_back(GEP);
