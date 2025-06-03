@@ -1598,12 +1598,10 @@ define <4 x i64> @unzip2a_dual_v4i64_exact_nf2(<4 x i64> %a, <4 x i64> %b) vscal
 ;
 ; ZIP-LABEL: unzip2a_dual_v4i64_exact_nf2:
 ; ZIP:       # %bb.0: # %entry
-; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; ZIP-NEXT:    ri.vunzip2a.vv v11, v9, v10
+; ZIP-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
+; ZIP-NEXT:    vslideup.vi v8, v9, 4
 ; ZIP-NEXT:    ri.vunzip2a.vv v9, v8, v10
-; ZIP-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
-; ZIP-NEXT:    vslideup.vi v9, v11, 2
-; ZIP-NEXT:    vmv1r.v v8, v9
+; ZIP-NEXT:    vmv.v.v v8, v9
 ; ZIP-NEXT:    ret
 entry:
   %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>

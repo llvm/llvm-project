@@ -5840,12 +5840,23 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           lowerVZIP(Opc, Src, DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
       return DAG.getExtractSubvector(DL, VT, Res, 0);
     }
-    // Narrow each source and concatenate them.
-    // FIXME: For small LMUL it is better to concatenate first.
+    // Deinterleave each source and concatenate them, or concat first, then
+    // deinterleave.
     if (1 < count_if(Mask,
                      [&Mask](int Idx) { return Idx < (int)Mask.size(); }) &&
         1 < count_if(Mask,
                      [&Mask](int Idx) { return Idx >= (int)Mask.size(); })) {
+
+      const unsigned EltSize = VT.getScalarSizeInBits();
+      const unsigned MinVLMAX = Subtarget.getRealMinVLen() / EltSize;
+      if (NumElts < MinVLMAX) {
+        MVT ConcatVT = VT.getDoubleNumVectorElementsVT();
+        SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
+        SDValue Res =
+            lowerVZIP(Opc, Concat, DAG.getUNDEF(ConcatVT), DL, DAG, Subtarget);
+        return DAG.getExtractSubvector(DL, VT, Res, 0);
+      }
+
       SDValue Lo = lowerVZIP(Opc, V1, DAG.getUNDEF(VT), DL, DAG, Subtarget);
       SDValue Hi = lowerVZIP(Opc, V2, DAG.getUNDEF(VT), DL, DAG, Subtarget);
 
