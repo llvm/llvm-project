@@ -221,6 +221,8 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
+* `fp128` will now use `*f128` libcalls on 32-bit GNU targets as well.
+
 Changes to the OCaml bindings
 -----------------------------
 
