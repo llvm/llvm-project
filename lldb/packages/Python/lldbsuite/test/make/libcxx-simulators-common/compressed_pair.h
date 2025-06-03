@@ -72,13 +72,23 @@ inline const size_t __datasizeof_v =
 template <class _Tp>
 struct __lldb_is_final : public integral_constant<bool, __is_final(_Tp)> {};
 
-template <class _ToPad> class __compressed_pair_padding {
-  char __padding_[((is_empty<_ToPad>::value &&
-                    !__lldb_is_final<_ToPad>::value) ||
-                   is_reference<_ToPad>::value)
-                      ? 0
-                      : sizeof(_ToPad) - __datasizeof_v<_ToPad>];
+template <class _ToPad>
+inline const bool __is_reference_or_unpadded_object =
+    (std::is_empty<_ToPad>::value && !__lldb_is_final<_ToPad>::value) ||
+    sizeof(_ToPad) == __datasizeof_v<_ToPad>;
+
+template <class _Tp>
+inline const bool __is_reference_or_unpadded_object<_Tp &> = true;
+
+template <class _Tp>
+inline const bool __is_reference_or_unpadded_object<_Tp &&> = true;
+
+template <class _ToPad, bool _Empty = __is_reference_or_unpadded_object<_ToPad>>
+class __compressed_pair_padding {
+  char __padding_[sizeof(_ToPad) - __datasizeof_v<_ToPad>] = {};
 };
+
+template <class _ToPad> class __compressed_pair_padding<_ToPad, true> {};
 
 #define _LLDB_COMPRESSED_PAIR(T1, Initializer1, T2, Initializer2)              \
   [[__gnu__::__aligned__(                                                      \
