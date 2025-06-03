@@ -5121,9 +5121,9 @@ bool Sema::addInstantiatedParametersToScope(
       // Simple case: not a parameter pack.
       assert(FParamIdx < Function->getNumParams());
       ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
-      DeclarationName name = FunctionParam->getDeclName();
+      DeclarationName Name = FunctionParam->getDeclName();
       auto _ = llvm::make_scope_exit([&]() {
-        FunctionParam->setDeclName(name);
+        FunctionParam->setDeclName(Name);
       });
       FunctionParam->setDeclName(PatternParam->getDeclName());
       // If the parameter's type is not dependent, update it to match the type
