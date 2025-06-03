@@ -585,22 +585,20 @@ llvm::json::Value toJSON(const SteppingGranularity &SG) {
 bool fromJSON(const json::Value &Params, StepInTarget &SIT, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("id", SIT.id) && O.map("label", SIT.label) &&
-         O.mapOptional("line", SIT.line) &&
-         O.mapOptional("column", SIT.column) &&
-         O.mapOptional("endLine", SIT.endLine) &&
-         O.mapOptional("endColumn", SIT.endColumn);
+         O.map("line", SIT.line) && O.map("column", SIT.column) &&
+         O.map("endLine", SIT.endLine) && O.map("endColumn", SIT.endColumn);
 }
 
 llvm::json::Value toJSON(const StepInTarget &SIT) {
   json::Object target{{"id", SIT.id}, {"label", SIT.label}};
 
-  if (SIT.line && *SIT.line != LLDB_INVALID_LINE_NUMBER)
+  if (SIT.line != LLDB_INVALID_LINE_NUMBER)
     target.insert({"line", SIT.line});
-  if (SIT.column && *SIT.column != LLDB_INVALID_COLUMN_NUMBER)
+  if (SIT.column != LLDB_INVALID_COLUMN_NUMBER)
     target.insert({"column", SIT.column});
-  if (SIT.endLine && *SIT.endLine != LLDB_INVALID_LINE_NUMBER)
+  if (SIT.endLine != LLDB_INVALID_LINE_NUMBER)
     target.insert({"endLine", SIT.endLine});
-  if (SIT.endColumn && *SIT.endLine != LLDB_INVALID_COLUMN_NUMBER)
+  if (SIT.endLine != LLDB_INVALID_COLUMN_NUMBER)
     target.insert({"endColumn", SIT.endColumn});
 
   return target;
