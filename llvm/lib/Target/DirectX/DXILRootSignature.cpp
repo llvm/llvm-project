@@ -450,7 +450,7 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
           return reportValueError(Ctx, "RegisterSpace", Range.RegisterSpace);
 
         if (!verifyDescriptorRangeFlag(RSD.Version, Range.RangeType,
-                                        Range.Flags))
+                                       Range.Flags))
           return reportValueError(Ctx, "DescriptorFlag", Range.Flags);
       }
       break;
