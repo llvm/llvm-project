@@ -121,7 +121,7 @@ precedence. Here are a few examples.
   src:*/mylib/*=sanitize
 
   $ cat ignorelist3.txt
-  # Type T will be instrumented.
+  # Type T will not be instrumented.
   type:*
   type:T=sanitize
   type:T
