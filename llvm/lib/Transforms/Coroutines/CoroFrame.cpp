@@ -1212,24 +1212,19 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   Builder.SetInsertPoint(Shape.AllocaSpillBlock,
                          Shape.AllocaSpillBlock->begin());
   SmallVector<Instruction *, 4> UsersToUpdate;
-  SmallVector<Instruction *, 4> Lifetimes;
   for (const auto &A : FrameData.Allocas) {
     AllocaInst *Alloca = A.Alloca;
     UsersToUpdate.clear();
-    Lifetimes.clear();
-    for (User *U : Alloca->users()) {
+    for (User *U : make_early_inc_range(Alloca->users())) {
       auto *I = cast<Instruction>(U);
+      // It is meaningless to retain the lifetime intrinsics refer for the
+      // member of coroutine frames and the meaningless lifetime intrinsics
+      // are possible to block further optimizations.
       if (I->isLifetimeStartOrEnd())
-        Lifetimes.push_back(I);
+        I->eraseFromParent();
       else if (DT.dominates(Shape.CoroBegin, I))
         UsersToUpdate.push_back(I);
     }
-
-    // It is meaningless to retain the lifetime intrinsics refer for the
-    // member of coroutine frames and the meaningless lifetime intrinsics
-    // are possible to block further optimizations.
-    for (auto *I : Lifetimes)
-      I->eraseFromParent();
 
     if (UsersToUpdate.empty())
       continue;
