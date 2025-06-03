@@ -744,111 +744,116 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   if (Ty.isVolatileQualified())
     return;
 
-  auto CheckHandler = SanitizerHandler::TypeMismatch;
-  // SO_Vptr's corresponding handler is DynamicTypeCacheMiss, not TypeMismatch.
-  // However, it relies upon IsGuaranteedNonNull, hence the instructions cannot
-  // be fully separated from the TypeMismatch.
-  SanitizerDebugLocation SanScope(
-      this,
-      {SanitizerKind::SO_Null, SanitizerKind::SO_ObjectSize,
-       SanitizerKind::SO_Alignment, SanitizerKind::SO_Vptr},
-      CheckHandler);
-
-  SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>, 3>
-      Checks;
-  llvm::BasicBlock *Done = nullptr;
-
   // Quickly determine whether we have a pointer to an alloca. It's possible
   // to skip null checks, and some alignment checks, for these pointers. This
   // can reduce compile-time significantly.
   auto PtrToAlloca = dyn_cast<llvm::AllocaInst>(Ptr->stripPointerCasts());
 
-  llvm::Value *True = llvm::ConstantInt::getTrue(getLLVMContext());
   llvm::Value *IsNonNull = nullptr;
   bool IsGuaranteedNonNull =
       SkippedChecks.has(SanitizerKind::Null) || PtrToAlloca;
-  bool AllowNullPointers = isNullPointerAllowed(TCK);
-  if ((SanOpts.has(SanitizerKind::Null) || AllowNullPointers) &&
-      !IsGuaranteedNonNull) {
-    // The glvalue must not be an empty glvalue.
-    IsNonNull = Builder.CreateIsNotNull(Ptr);
 
-    // The IR builder can constant-fold the null check if the pointer points to
-    // a constant.
-    IsGuaranteedNonNull = IsNonNull == True;
+  llvm::BasicBlock *Done = nullptr;
+  bool DoneViaNullSanitize = false;
 
-    // Skip the null check if the pointer is known to be non-null.
-    if (!IsGuaranteedNonNull) {
-      if (AllowNullPointers) {
-        // When performing pointer casts, it's OK if the value is null.
-        // Skip the remaining checks in that case.
-        Done = createBasicBlock("null");
-        llvm::BasicBlock *Rest = createBasicBlock("not.null");
-        Builder.CreateCondBr(IsNonNull, Rest, Done);
-        EmitBlock(Rest);
-      } else {
-        Checks.push_back(std::make_pair(IsNonNull, SanitizerKind::SO_Null));
+  {
+    auto CheckHandler = SanitizerHandler::TypeMismatch;
+    SanitizerDebugLocation SanScope(this,
+                                    {SanitizerKind::SO_Null,
+                                     SanitizerKind::SO_ObjectSize,
+                                     SanitizerKind::SO_Alignment},
+                                    CheckHandler);
+
+    SmallVector<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>, 3>
+        Checks;
+
+    llvm::Value *True = llvm::ConstantInt::getTrue(getLLVMContext());
+    bool AllowNullPointers = isNullPointerAllowed(TCK);
+    if ((SanOpts.has(SanitizerKind::Null) || AllowNullPointers) &&
+        !IsGuaranteedNonNull) {
+      // The glvalue must not be an empty glvalue.
+      IsNonNull = Builder.CreateIsNotNull(Ptr);
+
+      // The IR builder can constant-fold the null check if the pointer points
+      // to a constant.
+      IsGuaranteedNonNull = IsNonNull == True;
+
+      // Skip the null check if the pointer is known to be non-null.
+      if (!IsGuaranteedNonNull) {
+        if (AllowNullPointers) {
+          // When performing pointer casts, it's OK if the value is null.
+          // Skip the remaining checks in that case.
+          Done = createBasicBlock("null");
+          DoneViaNullSanitize = true;
+          llvm::BasicBlock *Rest = createBasicBlock("not.null");
+          Builder.CreateCondBr(IsNonNull, Rest, Done);
+          EmitBlock(Rest);
+        } else {
+          Checks.push_back(std::make_pair(IsNonNull, SanitizerKind::SO_Null));
+        }
       }
     }
-  }
 
-  if (SanOpts.has(SanitizerKind::ObjectSize) &&
-      !SkippedChecks.has(SanitizerKind::ObjectSize) &&
-      !Ty->isIncompleteType()) {
-    uint64_t TySize = CGM.getMinimumObjectSize(Ty).getQuantity();
-    llvm::Value *Size = llvm::ConstantInt::get(IntPtrTy, TySize);
-    if (ArraySize)
-      Size = Builder.CreateMul(Size, ArraySize);
+    if (SanOpts.has(SanitizerKind::ObjectSize) &&
+        !SkippedChecks.has(SanitizerKind::ObjectSize) &&
+        !Ty->isIncompleteType()) {
+      uint64_t TySize = CGM.getMinimumObjectSize(Ty).getQuantity();
+      llvm::Value *Size = llvm::ConstantInt::get(IntPtrTy, TySize);
+      if (ArraySize)
+        Size = Builder.CreateMul(Size, ArraySize);
 
-    // Degenerate case: new X[0] does not need an objectsize check.
-    llvm::Constant *ConstantSize = dyn_cast<llvm::Constant>(Size);
-    if (!ConstantSize || !ConstantSize->isNullValue()) {
-      // The glvalue must refer to a large enough storage region.
-      // FIXME: If Address Sanitizer is enabled, insert dynamic instrumentation
-      //        to check this.
-      // FIXME: Get object address space
-      llvm::Type *Tys[2] = { IntPtrTy, Int8PtrTy };
-      llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::objectsize, Tys);
-      llvm::Value *Min = Builder.getFalse();
-      llvm::Value *NullIsUnknown = Builder.getFalse();
-      llvm::Value *Dynamic = Builder.getFalse();
-      llvm::Value *LargeEnough = Builder.CreateICmpUGE(
-          Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic}), Size);
-      Checks.push_back(
-          std::make_pair(LargeEnough, SanitizerKind::SO_ObjectSize));
+      // Degenerate case: new X[0] does not need an objectsize check.
+      llvm::Constant *ConstantSize = dyn_cast<llvm::Constant>(Size);
+      if (!ConstantSize || !ConstantSize->isNullValue()) {
+        // The glvalue must refer to a large enough storage region.
+        // FIXME: If Address Sanitizer is enabled, insert dynamic
+        // instrumentation
+        //        to check this.
+        // FIXME: Get object address space
+        llvm::Type *Tys[2] = {IntPtrTy, Int8PtrTy};
+        llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::objectsize, Tys);
+        llvm::Value *Min = Builder.getFalse();
+        llvm::Value *NullIsUnknown = Builder.getFalse();
+        llvm::Value *Dynamic = Builder.getFalse();
+        llvm::Value *LargeEnough = Builder.CreateICmpUGE(
+            Builder.CreateCall(F, {Ptr, Min, NullIsUnknown, Dynamic}), Size);
+        Checks.push_back(
+            std::make_pair(LargeEnough, SanitizerKind::SO_ObjectSize));
+      }
     }
-  }
 
-  llvm::MaybeAlign AlignVal;
-  llvm::Value *PtrAsInt = nullptr;
+    llvm::MaybeAlign AlignVal;
+    llvm::Value *PtrAsInt = nullptr;
 
-  if (SanOpts.has(SanitizerKind::Alignment) &&
-      !SkippedChecks.has(SanitizerKind::Alignment)) {
-    AlignVal = Alignment.getAsMaybeAlign();
-    if (!Ty->isIncompleteType() && !AlignVal)
-      AlignVal = CGM.getNaturalTypeAlignment(Ty, nullptr, nullptr,
-                                             /*ForPointeeType=*/true)
-                     .getAsMaybeAlign();
+    if (SanOpts.has(SanitizerKind::Alignment) &&
+        !SkippedChecks.has(SanitizerKind::Alignment)) {
+      AlignVal = Alignment.getAsMaybeAlign();
+      if (!Ty->isIncompleteType() && !AlignVal)
+        AlignVal = CGM.getNaturalTypeAlignment(Ty, nullptr, nullptr,
+                                               /*ForPointeeType=*/true)
+                       .getAsMaybeAlign();
 
-    // The glvalue must be suitably aligned.
-    if (AlignVal && *AlignVal > llvm::Align(1) &&
-        (!PtrToAlloca || PtrToAlloca->getAlign() < *AlignVal)) {
-      PtrAsInt = Builder.CreatePtrToInt(Ptr, IntPtrTy);
-      llvm::Value *Align = Builder.CreateAnd(
-          PtrAsInt, llvm::ConstantInt::get(IntPtrTy, AlignVal->value() - 1));
-      llvm::Value *Aligned =
-          Builder.CreateICmpEQ(Align, llvm::ConstantInt::get(IntPtrTy, 0));
-      if (Aligned != True)
-        Checks.push_back(std::make_pair(Aligned, SanitizerKind::SO_Alignment));
+      // The glvalue must be suitably aligned.
+      if (AlignVal && *AlignVal > llvm::Align(1) &&
+          (!PtrToAlloca || PtrToAlloca->getAlign() < *AlignVal)) {
+        PtrAsInt = Builder.CreatePtrToInt(Ptr, IntPtrTy);
+        llvm::Value *Align = Builder.CreateAnd(
+            PtrAsInt, llvm::ConstantInt::get(IntPtrTy, AlignVal->value() - 1));
+        llvm::Value *Aligned =
+            Builder.CreateICmpEQ(Align, llvm::ConstantInt::get(IntPtrTy, 0));
+        if (Aligned != True)
+          Checks.push_back(
+              std::make_pair(Aligned, SanitizerKind::SO_Alignment));
+      }
     }
-  }
 
-  if (Checks.size() > 0) {
-    llvm::Constant *StaticData[] = {
-        EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(Ty),
-        llvm::ConstantInt::get(Int8Ty, AlignVal ? llvm::Log2(*AlignVal) : 1),
-        llvm::ConstantInt::get(Int8Ty, TCK)};
-    EmitCheck(Checks, CheckHandler, StaticData, PtrAsInt ? PtrAsInt : Ptr);
+    if (Checks.size() > 0) {
+      llvm::Constant *StaticData[] = {
+          EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(Ty),
+          llvm::ConstantInt::get(Int8Ty, AlignVal ? llvm::Log2(*AlignVal) : 1),
+          llvm::ConstantInt::get(Int8Ty, TCK)};
+      EmitCheck(Checks, CheckHandler, StaticData, PtrAsInt ? PtrAsInt : Ptr);
+    }
   }
 
   // If possible, check that the vptr indicates that there is a subobject of
@@ -861,6 +866,9 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   //       or call a non-static member function
   if (SanOpts.has(SanitizerKind::Vptr) &&
       !SkippedChecks.has(SanitizerKind::Vptr) && isVptrCheckRequired(TCK, Ty)) {
+    SanitizerDebugLocation SanScope(this, {SanitizerKind::SO_Vptr},
+                                    SanitizerHandler::DynamicTypeCacheMiss);
+
     // Ensure that the pointer is non-null before loading it. If there is no
     // compile-time guarantee, reuse the run-time null check or emit a new one.
     if (!IsGuaranteedNonNull) {
@@ -929,6 +937,11 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   }
 
   if (Done) {
+    SanitizerDebugLocation SanScope(
+        this,
+        {DoneViaNullSanitize ? SanitizerKind::SO_Null : SanitizerKind::SO_Vptr},
+        DoneViaNullSanitize ? SanitizerHandler::TypeMismatch
+                            : SanitizerHandler::DynamicTypeCacheMiss);
     Builder.CreateBr(Done);
     EmitBlock(Done);
   }
