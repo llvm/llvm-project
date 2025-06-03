@@ -35,7 +35,7 @@ define dso_local amdgpu_kernel void @_Z36test_amdgcn_convolve_f16_fp8_fp8_3x3_4x
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE]]
   ; CHECK-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 [[COPY2]], [[REG_SEQUENCE1]], [[SCRATCH_LOAD_DWORDX3_SADDR]], [[SCRATCH_LOAD_DWORDX3_SADDR1]], [[SCRATCH_LOAD_DWORDX3_SADDR2]], 42, -1, 0, 0, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 112
-  ; CHECK-NEXT:   SCRATCH_STORE_DWORDX4_SADDR [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], [[S_MOV_B32_7]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<8 x s16>) into @out, !tbaa !5, addrspace 10)
+  ; CHECK-NEXT:   SCRATCH_STORE_DWORDX4_SADDR [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], [[S_MOV_B32_7]], 0, 0, implicit $exec, implicit $flat_scr :: (store (<8 x s16>) into @out, !tbaa !6, addrspace 10)
   ; CHECK-NEXT:   S_ENDPGM 0
   ;
   ; VIDX-LABEL: name: _Z36test_amdgcn_convolve_f16_fp8_fp8_3x3_4x4v
@@ -60,7 +60,7 @@ define dso_local amdgpu_kernel void @_Z36test_amdgcn_convolve_f16_fp8_fp8_3x3_4x
   ; VIDX-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 [[COPY]], [[V_LOAD_IDX3]], [[V_LOAD_IDX]], [[V_LOAD_IDX1]], [[V_LOAD_IDX2]], 42, -1, 0, 0, implicit $exec
   ; VIDX-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 112
   ; VIDX-NEXT:   [[S_LSHR_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_5]], 2, implicit-def dead $scc
-  ; VIDX-NEXT:   V_STORE_IDX [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], [[S_LSHR_B32_4]], 0, implicit $exec :: (store (<8 x s16>) into @out, !tbaa !5, addrspace 10)
+  ; VIDX-NEXT:   V_STORE_IDX [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], [[S_LSHR_B32_4]], 0, implicit $exec :: (store (<8 x s16>) into @out, !tbaa !6, addrspace 10)
   ; VIDX-NEXT:   S_ENDPGM 0
 entry:
   %vec30 = load <3 x i32>, ptr addrspace(10) @col_center, align 16

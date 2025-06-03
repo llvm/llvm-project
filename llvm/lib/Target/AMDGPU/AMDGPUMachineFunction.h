@@ -116,6 +116,13 @@ public:
   uint32_t getLaneSharedScratchSize() const { return LaneSharedScratchSize; }
   uint32_t getLaneSharedVGPRSize() const { return LaneSharedVGPRSize; }
 
+  void updateLaneSharedScratchSize(unsigned ScratchSize) {
+    LaneSharedScratchSize = std::max(LaneSharedScratchSize, ScratchSize);
+  }
+  void updateLaneSharedVGPRSize(unsigned VGPRSize) {
+    LaneSharedVGPRSize = std::max(LaneSharedVGPRSize, VGPRSize);
+  }
+
   void recordNumNamedBarriers(uint32_t GVAddr, unsigned BarCnt) {
     NumNamedBarriers =
         std::max(NumNamedBarriers, ((GVAddr & 0x1ff) >> 4) + BarCnt - 1);

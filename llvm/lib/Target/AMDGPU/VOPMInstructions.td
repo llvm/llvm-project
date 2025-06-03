@@ -1056,7 +1056,7 @@ multiclass VOP3M_SBA_Real_Base<GFXGen Gen, bits<8> op,
       let AsmString = asmName # ps.Pfl.Asm64;
 
       defvar PixelShape4x2 = !cast<SBA_Profile>(ps.Pfl).PixelShape4x2;
-      let Inst{59} = !if(PixelShape4x2, aux_data{1}, 0);
+      let Inst{58} = !if(PixelShape4x2, aux_data{0}, 0);
   }
 }
 
@@ -1363,20 +1363,19 @@ V_CVT_TO_TENSOR_SR_FP8_BF16	0x04c
 V_CVT_TO_TENSOR_SR_BF8_BF16	0x04d
 */
 
-
-multiclass SBA<string Suffix, bits<8> op> {
+multiclass SBA<string Suffix, bits<8> op, string mnemo> {
   defm NAME # "_" # Suffix : VOP3M_SBA_Real_Base<GFX13Gen, op>;
-  defm NAME # "_SCATTER2" # "_" # Suffix : VOP3M_SBA_Real_Base<GFX13Gen, op>;
-  defm NAME # "_SCATTER4" # "_" # Suffix : VOP5M_Real_gfx13<op>;
+  defm NAME # "_SCATTER2" # "_" # Suffix : VOP3M_SBA_Real_Base<GFX13Gen, op, NAME # "_SCATTER2" # "_" # Suffix, mnemo>;
+  defm NAME # "_SCATTER4" # "_" # Suffix : VOP5M_Real_Base<GFX13Gen, op, NAME # "_SCATTER4" # "_" # Suffix, mnemo>;
 }
 
 defm V_SCALE_BIAS_ACTIVATE_F32 : VOP3M_SBA_Real_Base <GFX13Gen, 0x20>;
-defm V_SCALE_BIAS_ACTIVATE : SBA<"F16", 0x21>;
-defm V_SCALE_BIAS_ACTIVATE : SBA<"BF16", 0x22>;
+defm V_SCALE_BIAS_ACTIVATE : SBA<"F16", 0x21, "v_scale_bias_activate_f16">;
+defm V_SCALE_BIAS_ACTIVATE : SBA<"BF16", 0x22, "v_scale_bias_activate_bf16">;
 
 defm V_UNIFORM_SCALE_ACTIVATE_F32 : VOP3M_SBA_Real_Base <GFX13Gen, 0x25>;
-defm V_UNIFORM_SCALE_ACTIVATE : SBA<"F16", 0x26>;
-defm V_UNIFORM_SCALE_ACTIVATE : SBA<"BF16", 0x27>;
+defm V_UNIFORM_SCALE_ACTIVATE : SBA<"F16", 0x26, "v_uniform_scale_activate_f16">;
+defm V_UNIFORM_SCALE_ACTIVATE : SBA<"BF16", 0x27, "v_uniform_scale_activate_bf16">;
 
 multiclass VOP3M_WMMA_K1_K2_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X16_", NAME) : VOP3M_WMMA_Real_gfx13<op, !tolower(NAME)>;

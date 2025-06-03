@@ -2628,7 +2628,12 @@ class getAsmVOP3OpSel <int NumSrcArgs,
                        bit HasOMod,
                        bit Src0HasMods,
                        bit Src1HasMods,
+#ifdef LLPC_BUILD_NPI
+                       bit Src2HasMods,
+                       bit HasByteSel = 0> {
+#else /* LLPC_BUILD_NPI */
                        bit Src2HasMods> {
+#endif /* LLPC_BUILD_NPI */
   string dst = "$vdst";
 
   string isrc0 = !if(!eq(NumSrcArgs, 1), "$src0", "$src0,");
@@ -2647,9 +2652,16 @@ class getAsmVOP3OpSel <int NumSrcArgs,
   string src1 = !if(Src1HasMods, fsrc1, isrc1);
   string src2 = !if(Src2HasMods, fsrc2, isrc2);
 
+#ifdef LLPC_BUILD_NPI
+  string bytesel = !if(HasByteSel, "$byte_sel", "");
+#endif /* LLPC_BUILD_NPI */
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
+#ifdef LLPC_BUILD_NPI
+  string ret = dst#", "#src0#src1#src2#"$op_sel"#bytesel#clamp#omod;
+#else /* LLPC_BUILD_NPI */
   string ret = dst#", "#src0#src1#src2#"$op_sel"#clamp#omod;
+#endif /* LLPC_BUILD_NPI */
 }
 
 class getAsmDPP <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT = i32> {
@@ -3138,7 +3150,12 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                               HasOMod,
                                               HasSrc0FloatMods,
                                               HasSrc1FloatMods,
+#ifdef LLPC_BUILD_NPI
+                                              HasSrc2FloatMods,
+                                              HasFP8ByteSel>.ret;
+#else /* LLPC_BUILD_NPI */
                                               HasSrc2FloatMods>.ret;
+#endif /* LLPC_BUILD_NPI */
   field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3Base>.ret;
   field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3Base>.ret;
   field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;

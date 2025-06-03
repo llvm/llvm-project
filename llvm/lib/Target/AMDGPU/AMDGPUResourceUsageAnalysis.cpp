@@ -476,7 +476,7 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
       // WaveGroupTotalVGPR =
       //   NumLanesharedVGPR + max(NumWaves*NumVGPR, sum(rank-callee-NumVGPR)).
       if (SIInstrInfo::isWaveGroupRankCallMarker(MI)) {
-        Info.WavegroupRankCalls.push_back((MachineInstr*)&MI);
+        Info.WavegroupRankCalls.push_back(const_cast<MachineInstr*>(&MI));
         assert(getCalleeFunction(MI.getOperand(1)));
         assert(AMDGPU::getWavegroupRankFunction(
             *getCalleeFunction(MI.getOperand(1))));

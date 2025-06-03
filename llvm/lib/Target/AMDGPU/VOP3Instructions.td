@@ -105,15 +105,15 @@ def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
   let HasExtVOP3DPP = 0;
 #ifdef LLPC_BUILD_NPI
   let HasExt64BitDPP = 1;
+}
+def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
+def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
+  let HasClamp = 1;
 #else /* LLPC_BUILD_NPI */
   let HasExtDPP = 0;
 #endif /* LLPC_BUILD_NPI */
 }
 #ifdef LLPC_BUILD_NPI
-def VOP_I64_I64_I64_DPP : VOP3_Profile<VOP_I64_I64_I64>;
-def VOP_I32_I32_I64_DPP : VOP3_Profile<VOPProfile<[i64, i32, i32, i64]>> {
-  let HasClamp = 1;
-}
 } // End HasExt64BitDPP = 1;
 #endif /* LLPC_BUILD_NPI */
 
@@ -1311,6 +1311,9 @@ class VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<VOPProfile P> : VOP3_Profil
 
 class VOP3_CVT_SCALE_FP4_F32_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<P> {
   let HasFP8DstByteSel = 1;
+#ifdef LLPC_BUILD_NPI
+  let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
+#endif /* LLPC_BUILD_NPI */
 }
 
 class VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOPProfile P> : VOP3_CVT_SCALE_FP4FP8BF8_F32_TiedInput_Profile<P> {
@@ -1319,6 +1322,9 @@ class VOP3_CVT_SCALE_SR_F8BF8_F16BF16F32_TiedInput_Profile<VOPProfile P> : VOP3_
                           FP32InputMods:$src2_modifiers, Src2RC64:$src2,
                           VGPR_32:$vdst_in, op_sel0:$op_sel);
   let HasFP8DstByteSel = 1;
+#ifdef LLPC_BUILD_NPI
+  let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
+#endif /* LLPC_BUILD_NPI */
 }
 
 
@@ -1832,6 +1838,12 @@ let ReadsModeReg = 0, IsPacked = 0, SubtargetPredicate = isGFX125xOnly in {
                                            int_amdgcn_cvt_pk_bf8_f16>;
 }
 
+let HasClamp = 0, HasOpSel = 1 in {
+def VOP3_CVT_SR_F8_F16_Profile : VOP3_CVT_SR_F8_ByteSel_Profile<f16>;
+def VOP3_CVT_SR_F8_F16_True16_Profile : VOP3_Profile_True16<VOP3_CVT_SR_F8_F16_Profile>;
+def VOP3_CVT_SR_F8_F16_Fake16_Profile : VOP3_Profile_Fake16<VOP3_CVT_SR_F8_F16_Profile>;
+}
+
 let SubtargetPredicate = isGFX1250Plus in {
   let ReadsModeReg = 0 in {
     let IsPacked = 0 in {
@@ -1847,8 +1859,10 @@ let SubtargetPredicate = isGFX1250Plus in {
     // These instructions have non-standard use of op_sel. They are using bits 2 and 3 of opsel
     // to select a byte in the vdst. Bits 0 and 1 are unused.
     let Constraints = "$vdst = $vdst_in", DisableEncoding = "$vdst_in" in {
-      defm V_CVT_SR_FP8_F16 : VOP3Inst<"v_cvt_sr_fp8_f16", VOP3_CVT_SR_F8_ByteSel_Profile<f16>>;
-      defm V_CVT_SR_BF8_F16 : VOP3Inst<"v_cvt_sr_bf8_f16", VOP3_CVT_SR_F8_ByteSel_Profile<f16>>;
+      defm V_CVT_SR_FP8_F16 : VOP3Inst_t16_with_profiles<"v_cvt_sr_fp8_f16", VOP3_CVT_SR_F8_F16_Profile,
+                                                          VOP3_CVT_SR_F8_F16_True16_Profile, VOP3_CVT_SR_F8_F16_Fake16_Profile>;
+      defm V_CVT_SR_BF8_F16 : VOP3Inst_t16_with_profiles<"v_cvt_sr_bf8_f16", VOP3_CVT_SR_F8_F16_Profile,
+                                                          VOP3_CVT_SR_F8_F16_True16_Profile, VOP3_CVT_SR_F8_F16_Fake16_Profile>;
     }
 
     let Constraints = "@earlyclobber $vdst" in {
@@ -1913,8 +1927,14 @@ let SubtargetPredicate = isGFX1250Plus in {
     defm V_CVT_SCALEF32_SR_PK16_FP6_F32  : VOP3Inst<"v_cvt_scalef32_sr_pk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V3I32_V16F32_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk16_fp6_f32>;
   } // End Constraints = "@earlyclobber $vdst"
 
-  def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f16, V_CVT_SR_FP8_F16_e64, f16>;
-  def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f16, V_CVT_SR_BF8_F16_e64, f16>;
+  let True16Predicate = UseRealTrue16Insts in {
+    def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f16, V_CVT_SR_FP8_F16_t16_e64, f16>;
+    def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f16, V_CVT_SR_BF8_F16_t16_e64, f16>;
+  }
+  let True16Predicate = UseFakeTrue16Insts in {
+    def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f16, V_CVT_SR_FP8_F16_fake16_e64, f16>;
+    def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f16, V_CVT_SR_BF8_F16_fake16_e64, f16>;
+  }
 } // End SubtargetPredicate = isGFX1250Plus
 
 let SubtargetPredicate = HasTensorCvtLutInsts in {
@@ -2361,15 +2381,15 @@ multiclass VOP3be_Real_gfx11_gfx12_not_gfx1250_gfx13<bits<10> op, string opName,
   VOP3be_Real<GFX11Gen, op, opName, asmName>,
   VOP3be_Real<GFX12Not12_50Gen, op, opName, asmName>,
   VOP3be_Real<GFX13Gen, op, opName, asmName>;
+
+multiclass VOP3be_Realtriple_gfx1250<bits<10> op> :
+  VOP3be_Realtriple<GFX1250Gen, op>;
 #else /* LLPC_BUILD_NPI */
 multiclass VOP3_Real_No_Suffix_gfx11_gfx12<bits<10> op> :
   VOP3_Real_No_Suffix<GFX11Gen, op>, VOP3_Real_No_Suffix<GFX12Gen, op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
-multiclass VOP3be_Realtriple_gfx1250<bits<10> op> :
-  VOP3be_Realtriple<GFX1250Gen, op>;
-
 multiclass VOP3_Real_No_Suffix_gfx11_gfx12_gfx13<bits<10> op> :
   VOP3_Real_No_Suffix<GFX11Gen, op>, VOP3_Real_No_Suffix<GFX12Gen, op>,
   VOP3_Real_No_Suffix<GFX13Gen, op>;
@@ -2718,8 +2738,8 @@ defm V_CVT_PK_F16_F32                : VOP3Only_Realtriple_gfx1250_gfx13<0x36f, 
 defm V_CVT_SR_PK_F16_F32             : VOP3Only_Realtriple_gfx1250_gfx13<0x370, 0x2c3>;
 defm V_CVT_PK_FP8_F16_gfx1250        : VOP3Only_Realtriple_with_name<GFX1250Gen, 0x372, "V_CVT_PK_FP8_F16_gfx1250", "v_cvt_pk_fp8_f16">;
 defm V_CVT_PK_BF8_F16_gfx1250        : VOP3Only_Realtriple_with_name<GFX1250Gen, 0x373, "V_CVT_PK_BF8_F16_gfx1250", "v_cvt_pk_bf8_f16">;
-defm V_CVT_SR_FP8_F16                : VOP3Only_Realtriple_t16_gfx1250_gfx13<0x374, 0x335>;
-defm V_CVT_SR_BF8_F16                : VOP3Only_Realtriple_t16_gfx1250_gfx13<0x375, 0x336>;
+defm V_CVT_SR_FP8_F16                : VOP3Only_Realtriple_t16_and_fake16_gfx1250_gfx13<0x374, 0x335>;
+defm V_CVT_SR_BF8_F16                : VOP3Only_Realtriple_t16_and_fake16_gfx1250_gfx13<0x375, 0x336>;
 
 let WaveSizePredicate = isWave32 in {
   defm V_CVT_SCALEF32_PK32_BF6_BF16    : VOP3Only_Real_Base_gfx13<0x295>;
