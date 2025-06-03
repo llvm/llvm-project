@@ -580,7 +580,7 @@ static std::string GetDescriptionFromSiginfo(lldb::ValueObjectSP siginfo_sp) {
   }
 
   return linux_signals.GetSignalDescription(signo, code, addr, lower, upper,
-                                            uid, pid);
+                                            pid, uid);
 }
 
 lldb::StopInfoSP PlatformLinux::GetStopInfoFromSiginfo(Thread &thread) {

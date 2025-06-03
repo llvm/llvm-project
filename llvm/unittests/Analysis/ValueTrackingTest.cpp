@@ -202,12 +202,11 @@ TEST_F(MatchSelectPatternTest, FMinConstantZero) {
 }
 
 TEST_F(MatchSelectPatternTest, FMinConstantZeroNsz) {
-  parseAssembly(
-      "define float @test(float %a) {\n"
-      "  %1 = fcmp nsz ole float %a, 0.0\n"
-      "  %A = select i1 %1, float %a, float 0.0\n"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(float %a) {\n"
+                "  %1 = fcmp nsz ole float %a, 0.0\n"
+                "  %A = select nsz i1 %1, float %a, float 0.0\n"
+                "  ret float %A\n"
+                "}\n");
   // But this should be, because we've ignored signed zeroes.
   expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, true});
 }

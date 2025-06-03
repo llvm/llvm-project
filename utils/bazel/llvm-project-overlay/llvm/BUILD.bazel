@@ -1627,6 +1627,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Analysis",
+        ":Support",
         ":TargetParser",
     ],
 )
@@ -5161,6 +5162,13 @@ cc_library(
         ":Support",
         "//third-party/unittest:gmock",
     ],
+)
+
+cc_library(
+    name = "TestingDemangle",
+    testonly = True,
+    copts = llvm_copts,
+    textual_hdrs = glob(["include/llvm/Testing/Demangle/*.inc"]),
 )
 
 cc_library(
