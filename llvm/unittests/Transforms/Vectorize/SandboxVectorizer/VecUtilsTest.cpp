@@ -603,10 +603,10 @@ bb1:
   EXPECT_FALSE(sandboxir::VecUtils::matchPack(Pack0));
   EXPECT_FALSE(sandboxir::VecUtils::matchPack(Ret));
   {
-    auto PairOpt = sandboxir::VecUtils::matchPack(Pack1);
-    EXPECT_TRUE(PairOpt);
-    EXPECT_THAT(PairOpt->first, testing::ElementsAre(Pack1, Pack0));
-    EXPECT_THAT(PairOpt->second, testing::ElementsAre(Arg0, Arg1));
+    auto PackOpt = sandboxir::VecUtils::matchPack(Pack1);
+    EXPECT_TRUE(PackOpt);
+    EXPECT_THAT(PackOpt->Instrs, testing::ElementsAre(Pack1, Pack0));
+    EXPECT_THAT(PackOpt->Operands, testing::ElementsAre(Arg0, Arg1));
   }
   {
     for (auto *NotPack : {NotPack0, NotPack1, NotPack2, NotPackBB})

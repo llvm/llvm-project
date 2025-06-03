@@ -197,12 +197,32 @@ public:
   /// \Returns the first integer power of 2 that is <= Num.
   static unsigned getFloorPowerOf2(unsigned Num);
 
-  /// If \p I is the last instruction of a pack pattern, then this function
-  /// returns the instructions in the pack and the operands in the pack, else
-  /// returns nullopt.
-  static std::optional<
-      std::pair<SmallVector<Instruction *>, SmallVector<Value *>>>
-  matchPack(Instruction *I) {
+  /// Helper struct for `matchPack()`. Describes the instructions and operands
+  /// of a pack pattern.
+  struct PackPattern {
+    /// The insertelement instructions that form the pack pattern in bottom-up
+    /// order, i.e., the first instruction in `Instrs` is the bottom-most
+    /// InsertElement instruction of the pack pattern.
+    /// For example in this simple pack pattern:
+    ///  %Pack0 = insertelement <2 x i8> poison, i8 %v0, i64 0
+    ///  %Pack1 = insertelement <2 x i8> %Pack0, i8 %v1, i64 1
+    /// this is [ %Pack1, %Pack0 ].
+    SmallVector<Instruction *> Instrs;
+    /// The "external" operands of the pack pattern, i.e., the values that get
+    /// packed into a vector, skipping the ones in `Instrs`. The operands are in
+    /// bottom-up order, starting from the operands of the bottom-most insert.
+    /// So in our example this would be [ %v1, %v0 ].
+    SmallVector<Value *> Operands;
+  };
+
+  /// If \p I is the last instruction of a pack pattern (i.e., an InsertElement
+  /// into a vector), then this function returns the instructions in the pack
+  /// and the operands in the pack, else returns nullopt.
+  /// Here is an example of a matched pattern:
+  ///  %PackA0 = insertelement <2 x i8> poison, i8 %v0, i64 0
+  ///  %PackA1 = insertelement <2 x i8> %PackA0, i8 %v1, i64 1
+  /// TODO: this currently detects only simple canonicalized patterns.
+  static std::optional<PackPattern> matchPack(Instruction *I) {
     // TODO: Support vector pack patterns.
     // TODO: Support out-of-order inserts.
 
@@ -213,34 +233,32 @@ public:
     // The pack contains as many instrs as the lanes of the bottom-most Insert
     unsigned ExpectedNumInserts = VecUtils::getNumLanes(I);
     assert(ExpectedNumInserts >= 2 && "Expected at least 2 inserts!");
-    SmallVector<Instruction *> PackInstrs;
-    SmallVector<Value *> PackOperands;
-    PackOperands.resize(ExpectedNumInserts);
+    PackPattern Pack;
+    Pack.Operands.resize(ExpectedNumInserts);
     // Collect the inserts by walking up the use-def chain.
     Instruction *InsertI = I;
-    for ([[maybe_unused]] auto Cnt : seq<unsigned>(ExpectedNumInserts)) {
+    for (auto ExpectedLane : reverse(seq<unsigned>(ExpectedNumInserts))) {
       if (InsertI == nullptr)
         return std::nullopt;
       if (InsertI->getParent() != BB0)
         return std::nullopt;
       // Check the lane.
       auto *LaneC = dyn_cast<ConstantInt>(InsertI->getOperand(2));
-      unsigned ExpectedLane = ExpectedNumInserts - Cnt - 1;
       if (LaneC == nullptr || LaneC->getSExtValue() != ExpectedLane)
         return std::nullopt;
-      PackInstrs.push_back(InsertI);
-      PackOperands[ExpectedLane] = InsertI->getOperand(1);
+      Pack.Instrs.push_back(InsertI);
+      Pack.Operands[ExpectedLane] = InsertI->getOperand(1);
 
       Value *Op = InsertI->getOperand(0);
-      if (Cnt == ExpectedNumInserts - 1) {
+      if (ExpectedLane == 0) {
+        // Check the topmost insert. The operand should be a Poison.
         if (!isa<PoisonValue>(Op))
           return std::nullopt;
       } else {
         InsertI = dyn_cast<InsertElementInst>(Op);
       }
     }
-    // Check the topmost insert. The operand should be a Poison.
-    return std::make_pair(PackInstrs, PackOperands);
+    return Pack;
   }
 
 #ifndef NDEBUG
