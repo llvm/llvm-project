@@ -68,20 +68,20 @@ func.func @update_false(%arg0: memref<f32>) {
 func.func @enter_data_true(%d1 : memref<f32>) {
   %true = arith.constant true
   %0 = acc.create varPtr(%d1 : memref<f32>) -> memref<f32>
-  acc.enter_data if(%true) dataOperands(%0 : memref<f32>) attributes {async}
+  acc.enter_data async if(%true) dataOperands(%0 : memref<f32>)
   return
 }
 
 // CHECK-LABEL: func.func @enter_data_true
 // CHECK-NOT:     if
-// CHECK:           acc.enter_data dataOperands
+// CHECK:           acc.enter_data async dataOperands
 
 // -----
 
 func.func @enter_data_false(%d1 : memref<f32>) {
   %false = arith.constant false
   %0 = acc.create varPtr(%d1 : memref<f32>) -> memref<f32>
-  acc.enter_data if(%false) dataOperands(%0 : memref<f32>) attributes {async}
+  acc.enter_data async if(%false) dataOperands(%0 : memref<f32>)
   return
 }
 
@@ -93,21 +93,21 @@ func.func @enter_data_false(%d1 : memref<f32>) {
 func.func @exit_data_true(%d1 : memref<f32>) {
   %true = arith.constant true
   %0 = acc.getdeviceptr varPtr(%d1 : memref<f32>) -> memref<f32>
-  acc.exit_data if(%true) dataOperands(%0 : memref<f32>) attributes {async}
+  acc.exit_data async if(%true) dataOperands(%0 : memref<f32>)
   acc.delete accPtr(%0 : memref<f32>)
   return
 }
 
 // CHECK-LABEL: func.func @exit_data_true
 // CHECK-NOT:if
-// CHECK:acc.exit_data dataOperands
+// CHECK:acc.exit_data async dataOperands
 
 // -----
 
 func.func @exit_data_false(%d1 : memref<f32>) {
   %false = arith.constant false
   %0 = acc.getdeviceptr varPtr(%d1 : memref<f32>) -> memref<f32>
-  acc.exit_data if(%false) dataOperands(%0 : memref<f32>) attributes {async}
+  acc.exit_data async if(%false) dataOperands(%0 : memref<f32>)
   acc.delete accPtr(%0 : memref<f32>)
   return
 }

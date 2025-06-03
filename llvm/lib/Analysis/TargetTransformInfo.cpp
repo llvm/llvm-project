@@ -886,6 +886,10 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
   OperandValueKind OpInfo = OK_AnyValue;
   OperandValueProperties OpProps = OP_None;
 
+  // undef/poison don't materialize constants.
+  if (isa<UndefValue>(V))
+    return {OK_AnyValue, OP_None};
+
   if (isa<ConstantInt>(V) || isa<ConstantFP>(V)) {
     if (const auto *CI = dyn_cast<ConstantInt>(V)) {
       if (CI->getValue().isPowerOf2())

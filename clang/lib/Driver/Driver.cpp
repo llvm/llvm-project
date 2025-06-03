@@ -5362,11 +5362,11 @@ void Driver::BuildJobs(Compilation &C) const {
     });
   }
 
-  // If the user passed -Qunused-arguments or there were errors, don't warn
-  // about any unused arguments.
-  if (Diags.hasErrorOccurred() ||
-      C.getArgs().hasArg(options::OPT_Qunused_arguments))
-    return;
+  // If the user passed -Qunused-arguments or there were errors, don't
+  // warn about any unused arguments.
+  bool ReportUnusedArguments =
+      !Diags.hasErrorOccurred() &&
+      !C.getArgs().hasArg(options::OPT_Qunused_arguments);
 
   // Claim -fdriver-only here.
   (void)C.getArgs().hasArg(options::OPT_fdriver_only);
@@ -5420,7 +5420,7 @@ void Driver::BuildJobs(Compilation &C) const {
             !C.getActions().empty()) {
           Diag(diag::err_drv_unsupported_opt_for_target)
               << A->getSpelling() << getTargetTriple();
-        } else {
+        } else if (ReportUnusedArguments) {
           Diag(clang::diag::warn_drv_unused_argument)
               << A->getAsString(C.getArgs());
         }
@@ -6208,7 +6208,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
   if (is_style_windows(llvm::sys::path::Style::native)) {
     // BoundArch may contains ':', which is invalid in file names on Windows,
     // therefore replace it with '%'.
-    std::replace(BoundArch.begin(), BoundArch.end(), ':', '@');
+    llvm::replace(BoundArch, ':', '@');
   }
 
   llvm::PrettyStackTraceString CrashInfo("Computing output path");
@@ -7204,9 +7204,10 @@ static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {
 ///
 ///  '#': Silence information about the changes to the command line arguments.
 ///
-///  '^': Add FOO as a new argument at the beginning of the command line.
+///  '^FOO': Add FOO as a new argument at the beginning of the command line
+///  right after the name of the compiler executable.
 ///
-///  '+': Add FOO as a new argument at the end of the command line.
+///  '+FOO': Add FOO as a new argument at the end of the command line.
 ///
 ///  's/XXX/YYY/': Substitute the regular expression XXX with YYY in the command
 ///  line.
@@ -7294,7 +7295,7 @@ static void applyOneOverrideOption(raw_ostream &OS,
 void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                                   const char *OverrideStr,
                                   llvm::StringSet<> &SavedStrings,
-                                  raw_ostream *OS) {
+                                  StringRef EnvVar, raw_ostream *OS) {
   if (!OS)
     OS = &llvm::nulls();
 
@@ -7303,7 +7304,7 @@ void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
     OS = &llvm::nulls();
   }
 
-  *OS << "### CCC_OVERRIDE_OPTIONS: " << OverrideStr << "\n";
+  *OS << "### " << EnvVar << ": " << OverrideStr << "\n";
 
   // This does not need to be efficient.
 

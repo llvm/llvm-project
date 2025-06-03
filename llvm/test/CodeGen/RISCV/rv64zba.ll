@@ -126,7 +126,7 @@ define i64 @zextw_i64(i64 %a) nounwind {
 ;
 ; RV64XANDESPERF-LABEL: zextw_i64:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, zero, a0
+; RV64XANDESPERF-NEXT:    nds.bfoz a0, a0, 31, 0
 ; RV64XANDESPERF-NEXT:    ret
   %and = and i64 %a, 4294967295
   ret i64 %and
@@ -151,7 +151,7 @@ define i64 @zextw_demandedbits_i64(i64 %0) {
 ; RV64XANDESPERF-LABEL: zextw_demandedbits_i64:
 ; RV64XANDESPERF:       # %bb.0:
 ; RV64XANDESPERF-NEXT:    ori a0, a0, 1
-; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, zero, a0
+; RV64XANDESPERF-NEXT:    nds.bfoz a0, a0, 31, 0
 ; RV64XANDESPERF-NEXT:    ret
   %2 = and i64 %0, 4294967294
   %3 = or i64 %2, 1
@@ -1049,7 +1049,7 @@ define i64 @addmul4230(i64 %a, i64 %b) {
 ; CHECK-LABEL: addmul4230:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a2, 1
-; CHECK-NEXT:    addiw a2, a2, 134
+; CHECK-NEXT:    addi a2, a2, 134
 ; CHECK-NEXT:    mul a0, a0, a2
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -1577,7 +1577,7 @@ define i64 @adduw_imm(i32 signext %0) nounwind {
 ;
 ; RV64XANDESPERF-LABEL: adduw_imm:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    nds.lea.b.ze a0, zero, a0
+; RV64XANDESPERF-NEXT:    nds.bfoz a0, a0, 31, 0
 ; RV64XANDESPERF-NEXT:    addi a0, a0, 5
 ; RV64XANDESPERF-NEXT:    ret
   %a = zext i32 %0 to i64
@@ -2061,7 +2061,7 @@ define i64 @add4104(i64 %a) {
 ; RV64I-LABEL: add4104:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, 8
+; RV64I-NEXT:    addi a1, a1, 8
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -2084,7 +2084,7 @@ define i64 @add4104_2(i64 %a) {
 ; RV64I-LABEL: add4104_2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 1
-; RV64I-NEXT:    addiw a1, a1, 8
+; RV64I-NEXT:    addi a1, a1, 8
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -2107,7 +2107,7 @@ define i64 @add8208(i64 %a) {
 ; RV64I-LABEL: add8208:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 2
-; RV64I-NEXT:    addiw a1, a1, 16
+; RV64I-NEXT:    addi a1, a1, 16
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -2298,7 +2298,7 @@ define i64 @addshl64_5_8(i64 %a, i64 %b) {
   ret i64 %e
 }
 
-; Make sure we use sext.h+slli+srli for Zba+Zbb.
+; Make sure we use sext.b+slli+srli for Zba+Zbb.
 define zeroext i32 @sext_ashr_zext_i8(i8 %a) nounwind {
 ; RV64I-LABEL: sext_ashr_zext_i8:
 ; RV64I:       # %bb.0:
@@ -2323,9 +2323,8 @@ define zeroext i32 @sext_ashr_zext_i8(i8 %a) nounwind {
 ;
 ; RV64XANDESPERF-LABEL: sext_ashr_zext_i8:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    slli a0, a0, 56
-; RV64XANDESPERF-NEXT:    srai a0, a0, 31
-; RV64XANDESPERF-NEXT:    srli a0, a0, 32
+; RV64XANDESPERF-NEXT:    nds.bfos a0, a0, 7, 0
+; RV64XANDESPERF-NEXT:    nds.bfoz a0, a0, 40, 9
 ; RV64XANDESPERF-NEXT:    ret
   %ext = sext i8 %a to i32
   %1 = ashr i32 %ext, 9
@@ -2472,9 +2471,8 @@ define zeroext i32 @sext_ashr_zext_i16(i16 %a) nounwind {
 ;
 ; RV64XANDESPERF-LABEL: sext_ashr_zext_i16:
 ; RV64XANDESPERF:       # %bb.0:
-; RV64XANDESPERF-NEXT:    slli a0, a0, 48
-; RV64XANDESPERF-NEXT:    srai a0, a0, 25
-; RV64XANDESPERF-NEXT:    srli a0, a0, 32
+; RV64XANDESPERF-NEXT:    nds.bfos a0, a0, 15, 0
+; RV64XANDESPERF-NEXT:    nds.bfoz a0, a0, 40, 9
 ; RV64XANDESPERF-NEXT:    ret
   %ext = sext i16 %a to i32
   %1 = ashr i32 %ext, 9
@@ -4101,7 +4099,7 @@ define i64 @srli_slli_i16(i64 %1) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    lui a1, 256
-; CHECK-NEXT:    addiw a1, a1, -16
+; CHECK-NEXT:    addi a1, a1, -16
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    ret
 entry:

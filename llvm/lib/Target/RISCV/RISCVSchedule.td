@@ -97,6 +97,7 @@ def WriteFCvtF64ToF128 : SchedWrite;
 def WriteFRoundF32     : SchedWrite;
 def WriteFRoundF64     : SchedWrite;
 def WriteFRoundF16     : SchedWrite;
+def WriteFRoundF128    : SchedWrite;
 
 def WriteFClass16   : SchedWrite;    // 16-bit floating point classify
 def WriteFClass32   : SchedWrite;    // 32-bit floating point classify
@@ -125,6 +126,7 @@ def WriteFMovI64ToF64     : SchedWrite;    // RV64I only
 def WriteFLI16        : SchedWrite;    // Floating point constant load
 def WriteFLI32        : SchedWrite;    // Floating point constant load
 def WriteFLI64        : SchedWrite;    // Floating point constant load
+def WriteFLI128       : SchedWrite;    // Floating point constant load
 
 def WriteFLD16        : SchedWrite;    // Floating point sp load
 def WriteFLD32        : SchedWrite;    // Floating point sp load
@@ -244,6 +246,7 @@ def ReadFCvtF64ToF128    : SchedRead;
 def ReadFRoundF16        : SchedRead;
 def ReadFRoundF32        : SchedRead;
 def ReadFRoundF64        : SchedRead;
+def ReadFRoundF128       : SchedRead;
 
 def ReadFClass16         : SchedRead;
 def ReadFClass32         : SchedRead;
@@ -442,18 +445,40 @@ def : ReadAdvance<ReadSFBALU, 0>;
 } // Unsupported = true
 }
 
-multiclass UnsupportedSchedZfa {
+multiclass UnsupportedSchedZfaWithQ {
 let Unsupported = true in {
-def : WriteRes<WriteFRoundF16, []>;
-def : WriteRes<WriteFRoundF32, []>;
+def : WriteRes<WriteFRoundF128, []>;
+def : WriteRes<WriteFLI128, []>;
+
+def : ReadAdvance<ReadFRoundF128, 0>;
+}
+}
+
+multiclass UnsupportedSchedZfaWithD : UnsupportedSchedZfaWithQ {
+let Unsupported = true in {
 def : WriteRes<WriteFRoundF64, []>;
-def : WriteRes<WriteFLI16, []>;
-def : WriteRes<WriteFLI32, []>;
 def : WriteRes<WriteFLI64, []>;
 
-def : ReadAdvance<ReadFRoundF32, 0>;
 def : ReadAdvance<ReadFRoundF64, 0>;
+}
+}
+
+multiclass UnsupportedSchedZfaWithZfh {
+let Unsupported = true in {
+def : WriteRes<WriteFRoundF16, []>;
+def : WriteRes<WriteFLI16, []>;
+
 def : ReadAdvance<ReadFRoundF16, 0>;
+}
+}
+
+multiclass UnsupportedSchedZfa : UnsupportedSchedZfaWithD,
+                                 UnsupportedSchedZfaWithZfh {
+let Unsupported = true in {
+def : WriteRes<WriteFRoundF32, []>;
+def : WriteRes<WriteFLI32, []>;
+
+def : ReadAdvance<ReadFRoundF32, 0>;
 } // Unsupported = true
 }
 

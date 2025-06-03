@@ -25,6 +25,7 @@ set(files
   __algorithm/find_segment_if.h
   __algorithm/for_each.h
   __algorithm/for_each_n.h
+  __algorithm/for_each_n_segment.h
   __algorithm/for_each_segment.h
   __algorithm/generate.h
   __algorithm/generate_n.h

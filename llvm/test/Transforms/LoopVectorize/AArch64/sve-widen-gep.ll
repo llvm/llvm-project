@@ -15,7 +15,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:   Live-in ir<%N> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:  vp<[[END1:%.+]]> = DERIVED-IV ir<%start.1> + vp<[[VEC_TC]]> * ir<8>

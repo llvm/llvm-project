@@ -602,7 +602,10 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     Scopes.push_back(GotoScope(
         ParentScope, diag::note_acc_branch_into_compute_construct,
         diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
-    BuildScopeInformation(CC->getStructuredBlock(), NewParentScope);
+    // This can be 'null' if the 'body' is a break that we diagnosed, so no
+    // reason to put the scope into place.
+    if (CC->getStructuredBlock())
+      BuildScopeInformation(CC->getStructuredBlock(), NewParentScope);
     return;
   }
 
@@ -612,7 +615,10 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     Scopes.push_back(GotoScope(
         ParentScope, diag::note_acc_branch_into_compute_construct,
         diag::note_acc_branch_out_of_compute_construct, CC->getBeginLoc()));
-    BuildScopeInformation(CC->getLoop(), NewParentScope);
+    // This can be 'null' if the 'body' is a break that we diagnosed, so no
+    // reason to put the scope into place.
+    if (CC->getLoop())
+      BuildScopeInformation(CC->getLoop(), NewParentScope);
     return;
   }
 

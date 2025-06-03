@@ -747,7 +747,7 @@ class ListInit final : public TypedInit,
                        public FoldingSetNode,
                        private TrailingObjects<ListInit, const Init *> {
   friend TrailingObjects;
-  unsigned NumValues;
+  unsigned NumElements;
 
 public:
   using const_iterator = const Init *const *;
@@ -769,11 +769,14 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  ArrayRef<const Init *> getValues() const {
-    return ArrayRef(getTrailingObjects(), NumValues);
+  ArrayRef<const Init *> getElements() const {
+    return ArrayRef(getTrailingObjects(), NumElements);
   }
 
-  const Init *getElement(unsigned Idx) const { return getValues()[Idx]; }
+  LLVM_DEPRECATED("Use getElements instead", "getElements")
+  ArrayRef<const Init *> getValues() const { return getElements(); }
+
+  const Init *getElement(unsigned Idx) const { return getElements()[Idx]; }
 
   const RecTy *getElementType() const {
     return cast<ListRecTy>(getType())->getElementType();
@@ -794,11 +797,11 @@ public:
   bool isConcrete() const override;
   std::string getAsString() const override;
 
-  const_iterator begin() const { return getValues().begin(); }
-  const_iterator end() const { return getValues().end(); }
+  const_iterator begin() const { return getElements().begin(); }
+  const_iterator end() const { return getElements().end(); }
 
-  size_t         size () const { return NumValues;  }
-  bool           empty() const { return NumValues == 0; }
+  size_t size() const { return NumElements; }
+  bool empty() const { return NumElements == 0; }
 
   const Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off list");
@@ -1438,11 +1441,23 @@ public:
   }
 
   static const DagInit *get(const Init *V, const StringInit *VN,
-                            ArrayRef<const Init *> ArgRange,
-                            ArrayRef<const StringInit *> NameRange);
+                            ArrayRef<const Init *> Args,
+                            ArrayRef<const StringInit *> ArgNames);
+
+  static const DagInit *get(const Init *V, ArrayRef<const Init *> Args,
+                            ArrayRef<const StringInit *> ArgNames) {
+    return DagInit::get(V, nullptr, Args, ArgNames);
+  }
+
   static const DagInit *
   get(const Init *V, const StringInit *VN,
       ArrayRef<std::pair<const Init *, const StringInit *>> ArgAndNames);
+
+  static const DagInit *
+  get(const Init *V,
+      ArrayRef<std::pair<const Init *, const StringInit *>> ArgAndNames) {
+    return DagInit::get(V, nullptr, ArgAndNames);
+  }
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1966,7 +1981,7 @@ public:
   detail::RecordKeeperImpl &getImpl() { return *Impl; }
 
   /// Get the main TableGen input file's name.
-  const std::string getInputFilename() const { return InputFilename; }
+  StringRef getInputFilename() const { return InputFilename; }
 
   /// Get the map of classes.
   const RecordMap &getClasses() const { return Classes; }

@@ -99,7 +99,7 @@ public:
     int FD;
     std::error_code EC;
     if (auto EC =
-            openFileForWrite(FinalPath, FD, CD_CreateAlways, OF_None, Mode))
+            openFileForWrite(FinalPath, FD, CD_CreateAlways, OF_Delete, Mode))
       return errorCodeToError(EC);
     raw_fd_ostream OS(FD, /*shouldClose=*/true, /*unbuffered=*/true);
     OS << StringRef((const char *)Buffer.base(), BufferSize);

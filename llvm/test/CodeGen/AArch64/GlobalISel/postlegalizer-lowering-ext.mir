@@ -152,7 +152,6 @@ body:             |
     liveins: $d0, $d1
     ; Undef shuffle indices should not prevent matching G_EXT.
     ; We should get a constant 3 here.
-    ;
     ; CHECK-LABEL: name: undef_elts_should_match_1
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
@@ -178,7 +177,6 @@ body:             |
     liveins: $d0, $d1
     ; Undef shuffle indices should not prevent matching G_EXT.
     ; We should get a constant 6 here.
-    ;
     ; CHECK-LABEL: name: undef_elts_should_match_2
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
@@ -253,7 +251,6 @@ body:             |
   bb.0:
     liveins: $q0, $q1
     ; We expect at least one defined element in the shuffle mask.
-    ;
     ; CHECK-LABEL: name: all_undef
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}

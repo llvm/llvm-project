@@ -240,8 +240,9 @@ std::string ScaledNumberBase::toString(uint64_t D, int16_t E, int Width,
   if (Above0) {
     appendNumber(Str, Above0);
     DigitsOut = Str.size();
-  } else
+  } else {
     appendDigit(Str, 0);
+  }
   std::reverse(Str.begin(), Str.end());
 
   // Return early if there's nothing after the decimal.
@@ -262,8 +263,9 @@ std::string ScaledNumberBase::toString(uint64_t D, int16_t E, int Width,
     if (ExtraShift) {
       --ExtraShift;
       Error *= 5;
-    } else
+    } else {
       Error *= 10;
+    }
 
     Below0 *= 10;
     Extra *= 10;
@@ -317,9 +319,7 @@ raw_ostream &ScaledNumberBase::print(raw_ostream &OS, uint64_t D, int16_t E,
   return OS << toString(D, E, Width, Precision);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void ScaledNumberBase::dump(uint64_t D, int16_t E, int Width) {
+void ScaledNumberBase::dump(uint64_t D, int16_t E, int Width) {
   print(dbgs(), D, E, Width, 0) << "[" << Width << ":" << D << "*2^" << E
                                 << "]";
 }
-#endif

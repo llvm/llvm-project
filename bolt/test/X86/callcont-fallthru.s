@@ -6,7 +6,7 @@
 # RUN: %clangxx %cxxflags %s %t.so -o %t -Wl,-q -nostdlib
 # RUN: link_fdata %s %t %t.pat PREAGGT1
 # RUN: link_fdata %s %t %t.pat2 PREAGGT2
-# DONTRUN: link_fdata %s %t %t.patplt PREAGGPLT
+# RUN-DISABLED: link_fdata %s %t %t.patplt PREAGGPLT
 
 # RUN: llvm-strip --strip-unneeded %t -o %t.strip
 # RUN: llvm-objcopy --remove-section=.eh_frame %t.strip %t.noeh
@@ -26,8 +26,8 @@
 
 ## Check pre-aggregated traces don't report zero-sized PLT fall-through as
 ## invalid trace
-# DONTRUN: llvm-bolt %t.strip --pa -p %t.patplt -o %t.out | FileCheck %s \
-# DONTRUN:   --check-prefix=CHECK-PLT
+# RUN-DISABLED: llvm-bolt %t.strip --pa -p %t.patplt -o %t.out | FileCheck %s \
+# RUN-DISABLED:   --check-prefix=CHECK-PLT
 # CHECK-PLT: traces mismatching disassembled function contents: 0
 
   .globl foo

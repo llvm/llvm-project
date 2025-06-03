@@ -53,7 +53,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         character.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
+        self.build_and_launch(program)
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         lines = [breakpoint1_line]
@@ -66,6 +66,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         # Cause a "scopes" to be sent for frame zero which should update the
         # selected thread and frame to frame 0.
         self.dap_server.get_local_variables(frameIndex=0)
+
         # Verify frame #0 is selected in the command interpreter by running
         # the "frame select" command with no frame index which will print the
         # currently selected frame.
@@ -74,15 +75,15 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         # Cause a "scopes" to be sent for frame one which should update the
         # selected thread and frame to frame 1.
         self.dap_server.get_local_variables(frameIndex=1)
+
         # Verify frame #1 is selected in the command interpreter by running
         # the "frame select" command with no frame index which will print the
         # currently selected frame.
-
         self.check_lldb_command("frame select", "frame #1", "frame 1 is selected")
 
     def test_custom_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True, commandEscapePrefix="::")
+        self.build_and_launch(program, commandEscapePrefix="::")
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
@@ -97,7 +98,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
 
     def test_empty_escape_prefix(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True, commandEscapePrefix="")
+        self.build_and_launch(program, commandEscapePrefix="")
         source = "main.cpp"
         breakpoint1_line = line_number(source, "// breakpoint 1")
         breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
@@ -114,7 +115,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
     def test_exit_status_message_sigterm(self):
         source = "main.cpp"
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True, commandEscapePrefix="")
+        self.build_and_launch(program, commandEscapePrefix="")
         breakpoint1_line = line_number(source, "// breakpoint 1")
         breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
         self.continue_to_breakpoints(breakpoint_ids)
@@ -168,7 +169,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
 
     def test_diagnositcs(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
+        self.build_and_launch(program)
 
         core = self.getBuildArtifact("minidump.core")
         self.yaml2obj("minidump.yaml", core)
@@ -177,7 +178,7 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
         diagnostics = self.collect_important(
-            timeout_secs=self.timeoutval, pattern="minidump file"
+            timeout_secs=self.DEFAULT_TIMEOUT, pattern="minidump file"
         )
 
         self.assertIn(
