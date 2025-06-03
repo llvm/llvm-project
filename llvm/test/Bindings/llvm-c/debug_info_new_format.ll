@@ -72,7 +72,7 @@
 ; CHECK-NEXT: !36 = !DISubrangeType(name: "foo", scope: !1, file: !1, line: 42, size: 64, baseType: !6, lowerBound: i64 0, upperBound: i64 1, stride: i64 8, bias: i64 4)
 ; CHECK-NEXT: !37 = !DIDerivedType(tag: DW_TAG_set_type, name: "enumset", scope: !1, file: !1, line: 42, baseType: !3, size: 64)
 ; CHECK-NEXT: !38 = !DIDerivedType(tag: DW_TAG_set_type, name: "subrangeset", scope: !1, file: !1, line: 42, baseType: !36, size: 64)
-; CHECK-NEXT: !39 = !DICompositeType(tag: DW_TAG_array_type, name: "foo", scope: !1, file: !1, line: 42, baseType: !6, size: 640, elements: !40, dataLocation: !DIExpression(), associated: !DIExpression(), allocated: !DIExpression(), rank: !DIExpression())
+; CHECK-NEXT: !39 = !DICompositeType(tag: DW_TAG_array_type, name: "foo", scope: !1, file: !1, line: 42, baseType: !6, size: 640, elements: !40, dataLocation: !DIExpression())
 ; CHECK-NEXT: !40 = !{!41}
 ; CHECK-NEXT: !41 = !DISubrange(count: 10, lowerBound: 0)
 ; CHECK-NEXT: !42 = !DICompositeType(tag: DW_TAG_class_type, name: "Class", scope: !4, file: !1, size: 192, flags: DIFlagFwdDecl, elements: !43, identifier: "FooClass")

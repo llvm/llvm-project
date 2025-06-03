@@ -1355,8 +1355,8 @@ LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
   return wrap(unwrap(Builder)->createArrayType(
       unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File), LineNo,
       Size, AlignInBits, unwrapDI<DIType>(Ty), Subs,
-      unwrapDI<DIExpression>(DataLocation), unwrap<DIExpression>(Associated),
-      unwrap<DIExpression>(Allocated), unwrap<DIExpression>(Rank),
+      unwrapDI<DIExpression>(DataLocation), unwrapDI<DIExpression>(Associated),
+      unwrapDI<DIExpression>(Allocated), unwrapDI<DIExpression>(Rank),
       unwrap(BitStride)));
 }
 

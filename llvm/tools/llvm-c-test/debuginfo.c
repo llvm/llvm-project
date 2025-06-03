@@ -264,7 +264,7 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef L = LLVMDIBuilderCreateExpression(DIB, NULL, 0);
   LLVMMetadataRef DynamicArrayMetadataTy = LLVMDIBuilderCreateDynamicArrayType(
       DIB, File, "foo", 3, 42, File, 64 * 10, 0, Int64Ty, DynSubscripts, 1, L,
-      L, L, L, NULL);
+      NULL, NULL, NULL, NULL);
   LLVMAddNamedMetadataOperand(
       M, "DynType",
       LLVMMetadataAsValue(LLVMGetModuleContext(M), DynamicArrayMetadataTy));
