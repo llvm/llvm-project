@@ -8,6 +8,7 @@
 #include "../Target.h"
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 
 #if defined(__aarch64__) && defined(__linux__)
 #include <errno.h>
@@ -37,6 +38,8 @@
 
 namespace llvm {
 namespace exegesis {
+
+extern llvm::cl::opt<bool> AArch64DisablePacControl;
 
 bool isPointerAuth(unsigned Opcode) {
   switch (Opcode) {
@@ -219,18 +222,14 @@ private:
       if (!AArch64DisablePacControl) {
         // For some systems with existing PAC keys set, it is better to
         // check the existing state of the key before setting it.
-        // For systems without PAC, this is a No-op but with PAC, it is
-        // better to check the existing key state and then disable/enable them
-        // to avoid runtime crashes owing to unsupported prctl opcodes or if the
-        // CPU implements FEAT_PAuth with FEAT_FPAC (in which case this method
-        // would silently return.). If the CPU implements FEAT_FPAC,
+        // If the CPU implements FEAT_FPAC,
         // authentication instructions almost certainly crash when being
         // benchmarked, so disable all the keys by default. On the other hand,
         // disabling the keys at run-time can probably crash llvm-exegesis at
         // some later point, depending on how it was built. For that reason, the
-        // user may pass
-        // --COMMAND-LINE-OPTION-NAME in case llvm-exegesis crashes or
-        // instruction timings are affected. Hence the guard for switching.
+        // user may pass --aarch64-disable-pac-control in case
+        // llvm-exegesis crashes or instruction timings are affected.
+        // Hence the guard for switching.
         errno = 0;
         long PacKeys = prctl_wrapper(PR_PAC_GET_ENABLED_KEYS);
         if (PacKeys < 0 || errno == EINVAL)
@@ -245,7 +244,8 @@ private:
           // Operate on all keys.
           const long KeysToControl =
               PR_PAC_APIAKEY | PR_PAC_APIBKEY | PR_PAC_APDAKEY | PR_PAC_APDBKEY;
-          // Disable all.
+          // PR_PAC_* prctl operations return EINVAL when Pointer Authentication
+          // is not available but no more errors are expected if we got here.
           const long EnabledBitMask = 0;
           if (prctl_wrapper(PR_PAC_SET_ENABLED_KEYS, KeysToControl,
                             EnabledBitMask) < 0) {
