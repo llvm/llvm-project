@@ -4330,6 +4330,8 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
       OutStreamer->emitLabel(Sym);
   } else if (isVerbose() && MBB.isMachineBlockAddressTaken()) {
     OutStreamer->AddComment("Block address taken");
+  } else if (isVerbose() && MBB.isInlineAsmBrIndirectTarget()) {
+    OutStreamer->AddComment("Inline asm indirect target");
   }
 
   // Print some verbose block comments.
