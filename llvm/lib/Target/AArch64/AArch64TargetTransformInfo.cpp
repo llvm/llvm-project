@@ -4575,7 +4575,7 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   if (VecTy->isScalableTy() && !ST->hasSVE())
     return InstructionCost::getInvalid();
 
-  // Scalable VFs will emit vector.de[interleave] intrinsics, and currently we
+  // Scalable VFs will emit vector.[de]interleave intrinsics, and currently we
   // only have lowering for power-of-2 factors.
   // TODO: Add lowering for vector.[de]interleave3 intrinsics and support in
   // InterleavedAccessPass for ld3/st3
