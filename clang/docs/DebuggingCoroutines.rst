@@ -8,7 +8,7 @@ Debugging C++ Coroutines
 Introduction
 ============
 
-Coroutines in C++ were introduced in C++20, and their user experience for
+Coroutines in C++ were introduced in C++20, and the user experience for
 debugging them can still be challenging. This document guides you how to most
 efficiently debug coroutines and how to navigate existing shortcomings in
 debuggers and compilers.
@@ -20,7 +20,7 @@ generators section, as it will introduce foundational debugging techniques also
 applicable to the debugging of asynchronous programming.
 
 Both compilers (clang, gcc, ...) and debuggers (lldb, gdb, ...) are
-still improving their support for coroutines. As such, we recommend to use the
+still improving their support for coroutines. As such, we recommend using the
 latest available version of your toolchain.
 
 This document focuses on clang and lldb. The screenshots show
@@ -35,20 +35,20 @@ This guide will first showcase the more polished, bleeding-edge experience, but
 will also show you how to debug coroutines with older toolchains. In general,
 the older your toolchain, the deeper you will have to dive into the
 implementation details of coroutines (such as their ABI). The further down in
-this document, the more low-level, technical the content will become. If you
-are on an up-to-date toolchain, you will hopefully be able to stop reading
+this document you go, the more low-level, technical the content will become. If
+you are on an up-to-date toolchain, you will hopefully be able to stop reading
 earlier.
 
 Debugging generators
 ====================
 
-The first major use case for coroutines in C++ are generators, i.e. functions
+The first major use case for coroutines in C++ are generators, i.e., functions
 which can produce values via ``co_yield``. Values are produced lazily,
 on-demand. For that purpose, every time a new value is requested the coroutine
 gets resumed. As soon as it reaches a ``co_yield`` and thereby returns the
 requested value, the coroutine is suspended again.
 
-This logic is encapsulated in a ``generator`` type similar to
+This logic is encapsulated in a ``generator`` type similar to this one:
 
 .. code-block:: c++
 
@@ -77,8 +77,8 @@ This logic is encapsulated in a ``generator`` type similar to
     generator(std::coroutine_handle<promise_type> h) : hdl(h) { hdl.resume(); }
     ~generator() { hdl.destroy(); }
 
-    generator<int>& operator++() { hdl.resume(); return *this; } // resume the coroutine
-    int operator*() const { return hdl.promise().current_value; }
+    generator<T>& operator++() { hdl.resume(); return *this; } // resume the coroutine
+    T operator*() const { return hdl.promise().current_value; }
 
     private:
     std::coroutine_handle<promise_type> hdl;
@@ -159,7 +159,7 @@ If you stop at ``++fib`` and try to step into the generator, you will first
 find yourself inside ``operator++``. Stepping into the ``handle.resume()`` will
 not work by default.
 
-This is because lldb does not step int functions from the standard library by
+This is because lldb does not step into functions from the standard library by
 default. To make this work, you first need to run ``settings set
 target.process.thread.step-avoid-regexp ""``. You can do so from the "Debug
 Console" towards the bottom of the screen. With that setting change, you can
@@ -267,7 +267,7 @@ Async stack traces
 
 Besides generators, the second common use case for coroutines in C++ is
 asynchronous programming, usually involving libraries such as stdexec, folly,
-cppcoro, boost::asio or similar libraries. Some of those libraries already
+cppcoro, boost::asio, or similar libraries. Some of those libraries already
 provide custom debugging support, so in addition to this guide, you might want
 to check out their documentation.
 
@@ -508,8 +508,8 @@ Ramp, resume and destroy functions
 Every coroutine is split into three parts:
 
 * The ramp function allocates the coroutine frame and initializes it, usually
-  copying over all variables into the coroutine frame * The resume function
-  continues the coroutine from its previous suspension point
+  copying over all variables into the coroutine frame
+* The resume function continues the coroutine from its previous suspension point
 * The destroy function destroys and deallocates the coroutine frame
 * The cleanup function destroys the coroutine frame but does not deallocate it.
   It is used when the coroutine's allocation was elided thanks to
@@ -625,7 +625,7 @@ In practice, one would use the ``show-coro-frame`` command provided by the
 
 LLDB comes with devirtualization support out of the box, as part of the
 pretty-printer for ``std::coroutine_handle``. Internally, this pretty-printer
-uses the second approach. We lookup the types in the destroy function and not
+uses the second approach. We look up the types in the destroy function and not
 the resume function because the resume function pointer will be set to a
 nullptr as soon as a coroutine reaches its final suspension point. If we used
 the resume function, devirtualization would hence fail for all coroutines that
