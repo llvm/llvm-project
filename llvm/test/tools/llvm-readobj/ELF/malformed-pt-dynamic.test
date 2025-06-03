@@ -133,7 +133,6 @@ Sections:
     Type:     SHT_DYNAMIC
     Address:  0x1000
     Offset:   0x1000
-    ShOffset: [[OFFSET=<none>]]
     Entries:
       - Tag:   DT_NULL
         Value: 0
@@ -142,5 +141,6 @@ Sections:
 ProgramHeaders:
   - Type:     PT_DYNAMIC
     FileSize: [[FILESIZE=<none>]]
+    Offset: [[OFFSET=<none>]]
     FirstSec: .dynamic
     LastSec:  .dynamic
