@@ -313,14 +313,10 @@ void XeGPUBlockingPass::runOnOperation() {
   (void)applyPatternsGreedily(op, std::move(patterns));
 
   op->walk([](Operation *op) {
-    // Resolve unrealized conversion cast ops emulating pack/unpack
-    if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
-      resolveUnrealizedConversionCastOp(castOp);
-
     // Remove the layout attributes cached per operands.
     for (OpOperand &opr : op->getOpOperands()) {
       std::string name = xegpu::getLayoutName(opr);
-      if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name))
+      if (op->hasAttrOfType<xegpu::LayoutAttr>(name))
         op->removeAttr(name);
     }
 
@@ -333,5 +329,9 @@ void XeGPUBlockingPass::runOnOperation() {
           xegpu::setLayoutAttr(result, layout.dropInstData());
       }
     }
+
+    // Resolve unrealized conversion cast ops emulating pack/unpack
+    if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
+      resolveUnrealizedConversionCastOp(castOp);
   });
 }

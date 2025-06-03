@@ -969,13 +969,13 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   const uint64_t alignment = op.getAlignment().value_or(0);
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
+  mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
 
   SmallVector<mlir::NamedAttribute> attributes;
   mlir::LLVM::GlobalOp newGlobalOp =
       rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
           op, llvmType, isConst, linkage, symbol, nullptr, alignment, addrSpace,
-          isDsoLocal, isThreadLocal,
-          /*comdat=*/mlir::SymbolRefAttr(), attributes);
+          isDsoLocal, isThreadLocal, comdatAttr, attributes);
   newGlobalOp.getRegion().emplaceBlock();
   rewriter.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
 }
@@ -1024,6 +1024,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   const mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   const StringRef symbol = op.getSymName();
   SmallVector<mlir::NamedAttribute> attributes;
+  mlir::SymbolRefAttr comdatAttr = getComdatAttr(op, rewriter);
 
   if (init.has_value()) {
     if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {
@@ -1054,10 +1055,31 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // Rewrite op.
   rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
       op, llvmType, isConst, linkage, symbol, init.value_or(mlir::Attribute()),
-      alignment, addrSpace, isDsoLocal, isThreadLocal,
-      /*comdat=*/mlir::SymbolRefAttr(), attributes);
-
+      alignment, addrSpace, isDsoLocal, isThreadLocal, comdatAttr, attributes);
   return mlir::success();
+}
+
+mlir::SymbolRefAttr
+CIRToLLVMGlobalOpLowering::getComdatAttr(cir::GlobalOp &op,
+                                         mlir::OpBuilder &builder) const {
+  if (!op.getComdat())
+    return mlir::SymbolRefAttr{};
+
+  mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  StringRef comdatName("__llvm_comdat_globals");
+  if (!comdatOp) {
+    builder.setInsertionPointToStart(module.getBody());
+    comdatOp =
+        builder.create<mlir::LLVM::ComdatOp>(module.getLoc(), comdatName);
+  }
+
+  builder.setInsertionPointToStart(&comdatOp.getBody().back());
+  auto selectorOp = builder.create<mlir::LLVM::ComdatSelectorOp>(
+      comdatOp.getLoc(), op.getSymName(), mlir::LLVM::comdat::Comdat::Any);
+  return mlir::SymbolRefAttr::get(
+      builder.getContext(), comdatName,
+      mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr()));
 }
 
 mlir::LogicalResult CIRToLLVMSwitchFlatOpLowering::matchAndRewrite(
@@ -1836,10 +1858,6 @@ mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
     cir::VecCmpOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(mlir::isa<cir::VectorType>(op.getType()) &&
-         mlir::isa<cir::VectorType>(op.getLhs().getType()) &&
-         mlir::isa<cir::VectorType>(op.getRhs().getType()) &&
-         "Vector compare with non-vector type");
   mlir::Type elementType = elementTypeIfVector(op.getLhs().getType());
   mlir::Value bitResult;
   if (auto intType = mlir::dyn_cast<cir::IntType>(elementType)) {

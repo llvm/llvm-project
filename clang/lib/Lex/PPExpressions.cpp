@@ -984,7 +984,6 @@ static std::optional<CXXStandardLibraryVersionInfo>
 getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
                              CXXStandardLibraryVersionInfo::Library Lib) {
   MacroInfo *Macro = PP.getMacroInfo(PP.getIdentifierInfo(MacroName));
-
   if (!Macro || Macro->getNumTokens() != 1 || !Macro->isObjectLike())
     return std::nullopt;
 
@@ -995,7 +994,7 @@ getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
   llvm::StringRef RevisionDate =
       PP.getSpelling(RevisionDateTok, Buffer, &Invalid);
   if (!Invalid) {
-    unsigned Value;
+    std::uint64_t Value;
     // We don't use NumericParser to avoid diagnostics
     if (!RevisionDate.consumeInteger(10, Value))
       return CXXStandardLibraryVersionInfo{Lib, Value};
@@ -1004,7 +1003,7 @@ getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
                                        0};
 }
 
-std::optional<unsigned> Preprocessor::getStdLibCxxVersion() {
+std::optional<uint64_t> Preprocessor::getStdLibCxxVersion() {
   if (!CXXStandardLibraryVersion)
     CXXStandardLibraryVersion = getCXXStandardLibraryVersion(
         *this, "__GLIBCXX__", CXXStandardLibraryVersionInfo::LibStdCXX);
@@ -1017,10 +1016,10 @@ std::optional<unsigned> Preprocessor::getStdLibCxxVersion() {
   return std::nullopt;
 }
 
-bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(unsigned FixedVersion) {
+bool Preprocessor::NeedsStdLibCxxWorkaroundBefore(uint64_t FixedVersion) {
   assert(FixedVersion >= 2000'00'00 && FixedVersion <= 2100'00'00 &&
          "invalid value for __GLIBCXX__");
-  std::optional<unsigned> Ver = getStdLibCxxVersion();
+  std::optional<std::uint64_t> Ver = getStdLibCxxVersion();
   if (!Ver)
     return false;
   return *Ver < FixedVersion;

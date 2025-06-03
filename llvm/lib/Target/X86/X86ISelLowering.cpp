@@ -166,26 +166,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       addBypassSlowDiv(64, 32);
   }
 
-  // Setup Windows compiler runtime calls.
-  if (Subtarget.isTargetWindowsMSVC() || Subtarget.isTargetWindowsItanium()) {
-    static const struct {
-      const RTLIB::Libcall Op;
-      const char * const Name;
-      const CallingConv::ID CC;
-    } LibraryCalls[] = {
-      { RTLIB::SDIV_I64, "_alldiv", CallingConv::X86_StdCall },
-      { RTLIB::UDIV_I64, "_aulldiv", CallingConv::X86_StdCall },
-      { RTLIB::SREM_I64, "_allrem", CallingConv::X86_StdCall },
-      { RTLIB::UREM_I64, "_aullrem", CallingConv::X86_StdCall },
-      { RTLIB::MUL_I64, "_allmul", CallingConv::X86_StdCall },
-    };
-
-    for (const auto &LC : LibraryCalls) {
-      setLibcallName(LC.Op, LC.Name);
-      setLibcallCallingConv(LC.Op, LC.CC);
-    }
-  }
-
   if (Subtarget.canUseCMPXCHG16B())
     setMaxAtomicSizeInBitsSupported(128);
   else if (Subtarget.canUseCMPXCHG8B())
@@ -532,6 +512,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
+
+  // FIXME: This should be set in RuntimeLibcallsInfo
   if (TM.Options.ExceptionModel == ExceptionHandling::SjLj)
     setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
 
@@ -4153,8 +4135,7 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
       isNullConstant(Vec.getOperand(2)))
     return DAG.getUNDEF(ResultVT);
 
-  SDValue VecIdx = DAG.getVectorIdxConstant(IdxVal, dl);
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResultVT, Vec, VecIdx);
+  return DAG.getExtractSubvector(dl, ResultVT, Vec, IdxVal);
 }
 
 /// Generate a DAG to grab 128-bits from a vector > 128 bits.  This
@@ -4166,7 +4147,8 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
 static SDValue extract128BitVector(SDValue Vec, unsigned IdxVal,
                                    SelectionDAG &DAG, const SDLoc &dl) {
   assert((Vec.getValueType().is256BitVector() ||
-          Vec.getValueType().is512BitVector()) && "Unexpected vector size!");
+          Vec.getValueType().is512BitVector()) &&
+         "Unexpected vector size!");
   return extractSubVector(Vec, IdxVal, DAG, dl, 128);
 }
 
@@ -4185,20 +4167,16 @@ static SDValue insertSubVector(SDValue Result, SDValue Vec, unsigned IdxVal,
   // Inserting UNDEF is Result
   if (Vec.isUndef())
     return Result;
-  EVT VT = Vec.getValueType();
-  EVT ElVT = VT.getVectorElementType();
-  EVT ResultVT = Result.getValueType();
 
   // Insert the relevant vectorWidth bits.
-  unsigned ElemsPerChunk = vectorWidth/ElVT.getSizeInBits();
+  EVT VT = Vec.getValueType();
+  unsigned ElemsPerChunk = vectorWidth / VT.getScalarSizeInBits();
   assert(isPowerOf2_32(ElemsPerChunk) && "Elements per chunk not power of 2");
 
   // This is the index of the first element of the vectorWidth-bit chunk
   // we want. Since ElemsPerChunk is a power of 2 just need to clear bits.
   IdxVal &= ~(ElemsPerChunk - 1);
-
-  SDValue VecIdx = DAG.getVectorIdxConstant(IdxVal, dl);
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, ResultVT, Result, Vec, VecIdx);
+  return DAG.getInsertSubvector(dl, Result, Vec, IdxVal);
 }
 
 /// Generate a DAG to put 128-bits into a vector > 128 bits.  This
@@ -4234,8 +4212,7 @@ static SDValue widenSubVector(MVT VT, SDValue Vec, bool ZeroNewElements,
   }
   SDValue Res = ZeroNewElements ? getZeroVector(VT, Subtarget, DAG, dl)
                                 : DAG.getUNDEF(VT);
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, VT, Res, Vec,
-                     DAG.getVectorIdxConstant(0, dl));
+  return DAG.getInsertSubvector(dl, Res, Vec, 0);
 }
 
 /// Widen a vector to a larger size with the same scalar type, with the new
@@ -42672,7 +42649,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         bool SplatLo = isShuffleEquivalent(Mask, {0, 1, 0, 1}, LHS);
         bool SplatHi = isShuffleEquivalent(Mask, {2, 3, 2, 3}, LHS);
         if ((SplatLo || SplatHi) && !Subtarget.hasAVX512() &&
-            X86::mayFoldLoad(LHS, Subtarget)) {
+            X86::mayFoldLoad(LHS, Subtarget, /*AssumeSingleUse=*/true)) {
           MVT MemVT = VT.getHalfNumVectorElementsVT();
           unsigned Ofs = SplatLo ? 0 : MemVT.getStoreSize();
           return getBROADCAST_LOAD(X86ISD::SUBV_BROADCAST_LOAD, DL, VT, MemVT,
@@ -53035,7 +53012,7 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
         (User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD ||
          User->getOpcode() == X86ISD::VBROADCAST_LOAD ||
          ISD::isNormalLoad(User)) &&
-        UserLd->getChain() == Chain && !User->hasAnyUseOfValue(1) &&
+        UserLd->getChain() == Chain && User->hasAnyUseOfValue(0) &&
         User->getValueSizeInBits(0).getFixedValue() >
             RegVT.getFixedSizeInBits()) {
       EVT UserVT = User->getValueType(0);
@@ -53057,6 +53034,7 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
               getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
                                             UserUndefs, UserBits)) {
             if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
+              DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
               SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
                                                  RegVT.getSizeInBits());
               Extract = DAG.getBitcast(RegVT, Extract);
@@ -53143,9 +53121,10 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
           UserLd->getChain() == Chain && UserLd->getBasePtr() == Ptr &&
           UserLd->getMemoryVT().getSizeInBits() == MemVT.getSizeInBits() &&
-          !User->hasAnyUseOfValue(1) &&
+          User->hasAnyUseOfValue(0) &&
           User->getValueSizeInBits(0).getFixedValue() >
               RegVT.getFixedSizeInBits()) {
+        DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
         SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
                                            RegVT.getSizeInBits());
         Extract = DAG.getBitcast(RegVT, Extract);
@@ -59441,10 +59420,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   // If we're splatting the lower half subvector of a full vector load into the
   // upper half, just splat the subvector directly, potentially creating a
   // subvector broadcast.
-  // TODO: Drop hasOneUse checks.
   if ((int)IdxVal == (VecNumElts / 2) &&
-      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits()) &&
-      (Vec.hasOneUse() || SubVec.hasOneUse())) {
+      Vec.getValueSizeInBits() == (2 * SubVec.getValueSizeInBits())) {
     auto *VecLd = dyn_cast<LoadSDNode>(Vec);
     auto *SubLd = dyn_cast<LoadSDNode>(SubVec);
     if (VecLd && SubLd &&

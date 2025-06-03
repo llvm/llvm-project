@@ -108,6 +108,7 @@ public:
   void printStackMap() const override;
   void printAddrsig() override;
   void printCGProfile() override;
+  void printStringTable() override;
 
 private:
   StringRef getSymbolName(uint32_t Index);
@@ -2217,6 +2218,17 @@ void COFFDumper::printCGProfile() {
     W.printNumber("To", getSymbolName(ToIndex), ToIndex);
     W.printNumber("Weight", Count);
   }
+}
+
+void COFFDumper::printStringTable() {
+  DictScope DS(W, "StringTable");
+  StringRef StrTable = Obj->getStringTable();
+  uint32_t StrTabSize = StrTable.size();
+  W.printNumber("Length", StrTabSize);
+  // Print strings from the fifth byte, since the first four bytes contain the
+  // length (in bytes) of the string table (including the length field).
+  if (StrTabSize > 4)
+    printAsStringList(StrTable, 4);
 }
 
 StringRef COFFDumper::getSymbolName(uint32_t Index) {
