@@ -28,8 +28,10 @@ enum class RootSignatureElementKind {
   Error = 0,
   RootFlags = 1,
   RootConstants = 2,
-  RootDescriptors = 3,
-  DescriptorTable = 4,
+  SRV = 3,
+  UAV = 4,
+  CBV = 5,
+  DescriptorTable = 6,
 };
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
   friend AnalysisInfoMixin<RootSignatureAnalysis>;

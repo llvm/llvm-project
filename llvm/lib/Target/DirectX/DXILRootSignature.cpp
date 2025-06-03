@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "DXILRootSignature.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -57,7 +58,7 @@ static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
 
 static std::optional<StringRef> extractMdStringValue(MDNode *Node,
                                                      unsigned int OpId) {
-  MDString *NodeText = cast<MDString>(Node->getOperand(OpId));
+  MDString *NodeText = dyn_cast<MDString>(Node->getOperand(OpId));
   if (NodeText == nullptr)
     return std::nullopt;
   return NodeText->getString();
@@ -117,23 +118,31 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
 
 static bool parseRootDescriptors(LLVMContext *Ctx,
                                  mcdxbc::RootSignatureDesc &RSD,
-                                 MDNode *RootDescriptorNode) {
-
+                                 MDNode *RootDescriptorNode,
+                                 RootSignatureElementKind ElementKind) {
+  assert(ElementKind == RootSignatureElementKind::SRV ||
+         ElementKind == RootSignatureElementKind::UAV ||
+         ElementKind == RootSignatureElementKind::CBV &&
+             "parseRootDescriptors should only be called with RootDescriptor "
+             "element kind.");
   if (RootDescriptorNode->getNumOperands() != 5)
     return reportError(Ctx, "Invalid format for Root Descriptor Element");
 
-  std::optional<StringRef> ElementText =
-      extractMdStringValue(RootDescriptorNode, 0);
-
-  if (!ElementText.has_value())
-    return reportError(Ctx, "Root Descriptor, first element is not a string.");
-
   dxbc::RTS0::v1::RootParameterHeader Header;
-  Header.ParameterType =
-      StringSwitch<uint32_t>(*ElementText)
-          .Case("RootCBV", llvm::to_underlying(dxbc::RootParameterType::CBV))
-          .Case("RootSRV", llvm::to_underlying(dxbc::RootParameterType::SRV))
-          .Case("RootUAV", llvm::to_underlying(dxbc::RootParameterType::UAV));
+  switch (ElementKind) {
+  case RootSignatureElementKind::SRV:
+    Header.ParameterType = llvm::to_underlying(dxbc::RootParameterType::SRV);
+    break;
+  case RootSignatureElementKind::UAV:
+    Header.ParameterType = llvm::to_underlying(dxbc::RootParameterType::UAV);
+    break;
+  case RootSignatureElementKind::CBV:
+    Header.ParameterType = llvm::to_underlying(dxbc::RootParameterType::CBV);
+    break;
+  default:
+    llvm_unreachable("invalid Root Descriptor kind");
+    break;
+  }
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 1))
     Header.ShaderVisibility = *Val;
@@ -253,17 +262,17 @@ static bool parseDescriptorTable(LLVMContext *Ctx,
 static bool parseRootSignatureElement(LLVMContext *Ctx,
                                       mcdxbc::RootSignatureDesc &RSD,
                                       MDNode *Element) {
-  MDString *ElementText = cast<MDString>(Element->getOperand(0));
-  if (ElementText == nullptr)
+  std::optional<StringRef> ElementText = extractMdStringValue(Element, 0);
+  if (!ElementText.has_value())
     return reportError(Ctx, "Invalid format for Root Element");
 
   RootSignatureElementKind ElementKind =
-      StringSwitch<RootSignatureElementKind>(ElementText->getString())
+      StringSwitch<RootSignatureElementKind>(*ElementText)
           .Case("RootFlags", RootSignatureElementKind::RootFlags)
           .Case("RootConstants", RootSignatureElementKind::RootConstants)
-          .Case("RootCBV", RootSignatureElementKind::RootDescriptors)
-          .Case("RootSRV", RootSignatureElementKind::RootDescriptors)
-          .Case("RootUAV", RootSignatureElementKind::RootDescriptors)
+          .Case("RootCBV", RootSignatureElementKind::CBV)
+          .Case("RootSRV", RootSignatureElementKind::SRV)
+          .Case("RootUAV", RootSignatureElementKind::UAV)
           .Case("DescriptorTable", RootSignatureElementKind::DescriptorTable)
           .Default(RootSignatureElementKind::Error);
 
@@ -273,13 +282,14 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
     return parseRootFlags(Ctx, RSD, Element);
   case RootSignatureElementKind::RootConstants:
     return parseRootConstants(Ctx, RSD, Element);
-  case RootSignatureElementKind::RootDescriptors:
-    return parseRootDescriptors(Ctx, RSD, Element);
+  case RootSignatureElementKind::CBV:
+  case RootSignatureElementKind::SRV:
+  case RootSignatureElementKind::UAV:
+    return parseRootDescriptors(Ctx, RSD, Element, ElementKind);
   case RootSignatureElementKind::DescriptorTable:
     return parseDescriptorTable(Ctx, RSD, Element);
   case RootSignatureElementKind::Error:
-    return reportError(Ctx, "Invalid Root Signature Element: " +
-                                ElementText->getString());
+    return reportError(Ctx, "Invalid Root Signature Element: " + *ElementText);
   }
 
   llvm_unreachable("Unhandled RootSignatureElementKind enum.");
@@ -308,9 +318,11 @@ static bool verifyVersion(uint32_t Version) {
 }
 
 static bool verifyRegisterValue(uint32_t RegisterValue) {
-  return !(RegisterValue == 0xFFFFFFFF);
+  return RegisterValue != ~0U;
 }
 
+// This Range is reserverved, therefore invalid, according to the spec
+// https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#all-the-values-should-be-legal
 static bool verifyRegisterSpace(uint32_t RegisterSpace) {
   return !(RegisterSpace >= 0xFFFFFFF0 && RegisterSpace < 0xFFFFFFFF);
 }
@@ -408,42 +420,42 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
            "Invalid value for ParameterType");
 
-    switch(Info.Header.ParameterType) {
-    
-      case llvm::to_underlying(dxbc::RootParameterType::CBV):
-      case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      case llvm::to_underlying(dxbc::RootParameterType::SRV): {
-        const dxbc::RTS0::v2::RootDescriptor &Descriptor = RSD.ParametersContainer.getRootDescriptor(Info.Location);
-        if (!verifyRegisterValue(Descriptor.ShaderRegister))
-          return reportValueError(Ctx, "ShaderRegister",
-                                  Descriptor.ShaderRegister);
+    switch (Info.Header.ParameterType) {
 
-        if (!verifyRegisterSpace(Descriptor.RegisterSpace))
-          return reportValueError(Ctx, "RegisterSpace",
-                                  Descriptor.RegisterSpace);
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV): {
+      const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+          RSD.ParametersContainer.getRootDescriptor(Info.Location);
+      if (!verifyRegisterValue(Descriptor.ShaderRegister))
+        return reportValueError(Ctx, "ShaderRegister",
+                                Descriptor.ShaderRegister);
 
-        if(RSD.Version > 1) {
-          if (!verifyDescriptorFlag(Descriptor.Flags))
-            return reportValueError(Ctx, "DescriptorFlag", Descriptor.Flags);
-        }
-        break;
+      if (!verifyRegisterSpace(Descriptor.RegisterSpace))
+        return reportValueError(Ctx, "RegisterSpace", Descriptor.RegisterSpace);
+
+      if (RSD.Version > 1) {
+        if (!verifyDescriptorFlag(Descriptor.Flags))
+          return reportValueError(Ctx, "DescriptorFlag", Descriptor.Flags);
       }
-      case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
-        const mcdxbc::DescriptorTable &Table =
-            RSD.ParametersContainer.getDescriptorTable(Info.Location);
-        for (const dxbc::RTS0::v2::DescriptorRange &Range : Table) {
-          if (!verifyRangeType(Range.RangeType))
-            return reportValueError(Ctx, "RangeType", Range.RangeType);
+      break;
+    }
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+      const mcdxbc::DescriptorTable &Table =
+          RSD.ParametersContainer.getDescriptorTable(Info.Location);
+      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table) {
+        if (!verifyRangeType(Range.RangeType))
+          return reportValueError(Ctx, "RangeType", Range.RangeType);
 
-          if (!verifyRegisterSpace(Range.RegisterSpace))
-            return reportValueError(Ctx, "RegisterSpace", Range.RegisterSpace);
+        if (!verifyRegisterSpace(Range.RegisterSpace))
+          return reportValueError(Ctx, "RegisterSpace", Range.RegisterSpace);
 
-          if (!verifyDescriptorRangeFlag(RSD.Version, Range.RangeType,
-                                         Range.Flags))
-            return reportValueError(Ctx, "DescriptorFlag", Range.Flags);
-        }
-        break;
+        if (!verifyDescriptorRangeFlag(RSD.Version, Range.RangeType,
+                                        Range.Flags))
+          return reportValueError(Ctx, "DescriptorFlag", Range.Flags);
       }
+      break;
+    }
     }
   }
 
@@ -587,14 +599,14 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       case llvm::to_underlying(dxbc::RootParameterType::CBV):
       case llvm::to_underlying(dxbc::RootParameterType::UAV):
       case llvm::to_underlying(dxbc::RootParameterType::SRV): {
-                const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+        const dxbc::RTS0::v2::RootDescriptor &Descriptor =
             RS.ParametersContainer.getRootDescriptor(Loc);
         OS << indent(Space + 2)
            << "Register Space: " << Descriptor.RegisterSpace << "\n";
         OS << indent(Space + 2)
            << "Shader Register: " << Descriptor.ShaderRegister << "\n";
-        if(RS.Version > 1)
-        OS << indent(Space + 2) << "Flags: " << Descriptor.Flags << "\n";
+        if (RS.Version > 1)
+          OS << indent(Space + 2) << "Flags: " << Descriptor.Flags << "\n";
         break;
       }
       case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
