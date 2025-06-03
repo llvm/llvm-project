@@ -130,7 +130,7 @@ precedence. Here are a few examples.
   # Function `bad_bar`` will be instrumented.
   # Function `good_bar` will not be instrumented.
   fun:*
-  fun:bar*
+  fun:*bar
   fun:bad_bar=sanitize
 
 Format
