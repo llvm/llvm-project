@@ -223,9 +223,9 @@ void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
 
   if (info.size > info.storageSize)
     info.size = info.storageSize;
-  // Reverse the bit offsets for big endian machines. Because we represent
-  // a bitfield as a single large integer load, we can imagine the bits
-  // counting from the most-significant-bit instead the
+  // Reverse the bit offsets for big endian machines. Since bitfields are laid
+  // out as packed bits within an integer-sized unit, we can imagine the bits
+  // counting from the most-significant-bit instead of the
   // least-significant-bit.
   assert(!cir::MissingFeatures::isBigEndian());
 
@@ -292,35 +292,25 @@ void CIRRecordLowering::fillOutputFields() {
 
 void CIRRecordLowering::accumulateBitFields(
     RecordDecl::field_iterator field, RecordDecl::field_iterator fieldEnd) {
-  // Run stores the first element of the current run of bitfields.  FieldEnd is
-  // used as a special value to note that we don't have a current run.  A
+  // 'run' stores the first element of the current run of bitfields. 'fieldEnd'
+  // is used as a special value to note that we don't have a current run.  A
   // bitfield run is a contiguous collection of bitfields that can be stored in
   // the same storage block.  Zero-sized bitfields and bitfields that would
   // cross an alignment boundary break a run and start a new one.
   RecordDecl::field_iterator run = fieldEnd;
-  // Tail is the offset of the first bit off the end of the current run.  It's
+  // 'tail' is the offset of the first bit off the end of the current run. It's
   // used to determine if the ASTRecordLayout is treating these two bitfields as
-  // contiguous.  StartBitOffset is offset of the beginning of the Run.
+  // contiguous. 'startBitOffset' is offset of the beginning of the run.
   uint64_t startBitOffset, tail = 0;
   assert(!cir::MissingFeatures::isDiscreteBitFieldABI());
 
-  // Check if OffsetInRecord (the size in bits of the current run) is better
+  // Check if 'offsetInRecord' (the size in bits of the current run) is better
   // as a single field run. When OffsetInRecord has legal integer width, and
   // its bitfield offset is naturally aligned, it is better to make the
   // bitfield a separate storage component so as it can be accessed directly
   // with lower cost.
-  auto isBetterAsSingleFieldRun = [&](uint64_t offsetInRecord,
-                                      uint64_t startBitOffset,
-                                      uint64_t nextTail = 0) {
-    if (!cirGenTypes.getCGModule().getCodeGenOpts().FineGrainedBitfieldAccesses)
-      return false;
-    cirGenTypes.getCGModule().errorNYI(field->getSourceRange(),
-                                       "NYI FineGrainedBitfield");
-    return true;
-  };
+  assert(!cir::MissingFeatures::nonFineGrainedBitfields());
 
-  // The start field is better as a single field run.
-  bool startFieldAsSingleRun = false;
   for (;;) {
     // Check to see if we need to start a new run.
     if (run == fieldEnd) {
@@ -332,27 +322,34 @@ void CIRRecordLowering::accumulateBitFields(
         run = field;
         startBitOffset = getFieldBitOffset(*field);
         tail = startBitOffset + field->getBitWidthValue();
-        startFieldAsSingleRun =
-            isBetterAsSingleFieldRun(tail - startBitOffset, startBitOffset);
+        assert(!cir::MissingFeatures::nonFineGrainedBitfields());
       }
       ++field;
       continue;
     }
 
-    // If the start field of a new run is better as a single run, or if current
-    // field (or consecutive fields) is better as a single run, or if current
-    // field has zero width bitfield and either UseZeroLengthBitfieldAlignment
-    // or UseBitFieldTypeAlignment is set to true, or if the offset of current
-    // field is inconsistent with the offset of previous field plus its offset,
-    // skip the block below and go ahead to emit the storage. Otherwise, try to
-    // add bitfields to the run.
+    // Decide whether to continue extending the current bitfield run.
+    //
+    // Skip the block below and go directly to emitting storage if any of the
+    // following is true:
+    // - 1. The first field in the run is better treated as its own run.
+    // - 2. We have reached the end of the fields.
+    // - 3. The current field (or set of fields) is better as its own run.
+    // - 4. The current field is a zero-width bitfield or:
+    //     - Zero-length bitfield alignment is enabled, and
+    //     - Bitfield type alignment is enabled.
+    // - 5. The current field's offset doesn't match the expected tail (i.e.,
+    // layout isn't contiguous).
+    //
+    // If none of the above conditions are met, add the current field to the
+    // current run.
     uint64_t nextTail = tail;
     if (field != fieldEnd)
       nextTail += field->getBitWidthValue();
 
-    if (!startFieldAsSingleRun && field != fieldEnd &&
-        !isBetterAsSingleFieldRun(tail - startBitOffset, startBitOffset,
-                                  nextTail) &&
+    // TODO: add condition 1 and 3
+    assert(!cir::MissingFeatures::nonFineGrainedBitfields());
+    if (field != fieldEnd &&
         (!field->isZeroLengthBitField() ||
          (!astContext.getTargetInfo().useZeroLengthBitfieldAlignment() &&
           !astContext.getTargetInfo().useBitFieldTypeAlignment())) &&
@@ -373,7 +370,6 @@ void CIRRecordLowering::accumulateBitFields(
       members.push_back(MemberInfo(bitsToCharUnits(startBitOffset),
                                    MemberInfo::InfoKind::Field, nullptr, *run));
     run = fieldEnd;
-    startFieldAsSingleRun = false;
   }
 }
 

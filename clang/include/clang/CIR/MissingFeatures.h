@@ -219,6 +219,7 @@ struct MissingFeatures {
   static bool peepholeProtection() { return false; }
   static bool instrumentation() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
+  static bool nonFineGrainedBitfields() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
