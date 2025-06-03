@@ -2583,7 +2583,7 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
 
   // Generate VPReductionRecipe.
   VPReductionRecipe *Red = nullptr;
-  if (unsigned ScaleFactor = MulAcc->getVFScaleFactor())
+  if (unsigned ScaleFactor = MulAcc->getVFScaleFactor(); ScaleFactor > 1)
     Red = new VPPartialReductionRecipe(Instruction::Add, MulAcc->getChainOp(),
                                        Mul, MulAcc->getCondOp(), ScaleFactor);
   else
@@ -2940,7 +2940,8 @@ tryToCreateAbstractPartialReductionRecipe(VPPartialReductionRecipe *PRed) {
     return;
 
   auto *AbstractR = new VPMulAccumulateReductionRecipe(
-      PRed, BinOpR, Ext0R, Ext1R, Ext0R->getResultType());
+      PRed, BinOpR, Ext0R, Ext1R, Ext0R->getResultType(),
+      PRed->getVFScaleFactor());
   AbstractR->insertBefore(PRed);
   PRed->replaceAllUsesWith(AbstractR);
 }

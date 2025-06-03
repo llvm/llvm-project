@@ -2572,7 +2572,7 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
 InstructionCost
 VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
-  if (getVFScaleFactor() > 0) {
+  if (getVFScaleFactor() > 1) {
     return Ctx.TTI.getPartialReductionCost(
         Instruction::Add, Ctx.Types.inferScalarType(getVecOp0()),
         Ctx.Types.inferScalarType(getVecOp1()), getResultType(), VF,
@@ -2658,7 +2658,7 @@ void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " + ";
-  if (getVFScaleFactor() > 0)
+  if (getVFScaleFactor() > 1)
     O << "partial.";
   O << "reduce."
     << Instruction::getOpcodeName(

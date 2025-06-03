@@ -2721,7 +2721,7 @@ public:
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
                                  VPWidenCastRecipe *Ext0,
                                  VPWidenCastRecipe *Ext1, Type *ResultTy,
-                                 unsigned ScaleFactor = 0)
+                                 unsigned ScaleFactor = 1)
       : VPReductionRecipe(
             VPDef::VPMulAccumulateReductionSC, R->getRecurrenceKind(),
             {R->getChainOp(), Ext0->getOperand(0), Ext1->getOperand(0)},

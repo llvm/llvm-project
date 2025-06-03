@@ -70,10 +70,6 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:   IR   %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:   IR   %exitcond.not = icmp eq i64 %iv.next, 1024
 ; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[EXTRACT]]> from middle.block)
-; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK: VPlan 'Final VPlan for VF={8,16},UF={1}' {
 ; CHECK-NEXT: Live-in ir<[[EP_VFxUF:.+]]> = VF * UF
@@ -87,18 +83,16 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<vector.ph>:
-; CHECK-NEXT: Successor(s): vector loop
+; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[EP_IV:%.+]]> = phi ir<0>, vp<%index.next>
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:     EMIT-SCALAR vp<[[EP_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
 ; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, ir<%add> (VF scaled by 1/4)
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[EP_IV]]>, ir<1>
-; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[STEPS]]>
+; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[EP_IV]]>
 ; CHECK-NEXT:     vp<[[PTR_A:%.+]]> = vector-pointer ir<%gep.a>
 ; CHECK-NEXT:     WIDEN ir<%load.a> = load vp<[[PTR_A]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%ext.a> = sext ir<%load.a> to i32
-; CHECK-NEXT:     CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[STEPS]]>
+; CHECK-NEXT:     CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[EP_IV]]>
 ; CHECK-NEXT:     vp<[[PTR_B:%.+]]> = vector-pointer ir<%gep.b>
 ; CHECK-NEXT:     WIDEN ir<%load.b> = load vp<[[PTR_B]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32
@@ -106,13 +100,11 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:     PARTIAL-REDUCE ir<%add> = add ir<%accum>, ir<%mul>
 ; CHECK-NEXT:     EMIT vp<[[EP_IV_NEXT:%.+]]> = add nuw vp<[[EP_IV]]>, ir<16>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[EP_IV_NEXT]]>, ir<1024>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): middle.block
+; CHECK-NEXT:   Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<%accum>, ir<%add>
-; CHECK-NEXT:   EMIT vp<[[EXTRACT:%.+]]> = extract-from-end vp<[[RED_RESULT]]>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[EXTRACT:%.+]]> = extract-last-element vp<[[RED_RESULT]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, ir<1024>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
@@ -122,8 +114,8 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT:   EMIT vp<[[EP_RESUME:%.+]]> = resume-phi ir<1024>, ir<0>
-; CHECK-NEXT:   EMIT vp<[[EP_MERGE:%.+]]> = resume-phi vp<[[RED_RESULT]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_RESUME:%.+]]> = resume-phi ir<1024>, ir<0>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_MERGE:%.+]]> = resume-phi vp<[[RED_RESULT]]>, ir<0>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
@@ -164,12 +156,13 @@ exit:
 
 define i32 @print_bundled_partial_reduction(ptr %a, ptr %b) {
 ; CHECK:      VPlan 'Initial VPlan for VF={8,16},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -177,7 +170,7 @@ define i32 @print_bundled_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<[[ACC:%.+]]> = phi ir<0>, vp<[[REDUCE:%.+]]> (VF scaled by 1/4)
+; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<[[ACC:%.+]]> = phi ir<0>, ir<[[REDUCE:%.+]]> (VF scaled by 1/4)
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[PTR_A:%.+]]> = vector-pointer ir<%gep.a>
@@ -185,7 +178,7 @@ define i32 @print_bundled_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:   CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[PTR_B:%.+]]> = vector-pointer ir<%gep.b>
 ; CHECK-NEXT:   WIDEN ir<%load.b> = load vp<[[PTR_B]]>
-; CHECK-NEXT:   MULACC-REDUCE vp<[[REDUCE:%.+]]> = ir<%accum> + partial.reduce.add (mul (ir<%load.b> extended to i32), (ir<%load.a> extended to i32))
+; CHECK-NEXT:   MULACC-REDUCE ir<[[REDUCE:%.+]]> = ir<%accum> + partial.reduce.add (mul (ir<%load.b> zext to i32), (ir<%load.a> zext to i32))
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
@@ -193,15 +186,19 @@ define i32 @print_bundled_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<[[ACC]]>, vp<[[REDUCE]]>
-; CHECK-NEXT:   EMIT vp<[[EXTRACT:%.+]]> = extract-from-end vp<[[RED_RESULT]]>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<%1>
+; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<[[ACC]]>, ir<[[REDUCE]]>
+; CHECK-NEXT:   EMIT vp<[[EXTRACT:%.+]]> = extract-last-element vp<[[RED_RESULT]]>
+; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<exit>:
+; CHECK-NEXT:   IR %add.lcssa = phi i32 [ [[REDUCE]], %for.body ] (extra operand: vp<[[EXTRACT]]> from middle.block)
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT vp<%bc.resume.val> = resume-phi vp<[[VEC_TC]]>, ir<0>
-; CHECK-NEXT:   EMIT vp<%bc.merge.rdx> = resume-phi vp<[[RED_RESULT]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val> = resume-phi vp<[[VEC_TC]]>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<%bc.merge.rdx> = resume-phi vp<[[RED_RESULT]]>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
@@ -233,30 +230,26 @@ define i32 @print_bundled_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: ir-bb<vector.ph>:
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
-; CHECK-NEXT: <x1> vector loop: {
-; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[EP_IV:%.+]]> = phi ir<0>, vp<%index.next>
-; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, vp<%7> (VF scaled by 1/4)
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[EP_IV]]>, ir<1>
-; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[PTR_A:%.+]]> = vector-pointer ir<%gep.a>
-; CHECK-NEXT:     WIDEN ir<%load.a> = load vp<[[PTR_A]]>
-; CHECK-NEXT:     CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[PTR_B:%.+]]> = vector-pointer ir<%gep.b>
-; CHECK-NEXT:     WIDEN ir<%load.b> = load vp<[[PTR_B]]>
-; CHECK-NEXT:     WIDEN-CAST vp<%4> = zext ir<%load.b> to i32
-; CHECK-NEXT:     WIDEN-CAST vp<%5> = zext ir<%load.a> to i32
-; CHECK-NEXT:     WIDEN vp<%6> = mul vp<%4>, vp<%5>
-; CHECK-NEXT:     PARTIAL-REDUCE vp<[[REDUCE:%.+]]> = add ir<%accum>, vp<%6>
-; CHECK-NEXT:     EMIT vp<[[EP_IV_NEXT:%.+]]> = add nuw vp<[[EP_IV]]>, ir<16>
-; CHECK-NEXT:     EMIT branch-on-count vp<[[EP_IV_NEXT]]>, ir<1024>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
+; CHECK-NEXT: vector.body:
+; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_IV:%.+]]> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, vp<[[REDUCE:%.+]]> (VF scaled by 1/4)
+; CHECK-NEXT:   CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[EP_IV]]>
+; CHECK-NEXT:   vp<[[PTR_A:%.+]]> = vector-pointer ir<%gep.a>
+; CHECK-NEXT:   WIDEN ir<%load.a> = load vp<[[PTR_A]]>
+; CHECK-NEXT:   CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[EP_IV]]>
+; CHECK-NEXT:   vp<[[PTR_B:%.+]]> = vector-pointer ir<%gep.b>
+; CHECK-NEXT:   WIDEN ir<%load.b> = load vp<[[PTR_B]]>
+; CHECK-NEXT:   WIDEN-CAST vp<[[EXT_B:%.+]]> = zext ir<%load.b> to i32
+; CHECK-NEXT:   WIDEN-CAST vp<[[EXT_A:%.+]]> = zext ir<%load.a> to i32
+; CHECK-NEXT:   WIDEN vp<[[MUL:%.+]]> = mul vp<[[EXT_B]]>, vp<[[EXT_A]]>
+; CHECK-NEXT:   PARTIAL-REDUCE vp<[[REDUCE]]> = add ir<%accum>, vp<[[MUL]]>
+; CHECK-NEXT:   EMIT vp<[[EP_IV_NEXT:%.+]]> = add nuw vp<[[EP_IV]]>, ir<16>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[EP_IV_NEXT]]>, ir<1024>
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<%9> = compute-reduction-result ir<%accum>, vp<%7>
-; CHECK-NEXT:   EMIT vp<[[EXTRACT:%.+]]> = extract-from-end vp<%9>, ir<1>
+; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<%accum>, vp<[[REDUCE]]>
+; CHECK-NEXT:   EMIT vp<[[EXTRACT:%.+]]> = extract-last-element vp<[[RED_RESULT]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, ir<1024>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
@@ -266,8 +259,8 @@ define i32 @print_bundled_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT:   EMIT vp<[[EP_RESUME:%.+]]> = resume-phi ir<1024>, ir<0>
-; CHECK-NEXT:   EMIT vp<[[EP_MERGE:%.+]]> = resume-phi vp<%9>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_RESUME:%.+]]> = resume-phi ir<1024>, ir<0>, ir<0>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_MERGE:%.+]]> = resume-phi vp<[[RED_RESULT]]>, ir<0>, ir<0>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:
