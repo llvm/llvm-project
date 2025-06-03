@@ -133,7 +133,7 @@ enum class EmbedResult {
 struct CXXStandardLibraryVersionInfo {
   enum Library { Unknown, LibStdCXX };
   Library Lib;
-  unsigned Version;
+  std::uint64_t Version;
 };
 
 /// Engages in a tight little dance with the lexer to efficiently
@@ -2754,8 +2754,8 @@ private:
   std::optional<CXXStandardLibraryVersionInfo> CXXStandardLibraryVersion;
 
 public:
-  std::optional<unsigned> getStdLibCxxVersion();
-  bool NeedsStdLibCxxWorkaroundBefore(unsigned FixedVersion);
+  std::optional<std::uint64_t> getStdLibCxxVersion();
+  bool NeedsStdLibCxxWorkaroundBefore(std::uint64_t FixedVersion);
 
 private:
   //===--------------------------------------------------------------------===//
