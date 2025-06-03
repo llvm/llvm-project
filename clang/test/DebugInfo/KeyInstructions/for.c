@@ -114,6 +114,32 @@ void e() {
 }
 
 
+void f() {
+// - Check the `continue` keyword gets an atom group.
+// CHECK: entry:
+// CHECK-NEXT: br label %for.cond
+
+// CHECK: for.cond:
+// CHECK: br label %for.cond, !dbg [[fG1R1:!.*]], !llvm.loop
+  for ( ; ; )
+  {
+    continue;
+  }
+}
+
+void g() {
+// - Check the `break` keyword gets an atom group.
+// CHECK: entry:
+// CHECK-NEXT: br label %for.cond
+
+// CHECK: for.cond:
+// CHECK: br label %for.end, !dbg [[gG1R1:!.*]]
+  for ( ; ; )
+  {
+    break;
+  }
+}
+
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[G2R1]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
@@ -143,3 +169,7 @@ void e() {
 // CHECK: [[eG3R2]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 2)
 // CHECK: [[eG3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
 // CHECK: [[eG4R1]] = !DILocation(line: 113, column: 5, scope: ![[#]], atomGroup: 4, atomRank: 1)
+
+// CHECK: [[fG1R1]] = !DILocation(line: 126, column: 5, scope: ![[#]], atomGroup: 1, atomRank: 1)
+
+// CHECK: [[gG1R1]] = !DILocation(line: 139, column: 5, scope: ![[#]], atomGroup: 1, atomRank: 1)
