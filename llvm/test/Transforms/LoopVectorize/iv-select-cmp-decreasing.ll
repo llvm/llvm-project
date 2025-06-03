@@ -3,8 +3,8 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -S < %s | FileCheck %s
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=1 -S < %s | FileCheck %s
 
-define i64 @not_vectorized_select_decreasing_induction_icmp_const_start(ptr %a) {
-; CHECK-LABEL: define i64 @not_vectorized_select_decreasing_induction_icmp_const_start(
+define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
+; CHECK-LABEL: define i64 @select_decreasing_induction_icmp_const_start(
 ; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
@@ -42,8 +42,8 @@ exit:                                             ; preds = %for.body
 
 @table = constant [13 x i16] [i16 10, i16 35, i16 69, i16 147, i16 280, i16 472, i16 682, i16 1013, i16 1559, i16 2544, i16 4553, i16 6494, i16 10000], align 1
 
-define i16 @not_vectorized_select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
-; CHECK-LABEL: define i16 @not_vectorized_select_decreasing_induction_icmp_table_i16(
+define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
+; CHECK-LABEL: define i16 @select_decreasing_induction_icmp_table_i16(
 ; CHECK-SAME: i16 noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
@@ -82,8 +82,8 @@ for.body:                                         ; preds = %entry, %for.body
 
 @tablef = constant [13 x half] [half 10.0, half 35.0, half 69.0, half 147.0, half 280.0, half 472.0, half 682.0, half 1013.0, half 1559.0, half 2544.0, half 4556.0, half 6496.0, half 10000.0], align 1
 
-define i16 @not_vectorized_select_decreasing_induction_icmp_table_half(half noundef %val) {
-; CHECK-LABEL: define i16 @not_vectorized_select_decreasing_induction_icmp_table_half(
+define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
+; CHECK-LABEL: define i16 @select_decreasing_induction_icmp_table_half(
 ; CHECK-SAME: half noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
