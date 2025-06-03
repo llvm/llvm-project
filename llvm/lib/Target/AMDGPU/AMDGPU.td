@@ -1234,6 +1234,12 @@ def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
   "Has s_wait_xcnt instruction"
 >;
 
+def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
+  "HasSetPrioIncWgInst",
+  "true",
+  "Has s_setprio_inc_wg instruction."
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -2107,6 +2113,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
    FeatureLdsBarrierArriveAtomic,
+   FeatureSetPrioIncWgInst,
 ]>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2935,6 +2942,9 @@ def HasAddSubU64Insts : Predicate<"Subtarget->hasAddSubU64Insts()">,
 
 def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
   AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;
+
+def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
+ AssemblerPredicate<(all_of FeatureSetPrioIncWgInst)>;
 
 // Include AMDGPU TD files
 include "SISchedule.td"

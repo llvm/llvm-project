@@ -1684,7 +1684,7 @@ def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
 
 def S_SETPRIO_INC_WG : SOPP_Pseudo <"s_setprio_inc_wg", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio_inc_wg timm:$simm16)]> {
-  let SubtargetPredicate = isGFX1250Plus;
+  let SubtargetPredicate = HasSetPrioIncWgInst;
 }
 
 def S_GET_SHADER_CYCLES_U64 : SOP1_64_0 <"s_get_shader_cycles_u64",

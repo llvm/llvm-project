@@ -281,6 +281,7 @@ protected:
   bool HasAddSubU64Insts = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
+  bool HasSetPrioIncWgInst = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1592,6 +1593,9 @@ public:
 
   // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
   bool hasSGetShaderCyclesInst() const { return GFX1250Insts; }
+
+  // \returns true if target has S_SETPRIO_INC_WG instruction.
+  bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending. Note that GFX1250 has not only fixed the bug but also
