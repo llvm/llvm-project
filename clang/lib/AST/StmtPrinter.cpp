@@ -2914,11 +2914,6 @@ void StmtPrinter::VisitOpaqueValueExpr(OpaqueValueExpr *Node) {
   PrintExpr(Node->getSourceExpr());
 }
 
-void StmtPrinter::VisitTypoExpr(TypoExpr *Node) {
-  // TODO: Print something reasonable for a TypoExpr, if necessary.
-  llvm_unreachable("Cannot print TypoExpr nodes");
-}
-
 void StmtPrinter::VisitRecoveryExpr(RecoveryExpr *Node) {
   OS << "<recovery-expr>(";
   const char *Sep = "";

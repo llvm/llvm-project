@@ -5755,17 +5755,6 @@ void Sema::diagnoseTypo(const TypoCorrection &Correction,
     Diag(Correction.getCorrectionRange().getBegin(), PD);
 }
 
-const Sema::TypoExprState &Sema::getTypoExprState(TypoExpr *TE) const {
-  auto Entry = DelayedTypos.find(TE);
-  assert(Entry != DelayedTypos.end() &&
-         "Failed to get the state for a TypoExpr!");
-  return Entry->second;
-}
-
-void Sema::clearDelayedTypo(TypoExpr *TE) {
-  DelayedTypos.erase(TE);
-}
-
 void Sema::ActOnPragmaDump(Scope *S, SourceLocation IILoc, IdentifierInfo *II) {
   DeclarationNameInfo Name(II, IILoc);
   LookupResult R(*this, Name, LookupAnyName,

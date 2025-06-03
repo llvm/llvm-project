@@ -2315,10 +2315,6 @@ void ASTStmtReader::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   E->setIsUnique(Record.readInt());
 }
 
-void ASTStmtReader::VisitTypoExpr(TypoExpr *E) {
-  llvm_unreachable("Cannot read TypoExpr nodes");
-}
-
 void ASTStmtReader::VisitRecoveryExpr(RecoveryExpr *E) {
   VisitExpr(E);
   unsigned NumArgs = Record.readInt();

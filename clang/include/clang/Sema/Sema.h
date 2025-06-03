@@ -9312,10 +9312,6 @@ public:
                       bool VolatileArg, bool RValueThis, bool ConstThis,
                       bool VolatileThis);
 
-  typedef std::function<void(const TypoCorrection &)> TypoDiagnosticGenerator;
-  typedef std::function<ExprResult(Sema &, TypoExpr *, TypoCorrection)>
-      TypoRecoveryCallback;
-
   RedeclarationKind forRedeclarationInCurContext() const;
 
   /// Look up a name, looking for a single declaration.  Return
@@ -9687,20 +9683,6 @@ public:
                              SourceLocation DeclLoc, ArrayRef<Module *> Modules,
                              MissingImportKind MIK, bool Recover);
 
-  struct TypoExprState {
-    std::unique_ptr<TypoCorrectionConsumer> Consumer;
-    TypoDiagnosticGenerator DiagHandler;
-    TypoRecoveryCallback RecoveryHandler;
-    TypoExprState();
-    TypoExprState(TypoExprState &&other) noexcept;
-    TypoExprState &operator=(TypoExprState &&other) noexcept;
-  };
-
-  const TypoExprState &getTypoExprState(TypoExpr *TE) const;
-
-  /// Clears the state of the given TypoExpr.
-  void clearDelayedTypo(TypoExpr *TE);
-
   /// Called on #pragma clang __debug dump II
   void ActOnPragmaDump(Scope *S, SourceLocation Loc, IdentifierInfo *II);
 
@@ -9731,9 +9713,6 @@ private:
       Scope *S, CXXScopeSpec *SS, CorrectionCandidateCallback &CCC,
       DeclContext *MemberContext, bool EnteringContext,
       const ObjCObjectPointerType *OPT, bool ErrorRecovery);
-
-  /// The set of unhandled TypoExprs and their associated state.
-  llvm::MapVector<TypoExpr *, TypoExprState> DelayedTypos;
 
   /// Cache for module units which is usable for current module.
   llvm::DenseSet<const Module *> UsableModuleUnitsCache;
