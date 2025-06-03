@@ -1,3 +1,5 @@
+# REQUIRES: aarch64
+
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin  %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/more-cstrings.s -o %t/more-cstrings.o
