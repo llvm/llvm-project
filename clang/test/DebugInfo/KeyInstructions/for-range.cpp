@@ -1,14 +1,15 @@
-// RUN: %clang_cc1 -gkey-instructions %s -debug-info-kind=line-tables-only -emit-llvm -o - \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu  -gkey-instructions %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
-// Perennial quesiton: should the inc be its own source atom or not
+// Perennial question: should the inc be its own source atom or not
 // (currently it is).
 
 // FIXME: See do.c and while.c regarding cmp and cond br groups.
 
 // The stores in the setup (stores to __RANGE1, __BEGIN1, __END1) are all
 // marked as Key. Unclear whether that's desirable. Keep for now as that's
-// least risky.
+// least risky (at worst it introduces an unecessary step while debugging,
+// as opposed to potentially losing one we want).
 
 // Check the conditional branch (and the condition) in FOR_COND and
 // unconditional branch in FOR_BODY are Key Instructions.
