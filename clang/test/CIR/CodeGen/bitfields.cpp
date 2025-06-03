@@ -12,11 +12,19 @@ struct A {
   unsigned still_more_bits : 7;
 };
 
+// CIR-DAG:  !rec_A = !cir.record<struct "A" padded {!s8i, !s8i, !s8i, !u8i, !u8i, !cir.array<!u8i x 3>}>
+// LLVM-DAG: %struct.A = type { i8, i8, i8, i8, i8, [3 x i8] }
+// OGCG-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
+
 typedef struct {
   int a : 4;
   int b : 5;
   int c;
 } D;
+
+// CIR-DAG:  !rec_D = !cir.record<struct "D" {!u16i, !s32i}>
+// LLVM-DAG: %struct.D = type { i16, i32 }
+// OGCG-DAG: %struct.D = type { i16, i32 }
 
 typedef struct {
   int a : 4;
@@ -27,10 +35,18 @@ typedef struct {
   unsigned f; // type other than int above, not a bitfield
 } S;
 
+// CIR-DAG:  !rec_S = !cir.record<struct "S" {!u32i, !cir.array<!u8i x 3>, !u16i, !u32i}>
+// LLVM-DAG: %struct.S = type { i32, [3 x i8], i16, i32 }
+// OGCG-DAG: %struct.S = type { i64, i16, i32 }
+
 typedef struct {
   int a : 3;  // one bitfield with size < 8
   unsigned b;
 } T;
+
+// CIR-DAG:  !rec_T = !cir.record<struct "T" {!u8i, !u32i}>
+// LLVM-DAG: %struct.T = type { i8, i32 }
+// OGCG-DAG: %struct.T = type { i8, i32 }
 
 typedef struct {
     char a;
@@ -51,24 +67,9 @@ typedef struct {
                // because (tail - startOffset) is 65 after 'l' field
 } U;
 
-// CIR-DAG:  !rec_D = !cir.record<struct "D" {!u16i, !s32i}>
-// CIR-DAG:  !rec_T = !cir.record<struct "T" {!u8i, !u32i}>
 // CIR-DAG:  !rec_U = !cir.record<struct "U" {!s8i, !s8i, !s8i, !cir.array<!u8i x 9>}>
-// CIR-DAG:  !rec_A = !cir.record<struct "A" padded {!s8i, !s8i, !s8i, !u8i, !u8i, !cir.array<!u8i x 3>}>
-// CIR-DAG:  !rec_S = !cir.record<struct "S" {!u32i, !cir.array<!u8i x 3>, !u16i, !u32i}>
-
-
-// LLVM-DAG: %struct.D = type { i16, i32 }
 // LLVM-DAG: %struct.U = type { i8, i8, i8, [9 x i8] }
-// LLVM-DAG: %struct.A = type { i8, i8, i8, i8, i8, [3 x i8] }
-// LLVM-DAG: %struct.S = type { i32, [3 x i8], i16, i32 }
-// LLVM-DAG: %struct.T = type { i8, i32 }
-
-// OGCG-DAG: %struct.D = type { i16, i32 }
 // OGCG-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
-// OGCG-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
-// OGCG-DAG: %struct.S = type { i64, i16, i32 }
-// OGCG-DAG: %struct.T = type { i8, i32 }
 
 void def() {
   A a;
