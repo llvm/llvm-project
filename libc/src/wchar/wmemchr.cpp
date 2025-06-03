@@ -18,10 +18,9 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(const wchar_t *, wmemchr,
                    (const wchar_t *s, wchar_t c, size_t n)) {
   size_t i = 0;
-  for (; i < n; ++i) {
+  for (; i < n; ++i) 
     if (s[i] == c)
       return (s + i);
-  }
   return nullptr;
 }
 
