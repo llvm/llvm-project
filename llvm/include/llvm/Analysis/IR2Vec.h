@@ -84,12 +84,16 @@ protected:
   mutable BBEmbeddingsMap BBVecMap;
   mutable InstEmbeddingsMap InstVecMap;
 
-  Embedder(const Function &F, const Vocab &Vocabulary, unsigned Dimension);
+  Embedder(const Function &F, const Vocab &Vocabulary);
 
   /// Helper function to compute embeddings. It generates embeddings for all
   /// the instructions and basic blocks in the function F. Logic of computing
   /// the embeddings is specific to the kind of embeddings being computed.
   virtual void computeEmbeddings() const = 0;
+
+  /// Helper function to compute the embedding for a given basic block.
+  /// Specific to the kind of embeddings being computed.
+  virtual void computeEmbeddings(const BasicBlock &BB) const = 0;
 
   /// Lookup vocabulary for a given Key. If the key is not found, it returns a
   /// zero vector.
@@ -106,10 +110,8 @@ public:
   virtual ~Embedder() = default;
 
   /// Factory method to create an Embedder object.
-  static Expected<std::unique_ptr<Embedder>> create(IR2VecKind Mode,
-                                                    const Function &F,
-                                                    const Vocab &Vocabulary,
-                                                    unsigned Dimension);
+  static Expected<std::unique_ptr<Embedder>>
+  create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary);
 
   /// Returns a map containing instructions and the corresponding embeddings for
   /// the function F if it has been computed. If not, it computes the embeddings
@@ -121,6 +123,11 @@ public:
   /// for the function and returns the map.
   const BBEmbeddingsMap &getBBVecMap() const;
 
+  /// Returns the embedding for a given basic block in the function F if it has
+  /// been computed. If not, it computes the embedding for the basic block and
+  /// returns it.
+  const Embedding &getBBVector(const BasicBlock &BB) const;
+
   /// Computes and returns the embedding for the current function.
   const Embedding &getFunctionVector() const;
 };
@@ -130,9 +137,6 @@ public:
 /// representations obtained from the Vocabulary.
 class SymbolicEmbedder : public Embedder {
 private:
-  /// Utility function to compute the embedding for a given basic block.
-  Embedding computeBB2Vec(const BasicBlock &BB) const;
-
   /// Utility function to compute the embedding for a given type.
   Embedding getTypeEmbedding(const Type *Ty) const;
 
@@ -140,11 +144,11 @@ private:
   Embedding getOperandEmbedding(const Value *Op) const;
 
   void computeEmbeddings() const override;
+  void computeEmbeddings(const BasicBlock &BB) const override;
 
 public:
-  SymbolicEmbedder(const Function &F, const Vocab &Vocabulary,
-                   unsigned Dimension)
-      : Embedder(F, Vocabulary, Dimension) {
+  SymbolicEmbedder(const Function &F, const Vocab &Vocabulary)
+      : Embedder(F, Vocabulary) {
     FuncVector = Embedding(Dimension, 0);
   }
 };

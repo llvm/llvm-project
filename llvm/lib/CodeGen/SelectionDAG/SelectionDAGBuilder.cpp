@@ -3399,7 +3399,11 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
     BasicBlock *Dest = I.getIndirectDest(i);
     MachineBasicBlock *Target = FuncInfo.getMBB(Dest);
     Target->setIsInlineAsmBrIndirectTarget();
-    Target->setMachineBlockAddressTaken();
+    // If we introduce a type of asm goto statement that is permitted to use an
+    // indirect call instruction to jump to its labels, then we should add a
+    // call to Target->setMachineBlockAddressTaken() here, to mark the target
+    // block as requiring a BTI.
+
     Target->setLabelMustBeEmitted();
     // Don't add duplicate machine successors.
     if (Dests.insert(Dest).second)
@@ -4468,23 +4472,13 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
 }
 
 static const MDNode *getRangeMetadata(const Instruction &I) {
-  // If !noundef is not present, then !range violation results in a poison
-  // value rather than immediate undefined behavior. In theory, transferring
-  // these annotations to SDAG is fine, but in practice there are key SDAG
-  // transforms that are known not to be poison-safe, such as folding logical
-  // and/or to bitwise and/or. For now, only transfer !range if !noundef is
-  // also present.
-  if (!I.hasMetadata(LLVMContext::MD_noundef))
-    return nullptr;
   return I.getMetadata(LLVMContext::MD_range);
 }
 
 static std::optional<ConstantRange> getRange(const Instruction &I) {
-  if (const auto *CB = dyn_cast<CallBase>(&I)) {
-    // see comment in getRangeMetadata about this check
-    if (CB->hasRetAttr(Attribute::NoUndef))
-      return CB->getRange();
-  }
+  if (const auto *CB = dyn_cast<CallBase>(&I))
+    if (std::optional<ConstantRange> CR = CB->getRange())
+      return CR;
   if (const MDNode *Range = getRangeMetadata(I))
     return getConstantRangeFromMetadata(*Range);
   return std::nullopt;

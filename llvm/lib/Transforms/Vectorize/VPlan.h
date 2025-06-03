@@ -320,6 +320,20 @@ public:
     std::swap(Successors[0], Successors[1]);
   }
 
+  /// Returns the index for \p Pred in the blocks predecessors list.
+  unsigned getIndexForPredecessor(const VPBlockBase *Pred) const {
+    assert(count(Predecessors, Pred) == 1 &&
+           "must have Pred exactly once in Predecessors");
+    return std::distance(Predecessors.begin(), find(Predecessors, Pred));
+  }
+
+  /// Returns the index for \p Succ in the blocks successor list.
+  unsigned getIndexForSuccessor(const VPBlockBase *Succ) const {
+    assert(count(Successors, Succ) == 1 &&
+           "must have Succ exactly once in Successors");
+    return std::distance(Successors.begin(), find(Successors, Succ));
+  }
+
   /// The method which generates the output IR that correspond to this
   /// VPBlockBase, thereby "executing" the VPlan.
   virtual void execute(VPTransformState *State) = 0;
@@ -887,11 +901,6 @@ public:
     SLPStore,
     ActiveLaneMask,
     ExplicitVectorLength,
-    /// Creates a scalar phi in a leaf VPBB with a single predecessor in VPlan.
-    /// The first operand is the incoming value from the predecessor in VPlan,
-    /// the second operand is the incoming value for all other predecessors
-    /// (which are currently not modeled in VPlan).
-    ResumePhi,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -1127,6 +1136,10 @@ public:
     return getAsRecipe()->getNumOperands();
   }
 
+  /// Removes the incoming value for \p IncomingBlock, which must be a
+  /// predecessor.
+  void removeIncomingValueFor(VPBlockBase *IncomingBlock) const;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void printPhiOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
@@ -1137,9 +1150,13 @@ struct VPPhi : public VPInstruction, public VPPhiAccessors {
   VPPhi(ArrayRef<VPValue *> Operands, DebugLoc DL, const Twine &Name = "")
       : VPInstruction(Instruction::PHI, Operands, DL, Name) {}
 
-  static inline bool classof(const VPRecipeBase *U) {
+  static inline bool classof(const VPUser *U) {
     auto *R = dyn_cast<VPInstruction>(U);
     return R && R->getOpcode() == Instruction::PHI;
+  }
+
+  VPPhi *clone() override {
+    return new VPPhi(operands(), getDebugLoc(), getName());
   }
 
   void execute(VPTransformState &State) override;
@@ -1425,10 +1442,9 @@ public:
   VPWidenIntrinsicRecipe *clone() override {
     if (Value *CI = getUnderlyingValue())
       return new VPWidenIntrinsicRecipe(*cast<CallInst>(CI), VectorIntrinsicID,
-                                        {op_begin(), op_end()}, ResultTy,
-                                        getDebugLoc());
-    return new VPWidenIntrinsicRecipe(VectorIntrinsicID, {op_begin(), op_end()},
-                                      ResultTy, getDebugLoc());
+                                        operands(), ResultTy, getDebugLoc());
+    return new VPWidenIntrinsicRecipe(VectorIntrinsicID, operands(), ResultTy,
+                                      getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntrinsicSC)
@@ -1488,8 +1504,8 @@ public:
   ~VPWidenCallRecipe() override = default;
 
   VPWidenCallRecipe *clone() override {
-    return new VPWidenCallRecipe(getUnderlyingValue(), Variant,
-                                 {op_begin(), op_end()}, getDebugLoc());
+    return new VPWidenCallRecipe(getUnderlyingValue(), Variant, operands(),
+                                 getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
@@ -1505,11 +1521,9 @@ public:
     return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
   }
 
-  operand_range arg_operands() {
-    return make_range(op_begin(), op_begin() + getNumOperands() - 1);
-  }
-  const_operand_range arg_operands() const {
-    return make_range(op_begin(), op_begin() + getNumOperands() - 1);
+  operand_range args() { return make_range(op_begin(), std::prev(op_end())); }
+  const_operand_range args() const {
+    return make_range(op_begin(), std::prev(op_end()));
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3535,14 +3549,13 @@ template <> struct CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
 };
 /// Support casting from VPRecipeBase -> VPPhiAccessors, by down-casting to the
 /// recipe types implementing VPPhiAccessors. Used by cast<>, dyn_cast<> & co.
-template <>
-struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
-    : public CastIsPossible<VPPhiAccessors, const VPRecipeBase *> {
+template <typename SrcTy>
+struct CastInfoVPPhiAccessors : public CastIsPossible<VPPhiAccessors, SrcTy> {
 
-  using Self = CastInfo<VPPhiAccessors, const VPRecipeBase *>;
+  using Self = CastInfo<VPPhiAccessors, SrcTy>;
 
   /// doCast is used by cast<>.
-  static inline VPPhiAccessors *doCast(const VPRecipeBase *R) {
+  static inline VPPhiAccessors *doCast(SrcTy R) {
     return const_cast<VPPhiAccessors *>([R]() -> const VPPhiAccessors * {
       switch (R->getVPDefID()) {
       case VPDef::VPInstructionSC:
@@ -3558,12 +3571,18 @@ struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
   }
 
   /// doCastIfPossible is used by dyn_cast<>.
-  static inline VPPhiAccessors *doCastIfPossible(const VPRecipeBase *f) {
+  static inline VPPhiAccessors *doCastIfPossible(SrcTy f) {
     if (!Self::isPossible(f))
       return nullptr;
     return doCast(f);
   }
 };
+template <>
+struct CastInfo<VPPhiAccessors, VPRecipeBase *>
+    : CastInfoVPPhiAccessors<VPRecipeBase *> {};
+template <>
+struct CastInfo<VPPhiAccessors, const VPRecipeBase *>
+    : CastInfoVPPhiAccessors<const VPRecipeBase *> {};
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
