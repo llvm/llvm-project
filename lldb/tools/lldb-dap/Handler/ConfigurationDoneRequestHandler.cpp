@@ -10,6 +10,7 @@
 #include "EventHelper.h"
 #include "JSONUtils.h"
 #include "Protocol/ProtocolRequests.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBDebugger.h"
 
@@ -52,7 +53,7 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
 
   if (dap.stop_at_entry)
-    SendThreadStoppedEvent(dap);
+    SendThreadStoppedEvent(dap, /*on_entry=*/true);
   else
     process.Continue();
 

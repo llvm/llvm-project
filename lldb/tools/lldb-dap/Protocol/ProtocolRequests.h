@@ -482,6 +482,16 @@ struct SourceResponseBody {
 };
 llvm::json::Value toJSON(const SourceResponseBody &);
 
+/// Arguments for the `threads` request, no arguments.
+using ThreadsArguments = EmptyArguments;
+
+/// Response to `threads` request.
+struct ThreadsResponseBody {
+  /// All threads.
+  std::vector<Thread> threads;
+};
+llvm::json::Value toJSON(const ThreadsResponseBody &);
+
 /// Arguments for `next` request.
 struct NextArguments {
   /// Specifies the thread for which to resume execution for one step (of the

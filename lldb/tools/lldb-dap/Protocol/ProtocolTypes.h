@@ -443,6 +443,16 @@ struct StepInTarget {
 bool fromJSON(const llvm::json::Value &, StepInTarget &, llvm::json::Path);
 llvm::json::Value toJSON(const StepInTarget &);
 
+/// A Thread.
+struct Thread {
+  /// Unique identifier for the thread.
+  lldb::tid_t id;
+  /// The name of the thread.
+  std::string name;
+};
+bool fromJSON(const llvm::json::Value &, Thread &, llvm::json::Path);
+llvm::json::Value toJSON(const Thread &);
+
 /// Provides formatting information for a value.
 struct ValueFormat {
   /// Display the value in hex.

@@ -20,7 +20,7 @@ void SendTargetBasedCapabilities(DAP &dap);
 
 void SendProcessEvent(DAP &dap, LaunchMethod launch_method);
 
-void SendThreadStoppedEvent(DAP &dap);
+void SendThreadStoppedEvent(DAP &dap, bool on_entry = false);
 
 void SendTerminatedEvent(DAP &dap);
 

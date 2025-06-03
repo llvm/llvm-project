@@ -604,6 +604,15 @@ llvm::json::Value toJSON(const StepInTarget &SIT) {
   return target;
 }
 
+bool fromJSON(const json::Value &Params, Thread &T, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("id", T.id) && O.map("name", T.name);
+}
+
+json::Value toJSON(const Thread &T) {
+  return json::Object{{"id", T.id}, {"name", T.name}};
+}
+
 bool fromJSON(const llvm::json::Value &Params, ValueFormat &VF,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);

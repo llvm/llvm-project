@@ -145,7 +145,7 @@ void RestartRequestHandler::operator()(
   // Because we're restarting, configuration has already happened so we can
   // continue the process right away.
   if (dap.stop_at_entry) {
-    SendThreadStoppedEvent(dap);
+    SendThreadStoppedEvent(dap, /*on_entry=*/true);
   } else {
     dap.target.GetProcess().Continue();
   }
