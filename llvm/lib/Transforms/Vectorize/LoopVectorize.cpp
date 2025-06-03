@@ -7289,14 +7289,14 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
+  VPlanTransforms::convertToConcreteRecipes(BestVPlan,
+                                            *Legal->getWidestInductionType());
   // Retrieve and store the middle block before dissolving regions. Regions are
   // dissolved after optimizing for VF and UF, which completely removes unneeded
   // loop regions first.
   VPBasicBlock *MiddleVPBB =
       BestVPlan.getVectorLoopRegion() ? BestVPlan.getMiddleBlock() : nullptr;
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
-  VPlanTransforms::convertToConcreteRecipes(BestVPlan,
-                                            *Legal->getWidestInductionType());
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
                          OrigLoop->getParentLoop(),
