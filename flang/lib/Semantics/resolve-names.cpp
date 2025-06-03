@@ -1513,11 +1513,7 @@ public:
 
   bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
     AddOmpSourceRange(x.source);
-    SkipImplicitTyping(true);
     return true;
-  }
-  void Post(const parser::OpenMPDeclareSimdConstruct &x) {
-    SkipImplicitTyping(false);
   }
 
   bool Pre(const parser::OmpInitializerProc &x) {
