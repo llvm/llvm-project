@@ -10,9 +10,7 @@ define i128 @test_uadd_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    adds x0, x0, x2
 ; CHECK-SD-NEXT:    adcs x1, x1, x3
-; CHECK-SD-NEXT:    cset w8, hs
-; CHECK-SD-NEXT:    cmp w8, #1
-; CHECK-SD-NEXT:    b.ne .LBB0_2
+; CHECK-SD-NEXT:    b.lo .LBB0_2
 ; CHECK-SD-NEXT:  // %bb.1: // %if.then
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
@@ -66,9 +64,7 @@ define i128 @test_sadd_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    adds x0, x0, x2
 ; CHECK-SD-NEXT:    adcs x1, x1, x3
-; CHECK-SD-NEXT:    cset w8, vs
-; CHECK-SD-NEXT:    cmp w8, #1
-; CHECK-SD-NEXT:    b.ne .LBB1_2
+; CHECK-SD-NEXT:    b.vc .LBB1_2
 ; CHECK-SD-NEXT:  // %bb.1: // %if.then
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
@@ -122,9 +118,7 @@ define i128 @test_usub_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    subs x0, x0, x2
 ; CHECK-SD-NEXT:    sbcs x1, x1, x3
-; CHECK-SD-NEXT:    cset w8, lo
-; CHECK-SD-NEXT:    cmp w8, #1
-; CHECK-SD-NEXT:    b.ne .LBB2_2
+; CHECK-SD-NEXT:    b.hs .LBB2_2
 ; CHECK-SD-NEXT:  // %bb.1: // %if.then
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
@@ -178,9 +172,7 @@ define i128 @test_ssub_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    subs x0, x0, x2
 ; CHECK-SD-NEXT:    sbcs x1, x1, x3
-; CHECK-SD-NEXT:    cset w8, vs
-; CHECK-SD-NEXT:    cmp w8, #1
-; CHECK-SD-NEXT:    b.ne .LBB3_2
+; CHECK-SD-NEXT:    b.vc .LBB3_2
 ; CHECK-SD-NEXT:  // %bb.1: // %if.then
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
