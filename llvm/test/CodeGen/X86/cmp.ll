@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -show-mc-encoding | FileCheck %s --check-prefixes=CHECK,NO-NDD
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ndd -show-mc-encoding | FileCheck --check-prefixes=CHECK,NDD %s
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ndd,+zu -show-mc-encoding | FileCheck --check-prefixes=CHECK,NDD-ZU %s
-; RUN: llc -O0 < %s -mtriple=x86_64-unknown-unknown -mattr=+ndd,+zu -show-mc-encoding | FileCheck --check-prefixes=CHECK,O0-NDD-ZU %s
+; RUN: llc -O0 < %s -mtriple=x86_64-unknown-unknown -mattr=+ndd,+zu -show-mc-encoding | FileCheck --check-prefix=O0-NDD-ZU %s
 
 @d = dso_local global i8 0, align 1
 @d64 = dso_local global i64 0
@@ -19,6 +19,18 @@ define i32 @test1(i32 %X, ptr %y) nounwind {
 ; CHECK-NEXT:  .LBB0_2: # %ReturnBlock
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
+;
+; O0-NDD-ZU-LABEL: test1:
+; O0-NDD-ZU:       # %bb.0: # %entry
+; O0-NDD-ZU-NEXT:    cmpl $0, (%rsi) # encoding: [0x83,0x3e,0x00]
+; O0-NDD-ZU-NEXT:    je .LBB0_2 # encoding: [0x74,A]
+; O0-NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB0_2-1, kind: FK_PCRel_1
+; O0-NDD-ZU-NEXT:  # %bb.1: # %cond_true
+; O0-NDD-ZU-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; O0-NDD-ZU-NEXT:  .LBB0_2: # %ReturnBlock
+; O0-NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; O0-NDD-ZU-NEXT:    retq # encoding: [0xc3]
 entry:
   %tmp = load i32, ptr %y
   %tmp.upgrd.1 = icmp eq i32 %tmp, 0
@@ -32,44 +44,18 @@ ReturnBlock:
 }
 
 define i32 @test2(i32 %X, ptr %y) nounwind {
-; NO-NDD-LABEL: test2:
-; NO-NDD:       # %bb.0: # %entry
-; NO-NDD-NEXT:    testl $536870911, (%rsi) # encoding: [0xf7,0x06,0xff,0xff,0xff,0x1f]
-; NO-NDD-NEXT:    # imm = 0x1FFFFFFF
-; NO-NDD-NEXT:    je .LBB1_2 # encoding: [0x74,A]
-; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
-; NO-NDD-NEXT:  # %bb.1: # %cond_true
-; NO-NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-; NO-NDD-NEXT:  .LBB1_2: # %ReturnBlock
-; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-LABEL: test2:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    testl $536870911, (%rsi) # encoding: [0xf7,0x06,0xff,0xff,0xff,0x1f]
-; NDD-NEXT:    # imm = 0x1FFFFFFF
-; NDD-NEXT:    je .LBB1_2 # encoding: [0x74,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.1: # %cond_true
-; NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; NDD-NEXT:    retq # encoding: [0xc3]
-; NDD-NEXT:  .LBB1_2: # %ReturnBlock
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-ZU-LABEL: test2:
-; NDD-ZU:       # %bb.0: # %entry
-; NDD-ZU-NEXT:    testl $536870911, (%rsi) # encoding: [0xf7,0x06,0xff,0xff,0xff,0x1f]
-; NDD-ZU-NEXT:    # imm = 0x1FFFFFFF
-; NDD-ZU-NEXT:    je .LBB1_2 # encoding: [0x74,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
-; NDD-ZU-NEXT:  # %bb.1: # %cond_true
-; NDD-ZU-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; NDD-ZU-NEXT:    retq # encoding: [0xc3]
-; NDD-ZU-NEXT:  .LBB1_2: # %ReturnBlock
-; NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: test2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testl $536870911, (%rsi) # encoding: [0xf7,0x06,0xff,0xff,0xff,0x1f]
+; CHECK-NEXT:    # imm = 0x1FFFFFFF
+; CHECK-NEXT:    je .LBB1_2 # encoding: [0x74,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %cond_true
+; CHECK-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+; CHECK-NEXT:  .LBB1_2: # %ReturnBlock
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; O0-NDD-ZU-LABEL: test2:
 ; O0-NDD-ZU:       # %bb.0: # %entry
@@ -97,41 +83,17 @@ ReturnBlock:
 }
 
 define i8 @test2b(i8 %X, ptr %y) nounwind {
-; NO-NDD-LABEL: test2b:
-; NO-NDD:       # %bb.0: # %entry
-; NO-NDD-NEXT:    testb $31, (%rsi) # encoding: [0xf6,0x06,0x1f]
-; NO-NDD-NEXT:    je .LBB2_2 # encoding: [0x74,A]
-; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
-; NO-NDD-NEXT:  # %bb.1: # %cond_true
-; NO-NDD-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-; NO-NDD-NEXT:  .LBB2_2: # %ReturnBlock
-; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-LABEL: test2b:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    testb $31, (%rsi) # encoding: [0xf6,0x06,0x1f]
-; NDD-NEXT:    je .LBB2_2 # encoding: [0x74,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.1: # %cond_true
-; NDD-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
-; NDD-NEXT:    retq # encoding: [0xc3]
-; NDD-NEXT:  .LBB2_2: # %ReturnBlock
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-ZU-LABEL: test2b:
-; NDD-ZU:       # %bb.0: # %entry
-; NDD-ZU-NEXT:    testb $31, (%rsi) # encoding: [0xf6,0x06,0x1f]
-; NDD-ZU-NEXT:    je .LBB2_2 # encoding: [0x74,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
-; NDD-ZU-NEXT:  # %bb.1: # %cond_true
-; NDD-ZU-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
-; NDD-ZU-NEXT:    retq # encoding: [0xc3]
-; NDD-ZU-NEXT:  .LBB2_2: # %ReturnBlock
-; NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: test2b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testb $31, (%rsi) # encoding: [0xf6,0x06,0x1f]
+; CHECK-NEXT:    je .LBB2_2 # encoding: [0x74,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB2_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %cond_true
+; CHECK-NEXT:    movb $1, %al # encoding: [0xb0,0x01]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+; CHECK-NEXT:  .LBB2_2: # %ReturnBlock
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; O0-NDD-ZU-LABEL: test2b:
 ; O0-NDD-ZU:       # %bb.0: # %entry
@@ -229,65 +191,25 @@ define i64 @test4(i64 %x) nounwind {
 }
 
 define i32 @test5(double %A) nounwind {
-; NO-NDD-LABEL: test5:
-; NO-NDD:       # %bb.0: # %entry
-; NO-NDD-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; NO-NDD-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; NO-NDD-NEXT:    ja .LBB5_3 # encoding: [0x77,A]
-; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
-; NO-NDD-NEXT:  # %bb.1: # %entry
-; NO-NDD-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; NO-NDD-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; NO-NDD-NEXT:    jb .LBB5_3 # encoding: [0x72,A]
-; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
-; NO-NDD-NEXT:  # %bb.2: # %bb12
-; NO-NDD-NEXT:    movl $32, %eax # encoding: [0xb8,0x20,0x00,0x00,0x00]
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-; NO-NDD-NEXT:  .LBB5_3: # %bb8
-; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NO-NDD-NEXT:    jmp foo@PLT # TAILCALL
-; NO-NDD-NEXT:    # encoding: [0xeb,A]
-; NO-NDD-NEXT:    # fixup A - offset: 1, value: foo@PLT-1, kind: FK_PCRel_1
-;
-; NDD-LABEL: test5:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; NDD-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; NDD-NEXT:    ja .LBB5_3 # encoding: [0x77,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.1: # %entry
-; NDD-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; NDD-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; NDD-NEXT:    jb .LBB5_3 # encoding: [0x72,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.2: # %bb12
-; NDD-NEXT:    movl $32, %eax # encoding: [0xb8,0x20,0x00,0x00,0x00]
-; NDD-NEXT:    retq # encoding: [0xc3]
-; NDD-NEXT:  .LBB5_3: # %bb8
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-NEXT:    jmp foo@PLT # TAILCALL
-; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: foo@PLT-1, kind: FK_PCRel_1
-;
-; NDD-ZU-LABEL: test5:
-; NDD-ZU:       # %bb.0: # %entry
-; NDD-ZU-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; NDD-ZU-NEXT:    ja .LBB5_3 # encoding: [0x77,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
-; NDD-ZU-NEXT:  # %bb.1: # %entry
-; NDD-ZU-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
-; NDD-ZU-NEXT:    jb .LBB5_3 # encoding: [0x72,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
-; NDD-ZU-NEXT:  # %bb.2: # %bb12
-; NDD-ZU-NEXT:    movl $32, %eax # encoding: [0xb8,0x20,0x00,0x00,0x00]
-; NDD-ZU-NEXT:    retq # encoding: [0xc3]
-; NDD-ZU-NEXT:  .LBB5_3: # %bb8
-; NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-ZU-NEXT:    jmp foo@PLT # TAILCALL
-; NDD-ZU-NEXT:    # encoding: [0xeb,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 1, value: foo@PLT-1, kind: FK_PCRel_1
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ja .LBB5_3 # encoding: [0x77,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    jb .LBB5_3 # encoding: [0x72,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.2: # %bb12
+; CHECK-NEXT:    movl $32, %eax # encoding: [0xb8,0x20,0x00,0x00,0x00]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+; CHECK-NEXT:  .LBB5_3: # %bb8
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    jmp foo@PLT # TAILCALL
+; CHECK-NEXT:    # encoding: [0xeb,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo@PLT-1, kind: FK_PCRel_1
 ;
 ; O0-NDD-ZU-LABEL: test5:
 ; O0-NDD-ZU:       # %bb.0: # %entry
@@ -333,41 +255,17 @@ bb12:
 declare i32 @foo(...)
 
 define i32 @test6() nounwind align 2 {
-; NO-NDD-LABEL: test6:
-; NO-NDD:       # %bb.0: # %entry
-; NO-NDD-NEXT:    cmpq $0, -{{[0-9]+}}(%rsp) # encoding: [0x48,0x83,0x7c,0x24,0xf8,0x00]
-; NO-NDD-NEXT:    je .LBB6_1 # encoding: [0x74,A]
-; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB6_1-1, kind: FK_PCRel_1
-; NO-NDD-NEXT:  # %bb.2: # %F
-; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-; NO-NDD-NEXT:  .LBB6_1: # %T
-; NO-NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-LABEL: test6:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    cmpq $0, -{{[0-9]+}}(%rsp) # encoding: [0x48,0x83,0x7c,0x24,0xf8,0x00]
-; NDD-NEXT:    je .LBB6_1 # encoding: [0x74,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB6_1-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.2: # %F
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-NEXT:    retq # encoding: [0xc3]
-; NDD-NEXT:  .LBB6_1: # %T
-; NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-ZU-LABEL: test6:
-; NDD-ZU:       # %bb.0: # %entry
-; NDD-ZU-NEXT:    cmpq $0, -{{[0-9]+}}(%rsp) # encoding: [0x48,0x83,0x7c,0x24,0xf8,0x00]
-; NDD-ZU-NEXT:    je .LBB6_1 # encoding: [0x74,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB6_1-1, kind: FK_PCRel_1
-; NDD-ZU-NEXT:  # %bb.2: # %F
-; NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-ZU-NEXT:    retq # encoding: [0xc3]
-; NDD-ZU-NEXT:  .LBB6_1: # %T
-; NDD-ZU-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: test6:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpq $0, -{{[0-9]+}}(%rsp) # encoding: [0x48,0x83,0x7c,0x24,0xf8,0x00]
+; CHECK-NEXT:    je .LBB6_1 # encoding: [0x74,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB6_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.2: # %F
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+; CHECK-NEXT:  .LBB6_1: # %T
+; CHECK-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; O0-NDD-ZU-LABEL: test6:
 ; O0-NDD-ZU:       # %bb.0: # %entry
@@ -581,68 +479,26 @@ define i32 @test11(i64 %l) nounwind {
 }
 
 define i32 @test12() ssp uwtable {
-; NO-NDD-LABEL: test12:
-; NO-NDD:       # %bb.0: # %entry
-; NO-NDD-NEXT:    pushq %rax # encoding: [0x50]
-; NO-NDD-NEXT:    .cfi_def_cfa_offset 16
-; NO-NDD-NEXT:    callq test12b@PLT # encoding: [0xe8,A,A,A,A]
-; NO-NDD-NEXT:    # fixup A - offset: 1, value: test12b@PLT-4, kind: FK_PCRel_4
-; NO-NDD-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
-; NO-NDD-NEXT:    je .LBB12_2 # encoding: [0x74,A]
-; NO-NDD-NEXT:    # fixup A - offset: 1, value: .LBB12_2-1, kind: FK_PCRel_1
-; NO-NDD-NEXT:  # %bb.1: # %T
-; NO-NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; NO-NDD-NEXT:    popq %rcx # encoding: [0x59]
-; NO-NDD-NEXT:    .cfi_def_cfa_offset 8
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-; NO-NDD-NEXT:  .LBB12_2: # %F
-; NO-NDD-NEXT:    .cfi_def_cfa_offset 16
-; NO-NDD-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
-; NO-NDD-NEXT:    popq %rcx # encoding: [0x59]
-; NO-NDD-NEXT:    .cfi_def_cfa_offset 8
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-LABEL: test12:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    pushq %rax # encoding: [0x50]
-; NDD-NEXT:    .cfi_def_cfa_offset 16
-; NDD-NEXT:    callq test12b@PLT # encoding: [0xe8,A,A,A,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: test12b@PLT-4, kind: FK_PCRel_4
-; NDD-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
-; NDD-NEXT:    je .LBB12_2 # encoding: [0x74,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: .LBB12_2-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.1: # %T
-; NDD-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; NDD-NEXT:    popq %rcx # encoding: [0x59]
-; NDD-NEXT:    .cfi_def_cfa_offset 8
-; NDD-NEXT:    retq # encoding: [0xc3]
-; NDD-NEXT:  .LBB12_2: # %F
-; NDD-NEXT:    .cfi_def_cfa_offset 16
-; NDD-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
-; NDD-NEXT:    popq %rcx # encoding: [0x59]
-; NDD-NEXT:    .cfi_def_cfa_offset 8
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-ZU-LABEL: test12:
-; NDD-ZU:       # %bb.0: # %entry
-; NDD-ZU-NEXT:    pushq %rax # encoding: [0x50]
-; NDD-ZU-NEXT:    .cfi_def_cfa_offset 16
-; NDD-ZU-NEXT:    callq test12b@PLT # encoding: [0xe8,A,A,A,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 1, value: test12b@PLT-4, kind: FK_PCRel_4
-; NDD-ZU-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
-; NDD-ZU-NEXT:    je .LBB12_2 # encoding: [0x74,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 1, value: .LBB12_2-1, kind: FK_PCRel_1
-; NDD-ZU-NEXT:  # %bb.1: # %T
-; NDD-ZU-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
-; NDD-ZU-NEXT:    popq %rcx # encoding: [0x59]
-; NDD-ZU-NEXT:    .cfi_def_cfa_offset 8
-; NDD-ZU-NEXT:    retq # encoding: [0xc3]
-; NDD-ZU-NEXT:  .LBB12_2: # %F
-; NDD-ZU-NEXT:    .cfi_def_cfa_offset 16
-; NDD-ZU-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
-; NDD-ZU-NEXT:    popq %rcx # encoding: [0x59]
-; NDD-ZU-NEXT:    .cfi_def_cfa_offset 8
-; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: test12:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax # encoding: [0x50]
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq test12b@PLT # encoding: [0xe8,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: test12b@PLT-4, kind: FK_PCRel_4
+; CHECK-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
+; CHECK-NEXT:    je .LBB12_2 # encoding: [0x74,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB12_2-1, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %T
+; CHECK-NEXT:    movl $1, %eax # encoding: [0xb8,0x01,0x00,0x00,0x00]
+; CHECK-NEXT:    popq %rcx # encoding: [0x59]
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq # encoding: [0xc3]
+; CHECK-NEXT:  .LBB12_2: # %F
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    movl $2, %eax # encoding: [0xb8,0x02,0x00,0x00,0x00]
+; CHECK-NEXT:    popq %rcx # encoding: [0x59]
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; O0-NDD-ZU-LABEL: test12:
 ; O0-NDD-ZU:       # %bb.0: # %entry
@@ -998,20 +854,10 @@ define void @test20(i32 %bf.load, i8 %x1, ptr %b_addr) {
 }
 
 define i32 @highmask_i64_simplify(i64 %val) {
-; NO-NDD-LABEL: highmask_i64_simplify:
-; NO-NDD:       # %bb.0:
-; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NO-NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-LABEL: highmask_i64_simplify:
-; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-NEXT:    retq # encoding: [0xc3]
-;
-; NDD-ZU-LABEL: highmask_i64_simplify:
-; NDD-ZU:       # %bb.0:
-; NDD-ZU-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; NDD-ZU-NEXT:    retq # encoding: [0xc3]
+; CHECK-LABEL: highmask_i64_simplify:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; O0-NDD-ZU-LABEL: highmask_i64_simplify:
 ; O0-NDD-ZU:       # %bb.0:
@@ -1936,41 +1782,17 @@ define { i64, i64 } @pr39968(i64, i64, i32) {
 ; Make sure we use a 32-bit comparison without an extend based on the input
 ; being pre-sign extended by caller.
 define i32 @pr42189(i16 signext %c) {
-; NO-NDD-LABEL: pr42189:
-; NO-NDD:       # %bb.0: # %entry
-; NO-NDD-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
-; NO-NDD-NEXT:    # imm = 0x7FFF
-; NO-NDD-NEXT:    jne f@PLT # TAILCALL
-; NO-NDD-NEXT:    # encoding: [0x75,A]
-; NO-NDD-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
-; NO-NDD-NEXT:  # %bb.1: # %if.then
-; NO-NDD-NEXT:    jmp g@PLT # TAILCALL
-; NO-NDD-NEXT:    # encoding: [0xeb,A]
-; NO-NDD-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
-;
-; NDD-LABEL: pr42189:
-; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
-; NDD-NEXT:    # imm = 0x7FFF
-; NDD-NEXT:    jne f@PLT # TAILCALL
-; NDD-NEXT:    # encoding: [0x75,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
-; NDD-NEXT:  # %bb.1: # %if.then
-; NDD-NEXT:    jmp g@PLT # TAILCALL
-; NDD-NEXT:    # encoding: [0xeb,A]
-; NDD-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
-;
-; NDD-ZU-LABEL: pr42189:
-; NDD-ZU:       # %bb.0: # %entry
-; NDD-ZU-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
-; NDD-ZU-NEXT:    # imm = 0x7FFF
-; NDD-ZU-NEXT:    jne f@PLT # TAILCALL
-; NDD-ZU-NEXT:    # encoding: [0x75,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
-; NDD-ZU-NEXT:  # %bb.1: # %if.then
-; NDD-ZU-NEXT:    jmp g@PLT # TAILCALL
-; NDD-ZU-NEXT:    # encoding: [0xeb,A]
-; NDD-ZU-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
+; CHECK-LABEL: pr42189:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpl $32767, %edi # encoding: [0x81,0xff,0xff,0x7f,0x00,0x00]
+; CHECK-NEXT:    # imm = 0x7FFF
+; CHECK-NEXT:    jne f@PLT # TAILCALL
+; CHECK-NEXT:    # encoding: [0x75,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: f@PLT-1, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    jmp g@PLT # TAILCALL
+; CHECK-NEXT:    # encoding: [0xeb,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: g@PLT-1, kind: FK_PCRel_1
 ;
 ; O0-NDD-ZU-LABEL: pr42189:
 ; O0-NDD-ZU:       # %bb.0: # %entry
