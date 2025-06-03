@@ -12643,11 +12643,22 @@ struct AAInvariantLoadPointerImpl
   /// See AbstractAttribute::trackStatistics().
   void trackStatistics() const override {}
 
-protected:
-  /// Indicate that invariance necessarily requires the pointer to be noalias.
-  virtual bool requiresNoAlias() const { return false; }
-
 private:
+  /// Indicate that noalias is required for the pointer to be invariant.
+  bool requiresNoAlias() const {
+    switch (getPositionKind()) {
+    default:
+      return false;
+    case IRP_CALL_SITE_RETURNED:
+      return true;
+    case IRP_ARGUMENT: {
+      const Function *F = getAssociatedFunction();
+      assert(F && "no associated function for argument");
+      return !isCallableCC(F->getCallingConv());
+    }
+    }
+  }
+
   bool isExternal() const {
     const Function *F = getAssociatedFunction();
     if (!F)
@@ -12800,7 +12811,7 @@ struct AAInvariantLoadPointerCallSiteReturned final
     const Function *F = getAssociatedFunction();
     assert(F && "no associated function for return from call");
 
-    // not much we can say about opaque functions
+    // There is not much we can say about opaque functions.
     if (F->isDeclaration() || F->isIntrinsic()) {
       if (!F->onlyReadsMemory() || !F->hasNoSync()) {
         indicatePessimisticFixpoint();
@@ -12809,9 +12820,6 @@ struct AAInvariantLoadPointerCallSiteReturned final
     }
     AAInvariantLoadPointerImpl::initialize(A);
   }
-
-protected:
-  virtual bool requiresNoAlias() const override { return true; }
 };
 
 struct AAInvariantLoadPointerArgument final : AAInvariantLoadPointerImpl {
@@ -12820,7 +12828,7 @@ struct AAInvariantLoadPointerArgument final : AAInvariantLoadPointerImpl {
 
   void initialize(Attributor &) override {
     const Function *F = getAssociatedFunction();
-    assert(F && "no associated function to argument");
+    assert(F && "no associated function for argument");
 
     if (!isCallableCC(F->getCallingConv())) {
       addKnownBits(IS_LOCALLY_CONSTRAINED);
@@ -12829,13 +12837,6 @@ struct AAInvariantLoadPointerArgument final : AAInvariantLoadPointerImpl {
 
     if (!F->hasLocalLinkage())
       removeAssumedBits(IS_LOCALLY_CONSTRAINED);
-  }
-
-protected:
-  virtual bool requiresNoAlias() const override {
-    const Function *F = getAssociatedFunction();
-    assert(F && "no associated function to argument");
-    return !isCallableCC(F->getCallingConv());
   }
 };
 

@@ -6,8 +6,6 @@ declare void @clobber(i32) #0
 declare ptr addrspace(1) @get_ptr() #0
 declare noalias ptr addrspace(1) @get_noalias_ptr() #0
 declare noalias ptr addrspace(1) @get_untouched_ptr() #1
-attributes #0 = { nofree norecurse nosync nounwind willreturn }
-attributes #1 = { nofree norecurse nosync nounwind willreturn readonly }
 
 define void @test_nonkernel(ptr addrspace(1) noalias %ptr) {
 ; AMDGCN-LABEL: define void @test_nonkernel(
@@ -319,6 +317,9 @@ finish:
   call void @clobber(i32 %val)
   ret void
 }
+
+attributes #0 = { nofree norecurse nosync nounwind willreturn }
+attributes #1 = { nofree norecurse nosync nounwind willreturn readonly }
 ;.
 ; AMDGCN: [[META0]] = !{}
 ;.
