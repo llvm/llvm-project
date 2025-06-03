@@ -33,6 +33,10 @@ Error StepOutRequestHandler::Run(const StepOutArguments &arguments) const {
   if (!thread.IsValid())
     return make_error<DAPError>("invalid thread");
 
+  if (!lldb::SBDebugger::StateIsStoppedState(
+          dap.target.GetProcess().GetState()))
+    return make_error<NotStoppedError>();
+
   // Remember the thread ID that caused the resume so we can set the
   // "threadCausedFocus" boolean value in the "stopped" events.
   dap.focus_tid = thread.GetThreadID();

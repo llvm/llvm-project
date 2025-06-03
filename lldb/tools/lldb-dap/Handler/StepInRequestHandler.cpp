@@ -40,6 +40,9 @@ Error StepInRequestHandler::Run(const StepInArguments &args) const {
   // "threadCausedFocus" boolean value in the "stopped" events.
   dap.focus_tid = thread.GetThreadID();
 
+  if (!SBDebugger::StateIsStoppedState(dap.target.GetProcess().GetState()))
+    return make_error<NotStoppedError>();
+
   lldb::SBError error;
   if (args.granularity == eSteppingGranularityInstruction) {
     thread.StepInstruction(/*step_over=*/false, error);
