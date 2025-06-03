@@ -187,8 +187,8 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
 static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
                              AllocationType AllocType,
                              ArrayRef<ContextTotalSize> ContextSizeInfo,
-                             const uint64_t MaxColdSize,
-                             uint64_t &TotalBytes, uint64_t &ColdBytes) {
+                             const uint64_t MaxColdSize, uint64_t &TotalBytes,
+                             uint64_t &ColdBytes) {
   SmallVector<Metadata *> MIBPayload(
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
