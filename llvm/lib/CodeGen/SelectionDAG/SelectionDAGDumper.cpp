@@ -270,6 +270,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   // Binary operators
   case ISD::ADD:                        return "add";
+  case ISD::PTRADD:                     return "ptradd";
   case ISD::SUB:                        return "sub";
   case ISD::MUL:                        return "mul";
   case ISD::MULHU:                      return "mulhu";
@@ -1164,6 +1165,9 @@ static void printrWithDepthHelper(raw_ostream &OS, const SDNode *N,
   for (const SDValue &Op : N->op_values()) {
     // Don't follow chain operands.
     if (Op.getValueType() == MVT::Other)
+      continue;
+    // Don't print children that were fully rendered inline.
+    if (shouldPrintInline(*Op.getNode(), G))
       continue;
     OS << '\n';
     printrWithDepthHelper(OS, Op.getNode(), G, depth - 1, indent + 2);

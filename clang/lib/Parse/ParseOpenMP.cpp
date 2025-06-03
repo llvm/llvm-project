@@ -12,7 +12,6 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/OpenMPClause.h"
-#include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/TargetInfo.h"

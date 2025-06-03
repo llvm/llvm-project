@@ -547,7 +547,7 @@ ScheduleDAGInstrs *MachineSchedulerImpl::createMachineScheduler() {
     return Scheduler;
 
   // Default to GenericScheduler.
-  return createGenericSchedLive(this);
+  return createSchedLive(this);
 }
 
 bool MachineSchedulerImpl::run(MachineFunction &Func, const TargetMachine &TM,
@@ -595,7 +595,7 @@ ScheduleDAGInstrs *PostMachineSchedulerImpl::createPostMachineScheduler() {
     return Scheduler;
 
   // Default to GenericScheduler.
-  return createGenericSchedPostRA(this);
+  return createSchedPostRA(this);
 }
 
 bool PostMachineSchedulerImpl::run(MachineFunction &Func,
@@ -967,6 +967,12 @@ void ScheduleDAGMI::releaseSucc(SUnit *SU, SDep *SuccEdge) {
 
 /// releaseSuccessors - Call releaseSucc on each of SU's successors.
 void ScheduleDAGMI::releaseSuccessors(SUnit *SU) {
+  // Reset the next successor, For example, we want to cluster A B C.
+  // After A is picked, we will set B as next cluster succ, but if we pick
+  // D instead of B after A, then we need to reset the next cluster succ because
+  // we have decided to not pick the cluster candidate B during pickNode().
+  // Leaving B as the NextClusterSucc just make things messy.
+  NextClusterSucc = nullptr;
   for (SDep &Succ : SU->Succs)
     releaseSucc(SU, &Succ);
 }
@@ -1004,6 +1010,7 @@ void ScheduleDAGMI::releasePred(SUnit *SU, SDep *PredEdge) {
 
 /// releasePredecessors - Call releasePred on each of SU's predecessors.
 void ScheduleDAGMI::releasePredecessors(SUnit *SU) {
+  NextClusterPred = nullptr;
   for (SDep &Pred : SU->Preds)
     releasePred(SU, &Pred);
 }
@@ -4266,28 +4273,8 @@ void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
   }
 }
 
-/// Create the standard converging machine scheduler. This will be used as the
-/// default scheduler if the target does not set a default.
-ScheduleDAGMILive *llvm::createGenericSchedLive(MachineSchedContext *C) {
-  ScheduleDAGMILive *DAG =
-      new ScheduleDAGMILive(C, std::make_unique<GenericScheduler>(C));
-  // Register DAG post-processors.
-  //
-  // FIXME: extend the mutation API to allow earlier mutations to instantiate
-  // data and pass it to later mutations. Have a single mutation that gathers
-  // the interesting nodes in one pass.
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
-
-  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
-  // Add MacroFusion mutation if fusions are not empty.
-  const auto &MacroFusions = STI.getMacroFusions();
-  if (!MacroFusions.empty())
-    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
-  return DAG;
-}
-
 static ScheduleDAGInstrs *createConvergingSched(MachineSchedContext *C) {
-  return createGenericSchedLive(C);
+  return createSchedLive(C);
 }
 
 static MachineSchedRegistry
@@ -4589,18 +4576,6 @@ void PostGenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
     SU->BotReadyCycle = std::max(SU->BotReadyCycle, Bot.getCurrCycle());
     Bot.bumpNode(SU);
   }
-}
-
-ScheduleDAGMI *llvm::createGenericSchedPostRA(MachineSchedContext *C) {
-  ScheduleDAGMI *DAG =
-      new ScheduleDAGMI(C, std::make_unique<PostGenericScheduler>(C),
-                        /*RemoveKillFlags=*/true);
-  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
-  // Add MacroFusion mutation if fusions are not empty.
-  const auto &MacroFusions = STI.getMacroFusions();
-  if (!MacroFusions.empty())
-    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
-  return DAG;
 }
 
 //===----------------------------------------------------------------------===//

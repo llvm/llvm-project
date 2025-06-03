@@ -42,7 +42,7 @@ public:
 
   /// The description of this program point which will be dumped for debugging
   /// purposes. Do not use in user-facing output!
-  virtual StringRef getTagDescription() const = 0;
+  virtual StringRef getDebugTag() const = 0;
 
   /// Used to implement 'isKind' in subclasses.
   const void *getTagKind() const { return TagKind; }
@@ -55,7 +55,7 @@ class SimpleProgramPointTag : public ProgramPointTag {
   std::string Desc;
 public:
   SimpleProgramPointTag(StringRef MsgProvider, StringRef Msg);
-  StringRef getTagDescription() const override;
+  StringRef getDebugTag() const override;
 };
 
 class ProgramPoint {
