@@ -17,9 +17,10 @@ add_lldb_library(lldbExpression NO_PLUGIN_DEPENDENCIES
   UserExpression.cpp
   UtilityFunction.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Expression
   DEPENDS
-  intrinsics_gen
-
+    intrinsics_gen
   LINK_LIBS
     lldbCore
     lldbHost

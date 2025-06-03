@@ -71,12 +71,6 @@ function(add_lldb_library name)
     set_property(GLOBAL APPEND PROPERTY LLDB_PLUGINS ${name})
   endif()
 
-  if (MSVC_IDE OR XCODE)
-    string(REGEX MATCHALL "/[^/]+" split_path ${CMAKE_CURRENT_SOURCE_DIR})
-    list(GET split_path -1 dir)
-    file(GLOB_RECURSE headers
-      ../../include/lldb${dir}/*.h)
-  endif()
   if (PARAM_MODULE)
     set(libkind MODULE)
   elseif (PARAM_SHARED)
@@ -99,7 +93,7 @@ function(add_lldb_library name)
     set(pass_NO_INSTALL_RPATH NO_INSTALL_RPATH)
   endif()
 
-  llvm_add_library(${name} ${libkind} ${headers}
+  llvm_add_library(${name} ${libkind}
     ${PARAM_UNPARSED_ARGUMENTS}
     LINK_LIBS ${PARAM_LINK_LIBS}
     DEPENDS ${PARAM_DEPENDS}
