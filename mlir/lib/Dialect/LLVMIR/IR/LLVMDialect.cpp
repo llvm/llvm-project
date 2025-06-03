@@ -589,10 +589,6 @@ LogicalResult SwitchOp::verify() {
            static_cast<int64_t>(getCaseDestinations().size())))
     return emitOpError("expects number of case values to match number of "
                        "case destinations");
-  if (getBranchWeights() && getBranchWeights()->size() != getNumSuccessors())
-    return emitError("expects number of branch weights to match number of "
-                     "successors: ")
-           << getBranchWeights()->size() << " vs " << getNumSuccessors();
   if (getCaseValues() &&
       getValue().getType() != getCaseValues()->getElementType())
     return emitError("expects case value type to match condition value type");
