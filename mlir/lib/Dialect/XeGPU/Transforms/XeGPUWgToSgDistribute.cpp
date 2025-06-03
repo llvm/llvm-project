@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -28,6 +29,30 @@ namespace xegpu {
 using namespace mlir;
 
 namespace {
+
+static std::pair<SmallVector<int64_t>, int>
+computeTileShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
+  // init count and subShape to the default value. If the LayoutAttr
+  // is not present, it will return a VectorType with original shape.
+  int count = 1;
+  SmallVector<int64_t> tileShape(shape);
+
+  if (layout) {
+    if (DenseI32ArrayAttr sgLayoutAttr = layout.getSgLayout()) {
+      auto sgLayout = llvm::to_vector_of<int64_t>(sgLayoutAttr.asArrayRef());
+      if (DenseI32ArrayAttr sgDataAttr = layout.getSgData())
+        tileShape = llvm::to_vector_of<int64_t>(sgDataAttr.asArrayRef());
+      else
+        tileShape = computeShapeRatio(shape, sgLayout).value_or(tileShape);
+      SmallVector<int64_t> distUnit =
+          computeElementwiseMul(sgLayout, tileShape);
+      for (size_t i = 0; i < distUnit.size(); ++i)
+        distUnit[i] = std::min(shape[i], distUnit[i]);
+      count = computeProduct(shape) / computeProduct(distUnit);
+    }
+  }
+  return std::make_pair(tileShape, count);
+}
 
 /// This pattern transforms the CreateNdDescOp to create a subgroup descriptor
 /// from a workgroup descriptor. It replaces the offsets and sizes with
@@ -266,15 +291,15 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
     if (resultTy.getRank() != 2)
       return failure();
 
-    auto originalLayout =
-        llvm::dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
+    auto originalLayout = xegpu::getLayoutAttr(op.getResult());
     if (!originalLayout)
       return failure();
 
-    SmallVector<Value> newDpasOps;
     size_t i = 0;
+    SmallVector<Value> newDpasOps;
     for (auto aVec : adaptor.getLhs()) {
       for (auto bVec : adaptor.getRhs()) {
+
         llvm::SmallVector<Value> operands({aVec, bVec});
         Value tmpC;
         if (op.getAcc()) {
@@ -288,10 +313,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
             llvm::cast<VectorType>(bVec.getType()).getShape();
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
-        tmpC = rewriter.create<xegpu::DpasOp>(
-            loc, resTy, operands,
-            llvm::ArrayRef<NamedAttribute>(
-                {"layout_result_0", originalLayout.dropSgLayoutAndData()}));
+        tmpC = rewriter.create<xegpu::DpasOp>(loc, resTy, operands);
+        xegpu::setLayoutAttr(cast<OpResult>(tmpC), originalLayout.dropSgLayoutAndData());
+
         newDpasOps.push_back(tmpC);
       }
     }
@@ -314,14 +338,30 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
+struct UnrealizedConversionCastOpPattern
+    : public OpConversionPattern<mlir::UnrealizedConversionCastOp> {
+  using OpConversionPattern<
+      mlir::UnrealizedConversionCastOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::UnrealizedConversionCastOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getNumOperands() == 1 && op.getNumResults() == 1) {
+      rewriter.replaceOpWithMultiple(op, xegpu::flattenValues(adaptor.getInputs()));
+      return mlir::success();
+    }
+    return mlir::failure();
+  }
+};
+
 } // namespace
 
 namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
-               WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp>(
-      patterns.getContext());
+               WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
+               UnrealizedConversionCastOpPattern>(patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -353,7 +393,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   };
 
   auto isLegal = [&](xegpu::LayoutAttr layout) -> bool {
-    return !layout || layout.getSgLayout() == nullptr;
+    return !layout || !layout.isWgLayout();
   };
 
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp, xegpu::LoadNdOp,
@@ -365,11 +405,55 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   });
 
   target.addDynamicallyLegalOp<xegpu::DpasOp>([=](xegpu::DpasOp op) -> bool {
-    auto layout = dyn_cast_or_null<xegpu::LayoutAttr>(op->getAttr("layout"));
+    auto layout = xegpu::getLayoutAttr(op.getResult());
     return isLegal(layout);
   });
 
+  target.addIllegalOp<UnrealizedConversionCastOp>();
+
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
+
+  TypeConverter converter;
+  converter.addConversion([&](Type type) -> Type { return type; });
+  converter.addConversion(
+      [&](RankedTensorType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        Type elemTy = type.getElementType();
+        ArrayRef<int64_t> shape = type.getShape();
+
+        int count;
+        SmallVector<int64_t> subShape;
+        std::tie(subShape, count) = computeTileShapeAndCount(
+            shape, dyn_cast<xegpu::LayoutAttr>(type.getEncoding()));
+
+        auto newTy = VectorType::get(subShape, elemTy);
+        result.append(count, newTy);
+        return success();
+      });
+
+  converter.addConversion(
+      [&](xegpu::TensorDescType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        Type elemTy = type.getElementType();
+        ArrayRef<int64_t> shape = type.getShape();
+
+        // init count and newTy to the default value. If the layout
+        // attribute is not present, it will return the original type.
+        int count;
+        SmallVector<int64_t> subShape;
+        xegpu::LayoutAttr layout = type.getLayoutAttr();
+        std::tie(subShape, count) = computeTileShapeAndCount(shape, layout);
+
+        if (layout)
+          layout = layout.dropSgLayoutAndData();
+
+        auto newTy = xegpu::TensorDescType::get(
+            type.getContext(), subShape, elemTy, type.getEncoding(), layout);
+        result.append(count, newTy);
+        return success();
+      });
+
+  xegpu::doSCFStructuralTypeConversionWithTensorType(getOperation(), converter);
 
   xegpu::populateXeGPUWgToSgDistributePatterns(patterns);
   if (failed(

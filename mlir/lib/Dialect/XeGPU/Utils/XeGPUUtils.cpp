@@ -27,7 +27,7 @@
 using namespace mlir;
 
 /// convert ArrayRef<ValueRange> into SmallVector<Value>
-static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
+SmallVector<Value> xegpu::flattenValues(ArrayRef<ValueRange> values) {
   SmallVector<Value> result;
   for (const auto &vals : values)
     llvm::append_range(result, vals);
@@ -342,7 +342,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
         }
 
         if (isa<RankedTensorType>(inputTy) && isa<VectorType>(outputTy)) {
-          SmallVector<Value> values = flattenValues(adaptor.getInputs());
+          SmallVector<Value> values = xegpu::flattenValues(adaptor.getInputs());
           auto newOp = rewriter.create<UnrealizedConversionCastOp>(
               op.getLoc(), outputTy, values);
           rewriter.replaceOp(op, newOp);
