@@ -22,6 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/TargetParser/Triple.h"
@@ -36,7 +37,7 @@ namespace orc {
 class ExecutionSession;
 
 /// ExecutorProcessControl supports interaction with a JIT target process.
-class ExecutorProcessControl {
+class LLVM_ABI ExecutorProcessControl {
   friend class ExecutionSession;
 public:
 
@@ -99,7 +100,7 @@ public:
   };
 
   /// APIs for manipulating memory in the target process.
-  class MemoryAccess {
+  class LLVM_ABI MemoryAccess {
   public:
     /// Callback function for asynchronous writes.
     using WriteResultFn = unique_function<void(Error)>;
@@ -398,7 +399,8 @@ protected:
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
-class InProcessMemoryAccess : public ExecutorProcessControl::MemoryAccess {
+class LLVM_ABI InProcessMemoryAccess
+    : public ExecutorProcessControl::MemoryAccess {
 public:
   InProcessMemoryAccess(bool IsArch64Bit) : IsArch64Bit(IsArch64Bit) {}
   void writeUInt8sAsync(ArrayRef<tpctypes::UInt8Write> Ws,
@@ -465,9 +467,9 @@ public:
 };
 
 /// A ExecutorProcessControl implementation targeting the current process.
-class SelfExecutorProcessControl : public ExecutorProcessControl,
-                                   private InProcessMemoryAccess,
-                                   private DylibManager {
+class LLVM_ABI SelfExecutorProcessControl : public ExecutorProcessControl,
+                                            private InProcessMemoryAccess,
+                                            private DylibManager {
 public:
   SelfExecutorProcessControl(
       std::shared_ptr<SymbolStringPool> SSP, std::unique_ptr<TaskDispatcher> D,
