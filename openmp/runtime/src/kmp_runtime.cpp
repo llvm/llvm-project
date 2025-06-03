@@ -579,7 +579,10 @@ static void __kmp_init_allocator() {
   __kmp_init_memkind();
   __kmp_init_target_mem();
 }
-static void __kmp_fini_allocator() { __kmp_fini_memkind(); }
+static void __kmp_fini_allocator() {
+  __kmp_fini_target_mem();
+  __kmp_fini_memkind();
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -1983,8 +1986,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
 
 #if OMPT_SUPPORT
     ompt_data_t ompt_parallel_data = ompt_data_none;
-    ompt_data_t *parent_task_data;
-    ompt_frame_t *ompt_frame;
+    ompt_data_t *parent_task_data = NULL;
+    ompt_frame_t *ompt_frame = NULL;
     void *return_address = NULL;
 
     if (ompt_enabled.enabled) {
@@ -5765,8 +5768,8 @@ void __kmp_free_team(kmp_root_t *root,
     for (f = 1; f < team->t.t_nproc; ++f) {
       KMP_DEBUG_ASSERT(team->t.t_threads[f]);
       if (__kmp_barrier_gather_pattern[bs_forkjoin_barrier] == bp_dist_bar) {
-        KMP_COMPARE_AND_STORE_ACQ32(&(team->t.t_threads[f]->th.th_used_in_team),
-                                    1, 2);
+        (void)KMP_COMPARE_AND_STORE_ACQ32(
+            &(team->t.t_threads[f]->th.th_used_in_team), 1, 2);
       }
       __kmp_free_thread(team->t.t_threads[f]);
     }
@@ -7143,8 +7146,6 @@ static void __kmp_do_serial_initialize(void) {
   __kmp_stats_init();
 #endif
   __kmp_init_lock(&__kmp_global_lock);
-  __kmp_init_queuing_lock(&__kmp_dispatch_lock);
-  __kmp_init_lock(&__kmp_debug_lock);
   __kmp_init_atomic_lock(&__kmp_atomic_lock);
   __kmp_init_atomic_lock(&__kmp_atomic_lock_1i);
   __kmp_init_atomic_lock(&__kmp_atomic_lock_2i);
@@ -8951,8 +8952,8 @@ __kmp_determine_reduction_method(
     KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_WASM
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD ||        \
-    KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
+    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HAIKU ||       \
+    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
     int teamsize_cutoff = 4;
 
@@ -8976,15 +8977,15 @@ __kmp_determine_reduction_method(
 #else
 #error "Unknown or unsupported OS"
 #endif // KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||
-       // KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HURD ||
-       // KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
+       // KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HAIKU ||
+       // KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
 #elif KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_AARCH || KMP_ARCH_MIPS ||       \
-    KMP_ARCH_WASM || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
+    KMP_ARCH_WASM || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_HURD || KMP_OS_SOLARIS ||       \
-    KMP_OS_WASI || KMP_OS_AIX
+    KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_HAIKU || KMP_OS_HURD ||         \
+    KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
     // basic tuning
 
@@ -9132,7 +9133,8 @@ int __kmp_pause_resource(kmp_pause_status_t level) {
       __kmp_soft_pause();
       return 0;
     }
-  } else if (level == kmp_hard_paused) { // requesting hard pause
+  } else if (level == kmp_hard_paused || level == kmp_stop_tool_paused) {
+    // requesting hard pause or stop_tool pause
     if (__kmp_pause_status != kmp_not_paused) {
       // error message about already being paused
       return 1;
@@ -9220,8 +9222,8 @@ void __kmp_add_threads_to_team(kmp_team_t *team, int new_nthreads) {
   // to wake it up.
   for (int f = 1; f < new_nthreads; ++f) {
     KMP_DEBUG_ASSERT(team->t.t_threads[f]);
-    KMP_COMPARE_AND_STORE_ACQ32(&(team->t.t_threads[f]->th.th_used_in_team), 0,
-                                3);
+    (void)KMP_COMPARE_AND_STORE_ACQ32(
+        &(team->t.t_threads[f]->th.th_used_in_team), 0, 3);
     if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME) { // Wake up sleeping threads
       __kmp_resume_32(team->t.t_threads[f]->th.th_info.ds.ds_gtid,
                       (kmp_flag_32<false, false> *)NULL);

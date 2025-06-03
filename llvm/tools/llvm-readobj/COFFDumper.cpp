@@ -108,6 +108,7 @@ public:
   void printStackMap() const override;
   void printAddrsig() override;
   void printCGProfile() override;
+  void printStringTable() override;
 
 private:
   StringRef getSymbolName(uint32_t Index);
@@ -645,10 +646,11 @@ void COFFDumper::cacheRelocations() {
   for (const SectionRef &S : Obj->sections()) {
     const coff_section *Section = Obj->getCOFFSection(S);
 
-    append_range(RelocMap[Section], S.relocations());
+    auto &RM = RelocMap[Section];
+    append_range(RM, S.relocations());
 
     // Sort relocations by address.
-    llvm::sort(RelocMap[Section], [](RelocationRef L, RelocationRef R) {
+    llvm::sort(RM, [](RelocationRef L, RelocationRef R) {
       return L.getOffset() < R.getOffset();
     });
   }
@@ -930,6 +932,12 @@ void COFFDumper::printCOFFLoadConfig() {
     W.printHex("ExtraRFETableSize", CHPE->ExtraRFETableSize);
     W.printHex("__os_arm64x_dispatch_fptr", CHPE->__os_arm64x_dispatch_fptr);
     W.printHex("AuxiliaryIATCopy", CHPE->AuxiliaryIATCopy);
+
+    if (CHPE->Version >= 2) {
+      W.printHex("AuxiliaryDelayloadIAT", CHPE->AuxiliaryDelayloadIAT);
+      W.printHex("AuxiliaryDelayloadIATCopy", CHPE->AuxiliaryDelayloadIATCopy);
+      W.printHex("HybridImageInfoBitfield", CHPE->HybridImageInfoBitfield);
+    }
   }
 
   if (Tables.SEHTableVA) {
@@ -1264,14 +1272,15 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
         reportError(errorCodeToError(EC), Obj->getFileName());
 
       W.printString("LinkageName", LinkageName);
-      if (FunctionLineTables.count(LinkageName) != 0) {
+      auto [It, Inserted] =
+          FunctionLineTables.try_emplace(LinkageName, Contents);
+      if (!Inserted) {
         // Saw debug info for this function already?
         reportError(errorCodeToError(object_error::parse_failed),
                     Obj->getFileName());
         return;
       }
 
-      FunctionLineTables[LinkageName] = Contents;
       FunctionNames.push_back(LinkageName);
       break;
     }
@@ -2209,6 +2218,17 @@ void COFFDumper::printCGProfile() {
     W.printNumber("To", getSymbolName(ToIndex), ToIndex);
     W.printNumber("Weight", Count);
   }
+}
+
+void COFFDumper::printStringTable() {
+  DictScope DS(W, "StringTable");
+  StringRef StrTable = Obj->getStringTable();
+  uint32_t StrTabSize = StrTable.size();
+  W.printNumber("Length", StrTabSize);
+  // Print strings from the fifth byte, since the first four bytes contain the
+  // length (in bytes) of the string table (including the length field).
+  if (StrTabSize > 4)
+    printAsStringList(StrTable, 4);
 }
 
 StringRef COFFDumper::getSymbolName(uint32_t Index) {

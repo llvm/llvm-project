@@ -10,7 +10,6 @@
 // CHECK-NEXT:     FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // CHECK-NEXT:     FEAT_BF16                                              Enable BFloat16 Extension
 // CHECK-NEXT:     FEAT_BTI                                               Enable Branch Target Identification
-// CHECK-NEXT:     FEAT_CCIDX                                             Enable Armv8.3-A Extend of the CCSIDR number of sets
 // CHECK-NEXT:     FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
 // CHECK-NEXT:     FEAT_CSV2_2                                            Enable architectural speculation restriction
 // CHECK-NEXT:     FEAT_DIT                                               Enable Armv8.4-A Data Independent Timing instructions

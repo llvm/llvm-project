@@ -18,6 +18,7 @@
 
 #include <mdspan>
 #include <cstddef>
+#include <span> // dynamic_extent
 
 #include "test_macros.h"
 

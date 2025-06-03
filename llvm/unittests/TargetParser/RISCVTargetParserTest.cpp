@@ -14,20 +14,20 @@ using namespace llvm;
 namespace {
 TEST(RISCVVType, CheckSameRatioLMUL) {
   // Smaller LMUL.
-  EXPECT_EQ(RISCVII::LMUL_1,
-            RISCVVType::getSameRatioLMUL(16, RISCVII::LMUL_2, 8));
-  EXPECT_EQ(RISCVII::LMUL_F2,
-            RISCVVType::getSameRatioLMUL(16, RISCVII::LMUL_1, 8));
+  EXPECT_EQ(RISCVVType::LMUL_1,
+            RISCVVType::getSameRatioLMUL(16, RISCVVType::LMUL_2, 8));
+  EXPECT_EQ(RISCVVType::LMUL_F2,
+            RISCVVType::getSameRatioLMUL(16, RISCVVType::LMUL_1, 8));
   // Smaller fractional LMUL.
-  EXPECT_EQ(RISCVII::LMUL_F8,
-            RISCVVType::getSameRatioLMUL(16, RISCVII::LMUL_F4, 8));
+  EXPECT_EQ(RISCVVType::LMUL_F8,
+            RISCVVType::getSameRatioLMUL(16, RISCVVType::LMUL_F4, 8));
   // Bigger LMUL.
-  EXPECT_EQ(RISCVII::LMUL_2,
-            RISCVVType::getSameRatioLMUL(8, RISCVII::LMUL_1, 16));
-  EXPECT_EQ(RISCVII::LMUL_1,
-            RISCVVType::getSameRatioLMUL(8, RISCVII::LMUL_F2, 16));
+  EXPECT_EQ(RISCVVType::LMUL_2,
+            RISCVVType::getSameRatioLMUL(8, RISCVVType::LMUL_1, 16));
+  EXPECT_EQ(RISCVVType::LMUL_1,
+            RISCVVType::getSameRatioLMUL(8, RISCVVType::LMUL_F2, 16));
   // Bigger fractional LMUL.
-  EXPECT_EQ(RISCVII::LMUL_F2,
-            RISCVVType::getSameRatioLMUL(8, RISCVII::LMUL_F4, 16));
+  EXPECT_EQ(RISCVVType::LMUL_F2,
+            RISCVVType::getSameRatioLMUL(8, RISCVVType::LMUL_F4, 16));
 }
 } // namespace

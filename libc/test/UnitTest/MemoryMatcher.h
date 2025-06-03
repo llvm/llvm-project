@@ -49,7 +49,7 @@ class MemoryMatcher : public Matcher<MemoryView> {
   MemoryView expected;
   MemoryView actual;
   bool mismatch_size = false;
-  size_t mismatch_index = -1;
+  size_t mismatch_index = cpp::numeric_limits<size_t>::max();
 
 public:
   MemoryMatcher(MemoryView expectedValue) : expected(expectedValue) {}

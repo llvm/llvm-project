@@ -15,9 +15,6 @@
 // CHECK-NOT: warning:
 
 //--- main.c
-#define TESTMACRO1 2
-#define TESTMARCRO2 5
-
 int main ()
 {
   return 0;
@@ -87,7 +84,7 @@ int main ()
       "location": {
         "position": {
           "character": 4,
-          "line": 3
+          "line": 0
         },
         "uri": "file://INPUT_DIR/main.c"
       },
@@ -108,106 +105,6 @@ int main ()
       },
       "pathComponents": [
         "main"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "#define"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "TESTMACRO1"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:main.c@8@macro@TESTMACRO1"
-      },
-      "kind": {
-        "displayName": "Macro",
-        "identifier": "c.macro"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 0
-        },
-        "uri": "file://INPUT_DIR/main.c"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "TESTMACRO1"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "TESTMACRO1"
-          }
-        ],
-        "title": "TESTMACRO1"
-      },
-      "pathComponents": [
-        "TESTMACRO1"
-      ]
-    },
-    {
-      "accessLevel": "public",
-      "declarationFragments": [
-        {
-          "kind": "keyword",
-          "spelling": "#define"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "identifier",
-          "spelling": "TESTMARCRO2"
-        }
-      ],
-      "identifier": {
-        "interfaceLanguage": "c",
-        "precise": "c:main.c@29@macro@TESTMARCRO2"
-      },
-      "kind": {
-        "displayName": "Macro",
-        "identifier": "c.macro"
-      },
-      "location": {
-        "position": {
-          "character": 8,
-          "line": 1
-        },
-        "uri": "file://INPUT_DIR/main.c"
-      },
-      "names": {
-        "navigator": [
-          {
-            "kind": "identifier",
-            "spelling": "TESTMARCRO2"
-          }
-        ],
-        "subHeading": [
-          {
-            "kind": "identifier",
-            "spelling": "TESTMARCRO2"
-          }
-        ],
-        "title": "TESTMARCRO2"
-      },
-      "pathComponents": [
-        "TESTMARCRO2"
       ]
     }
   ]

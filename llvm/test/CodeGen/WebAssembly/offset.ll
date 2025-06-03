@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -disable-wasm-fallthrough-return-opt -mattr=+half-precision | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -disable-wasm-fallthrough-return-opt -mattr=+fp16 | FileCheck %s
 
 ; Test constant load and store address offsets.
 

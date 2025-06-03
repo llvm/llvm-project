@@ -28,6 +28,8 @@
 #ifndef LLVM_SUPPORT_DEBUG_H
 #define LLVM_SUPPORT_DEBUG_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class raw_ostream;
@@ -61,22 +63,27 @@ void setCurrentDebugTypes(const char **Types, unsigned Count);
 ///
 /// This will emit the debug information if -debug is present, and -debug-only
 /// is not specified, or is specified as "bitset".
-#define DEBUG_WITH_TYPE(TYPE, X)                                        \
-  do { if (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)) { X; } \
+#define DEBUG_WITH_TYPE(TYPE, ...)                                             \
+  do {                                                                         \
+    if (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)) {               \
+      __VA_ARGS__;                                                             \
+    }                                                                          \
   } while (false)
 
 #else
 #define isCurrentDebugType(X) (false)
 #define setCurrentDebugType(X) do { (void)(X); } while (false)
 #define setCurrentDebugTypes(X, N) do { (void)(X); (void)(N); } while (false)
-#define DEBUG_WITH_TYPE(TYPE, X) do { } while (false)
+#define DEBUG_WITH_TYPE(TYPE, ...)                                             \
+  do {                                                                         \
+  } while (false)
 #endif
 
 /// This boolean is set to true if the '-debug' command line option
 /// is specified.  This should probably not be referenced directly, instead, use
 /// the DEBUG macro below.
 ///
-extern bool DebugFlag;
+LLVM_ABI extern bool DebugFlag;
 
 /// EnableDebugBuffering - This defaults to false.  If true, the debug
 /// stream will install signal handlers to dump any buffered debug
@@ -84,12 +91,12 @@ extern bool DebugFlag;
 /// to install signal handlers if they are certain there will be no
 /// conflict.
 ///
-extern bool EnableDebugBuffering;
+LLVM_ABI extern bool EnableDebugBuffering;
 
 /// dbgs() - This returns a reference to a raw_ostream for debugging
 /// messages.  If debugging is disabled it returns errs().  Use it
 /// like: dbgs() << "foo" << "bar";
-raw_ostream &dbgs();
+LLVM_ABI raw_ostream &dbgs();
 
 // DEBUG macro - This macro should be used by passes to emit debug information.
 // If the '-debug' option is specified on the commandline, and if this is a
@@ -98,7 +105,7 @@ raw_ostream &dbgs();
 //
 // LLVM_DEBUG(dbgs() << "Bitset contains: " << Bitset << "\n");
 //
-#define LLVM_DEBUG(X) DEBUG_WITH_TYPE(DEBUG_TYPE, X)
+#define LLVM_DEBUG(...) DEBUG_WITH_TYPE(DEBUG_TYPE, __VA_ARGS__)
 
 } // end namespace llvm
 

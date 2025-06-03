@@ -24,47 +24,49 @@ using namespace mlir::tblgen;
 
 /// Generate a unique label based on the current file name to prevent name
 /// collisions if multiple generated files are included at once.
-static std::string getUniqueOutputLabel(const llvm::RecordKeeper &records,
+static std::string getUniqueOutputLabel(const RecordKeeper &records,
                                         StringRef tag) {
   // Use the input file name when generating a unique name.
-  std::string inputFilename = records.getInputFilename();
+  StringRef inputFilename = records.getInputFilename();
 
   // Drop all but the base filename.
-  StringRef nameRef = llvm::sys::path::filename(inputFilename);
+  StringRef nameRef = sys::path::filename(inputFilename);
   nameRef.consume_back(".td");
 
   // Sanitize any invalid characters.
   std::string uniqueName(tag);
   for (char c : nameRef) {
-    if (llvm::isAlnum(c) || c == '_')
+    if (isAlnum(c) || c == '_')
       uniqueName.push_back(c);
     else
-      uniqueName.append(llvm::utohexstr((unsigned char)c));
+      uniqueName.append(utohexstr((unsigned char)c));
   }
   return uniqueName;
 }
 
 StaticVerifierFunctionEmitter::StaticVerifierFunctionEmitter(
-    raw_ostream &os, const llvm::RecordKeeper &records, StringRef tag)
+    raw_ostream &os, const RecordKeeper &records, StringRef tag)
     : os(os), uniqueOutputLabel(getUniqueOutputLabel(records, tag)) {}
 
 void StaticVerifierFunctionEmitter::emitOpConstraints(
-    ArrayRef<llvm::Record *> opDefs) {
+    ArrayRef<const Record *> opDefs) {
   NamespaceEmitter namespaceEmitter(os, Operator(*opDefs[0]).getCppNamespace());
   emitTypeConstraints();
   emitAttrConstraints();
+  emitPropConstraints();
   emitSuccessorConstraints();
   emitRegionConstraints();
 }
 
 void StaticVerifierFunctionEmitter::emitPatternConstraints(
-    const llvm::ArrayRef<DagLeaf> constraints) {
+    const ArrayRef<DagLeaf> constraints) {
   collectPatternConstraints(constraints);
   emitPatternConstraints();
 }
 
 //===----------------------------------------------------------------------===//
 // Constraint Getters
+//===----------------------------------------------------------------------===//
 
 StringRef StaticVerifierFunctionEmitter::getTypeConstraintFn(
     const Constraint &constraint) const {
@@ -79,6 +81,15 @@ std::optional<StringRef> StaticVerifierFunctionEmitter::getAttrConstraintFn(
     const Constraint &constraint) const {
   const auto *it = attrConstraints.find(constraint);
   return it == attrConstraints.end() ? std::optional<StringRef>()
+                                     : StringRef(it->second);
+}
+
+// Find a uniqued property constraint. Since not all property constraints can
+// be uniqued, return std::nullopt if one was not found.
+std::optional<StringRef> StaticVerifierFunctionEmitter::getPropConstraintFn(
+    const Constraint &constraint) const {
+  const auto *it = propConstraints.find(constraint);
+  return it == propConstraints.end() ? std::optional<StringRef>()
                                      : StringRef(it->second);
 }
 
@@ -100,6 +111,7 @@ StringRef StaticVerifierFunctionEmitter::getRegionConstraintFn(
 
 //===----------------------------------------------------------------------===//
 // Constraint Emission
+//===----------------------------------------------------------------------===//
 
 /// Code templates for emitting type, attribute, successor, and region
 /// constraints. Each of these templates require the following arguments:
@@ -143,6 +155,25 @@ static ::llvm::LogicalResult {0}(
   });
 }
 )";
+
+/// Code for a property constraint. These may be called from ops only.
+/// Property constraints cannot reference anything other than `$_self` and
+/// `$_op`. {3} is the interface type of the property.
+static const char *const propConstraintCode = R"(
+  static ::llvm::LogicalResult {0}(
+      {3} prop, ::llvm::StringRef propName, llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
+    if (!({1}))
+      return emitError() << "property '" << propName
+          << "' failed to satisfy constraint: {2}";
+    return ::mlir::success();
+  }
+  static ::llvm::LogicalResult {0}(
+      ::mlir::Operation *op, {3} prop, ::llvm::StringRef propName) {{
+    return {0}(prop, propName, [op]() {{
+      return op->emitOpError();
+    });
+  }
+  )";
 
 /// Code for a successor constraint.
 static const char *const successorConstraintCode = R"(
@@ -208,6 +239,20 @@ void StaticVerifierFunctionEmitter::emitAttrConstraints() {
   emitConstraints(attrConstraints, "attr", attrConstraintCode);
 }
 
+/// Unlike with the other helpers, this one has to substitute in the interface
+/// type of the property, so we can't just use the generic function.
+void StaticVerifierFunctionEmitter::emitPropConstraints() {
+  FmtContext ctx;
+  ctx.addSubst("_op", "*op").withSelf("prop");
+  for (auto &it : propConstraints) {
+    auto propConstraint = cast<PropConstraint>(it.first);
+    os << formatv(propConstraintCode, it.second,
+                  tgfmt(propConstraint.getConditionTemplate(), &ctx),
+                  escapeString(it.first.getSummary()),
+                  propConstraint.getInterfaceType());
+  }
+}
+
 void StaticVerifierFunctionEmitter::emitSuccessorConstraints() {
   emitConstraints(successorConstraints, "successor", successorConstraintCode);
 }
@@ -234,6 +279,7 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
 
 //===----------------------------------------------------------------------===//
 // Constraint Uniquing
+//===----------------------------------------------------------------------===//
 
 /// An attribute constraint that references anything other than itself and the
 /// current op cannot be generically extracted into a function. Most
@@ -248,6 +294,20 @@ static bool canUniqueAttrConstraint(Attribute attr) {
   return !StringRef(test).contains("<no-subst-found>");
 }
 
+/// A property constraint that references anything other than itself and the
+/// current op cannot be generically extracted into a function, just as with
+/// canUnequePropConstraint(). Additionally, property constraints without
+/// an interface type specified can't be uniqued, and ones that are a literal
+/// "true" shouldn't be constrained.
+static bool canUniquePropConstraint(Property prop) {
+  FmtContext ctx;
+  auto test = tgfmt(prop.getConditionTemplate(),
+                    &ctx.withSelf("prop").addSubst("_op", "*op"))
+                  .str();
+  return !StringRef(test).contains("<no-subst-found>") && test != "true" &&
+         !prop.getInterfaceType().empty();
+}
+
 std::string StaticVerifierFunctionEmitter::getUniqueName(StringRef kind,
                                                          unsigned index) {
   return ("__mlir_ods_local_" + kind + "_constraint_" + uniqueOutputLabel +
@@ -258,20 +318,20 @@ std::string StaticVerifierFunctionEmitter::getUniqueName(StringRef kind,
 void StaticVerifierFunctionEmitter::collectConstraint(ConstraintMap &map,
                                                       StringRef kind,
                                                       Constraint constraint) {
-  auto *it = map.find(constraint);
-  if (it == map.end())
-    map.insert({constraint, getUniqueName(kind, map.size())});
+  auto [it, inserted] = map.try_emplace(constraint);
+  if (inserted)
+    it->second = getUniqueName(kind, map.size());
 }
 
 void StaticVerifierFunctionEmitter::collectOpConstraints(
-    ArrayRef<Record *> opDefs) {
+    ArrayRef<const Record *> opDefs) {
   const auto collectTypeConstraints = [&](Operator::const_value_range values) {
     for (const NamedTypeConstraint &value : values)
       if (value.hasPredicate())
         collectConstraint(typeConstraints, "type", value.constraint);
   };
 
-  for (Record *def : opDefs) {
+  for (const Record *def : opDefs) {
     Operator op(*def);
     /// Collect type constraints.
     collectTypeConstraints(op.getOperands());
@@ -282,6 +342,13 @@ void StaticVerifierFunctionEmitter::collectOpConstraints(
           !namedAttr.attr.isDerivedAttr() &&
           canUniqueAttrConstraint(namedAttr.attr))
         collectConstraint(attrConstraints, "attr", namedAttr.attr);
+    }
+    /// Collect non-trivial property constraints.
+    for (const NamedProperty &namedProp : op.getProperties()) {
+      if (!namedProp.prop.getPredicate().isNull() &&
+          canUniquePropConstraint(namedProp.prop)) {
+        collectConstraint(propConstraints, "prop", namedProp.prop);
+      }
     }
     /// Collect successor constraints.
     for (const NamedSuccessor &successor : op.getSuccessors()) {
@@ -298,7 +365,7 @@ void StaticVerifierFunctionEmitter::collectOpConstraints(
 }
 
 void StaticVerifierFunctionEmitter::collectPatternConstraints(
-    const llvm::ArrayRef<DagLeaf> constraints) {
+    const ArrayRef<DagLeaf> constraints) {
   for (auto &leaf : constraints) {
     assert(leaf.isOperandMatcher() || leaf.isAttrMatcher());
     collectConstraint(
@@ -313,7 +380,7 @@ void StaticVerifierFunctionEmitter::collectPatternConstraints(
 
 std::string mlir::tblgen::escapeString(StringRef value) {
   std::string ret;
-  llvm::raw_string_ostream os(ret);
+  raw_string_ostream os(ret);
   os.write_escaped(value);
-  return os.str();
+  return ret;
 }

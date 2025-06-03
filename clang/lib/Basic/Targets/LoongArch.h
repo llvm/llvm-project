@@ -30,6 +30,11 @@ protected:
   bool HasFeatureLSX;
   bool HasFeatureLASX;
   bool HasFeatureFrecipe;
+  bool HasFeatureLAM_BH;
+  bool HasFeatureLAMCAS;
+  bool HasFeatureLD_SEQ_SA;
+  bool HasFeatureDiv32;
+  bool HasFeatureSCQ;
 
 public:
   LoongArchTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -39,10 +44,16 @@ public:
     HasFeatureLSX = false;
     HasFeatureLASX = false;
     HasFeatureFrecipe = false;
+    HasFeatureLAM_BH = false;
+    HasFeatureLAMCAS = false;
+    HasFeatureLD_SEQ_SA = false;
+    HasFeatureDiv32 = false;
+    HasFeatureSCQ = false;
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
     MCountName = "_mcount";
+    HasFloat16 = true;
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;
@@ -62,7 +73,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -88,8 +99,13 @@ public:
 
   bool hasBitIntType() const override { return true; }
 
+  bool useFP16ConversionIntrinsics() const override { return false; }
+
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
+
+  ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+  bool supportsTargetAttributeTune() const override { return true; }
 
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
@@ -100,6 +116,7 @@ public:
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+  bool isValidFeatureName(StringRef Name) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY LoongArch32TargetInfo

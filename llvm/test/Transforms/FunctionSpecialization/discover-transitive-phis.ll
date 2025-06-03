@@ -29,7 +29,7 @@ entry:
 
 define internal i64 @foo(i64 %n, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5, i1 %c6, i1 %c7, i1 %c8, i1 %c9, i1 %c10) {
 ; NOFUNCSPEC-LABEL: define internal range(i64 2, 7) i64 @foo(
-; NOFUNCSPEC-SAME: i64 [[N:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]], i1 [[C4:%.*]], i1 [[C5:%.*]], i1 [[C6:%.*]], i1 [[C7:%.*]], i1 [[C8:%.*]], i1 [[C9:%.*]], i1 [[C10:%.*]]) {
+; NOFUNCSPEC-SAME: i64 range(i64 3, 5) [[N:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]], i1 [[C4:%.*]], i1 [[C5:%.*]], i1 [[C6:%.*]], i1 [[C7:%.*]], i1 [[C8:%.*]], i1 [[C9:%.*]], i1 [[C10:%.*]]) {
 ; NOFUNCSPEC-NEXT:  entry:
 ; NOFUNCSPEC-NEXT:    br i1 [[C1]], label [[L1:%.*]], label [[L9:%.*]]
 ; NOFUNCSPEC:       l1:

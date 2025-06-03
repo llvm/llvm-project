@@ -33,6 +33,9 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
+#include <functional>
+#include <utility>
 #include <vector>
 
 #include "test_macros.h"

@@ -126,10 +126,10 @@ int main(int argc, const char **argv) {
   if (int Result = Tool.run(Factory.get()))
     return Result;
   LangOptions DefaultLangOptions;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  clang::TextDiagnosticPrinter DiagnosticPrinter(errs(), &*DiagOpts);
+  DiagnosticOptions DiagOpts;
+  clang::TextDiagnosticPrinter DiagnosticPrinter(errs(), DiagOpts);
   DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
+      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
       &DiagnosticPrinter, false);
   auto &FileMgr = Tool.getFiles();
   SourceManager Sources(Diagnostics, FileMgr);

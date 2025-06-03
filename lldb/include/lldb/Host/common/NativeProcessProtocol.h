@@ -51,13 +51,9 @@ public:
   virtual ~NativeProcessProtocol() = default;
 
   typedef std::vector<std::unique_ptr<NativeThreadProtocol>> thread_collection;
-  template <typename I>
-  static NativeThreadProtocol &thread_list_adapter(I &iter) {
-    assert(*iter);
-    return **iter;
-  }
-  typedef LockingAdaptedIterable<thread_collection, NativeThreadProtocol &,
-                                 thread_list_adapter, std::recursive_mutex>
+  typedef LockingAdaptedIterable<
+      std::recursive_mutex, thread_collection,
+      llvm::pointee_iterator<thread_collection::const_iterator>>
       ThreadIterable;
 
   virtual Status Resume(const ResumeActionList &resume_actions) = 0;

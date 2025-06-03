@@ -8,7 +8,8 @@ add_libc_unittest(
     prctl_test.cpp
   DEPENDS
     libc.include.sys_prctl
-    libc.include.errno
     libc.src.sys.prctl.prctl
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

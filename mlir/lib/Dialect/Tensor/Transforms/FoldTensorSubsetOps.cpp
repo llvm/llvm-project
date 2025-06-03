@@ -21,13 +21,14 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <type_traits>
 
 namespace mlir {
 namespace tensor {
-#define GEN_PASS_DEF_FOLDTENSORSUBSETOPS
+#define GEN_PASS_DEF_FOLDTENSORSUBSETOPSPASS
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 } // namespace tensor
 } // namespace mlir
@@ -35,7 +36,7 @@ namespace tensor {
 using namespace mlir;
 
 static Value getTensorOperand(vector::TransferReadOp op) {
-  return op.getSource();
+  return op.getBase();
 }
 
 static Value getTensorOperand(tensor::InsertSliceOp op) {
@@ -67,6 +68,10 @@ public:
 
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertSliceOp,
                                 PatternRewriter &rewriter) const override;
+
+private:
+  static bool
+  doesTransferWriteCoverInsertSlice(vector::TransferWriteOp writeOp);
 };
 } // namespace
 
@@ -136,6 +141,10 @@ LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
   if (failed(preconditionResult))
     return preconditionResult;
 
+  if (!doesTransferWriteCoverInsertSlice(writeOp))
+    return rewriter.notifyMatchFailure(
+        insertSliceOp, "transfer_write does not cover insert_slice");
+
   SmallVector<Value> indices(writeOp.getIndices().begin(),
                              writeOp.getIndices().end());
   SmallVector<Value> sourceIndices;
@@ -152,6 +161,17 @@ LogicalResult InsertSliceOfTransferWriteOpFolder::matchAndRewrite(
       writeOp.getInBoundsAttr());
 
   return success();
+}
+
+bool InsertSliceOfTransferWriteOpFolder::doesTransferWriteCoverInsertSlice(
+    vector::TransferWriteOp writeOp) {
+  if (writeOp.getShapedType().hasStaticShape())
+    return llvm::equal(writeOp.getVectorType().getShape(),
+                       writeOp.getShapedType().getShape());
+
+  // TODO: Use ValueBoundsConstraintSet for dynamic shapes.
+
+  return false;
 }
 
 template <typename OpTy>
@@ -248,7 +268,8 @@ void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
 namespace {
 
 struct FoldTensorSubsetOpsPass final
-    : public tensor::impl::FoldTensorSubsetOpsBase<FoldTensorSubsetOpsPass> {
+    : public tensor::impl::FoldTensorSubsetOpsPassBase<
+          FoldTensorSubsetOpsPass> {
   void runOnOperation() override;
 };
 
@@ -257,9 +278,5 @@ struct FoldTensorSubsetOpsPass final
 void FoldTensorSubsetOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> tensor::createFoldTensorSubsetOpsPass() {
-  return std::make_unique<FoldTensorSubsetOpsPass>();
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }

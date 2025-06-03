@@ -288,7 +288,6 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
   {
     PreservedAnalyses PA = PreservedAnalyses::all();
     PA.abandon<FunctionPropertiesAnalysis>();
-    PA.abandon<DominatorTreeAnalysis>();
     PA.abandon<LoopAnalysis>();
     FAM.invalidate(*Caller, PA);
   }
@@ -331,8 +330,7 @@ int64_t MLInlineAdvisor::getModuleIRSize() const {
 }
 
 FunctionPropertiesInfo &MLInlineAdvisor::getCachedFPI(Function &F) const {
-  auto InsertPair =
-      FPICache.insert(std::make_pair(&F, FunctionPropertiesInfo()));
+  auto InsertPair = FPICache.try_emplace(&F);
   if (!InsertPair.second)
     return InsertPair.first->second;
   InsertPair.first->second = FAM.getResult<FunctionPropertiesAnalysis>(F);
@@ -401,9 +399,9 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   if (Mandatory)
     return getMandatoryAdvice(CB, true);
 
-  auto NrCtantParams = 0;
+  auto NumCtantParams = 0;
   for (auto I = CB.arg_begin(), E = CB.arg_end(); I != E; ++I) {
-    NrCtantParams += (isa<Constant>(*I));
+    NumCtantParams += (isa<Constant>(*I));
   }
 
   auto &CallerBefore = getCachedFPI(Caller);
@@ -415,7 +413,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
       getInitialFunctionLevel(Caller);
   *ModelRunner->getTensor<int64_t>(FeatureIndex::node_count) = NodeCount;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::nr_ctant_params) =
-      NrCtantParams;
+      NumCtantParams;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::edge_count) = EdgeCount;
   *ModelRunner->getTensor<int64_t>(FeatureIndex::caller_users) =
       CallerBefore.Uses;
@@ -443,7 +441,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   }
   // This one would have been set up to be right at the end.
   if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-    *ModelRunner->getTensor<int64_t>(InlineCostFeatureIndex::NumberOfFeatures) =
+    *ModelRunner->getTensor<int64_t>(FeatureIndex::NumberOfFeatures) =
         GetDefaultAdvice(CB);
   return getAdviceFromModel(CB, ORE);
 }

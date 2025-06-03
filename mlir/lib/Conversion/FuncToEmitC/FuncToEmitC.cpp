@@ -13,11 +13,34 @@
 
 #include "mlir/Conversion/FuncToEmitC/FuncToEmitC.h"
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+
+namespace {
+
+/// Implement the interface to convert Func to EmitC.
+struct FuncToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateFuncToEmitCPatterns(typeConverter, patterns);
+  }
+};
+} // namespace
+
+void mlir::registerConvertFuncToEmitCInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, func::FuncDialect *dialect) {
+    dialect->addInterfaces<FuncToEmitCDialectInterface>();
+  });
+}
 
 //===----------------------------------------------------------------------===//
 // Conversion Patterns
@@ -51,14 +74,36 @@ public:
   LogicalResult
   matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    FunctionType fnType = funcOp.getFunctionType();
 
-    if (funcOp.getFunctionType().getNumResults() > 1)
+    if (fnType.getNumResults() > 1)
       return rewriter.notifyMatchFailure(
           funcOp, "only functions with zero or one result can be converted");
 
+    TypeConverter::SignatureConversion signatureConverter(
+        fnType.getNumInputs());
+    for (const auto &argType : enumerate(fnType.getInputs())) {
+      auto convertedType = getTypeConverter()->convertType(argType.value());
+      if (!convertedType)
+        return rewriter.notifyMatchFailure(funcOp,
+                                           "argument type conversion failed");
+      signatureConverter.addInputs(argType.index(), convertedType);
+    }
+
+    Type resultType;
+    if (fnType.getNumResults() == 1) {
+      resultType = getTypeConverter()->convertType(fnType.getResult(0));
+      if (!resultType)
+        return rewriter.notifyMatchFailure(funcOp,
+                                           "result type conversion failed");
+    }
+
     // Create the converted `emitc.func` op.
     emitc::FuncOp newFuncOp = rewriter.create<emitc::FuncOp>(
-        funcOp.getLoc(), funcOp.getName(), funcOp.getFunctionType());
+        funcOp.getLoc(), funcOp.getName(),
+        FunctionType::get(rewriter.getContext(),
+                          signatureConverter.getConvertedTypes(),
+                          resultType ? TypeRange(resultType) : TypeRange()));
 
     // Copy over all attributes other than the function name and type.
     for (const auto &namedAttr : funcOp->getAttrs()) {
@@ -80,9 +125,13 @@ public:
       newFuncOp.setSpecifiersAttr(specifiers);
     }
 
-    if (!funcOp.isDeclaration())
+    if (!funcOp.isDeclaration()) {
       rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                   newFuncOp.end());
+      if (failed(rewriter.convertRegionTypes(
+              &newFuncOp.getBody(), *getTypeConverter(), &signatureConverter)))
+        return failure();
+    }
     rewriter.eraseOp(funcOp);
 
     return success();
@@ -112,8 +161,10 @@ public:
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateFuncToEmitCPatterns(RewritePatternSet &patterns) {
+void mlir::populateFuncToEmitCPatterns(const TypeConverter &typeConverter,
+                                       RewritePatternSet &patterns) {
   MLIRContext *ctx = patterns.getContext();
 
-  patterns.add<CallOpConversion, FuncOpConversion, ReturnOpConversion>(ctx);
+  patterns.add<CallOpConversion, FuncOpConversion, ReturnOpConversion>(
+      typeConverter, ctx);
 }

@@ -172,7 +172,7 @@ static Value getValueLoadedFromGlobal(Operation *op) {
   if (!load)
     return nullptr;
 
-  auto loadType = dyn_cast<MemRefType>(load.getSource().getType());
+  auto loadType = dyn_cast<MemRefType>(load.getBase().getType());
   if (!loadType || !hasDefaultMemorySpace(loadType))
     return nullptr;
   return load;
@@ -185,7 +185,7 @@ static bool isStoreToShared(Operation *op, Value v) {
   if (!store || store.getVector() != v)
     return false;
 
-  auto storeType = dyn_cast<MemRefType>(store.getSource().getType());
+  auto storeType = dyn_cast<MemRefType>(store.getBase().getType());
   return storeType || hasSharedMemorySpace(storeType);
 }
 
@@ -290,8 +290,11 @@ static void getPipelineStages(
   });
   options.inclusive = true;
   for (Operation &op : forOp.getBody()->getOperations()) {
-    if (stage0Ops.contains(&op))
-      getBackwardSlice(&op, &dependencies, options);
+    if (stage0Ops.contains(&op)) {
+      LogicalResult result = getBackwardSlice(&op, &dependencies, options);
+      assert(result.succeeded() && "expected a backward slice");
+      (void)result;
+    }
   }
 
   for (Operation &op : forOp.getBody()->getOperations()) {
@@ -740,9 +743,9 @@ static std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
                   SmallVector<int64_t>>
 makeVectorShapes(ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs,
                  ArrayRef<int64_t> res) {
-  SmallVector<int64_t> vlhs{lhs};
-  SmallVector<int64_t> vrhs{rhs};
-  SmallVector<int64_t> vres{res};
+  SmallVector<int64_t> vlhs(lhs);
+  SmallVector<int64_t> vrhs(rhs);
+  SmallVector<int64_t> vres(res);
   return std::make_tuple(vlhs, vrhs, vres);
 }
 
@@ -821,6 +824,12 @@ DiagnosedSilenceableFailure transform::RewriteMatmulAsMmaSyncOp::applyToOne(
   bool fail = true;
   // TODO: more robust detection of matmulOp, with transposes etc.
   if (isa_and_nonnull<linalg::MatmulOp>(linalgOp.getOperation())) {
+    // Check to not let go the matmul with extended semantic, through this
+    // transform.
+    if (linalgOp.hasUserDefinedMaps()) {
+      return emitSilenceableError()
+             << "only matmul ops with non-extended semantics are supported";
+    }
     Location loc = linalgOp.getLoc();
     // TODO: more robust computation of laneId, for now assume a single warp.
     Value laneId = rewriter.create<gpu::ThreadIdOp>(

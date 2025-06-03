@@ -56,8 +56,8 @@ class LLDBTest(TestFormat):
         cmd = [executable] + self.dotest_cmd + [testPath, "-p", testFile]
 
         if isLuaTest:
-            luaExecutable = test.config.lua_executable
-            cmd.extend(["--env", "LUA_EXECUTABLE=%s" % luaExecutable])
+            cmd.extend(["--env", "LUA_EXECUTABLE=%s" % test.config.lua_executable])
+            cmd.extend(["--env", "LLDB_LUA_CPATH=%s" % test.config.lldb_lua_cpath])
 
         timeoutInfo = None
         try:

@@ -18,6 +18,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -41,7 +42,7 @@ namespace classic {
 ///
 /// All interactions with the MC layer that is used to build the debug
 /// information binary representation are handled in this class.
-class DwarfStreamer : public DwarfEmitter {
+class LLVM_ABI DwarfStreamer : public DwarfEmitter {
 public:
   DwarfStreamer(DWARFLinkerBase::OutputFileType OutFileType,
                 raw_pwrite_stream &OutFile,
@@ -149,10 +150,13 @@ public:
   }
 
   /// Emit .debug_line table entry for specified \p LineTable
-  void emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
-                            const CompileUnit &Unit,
-                            OffsetsStringPool &DebugStrPool,
-                            OffsetsStringPool &DebugLineStrPool) override;
+  /// The optional parameter RowOffsets, if provided, will be populated with the
+  /// offsets of each line table row in the output .debug_line section.
+  void
+  emitLineTableForUnit(const DWARFDebugLine::LineTable &LineTable,
+                       const CompileUnit &Unit, OffsetsStringPool &DebugStrPool,
+                       OffsetsStringPool &DebugLineStrPool,
+                       std::vector<uint64_t> *RowOffsets = nullptr) override;
 
   uint64_t getLineSectionSize() const override { return LineSectionSize; }
 
@@ -266,7 +270,8 @@ private:
       const DWARFDebugLine::Prologue &P, OffsetsStringPool &DebugStrPool,
       OffsetsStringPool &DebugLineStrPool);
   void emitLineTableRows(const DWARFDebugLine::LineTable &LineTable,
-                         MCSymbol *LineEndSym, unsigned AddressByteSize);
+                         MCSymbol *LineEndSym, unsigned AddressByteSize,
+                         std::vector<uint64_t> *RowOffsets = nullptr);
   void emitIntOffset(uint64_t Offset, dwarf::DwarfFormat Format,
                      uint64_t &SectionSize);
   void emitLabelDifference(const MCSymbol *Hi, const MCSymbol *Lo,
@@ -282,7 +287,6 @@ private:
   MCAsmBackend *MAB; // Owned by MCStreamer
   std::unique_ptr<MCInstrInfo> MII;
   std::unique_ptr<MCSubtargetInfo> MSTI;
-  MCInstPrinter *MIP; // Owned by AsmPrinter
   MCCodeEmitter *MCE; // Owned by MCStreamer
   MCStreamer *MS;     // Owned by AsmPrinter
   std::unique_ptr<TargetMachine> TM;

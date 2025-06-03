@@ -14,6 +14,7 @@ namespace mlir {
 class LLVMConversionTarget;
 class LLVMTypeConverter;
 class RewritePatternSet;
+class DialectRegistry;
 
 /// Collect a set of patterns to lower AMX ops to ops that map to LLVM
 /// intrinsics.

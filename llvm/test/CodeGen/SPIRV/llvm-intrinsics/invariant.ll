@@ -1,5 +1,5 @@
 ;; Make sure the backend doesn't crash if the input LLVM IR contains llvm.invariant.* intrinsics
-; RUN: llc -O0 -mtriple=spirv64-unknown-linux %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-linux %s -o - | FileCheck %s
 
 ; CHECK-NOT: OpFunctionParameter
 ; CHECK-NOT: OpFunctionCall

@@ -1,28 +1,28 @@
 // RUN: llvm-mc -triple x86_64 --show-encoding %s | FileCheck %s
 
-// CHECK: cmpnbxadd  %eax, %ecx, (%rip)
+// CHECK: cmpaexadd  %eax, %ecx, (%rip)
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe3,0x0d,0x00,0x00,0x00,0x00]
-          cmpaexadd  %eax, %ecx, (%rip)
+          cmpnbxadd  %eax, %ecx, (%rip)
 
-// CHECK: cmpzxadd  %eax, %ecx, (%rip)
+// CHECK: cmpexadd  %eax, %ecx, (%rip)
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe4,0x0d,0x00,0x00,0x00,0x00]
-          cmpexadd  %eax, %ecx, (%rip)
+          cmpzxadd  %eax, %ecx, (%rip)
 
-// CHECK: cmpnzxadd  %eax, %ecx, (%rip)
+// CHECK: cmpnexadd  %eax, %ecx, (%rip)
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe5,0x0d,0x00,0x00,0x00,0x00]
-          cmpnexadd  %eax, %ecx, (%rip)
+          cmpnzxadd  %eax, %ecx, (%rip)
 
-// CHECK: cmpnbexadd  %eax, %ecx, (%rip)
+// CHECK: cmpaxadd  %eax, %ecx, (%rip)
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe7,0x0d,0x00,0x00,0x00,0x00]
-          cmpaxadd  %eax, %ecx, (%rip)
+          cmpnbexadd  %eax, %ecx, (%rip)
 
-// CHECK: cmpnlxadd  %eax, %ecx, (%rip)
+// CHECK: cmpgexadd  %eax, %ecx, (%rip)
 // CHECK: encoding: [0xc4,0xe2,0x79,0xed,0x0d,0x00,0x00,0x00,0x00]
-          cmpgexadd  %eax, %ecx, (%rip)
+          cmpnlxadd  %eax, %ecx, (%rip)
 
-// CHECK: cmpnlexadd  %eax, %ecx, (%rip)
+// CHECK: cmpgxadd  %eax, %ecx, (%rip)
 // CHECK: encoding: [0xc4,0xe2,0x79,0xef,0x0d,0x00,0x00,0x00,0x00]
-          cmpgxadd  %eax, %ecx, (%rip)
+          cmpnlexadd  %eax, %ecx, (%rip)
 
 // CHECK: cmpbxadd  %eax, %ecx, (%rip)
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe2,0x0d,0x00,0x00,0x00,0x00]
@@ -32,7 +32,7 @@
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe2,0x0d,0x00,0x00,0x00,0x00]
           cmpnaexadd  %eax, %ecx, (%rip)
 
-// CHECK: cmpnbxadd  %eax, %ecx, (%rip)
+// CHECK: cmpaexadd  %eax, %ecx, (%rip)
 // CHECK: encoding: [0xc4,0xe2,0x79,0xe3,0x0d,0x00,0x00,0x00,0x00]
           cmpncxadd  %eax, %ecx, (%rip)
 

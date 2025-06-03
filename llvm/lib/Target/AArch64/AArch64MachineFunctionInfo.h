@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -177,6 +178,11 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// SignWithBKey modifies the default PAC-RET mode to signing with the B key.
   bool SignWithBKey = false;
 
+  /// HasELFSignedGOT is true if the target binary format is ELF and the IR
+  /// module containing the corresponding function has "ptrauth-elf-got" flag
+  /// set to 1.
+  bool HasELFSignedGOT = false;
+
   /// SigningInstrOffset captures the offset of the PAC-RET signing instruction
   /// within the prologue, so it can be re-used for authentication in the
   /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
@@ -224,6 +230,14 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // on function entry to record the initial pstate of a function.
   Register PStateSMReg = MCRegister::NoRegister;
 
+  // Holds a pointer to a buffer that is large enough to represent
+  // all SME ZA state and any additional state required by the
+  // __arm_sme_save/restore support routines.
+  Register SMESaveBufferAddr = MCRegister::NoRegister;
+
+  // true if SMESaveBufferAddr is used.
+  bool SMESaveBufferUsed = false;
+
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
   unsigned PredicateRegForFillSpill = 0;
@@ -231,6 +245,9 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // The stack slots where VG values are stored to.
   int64_t VGIdx = std::numeric_limits<int>::max();
   int64_t StreamingVGIdx = std::numeric_limits<int>::max();
+
+  // Holds the SME function attributes (streaming mode, ZA/ZT0 state).
+  SMEAttrs SMEFnAttrs;
 
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
@@ -246,6 +263,12 @@ public:
   unsigned getPredicateRegForFillSpill() const {
     return PredicateRegForFillSpill;
   }
+
+  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
+  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
+
+  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
+  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
 
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
@@ -303,7 +326,7 @@ public:
   void setLocalStackSize(uint64_t Size) { LocalStackSize = Size; }
   uint64_t getLocalStackSize() const { return LocalStackSize; }
 
-  void setOutliningStyle(std::string Style) { OutliningStyle = Style; }
+  void setOutliningStyle(const std::string &Style) { OutliningStyle = Style; }
   std::optional<std::string> getOutliningStyle() const {
     return OutliningStyle;
   }
@@ -430,6 +453,8 @@ public:
     StackHazardCSRSlotIndex = Index;
   }
 
+  SMEAttrs getSMEFnAttrs() const { return SMEFnAttrs; }
+
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
 
@@ -476,7 +501,7 @@ public:
   /// Add a LOH directive of this @p Kind and this @p Args.
   void addLOHDirective(MCLOHType Kind, MILOHArgs Args) {
     LOHContainerSet.push_back(MILOHDirective(Kind, Args));
-    LOHRelated.insert(Args.begin(), Args.end());
+    LOHRelated.insert_range(Args);
   }
 
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
@@ -508,6 +533,8 @@ public:
   bool needsShadowCallStackPrologueEpilogue(MachineFunction &MF) const;
 
   bool shouldSignWithBKey() const { return SignWithBKey; }
+
+  bool hasELFSignedGOT() const { return HasELFSignedGOT; }
 
   MCSymbol *getSigningInstrLabel() const { return SignInstrLabel; }
   void setSigningInstrLabel(MCSymbol *Label) { SignInstrLabel = Label; }

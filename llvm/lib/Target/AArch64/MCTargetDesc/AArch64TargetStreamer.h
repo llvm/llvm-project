@@ -9,7 +9,13 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 
+#include "AArch64MCExpr.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/AArch64BuildAttributes.h"
+#include <cstdint>
 
 namespace {
 class AArch64ELFStreamer;
@@ -38,11 +44,19 @@ public:
   void emitNoteSection(unsigned Flags, uint64_t PAuthABIPlatform = -1,
                        uint64_t PAuthABIVersion = -1);
 
+  /// Callback used to emit AUTH expressions (e.g. signed
+  /// personality function pointer).
+  void emitAuthValue(const MCExpr *Expr, uint16_t Discriminator,
+                     AArch64PACKey::ID Key, bool HasAddressDiversity);
+
   /// Callback used to implement the .inst directive.
   virtual void emitInst(uint32_t Inst);
 
   /// Callback used to implement the .variant_pcs directive.
   virtual void emitDirectiveVariantPCS(MCSymbol *Symbol) {};
+
+  virtual void emitDirectiveArch(StringRef Name) {};
+  virtual void emitDirectiveArchExtension(StringRef Name) {};
 
   virtual void emitARM64WinCFIAllocStack(unsigned Size) {}
   virtual void emitARM64WinCFISaveR19R20X(int Offset) {}
@@ -82,6 +96,27 @@ public:
   virtual void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) {}
   virtual void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) {}
   virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFIAllocZ(int Offset) {}
+  virtual void emitARM64WinCFISaveZReg(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISavePReg(unsigned Reg, int Offset) {}
+
+  /// Build attributes implementation
+  virtual void
+  emitAtributesSubsection(StringRef VendorName,
+                          AArch64BuildAttributes::SubsectionOptional IsOptional,
+                          AArch64BuildAttributes::SubsectionType ParameterType);
+  virtual void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
+                             std::string String);
+  void activateAtributesSubsection(StringRef VendorName);
+  std::unique_ptr<MCELFStreamer::AttributeSubSection>
+  getActiveAtributesSubsection();
+  std::unique_ptr<MCELFStreamer::AttributeSubSection>
+  getAtributesSubsectionByName(StringRef Name);
+  void
+  insertAttributeInPlace(const MCELFStreamer::AttributeItem &Attr,
+                         MCELFStreamer::AttributeSubSection &AttSubSection);
+
+  SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
 
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
@@ -91,6 +126,15 @@ class AArch64TargetELFStreamer : public AArch64TargetStreamer {
 private:
   AArch64ELFStreamer &getStreamer();
 
+  MCSection *AttributeSection = nullptr;
+
+  /// Build attributes implementation
+  void emitAtributesSubsection(
+      StringRef VendorName,
+      AArch64BuildAttributes::SubsectionOptional IsOptional,
+      AArch64BuildAttributes::SubsectionType ParameterType) override;
+  void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
+                     std::string String) override;
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;
   void finish() override;
@@ -100,12 +144,6 @@ public:
 };
 
 class AArch64TargetWinCOFFStreamer : public llvm::AArch64TargetStreamer {
-private:
-  // True if we are processing SEH directives in an epilogue.
-  bool InEpilogCFI = false;
-
-  // Symbol of the current epilog for which we are processing SEH directives.
-  MCSymbol *CurrentEpilog = nullptr;
 public:
   AArch64TargetWinCOFFStreamer(llvm::MCStreamer &S)
     : AArch64TargetStreamer(S) {}
@@ -150,6 +188,9 @@ public:
   void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) override;
   void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) override;
   void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFIAllocZ(int Offset) override;
+  void emitARM64WinCFISaveZReg(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISavePReg(unsigned Reg, int Offset) override;
 
 private:
   void emitARM64WinUnwindCode(unsigned UnwindCode, int Reg, int Offset);

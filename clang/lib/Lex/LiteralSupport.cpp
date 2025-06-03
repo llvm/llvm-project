@@ -21,6 +21,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -353,10 +354,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
            diag::err_expected)
           << tok::r_brace;
     else if (!HadError) {
-      Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-           Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
-                                : diag::ext_delimited_escape_sequence)
-          << /*delimited*/ 0 << (Features.CPlusPlus ? 1 : 0);
+      Lexer::DiagnoseDelimitedOrNamedEscapeSequence(Loc, false, Features,
+                                                    *Diags);
     }
   }
 
@@ -709,11 +708,8 @@ static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
          diag::warn_ucn_not_valid_in_c89_literal);
 
   if ((IsDelimitedEscapeSequence || IsNamedEscapeSequence) && Diags)
-    Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
-         Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
-                              : diag::ext_delimited_escape_sequence)
-        << (IsNamedEscapeSequence ? 1 : 0) << (Features.CPlusPlus ? 1 : 0);
-
+    Lexer::DiagnoseDelimitedOrNamedEscapeSequence(Loc, IsNamedEscapeSequence,
+                                                  Features, *Diags);
   return true;
 }
 
@@ -1073,8 +1069,8 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       continue;
     case 'i':
     case 'I':
-      if (LangOpts.MicrosoftExt && !isFPConstant) {
-        // Allow i8, i16, i32, and i64. First, look ahead and check if
+      if (LangOpts.MicrosoftExt && s + 1 < ThisTokEnd && !isFPConstant) {
+        // Allow i8, i16, i32, i64, and i128. First, look ahead and check if
         // suffixes are Microsoft integers and not the imaginary unit.
         uint8_t Bits = 0;
         size_t ToSkip = 0;
@@ -1084,19 +1080,23 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
           ToSkip = 2;
           break;
         case '1':
-          if (s[2] == '6') { // i16 suffix
+          if (s + 2 < ThisTokEnd && s[2] == '6') { // i16 suffix
             Bits = 16;
             ToSkip = 3;
+          } else if (s + 3 < ThisTokEnd && s[2] == '2' &&
+                     s[3] == '8') { // i128 suffix
+            Bits = 128;
+            ToSkip = 4;
           }
           break;
         case '3':
-          if (s[2] == '2') { // i32 suffix
+          if (s + 2 < ThisTokEnd && s[2] == '2') { // i32 suffix
             Bits = 32;
             ToSkip = 3;
           }
           break;
         case '6':
-          if (s[2] == '4') { // i64 suffix
+          if (s + 2 < ThisTokEnd && s[2] == '4') { // i64 suffix
             Bits = 64;
             ToSkip = 3;
           }
@@ -1419,6 +1419,30 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
     return;
   }
 
+  // Parse a potential octal literal prefix.
+  bool SawOctalPrefix = false, IsSingleZero = false;
+  if ((c1 == 'O' || c1 == 'o') && (s[1] >= '0' && s[1] <= '7')) {
+    unsigned DiagId;
+    if (LangOpts.C2y)
+      DiagId = diag::warn_c2y_compat_octal_literal;
+    else if (LangOpts.CPlusPlus)
+      DiagId = diag::ext_cpp_octal_literal;
+    else
+      DiagId = diag::ext_octal_literal;
+    Diags.Report(TokLoc, DiagId);
+    ++s;
+    DigitsBegin = s;
+    SawOctalPrefix = true;
+  }
+
+  auto _ = llvm::make_scope_exit([&] {
+    // If we still have an octal value but we did not see an octal prefix,
+    // diagnose as being an obsolescent feature starting in C2y.
+    if (radix == 8 && LangOpts.C2y && !SawOctalPrefix && !hadError &&
+        !IsSingleZero)
+      Diags.Report(TokLoc, diag::warn_unprefixed_octal_deprecated);
+  });
+
   // For now, the radix is set to 8. If we discover that we have a
   // floating point constant, the radix will change to 10. Octal floating
   // point constants are not permitted (only decimal and hexadecimal).
@@ -1430,6 +1454,8 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
   // anything, we leave the digit start where it was.
   if (s != PossibleNewDigitStart)
     DigitsBegin = PossibleNewDigitStart;
+  else
+    IsSingleZero = (s == ThisTokEnd); // Is the only thing we've seen a 0?
 
   if (s == ThisTokEnd)
     return; // Done, simple octal number like 01234

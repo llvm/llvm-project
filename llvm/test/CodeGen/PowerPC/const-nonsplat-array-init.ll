@@ -55,9 +55,9 @@ define dso_local void @foo1_int_be_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 1798
 ; P8-LE-NEXT:    ori 4, 4, 1284
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
 ; P8-LE-NEXT:    li 4, 2312
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    sth 4, 20(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -143,9 +143,9 @@ define dso_local void @foo2_int_le_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 2826
 ; P8-LE-NEXT:    ori 4, 4, 2312
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
 ; P8-LE-NEXT:    li 4, 3340
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    sth 4, 20(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -231,9 +231,9 @@ define dso_local void @foo3_int_be_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 1543
 ; P8-LE-NEXT:    ori 4, 4, 1029
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
 ; P8-LE-NEXT:    li 4, 2057
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    sth 4, 20(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -313,9 +313,9 @@ define dso_local void @foo4_int_le_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 2571
 ; P8-LE-NEXT:    ori 4, 4, 2057
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
 ; P8-LE-NEXT:    li 4, 3085
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    sth 4, 20(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -389,8 +389,8 @@ define dso_local void @foo5_int_be_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 1029
 ; P8-LE-NEXT:    ori 4, 4, 1543
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo5_int_be_reuse4B:
@@ -455,8 +455,8 @@ define dso_local void @foo6_int_le_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 2057
 ; P8-LE-NEXT:    ori 4, 4, 2571
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo6_int_le_reuse4B:
@@ -1221,8 +1221,8 @@ define dso_local void @foo15_int_noreuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 1029
 ; P8-LE-NEXT:    ori 4, 4, 1544
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo15_int_noreuse4B:
@@ -1371,8 +1371,8 @@ define dso_local void @foo17_fp_be_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 16673
 ; P8-LE-NEXT:    ori 4, 4, 39322
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo17_fp_be_reuse4B:
@@ -1437,8 +1437,8 @@ define dso_local void @foo18_fp_le_reuse4B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 16675
 ; P8-LE-NEXT:    ori 4, 4, 13107
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo18_fp_le_reuse4B:
@@ -1504,8 +1504,8 @@ define dso_local void @foo19_fp_be_reuse8B(ptr nocapture noundef writeonly %a) l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    li 4, 4105
 ; P8-LE-NEXT:    rldic 4, 4, 50, 1
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo19_fp_be_reuse8B:
@@ -1649,8 +1649,8 @@ define dso_local void @foo21_fp_noreuse4B(ptr nocapture noundef writeonly %a) lo
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 16268
 ; P8-LE-NEXT:    ori 4, 4, 52430
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo21_fp_noreuse4B:
@@ -1716,8 +1716,8 @@ define dso_local void @foo22_fp_noreuse8B(ptr nocapture noundef writeonly %a) lo
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    li 4, 21503
 ; P8-LE-NEXT:    rotldi 4, 4, 52
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo22_fp_noreuse8B:

@@ -19,8 +19,8 @@ declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 ; GCN-ALLOCA: v_add_{{[iu]}}32_e32 [[RESULT:v[0-9]+]], vcc, v{{[0-9]+}}, v0
 
 ; GCN-PROMOTE: s_cmp_eq_u32 [[IN]], 1
-; GCN-PROMOTE-NEXT: s_cselect_b64 vcc, -1, 0
-; GCN-PROMOTE-NEXT: v_addc_u32_e32 [[RESULT:v[0-9]+]], vcc, 0, v0, vcc
+; GCN-PROMOTE-NEXT: s_cselect_b32 [[SCC:s[0-9]+]], 1, 0
+; GCN-PROMOTE-NEXT: v_add_{{[iu]}}32_e32 [[RESULT:v[0-9]+]], vcc, [[SCC]], v0
 
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @work_item_info(ptr addrspace(1) %out, i32 %in) {

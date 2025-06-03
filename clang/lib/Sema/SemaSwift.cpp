@@ -73,11 +73,16 @@ static bool isValidSwiftErrorResultType(QualType Ty) {
 }
 
 void SemaSwift::handleAttrAttr(Decl *D, const ParsedAttr &AL) {
+  if (AL.isInvalid() || AL.isUsedAsTypeAttr())
+    return;
+
   // Make sure that there is a string literal as the annotation's single
   // argument.
   StringRef Str;
-  if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str))
+  if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str)) {
+    AL.setInvalid();
     return;
+  }
 
   D->addAttr(::new (getASTContext()) SwiftAttrAttr(getASTContext(), AL, Str));
 }
@@ -143,8 +148,8 @@ void SemaSwift::handleError(Decl *D, const ParsedAttr &AL) {
       return true;
 
     S.Diag(AL.getLoc(), diag::err_attr_swift_error_return_type)
-        << AL << AL.getArgAsIdent(0)->Ident->getName() << isa<ObjCMethodDecl>(D)
-        << /*pointer*/ 1;
+        << AL << AL.getArgAsIdent(0)->getIdentifierInfo()->getName()
+        << isa<ObjCMethodDecl>(D) << /*pointer*/ 1;
     return false;
   };
 
@@ -154,8 +159,8 @@ void SemaSwift::handleError(Decl *D, const ParsedAttr &AL) {
       return true;
 
     S.Diag(AL.getLoc(), diag::err_attr_swift_error_return_type)
-        << AL << AL.getArgAsIdent(0)->Ident->getName() << isa<ObjCMethodDecl>(D)
-        << /*integral*/ 0;
+        << AL << AL.getArgAsIdent(0)->getIdentifierInfo()->getName()
+        << isa<ObjCMethodDecl>(D) << /*integral*/ 0;
     return false;
   };
 
@@ -164,10 +169,10 @@ void SemaSwift::handleError(Decl *D, const ParsedAttr &AL) {
 
   IdentifierLoc *Loc = AL.getArgAsIdent(0);
   SwiftErrorAttr::ConventionKind Convention;
-  if (!SwiftErrorAttr::ConvertStrToConventionKind(Loc->Ident->getName(),
-                                                  Convention)) {
+  if (!SwiftErrorAttr::ConvertStrToConventionKind(
+          Loc->getIdentifierInfo()->getName(), Convention)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
-        << AL << Loc->Ident;
+        << AL << Loc->getIdentifierInfo();
     return;
   }
 
@@ -282,10 +287,10 @@ static void checkSwiftAsyncErrorBlock(Sema &S, Decl *D,
 void SemaSwift::handleAsyncError(Decl *D, const ParsedAttr &AL) {
   IdentifierLoc *IDLoc = AL.getArgAsIdent(0);
   SwiftAsyncErrorAttr::ConventionKind ConvKind;
-  if (!SwiftAsyncErrorAttr::ConvertStrToConventionKind(IDLoc->Ident->getName(),
-                                                       ConvKind)) {
+  if (!SwiftAsyncErrorAttr::ConvertStrToConventionKind(
+          IDLoc->getIdentifierInfo()->getName(), ConvKind)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
-        << AL << IDLoc->Ident;
+        << AL << IDLoc->getIdentifierInfo();
     return;
   }
 
@@ -638,15 +643,15 @@ void SemaSwift::handleNewType(Decl *D, const ParsedAttr &AL) {
   }
 
   SwiftNewTypeAttr::NewtypeKind Kind;
-  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+  IdentifierInfo *II = AL.getArgAsIdent(0)->getIdentifierInfo();
   if (!SwiftNewTypeAttr::ConvertStrToNewtypeKind(II->getName(), Kind)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << II;
     return;
   }
 
   if (!isa<TypedefNameDecl>(D)) {
-    Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-        << AL << AL.isRegularKeywordAttribute() << "typedefs";
+    Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
+        << AL << AL.isRegularKeywordAttribute() << ExpectedTypedef;
     return;
   }
 
@@ -662,7 +667,7 @@ void SemaSwift::handleAsyncAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   SwiftAsyncAttr::Kind Kind;
-  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+  IdentifierInfo *II = AL.getArgAsIdent(0)->getIdentifierInfo();
   if (!SwiftAsyncAttr::ConvertStrToKind(II->getName(), Kind)) {
     Diag(AL.getLoc(), diag::err_swift_async_no_access) << AL << II;
     return;
@@ -724,6 +729,9 @@ void SemaSwift::AddParameterABIAttr(Decl *D, const AttributeCommonInfo &CI,
   }
 
   switch (abi) {
+  case ParameterABI::HLSLOut:
+  case ParameterABI::HLSLInOut:
+    llvm_unreachable("explicit attribute for non-swift parameter ABI?");
   case ParameterABI::Ordinary:
     llvm_unreachable("explicit attribute for ordinary parameter ABI?");
 

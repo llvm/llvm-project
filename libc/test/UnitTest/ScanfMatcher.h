@@ -13,8 +13,6 @@
 #include "src/stdio/scanf_core/core_structs.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
-
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 

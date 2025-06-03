@@ -23,6 +23,9 @@ void* dependent_param_func(T param) __attribute__((alloc_align(1)));// expected-
 template <int T>
 void* illegal_align_param(int p) __attribute__((alloc_align(T))); // expected-error {{'alloc_align' attribute requires parameter 1 to be an integer constant}}
 
+template <typename T>
+T dependent_return_type(int p) __attribute__((alloc_align(1)));
+
 void dependent_impl(int align) {
   dependent_ret<int> a; // expected-note {{in instantiation of template class 'dependent_ret<int>' requested here}}
   a.Foo(1);
@@ -44,3 +47,15 @@ void dependent_impl(int align) {
   dependent_param_func<int>(1);
   dependent_param_func<float>(1); // expected-note {{in instantiation of function template specialization 'dependent_param_func<float>' requested here}}
 }
+
+namespace GH26612 {
+// This issue was about the align_value attribute, but alloc_align has the
+// same problematic code pattern, so is being fixed at the same time despite
+// not having the same crashing behavior.
+template <class T>
+__attribute__((alloc_align(1))) T f(T x); // expected-warning {{'alloc_align' attribute only applies to return values that are pointers or references}}
+
+void foo() {
+  f<int>(0); // expected-note {{in instantiation of function template specialization 'GH26612::f<int>' requested here}}
+}
+} // namespace GH26612

@@ -46,7 +46,7 @@ private:
   const GCNSubtarget &ST;
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
-  TargetSchedModel TSchedModel;
+  const TargetSchedModel &TSchedModel;
   bool RunLdsBranchVmemWARHazardFixup;
 
   /// RegUnits of uses in the current soft memory clause.
@@ -130,6 +130,7 @@ private:
   int checkMFMAPadding(MachineInstr *MI);
   int checkMAIVALUHazards(MachineInstr *MI);
   int checkMAILdStHazards(MachineInstr *MI);
+  int checkPermlaneHazards(MachineInstr *MI);
 
 public:
   GCNHazardRecognizer(const MachineFunction &MF);

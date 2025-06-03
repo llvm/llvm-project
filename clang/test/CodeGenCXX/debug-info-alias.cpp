@@ -24,7 +24,7 @@ x::bar<int> bi;
 // CHECK: [[BFLOAT]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<float>"
 x::bar<float> bf;
 // CHECK: !DIGlobalVariable(name: "bz",{{.*}} type: [[BBAZ:![0-9]+]]
-// CHECK: [[BBAZ]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<baz<int> >"
+// CHECK: [[BBAZ]] = !DIDerivedType(tag: DW_TAG_typedef, name: "bar<baz<int,{{ *}}int> >"
 x::bar<baz<int>> bz;
 
 using

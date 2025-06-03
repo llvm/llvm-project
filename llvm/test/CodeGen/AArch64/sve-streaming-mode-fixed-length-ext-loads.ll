@@ -326,29 +326,29 @@ define <2 x i256> @load_sext_v2i64i256(ptr %ap) {
 ; CHECK-LABEL: load_sext_v2i64i256:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    fmov x10, d1
-; CHECK-NEXT:    stp x8, x9, [sp, #-32]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    asr x8, x10, #63
-; CHECK-NEXT:    mov z0.d, x9
-; CHECK-NEXT:    stp x10, x8, [sp, #16]
-; CHECK-NEXT:    mov z1.d, x8
-; CHECK-NEXT:    ldp q2, q4, [sp], #32
-; CHECK-NEXT:    mov z3.d, z0.d[1]
-; CHECK-NEXT:    mov z5.d, z1.d[1]
-; CHECK-NEXT:    mov z6.d, z2.d[1]
-; CHECK-NEXT:    fmov x2, d0
-; CHECK-NEXT:    mov z0.d, z4.d[1]
-; CHECK-NEXT:    fmov x6, d1
-; CHECK-NEXT:    fmov x0, d2
-; CHECK-NEXT:    fmov x4, d4
-; CHECK-NEXT:    fmov x3, d3
-; CHECK-NEXT:    fmov x7, d5
-; CHECK-NEXT:    fmov x1, d6
-; CHECK-NEXT:    fmov x5, d0
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    asr x8, x8, #63
+; CHECK-NEXT:    fmov d3, x8
+; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    asr x9, x9, #63
+; CHECK-NEXT:    fmov d4, x9
+; CHECK-NEXT:    zip1 z0.d, z0.d, z3.d
+; CHECK-NEXT:    mov z3.d, x9
+; CHECK-NEXT:    fmov x2, d2
+; CHECK-NEXT:    zip1 z1.d, z1.d, z4.d
+; CHECK-NEXT:    mov z4.d, z2.d[1]
+; CHECK-NEXT:    mov z5.d, z0.d[1]
+; CHECK-NEXT:    mov z6.d, z3.d[1]
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x6, d3
+; CHECK-NEXT:    mov z2.d, z1.d[1]
+; CHECK-NEXT:    fmov x3, d4
+; CHECK-NEXT:    fmov x1, d5
+; CHECK-NEXT:    fmov x4, d1
+; CHECK-NEXT:    fmov x7, d6
+; CHECK-NEXT:    fmov x5, d2
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_sext_v2i64i256:

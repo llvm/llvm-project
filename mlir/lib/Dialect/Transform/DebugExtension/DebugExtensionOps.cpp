@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 
@@ -58,12 +59,12 @@ DiagnosedSilenceableFailure transform::DebugEmitParamAsRemarkOp::apply(
   llvm::raw_string_ostream os(str);
   if (getMessage())
     os << *getMessage() << " ";
-  llvm::interleaveComma(state.getParams(getParam()), os);
+  os << llvm::interleaved(state.getParams(getParam()));
   if (!getAnchor()) {
-    emitRemark() << os.str();
+    emitRemark() << str;
     return DiagnosedSilenceableFailure::success();
   }
   for (Operation *payload : state.getPayloadOps(getAnchor()))
-    ::mlir::emitRemark(payload->getLoc()) << os.str();
+    ::mlir::emitRemark(payload->getLoc()) << str;
   return DiagnosedSilenceableFailure::success();
 }

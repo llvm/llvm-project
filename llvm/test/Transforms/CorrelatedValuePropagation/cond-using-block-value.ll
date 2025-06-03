@@ -13,7 +13,7 @@ define void @test_icmp_from_implied_cond(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[L2:%.*]], label [[END]]
 ; CHECK:       l2:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[B_CMP2:%.*]] = icmp ult i32 [[B]], 31
+; CHECK-NEXT:    [[B_CMP2:%.*]] = icmp samesign ult i32 [[B]], 31
 ; CHECK-NEXT:    call void @use(i1 [[B_CMP2]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
@@ -38,7 +38,7 @@ end:
 }
 
 define i64 @test_sext_from_implied_cond(i32 %a, i32 %b) {
-; CHECK-LABEL: define i64 @test_sext_from_implied_cond(
+; CHECK-LABEL: define range(i64 0, 2147483647) i64 @test_sext_from_implied_cond(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[A_CMP:%.*]] = icmp slt i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[A_CMP]], label [[END:%.*]], label [[L1:%.*]]
@@ -74,7 +74,7 @@ define void @test_icmp_from_implied_range(i16 %x, i32 %b) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[L1:%.*]], label [[END:%.*]]
 ; CHECK:       l1:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[B_CMP2:%.*]] = icmp ult i32 [[B]], 65534
+; CHECK-NEXT:    [[B_CMP2:%.*]] = icmp samesign ult i32 [[B]], 65534
 ; CHECK-NEXT:    call void @use(i1 [[B_CMP2]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
