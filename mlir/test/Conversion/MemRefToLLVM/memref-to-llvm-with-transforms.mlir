@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-memref-to-llvm-with-transforms -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -test-memref-to-llvm-with-transforms %s | FileCheck %s
 
 // Checks that the program does not crash. The functionality of the pattern is
 // already checked in test/Dialect/MemRef/*.mlir
