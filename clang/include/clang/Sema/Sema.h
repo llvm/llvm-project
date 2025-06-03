@@ -975,10 +975,9 @@ public:
   /// Calls \c Lexer::findNextToken() to find the next token, and if the
   /// locations of both ends of the token can be resolved it return that
   /// range; Otherwise it returns an invalid SourceRange.
-  SourceRange getRangeForNextToken(SourceLocation Loc,
-                                   bool IncludeMacros,
-                                   bool IncludeComments,
-                                   std::optional<tok::TokenKind> ExpectedToken = std::nullopt);
+  SourceRange getRangeForNextToken(
+      SourceLocation Loc, bool IncludeMacros, bool IncludeComments,
+      std::optional<tok::TokenKind> ExpectedToken = std::nullopt);
 
   /// Retrieve the module loader associated with the preprocessor.
   ModuleLoader &getModuleLoader() const;

@@ -84,10 +84,10 @@ SourceLocation Sema::getLocForEndOfToken(SourceLocation Loc, unsigned Offset) {
   return Lexer::getLocForEndOfToken(Loc, Offset, SourceMgr, LangOpts);
 }
 
-SourceRange Sema::getRangeForNextToken(SourceLocation Loc,
-                                       bool IncludeMacros,
-                                       bool IncludeComments,
-                                       std::optional<tok::TokenKind> ExpectedToken) {
+SourceRange
+Sema::getRangeForNextToken(SourceLocation Loc, bool IncludeMacros,
+                           bool IncludeComments,
+                           std::optional<tok::TokenKind> ExpectedToken) {
   if (!Loc.isValid())
     return SourceRange();
   std::optional<Token> NextToken =

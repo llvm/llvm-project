@@ -2101,6 +2101,39 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
   return Field;
 }
 
+static SourceRange
+constructFixItRangeForUnusedCapture(Sema &S, SourceRange CaptureRange,
+                                    SourceLocation PrevCaptureLoc,
+                                    bool CurHasPreviousCapture, bool IsLast) {
+  if (!CaptureRange.isValid())
+    return SourceRange();
+
+  auto GetTrailingEndLocation = [&](SourceLocation StartPoint) {
+    SourceRange NextToken = S.getRangeForNextToken(
+        StartPoint, /*IncludeMacros=*/false, /*IncludeComments=*/true);
+    if (!NextToken.isValid())
+      return SourceLocation();
+    // Return the last location preceding the next token
+    return NextToken.getBegin().getLocWithOffset(-1);
+  };
+
+  if (!CurHasPreviousCapture && !IsLast) {
+    // If there are no captures preceding this capture, remove the
+    // trailing comma and anything up to the next token
+    SourceRange CommaRange =
+        S.getRangeForNextToken(CaptureRange.getEnd(), /*IncludeMacros=*/false,
+                               /*IncludeComments=*/false, tok::comma);
+    SourceLocation FixItEnd = GetTrailingEndLocation(CommaRange.getBegin());
+    return SourceRange(CaptureRange.getBegin(), FixItEnd);
+  }
+
+  // Otherwise, remove the comma since the last used capture, and
+  // anything up to the next token
+  SourceLocation FixItStart = S.getLocForEndOfToken(PrevCaptureLoc);
+  SourceLocation FixItEnd = GetTrailingEndLocation(CaptureRange.getEnd());
+  return SourceRange(FixItStart, FixItEnd);
+}
+
 ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
                                  LambdaScopeInfo *LSI) {
   // Collect information from the lambda scope.
@@ -2168,35 +2201,11 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
             IsGenericLambda && From.isNonODRUsed() && From.isInitCapture();
         if (!NonODRUsedInitCapture) {
           bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
-          SourceRange FixItRange;
-          if (CaptureRange.isValid()) {
-            auto GetTrailingEndLocation = [&](SourceLocation StartPoint) {
-              SourceRange NextToken =
-                  getRangeForNextToken(StartPoint, /*IncludeMacros=*/false, /*IncludeComments=*/true);
-              if (!NextToken.isValid())
-                return SourceLocation();
-              // Return the last location preceding the next token
-              return NextToken.getBegin().getLocWithOffset(-1);
-            };
-            if (!CurHasPreviousCapture && !IsLast) {
-              // If there are no captures preceding this capture, remove the
-              // trailing comma and anything up to the next token
-              SourceRange CommaRange =
-                  getRangeForNextToken(CaptureRange.getEnd(), /*IncludeMacros=*/false, /*IncludeComments=*/false, tok::comma);
-              SourceLocation FixItEnd =
-                  GetTrailingEndLocation(CommaRange.getBegin());
-              FixItRange = SourceRange(CaptureRange.getBegin(), FixItEnd);
-            } else {
-              // Otherwise, remove the comma since the last used capture, and
-              // anything up to the next token
-              SourceLocation FixItStart = getLocForEndOfToken(PrevCaptureLoc);
-              SourceLocation FixItEnd =
-                  GetTrailingEndLocation(CaptureRange.getEnd());
-              FixItRange = SourceRange(FixItStart, FixItEnd);
-            }
-          }
-
-          IsCaptureUsed = !DiagnoseUnusedLambdaCapture(CaptureRange, FixItRange, From);
+          SourceRange FixItRange = constructFixItRangeForUnusedCapture(
+              *this, CaptureRange, PrevCaptureLoc, CurHasPreviousCapture,
+              IsLast);
+          IsCaptureUsed =
+              !DiagnoseUnusedLambdaCapture(CaptureRange, FixItRange, From);
         }
       }
 
