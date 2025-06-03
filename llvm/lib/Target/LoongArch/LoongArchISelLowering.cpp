@@ -5762,7 +5762,7 @@ emitPseudoVMSKCOND(MachineInstr &MI, MachineBasicBlock *BB,
     Register Lo = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
     Register Hi = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
     BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPICKVE2GR_WU), Lo)
-        .addReg(Msk, RegState::Kill)
+        .addReg(Msk)
         .addImm(0);
     BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPICKVE2GR_WU), Hi)
         .addReg(Msk, RegState::Kill)
