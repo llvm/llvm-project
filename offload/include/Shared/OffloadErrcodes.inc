@@ -11,8 +11,7 @@
 #endif
 
 // Error codes are shared between PluginInterface and liboffload.
-// To add new error codes, add them to offload/liboffload/API/Common.td and run
-// the GenerateOffload target.
+// To add new error codes, add them to offload/liboffload/API/Common.td.
 
 OFFLOAD_ERRC(SUCCESS, "success", 0)
 OFFLOAD_ERRC(UNKNOWN, "unknown or internal error", 1)
