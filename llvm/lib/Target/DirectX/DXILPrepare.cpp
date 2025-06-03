@@ -167,13 +167,17 @@ class DXILPrepareModule : public ModulePass {
 
     // finally, drill down GEP instructions until we get the array
     // that is being accessed, and compare element types
-    if (auto *GEPInstr = llvm::dyn_cast<llvm::ConstantExpr>(Operand)) {
+    if (llvm::ConstantExpr *GEPInstr =
+            llvm::dyn_cast<llvm::ConstantExpr>(Operand)) {
       while (GEPInstr->getOpcode() == llvm::Instruction::GetElementPtr) {
         llvm::Value *OpArg = GEPInstr->getOperand(0);
+        if (llvm::ConstantExpr *NewGEPInstr =
+                llvm::dyn_cast<llvm::ConstantExpr>(OpArg)) {
+          GEPInstr = NewGEPInstr;
+          continue;
+        }
 
         if (auto *GlobalVar = llvm::dyn_cast<llvm::GlobalVariable>(OpArg)) {
-          llvm::Constant *initializer = GlobalVar->getInitializer();
-
           llvm::Type *ValTy = GlobalVar->getValueType();
           if (auto *ArrTy = llvm::dyn_cast<llvm::ArrayType>(ValTy)) {
             llvm::Type *ElTy = ArrTy->getElementType();
@@ -181,6 +185,7 @@ class DXILPrepareModule : public ModulePass {
               return nullptr;
           }
         }
+        break;
       }
     }
 
