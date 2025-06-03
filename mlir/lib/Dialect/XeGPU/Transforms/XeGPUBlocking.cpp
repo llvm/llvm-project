@@ -333,6 +333,5 @@ void XeGPUBlockingPass::runOnOperation() {
     // Resolve unrealized conversion cast ops emulating pack/unpack
     if (auto castOp = dyn_cast<UnrealizedConversionCastOp>(op))
       resolveUnrealizedConversionCastOp(castOp);
-
   });
 }
