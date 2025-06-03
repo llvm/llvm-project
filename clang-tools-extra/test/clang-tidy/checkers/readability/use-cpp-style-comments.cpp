@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11 %s readability-use-cpp-style-comments %t 
+// RUN: %check_clang_tidy -std=c++98-or-later %s readability-use-cpp-style-comments %t 
 
 // Single-line full C-style comment
 static const int CONSTANT = 42; /* Important constant value */
