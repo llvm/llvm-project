@@ -1,3 +1,6 @@
+from enum import Enum
+from sys import stderr
+import sys
 import lldb
 import lldb.formatters.Logger
 
@@ -72,6 +75,40 @@ def stdstring_SummaryProvider(valobj, dict):
             return "<error:" + error.GetCString() + ">"
         else:
             return '"' + strval + '"'
+
+
+def get_buffer_data(parent):
+    map_valobj = parent.valobj.GetChildMemberWithName("__map_")
+    map_data = map_valobj.GetChildMemberWithName("__data_")
+    if map_data.IsValid():
+        return map_data
+
+    return map_valobj
+
+
+def get_buffer_end(buffer, begin):
+    map_end = buffer.GetChildMemberWithName("__end_")
+    if map_end.IsValid():
+        return map_end.GetValueAsUnsigned(0)
+    map_size = buffer.GetChildMemberWithName("__size_").GetValueAsUnsigned(0)
+    return begin + map_size
+
+
+def get_buffer_endcap(parent, buffer, begin, has_compressed_pair_layout, is_size_based):
+    if has_compressed_pair_layout:
+        map_endcap = parent._get_value_of_compressed_pair(
+            buffer.GetChildMemberWithName("__end_cap_")
+        )
+    else:
+        map_endcap = buffer.GetChildMemberWithName("__cap_")
+        if not map_endcap.IsValid():
+            map_endcap = buffer.GetChildMemberWithName("__end_cap_")
+        map_endcap = map_endcap.GetValueAsUnsigned(0)
+
+    if is_size_based:
+        return begin + map_endcap
+
+    return map_endcap
 
 
 class stdvector_SynthProvider:
@@ -755,23 +792,16 @@ class stddeque_SynthProvider:
             if self.block_size < 0:
                 logger.write("block_size < 0")
                 return
-            map_ = self.valobj.GetChildMemberWithName("__map_")
             start = self.valobj.GetChildMemberWithName("__start_").GetValueAsUnsigned(0)
+
+            map_ = get_buffer_data(self)
+            is_size_based = map_.GetChildMemberWithName("__size_").IsValid()
             first = map_.GetChildMemberWithName("__first_")
             map_first = first.GetValueAsUnsigned(0)
             self.map_begin = map_.GetChildMemberWithName("__begin_")
             map_begin = self.map_begin.GetValueAsUnsigned(0)
-            map_end = map_.GetChildMemberWithName("__end_").GetValueAsUnsigned(0)
-
-            if has_compressed_pair_layout:
-                map_endcap = self._get_value_of_compressed_pair(
-                    map_.GetChildMemberWithName("__end_cap_")
-                )
-            else:
-                map_endcap = map_.GetChildMemberWithName("__cap_")
-                if not map_endcap.IsValid():
-                    map_endcap = map_.GetChildMemberWithName("__end_cap_")
-                map_endcap = map_endcap.GetValueAsUnsigned(0)
+            map_end = get_buffer_end(map_, map_begin)
+            map_endcap = get_buffer_endcap(self, map_, map_begin, has_compressed_pair_layout, is_size_based)
 
             # check consistency
             if not map_first <= map_begin <= map_end <= map_endcap:
