@@ -315,11 +315,11 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   }
 
   // Collect source ranges by iterating over the target shape left-to-right.
-  auto maybeForwardRanges =
+  FailureOr<SmallVector<ReassociationIndexRange>> maybeForwardRanges =
       findReassociationRangesForCollapse(sourceShape, targetShape);
   if (failed(maybeForwardRanges))
     return std::nullopt;
-  SmallVector<ReassociationIndexRange> &ranges = *maybeForwardRanges;
+  auto &ranges = *maybeForwardRanges;
   // Now do the same in reverse. We need to get another valid reassociation
   // through some other strategy, and then compare the results in order to
   // disambiguate mixed subshapes, such as:
@@ -328,11 +328,12 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
   // be found by iterating in a certain direction, e.g. 2x2x? into 2x? - without
   // backtracking, the algorithm will fail right-to-left. However, this is the
   // best way to preserve correctness.
-  auto maybeReverseRanges = findReassociationRangesForCollapse(
-      sourceShape, targetShape, /*iterateRightToLeft=*/true);
+  FailureOr<SmallVector<ReassociationIndexRange>> maybeReverseRanges =
+      findReassociationRangesForCollapse(sourceShape, targetShape,
+                                         /*iterateRightToLeft=*/true);
   if (failed(maybeReverseRanges))
     return std::nullopt;
-  SmallVector<ReassociationIndexRange> &reverseRanges = *maybeReverseRanges;
+  auto &reverseRanges = *maybeReverseRanges;
 
   if (ranges.size() != numTargetDims || reverseRanges.size() != numTargetDims)
     return std::nullopt;
