@@ -79,7 +79,7 @@ class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
         self.assertIsNotNone(leaf_frame, "expect a leaf frame")
         self.assertEqual(step_in_targets[1]["label"], leaf_frame["name"])
 
-    def test_dynamic_capability(self):
+    def test_supported_capability(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         source = "main.cpp"
