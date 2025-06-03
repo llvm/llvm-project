@@ -151,9 +151,6 @@ if (LLVM_ENABLE_SPHINX)
         COMMAND "${CMAKE_COMMAND}" -E copy
                 "${CMAKE_CURRENT_SOURCE_DIR}/index.rst"
                 "${CMAKE_CURRENT_BINARY_DIR}/Source/index.rst"
-        COMMAND "${CMAKE_COMMAND}" -E copy
-                "${CMAKE_CURRENT_BINARY_DIR}/Source/FlangCommandLineReference.rst"
-                "${CMAKE_CURRENT_BINARY_DIR}/Source/FlangCommandLineReference.rst"
         DEPENDS flang-doc gen-FlangCommandLineReference.rst)
         
       add_sphinx_target(man flang SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Source")
