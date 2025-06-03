@@ -260,26 +260,26 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
            "Invalid value for ParameterType");
 
-    switch(Info.Header.ParameterType) {
-    
-      case llvm::to_underlying(dxbc::RootParameterType::CBV):
-      case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      case llvm::to_underlying(dxbc::RootParameterType::SRV): {
-        const dxbc::RTS0::v2::RootDescriptor &Descriptor = RSD.ParametersContainer.getRootDescriptor(Info.Location);
-        if (!verifyRegisterValue(Descriptor.ShaderRegister))
-          return reportValueError(Ctx, "ShaderRegister",
-                                  Descriptor.ShaderRegister);
+    switch (Info.Header.ParameterType) {
 
-        if (!verifyRegisterSpace(Descriptor.RegisterSpace))
-          return reportValueError(Ctx, "RegisterSpace",
-                                  Descriptor.RegisterSpace);
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV): {
+      const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+          RSD.ParametersContainer.getRootDescriptor(Info.Location);
+      if (!verifyRegisterValue(Descriptor.ShaderRegister))
+        return reportValueError(Ctx, "ShaderRegister",
+                                Descriptor.ShaderRegister);
 
-        if(RSD.Version > 1) {
-          if (!verifyDescriptorFlag(Descriptor.Flags))
-            return reportValueError(Ctx, "DescriptorFlag", Descriptor.Flags);
-        }
-        break;
+      if (!verifyRegisterSpace(Descriptor.RegisterSpace))
+        return reportValueError(Ctx, "RegisterSpace", Descriptor.RegisterSpace);
+
+      if (RSD.Version > 1) {
+        if (!verifyDescriptorFlag(Descriptor.Flags))
+          return reportValueError(Ctx, "DescriptorFlag", Descriptor.Flags);
       }
+      break;
+    }
     }
   }
 
@@ -425,14 +425,14 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       case llvm::to_underlying(dxbc::RootParameterType::CBV):
       case llvm::to_underlying(dxbc::RootParameterType::UAV):
       case llvm::to_underlying(dxbc::RootParameterType::SRV): {
-                const dxbc::RTS0::v2::RootDescriptor &Descriptor =
+        const dxbc::RTS0::v2::RootDescriptor &Descriptor =
             RS.ParametersContainer.getRootDescriptor(Loc);
         OS << indent(Space + 2)
            << "Register Space: " << Descriptor.RegisterSpace << "\n";
         OS << indent(Space + 2)
            << "Shader Register: " << Descriptor.ShaderRegister << "\n";
         if(RS.Version > 1)
-        OS << indent(Space + 2) << "Flags: " << Descriptor.Flags << "\n";
+          OS << indent(Space + 2) << "Flags: " << Descriptor.Flags << "\n";
         break;
       }
       }
