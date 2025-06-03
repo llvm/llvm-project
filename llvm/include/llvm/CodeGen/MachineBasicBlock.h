@@ -277,18 +277,33 @@ public:
   /// of a terminator, exception-handling target, or jump table. This is
   /// either the result of an IR-level "blockaddress", or some form
   /// of target-specific branch lowering.
+  ///
+  /// The name of this function `hasAddressTaken` implies that the address of
+  /// the block is known and used in a general sense, but not necessarily that
+  /// the address is used by an indirect branch instruction. So branch target
+  /// enforcement need not put a BTI instruction (or equivalent) at the start
+  /// of a block just because this function returns true. The decision about
+  /// whether to add a BTI can be more subtle than that, and depends on the
+  /// more detailed checks that this function aggregates together.
   bool hasAddressTaken() const {
-    return MachineBlockAddressTaken || AddressTakenIRBlock;
+    return MachineBlockAddressTaken || AddressTakenIRBlock ||
+           IsInlineAsmBrIndirectTarget;
   }
 
   /// Test whether this block is used as something other than the target of a
   /// terminator, exception-handling target, jump table, or IR blockaddress.
   /// For example, its address might be loaded into a register, or
   /// stored in some branch table that isn't part of MachineJumpTableInfo.
+  ///
+  /// If this function returns true, it _does_ mean that branch target
+  /// enforcement needs to put a BTI or equivalent at the start of the block.
   bool isMachineBlockAddressTaken() const { return MachineBlockAddressTaken; }
 
   /// Test whether this block is the target of an IR BlockAddress.  (There can
   /// more than one MBB associated with an IR BB where the address is taken.)
+  ///
+  /// If this function returns true, it _does_ mean that branch target
+  /// enforcement needs to put a BTI or equivalent at the start of the block.
   bool isIRBlockAddressTaken() const { return AddressTakenIRBlock; }
 
   /// Retrieves the BasicBlock which corresponds to this MachineBasicBlock.
