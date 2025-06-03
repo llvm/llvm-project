@@ -5119,18 +5119,14 @@ static SDValue lowerVZIP(unsigned Opc, SDValue Op0, SDValue Op1,
                          Subtarget.getXLenVT());
     Mask = getAllOnesMask(InnerVT, VL, DL, DAG);
     unsigned HighIdx = InnerVT.getVectorElementCount().getKnownMinValue();
-    Op1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InnerVT, Op0,
-                      DAG.getVectorIdxConstant(HighIdx, DL));
-    Op0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InnerVT, Op0,
-                      DAG.getVectorIdxConstant(0, DL));
+    Op1 = DAG.getExtractSubvector(DL, InnerVT, Op0, HighIdx);
+    Op0 = DAG.getExtractSubvector(DL, InnerVT, Op0, 0);
   }
 
   SDValue Passthru = DAG.getUNDEF(InnerVT);
   SDValue Res = DAG.getNode(Opc, DL, InnerVT, Op0, Op1, Passthru, Mask, VL);
   if (InnerVT.bitsLT(ContainerVT))
-    Res = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
-                      DAG.getUNDEF(ContainerVT), Res,
-                      DAG.getVectorIdxConstant(0, DL));
+    Res = DAG.getInsertSubvector(DL, DAG.getUNDEF(ContainerVT), Res, 0);
   if (IntVT.isFixedLengthVector())
     Res = convertFromScalableVector(IntVT, Res, DAG, Subtarget);
   Res = DAG.getBitcast(VT, Res);
@@ -5838,11 +5834,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       return lowerVZIP(Opc, V1, V2, DL, DAG, Subtarget);
     if (SDValue Src = foldConcatVector(V1, V2)) {
       EVT NewVT = VT.getDoubleNumVectorElementsVT();
-      SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
-      Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, Src, ZeroIdx);
+      Src = DAG.getExtractSubvector(DL, NewVT, Src, 0);
       SDValue Res =
           lowerVZIP(Opc, Src, DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res, ZeroIdx);
+      return DAG.getExtractSubvector(DL, VT, Res, 0);
     }
   }
 
