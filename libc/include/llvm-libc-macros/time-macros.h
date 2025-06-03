@@ -5,7 +5,7 @@
 #include "gpu/time-macros.h"
 #elif defined(__linux__)
 #include "linux/time-macros.h"
-#else
+#elif defined(__ELF__)
 #include "baremetal/time-macros.h"
 #endif
 
