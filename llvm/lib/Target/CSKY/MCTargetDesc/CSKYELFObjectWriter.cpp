@@ -27,17 +27,15 @@ public:
       : MCELFObjectTargetWriter(false, OSABI, ELF::EM_CSKY, true){};
   ~CSKYELFObjectWriter() {}
 
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
-  bool needsRelocateWithSymbol(const MCValue &Val, const MCSymbol &Sym,
-                               unsigned Type) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
+  bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
 };
 
 } // namespace
 
-unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
+unsigned CSKYELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                            const MCValue &Target,
-                                           const MCFixup &Fixup,
                                            bool IsPCRel) const {
   const MCExpr *Expr = Fixup.getValue();
   // Determine the type of the relocation
@@ -61,7 +59,7 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
     switch (Kind) {
     default:
       LLVM_DEBUG(dbgs() << "Unknown Kind1  = " << Kind);
-      Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
+      reportError(Fixup.getLoc(), "Unsupported relocation type");
       return ELF::R_CKCORE_NONE;
     case FK_Data_4:
     case FK_PCRel_4:
@@ -86,13 +84,13 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
   switch (Kind) {
   default:
     LLVM_DEBUG(dbgs() << "Unknown Kind2  = " << Kind);
-    Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
+    reportError(Fixup.getLoc(), "Unsupported relocation type");
     return ELF::R_CKCORE_NONE;
   case FK_Data_1:
-    Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "1-byte data relocations not supported");
     return ELF::R_CKCORE_NONE;
   case FK_Data_2:
-    Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "2-byte data relocations not supported");
     return ELF::R_CKCORE_NONE;
   case FK_Data_4:
     if (Expr->getKind() == MCExpr::Target) {
@@ -121,12 +119,11 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
         return ELF::R_CKCORE_ADDR32;
 
       LLVM_DEBUG(dbgs() << "Unknown FK_Data_4 TK  = " << TK);
-      Ctx.reportError(Fixup.getLoc(), "unknown target FK_Data_4");
+      reportError(Fixup.getLoc(), "unknown target FK_Data_4");
     } else {
       switch (Modifier) {
       default:
-        Ctx.reportError(Fixup.getLoc(),
-                        "invalid fixup for 4-byte data relocation");
+        reportError(Fixup.getLoc(), "invalid fixup for 4-byte data relocation");
         return ELF::R_CKCORE_NONE;
       case CSKYMCExpr::VK_GOT:
         return ELF::R_CKCORE_GOT32;
@@ -146,7 +143,7 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
     }
     return ELF::R_CKCORE_NONE;
   case FK_Data_8:
-    Ctx.reportError(Fixup.getLoc(), "8-byte data relocations not supported");
+    reportError(Fixup.getLoc(), "8-byte data relocations not supported");
     return ELF::R_CKCORE_NONE;
   case CSKY::fixup_csky_addr32:
     return ELF::R_CKCORE_ADDR32;
@@ -168,7 +165,6 @@ unsigned CSKYELFObjectWriter::getRelocType(MCContext &Ctx,
 }
 
 bool CSKYELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
-                                                  const MCSymbol &,
                                                   unsigned Type) const {
   switch (V.getSpecifier()) {
   case CSKYMCExpr::VK_PLT:

@@ -79,6 +79,12 @@ clang_tablegen(CXX11AttributeInfo.inc -gen-cxx11-attribute-info
   TARGET CXX11AttributeInfo
   )
 
+  clang_tablegen(AttributeSpellingList.inc -gen-attribute-spelling-list
+  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
+  SOURCE Attr.td
+  TARGET AttributeSpellingList
+  )
+
 clang_tablegen(Builtins.inc -gen-clang-builtins
   SOURCE Builtins.td
   TARGET ClangBuiltins)
@@ -103,9 +109,17 @@ clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
   SOURCE BuiltinsRISCV.td
   TARGET ClangBuiltinsRISCV)
 
-clang_tablegen(BuiltinsSPIRV.inc -gen-clang-builtins
-  SOURCE BuiltinsSPIRV.td
-  TARGET ClangBuiltinsSPIRV)
+clang_tablegen(BuiltinsSPIRVCommon.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRVCommon.td
+  TARGET ClangBuiltinsSPIRVCommon)
+
+clang_tablegen(BuiltinsSPIRVVK.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRVVK.td
+  TARGET ClangBuiltinsSPIRVVK)
+
+clang_tablegen(BuiltinsSPIRVCL.inc -gen-clang-builtins
+  SOURCE BuiltinsSPIRVCL.td
+  TARGET ClangBuiltinsSPIRVCL)
 
 clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
   SOURCE BuiltinsX86.td

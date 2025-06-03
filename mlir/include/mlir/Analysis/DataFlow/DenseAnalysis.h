@@ -125,7 +125,7 @@ protected:
   /// Visit an operation. If this analysis can confirm that lattice content
   /// of lattice anchors around operation are necessarily identical, join
   /// them into the same equivalent class.
-  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) { return; }
+  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) {}
 
   /// Propagate the dense lattice forward along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
@@ -386,7 +386,7 @@ protected:
   /// Visit an operation. If this analysis can confirm that lattice content
   /// of lattice anchors around operation are necessarily identical, join
   /// them into the same equivalent class.
-  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) { return; }
+  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) {}
 
   /// Propagate the dense lattice backwards along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`

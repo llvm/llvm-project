@@ -1614,17 +1614,32 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     for (OutputSection *sec : ctx.outputSections)
       sec->addr = 0;
 
-  // If addrExpr is set, the address may not be a multiple of the alignment.
-  // Warn because this is error-prone.
-  for (SectionCommand *cmd : ctx.script->sectionCommands)
-    if (auto *osd = dyn_cast<OutputDesc>(cmd)) {
-      OutputSection *osec = &osd->osec;
-      if (osec->addr % osec->addralign != 0)
-        Warn(ctx) << "address (0x" << Twine::utohexstr(osec->addr)
-                  << ") of section " << osec->name
-                  << " is not a multiple of alignment (" << osec->addralign
-                  << ")";
+  uint64_t imageBase = ctx.script->hasSectionsCommand || ctx.arg.relocatable
+                           ? 0
+                           : ctx.target->getImageBase();
+  for (SectionCommand *cmd : ctx.script->sectionCommands) {
+    auto *osd = dyn_cast<OutputDesc>(cmd);
+    if (!osd)
+      continue;
+    OutputSection *osec = &osd->osec;
+    // Error if the address is below the image base when SECTIONS is absent
+    // (e.g. when -Ttext is specified and smaller than the default target image
+    // base for no-pie).
+    if (osec->addr < imageBase && (osec->flags & SHF_ALLOC)) {
+      Err(ctx) << "section '" << osec->name << "' address (0x"
+               << Twine::utohexstr(osec->addr)
+               << ") is smaller than image base (0x"
+               << Twine::utohexstr(imageBase) << "); specify --image-base";
     }
+
+    // If addrExpr is set, the address may not be a multiple of the alignment.
+    // Warn because this is error-prone.
+    if (osec->addr % osec->addralign != 0)
+      Warn(ctx) << "address (0x" << Twine::utohexstr(osec->addr)
+                << ") of section " << osec->name
+                << " is not a multiple of alignment (" << osec->addralign
+                << ")";
+  }
 
   // Sizes are no longer allowed to grow, so all allowable spills have been
   // taken. Remove any leftover potential spills.

@@ -18,7 +18,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Lex/Token.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
@@ -959,6 +958,8 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   CurrentPackingBits.updateBits();
   CurrentPackingBits.addBit(static_cast<bool>(E->getADLCallKind()));
   CurrentPackingBits.addBit(E->hasStoredFPFeatures());
+  CurrentPackingBits.addBit(E->isCoroElideSafe());
+  CurrentPackingBits.addBit(E->usesMemberSyntax());
 
   Record.AddSourceLocation(E->getRParenLoc());
   Record.AddStmt(E->getCallee());

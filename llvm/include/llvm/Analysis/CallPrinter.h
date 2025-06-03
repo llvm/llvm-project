@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_CALLPRINTER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -23,19 +24,19 @@ class ModulePass;
 /// Pass for printing the call graph to a dot file
 class CallGraphDOTPrinterPass : public PassInfoMixin<CallGraphDOTPrinterPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
 /// Pass for viewing the call graph
 class CallGraphViewerPass : public PassInfoMixin<CallGraphViewerPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
-ModulePass *createCallGraphViewerPass();
-ModulePass *createCallGraphDOTPrinterPass();
+LLVM_ABI ModulePass *createCallGraphViewerPass();
+LLVM_ABI ModulePass *createCallGraphDOTPrinterPass();
 
 } // end namespace llvm
 

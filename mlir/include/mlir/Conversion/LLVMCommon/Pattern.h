@@ -69,6 +69,15 @@ SmallVector<Value> decomposeValue(OpBuilder &builder, Location loc, Value src,
 /// function is used to combine multiple values into a single value.
 Value composeValue(OpBuilder &builder, Location loc, ValueRange src,
                    Type dstType);
+
+/// Performs the index computation to get to the element at `indices` of the
+/// memory pointed to by `memRefDesc`, using the layout map of `type`.
+/// The indices are linearized as:
+///   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
+Value getStridedElementPtr(
+    OpBuilder &builder, Location loc, const LLVMTypeConverter &converter,
+    MemRefType type, Value memRefDesc, ValueRange indices,
+    LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none);
 } // namespace LLVM
 
 /// Base class for operation conversions targeting the LLVM IR dialect. It
@@ -107,8 +116,8 @@ protected:
   static Value createIndexAttrConstant(OpBuilder &builder, Location loc,
                                        Type resultType, int64_t value);
 
-  // This is a strided getElementPtr variant that linearizes subscripts as:
-  //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
+  /// Convenience wrapper for the corresponding helper utility.
+  /// This is a strided getElementPtr variant with linearized subscripts.
   Value getStridedElementPtr(
       ConversionPatternRewriter &rewriter, Location loc, MemRefType type,
       Value memRefDesc, ValueRange indices,

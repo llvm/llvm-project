@@ -563,17 +563,21 @@ protected:
     unsigned HasFPFeatures : 1;
 
     /// True if the call expression is a must-elide call to a coroutine.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsCoroElideSafe : 1;
 
-    /// Padding used to align OffsetToTrailingObjects to a byte multiple.
-    unsigned : 24 - 4 - NumExprBits;
+    /// Tracks when CallExpr is used to represent an explicit object
+    /// member function, in order to adjust the begin location.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ExplicitObjectMemFunUsingMemberSyntax : 1;
 
-    /// The offset in bytes from the this pointer to the start of the
-    /// trailing objects belonging to CallExpr. Intentionally byte sized
-    /// for faster access.
-    unsigned OffsetToTrailingObjects : 8;
+    /// Indicates that SourceLocations are cached as
+    /// Trailing objects. See the definition of CallExpr.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasTrailingSourceLoc : 1;
   };
-  enum { NumCallExprBits = 32 };
+
+  enum { NumCallExprBits = 25 };
 
   class MemberExprBitfields {
     friend class ASTStmtReader;

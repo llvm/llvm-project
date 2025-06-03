@@ -152,11 +152,13 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   // out, don't do it.  This includes virtual base classes which get laid out
   // when a class is translated, even though they aren't embedded by-value into
   // the class.
-  if (isa<CXXRecordDecl>(rd)) {
-    assert(!cir::MissingFeatures::cxxSupport());
-    cgt.getCGModule().errorNYI(rd->getSourceRange(),
-                               "isSafeToConvert: CXXRecordDecl");
-    return false;
+  if (auto *crd = dyn_cast<CXXRecordDecl>(rd)) {
+    if (crd->getNumBases() > 0) {
+      assert(!cir::MissingFeatures::cxxSupport());
+      cgt.getCGModule().errorNYI(rd->getSourceRange(),
+                                 "isSafeToConvert: CXXRecordDecl with bases");
+      return false;
+    }
   }
 
   // If this type would require laying out members that are currently being laid
@@ -226,7 +228,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // If converting this type would cause us to infinitely loop, don't do it!
   if (!isSafeToConvert(rd, *this)) {
-    cgm.errorNYI(rd->getSourceRange(), "recursive record layout");
+    deferredRecords.push_back(rd);
     return entry;
   }
 
@@ -259,7 +261,9 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
 
   // If we're done converting the outer-most record, then convert any deferred
   // records as well.
-  assert(!cir::MissingFeatures::recursiveRecordLayout());
+  if (recordsBeingLaidOut.empty())
+    while (!deferredRecords.empty())
+      convertRecordDeclType(deferredRecords.pop_back_val());
 
   return entry;
 }
