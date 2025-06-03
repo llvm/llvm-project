@@ -21,3 +21,19 @@ functions:
       - _Returns_twice
     arguments:
       - type: jmp_buf
+  - name: sigsetjmp
+    standards:
+      - POSIX
+    return_type: int
+    attributes:
+      - _Returns_twice
+    arguments:
+      - type: sigjmp_buf
+      - type: int
+  - name: siglongjmp
+    standards:
+      - POSIX
+    return_type: _Noreturn void
+    arguments:
+      - type: sigjmp_buf
+      - type: int

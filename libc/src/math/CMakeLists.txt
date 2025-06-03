@@ -48,6 +48,8 @@ add_math_entrypoint_object(acosh)
 add_math_entrypoint_object(acoshf)
 add_math_entrypoint_object(acoshf16)
 
+add_math_entrypoint_object(acospif16)
+ 
 add_math_entrypoint_object(asin)
 add_math_entrypoint_object(asinf)
 add_math_entrypoint_object(asinf16)
@@ -58,6 +60,7 @@ add_math_entrypoint_object(asinhf16)
 
 add_math_entrypoint_object(atan)
 add_math_entrypoint_object(atanf)
+add_math_entrypoint_object(atanf16)
 
 add_math_entrypoint_object(atan2)
 add_math_entrypoint_object(atan2f)
@@ -66,6 +69,7 @@ add_math_entrypoint_object(atan2f128)
 
 add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
+add_math_entrypoint_object(atanhf16)
 
 add_math_entrypoint_object(canonicalize)
 add_math_entrypoint_object(canonicalizef)

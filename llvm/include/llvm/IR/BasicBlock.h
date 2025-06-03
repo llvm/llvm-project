@@ -218,7 +218,7 @@ public:
 
   /// Return the enclosing method, or null if none.
   const Function *getParent() const { return Parent; }
-        Function *getParent()       { return Parent; }
+  Function *getParent() { return Parent; }
 
   /// Return the module owning the function this basic block belongs to, or
   /// nullptr if the function does not have a module.
@@ -227,7 +227,7 @@ public:
   const Module *getModule() const;
   Module *getModule() {
     return const_cast<Module *>(
-                            static_cast<const BasicBlock *>(this)->getModule());
+        static_cast<const BasicBlock *>(this)->getModule());
   }
 
   /// Get the data layout of the module this basic block belongs to.
@@ -253,16 +253,17 @@ public:
   const CallInst *getTerminatingDeoptimizeCall() const;
   CallInst *getTerminatingDeoptimizeCall() {
     return const_cast<CallInst *>(
-         static_cast<const BasicBlock *>(this)->getTerminatingDeoptimizeCall());
+        static_cast<const BasicBlock *>(this)->getTerminatingDeoptimizeCall());
   }
 
   /// Returns the call instruction calling \@llvm.experimental.deoptimize
   /// that is present either in current basic block or in block that is a unique
-  /// successor to current block, if such call is present. Otherwise, returns null.
+  /// successor to current block, if such call is present. Otherwise, returns
+  /// null.
   const CallInst *getPostdominatingDeoptimizeCall() const;
   CallInst *getPostdominatingDeoptimizeCall() {
-    return const_cast<CallInst *>(
-         static_cast<const BasicBlock *>(this)->getPostdominatingDeoptimizeCall());
+    return const_cast<CallInst *>(static_cast<const BasicBlock *>(this)
+                                      ->getPostdominatingDeoptimizeCall());
   }
 
   /// Returns the call instruction marked 'musttail' prior to the terminating
@@ -271,7 +272,7 @@ public:
   const CallInst *getTerminatingMustTailCall() const;
   CallInst *getTerminatingMustTailCall() {
     return const_cast<CallInst *>(
-           static_cast<const BasicBlock *>(this)->getTerminatingMustTailCall());
+        static_cast<const BasicBlock *>(this)->getTerminatingMustTailCall());
   }
 
   /// Returns a pointer to the first instruction in this block that is not a
@@ -336,7 +337,8 @@ public:
   const_iterator getFirstInsertionPt() const;
   iterator getFirstInsertionPt() {
     return static_cast<const BasicBlock *>(this)
-                                          ->getFirstInsertionPt().getNonConst();
+        ->getFirstInsertionPt()
+        .getNonConst();
   }
 
   /// Returns an iterator to the first instruction in this block that is
@@ -351,10 +353,10 @@ public:
   /// Returns the first potential AsynchEH faulty instruction
   /// currently it checks for loads/stores (which may dereference a null
   /// pointer) and calls/invokes (which may propagate exceptions)
-  const Instruction* getFirstMayFaultInst() const;
-  Instruction* getFirstMayFaultInst() {
-      return const_cast<Instruction*>(
-          static_cast<const BasicBlock*>(this)->getFirstMayFaultInst());
+  const Instruction *getFirstMayFaultInst() const;
+  Instruction *getFirstMayFaultInst() {
+    return const_cast<Instruction *>(
+        static_cast<const BasicBlock *>(this)->getFirstMayFaultInst());
   }
 
   /// Return a const iterator range over the instructions in the block, skipping
@@ -408,7 +410,7 @@ public:
   const BasicBlock *getSinglePredecessor() const;
   BasicBlock *getSinglePredecessor() {
     return const_cast<BasicBlock *>(
-                 static_cast<const BasicBlock *>(this)->getSinglePredecessor());
+        static_cast<const BasicBlock *>(this)->getSinglePredecessor());
   }
 
   /// Return the predecessor of this block if it has a unique predecessor
@@ -420,7 +422,7 @@ public:
   const BasicBlock *getUniquePredecessor() const;
   BasicBlock *getUniquePredecessor() {
     return const_cast<BasicBlock *>(
-                 static_cast<const BasicBlock *>(this)->getUniquePredecessor());
+        static_cast<const BasicBlock *>(this)->getUniquePredecessor());
   }
 
   /// Return true if this block has exactly N predecessors.
@@ -436,7 +438,7 @@ public:
   const BasicBlock *getSingleSuccessor() const;
   BasicBlock *getSingleSuccessor() {
     return const_cast<BasicBlock *>(
-                   static_cast<const BasicBlock *>(this)->getSingleSuccessor());
+        static_cast<const BasicBlock *>(this)->getSingleSuccessor());
   }
 
   /// Return the successor of this block if it has a unique successor.
@@ -446,7 +448,7 @@ public:
   const BasicBlock *getUniqueSuccessor() const;
   BasicBlock *getUniqueSuccessor() {
     return const_cast<BasicBlock *>(
-                   static_cast<const BasicBlock *>(this)->getUniqueSuccessor());
+        static_cast<const BasicBlock *>(this)->getUniqueSuccessor());
   }
 
   /// Print the basic block to an output stream with an optional
@@ -471,20 +473,20 @@ public:
     It.setHeadBit(true);
     return It;
   }
-  inline iterator                end  ()       { return InstList.end();   }
-  inline const_iterator          end  () const { return InstList.end();   }
+  inline iterator end() { return InstList.end(); }
+  inline const_iterator end() const { return InstList.end(); }
 
-  inline reverse_iterator        rbegin()       { return InstList.rbegin(); }
-  inline const_reverse_iterator  rbegin() const { return InstList.rbegin(); }
-  inline reverse_iterator        rend  ()       { return InstList.rend();   }
-  inline const_reverse_iterator  rend  () const { return InstList.rend();   }
+  inline reverse_iterator rbegin() { return InstList.rbegin(); }
+  inline const_reverse_iterator rbegin() const { return InstList.rbegin(); }
+  inline reverse_iterator rend() { return InstList.rend(); }
+  inline const_reverse_iterator rend() const { return InstList.rend(); }
 
-  inline size_t                   size() const { return InstList.size();  }
-  inline bool                    empty() const { return InstList.empty(); }
-  inline const Instruction      &front() const { return InstList.front(); }
-  inline       Instruction      &front()       { return InstList.front(); }
-  inline const Instruction       &back() const { return InstList.back();  }
-  inline       Instruction       &back()       { return InstList.back();  }
+  inline size_t size() const { return InstList.size(); }
+  inline bool empty() const { return InstList.empty(); }
+  inline const Instruction &front() const { return InstList.front(); }
+  inline Instruction &front() { return InstList.front(); }
+  inline const Instruction &back() const { return InstList.back(); }
+  inline Instruction &back() { return InstList.back(); }
 
   /// Iterator to walk just the phi nodes in the basic block.
   template <typename PHINodeT = PHINode, typename BBIteratorT = iterator>
@@ -563,6 +565,24 @@ private:
   void spliceDebugInfoImpl(BasicBlock::iterator ToIt, BasicBlock *FromBB,
                            BasicBlock::iterator FromBeginIt,
                            BasicBlock::iterator FromEndIt);
+
+  enum {
+    HasAddressTaken = 1 << 0,
+    InstrOrderValid = 1 << 1,
+  };
+
+  void setHasAddressTaken(bool B) {
+    if (B)
+      SubclassOptionalData |= HasAddressTaken;
+    else
+      SubclassOptionalData &= ~HasAddressTaken;
+  }
+
+  /// Shadow Value::setValueSubclassData with a private forwarding method so
+  /// that any future subclasses cannot accidentally use it.
+  void setValueSubclassData(unsigned short D) {
+    Value::setValueSubclassData(D);
+  }
 
 public:
   /// Returns a pointer to the symbol table if one exists.
@@ -659,17 +679,17 @@ public:
   /// Transfer a range of instructions that belong to \p FromBB from \p
   /// FromBeginIt to \p FromEndIt, to this basic block at \p ToIt.
   void splice(BasicBlock::iterator ToIt, BasicBlock *FromBB,
-              BasicBlock::iterator FromBeginIt,
-              BasicBlock::iterator FromEndIt);
+              BasicBlock::iterator FromBeginIt, BasicBlock::iterator FromEndIt);
 
   /// Erases a range of instructions from \p FromIt to (not including) \p ToIt.
   /// \Returns \p ToIt.
-  BasicBlock::iterator erase(BasicBlock::iterator FromIt, BasicBlock::iterator ToIt);
+  BasicBlock::iterator erase(BasicBlock::iterator FromIt,
+                             BasicBlock::iterator ToIt);
 
   /// Returns true if there are any uses of this basic block other than
   /// direct branches, switches, etc. to it.
   bool hasAddressTaken() const {
-    return getBasicBlockBits().BlockAddressRefCount != 0;
+    return SubclassOptionalData & HasAddressTaken;
   }
 
   /// Update all phi nodes in this basic block to refer to basic block \p New
@@ -697,7 +717,7 @@ public:
   const LandingPadInst *getLandingPadInst() const;
   LandingPadInst *getLandingPadInst() {
     return const_cast<LandingPadInst *>(
-                    static_cast<const BasicBlock *>(this)->getLandingPadInst());
+        static_cast<const BasicBlock *>(this)->getLandingPadInst());
   }
 
   /// Return true if it is legal to hoist instructions into this block.
@@ -711,15 +731,13 @@ public:
 
   /// Returns true if the Order field of child Instructions is valid.
   bool isInstrOrderValid() const {
-    return getBasicBlockBits().InstrOrderValid;
+    return SubclassOptionalData & InstrOrderValid;
   }
 
   /// Mark instruction ordering invalid. Done on every instruction insert.
   void invalidateOrders() {
     validateInstrOrdering();
-    BasicBlockBits Bits = getBasicBlockBits();
-    Bits.InstrOrderValid = false;
-    setBasicBlockBits(Bits);
+    SubclassOptionalData &= ~InstrOrderValid;
   }
 
   /// Renumber instructions and mark the ordering as valid.
@@ -734,63 +752,6 @@ public:
   /// each ordering to ensure that transforms have the same algorithmic
   /// complexity when asserts are enabled as when they are disabled.
   void validateInstrOrdering() const;
-
-private:
-#if defined(_AIX) && (!defined(__GNUC__) || defined(__clang__))
-// Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
-// and give the `pack` pragma push semantics.
-#define BEGIN_TWO_BYTE_PACK() _Pragma("pack(2)")
-#define END_TWO_BYTE_PACK() _Pragma("pack(pop)")
-#else
-#define BEGIN_TWO_BYTE_PACK()
-#define END_TWO_BYTE_PACK()
-#endif
-
-  BEGIN_TWO_BYTE_PACK()
-  /// Bitfield to help interpret the bits in Value::SubclassData.
-  struct BasicBlockBits {
-    unsigned short BlockAddressRefCount : 15;
-    unsigned short InstrOrderValid : 1;
-  };
-  END_TWO_BYTE_PACK()
-
-#undef BEGIN_TWO_BYTE_PACK
-#undef END_TWO_BYTE_PACK
-
-  /// Safely reinterpret the subclass data bits to a more useful form.
-  BasicBlockBits getBasicBlockBits() const {
-    static_assert(sizeof(BasicBlockBits) == sizeof(unsigned short),
-                  "too many bits for Value::SubclassData");
-    unsigned short ValueData = getSubclassDataFromValue();
-    BasicBlockBits AsBits;
-    memcpy(&AsBits, &ValueData, sizeof(AsBits));
-    return AsBits;
-  }
-
-  /// Reinterpret our subclass bits and store them back into Value.
-  void setBasicBlockBits(BasicBlockBits AsBits) {
-    unsigned short D;
-    memcpy(&D, &AsBits, sizeof(D));
-    Value::setValueSubclassData(D);
-  }
-
-  /// Increment the internal refcount of the number of BlockAddresses
-  /// referencing this BasicBlock by \p Amt.
-  ///
-  /// This is almost always 0, sometimes one possibly, but almost never 2, and
-  /// inconceivably 3 or more.
-  void AdjustBlockAddressRefCount(int Amt) {
-    BasicBlockBits Bits = getBasicBlockBits();
-    Bits.BlockAddressRefCount += Amt;
-    setBasicBlockBits(Bits);
-    assert(Bits.BlockAddressRefCount < 255 && "Refcount wrap-around");
-  }
-
-  /// Shadow Value::setValueSubclassData with a private forwarding method so
-  /// that any future subclasses cannot accidentally use it.
-  void setValueSubclassData(unsigned short D) {
-    Value::setValueSubclassData(D);
-  }
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).

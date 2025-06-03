@@ -16,7 +16,7 @@ void b0(int a, int b) {
   x = x | b;
 }
 
-// CIR-LABEL: cir.func @b0(
+// CIR-LABEL: cir.func @_Z2b0ii(
 // CIR: %{{.+}} = cir.binop(mul, %{{.+}}, %{{.+}}) nsw : !s32i
 // CIR: %{{.+}} = cir.binop(div, %{{.+}}, %{{.+}}) : !s32i
 // CIR: %{{.+}} = cir.binop(rem, %{{.+}}, %{{.+}}) : !s32i
@@ -27,7 +27,7 @@ void b0(int a, int b) {
 // CIR: %{{.+}} = cir.binop(or, %{{.+}}, %{{.+}}) : !s32i
 // CIR: cir.return
 
-// LLVM-LABEL: define void @b0(
+// LLVM-LABEL: define void @_Z2b0ii(
 // LLVM-SAME: i32 %[[A:.*]], i32 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
@@ -133,14 +133,14 @@ void testFloatingPointBinOps(float a, float b) {
   a - b;
 }
 
-// CIR-LABEL: cir.func @testFloatingPointBinOps(
+// CIR-LABEL: cir.func @_Z23testFloatingPointBinOpsff(
 // CIR: cir.binop(mul, %{{.+}}, %{{.+}}) : !cir.float
 // CIR: cir.binop(div, %{{.+}}, %{{.+}}) : !cir.float
 // CIR: cir.binop(add, %{{.+}}, %{{.+}}) : !cir.float
 // CIR: cir.binop(sub, %{{.+}}, %{{.+}}) : !cir.float
 // CIR: cir.return
 
-// LLVM-LABEL: define void @testFloatingPointBinOps(
+// LLVM-LABEL: define void @_Z23testFloatingPointBinOpsff(
 // LLVM-SAME: float %[[A:.*]], float %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca float, i64 1
 // LLVM:         %[[B_ADDR:.*]] = alloca float, i64 1
@@ -194,28 +194,28 @@ void signed_shift(int a, int b) {
   x = a << b;
 }
 
-// CIR-LABEL: cir.func @signed_shift(
+// CIR-LABEL: cir.func @_Z12signed_shiftii(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !s32i{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
 
-// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s32i, %[[B1]] : !s32i) -> !s32i
-// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s32i, %[[B2]] : !s32i) -> !s32i
-// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // CIR: cir.return
 
-// LLVM-LABEL: define void @signed_shift
+// LLVM-LABEL: define void @_Z12signed_shiftii
 // LLVM-SAME: (i32 %[[A:.*]], i32 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
@@ -260,28 +260,28 @@ void unsigned_shift(unsigned a, unsigned b) {
   x = a << b;
 }
 
-// CIR-LABEL: cir.func @unsigned_shift(
+// CIR-LABEL: cir.func @_Z14unsigned_shiftjj(
 // CIR-SAME: %[[ARG0:.*]]: !u32i{{.*}}, %[[ARG1:.*]]: !u32i{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init]
 
-// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !u32i, !cir.ptr<!u32i>
-// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !u32i, !cir.ptr<!u32i>
+// CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !u32i, !cir.ptr<!u32i>
+// CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !u32i, !cir.ptr<!u32i>
 
-// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!u32i>, !u32i
-// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!u32i>, !u32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !u32i, %[[B1]] : !u32i) -> !u32i
-// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !u32i, !cir.ptr<!u32i>
+// CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !u32i, !cir.ptr<!u32i>
 
-// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!u32i>, !u32i
-// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!u32i>, !u32i
+// CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!u32i>, !u32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !u32i, %[[B2]] : !u32i) -> !u32i
-// CIR: cir.store %[[SHL]], %[[X_PTR]] : !u32i, !cir.ptr<!u32i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !u32i, !cir.ptr<!u32i>
 
 // CIR: cir.return
 
-// LLVM-LABEL: define void @unsigned_shift
+// LLVM-LABEL: define void @_Z14unsigned_shiftjj
 // LLVM-SAME: (i32 %[[A:.*]], i32 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i32
@@ -326,30 +326,30 @@ void zext_shift_example(int a, unsigned char b) {
   x = a << b;
 }
 
-// CIR-LABEL: cir.func @zext_shift_example(
+// CIR-LABEL: cir.func @_Z18zext_shift_exampleih(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !u8i{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
 
-// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !u8i, !cir.ptr<!u8i>
+// CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !u8i, !cir.ptr<!u8i>
 
-// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
+// CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
 // CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !u8i), !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s32i, %[[B1_EXT]] : !s32i) -> !s32i
-// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
+// CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
 // CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !u8i), !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s32i, %[[B2_EXT]] : !s32i) -> !s32i
-// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // CIR: cir.return
 
-// LLVM-LABEL: define void @zext_shift_example
+// LLVM-LABEL: define void @_Z18zext_shift_exampleih
 // LLVM-SAME: (i32 %[[A:.*]], i8 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i8
@@ -398,30 +398,30 @@ void sext_shift_example(int a, signed char b) {
   x = a << b;
 }
 
-// CIR-LABEL: cir.func @sext_shift_example(
+// CIR-LABEL: cir.func @_Z18sext_shift_exampleia(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !s8i{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
 
-// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !s8i, !cir.ptr<!s8i>
+// CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s8i, !cir.ptr<!s8i>
 
-// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
+// CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
 // CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !s8i), !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s32i, %[[B1_EXT]] : !s32i) -> !s32i
-// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
-// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
+// CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
 // CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !s8i), !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s32i, %[[B2_EXT]] : !s32i) -> !s32i
-// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // CIR: cir.return
 
-// LLVM-LABEL: define void @sext_shift_example
+// LLVM-LABEL: define void @_Z18sext_shift_exampleia
 // LLVM-SAME: (i32 %[[A:.*]], i8 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i32
 // LLVM:         %[[B_ADDR:.*]] = alloca i8
@@ -470,30 +470,30 @@ void long_shift_example(long long a, short b) {
   x = a << b;
 }
 
-// CIR-LABEL: cir.func @long_shift_example(
+// CIR-LABEL: cir.func @_Z18long_shift_examplexs(
 // CIR-SAME: %[[ARG0:.*]]: !s64i{{.*}}, %[[ARG1:.*]]: !s16i{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !s16i, !cir.ptr<!s16i>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["x", init]
 
-// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s64i, !cir.ptr<!s64i>
-// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !s16i, !cir.ptr<!s16i>
+// CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s64i, !cir.ptr<!s64i>
+// CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s16i, !cir.ptr<!s16i>
 
-// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
-// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
+// CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
 // CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !s16i), !s32i
 // CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s64i, %[[B1_EXT]] : !s32i) -> !s64i
-// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
+// CIR: cir.store{{.*}} %[[ASHR]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
 
-// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
-// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
+// CIR: %[[A2:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR: %[[B2:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
 // CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !s16i), !s32i
 // CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s64i, %[[B2_EXT]] : !s32i) -> !s64i
-// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
 
 // CIR: cir.return
 
-// LLVM-LABEL: define void @long_shift_example
+// LLVM-LABEL: define void @_Z18long_shift_examplexs
 // LLVM-SAME: (i64 %[[A:.*]], i16 %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca i64
 // LLVM:         %[[B_ADDR:.*]] = alloca i16

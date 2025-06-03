@@ -81,28 +81,28 @@ for.end:                                          ; preds = %for.body
 
 ; CHECK: Run-time memory checks:
 ; CHECK-NEXT:   Check 0:
-; CHECK-NEXT:     Comparing group ([[ZERO:.+]]):
+; CHECK-NEXT:     Comparing group GRP0:
 ; CHECK-NEXT:       %arrayidxC1 = getelementptr inbounds i16, ptr %c, i64 %store_ind_inc
 ; CHECK-NEXT:       %arrayidxC = getelementptr inbounds i16, ptr %c, i64 %store_ind
-; CHECK-NEXT:     Against group ([[ONE:.+]]):
+; CHECK-NEXT:     Against group GRP1:
 ; CHECK-NEXT:       %arrayidxA1 = getelementptr inbounds i16, ptr %a, i64 %add
 ; CHECK-NEXT:       %arrayidxA = getelementptr inbounds i16, ptr %a, i64 %ind
 ; CHECK-NEXT:   Check 1:
-; CHECK-NEXT:     Comparing group ({{.*}}[[ZERO]]):
+; CHECK-NEXT:     Comparing group GRP0:
 ; CHECK-NEXT:       %arrayidxC1 = getelementptr inbounds i16, ptr %c, i64 %store_ind_inc
 ; CHECK-NEXT:       %arrayidxC = getelementptr inbounds i16, ptr %c, i64 %store_ind
-; CHECK-NEXT:     Against group ([[TWO:.+]]):
+; CHECK-NEXT:     Against group GRP2:
 ; CHECK-NEXT:       %arrayidxB = getelementptr inbounds i16, ptr %b, i64 %ind
 ; CHECK-NEXT:   Grouped accesses:
-; CHECK-NEXT:    Group {{.*}}[[ZERO]]:
+; CHECK-NEXT:    Group GRP0:
 ; CHECK-NEXT:       (Low: %c High: (80 + %c))
 ; CHECK-NEXT:         Member: {(2 + %c)<nuw>,+,4}
 ; CHECK-NEXT:         Member: {%c,+,4}
-; CHECK-NEXT:     Group {{.*}}[[ONE]]:
+; CHECK-NEXT:     Group GRP1:
 ; CHECK-NEXT:       (Low: %a High: (42 + %a))
 ; CHECK-NEXT:         Member: {(2 + %a)<nuw>,+,2}
 ; CHECK-NEXT:         Member: {%a,+,2}
-; CHECK-NEXT:     Group {{.*}}[[TWO]]:
+; CHECK-NEXT:     Group GRP2:
 ; CHECK-NEXT:       (Low: %b High: (40 + %b))
 ; CHECK-NEXT:         Member: {%b,+,2}
 
@@ -153,28 +153,28 @@ for.end:                                          ; preds = %for.body
 ; CHECK: function 'testh':
 ; CHECK: Run-time memory checks:
 ; CHECK-NEXT:   Check 0:
-; CHECK-NEXT:     Comparing group ([[ZERO:.+]]):
+; CHECK-NEXT:     Comparing group GRP0:
 ; CHECK-NEXT:         %arrayidxC1 = getelementptr inbounds i16, ptr %c, i64 %store_ind_inc
 ; CHECK-NEXT:         %arrayidxC = getelementptr inbounds i16, ptr %c, i64 %store_ind
-; CHECK-NEXT:     Against group ([[ONE:.+]]):
+; CHECK-NEXT:     Against group GRP1:
 ; CHECK-NEXT:         %arrayidxA1 = getelementptr i16, ptr %a, i64 %add
 ; CHECK-NEXT:         %arrayidxA = getelementptr i16, ptr %a, i64 %ind
 ; CHECK-NEXT:   Check 1:
-; CHECK-NEXT:     Comparing group ({{.*}}[[ZERO]]):
+; CHECK-NEXT:     Comparing group GRP0:
 ; CHECK-NEXT:         %arrayidxC1 = getelementptr inbounds i16, ptr %c, i64 %store_ind_inc
 ; CHECK-NEXT:         %arrayidxC = getelementptr inbounds i16, ptr %c, i64 %store_ind
-; CHECK-NEXT:     Against group ([[TWO:.+]]):
+; CHECK-NEXT:     Against group GRP2:
 ; CHECK-NEXT:         %arrayidxB = getelementptr i16, ptr %b, i64 %ind
 ; CHECK-NEXT:   Grouped accesses:
-; CHECK-NEXT:     Group {{.*}}[[ZERO]]:
+; CHECK-NEXT:     Group GRP0:
 ; CHECK-NEXT:       (Low: %c High: (80 + %c))
 ; CHECK-NEXT:         Member: {(2 + %c)<nuw>,+,4}
 ; CHECK-NEXT:         Member: {%c,+,4}
-; CHECK-NEXT:     Group {{.*}}[[ONE]]:
+; CHECK-NEXT:     Group GRP1:
 ; CHECK-NEXT:       (Low: %a High: (42 + %a))
 ; CHECK-NEXT:         Member: {(2 + %a),+,2}
 ; CHECK-NEXT:         Member: {%a,+,2}
-; CHECK-NEXT:     Group {{.*}}[[TWO]]:
+; CHECK-NEXT:     Group GRP2:
 ; CHECK-NEXT:       (Low: %b High: (40 + %b))
 ; CHECK-NEXT:         Member: {%b,+,2}
 
@@ -235,23 +235,23 @@ for.end:                                          ; preds = %for.body
 ; CHECK: function 'testi':
 ; CHECK: Run-time memory checks:
 ; CHECK-NEXT:   Check 0:
-; CHECK-NEXT:     Comparing group ([[ZERO:.+]]):
+; CHECK-NEXT:     Comparing group GRP0:
 ; CHECK-NEXT:       %storeidx = getelementptr inbounds i16, ptr %a, i64 %store_ind
-; CHECK-NEXT:     Against group ([[ONE:.+]]):
+; CHECK-NEXT:     Against group GRP1:
 ; CHECK-NEXT:       %arrayidxA1 = getelementptr i16, ptr %a, i64 %ind
 ; CHECK-NEXT:   Check 1:
-; CHECK-NEXT:     Comparing group ({{.*}}[[ZERO]]):
+; CHECK-NEXT:     Comparing group GRP0:
 ; CHECK-NEXT:       %storeidx = getelementptr inbounds i16, ptr %a, i64 %store_ind
-; CHECK-NEXT:     Against group ([[TWO:.+]]):
+; CHECK-NEXT:     Against group GRP2:
 ; CHECK-NEXT:       %arrayidxA2 = getelementptr i16, ptr %a, i64 %ind2
 ; CHECK-NEXT:   Grouped accesses:
-; CHECK-NEXT:     Group {{.*}}[[ZERO]]:
+; CHECK-NEXT:     Group GRP0:
 ; CHECK-NEXT:       (Low: ((2 * %offset) + %a) High: (10000 + (2 * %offset) + %a))
 ; CHECK-NEXT:         Member: {((2 * %offset) + %a),+,2}<%for.body>
-; CHECK-NEXT:     Group {{.*}}[[ONE]]:
+; CHECK-NEXT:     Group GRP1:
 ; CHECK-NEXT:       (Low: %a High: (10000 + %a))
 ; CHECK-NEXT:         Member: {%a,+,2}<nw><%for.body>
-; CHECK-NEXT:     Group {{.*}}[[TWO]]:
+; CHECK-NEXT:     Group GRP2:
 ; CHECK-NEXT:       (Low: (20000 + %a) High: (30000 + %a))
 ; CHECK-NEXT:         Member: {(20000 + %a),+,2}<nw><%for.body>
 

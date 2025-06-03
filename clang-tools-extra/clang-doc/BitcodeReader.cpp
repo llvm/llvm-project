@@ -79,7 +79,8 @@ static llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
-  Field.emplace(static_cast<int>(R[0]), Blob, static_cast<bool>(R[1]));
+  Field.emplace(static_cast<int>(R[0]), static_cast<int>(R[1]), Blob,
+                static_cast<bool>(R[2]));
   return llvm::Error::success();
 }
 
@@ -130,7 +131,8 @@ static llvm::Error decodeRecord(const Record &R,
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
-  Field.emplace_back(static_cast<int>(R[0]), Blob, static_cast<bool>(R[1]));
+  Field.emplace_back(static_cast<int>(R[0]), static_cast<int>(R[1]), Blob,
+                     static_cast<bool>(R[2]));
   return llvm::Error::success();
 }
 

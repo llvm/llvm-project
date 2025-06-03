@@ -160,10 +160,7 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
     auto *CB = cast<CallBase>(U.getUser());
 
     if (CB->getCalledFunction() != &F) {
-      objcarc::ARCInstKind Kind = objcarc::getAttachedARCFunctionKind(CB);
-      (void)Kind;
-      assert((Kind == objcarc::ARCInstKind::RetainRV ||
-              Kind == objcarc::ARCInstKind::UnsafeClaimRV) &&
+      assert(objcarc::getAttachedARCFunction(CB) == &F &&
              "use expected to be the argument of operand bundle "
              "\"clang.arc.attachedcall\"");
       U.set(FCache.getCallee());
@@ -319,7 +316,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memcpy.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memcpy intrinsics undisturbed.
-      auto *Memcpy = cast<MemCpyInlineInst>(Inst);
+      auto *Memcpy = cast<MemCpyInst>(Inst);
       if (isa<ConstantInt>(Memcpy->getLength()))
         break;
 
@@ -367,7 +364,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
       // Only expand llvm.memset.inline with non-constant length in this
       // codepath, leaving the current SelectionDAG expansion for constant
       // length memset intrinsics undisturbed.
-      auto *Memset = cast<MemSetInlineInst>(Inst);
+      auto *Memset = cast<MemSetInst>(Inst);
       if (isa<ConstantInt>(Memset->getLength()))
         break;
 
@@ -528,6 +525,9 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::objc_retainAutoreleasedReturnValue:
       Changed |= lowerObjCCall(F, "objc_retainAutoreleasedReturnValue");
+      break;
+    case Intrinsic::objc_claimAutoreleasedReturnValue:
+      Changed |= lowerObjCCall(F, "objc_claimAutoreleasedReturnValue");
       break;
     case Intrinsic::objc_retainBlock:
       Changed |= lowerObjCCall(F, "objc_retainBlock");

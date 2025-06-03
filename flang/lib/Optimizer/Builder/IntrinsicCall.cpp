@@ -8332,12 +8332,7 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
 
 // SYNCTHREADS
 void IntrinsicLibrary::genSyncThreads(llvm::ArrayRef<fir::ExtendedValue> args) {
-  constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0";
-  mlir::FunctionType funcType =
-      mlir::FunctionType::get(builder.getContext(), {}, {});
-  auto funcOp = builder.createFunction(loc, funcName, funcType);
-  llvm::SmallVector<mlir::Value> noArgs;
-  builder.create<fir::CallOp>(loc, funcOp, noArgs);
+  builder.create<mlir::NVVM::Barrier0Op>(loc);
 }
 
 // SYNCTHREADS_AND

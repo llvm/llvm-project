@@ -577,6 +577,13 @@ public:
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
 
+  /// Checks if an object or a subfield is volatile.
+  bool isVolatile() const {
+    if (!isBlockPointer())
+      return false;
+    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+  }
+
   /// Returns the declaration ID.
   std::optional<unsigned> getDeclID() const {
     if (isBlockPointer()) {
@@ -605,6 +612,13 @@ public:
   }
 
   const Block *block() const { return asBlockPointer().Pointee; }
+
+  /// If backed by actual data (i.e. a block pointer), return
+  /// an address to that data.
+  const std::byte *getRawAddress() const {
+    assert(isBlockPointer());
+    return asBlockPointer().Pointee->rawData() + Offset;
+  }
 
   /// Returns the index into an array.
   int64_t getIndex() const {
@@ -706,6 +720,14 @@ public:
     if (asBlockPointer().Base < sizeof(InlineDescriptor))
       return;
     getInlineDesc()->LifeState = Lifetime::Ended;
+  }
+
+  void startLifetime() const {
+    if (!isBlockPointer())
+      return;
+    if (asBlockPointer().Base < sizeof(InlineDescriptor))
+      return;
+    getInlineDesc()->LifeState = Lifetime::Started;
   }
 
   /// Compare two pointers.

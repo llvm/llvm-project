@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Dominators.h"
@@ -201,12 +202,11 @@ TEST_F(MatchSelectPatternTest, FMinConstantZero) {
 }
 
 TEST_F(MatchSelectPatternTest, FMinConstantZeroNsz) {
-  parseAssembly(
-      "define float @test(float %a) {\n"
-      "  %1 = fcmp nsz ole float %a, 0.0\n"
-      "  %A = select i1 %1, float %a, float 0.0\n"
-      "  ret float %A\n"
-      "}\n");
+  parseAssembly("define float @test(float %a) {\n"
+                "  %1 = fcmp nsz ole float %a, 0.0\n"
+                "  %A = select nsz i1 %1, float %a, float 0.0\n"
+                "  ret float %A\n"
+                "}\n");
   // But this should be, because we've ignored signed zeroes.
   expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, true});
 }
@@ -1616,6 +1616,62 @@ TEST_F(ComputeKnownFPClassTest, FMulNoZero) {
   expectKnownFPClass(fcAllFlags, std::nullopt, A5);
   expectKnownFPClass(fcAllFlags, std::nullopt, A6);
   expectKnownFPClass(fcAllFlags, std::nullopt, A7);
+}
+
+TEST_F(ComputeKnownFPClassTest, MinimumNumSignBit) {
+  parseAssembly(
+      R"(
+      define float @test(
+          float %unknown,
+          float nofpclass(nan) %nnan,
+          float nofpclass(nan pinf pnorm psub pzero) %nnan.nopos,
+          float nofpclass(nan ninf nnorm nsub nzero) %nnan.noneg,
+          float nofpclass(ninf nnorm nsub nzero) %noneg,
+          float nofpclass(pinf pnorm psub pzero) %nopos) {
+        %A = call float @llvm.minimumnum.f32(float %nnan.nopos, float %unknown)
+        %A2 = call float @llvm.minimumnum.f32(float %unknown, float %nnan.nopos)
+        %A3 = call float @llvm.minimumnum.f32(float %nnan.noneg, float %unknown)
+        %A4 = call float @llvm.minimumnum.f32(float %unknown, float %nnan.noneg)
+        %A5 = call float @llvm.minimumnum.f32(float %nnan.nopos, float %nnan.noneg)
+        %A6 = call float @llvm.minimumnum.f32(float %nopos, float %nnan.noneg)
+        %A7 = call float @llvm.minimumnum.f32(float %nnan.nopos, float %noneg)
+        ret float %A
+      })");
+  expectKnownFPClass(fcNegative, true, A);
+  expectKnownFPClass(fcNegative, true, A2);
+  expectKnownFPClass(~fcNan, std::nullopt, A3);
+  expectKnownFPClass(~fcNan, std::nullopt, A4);
+  expectKnownFPClass(fcNegative, true, A5);
+  expectKnownFPClass(~fcNan, std::nullopt, A6);
+  expectKnownFPClass(fcNegative, true, A7);
+}
+
+TEST_F(ComputeKnownFPClassTest, MaximumNumSignBit) {
+  parseAssembly(
+      R"(
+    define float @test(
+        float %unknown,
+        float nofpclass(nan) %nnan,
+        float nofpclass(nan pinf pnorm psub pzero) %nnan.nopos,
+        float nofpclass(nan ninf nnorm nsub nzero) %nnan.noneg,
+        float nofpclass(ninf nnorm nsub nzero) %noneg,
+        float nofpclass(pinf pnorm psub pzero) %nopos) {
+      %A = call float @llvm.maximumnum.f32(float %nnan.noneg, float %unknown)
+      %A2 = call float @llvm.maximumnum.f32(float %unknown, float %nnan.noneg)
+      %A3 = call float @llvm.maximumnum.f32(float %nnan.nopos, float %unknown)
+      %A4 = call float @llvm.maximumnum.f32(float %unknown, float %nnan.nopos)
+      %A5 = call float @llvm.maximumnum.f32(float %nnan.noneg, float %nnan.nopos)
+      %A6 = call float @llvm.maximumnum.f32(float %noneg, float %nnan.nopos)
+      %A7 = call float @llvm.maximumnum.f32(float %nnan.noneg, float %nopos)
+      ret float %A
+    })");
+  expectKnownFPClass(fcPositive, false, A);
+  expectKnownFPClass(fcPositive, false, A2);
+  expectKnownFPClass(~fcNan, std::nullopt, A3);
+  expectKnownFPClass(~fcNan, std::nullopt, A4);
+  expectKnownFPClass(fcPositive, false, A5);
+  expectKnownFPClass(~fcNan, std::nullopt, A6);
+  expectKnownFPClass(fcPositive, false, A7);
 }
 
 TEST_F(ComputeKnownFPClassTest, Phi) {

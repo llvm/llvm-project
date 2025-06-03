@@ -12,7 +12,7 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]], !dbg [[DBG21]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_COND_CLEANUP32:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_COND_CLEANUP32:%.*]] ], !dbg [[DBG222:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_COND5_PREHEADER1:%.*]], !dbg [[DBG21]]
 ; CHECK:       for.cond5.preheader1:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, [[VECTOR_BODY]] ], [ [[TMP4:%.*]], [[FOR_COND5_PREHEADER1]] ], !dbg [[DBG22:![0-9]+]]
@@ -29,9 +29,9 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0, !dbg [[DBG28:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP32]], label [[FOR_COND5_PREHEADER1]], !dbg [[DBG28]]
 ; CHECK:       vector.latch:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
-; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG222]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20, !dbg [[DBG222]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !dbg [[DBG222]], !llvm.loop [[LOOP29:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]], !dbg [[DBG21]]
 ; CHECK:       scalar.ph:
@@ -156,6 +156,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; CHECK: [[META19]] = distinct !DILexicalBlock(scope: [[META15]], file: [[META1]], line: 11, column: 5)
 ; CHECK: [[META20]] = !DILocation(line: 0, scope: [[META12]])
 ; CHECK: [[DBG21]] = !DILocation(line: 10, column: 3, scope: [[META12]])
+; CHECK: [[DBG222]] = !DILocation(line: 10, column: 30, scope: [[META16]])
 ; CHECK: [[DBG22]] = !DILocation(line: 10, column: 5, scope: [[META12]])
 ; CHECK: [[DBG23]] = !DILocation(line: 13, column: 11, scope: [[META24:![0-9]+]])
 ; CHECK: [[META24]] = distinct !DILexicalBlock(scope: [[META18]], file: [[META1]], line: 12, column: 7)
@@ -167,7 +168,6 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; CHECK: [[META30]] = !DILocation(line: 13, column: 13, scope: [[META12]])
 ; CHECK: [[META31]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META32]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[DBG33]] = !DILocation(line: 10, column: 30, scope: [[META16]])
 ; CHECK: [[DBG34]] = !DILocation(line: 10, column: 24, scope: [[META16]])
 ; CHECK: [[LOOP35]] = distinct !{[[LOOP35]], [[DBG21]], [[META30]], [[META31]]}
 ; CHECK: [[DBG36]] = !DILocation(line: 14, column: 1, scope: [[DBG4]])

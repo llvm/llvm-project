@@ -829,16 +829,39 @@ public:
     if (!Attr)
       return;
 
-    const char *Kind;
-    switch (Attr->getInterrupt()) {
-    case RISCVInterruptAttr::supervisor: Kind = "supervisor"; break;
-    case RISCVInterruptAttr::machine: Kind = "machine"; break;
-    case RISCVInterruptAttr::qcinest:
-      Kind = "qci-nest";
-      break;
-    case RISCVInterruptAttr::qcinonest:
-      Kind = "qci-nonest";
-      break;
+    StringRef Kind = "machine";
+    bool HasSiFiveCLICPreemptible = false;
+    bool HasSiFiveCLICStackSwap = false;
+    for (RISCVInterruptAttr::InterruptType type : Attr->interrupt()) {
+      switch (type) {
+      case RISCVInterruptAttr::machine:
+        // Do not update `Kind` because `Kind` is already "machine", or the
+        // kinds also contains SiFive types which need to be applied.
+        break;
+      case RISCVInterruptAttr::supervisor:
+        Kind = "supervisor";
+        break;
+      case RISCVInterruptAttr::qcinest:
+        Kind = "qci-nest";
+        break;
+      case RISCVInterruptAttr::qcinonest:
+        Kind = "qci-nonest";
+        break;
+      // There are three different LLVM IR attribute values for SiFive CLIC
+      // interrupt kinds, one for each kind and one extra for their combination.
+      case RISCVInterruptAttr::SiFiveCLICPreemptible: {
+        HasSiFiveCLICPreemptible = true;
+        Kind = HasSiFiveCLICStackSwap ? "SiFive-CLIC-preemptible-stack-swap"
+                                      : "SiFive-CLIC-preemptible";
+        break;
+      }
+      case RISCVInterruptAttr::SiFiveCLICStackSwap: {
+        HasSiFiveCLICStackSwap = true;
+        Kind = HasSiFiveCLICPreemptible ? "SiFive-CLIC-preemptible-stack-swap"
+                                        : "SiFive-CLIC-stack-swap";
+        break;
+      }
+      }
     }
 
     Fn->addFnAttr("interrupt", Kind);

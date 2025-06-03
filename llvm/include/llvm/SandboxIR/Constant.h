@@ -670,7 +670,96 @@ class ConstantDataVector final : public ConstantDataSequential {
   friend class Context;
 
 public:
-  // TODO: Add missing functions.
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::ConstantDataVector;
+  }
+  /// get() constructors - Return a constant with vector type with an element
+  /// count and element type matching the ArrayRef passed in.  Note that this
+  /// can return a ConstantAggregateZero object.
+  static Constant *get(Context &Ctx, ArrayRef<uint8_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *get(Context &Ctx, ArrayRef<uint16_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *get(Context &Ctx, ArrayRef<uint32_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *get(Context &Ctx, ArrayRef<uint64_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *get(Context &Ctx, ArrayRef<float> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *get(Context &Ctx, ArrayRef<double> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::get(Ctx.LLVMCtx, Elts);
+    return Ctx.getOrCreateConstant(NewLLVMC);
+  }
+
+  /// getRaw() constructor - Return a constant with vector type with an element
+  /// count and element type matching the NumElements and ElementTy parameters
+  /// passed in. Note that this can return a ConstantAggregateZero object.
+  /// ElementTy must be one of i8/i16/i32/i64/half/bfloat/float/double. Data is
+  /// the buffer containing the elements. Be careful to make sure Data uses the
+  /// right endianness, the buffer will be used as-is.
+  static Constant *getRaw(StringRef Data, uint64_t NumElements,
+                          Type *ElementTy) {
+    auto *NewLLVMC =
+        llvm::ConstantDataVector::getRaw(Data, NumElements, ElementTy->LLVMTy);
+    return ElementTy->getContext().getOrCreateConstant(NewLLVMC);
+  }
+  /// getFP() constructors - Return a constant of vector type with a float
+  /// element type taken from argument `ElementType', and count taken from
+  /// argument `Elts'.  The amount of bits of the contained type must match the
+  /// number of bits of the type contained in the passed in ArrayRef.
+  /// (i.e. half or bfloat for 16bits, float for 32bits, double for 64bits) Note
+  /// that this can return a ConstantAggregateZero object.
+  static Constant *getFP(Type *ElementType, ArrayRef<uint16_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *getFP(Type *ElementType, ArrayRef<uint32_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(NewLLVMC);
+  }
+  static Constant *getFP(Type *ElementType, ArrayRef<uint64_t> Elts) {
+    auto *NewLLVMC = llvm::ConstantDataVector::getFP(ElementType->LLVMTy, Elts);
+    return ElementType->getContext().getOrCreateConstant(NewLLVMC);
+  }
+
+  /// Return a ConstantVector with the specified constant in each element.
+  /// The specified constant has to be a of a compatible type (i8/i16/
+  /// i32/i64/half/bfloat/float/double) and must be a ConstantFP or ConstantInt.
+  static Constant *getSplat(unsigned NumElts, Constant *Elt) {
+    auto *NewLLVMC = llvm::ConstantDataVector::getSplat(
+        NumElts, cast<llvm::Constant>(Elt->Val));
+    return Elt->getContext().getOrCreateConstant(NewLLVMC);
+  }
+
+  /// Returns true if this is a splat constant, meaning that all elements have
+  /// the same value.
+  bool isSplat() const {
+    return cast<llvm::ConstantDataVector>(Val)->isSplat();
+  }
+
+  /// If this is a splat constant, meaning that all of the elements have the
+  /// same value, return that value. Otherwise return NULL.
+  Constant *getSplatValue() const {
+    return Ctx.getOrCreateConstant(
+        cast<llvm::ConstantDataVector>(Val)->getSplatValue());
+  }
+
+  /// Specialize the getType() method to always return a FixedVectorType,
+  /// which reduces the amount of casting needed in parts of the compiler.
+  inline FixedVectorType *getType() const {
+    return cast<FixedVectorType>(Value::getType());
+  }
 };
 
 // TODO: Inherit from ConstantData.

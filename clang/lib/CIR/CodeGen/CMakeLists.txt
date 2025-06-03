@@ -10,6 +10,8 @@ add_clang_library(clangCIR
   CIRGenerator.cpp
   CIRGenBuilder.cpp
   CIRGenCall.cpp
+  CIRGenCXXABI.cpp
+  CIRGenCXXExpr.cpp
   CIRGenDecl.cpp
   CIRGenDeclOpenACC.cpp
   CIRGenExpr.cpp
@@ -18,9 +20,11 @@ add_clang_library(clangCIR
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
   CIRGenModule.cpp
+  CIRGenOpenACCClause.cpp
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp
   CIRGenStmtOpenACC.cpp
+  CIRGenStmtOpenACCLoop.cpp
   CIRGenTypes.cpp
   TargetInfo.cpp
 
@@ -34,6 +38,7 @@ add_clang_library(clangCIR
   clangBasic
   clangLex
   ${dialect_libs}
+  CIROpenACCSupport
   MLIRCIR
   MLIRCIRInterfaces
 )

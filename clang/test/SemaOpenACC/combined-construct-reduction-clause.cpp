@@ -47,14 +47,14 @@ void uses(unsigned Parm) {
 #pragma acc kernels loop reduction(+:Parm) num_gangs(I)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC 'num_gangs' clause with more than 1 argument may not appear on a 'parallel loop' construct with a 'reduction' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'reduction' clause is here}}
 #pragma acc parallel loop reduction(+:Parm) num_gangs(I, I)
   for(int i = 0; i < 5; ++i);
 
 #pragma acc kernels loop num_gangs(I) reduction(+:Parm)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC 'reduction' clause may not appear on a 'parallel loop' construct with a 'num_gangs' clause with more than 1 argument}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_gangs' clause is here}}
 #pragma acc parallel loop num_gangs(I, I) reduction(+:Parm)
   for(int i = 0; i < 5; ++i);
 
@@ -62,13 +62,13 @@ void uses(unsigned Parm) {
 #pragma acc parallel loop gang(dim:1) reduction(+:Parm)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC 'reduction' clause cannot appear on the same 'parallel loop' construct as a 'gang' clause with a 'dim' value greater than 1}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc parallel loop gang(dim:2) reduction(+:Parm)
   for(int i = 0; i < 5; ++i);
 #pragma acc parallel loop reduction(+:Parm) gang(dim:1)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC 'gang' clause with a 'dim' value greater than 1 cannot appear on the same 'parallel loop' construct as a 'reduction' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'reduction' clause is here}}
 #pragma acc parallel loop reduction(+:Parm) gang(dim:2)
   for(int i = 0; i < 5; ++i);
 
@@ -88,31 +88,31 @@ void uses(unsigned Parm) {
   for(int i = 0; i < 5; ++i);
 
   // expected-error@+2{{OpenACC 'reduction' clause may not appear on a 'parallel loop' construct with a 'num_gangs' clause with more than 1 argument}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'num_gangs' clause is here}}
 #pragma acc parallel loop num_gangs(I, I) reduction(+:Parm) gang
   for(int i = 0; i < 5; ++i);
   // expected-error@+3{{OpenACC 'reduction' clause cannot appear on the same 'parallel loop' construct as a 'gang' clause and a 'num_gangs' clause with more than one argument}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'num_gangs' clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc parallel loop num_gangs(I, I) gang reduction(+:Parm)
   for(int i = 0; i < 5; ++i);
   // expected-error@+2{{OpenACC 'num_gangs' clause with more than 1 argument may not appear on a 'parallel loop' construct with a 'reduction' clause}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'reduction' clause is here}}
 #pragma acc parallel loop reduction(+:Parm) num_gangs(I, I) gang
   for(int i = 0; i < 5; ++i);
   // expected-error@+3{{OpenACC 'reduction' clause cannot appear on the same 'parallel loop' construct as a 'gang' clause and a 'num_gangs' clause with more than one argument}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'reduction' clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc parallel loop reduction(+:Parm) gang num_gangs(I, I)
   for(int i = 0; i < 5; ++i);
   // expected-error@+3{{OpenACC 'reduction' clause cannot appear on the same 'parallel loop' construct as a 'gang' clause and a 'num_gangs' clause with more than one argument}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'gang' clause is here}}
+  // expected-note@+1{{previous 'num_gangs' clause is here}}
 #pragma acc parallel loop gang num_gangs(I, I) reduction(+:Parm)
   for(int i = 0; i < 5; ++i);
   // expected-error@+3{{OpenACC 'reduction' clause cannot appear on the same 'parallel loop' construct as a 'gang' clause and a 'num_gangs' clause with more than one argument}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'reduction' clause is here}}
+  // expected-note@+1{{previous 'gang' clause is here}}
 #pragma acc parallel loop gang reduction(+:Parm) num_gangs(I, I)
   for(int i = 0; i < 5; ++i);
 
@@ -132,14 +132,14 @@ void uses(unsigned Parm) {
 #pragma acc parallel loop reduction(+:I)
   for(int i = 0; i < 5; ++i) {
   // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
-  // expected-note@-3{{previous clause is here}}
+  // expected-note@-3{{previous 'reduction' clause is here}}
 #pragma acc loop reduction(&:I)
     for(int i = 0; i < 5; ++i);
   }
 #pragma acc parallel loop reduction(+:I)
   for(int i = 0; i < 5; ++i) {
   // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
-  // expected-note@-3{{previous clause is here}}
+  // expected-note@-3{{previous 'reduction' clause is here}}
 #pragma acc parallel reduction(&:I)
     for(int i = 0; i < 5; ++i);
   }
@@ -147,14 +147,14 @@ void uses(unsigned Parm) {
 #pragma acc parallel loop reduction(+:I)
   for(int i = 0; i < 5; ++i) {
   // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
-  // expected-note@-3{{previous clause is here}}
+  // expected-note@-3{{previous 'reduction' clause is here}}
 #pragma acc parallel loop reduction(&:I)
     for(int i = 0; i < 5; ++i);
   }
 #pragma acc loop reduction(+:I)
   for(int i = 0; i < 5; ++i) {
   // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
-  // expected-note@-3{{previous clause is here}}
+  // expected-note@-3{{previous 'reduction' clause is here}}
 #pragma acc parallel loop reduction(&:I)
     for(int i = 0; i < 5; ++i);
   }
@@ -162,7 +162,7 @@ void uses(unsigned Parm) {
 #pragma acc parallel reduction(+:I)
   for(int i = 0; i < 5; ++i) {
   // expected-error@+2{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
-  // expected-note@-3{{previous clause is here}}
+  // expected-note@-3{{previous 'reduction' clause is here}}
 #pragma acc parallel loop reduction(&:I)
     for(int i = 0; i < 5; ++i);
   }

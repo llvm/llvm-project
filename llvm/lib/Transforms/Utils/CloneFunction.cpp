@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -40,6 +41,27 @@ using namespace llvm;
 
 #define DEBUG_TYPE "clone-function"
 
+STATISTIC(RemappedAtomMax, "Highest global NextAtomGroup (after mapping)");
+
+void llvm::mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap) {
+  auto CurGroup = DL->getAtomGroup();
+  if (!CurGroup)
+    return;
+
+  // Try inserting a new entry. If there's already a mapping for this atom
+  // then there's nothing to do.
+  auto [It, Inserted] = VMap.AtomMap.insert({{DL.getInlinedAt(), CurGroup}, 0});
+  if (!Inserted)
+    return;
+
+  // Map entry to a new atom group.
+  uint64_t NewGroup = DL->getContext().incNextDILocationAtomGroup();
+  assert(NewGroup > CurGroup && "Next should always be greater than current");
+  It->second = NewGroup;
+
+  RemappedAtomMax = std::max<uint64_t>(NewGroup, RemappedAtomMax);
+}
+
 namespace {
 void collectDebugInfoFromInstructions(const Function &F,
                                       DebugInfoFinder &DIFinder) {
@@ -59,17 +81,28 @@ MetadataPredicate createIdentityMDPredicate(const Function &F,
     return [](const Metadata *MD) { return false; };
 
   DISubprogram *SPClonedWithinModule = F.getSubprogram();
+
+  // Don't clone inlined subprograms.
+  auto ShouldKeep = [SPClonedWithinModule](const DISubprogram *SP) -> bool {
+    return SP != SPClonedWithinModule;
+  };
+
   return [=](const Metadata *MD) {
     // Avoid cloning types, compile units, and (other) subprograms.
     if (isa<DICompileUnit>(MD) || isa<DIType>(MD))
       return true;
 
     if (auto *SP = dyn_cast<DISubprogram>(MD))
-      return SP != SPClonedWithinModule;
+      return ShouldKeep(SP);
 
     // If a subprogram isn't going to be cloned skip its lexical blocks as well.
     if (auto *LScope = dyn_cast<DILocalScope>(MD))
-      return LScope->getSubprogram() != SPClonedWithinModule;
+      return ShouldKeep(LScope->getSubprogram());
+
+    // Avoid cloning local variables of subprograms that won't be cloned.
+    if (auto *DV = dyn_cast<DILocalVariable>(MD))
+      if (auto *S = dyn_cast_or_null<DILocalScope>(DV->getScope()))
+        return ShouldKeep(S->getSubprogram());
 
     return false;
   };
@@ -79,7 +112,7 @@ MetadataPredicate createIdentityMDPredicate(const Function &F,
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   const Twine &NameSuffix, Function *F,
-                                  ClonedCodeInfo *CodeInfo) {
+                                  ClonedCodeInfo *CodeInfo, bool MapAtoms) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
   NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
   if (BB->hasName())
@@ -97,6 +130,11 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     NewInst->cloneDebugInfoFrom(&I);
 
     VMap[&I] = NewInst; // Add instruction map to value.
+
+    if (MapAtoms) {
+      if (const DebugLoc &DL = NewInst->getDebugLoc())
+        mapAtomInstance(DL.get(), VMap);
+    }
 
     if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
       hasCalls = true;

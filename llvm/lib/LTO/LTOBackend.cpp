@@ -35,7 +35,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -43,7 +42,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
-#include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 #include <optional>
@@ -195,7 +193,7 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
   for (auto &PluginFN : PassPlugins) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
     if (!PassPlugin)
-      report_fatal_error(PassPlugin.takeError(), /*gen_crash_diag=*/false);
+      reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
 }
@@ -439,27 +437,33 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
-  legacy::PassManager CodeGenPasses;
-  TargetLibraryInfoImpl TLII(Mod.getTargetTriple());
-  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-  // No need to make index available if the module is empty.
-  // In theory these passes should not use the index for an empty
-  // module, however, this guards against doing any unnecessary summary-based
-  // analysis in the case of a ThinLTO build where this might be an empty
-  // regular LTO combined module, with a large combined index from ThinLTO.
-  if (!isEmptyModule(Mod))
-    CodeGenPasses.add(
-        createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
-  if (Conf.PreCodeGenPassesHook)
-    Conf.PreCodeGenPassesHook(CodeGenPasses);
-  if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                              DwoOut ? &DwoOut->os() : nullptr,
-                              Conf.CGFileType))
-    report_fatal_error("Failed to setup codegen");
-  CodeGenPasses.run(Mod);
+  // Create the codegen pipeline in its own scope so it gets deleted before
+  // Stream->commit() is called. The commit function of CacheStream deletes
+  // the raw stream, which is too early as streamers (e.g. MCAsmStreamer)
+  // keep the pointer and may use it until their destruction. See #138194.
+  {
+    legacy::PassManager CodeGenPasses;
+    TargetLibraryInfoImpl TLII(Mod.getTargetTriple());
+    CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
+    // No need to make index available if the module is empty.
+    // In theory these passes should not use the index for an empty
+    // module, however, this guards against doing any unnecessary summary-based
+    // analysis in the case of a ThinLTO build where this might be an empty
+    // regular LTO combined module, with a large combined index from ThinLTO.
+    if (!isEmptyModule(Mod))
+      CodeGenPasses.add(
+          createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
+    if (Conf.PreCodeGenPassesHook)
+      Conf.PreCodeGenPassesHook(CodeGenPasses);
+    if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
+                                DwoOut ? &DwoOut->os() : nullptr,
+                                Conf.CGFileType))
+      report_fatal_error("Failed to setup codegen");
+    CodeGenPasses.run(Mod);
 
-  if (DwoOut)
-    DwoOut->keep();
+    if (DwoOut)
+      DwoOut->keep();
+  }
 
   if (Error Err = Stream->commit())
     report_fatal_error(std::move(Err));

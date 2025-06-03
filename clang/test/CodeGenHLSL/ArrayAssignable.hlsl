@@ -10,7 +10,7 @@ struct S {
 // CHECK: @c1 = external addrspace(2) global [2 x float], align 4
 // CHECK: @c2 = external addrspace(2) global [2 x <4 x i32>], align 16
 // CHECK: @c3 = external addrspace(2) global [2 x [2 x i32]], align 4
-// CHECK: @c4 = external addrspace(2) global [1 x target("dx.Layout", %S, 8, 0, 4)], align 4
+// CHECK: @c4 = external addrspace(2) global [1 x target("dx.Layout", %S, 8, 0, 4)], align 1
 
 cbuffer CBArrays : register(b0) {
   float c1[2];
@@ -169,8 +169,8 @@ void arr_assign10() {
 }
 
 // CHECK-LABEL: define void {{.*}}arr_assign11
-// CHECK: [[C:%.*]] = alloca [1 x %struct.S], align 4
-// CHECK: call void @llvm.memcpy.p0.p2.i32(ptr align 4 [[C]], ptr addrspace(2) align 4 @c4, i32 8, i1 false)
+// CHECK: [[C:%.*]] = alloca [1 x %struct.S], align 1
+// CHECK: call void @llvm.memcpy.p0.p2.i32(ptr align 1 [[C]], ptr addrspace(2) align 1 @c4, i32 8, i1 false)
 // CHECK-NEXT: ret void
 void arr_assign11() {
   S s = {1, 2.0};

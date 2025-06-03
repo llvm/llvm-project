@@ -14,6 +14,7 @@
 #ifndef CLANG_LIB_CODEGEN_CIRGENCALL_H
 #define CLANG_LIB_CODEGEN_CIRGENCALL_H
 
+#include "CIRGenValue.h"
 #include "mlir/IR/Operation.h"
 #include "clang/AST/GlobalDecl.h"
 #include "llvm/ADT/SmallVector.h"
@@ -24,11 +25,20 @@ class CIRGenFunction;
 
 /// Abstract information about a function or function prototype.
 class CIRGenCalleeInfo {
+  const clang::FunctionProtoType *calleeProtoTy;
   clang::GlobalDecl calleeDecl;
 
 public:
-  explicit CIRGenCalleeInfo() : calleeDecl() {}
+  explicit CIRGenCalleeInfo() : calleeProtoTy(nullptr), calleeDecl() {}
+  CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy,
+                   clang::GlobalDecl calleeDecl)
+      : calleeProtoTy(calleeProtoTy), calleeDecl(calleeDecl) {}
   CIRGenCalleeInfo(clang::GlobalDecl calleeDecl) : calleeDecl(calleeDecl) {}
+
+  const clang::FunctionProtoType *getCalleeFunctionProtoType() const {
+    return calleeProtoTy;
+  }
+  clang::GlobalDecl getCalleeDecl() const { return calleeDecl; }
 };
 
 class CIRGenCallee {
@@ -77,9 +87,50 @@ public:
 /// The decl must be either a ParmVarDecl or ImplicitParamDecl.
 class FunctionArgList : public llvm::SmallVector<const clang::VarDecl *, 16> {};
 
-struct CallArg {};
+struct CallArg {
+private:
+  union {
+    RValue rv;
+    LValue lv; // This argument is semantically a load from this l-value
+  };
+  bool hasLV;
 
-class CallArgList : public llvm::SmallVector<CallArg, 8> {};
+  /// A data-flow flag to make sure getRValue and/or copyInto are not
+  /// called twice for duplicated IR emission.
+  mutable bool isUsed;
+
+public:
+  clang::QualType ty;
+
+  CallArg(RValue rv, clang::QualType ty)
+      : rv(rv), hasLV(false), isUsed(false), ty(ty) {}
+
+  bool hasLValue() const { return hasLV; }
+
+  RValue getKnownRValue() const {
+    assert(!hasLV && !isUsed);
+    return rv;
+  }
+
+  bool isAggregate() const { return hasLV || rv.isAggregate(); }
+};
+
+class CallArgList : public llvm::SmallVector<CallArg, 8> {
+public:
+  void add(RValue rvalue, clang::QualType type) { emplace_back(rvalue, type); }
+
+  /// Add all the arguments from another CallArgList to this one. After doing
+  /// this, the old CallArgList retains its list of arguments, but must not
+  /// be used to emit a call.
+  void addFrom(const CallArgList &other) {
+    insert(end(), other.begin(), other.end());
+    // Classic codegen has handling for these here. We may not need it here for
+    // CIR, but if not we should implement equivalent handling in lowering.
+    assert(!cir::MissingFeatures::writebacks());
+    assert(!cir::MissingFeatures::cleanupsToDeactivate());
+    assert(!cir::MissingFeatures::stackBase());
+  }
+};
 
 /// Contains the address where the return value of a function can be stored, and
 /// whether the address is volatile or not.

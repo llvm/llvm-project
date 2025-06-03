@@ -50,11 +50,6 @@ BUILTIN(__builtin_arm_wfi, "v", "")
 BUILTIN(__builtin_arm_sev, "v", "")
 BUILTIN(__builtin_arm_sevl, "v", "")
 BUILTIN(__builtin_arm_chkfeat, "WUiWUi", "")
-TARGET_HEADER_BUILTIN(__yield, "v", "h", ARMACLE_H, ALL_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__wfe,   "v", "h", ARMACLE_H, ALL_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__wfi,   "v", "h", ARMACLE_H, ALL_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__sev,   "v", "h", ARMACLE_H, ALL_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__sevl,  "v", "h", ARMACLE_H, ALL_LANGUAGES, "")
 
 // Like __builtin_trap but provide an 16-bit immediate reason code (which goes into `brk #N`).
 BUILTIN(__builtin_arm_trap, "vUIs", "nr")
@@ -87,9 +82,6 @@ TARGET_BUILTIN(__builtin_arm_mops_memset_tag, "v*v*iz", "", "mte,mops")
 BUILTIN(__builtin_arm_dmb, "vUi", "nc")
 BUILTIN(__builtin_arm_dsb, "vUi", "nc")
 BUILTIN(__builtin_arm_isb, "vUi", "nc")
-TARGET_HEADER_BUILTIN(__dmb, "vUi", "nch", ARMACLE_H, ALL_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__dsb, "vUi", "nch", ARMACLE_H, ALL_LANGUAGES, "")
-TARGET_HEADER_BUILTIN(__isb, "vUi", "nch", ARMACLE_H, ALL_LANGUAGES, "")
 
 TARGET_BUILTIN(__builtin_arm_jcvt, "Zid", "nc", "v8.3a")
 
@@ -105,6 +97,16 @@ BUILTIN(__builtin_arm_wsr, "vcC*Ui", "nc")
 BUILTIN(__builtin_arm_wsr64, "vcC*WUi", "nc")
 TARGET_BUILTIN(__builtin_arm_wsr128, "vcC*LLLUi", "nc", "d128")
 BUILTIN(__builtin_arm_wsrp, "vcC*vC*", "nc")
+
+// MSVC
+LANGBUILTIN(__dmb, "vUi", "nc", ALL_MS_LANGUAGES)
+LANGBUILTIN(__dsb, "vUi", "nc", ALL_MS_LANGUAGES)
+LANGBUILTIN(__isb, "vUi", "nc", ALL_MS_LANGUAGES)
+LANGBUILTIN(__yield, "v", "",   ALL_MS_LANGUAGES)
+LANGBUILTIN(__wfe,   "v", "",   ALL_MS_LANGUAGES)
+LANGBUILTIN(__wfi,   "v", "",   ALL_MS_LANGUAGES)
+LANGBUILTIN(__sev,   "v", "",   ALL_MS_LANGUAGES)
+LANGBUILTIN(__sevl,  "v", "",   ALL_MS_LANGUAGES)
 
 // Misc
 BUILTIN(__builtin_sponentry, "v*", "c")

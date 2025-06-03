@@ -119,6 +119,19 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__start_") ||
                                 GV->getName().starts_with("__stop_")))
       return true;
+    // Linkers do not currently support PT_GNU_RELRO for SHF_X86_64_LARGE
+    // sections; that would require the linker to emit more than one
+    // PT_GNU_RELRO because large sections are discontiguous by design, and most
+    // ELF dynamic loaders do not support that (bionic appears to support it but
+    // glibc/musl/FreeBSD/NetBSD/OpenBSD appear not to). With current linkers
+    // these sections will end up in .ldata which results in silently disabling
+    // RELRO. If this ever gets supported by downstream components in the future
+    // we could add an opt-in flag for moving these sections to .ldata.rel.ro
+    // which would trigger the creation of a second PT_GNU_RELRO.
+    if (!GV->isDeclarationForLinker() &&
+        TargetLoweringObjectFile::getKindForGlobal(GV, *this)
+            .isReadOnlyWithRel())
+      return false;
     const DataLayout &DL = GV->getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     return Size == 0 || Size > LargeDataThreshold;

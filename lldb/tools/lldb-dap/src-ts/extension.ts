@@ -5,6 +5,11 @@ import { DisposableContext } from "./disposable-context";
 import { LaunchUriHandler } from "./uri-launch-handler";
 import { LLDBDapConfigurationProvider } from "./debug-configuration-provider";
 import { LLDBDapServer } from "./lldb-dap-server";
+import { DebugSessionTracker } from "./debug-session-tracker";
+import {
+  ModulesDataProvider,
+  ModuleProperty,
+} from "./ui/modules-data-provider";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -15,24 +20,33 @@ export class LLDBDapExtension extends DisposableContext {
     super();
 
     const lldbDapServer = new LLDBDapServer();
-    this.pushSubscription(lldbDapServer);
+    const sessionTracker = new DebugSessionTracker();
 
     this.pushSubscription(
+      lldbDapServer,
+      sessionTracker,
       vscode.debug.registerDebugConfigurationProvider(
         "lldb-dap",
         new LLDBDapConfigurationProvider(lldbDapServer),
       ),
-    );
-
-    this.pushSubscription(
       vscode.debug.registerDebugAdapterDescriptorFactory(
         "lldb-dap",
         new LLDBDapDescriptorFactory(),
       ),
+      vscode.debug.registerDebugAdapterTrackerFactory(
+        "lldb-dap",
+        sessionTracker,
+      ),
+      vscode.window.registerTreeDataProvider(
+        "lldb-dap.modules",
+        new ModulesDataProvider(sessionTracker),
+      ),
+      vscode.window.registerUriHandler(new LaunchUriHandler()),
     );
 
-    this.pushSubscription(
-      vscode.window.registerUriHandler(new LaunchUriHandler()),
+    vscode.commands.registerCommand(
+      "lldb-dap.modules.copyProperty",
+      (node: ModuleProperty) => vscode.env.clipboard.writeText(node.value),
     );
   }
 }

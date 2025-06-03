@@ -44,23 +44,24 @@ private:
   IntrusiveRefCntPtr<ExternalASTSource> Source;
 };
 
-bool testExternalASTSource(ExternalASTSource *Source,
-                           StringRef FileContents) {
-  CompilerInstance Compiler;
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+bool testExternalASTSource(ExternalASTSource *Source, StringRef FileContents) {
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc", MemoryBuffer::getMemBuffer(FileContents).release());
   const char *Args[] = { "test.cc" };
-  CompilerInvocation::CreateFromArgs(*Invocation, Args,
-                                     Compiler.getDiagnostics());
-  Compiler.setInvocation(std::move(Invocation));
+
+  DiagnosticOptions InvocationDiagOpts;
+  auto InvocationDiags = CompilerInstance::createDiagnostics(
+      *llvm::vfs::getRealFileSystem(), InvocationDiagOpts);
+  CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
+
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestFrontendAction Action(Source);
   return Compiler.ExecuteAction(Action);
 }
-
 
 // Ensure that a failed name lookup into an external source only occurs once.
 TEST(ExternalASTSourceTest, FailedLookupOccursOnce) {

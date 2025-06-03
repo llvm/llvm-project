@@ -110,8 +110,9 @@ InstructionCost R600TTIImpl::getCFInstrCost(unsigned Opcode,
 
 InstructionCost R600TTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                 TTI::TargetCostKind CostKind,
-                                                unsigned Index, Value *Op0,
-                                                Value *Op1) const {
+                                                unsigned Index,
+                                                const Value *Op0,
+                                                const Value *Op1) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
