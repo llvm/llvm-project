@@ -5830,6 +5830,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
         Index == 0 ? RISCVISD::RI_VUNZIP2A_VL : RISCVISD::RI_VUNZIP2B_VL;
     if (V2.isUndef())
       return lowerVZIP(Opc, V1, V2, DL, DAG, Subtarget);
+    if (auto VLEN = Subtarget.getRealVLen();
+        VLEN && VT.getSizeInBits().getKnownMinValue() % *VLEN == 0)
+      return lowerVZIP(Opc, V1, V2, DL, DAG, Subtarget);
     if (SDValue Src = foldConcatVector(V1, V2)) {
       EVT NewVT = VT.getDoubleNumVectorElementsVT();
       Src = DAG.getExtractSubvector(DL, NewVT, Src, 0);
@@ -5837,7 +5840,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           lowerVZIP(Opc, Src, DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
       return DAG.getExtractSubvector(DL, VT, Res, 0);
     }
-
     // Narrow each source and concatenate them.
     // FIXME: For small LMUL it is better to concatenate first.
     if (1 < count_if(Mask,

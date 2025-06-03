@@ -1551,10 +1551,8 @@ define <4 x i64> @unzip2a_dual_v4i64_exact(<4 x i64> %a, <4 x i64> %b) vscale_ra
 ; ZIP-LABEL: unzip2a_dual_v4i64_exact:
 ; ZIP:       # %bb.0: # %entry
 ; ZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; ZIP-NEXT:    ri.vunzip2a.vv v11, v9, v10
-; ZIP-NEXT:    ri.vunzip2a.vv v9, v8, v10
-; ZIP-NEXT:    vslideup.vi v9, v11, 2
-; ZIP-NEXT:    vmv.v.v v8, v9
+; ZIP-NEXT:    ri.vunzip2a.vv v10, v8, v9
+; ZIP-NEXT:    vmv.v.v v8, v10
 ; ZIP-NEXT:    ret
 entry:
   %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -1730,10 +1728,9 @@ define <16 x i64> @unzip2a_dual_v16i64_exact(<16 x i64> %a, <16 x i64> %b) vscal
 ;
 ; ZIP-LABEL: unzip2a_dual_v16i64_exact:
 ; ZIP:       # %bb.0: # %entry
-; ZIP-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
-; ZIP-NEXT:    ri.vunzip2a.vv v18, v12, v14
-; ZIP-NEXT:    ri.vunzip2a.vv v16, v8, v10
-; ZIP-NEXT:    vmv4r.v v8, v16
+; ZIP-NEXT:    vsetivli zero, 16, e64, m4, ta, ma
+; ZIP-NEXT:    ri.vunzip2a.vv v16, v8, v12
+; ZIP-NEXT:    vmv.v.v v8, v16
 ; ZIP-NEXT:    ret
 entry:
   %c = shufflevector <16 x i64> %a, <16 x i64> %b, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
