@@ -1,5 +1,6 @@
 # Common interface to handle creating a plugin library.
 set(common_dir ${CMAKE_CURRENT_SOURCE_DIR}/common)
+set(common_bin_dir ${CMAKE_CURRENT_BINARY_DIR}/common)
 add_subdirectory(common)
 function(add_target_library target_name lib_name)
   add_llvm_library(${target_name} STATIC
@@ -32,12 +33,11 @@ function(add_target_library target_name lib_name)
 
     NO_INSTALL_RPATH
     BUILDTREE_ONLY
-
-    DEPENDS LibomptargetOffloadErrcodes
   )
 
   llvm_update_compile_flags(${target_name})
-  target_include_directories(${target_name} PUBLIC ${common_dir}/include)
+  target_include_directories(${target_name} PUBLIC ${common_dir}/include
+                             ${common_bin_dir}/include)
   target_link_libraries(${target_name} PRIVATE
                         PluginCommon ${OPENMP_PTHREAD_LIB})
 

@@ -11,7 +11,7 @@ add_llvm_library(
 
   DEPENDS
   OffloadAPI
-  LibomptargetOffloadErrcodes
+  PluginErrcodes
   )
 
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
@@ -27,7 +27,9 @@ target_include_directories(LLVMOffload PUBLIC
                             ${CMAKE_CURRENT_BINARY_DIR}/../include
                             ${CMAKE_CURRENT_SOURCE_DIR}/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/../include
-                            ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include)
+                            ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include
+                            ${CMAKE_CURRENT_BINARY_DIR}/../plugins-nextgen/common/include
+                            )
 
 target_compile_options(LLVMOffload PRIVATE ${offload_compile_flags})
 target_link_options(LLVMOffload PRIVATE ${offload_link_flags})

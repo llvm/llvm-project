@@ -6,13 +6,6 @@ else()
   set(LIBOMP omp)
 endif()
 
-# The error codes in this header are shared with liboffload, so need to be
-# generated from the same source.
-include(TableGen)
-set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/../liboffload/API/OffloadAPI.td)
-tablegen(OFFLOAD ../include/Shared/OffloadErrcodes.inc -gen-errcodes -I ${CMAKE_CURRENT_SOURCE_DIR}/../liboffload/API)
-add_public_tablegen_target(LibomptargetOffloadErrcodes)
-
 add_llvm_library(omptarget
   SHARED
 
