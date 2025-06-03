@@ -1215,24 +1215,20 @@ void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred,
   }
 
   // 'Recurse' to our successors.
-  succ_iterator I = succ_begin(BB), E = succ_end(BB);
-  if (I == E)
-    return;
 
   // Keep track of the successors so we don't visit the same successor twice
   SmallPtrSet<BasicBlock *, 8> VisitedSuccs;
 
-  // Handle the first successor after the rest, to mimic legacy behaviour.
-  // FIXME: Handle them in regular order.
-  VisitedSuccs.insert(*I);
-  ++I;
-
-  for (; I != E; ++I)
-    if (VisitedSuccs.insert(*I).second)
-      Worklist.emplace_back(*I, BB, IncomingVals, IncomingLocs);
-
-  Worklist.emplace_back(*succ_begin(BB), BB, std::move(IncomingVals),
-                        std::move(IncomingLocs));
+  for (BasicBlock *S : reverse(successors(BB)))
+    if (VisitedSuccs.insert(S).second) {
+      if (VisitedSuccs.size() > 1) {
+        // Let the first successor own allocated arrays, other will make a copy.
+        IncomingVals = Worklist.back().Values;
+        IncomingLocs = Worklist.back().Locations;
+      }
+      Worklist.emplace_back(S, BB, std::move(IncomingVals),
+                            std::move(IncomingLocs));
+    }
 }
 
 void llvm::PromoteMemToReg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
