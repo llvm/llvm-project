@@ -54,11 +54,14 @@ TEST(ReassociationIndicesForCollapse, StaticTest) {
 }
 
 TEST(ReassociationIndicesForCollapse, StaticTestFailure) {
-  EXPECT_EQ(getReassociationIndicesForCollapse({10, 20}, {10}), std::nullopt);
+  // No-op reassociation
   EXPECT_EQ(getReassociationIndicesForCollapse({10, 20}, {10, 20}),
             std::nullopt);
+  // Invalid static reassociations
+  EXPECT_EQ(getReassociationIndicesForCollapse({10, 20}, {10}), std::nullopt);
   EXPECT_EQ(getReassociationIndicesForCollapse({10, 20, 30}, {200, 300}),
             std::nullopt);
+  // Non-collapsing (expanding) reassociation
   EXPECT_EQ(getReassociationIndicesForCollapse({10, 20, 30}, {1, 10, 20, 30}),
             std::nullopt);
 }

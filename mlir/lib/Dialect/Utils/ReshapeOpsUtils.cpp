@@ -293,6 +293,10 @@ mlir::getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
                                          ArrayRef<int64_t> targetShape) {
   unsigned numSourceDims = sourceShape.size(),
            numTargetDims = targetShape.size();
+  // We're supposed to search for a collapsing reassociation. If the sizes
+  // match, there's no actual collapsing taking place - it's either a no-op or a
+  // `tensor.reshape`-style reassociation (that would be beyond the scope of
+  // this utility).
   if (numSourceDims <= numTargetDims)
     return std::nullopt;
   // Early handling for scalar target types.
