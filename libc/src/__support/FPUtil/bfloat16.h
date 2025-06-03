@@ -29,10 +29,8 @@ struct BFloat16 {
   constexpr BFloat16(float x) {
     FPBits x_bits(x);
 
-    // TODO: correct rounding for all modes
-    // currently it is RTNE
     uint32_t val = x_bits.get_val();
-    bits = static_cast<uint16_t>(val >> 16);
+    bits = fputil::cast<BFloat16>(x);
   }
 
   constexpr float as_float() const {
