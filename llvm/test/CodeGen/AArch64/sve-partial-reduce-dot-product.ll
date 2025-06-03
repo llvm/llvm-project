@@ -561,31 +561,34 @@ define <vscale x 4 x i64> @udot_no_bin_op_8to64(<vscale x 4 x i64> %acc, <vscale
 ; CHECK-NEXT:    add z1.d, z1.d, z3.d
 ; CHECK-NEXT:    ret
 ;
-; CHECK-NEWLOWERING-LABEL: udot_no_bin_op_8to64:
-; CHECK-NEWLOWERING:       // %bb.0:
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.h, z2.b
-; CHECK-NEWLOWERING-NEXT:    uunpklo z2.h, z2.b
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z5.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z6.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z7.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z24.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z25.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z24.d
-; CHECK-NEWLOWERING-NEXT:    add z5.d, z5.d, z25.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z1.d, z3.d
-; CHECK-NEWLOWERING-NEXT:    add z3.d, z7.d, z6.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z5.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z1.d, z3.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z1.d, z4.d
-; CHECK-NEWLOWERING-NEXT:    ret
+; CHECK-NEWLOWERING-SVE-LABEL: udot_no_bin_op_8to64:
+; CHECK-NEWLOWERING-SVE:       // %bb.0:
+; CHECK-NEWLOWERING-SVE-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEWLOWERING-SVE-NEXT:    mov z4.b, #1 // =0x1
+; CHECK-NEWLOWERING-SVE-NEXT:    udot z3.s, z2.b, z4.b
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpklo z2.d, z3.s
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpkhi z3.d, z3.s
+; CHECK-NEWLOWERING-SVE-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEWLOWERING-SVE-NEXT:    add z0.d, z0.d, z3.d
+; CHECK-NEWLOWERING-SVE-NEXT:    ret
+;
+; CHECK-NEWLOWERING-SVE2-LABEL: udot_no_bin_op_8to64:
+; CHECK-NEWLOWERING-SVE2:       // %bb.0:
+; CHECK-NEWLOWERING-SVE2-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEWLOWERING-SVE2-NEXT:    mov z4.b, #1 // =0x1
+; CHECK-NEWLOWERING-SVE2-NEXT:    udot z3.s, z2.b, z4.b
+; CHECK-NEWLOWERING-SVE2-NEXT:    uaddwb z0.d, z0.d, z3.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    uaddwt z0.d, z0.d, z3.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    ret
+;
+; CHECK-NEWLOWERING-SME-LABEL: udot_no_bin_op_8to64:
+; CHECK-NEWLOWERING-SME:       // %bb.0:
+; CHECK-NEWLOWERING-SME-NEXT:    mov z3.b, #1 // =0x1
+; CHECK-NEWLOWERING-SME-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-NEWLOWERING-SME-NEXT:    udot z4.s, z2.b, z3.b
+; CHECK-NEWLOWERING-SME-NEXT:    uaddwb z0.d, z0.d, z4.s
+; CHECK-NEWLOWERING-SME-NEXT:    uaddwt z0.d, z0.d, z4.s
+; CHECK-NEWLOWERING-SME-NEXT:    ret
   %a.ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
   %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i64.nxv16i64(<vscale x 4 x i64> %acc, <vscale x 16 x i64> %a.ext)
   ret <vscale x 4 x i64> %partial.reduce
@@ -603,31 +606,34 @@ define <vscale x 4 x i64> @sdot_no_bin_op_8to64(<vscale x 4 x i64> %acc, <vscale
 ; CHECK-NEXT:    add z1.d, z1.d, z3.d
 ; CHECK-NEXT:    ret
 ;
-; CHECK-NEWLOWERING-LABEL: sdot_no_bin_op_8to64:
-; CHECK-NEWLOWERING:       // %bb.0:
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.h, z2.b
-; CHECK-NEWLOWERING-NEXT:    sunpklo z2.h, z2.b
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z5.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z6.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z7.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z24.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z25.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z24.d
-; CHECK-NEWLOWERING-NEXT:    add z5.d, z5.d, z25.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z1.d, z3.d
-; CHECK-NEWLOWERING-NEXT:    add z3.d, z7.d, z6.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z5.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z1.d, z3.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z2.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z1.d, z4.d
-; CHECK-NEWLOWERING-NEXT:    ret
+; CHECK-NEWLOWERING-SVE-LABEL: sdot_no_bin_op_8to64:
+; CHECK-NEWLOWERING-SVE:       // %bb.0:
+; CHECK-NEWLOWERING-SVE-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEWLOWERING-SVE-NEXT:    mov z4.b, #1 // =0x1
+; CHECK-NEWLOWERING-SVE-NEXT:    sdot z3.s, z2.b, z4.b
+; CHECK-NEWLOWERING-SVE-NEXT:    sunpklo z2.d, z3.s
+; CHECK-NEWLOWERING-SVE-NEXT:    sunpkhi z3.d, z3.s
+; CHECK-NEWLOWERING-SVE-NEXT:    add z0.d, z0.d, z2.d
+; CHECK-NEWLOWERING-SVE-NEXT:    add z0.d, z0.d, z3.d
+; CHECK-NEWLOWERING-SVE-NEXT:    ret
+;
+; CHECK-NEWLOWERING-SVE2-LABEL: sdot_no_bin_op_8to64:
+; CHECK-NEWLOWERING-SVE2:       // %bb.0:
+; CHECK-NEWLOWERING-SVE2-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEWLOWERING-SVE2-NEXT:    mov z4.b, #1 // =0x1
+; CHECK-NEWLOWERING-SVE2-NEXT:    sdot z3.s, z2.b, z4.b
+; CHECK-NEWLOWERING-SVE2-NEXT:    saddwb z0.d, z0.d, z3.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    saddwt z0.d, z0.d, z3.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    ret
+;
+; CHECK-NEWLOWERING-SME-LABEL: sdot_no_bin_op_8to64:
+; CHECK-NEWLOWERING-SME:       // %bb.0:
+; CHECK-NEWLOWERING-SME-NEXT:    mov z3.b, #1 // =0x1
+; CHECK-NEWLOWERING-SME-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-NEWLOWERING-SME-NEXT:    sdot z4.s, z2.b, z3.b
+; CHECK-NEWLOWERING-SME-NEXT:    saddwb z0.d, z0.d, z4.s
+; CHECK-NEWLOWERING-SME-NEXT:    saddwt z0.d, z0.d, z4.s
+; CHECK-NEWLOWERING-SME-NEXT:    ret
   %a.ext = sext <vscale x 16 x i8> %a to <vscale x 16 x i64>
   %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i64.nxv16i64(<vscale x 4 x i64> %acc, <vscale x 16 x i64> %a.ext)
   ret <vscale x 4 x i64> %partial.reduce
@@ -647,18 +653,34 @@ define <vscale x 4 x i32> @not_udot(<vscale x 4 x i32> %acc, <vscale x 8 x i8> %
 ; CHECK-NEXT:    mla z0.s, p0/m, z1.s, z2.s
 ; CHECK-NEXT:    ret
 ;
-; CHECK-NEWLOWERING-LABEL: not_udot:
-; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-NEWLOWERING-NEXT:    and z2.h, z2.h, #0xff
-; CHECK-NEWLOWERING-NEXT:    ptrue p0.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z4.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    mla z0.s, p0/m, z3.s, z4.s
-; CHECK-NEWLOWERING-NEXT:    mla z0.s, p0/m, z1.s, z2.s
-; CHECK-NEWLOWERING-NEXT:    ret
+; CHECK-NEWLOWERING-SVE-LABEL: not_udot:
+; CHECK-NEWLOWERING-SVE:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-SVE-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-NEWLOWERING-SVE-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-NEWLOWERING-SVE-NEXT:    ptrue p0.s
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpklo z3.s, z1.h
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpklo z4.s, z2.h
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-SVE-NEXT:    mla z0.s, p0/m, z3.s, z4.s
+; CHECK-NEWLOWERING-SVE-NEXT:    mla z0.s, p0/m, z1.s, z2.s
+; CHECK-NEWLOWERING-SVE-NEXT:    ret
+;
+; CHECK-NEWLOWERING-SVE2-LABEL: not_udot:
+; CHECK-NEWLOWERING-SVE2:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-SVE2-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-NEWLOWERING-SVE2-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-NEWLOWERING-SVE2-NEXT:    umlalb z0.s, z1.h, z2.h
+; CHECK-NEWLOWERING-SVE2-NEXT:    umlalt z0.s, z1.h, z2.h
+; CHECK-NEWLOWERING-SVE2-NEXT:    ret
+;
+; CHECK-NEWLOWERING-SME-LABEL: not_udot:
+; CHECK-NEWLOWERING-SME:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-SME-NEXT:    and z2.h, z2.h, #0xff
+; CHECK-NEWLOWERING-SME-NEXT:    and z1.h, z1.h, #0xff
+; CHECK-NEWLOWERING-SME-NEXT:    umlalb z0.s, z1.h, z2.h
+; CHECK-NEWLOWERING-SME-NEXT:    umlalt z0.s, z1.h, z2.h
+; CHECK-NEWLOWERING-SME-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.wide = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>
@@ -681,18 +703,34 @@ define <vscale x 2 x i64> @not_udot_wide(<vscale x 2 x i64> %acc, <vscale x 4 x 
 ; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
 ; CHECK-NEXT:    ret
 ;
-; CHECK-NEWLOWERING-LABEL: not_udot_wide:
-; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    and z1.s, z1.s, #0xffff
-; CHECK-NEWLOWERING-NEXT:    and z2.s, z2.s, #0xffff
-; CHECK-NEWLOWERING-NEXT:    ptrue p0.d
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z4.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z3.d, z4.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z1.d, z2.d
-; CHECK-NEWLOWERING-NEXT:    ret
+; CHECK-NEWLOWERING-SVE-LABEL: not_udot_wide:
+; CHECK-NEWLOWERING-SVE:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-SVE-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-NEWLOWERING-SVE-NEXT:    and z2.s, z2.s, #0xffff
+; CHECK-NEWLOWERING-SVE-NEXT:    ptrue p0.d
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpklo z3.d, z1.s
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpklo z4.d, z2.s
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEWLOWERING-SVE-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEWLOWERING-SVE-NEXT:    mla z0.d, p0/m, z3.d, z4.d
+; CHECK-NEWLOWERING-SVE-NEXT:    mla z0.d, p0/m, z1.d, z2.d
+; CHECK-NEWLOWERING-SVE-NEXT:    ret
+;
+; CHECK-NEWLOWERING-SVE2-LABEL: not_udot_wide:
+; CHECK-NEWLOWERING-SVE2:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-SVE2-NEXT:    and z2.s, z2.s, #0xffff
+; CHECK-NEWLOWERING-SVE2-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-NEWLOWERING-SVE2-NEXT:    umlalb z0.d, z1.s, z2.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    umlalt z0.d, z1.s, z2.s
+; CHECK-NEWLOWERING-SVE2-NEXT:    ret
+;
+; CHECK-NEWLOWERING-SME-LABEL: not_udot_wide:
+; CHECK-NEWLOWERING-SME:       // %bb.0: // %entry
+; CHECK-NEWLOWERING-SME-NEXT:    and z2.s, z2.s, #0xffff
+; CHECK-NEWLOWERING-SME-NEXT:    and z1.s, z1.s, #0xffff
+; CHECK-NEWLOWERING-SME-NEXT:    umlalb z0.d, z1.s, z2.s
+; CHECK-NEWLOWERING-SME-NEXT:    umlalt z0.d, z1.s, z2.s
+; CHECK-NEWLOWERING-SME-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 4 x i16> %a to <vscale x 4 x i64>
   %b.wide = zext <vscale x 4 x i16> %b to <vscale x 4 x i64>
