@@ -417,9 +417,11 @@ void GCNHazardRecognizer::AdvanceCycle() {
 }
 
 void GCNHazardRecognizer::RecedeCycle() {
-  if (IsHazardRecognizerMode || ST.getGeneration() < AMDGPUSubtarget::GFX11)
-    report_fatal_error(
-        "hazard recognizer does not support bottom-up scheduling.");
+  assert(!IsHazardRecognizerMode &&
+         "Bottom-up scheduling shouldn't run in hazard recognizer mode");
+  if (ST.getGeneration() < AMDGPUSubtarget::GFX11)
+    report_fatal_error("Hazard recognizer does not support bottom-up "
+                       "scheduling on pre‑GFX11.");
 }
 
 //===----------------------------------------------------------------------===//
