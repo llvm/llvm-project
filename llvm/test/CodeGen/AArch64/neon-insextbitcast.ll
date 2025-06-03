@@ -89,11 +89,58 @@ entry:
 }
 
 
+define half @test_vext_v8i16(<8 x i16> %a) {
+; CHECK-LABEL: test_vext_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov h0, v0.h[5]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %b = extractelement <8 x i16> %a, i32 5
+  %c = bitcast i16 %b to half
+  ret half %c
+}
+
+define half @test_vext_v8i16_0(<8 x i16> %a) {
+; CHECK-LABEL: test_vext_v8i16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %b = extractelement <8 x i16> %a, i32 0
+  %c = bitcast i16 %b to half
+  ret half %c
+}
+
+define half @test_vext_v4i16(<4 x i16> %a) {
+; CHECK-LABEL: test_vext_v4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov h0, v0.h[1]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %b = extractelement <4 x i16> %a, i32 1
+  %c = bitcast i16 %b to half
+  ret half %c
+}
+
+define half @test_vext_v4i16_0(<4 x i16> %a) {
+; CHECK-LABEL: test_vext_v4i16_0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    ret
+entry:
+  %b = extractelement <4 x i16> %a, i32 0
+  %c = bitcast i16 %b to half
+  ret half %c
+}
+
 define float @test_vext_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: test_vext_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v0.s[0], v0.s[3]
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    mov s0, v0.s[3]
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <4 x i32> %a, i32 3
@@ -116,8 +163,7 @@ define float @test_vext_v2i32(<2 x i32> %a) {
 ; CHECK-LABEL: test_vext_v2i32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v0.s[0], v0.s[1]
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <2 x i32> %a, i32 1
@@ -140,8 +186,7 @@ entry:
 define double @test_vext_v2i64(<2 x i64> %a) {
 ; CHECK-LABEL: test_vext_v2i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v0.d[0], v0.d[1]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <2 x i64> %a, i32 1
@@ -163,8 +208,6 @@ entry:
 define double @test_vext_v1i64(<1 x i64> %a) {
 ; CHECK-LABEL: test_vext_v1i64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <1 x i64> %a, i32 0

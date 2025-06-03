@@ -207,11 +207,27 @@ define void @call_no_name_extern() {
 
 declare hidden void @0()
 declare void @1()
+declare void @forward_extern_func()
 
 ;; Note that we keep this at the very end because llc emits this after all the
 ;; functions.
-; CHECK: const:
-; CHECK:   .long   forward_extern_func@PLT
-@const = constant i32 trunc (i64 ptrtoint (ptr dso_local_equivalent @forward_extern_func to i64) to i32)
+; CHECK-LABEL: _ZTV1B:
+; CHECK:         .long   0
+; CHECK-NEXT:    .long   0
+; CHECK-NEXT:    .long   f0@PLT-_ZTV1B-8
+; CHECK-NEXT:    .long   f1@PLT-_ZTV1B-8
+; CHECK-NEXT:    .long   f2@PLT-_ZTV1B-8
 
-declare void @forward_extern_func()
+@_ZTV1B = dso_local constant { [5 x i32] } { [5 x i32] [
+  i32 0,
+  i32 0,
+  i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @f0 to i64), i64 ptrtoint (ptr getelementptr inbounds ({ [7 x i32] }, ptr @_ZTV1B, i32 0, i32 0, i32 2) to i64)) to i32),
+  i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @f1 to i64), i64 ptrtoint (ptr getelementptr inbounds ({ [7 x i32] }, ptr @_ZTV1B, i32 0, i32 0, i32 2) to i64)) to i32),
+  i32 trunc (i64 sub (i64 ptrtoint (ptr dso_local_equivalent @f2 to i64), i64 ptrtoint (ptr getelementptr inbounds ({ [7 x i32] }, ptr @_ZTV1B, i32 0, i32 0, i32 2) to i64)) to i32)
+] }
+
+declare void @f0()
+declare void @f1()
+define dso_local void @f2() {
+  ret void
+}

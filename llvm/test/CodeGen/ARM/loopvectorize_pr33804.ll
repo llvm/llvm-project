@@ -26,7 +26,7 @@ for.body14.i.i:                                   ; preds = %for.body14.i.i, %en
   %next19.i.i = getelementptr inbounds %struct.CvNode1D, ptr %dst, i32 %i.1424.i.i, i32 1
   store ptr %dst, ptr %next19.i.i, align 4
   %inc21.i.i = add nuw nsw i32 %i.1424.i.i, 1
-  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 0
+  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 1024
   br i1 %exitcond438.i.i, label %for.end22.i.i, label %for.body14.i.i
 
 for.end22.i.i:                                    ; preds = %for.body14.i.i
@@ -52,7 +52,7 @@ for.body14.i.i:                                   ; preds = %for.body14.i.i, %en
   %val.i.i = getelementptr inbounds %struct.CvNode1D2, ptr %arrayidx15.i.i1427, i32 0, i32 1
   store float 0xC415AF1D80000000, ptr %val.i.i, align 4
   %inc21.i.i = add nuw nsw i32 %i.1424.i.i, 1
-  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 0
+  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 1024
   br i1 %exitcond438.i.i, label %for.end22.i.i, label %for.body14.i.i
 
 for.end22.i.i:                                    ; preds = %for.body14.i.i
@@ -79,7 +79,7 @@ for.body14.i.i:                                   ; preds = %for.body14.i.i, %en
   store float %loadf, ptr %dst.ptr, align 4
   store ptr %loadp, ptr %dst.ptr.1, align 4
   %inc21.i.i = add nuw nsw i32 %i.1424.i.i, 1
-  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 0
+  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 1024
   br i1 %exitcond438.i.i, label %for.end22.i.i, label %for.body14.i.i
 
 for.end22.i.i:                                    ; preds = %for.body14.i.i
@@ -107,7 +107,7 @@ for.body14.i.i:                                   ; preds = %for.body14.i.i, %en
   store float %loadf, ptr %dst.ptr, align 4
   store ptr %loadp, ptr %dst.ptr.1, align 4
   %inc21.i.i = add nuw nsw i32 %i.1424.i.i, 1
-  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 0
+  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 1024
   br i1 %exitcond438.i.i, label %for.end22.i.i, label %for.body14.i.i
 
 for.end22.i.i:                                    ; preds = %for.body14.i.i

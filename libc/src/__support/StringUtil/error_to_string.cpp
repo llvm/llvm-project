@@ -45,7 +45,10 @@ constexpr size_t TOTAL_STR_LEN = total_str_len(PLATFORM_ERRORS);
 constexpr size_t ERR_ARRAY_SIZE = max_key_val(PLATFORM_ERRORS) + 1;
 
 constexpr MessageMapper<ERR_ARRAY_SIZE, TOTAL_STR_LEN>
-    error_mapper(PLATFORM_ERRORS);
+    ERROR_MAPPER(PLATFORM_ERRORS);
+
+constexpr MessageMapper<ERR_ARRAY_SIZE, TOTAL_STR_LEN>
+    ERRNO_NAME_MAPPER(PLATFORM_ERRNO_NAMES);
 
 cpp::string_view build_error_string(int err_num, cpp::span<char> buffer) {
   // if the buffer can't hold "Unknown error" + ' ' + num_str, then just
@@ -68,11 +71,15 @@ cpp::string_view get_error_string(int err_num) {
 }
 
 cpp::string_view get_error_string(int err_num, cpp::span<char> buffer) {
-  auto opt_str = internal::error_mapper.get_str(err_num);
+  auto opt_str = internal::ERROR_MAPPER.get_str(err_num);
   if (opt_str)
     return *opt_str;
   else
     return internal::build_error_string(err_num, buffer);
+}
+
+cpp::optional<cpp::string_view> try_get_errno_name(int err_num) {
+  return internal::ERRNO_NAME_MAPPER.get_str(err_num);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

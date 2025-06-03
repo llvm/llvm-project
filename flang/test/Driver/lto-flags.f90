@@ -30,7 +30,7 @@
 ! FULL-LTO: "-fc1"
 ! FULL-LTO-SAME: "-flto=full"
 
-! THIN-LTO-ALL: flang-new: warning: the option '-flto=thin' is a work in progress
+! THIN-LTO-ALL: flang{{.*}}: warning: the option '-flto=thin' is a work in progress
 ! THIN-LTO-ALL: "-fc1"
 ! THIN-LTO-ALL-SAME: "-flto=thin"
 ! THIN-LTO-LINKER-PLUGIN: "-plugin-opt=thinlto"

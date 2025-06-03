@@ -26,6 +26,7 @@ class AssumptionCache;
 class CallBase;
 class CallInst;
 class DominatorTree;
+class EarliestEscapeAnalysis;
 class Function;
 class Instruction;
 class LoadInst;
@@ -48,6 +49,7 @@ class MemCpyOptPass : public PassInfoMixin<MemCpyOptPass> {
   PostDominatorTree *PDT = nullptr;
   MemorySSA *MSSA = nullptr;
   MemorySSAUpdater *MSSAU = nullptr;
+  EarliestEscapeAnalysis *EEA = nullptr;
 
 public:
   MemCpyOptPass() = default;
@@ -66,7 +68,7 @@ private:
                           BasicBlock::iterator &BBI);
   bool processMemSet(MemSetInst *SI, BasicBlock::iterator &BBI);
   bool processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI);
-  bool processMemMove(MemMoveInst *M);
+  bool processMemMove(MemMoveInst *M, BasicBlock::iterator &BBI);
   bool performCallSlotOptzn(Instruction *cpyLoad, Instruction *cpyStore,
                             Value *cpyDst, Value *cpySrc, TypeSize cpyLen,
                             Align cpyAlign, BatchAAResults &BAA,
@@ -85,6 +87,7 @@ private:
   bool performStackMoveOptzn(Instruction *Load, Instruction *Store,
                              AllocaInst *DestAlloca, AllocaInst *SrcAlloca,
                              TypeSize Size, BatchAAResults &BAA);
+  bool isMemMoveMemSetDependency(MemMoveInst *M);
 
   void eraseInstruction(Instruction *I);
   bool iterateOnFunction(Function &F);

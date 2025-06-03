@@ -1006,7 +1006,14 @@ template<class>
 concept Irrelevant = false;
 
 template <typename T>
-concept ErrorRequires = requires(ErrorRequires auto x) { x; }; // expected-error {{unknown type name 'ErrorRequires'}}
+concept ErrorRequires = requires(ErrorRequires auto x) { x; };
+// expected-error@-1 {{a concept definition cannot refer to itself}} \
+// expected-error@-1 {{'auto' not allowed in requires expression parameter}} \
+// expected-note@-1 {{declared here}}
+
+template<typename T> concept C1 = C1<T> && []<C1>(C1 auto) -> C1 auto {};
+//expected-error@-1 4{{a concept definition cannot refer to itself}} \
+//expected-note@-1 4{{declared here}}
 
 template<class T> void aaa(T t) // expected-note {{candidate template ignored: constraints not satisfied}}
 requires (False<T> || False<T>) || False<T> {} // expected-note 3 {{'int' does not satisfy 'False'}}
@@ -1141,6 +1148,55 @@ int test() {
     S{}.f(); // expected-error{{call to member function 'f' is ambiguous}}
     S{}.g(); // expected-error{{call to member function 'g' is ambiguous}}
     S{}.h();
+}
+
+}
+
+namespace GH109780 {
+
+template <typename T>
+concept Concept; // expected-error {{expected '='}}
+
+bool val = Concept<int>;
+
+template <typename T>
+concept C = invalid; // expected-error {{use of undeclared identifier 'invalid'}}
+
+bool val2 = C<int>;
+
+} // namespace GH109780
+
+namespace GH121980 {
+
+template <class>
+concept has_member_difference_type; // expected-error {{expected '='}}
+
+template <has_member_difference_type> struct incrementable_traits; // expected-note {{declared here}}
+
+template <has_member_difference_type Tp>
+struct incrementable_traits<Tp>; // expected-error {{not more specialized than the primary}}
+
+}
+
+namespace InjectedClassNameType {
+
+template <class, class _Err> class expected {
+public:
+  template <class...>
+  expected(...);
+
+  template <class _T2, class _E2>
+  friend bool operator==(expected x, expected<_T2, _E2>)
+    requires requires {
+      { x };
+    }
+  {
+    return true;
+  }
+};
+
+bool test_val_types() {
+  return expected<void, int>() == 1;
 }
 
 }

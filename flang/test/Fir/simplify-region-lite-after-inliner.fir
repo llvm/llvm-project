@@ -33,4 +33,4 @@ func.func private @foo() -> none
 
 
 // CHECK: define void @repro(i8 %0, i8 %1)
-//   CHECK-NEXT  ret void
+// CHECK-NEXT: ret void

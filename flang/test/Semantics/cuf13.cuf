@@ -8,6 +8,13 @@ module matching
     module procedure sub_unified
   end interface
 
+  interface
+  subroutine ignore(a)
+    !dir$ ignore_tkr(d) a
+    integer, managed :: a(:)
+  end subroutine
+  end interface
+
 contains
   subroutine sub_host(a)
     integer :: a(:)
@@ -43,9 +50,11 @@ program m
   call sub(u) ! Should resolve to sub_unified
   call sub(d) ! Should resolve to sub_device
 
+  call ignore(a)
 end
 
 ! CHECK: CALL sub_host
 ! CHECK: CALL sub_managed
 ! CHECK: CALL sub_unified
 ! CHECK: CALL sub_device
+! CHECK: CALL ignore

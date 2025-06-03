@@ -30,12 +30,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.11"]
+        python-version: ["3.8", "3.13"]
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
       build_target: check-clang-python
       projects: clang
       # There is an issue running on "windows-2019".
       # See https://github.com/llvm/llvm-project/issues/76601#issuecomment-1873049082.
-      os_list: '["ubuntu-latest"]'
+      os_list: '["ubuntu-24.04"]'
       python_version: ${{ matrix.python-version }}

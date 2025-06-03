@@ -1,9 +1,9 @@
-/* RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only -pedantic -Wno-declaration-after-statement -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only -pedantic -Wno-declaration-after-statement -Wno-c11-extensions -fno-signed-char %s
-   RUN: %clang_cc1 -std=c99 -fsyntax-only -verify=expected,c99untilc2x -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c11 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c2x -fsyntax-only -verify=expected,c2xandup -pedantic %s
+/* RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only,c17andearlier -pedantic -Wno-declaration-after-statement -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only,c17andearlier -pedantic -Wno-declaration-after-statement -Wno-c11-extensions -fno-signed-char %s
+   RUN: %clang_cc1 -std=c99 -fsyntax-only -verify=expected,c99untilc2x,c17andearlier -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c11 -fsyntax-only -verify=expected,c99untilc2x,c17andearlier -pedantic %s
+   RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=expected,c99untilc2x,c17andearlier -pedantic %s
+   RUN: %clang_cc1 -std=c23 -fsyntax-only -verify=expected,c2xandup -pedantic %s
  */
 
 /* The following are DRs which do not require tests to demonstrate
@@ -139,7 +139,9 @@ int dr010_c = sizeof(dr010_t); /* expected-error {{invalid application of 'sizeo
  * Note: DR034 has a question resolved by DR011 and another question where the
  * result is UB.
  */
-static int dr011_a[]; /* expected-warning {{tentative array definition assumed to have one element}} */
+static int dr011_a[]; /* expected-warning {{tentative array definition assumed to have one element}}
+                         expected-warning {{tentative definition of variable with internal linkage has incomplete array type 'int[]'}}
+                       */
 void dr011(void) {
   extern int i[];
   {
@@ -243,13 +245,13 @@ int dr032 = (1, 2); /* expected-warning {{left operand of comma operator has no 
  * Questions about definition of functions without a prototype
  */
 void dr035_1(a, b) /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}} */
-  int a(enum b {x, y}); /* expected-warning {{declaration of 'enum b' will not be visible outside of this function}} */
+  int a(enum b {x, y}); /* c17andearlier-warning {{declaration of 'enum b' will not be visible outside of this function}} */
   int b; {
   int test = x; /* expected-error {{use of undeclared identifier 'x'}} */
 }
 
 void dr035_2(c) /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}} */
-  enum m{q, r} c; { /* expected-warning {{declaration of 'enum m' will not be visible outside of this function}} */
+  enum m{q, r} c; { /* c17andearlier-warning {{declaration of 'enum m' will not be visible outside of this function}} */
   /* FIXME: This should be accepted because the scope of m, q, and r ends at
    * the closing brace of the function per C89 6.1.2.1.
    */

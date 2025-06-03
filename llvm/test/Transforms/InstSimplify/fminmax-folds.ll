@@ -196,7 +196,7 @@ define <2 x float> @test_minnum_const_inf_nnan_comm_vec(<2 x float> %x) {
 
 define <2 x float> @test_maxnum_const_inf_nnan_comm_vec(<2 x float> %x) {
 ; CHECK-LABEL: @test_maxnum_const_inf_nnan_comm_vec(
-; CHECK-NEXT:    ret <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF0000000000000)
 ;
   %r = call nnan <2 x float> @llvm.maxnum.v2f32(<2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>, <2 x float> %x)
   ret <2 x float> %r
@@ -204,7 +204,7 @@ define <2 x float> @test_maxnum_const_inf_nnan_comm_vec(<2 x float> %x) {
 
 define <2 x float> @test_maximum_const_inf_nnan_comm_vec(<2 x float> %x) {
 ; CHECK-LABEL: @test_maximum_const_inf_nnan_comm_vec(
-; CHECK-NEXT:    ret <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF0000000000000)
 ;
   %r = call nnan <2 x float> @llvm.maximum.v2f32(<2 x float> <float 0x7ff0000000000000, float 0x7ff0000000000000>, <2 x float> %x)
   ret <2 x float> %r
@@ -727,7 +727,7 @@ define float @minnum_neginf(float %x) {
 
 define <2 x double> @minnum_neginf_commute_vec(<2 x double> %x) {
 ; CHECK-LABEL: @minnum_neginf_commute_vec(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0xFFF0000000000000)
 ;
   %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>, <2 x double> %x)
   ret <2 x double> %r
@@ -813,7 +813,7 @@ define float @maxnum_x_y_maxnum_z(float %x, float %y, float %z) {
 
 define <2 x double> @maxnum_inf(<2 x double> %x) {
 ; CHECK-LABEL: @maxnum_inf(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF0000000000000)
 ;
   %val = call <2 x double> @llvm.maxnum.v2f64(<2 x double> %x, <2 x double><double 0x7FF0000000000000, double 0x7FF0000000000000>)
   ret <2 x double> %val
@@ -915,7 +915,7 @@ define <2 x double> @minimum_nan_op1_vec_partial_poison(<2 x double> %x) {
 
 define <2 x double> @minimum_nan_op1_vec(<2 x double> %x) {
 ; CHECK-LABEL: @minimum_nan_op1_vec(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF800DEAD00DEAD, double 0x7FF800DEAD00DEAD>
+; CHECK-NEXT:    ret <2 x double> splat (double 0x7FF800DEAD00DEAD)
 ;
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> <double 0x7ff800dead00dead, double 0x7ff800dead00dead>)
   ret <2 x double> %r
@@ -1164,7 +1164,7 @@ define float @minimum_neginf(float %x) {
 
 define <2 x double> @minimum_neginf_commute_vec(<2 x double> %x) {
 ; CHECK-LABEL: @minimum_neginf_commute_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>, <2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x double> @llvm.minimum.v2f64(<2 x double> splat (double 0xFFF0000000000000), <2 x double> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0xFFF0000000000000, double 0xFFF0000000000000>, <2 x double> %x)
@@ -1185,7 +1185,7 @@ define float @minimum_inf(float %x) {
 
 define <2 x double> @maximum_inf(<2 x double> %x) {
 ; CHECK-LABEL: @maximum_inf(
-; CHECK-NEXT:    [[VAL:%.*]] = call <2 x double> @llvm.maximum.v2f64(<2 x double> [[X:%.*]], <2 x double> <double 0x7FF0000000000000, double 0x7FF0000000000000>)
+; CHECK-NEXT:    [[VAL:%.*]] = call <2 x double> @llvm.maximum.v2f64(<2 x double> [[X:%.*]], <2 x double> splat (double 0x7FF0000000000000))
 ; CHECK-NEXT:    ret <2 x double> [[VAL]]
 ;
   %val = call <2 x double> @llvm.maximum.v2f64(<2 x double> %x, <2 x double><double 0x7FF0000000000000, double 0x7FF0000000000000>)

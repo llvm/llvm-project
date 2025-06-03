@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-target-materialization-with-no-uses %s | FileCheck %s
+// RUN: mlir-opt -test-target-materialization-with-no-uses -split-input-file %s | FileCheck %s
 
 // The conversion is set up as follows:
 // - type_changer ops are illegal;
@@ -24,4 +24,13 @@ func.func @foo() {
   %2 = "test.type_changer"(%1) : (i16) -> i64
   "test.type_consumer"(%2) : (i64) -> ()
   return
+}
+
+// -----
+
+// CHECK-LABEL: @direct_forward
+func.func @direct_forward(%arg0 : i16) -> i16 {
+  // CHECK-NEXT: return
+  %0 = "test.type_changer"(%arg0) : (i16) -> i16
+  return %0 : i16
 }

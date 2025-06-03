@@ -21,6 +21,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
@@ -473,7 +474,31 @@ public:
                       LLVM_PRETTY_FUNCTION, GetName()));
   }
 
-  const std::string &GetRemoteURL() const { return m_remote_url; }
+  /// Search CU for the SDK path the CUs was compiled against.
+  ///
+  /// \param[in] unit The CU
+  ///
+  /// \returns A parsed XcodeSDK object if successful, an Error otherwise. 
+  virtual llvm::Expected<XcodeSDK> GetSDKPathFromDebugInfo(CompileUnit &unit) {
+    return llvm::createStringError(
+        llvm::formatv("{0} not implemented for '{1}' platform.",
+                      LLVM_PRETTY_FUNCTION, GetName()));
+  }
+
+  /// Returns the full path of the most appropriate SDK for the
+  /// specified compile unit. This function gets this path by parsing
+  /// debug-info (see \ref `GetSDKPathFromDebugInfo`).
+  ///
+  /// \param[in] unit The CU to scan.
+  ///
+  /// \returns If successful, returns the full path to an
+  ///          Xcode SDK.
+  virtual llvm::Expected<std::string>
+  ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
+    return llvm::createStringError(
+        llvm::formatv("{0} not implemented for '{1}' platform.",
+                      LLVM_PRETTY_FUNCTION, GetName()));
+  }
 
   bool IsHost() const {
     return m_is_host; // Is this the default host platform?
@@ -936,6 +961,8 @@ public:
 
   virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
 
+  virtual lldb::StopInfoSP GetStopInfoFromSiginfo(Thread &thread) { return {}; }
+
   virtual Args GetExtraStartupCommands();
 
   typedef std::function<Status(const ModuleSpec &module_spec,
@@ -977,7 +1004,6 @@ protected:
   std::string m_sdk_build;
   FileSpec m_working_dir; // The working directory which is used when installing
                           // modules that have no install path set
-  std::string m_remote_url;
   std::string m_hostname;
   llvm::VersionTuple m_os_version;
   ArchSpec

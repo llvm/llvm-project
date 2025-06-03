@@ -17,8 +17,6 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "amdgpu-annotate-kernel-features"
@@ -53,11 +51,6 @@ public:
 } // end anonymous namespace
 
 char AMDGPUAnnotateKernelFeatures::ID = 0;
-
-char &llvm::AMDGPUAnnotateKernelFeaturesID = AMDGPUAnnotateKernelFeatures::ID;
-
-INITIALIZE_PASS(AMDGPUAnnotateKernelFeatures, DEBUG_TYPE,
-                "Add AMDGPU function attributes", false, false)
 
 bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
   bool HaveStackObjects = false;
@@ -132,8 +125,4 @@ bool AMDGPUAnnotateKernelFeatures::doInitialization(CallGraph &CG) {
 
   TM = &TPC->getTM<TargetMachine>();
   return false;
-}
-
-Pass *llvm::createAMDGPUAnnotateKernelFeaturesPass() {
-  return new AMDGPUAnnotateKernelFeatures();
 }

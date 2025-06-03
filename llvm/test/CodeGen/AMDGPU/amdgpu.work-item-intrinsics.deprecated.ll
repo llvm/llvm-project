@@ -9,8 +9,8 @@
 ; Legacy intrinsics that just read implicit parameters
 
 ; FUNC-LABEL: {{^}}ngroups_x:
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x0
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x0
+; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x0
+; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x0
 ; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NOHSA: buffer_store_dword [[VVAL]]
 
@@ -24,8 +24,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}ngroups_y:
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x1
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x4
+; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x1
+; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x4
 ; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NOHSA: buffer_store_dword [[VVAL]]
 
@@ -39,8 +39,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}ngroups_z:
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x2
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x8
+; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x2
+; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x8
 ; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NOHSA: buffer_store_dword [[VVAL]]
 
@@ -53,54 +53,9 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}global_size_x:
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x3
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0xc
-; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
-; GCN-NOHSA: buffer_store_dword [[VVAL]]
-
-; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV {{\*? *}}[[VAL]], KC0[0].W
-define amdgpu_kernel void @global_size_x (ptr addrspace(1) %out) {
-entry:
-  %0 = call i32 @llvm.r600.read.global.size.x() #0
-  store i32 %0, ptr addrspace(1) %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}global_size_y:
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x4
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x10
-; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
-; GCN-NOHSA: buffer_store_dword [[VVAL]]
-
-; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV {{\*? *}}[[VAL]], KC0[1].X
-define amdgpu_kernel void @global_size_y (ptr addrspace(1) %out) {
-entry:
-  %0 = call i32 @llvm.r600.read.global.size.y() #0
-  store i32 %0, ptr addrspace(1) %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}global_size_z:
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x5
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x14
-; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
-; GCN-NOHSA: buffer_store_dword [[VVAL]]
-
-; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV {{\*? *}}[[VAL]], KC0[1].Y
-define amdgpu_kernel void @global_size_z (ptr addrspace(1) %out) {
-entry:
-  %0 = call i32 @llvm.r600.read.global.size.z() #0
-  store i32 %0, ptr addrspace(1) %out
-  ret void
-}
-
 ; FUNC-LABEL: {{^}}local_size_x:
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x6
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x18
+; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x6
+; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x18
 ; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NOHSA: buffer_store_dword [[VVAL]]
 
@@ -114,8 +69,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_size_y:
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x7
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x1c
+; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x7
+; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x1c
 ; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NOHSA: buffer_store_dword [[VVAL]]
 
@@ -129,8 +84,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}local_size_z:
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x8
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[2:3], 0x20
+; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x8
+; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[4:5], 0x20
 ; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
 ; GCN-NOHSA: buffer_store_dword [[VVAL]]
 
@@ -146,10 +101,6 @@ entry:
 declare i32 @llvm.r600.read.ngroups.x() #0
 declare i32 @llvm.r600.read.ngroups.y() #0
 declare i32 @llvm.r600.read.ngroups.z() #0
-
-declare i32 @llvm.r600.read.global.size.x() #0
-declare i32 @llvm.r600.read.global.size.y() #0
-declare i32 @llvm.r600.read.global.size.z() #0
 
 declare i32 @llvm.r600.read.local.size.x() #0
 declare i32 @llvm.r600.read.local.size.y() #0

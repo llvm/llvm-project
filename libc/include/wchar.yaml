@@ -1,0 +1,126 @@
+header: wchar.h
+header_template: wchar.h.def
+macros: []
+types:
+  - type_name: size_t
+  - type_name: wint_t
+  - type_name: wchar_t
+  - type_name: mbstate_t
+enums: []
+objects: []
+functions:
+  - name: wcslen
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const wchar_t *
+  - name: wctob
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: btowc
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: int
+  - name: wmemset
+    standards:
+      - stdc
+    return_type: wchar_t*
+    arguments:
+      - type: wchar_t*
+      - type: wchar_t
+      - type: size_t
+  - name: wcschr
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments:
+      - type: const wchar_t *
+      - type: wchar_t
+  - name: wcsncmp
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+      - type: size_t
+  - name: wcscmp
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+  - name: wcspbrk
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+  - name: wcsrchr
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments:
+      - type: const wchar_t *
+      - type: wchar_t
+  - name: wcsspn
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+  - name: wmemcmp
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+      - type: size_t
+  - name: wmempcpy
+    standards:
+      - gnu
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *
+      - type: const wchar_t *
+      - type: size_t
+  - name: wmemcpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: __restrict wchar_t *
+      - type: const __restrict wchar_t *
+      - type: size_t
+  - name: wcsstr
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+  - name: wcsncat
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: __restrict wchar_t *
+      - type: const __restrict wchar_t *
+      - type: size_t
+  - name: wcscpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: __restrict wchar_t *
+      - type: const __restrict wchar_t *

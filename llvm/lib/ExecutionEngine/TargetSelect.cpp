@@ -29,7 +29,7 @@ TargetMachine *EngineBuilder::selectTarget() {
   // MCJIT can generate code for remote targets, but the old JIT and Interpreter
   // must use the host architecture.
   if (WhichEngine != EngineKind::Interpreter && M)
-    TT.setTriple(M->getTargetTriple());
+    TT = M->getTargetTriple();
 
   return selectTarget(TT, MArch, MCPU, MAttrs);
 }
@@ -66,7 +66,7 @@ TargetMachine *EngineBuilder::selectTarget(const Triple &TargetTriple,
       TheTriple.setArch(Type);
   } else {
     std::string Error;
-    TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
+    TheTarget = TargetRegistry::lookupTarget(TheTriple, Error);
     if (!TheTarget) {
       if (ErrorStr)
         *ErrorStr = Error;
@@ -84,10 +84,9 @@ TargetMachine *EngineBuilder::selectTarget(const Triple &TargetTriple,
   }
 
   // Allocate a target...
-  TargetMachine *Target =
-      TheTarget->createTargetMachine(TheTriple.getTriple(), MCPU, FeaturesStr,
-                                     Options, RelocModel, CMModel, OptLevel,
-				     /*JIT*/ true);
+  TargetMachine *Target = TheTarget->createTargetMachine(
+      TheTriple, MCPU, FeaturesStr, Options, RelocModel, CMModel, OptLevel,
+      /*JIT=*/true);
   Target->Options.EmulatedTLS = EmulatedTLS;
 
   assert(Target && "Could not allocate target machine!");

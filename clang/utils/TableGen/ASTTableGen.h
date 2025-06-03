@@ -87,18 +87,18 @@ namespace clang {
 namespace tblgen {
 
 class WrappedRecord {
-  llvm::Record *Record;
+  const llvm::Record *Record;
 
 protected:
-  WrappedRecord(llvm::Record *record = nullptr) : Record(record) {}
+  WrappedRecord(const llvm::Record *record = nullptr) : Record(record) {}
 
-  llvm::Record *get() const {
+  const llvm::Record *get() const {
     assert(Record && "accessing null record");
     return Record;
   }
 
 public:
-  llvm::Record *getRecord() const { return Record; }
+  const llvm::Record *getRecord() const { return Record; }
 
   explicit operator bool() const { return Record != nullptr; }
 
@@ -144,7 +144,7 @@ class HasProperties : public WrappedRecord {
 public:
   static constexpr llvm::StringRef ClassName = HasPropertiesClassName;
 
-  HasProperties(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+  HasProperties(const llvm::Record *record = nullptr) : WrappedRecord(record) {}
 
   llvm::StringRef getName() const;
 
@@ -157,7 +157,7 @@ public:
 /// in one of Clang's AST hierarchies.
 class ASTNode : public HasProperties {
 public:
-  ASTNode(llvm::Record *record = nullptr) : HasProperties(record) {}
+  ASTNode(const llvm::Record *record = nullptr) : HasProperties(record) {}
 
   llvm::StringRef getName() const {
     return get()->getName();
@@ -180,7 +180,7 @@ public:
 
 class DeclNode : public ASTNode {
 public:
-  DeclNode(llvm::Record *record = nullptr) : ASTNode(record) {}
+  DeclNode(const llvm::Record *record = nullptr) : ASTNode(record) {}
 
   llvm::StringRef getId() const;
   std::string getClassName() const;
@@ -202,7 +202,7 @@ public:
 
 class TypeNode : public ASTNode {
 public:
-  TypeNode(llvm::Record *record = nullptr) : ASTNode(record) {}
+  TypeNode(const llvm::Record *record = nullptr) : ASTNode(record) {}
 
   llvm::StringRef getId() const;
   llvm::StringRef getClassName() const;
@@ -224,7 +224,7 @@ public:
 
 class StmtNode : public ASTNode {
 public:
-  StmtNode(llvm::Record *record = nullptr) : ASTNode(record) {}
+  StmtNode(const llvm::Record *record = nullptr) : ASTNode(record) {}
 
   std::string getId() const;
   llvm::StringRef getClassName() const;
@@ -247,7 +247,7 @@ public:
 /// The type of a property.
 class PropertyType : public WrappedRecord {
 public:
-  PropertyType(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+  PropertyType(const llvm::Record *record = nullptr) : WrappedRecord(record) {}
 
   /// Is this a generic specialization (i.e. `Array<T>` or `Optional<T>`)?
   bool isGenericSpecialization() const {
@@ -319,7 +319,7 @@ public:
     return get()->getValueAsString(UnpackOptionalCodeFieldName);
   }
 
-  std::vector<llvm::Record*> getBufferElementTypes() const {
+  std::vector<const llvm::Record *> getBufferElementTypes() const {
     return get()->getValueAsListOfDefs(BufferElementTypesFieldName);
   }
 
@@ -331,7 +331,7 @@ public:
 /// A rule for returning the kind of a type.
 class TypeKindRule : public WrappedRecord {
 public:
-  TypeKindRule(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+  TypeKindRule(const llvm::Record *record = nullptr) : WrappedRecord(record) {}
 
   /// Return the type to which this applies.
   PropertyType getParentType() const {
@@ -361,7 +361,7 @@ public:
 /// An implementation case of a property type.
 class TypeCase : public HasProperties {
 public:
-  TypeCase(llvm::Record *record = nullptr) : HasProperties(record) {}
+  TypeCase(const llvm::Record *record = nullptr) : HasProperties(record) {}
 
   /// Return the name of this case.
   llvm::StringRef getCaseName() const {
@@ -381,7 +381,7 @@ public:
 /// A property of an AST node.
 class Property : public WrappedRecord {
 public:
-  Property(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+  Property(const llvm::Record *record = nullptr) : WrappedRecord(record) {}
 
   /// Return the name of this property.
   llvm::StringRef getName() const {
@@ -417,7 +417,8 @@ public:
 /// a value (which is actually done when writing the value out).
 class ReadHelperRule : public WrappedRecord {
 public:
-  ReadHelperRule(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+  ReadHelperRule(const llvm::Record *record = nullptr)
+      : WrappedRecord(record) {}
 
   /// Return the class for which this is a creation rule.
   /// Should never be abstract.
@@ -437,7 +438,7 @@ public:
 /// A rule for how to create an AST node from its properties.
 class CreationRule : public WrappedRecord {
 public:
-  CreationRule(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+  CreationRule(const llvm::Record *record = nullptr) : WrappedRecord(record) {}
 
   /// Return the class for which this is a creation rule.
   /// Should never be abstract.
@@ -457,7 +458,7 @@ public:
 /// A rule which overrides the standard rules for serializing an AST node.
 class OverrideRule : public WrappedRecord {
 public:
-  OverrideRule(llvm::Record *record = nullptr) : WrappedRecord(record) {}
+  OverrideRule(const llvm::Record *record = nullptr) : WrappedRecord(record) {}
 
   /// Return the class for which this is an override rule.
   /// Should never be abstract.
@@ -483,12 +484,12 @@ template <class NodeClass>
 using ASTNodeHierarchyVisitor =
   llvm::function_ref<void(NodeClass node, NodeClass base)>;
 
-void visitASTNodeHierarchyImpl(llvm::RecordKeeper &records,
+void visitASTNodeHierarchyImpl(const llvm::RecordKeeper &records,
                                llvm::StringRef nodeClassName,
                                ASTNodeHierarchyVisitor<ASTNode> visit);
 
 template <class NodeClass>
-void visitASTNodeHierarchy(llvm::RecordKeeper &records,
+void visitASTNodeHierarchy(const llvm::RecordKeeper &records,
                            ASTNodeHierarchyVisitor<NodeClass> visit) {
   visitASTNodeHierarchyImpl(records, NodeClass::getTableGenNodeClassName(),
                             [visit](ASTNode node, ASTNode base) {

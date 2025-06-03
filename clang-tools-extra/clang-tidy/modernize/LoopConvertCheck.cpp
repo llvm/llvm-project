@@ -18,12 +18,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstring>
 #include <optional>
-#include <tuple>
 #include <utility>
 
 using namespace clang::ast_matchers;
@@ -262,7 +260,7 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
 ///     EndVarName: 'j' (as a VarDecl)
 ///   In the second example only:
 ///     EndCallName: 'container.size()' (as a CXXMemberCallExpr) or
-///     'size(contaner)' (as a CallExpr)
+///     'size(container)' (as a CallExpr)
 ///
 /// Client code will need to make sure that:
 ///   - The containers on which 'size()' is called is the container indexed.
@@ -491,7 +489,7 @@ static bool isDirectMemberExpr(const Expr *E) {
 }
 
 /// Given an expression that represents an usage of an element from the
-/// containter that we are iterating over, returns false when it can be
+/// container that we are iterating over, returns false when it can be
 /// guaranteed this element cannot be modified as a result of this usage.
 static bool canBeModified(ASTContext *Context, const Expr *E) {
   if (E->getType().isConstQualified())
@@ -922,7 +920,7 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
                                      const ast_matchers::BoundNodes &Nodes,
                                      const ForStmt *Loop,
                                      LoopFixerKind FixerKind) {
-  // In self contained diagnosics mode we don't want dependancies on other
+  // In self contained diagnostic mode we don't want dependencies on other
   // loops, otherwise, If we already modified the range of this for loop, don't
   // do any further updates on this iteration.
   if (areDiagsSelfContained())

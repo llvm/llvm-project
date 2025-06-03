@@ -22,7 +22,7 @@ define amdgpu_kernel void @store_build_vector_multiple_uses_v4i32(ptr addrspace(
   %elt2 = load volatile i32, ptr addrspace(1) %in
   %elt3 = load volatile i32, ptr addrspace(1) %in
 
-  %vec0 = insertelement <4 x i32> undef, i32 %elt0, i32 0
+  %vec0 = insertelement <4 x i32> poison, i32 %elt0, i32 0
   %vec1 = insertelement <4 x i32> %vec0, i32 %elt1, i32 1
   %vec2 = insertelement <4 x i32> %vec1, i32 %elt2, i32 2
   %vec3 = insertelement <4 x i32> %vec2, i32 %elt3, i32 3
@@ -64,7 +64,7 @@ define amdgpu_kernel void @store_build_vector_multiple_extract_uses_v4i32(ptr ad
   %elt2 = load volatile i32, ptr addrspace(1) %in
   %elt3 = load volatile i32, ptr addrspace(1) %in
 
-  %vec0 = insertelement <4 x i32> undef, i32 %elt0, i32 0
+  %vec0 = insertelement <4 x i32> poison, i32 %elt0, i32 0
   %vec1 = insertelement <4 x i32> %vec0, i32 %elt1, i32 1
   %vec2 = insertelement <4 x i32> %vec1, i32 %elt2, i32 2
   %vec3 = insertelement <4 x i32> %vec2, i32 %elt3, i32 3
@@ -108,7 +108,7 @@ define amdgpu_kernel void @store_build_vector_multiple_uses_v4i32_bitcast_to_v2i
   %elt2 = load volatile i32, ptr addrspace(1) %in
   %elt3 = load volatile i32, ptr addrspace(1) %in
 
-  %vec0 = insertelement <4 x i32> undef, i32 %elt0, i32 0
+  %vec0 = insertelement <4 x i32> poison, i32 %elt0, i32 0
   %vec1 = insertelement <4 x i32> %vec0, i32 %elt1, i32 1
   %vec2 = insertelement <4 x i32> %vec1, i32 %elt2, i32 2
   %vec3 = insertelement <4 x i32> %vec2, i32 %elt3, i32 3

@@ -38,7 +38,7 @@ namespace clang {
 namespace ast_matchers {
 AST_MATCHER_P(StringLiteral, mentionsBoundType, std::string, BindingID) {
   return Builder->removeBindings([this, &Node](const BoundNodesMap &Nodes) {
-    const auto &BN = Nodes.getNode(this->BindingID);
+    const DynTypedNode &BN = Nodes.getNode(this->BindingID);
     if (const auto *ND = BN.get<NamedDecl>()) {
       return ND->getName() != Node.getString();
     }
@@ -68,7 +68,7 @@ static void emitDiagnostics(const BoundNodes &Nodes,
     Checker,
     /*Name=*/"OSObject C-Style Cast",
     categories::SecurityError,
-    OS.str(),
+    Diagnostics,
     PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), ADC),
     CE->getSourceRange());
 }

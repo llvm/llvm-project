@@ -183,7 +183,8 @@ public:
   Diagnostic &operator<<(StringAttr val);
 
   /// Stream in a string literal.
-  Diagnostic &operator<<(const char *val) {
+  template <size_t n>
+  Diagnostic &operator<<(const char (&val)[n]) {
     arguments.push_back(DiagnosticArgument(val));
     return *this;
   }
@@ -577,6 +578,9 @@ public:
   void emitDiagnostic(Location loc, Twine message, DiagnosticSeverity kind,
                       bool displaySourceLine = true);
 
+  /// Set the maximum depth that a call stack will be printed. Defaults to 10.
+  void setCallStackLimit(unsigned limit);
+
 protected:
   /// Emit the given diagnostic with the held source manager.
   void emitDiagnostic(Diagnostic &diag);
@@ -604,7 +608,6 @@ private:
   std::optional<Location> findLocToShow(Location loc);
 
   /// The maximum depth that a call stack will be printed.
-  /// TODO: This should be a tunable flag.
   unsigned callStackLimit = 10;
 
   std::unique_ptr<detail::SourceMgrDiagnosticHandlerImpl> impl;
@@ -623,9 +626,12 @@ struct SourceMgrDiagnosticVerifierHandlerImpl;
 /// corresponding line of the source file.
 class SourceMgrDiagnosticVerifierHandler : public SourceMgrDiagnosticHandler {
 public:
+  enum class Level { None = 0, All, OnlyExpected };
   SourceMgrDiagnosticVerifierHandler(llvm::SourceMgr &srcMgr, MLIRContext *ctx,
-                                     raw_ostream &out);
-  SourceMgrDiagnosticVerifierHandler(llvm::SourceMgr &srcMgr, MLIRContext *ctx);
+                                     raw_ostream &out,
+                                     Level level = Level::All);
+  SourceMgrDiagnosticVerifierHandler(llvm::SourceMgr &srcMgr, MLIRContext *ctx,
+                                     Level level = Level::All);
   ~SourceMgrDiagnosticVerifierHandler();
 
   /// Returns the status of the handler and verifies that all expected
@@ -637,8 +643,8 @@ private:
   /// Process a single diagnostic.
   void process(Diagnostic &diag);
 
-  /// Process a FileLineColLoc diagnostic.
-  void process(FileLineColLoc loc, StringRef msg, DiagnosticSeverity kind);
+  /// Process a LocationAttr diagnostic.
+  void process(LocationAttr loc, StringRef msg, DiagnosticSeverity kind);
 
   std::unique_ptr<detail::SourceMgrDiagnosticVerifierHandlerImpl> impl;
 };

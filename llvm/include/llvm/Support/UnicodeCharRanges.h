@@ -61,9 +61,7 @@ public:
 
   /// Returns true if the character set contains the Unicode code point
   /// \p C.
-  bool contains(uint32_t C) const {
-    return std::binary_search(Ranges.begin(), Ranges.end(), C);
-  }
+  bool contains(uint32_t C) const { return llvm::binary_search(Ranges, C); }
 
 private:
   /// Returns true if each of the ranges is a proper closed range

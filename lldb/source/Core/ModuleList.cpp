@@ -917,9 +917,10 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
 
   // Fixup the incoming path in case the path points to a valid file, yet the
   // arch or UUID (if one was passed in) don't match.
-  ModuleSpec located_binary_modulespec =
-      PluginManager::LocateExecutableObjectFile(module_spec);
-
+  ModuleSpec located_binary_modulespec;
+  StatisticsMap symbol_locator_map;
+  located_binary_modulespec = PluginManager::LocateExecutableObjectFile(
+      module_spec, symbol_locator_map);
   // Don't look for the file if it appears to be the same one we already
   // checked for above...
   if (located_binary_modulespec.GetFileSpec() != module_file_spec) {
@@ -938,16 +939,16 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
 
         if (arch.IsValid()) {
           if (!uuid_str.empty())
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "'%s' does not contain the %s architecture and UUID %s", path,
                 arch.GetArchitectureName(), uuid_str.c_str());
           else
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "'%s' does not contain the %s architecture.", path,
                 arch.GetArchitectureName());
         }
       } else {
-        error.SetErrorStringWithFormat("'%s' does not exist", path);
+        error = Status::FromErrorStringWithFormat("'%s' does not exist", path);
       }
       if (error.Fail())
         module_sp.reset();
@@ -992,6 +993,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
       // By getting the object file we can guarantee that the architecture
       // matches
       if (module_sp && module_sp->GetObjectFile()) {
+        module_sp->GetSymbolLocatorStatistics().merge(symbol_locator_map);
         if (module_sp->GetObjectFile()->GetType() ==
             ObjectFile::eTypeStubLibrary) {
           module_sp.reset();
@@ -1006,21 +1008,22 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
 
         if (located_binary_modulespec.GetFileSpec()) {
           if (arch.IsValid())
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "unable to open %s architecture in '%s'",
                 arch.GetArchitectureName(), path);
           else
-            error.SetErrorStringWithFormat("unable to open '%s'", path);
+            error =
+                Status::FromErrorStringWithFormat("unable to open '%s'", path);
         } else {
           std::string uuid_str;
           if (uuid_ptr && uuid_ptr->IsValid())
             uuid_str = uuid_ptr->GetAsString();
 
           if (!uuid_str.empty())
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "cannot locate a module for UUID '%s'", uuid_str.c_str());
           else
-            error.SetErrorString("cannot locate a module");
+            error = Status::FromErrorString("cannot locate a module");
         }
       }
     }
@@ -1043,21 +1046,27 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 bool continue_on_error) {
   if (!target)
     return false;
-  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-  for (auto module : m_modules) {
-    Status error;
+  m_modules_mutex.lock();
+  // Don't hold the module list mutex while loading the scripting resources,
+  // The initializer might do any amount of work, and having that happen while
+  // the module list is held is asking for A/B locking problems.
+  const ModuleList tmp_module_list(*this);
+  m_modules_mutex.unlock();
+
+  for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
+      Status error;
       if (!module->LoadScriptingResourceInTarget(target, error,
                                                  feedback_stream)) {
         if (error.Fail() && error.AsCString()) {
-          error.SetErrorStringWithFormat("unable to load scripting data for "
-                                         "module %s - error reported was %s",
-                                         module->GetFileSpec()
-                                             .GetFileNameStrippingExtension()
-                                             .GetCString(),
-                                         error.AsCString());
-          errors.push_back(error);
-
+          error = Status::FromErrorStringWithFormat(
+              "unable to load scripting data for "
+              "module %s - error reported was %s",
+              module->GetFileSpec()
+                  .GetFileNameStrippingExtension()
+                  .GetCString(),
+              error.AsCString());
+          errors.push_back(std::move(error));
           if (!continue_on_error)
             return false;
         }

@@ -41,7 +41,6 @@ class LibcxxStringDataFormatterTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
 
         is_64_bit = self.process().GetAddressByteSize() == 8
 
@@ -98,6 +97,16 @@ class LibcxxStringDataFormatterTestCase(TestBase):
 
         self.expect_expr(
             "s", result_type=ns + "::wstring", result_summary='L"hello world! מזל טוב!"'
+        )
+
+        self.expect_expr(
+            "q", result_type=ns + "::string", result_summary='"hello world"'
+        )
+
+        self.expect_expr(
+            "Q",
+            result_type=ns + "::string",
+            result_summary='"quite a long std::strin with lots of info inside it"',
         )
 
         self.expect(

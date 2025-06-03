@@ -10,7 +10,6 @@
 
 #include "NativeRegisterContextWindows_arm64.h"
 #include "NativeThreadWindows.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "ProcessWindowsLog.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
@@ -111,7 +110,7 @@ static Status GetThreadContextHelper(lldb::thread_t thread_handle,
   memset(context_ptr, 0, sizeof(::CONTEXT));
   context_ptr->ContextFlags = control_flag;
   if (!::GetThreadContext(thread_handle, context_ptr)) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "{0} GetThreadContext failed with error {1}", __FUNCTION__,
              error);
     return error;
@@ -125,7 +124,7 @@ static Status SetThreadContextHelper(lldb::thread_t thread_handle,
   Status error;
   // It's assumed that the thread has stopped.
   if (!::SetThreadContext(thread_handle, context_ptr)) {
-    error.SetError(GetLastError(), eErrorTypeWin32);
+    error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "{0} SetThreadContext failed with error {1}", __FUNCTION__,
              error);
     return error;
@@ -143,8 +142,13 @@ NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
 
 NativeRegisterContextWindows_arm64::NativeRegisterContextWindows_arm64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextWindows(native_thread,
-                                   CreateRegisterInfoInterface(target_arch)) {}
+    : NativeRegisterContextRegisterInfo(
+          native_thread, CreateRegisterInfoInterface(target_arch)) {
+  // Currently, there is no API to query the maximum supported hardware
+  // breakpoints and watchpoints on Windows. The values set below are based
+  // on tests conducted on Windows 11 with Snapdragon Elite X hardware.
+  m_max_hwp_supported = 1;
+}
 
 bool NativeRegisterContextWindows_arm64::IsGPR(uint32_t reg_index) const {
   return (reg_index >= k_first_gpr_arm64 && reg_index <= k_last_gpr_arm64);
@@ -618,7 +622,7 @@ NativeRegisterContextWindows_arm64::ReadRegister(const RegisterInfo *reg_info,
                                                  RegisterValue &reg_value) {
   Status error;
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
@@ -626,9 +630,10 @@ NativeRegisterContextWindows_arm64::ReadRegister(const RegisterInfo *reg_info,
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
     // directly queried.
-    error.SetErrorStringWithFormat("register \"%s\" is an internal-only lldb "
-                                   "register, cannot read directly",
-                                   reg_info->name);
+    error = Status::FromErrorStringWithFormat(
+        "register \"%s\" is an internal-only lldb "
+        "register, cannot read directly",
+        reg_info->name);
     return error;
   }
 
@@ -638,7 +643,7 @@ NativeRegisterContextWindows_arm64::ReadRegister(const RegisterInfo *reg_info,
   if (IsFPR(reg))
     return FPRRead(reg, reg_value);
 
-  return Status("unimplemented");
+  return Status::FromErrorString("unimplemented");
 }
 
 Status NativeRegisterContextWindows_arm64::WriteRegister(
@@ -646,7 +651,7 @@ Status NativeRegisterContextWindows_arm64::WriteRegister(
   Status error;
 
   if (!reg_info) {
-    error.SetErrorString("reg_info NULL");
+    error = Status::FromErrorString("reg_info NULL");
     return error;
   }
 
@@ -654,9 +659,10 @@ Status NativeRegisterContextWindows_arm64::WriteRegister(
   if (reg == LLDB_INVALID_REGNUM) {
     // This is likely an internal register for lldb use only and should not be
     // directly written.
-    error.SetErrorStringWithFormat("register \"%s\" is an internal-only lldb "
-                                   "register, cannot write directly",
-                                   reg_info->name);
+    error = Status::FromErrorStringWithFormat(
+        "register \"%s\" is an internal-only lldb "
+        "register, cannot write directly",
+        reg_info->name);
     return error;
   }
 
@@ -666,7 +672,7 @@ Status NativeRegisterContextWindows_arm64::WriteRegister(
   if (IsFPR(reg))
     return FPRWrite(reg, reg_value);
 
-  return Status("unimplemented");
+  return Status::FromErrorString("unimplemented");
 }
 
 Status NativeRegisterContextWindows_arm64::ReadAllRegisterValues(
@@ -689,14 +695,14 @@ Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
   Status error;
   const size_t data_size = REG_CONTEXT_SIZE;
   if (!data_sp) {
-    error.SetErrorStringWithFormat(
+    error = Status::FromErrorStringWithFormat(
         "NativeRegisterContextWindows_arm64::%s invalid data_sp provided",
         __FUNCTION__);
     return error;
   }
 
   if (data_sp->GetByteSize() != data_size) {
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "data_sp contained mismatched data size, expected {0}, actual {1}",
         data_size, data_sp->GetByteSize());
     return error;
@@ -707,48 +713,37 @@ Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
   return SetThreadContextHelper(GetThreadHandle(), &tls_context);
 }
 
-Status NativeRegisterContextWindows_arm64::IsWatchpointHit(uint32_t wp_index,
-                                                           bool &is_hit) {
-  return Status("unimplemented");
+llvm::Error NativeRegisterContextWindows_arm64::ReadHardwareDebugInfo() {
+  ::CONTEXT tls_context;
+  Status error = GetThreadContextHelper(GetThreadHandle(), &tls_context,
+                                        CONTEXT_DEBUG_REGISTERS);
+  if (error.Fail())
+    return error.ToError();
+
+  for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
+    m_hwp_regs[i].address = tls_context.Wvr[i];
+    m_hwp_regs[i].control = tls_context.Wcr[i];
+  }
+
+  return llvm::Error::success();
 }
 
-Status NativeRegisterContextWindows_arm64::GetWatchpointHitIndex(
-    uint32_t &wp_index, lldb::addr_t trap_addr) {
-  return Status("unimplemented");
-}
+llvm::Error
+NativeRegisterContextWindows_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
+  ::CONTEXT tls_context;
+  Status error = GetThreadContextHelper(GetThreadHandle(), &tls_context,
+                                        CONTEXT_DEBUG_REGISTERS);
+  if (error.Fail())
+    return error.ToError();
 
-Status NativeRegisterContextWindows_arm64::IsWatchpointVacant(uint32_t wp_index,
-                                                              bool &is_vacant) {
-  return Status("unimplemented");
-}
+  if (hwbType == eDREGTypeWATCH) {
+    for (uint32_t i = 0; i < m_max_hwp_supported; i++) {
+      tls_context.Wvr[i] = m_hwp_regs[i].address;
+      tls_context.Wcr[i] = m_hwp_regs[i].control;
+    }
+  }
 
-Status NativeRegisterContextWindows_arm64::SetHardwareWatchpointWithIndex(
-    lldb::addr_t addr, size_t size, uint32_t watch_flags, uint32_t wp_index) {
-  return Status("unimplemented");
-}
-
-bool NativeRegisterContextWindows_arm64::ClearHardwareWatchpoint(
-    uint32_t wp_index) {
-  return false;
-}
-
-Status NativeRegisterContextWindows_arm64::ClearAllHardwareWatchpoints() {
-  return Status("unimplemented");
-}
-
-uint32_t NativeRegisterContextWindows_arm64::SetHardwareWatchpoint(
-    lldb::addr_t addr, size_t size, uint32_t watch_flags) {
-  return LLDB_INVALID_INDEX32;
-}
-
-lldb::addr_t
-NativeRegisterContextWindows_arm64::GetWatchpointAddress(uint32_t wp_index) {
-  return LLDB_INVALID_ADDRESS;
-}
-
-uint32_t NativeRegisterContextWindows_arm64::NumSupportedHardwareWatchpoints() {
-  // Not implemented
-  return 0;
+  return SetThreadContextHelper(GetThreadHandle(), &tls_context).ToError();
 }
 
 #endif // defined(__aarch64__) || defined(_M_ARM64)

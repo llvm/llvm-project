@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
-#include "Targets.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringRef.h"
@@ -19,11 +18,19 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::BPF::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+#define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsBPF.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsBPF.inc"
+#undef GET_BUILTIN_INFOS
 };
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
 
 void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
@@ -37,15 +44,19 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   Builder.defineMacro("__BPF_FEATURE_ADDR_SPACE_CAST");
+  Builder.defineMacro("__BPF_FEATURE_MAY_GOTO");
+  Builder.defineMacro("__BPF_FEATURE_ATOMIC_MEM_ORDERING");
 
-  if (CPU.empty() || CPU == "generic" || CPU == "v1") {
+  if (CPU.empty())
+    CPU = "v3";
+
+  if (CPU == "generic" || CPU == "v1") {
     Builder.defineMacro("__BPF_CPU_VERSION__", "1");
     return;
   }
 
   std::string CpuVerNumStr = CPU.substr(1);
   Builder.defineMacro("__BPF_CPU_VERSION__", CpuVerNumStr);
-  Builder.defineMacro("__BPF_FEATURE_MAY_GOTO");
 
   int CpuVerNum = std::stoi(CpuVerNumStr);
   if (CpuVerNum >= 2)
@@ -63,6 +74,7 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__BPF_FEATURE_SDIV_SMOD");
     Builder.defineMacro("__BPF_FEATURE_GOTOL");
     Builder.defineMacro("__BPF_FEATURE_ST");
+    Builder.defineMacro("__BPF_FEATURE_LOAD_ACQ_STORE_REL");
   }
 }
 
@@ -77,9 +89,9 @@ void BPFTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
-ArrayRef<Builtin::Info> BPFTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::BPF::LastTSBuiltin - Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+BPFTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 bool BPFTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,

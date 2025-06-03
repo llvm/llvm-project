@@ -10,4 +10,4 @@ a.out: lib_One lib_Two
 lib_One: lib_Two
 
 lib_%:
-	$(MAKE) VPATH=$(SRCDIR)/$* -I $(SRCDIR) -f $(SRCDIR)/$*.mk DSYMUTIL=$(DSYMUTIL)
+	"$(MAKE)" VPATH=$(SRCDIR)/$* -I $(SRCDIR) -f $(SRCDIR)/$*.mk DSYMUTIL=$(DSYMUTIL)

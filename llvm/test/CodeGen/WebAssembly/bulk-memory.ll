@@ -17,7 +17,12 @@ declare void @llvm.memset.p0.i32(ptr, i8, i32, i1)
 ; CHECK-LABEL: memcpy_i8:
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memcpy_i8 (i32, i32, i32) -> ()
+; BULK-MEM-NEXT: block
+; BULK-MEM-NEXT: i32.eqz $push0=, $2
+; BULK-MEM-NEXT: br_if 0, $pop0
 ; BULK-MEM-NEXT: memory.copy 0, 0, $0, $1, $2
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memcpy_i8(ptr %dest, ptr %src, i8 zeroext %len) {
   call void @llvm.memcpy.p0.p0.i8(ptr %dest, ptr %src, i8 %len, i1 0)
@@ -27,7 +32,12 @@ define void @memcpy_i8(ptr %dest, ptr %src, i8 zeroext %len) {
 ; CHECK-LABEL: memmove_i8:
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memmove_i8 (i32, i32, i32) -> ()
+; BULK-MEM-NEXT: block
+; BULK-MEM-NEXT: i32.eqz $push0=, $2
+; BULK-MEM-NEXT: br_if 0, $pop0
 ; BULK-MEM-NEXT: memory.copy 0, 0, $0, $1, $2
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memmove_i8(ptr %dest, ptr %src, i8 zeroext %len) {
   call void @llvm.memmove.p0.p0.i8(ptr %dest, ptr %src, i8 %len, i1 0)
@@ -37,7 +47,12 @@ define void @memmove_i8(ptr %dest, ptr %src, i8 zeroext %len) {
 ; CHECK-LABEL: memset_i8:
 ; NO-BULK-MEM-NOT: memory.fill
 ; BULK-MEM-NEXT: .functype memset_i8 (i32, i32, i32) -> ()
+; BULK-MEM-NEXT: block
+; BULK-MEM-NEXT: i32.eqz $push0=, $2
+; BULK-MEM-NEXT: br_if 0, $pop0
 ; BULK-MEM-NEXT: memory.fill 0, $0, $1, $2
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memset_i8(ptr %dest, i8 %val, i8 zeroext %len) {
   call void @llvm.memset.p0.i8(ptr %dest, i8 %val, i8 %len, i1 0)
@@ -47,7 +62,12 @@ define void @memset_i8(ptr %dest, i8 %val, i8 zeroext %len) {
 ; CHECK-LABEL: memcpy_i32:
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memcpy_i32 (i32, i32, i32) -> ()
+; BULK-MEM-NEXT: block
+; BULK-MEM-NEXT: i32.eqz $push0=, $2
+; BULK-MEM-NEXT: br_if 0, $pop0
 ; BULK-MEM-NEXT: memory.copy 0, 0, $0, $1, $2
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memcpy_i32(ptr %dest, ptr %src, i32 %len) {
   call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 0)
@@ -57,7 +77,12 @@ define void @memcpy_i32(ptr %dest, ptr %src, i32 %len) {
 ; CHECK-LABEL: memmove_i32:
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memmove_i32 (i32, i32, i32) -> ()
+; BULK-MEM-NEXT: block
+; BULK-MEM-NEXT: i32.eqz $push0=, $2
+; BULK-MEM-NEXT: br_if 0, $pop0
 ; BULK-MEM-NEXT: memory.copy 0, 0, $0, $1, $2
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memmove_i32(ptr %dest, ptr %src, i32 %len) {
   call void @llvm.memmove.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 0)
@@ -67,7 +92,12 @@ define void @memmove_i32(ptr %dest, ptr %src, i32 %len) {
 ; CHECK-LABEL: memset_i32:
 ; NO-BULK-MEM-NOT: memory.fill
 ; BULK-MEM-NEXT: .functype memset_i32 (i32, i32, i32) -> ()
+; BULK-MEM-NEXT: block
+; BULK-MEM-NEXT: i32.eqz $push0=, $2
+; BULK-MEM-NEXT: br_if 0, $pop0
 ; BULK-MEM-NEXT: memory.fill 0, $0, $1, $2
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memset_i32(ptr %dest, i8 %val, i32 %len) {
   call void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 %len, i1 0)
@@ -107,8 +137,14 @@ define void @memset_1(ptr %dest, i8 %val) {
 ; CHECK-LABEL: memcpy_1024:
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memcpy_1024 (i32, i32) -> ()
+; BULK-MEM-NEXT: block
 ; BULK-MEM-NEXT: i32.const $push[[L0:[0-9]+]]=, 1024
-; BULK-MEM-NEXT: memory.copy 0, 0, $0, $1, $pop[[L0]]
+; BULK-MEM-NEXT: i32.eqz $push[[L1:[0-9]+]]=, $pop[[L0]]
+; BULK-MEM-NEXT: br_if 0, $pop[[L1]]
+; BULK-MEM-NEXT: i32.const $push[[L2:[0-9]+]]=, 1024
+; BULK-MEM-NEXT: memory.copy 0, 0, $0, $1, $pop[[L2]]
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memcpy_1024(ptr %dest, ptr %src) {
   call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 1024, i1 0)
@@ -118,8 +154,14 @@ define void @memcpy_1024(ptr %dest, ptr %src) {
 ; CHECK-LABEL: memmove_1024:
 ; NO-BULK-MEM-NOT: memory.copy
 ; BULK-MEM-NEXT: .functype memmove_1024 (i32, i32) -> ()
+; BULK-MEM-NEXT: block
 ; BULK-MEM-NEXT: i32.const $push[[L0:[0-9]+]]=, 1024
-; BULK-MEM-NEXT: memory.copy 0, 0, $0, $1, $pop[[L0]]
+; BULK-MEM-NEXT: i32.eqz $push[[L1:[0-9]+]]=, $pop[[L0]]
+; BULK-MEM-NEXT: br_if 0, $pop[[L1]]
+; BULK-MEM-NEXT: i32.const $push[[L2:[0-9]+]]=, 1024
+; BULK-MEM-NEXT: memory.copy 0, 0, $0, $1, $pop[[L2]]
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memmove_1024(ptr %dest, ptr %src) {
   call void @llvm.memmove.p0.p0.i32(ptr %dest, ptr %src, i32 1024, i1 0)
@@ -129,8 +171,14 @@ define void @memmove_1024(ptr %dest, ptr %src) {
 ; CHECK-LABEL: memset_1024:
 ; NO-BULK-MEM-NOT: memory.fill
 ; BULK-MEM-NEXT: .functype memset_1024 (i32, i32) -> ()
+; BULK-MEM-NEXT: block
 ; BULK-MEM-NEXT: i32.const $push[[L0:[0-9]+]]=, 1024
-; BULK-MEM-NEXT: memory.fill 0, $0, $1, $pop[[L0]]
+; BULK-MEM-NEXT: i32.eqz $push[[L1:[0-9]+]]=, $pop[[L0]]
+; BULK-MEM-NEXT: br_if 0, $pop[[L1]]
+; BULK-MEM-NEXT: i32.const $push[[L2:[0-9]+]]=, 1024
+; BULK-MEM-NEXT: memory.fill 0, $0, $1, $pop[[L2]]
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memset_1024(ptr %dest, i8 %val) {
   call void @llvm.memset.p0.i32(ptr %dest, i8 %val, i32 1024, i1 0)
@@ -153,11 +201,17 @@ define void @memset_1024(ptr %dest, i8 %val) {
 ; BULK-MEM-NEXT: .functype memcpy_alloca_src (i32) -> ()
 ; BULK-MEM-NEXT: global.get $push[[L0:[0-9]+]]=, __stack_pointer
 ; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 112
-; BULK-MEM-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
-; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 12
-; BULK-MEM-NEXT: i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
-; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 100
-; BULK-MEM-NEXT: memory.copy 0, 0, $0, $pop[[L4]], $pop[[L5]]
+; BULK-MEM-NEXT: i32.sub $[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
+; BULK-MEM-NEXT: block
+; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 100
+; BULK-MEM-NEXT: i32.eqz $push[[L4:[0-9]+]]=, $pop[[L3]]
+; BULK-MEM-NEXT: br_if 0, $pop[[L4]]
+; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 12
+; BULK-MEM-NEXT: i32.add $push[[L6:[0-9]+]]=, $[[L2]], $pop[[L5]]
+; BULK-MEM-NEXT: i32.const $push[[L7:[0-9]+]]=, 100
+; BULK-MEM-NEXT: memory.copy 0, 0, $0, $pop[[L6]], $pop[[L7]]
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memcpy_alloca_src(ptr %dst) {
   %a = alloca [100 x i8]
@@ -170,11 +224,17 @@ define void @memcpy_alloca_src(ptr %dst) {
 ; BULK-MEM-NEXT: .functype memcpy_alloca_dst (i32) -> ()
 ; BULK-MEM-NEXT: global.get $push[[L0:[0-9]+]]=, __stack_pointer
 ; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 112
-; BULK-MEM-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
-; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 12
-; BULK-MEM-NEXT: i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
-; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 100
-; BULK-MEM-NEXT: memory.copy 0, 0, $pop[[L4]], $0, $pop[[L5]]
+; BULK-MEM-NEXT: i32.sub $[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
+; BULK-MEM-NEXT: block
+; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 100
+; BULK-MEM-NEXT: i32.eqz $push[[L4:[0-9]+]]=, $pop[[L3]]
+; BULK-MEM-NEXT: br_if 0, $pop[[L4]]
+; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 12
+; BULK-MEM-NEXT: i32.add $push[[L6:[0-9]+]]=, $[[L2]], $pop[[L5]]
+; BULK-MEM-NEXT: i32.const $push[[L7:[0-9]+]]=, 100
+; BULK-MEM-NEXT: memory.copy 0, 0, $pop[[L6]], $0, $pop[[L7]]
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memcpy_alloca_dst(ptr %src) {
   %a = alloca [100 x i8]
@@ -187,11 +247,17 @@ define void @memcpy_alloca_dst(ptr %src) {
 ; BULK-MEM-NEXT: .functype memset_alloca (i32) -> ()
 ; BULK-MEM-NEXT: global.get $push[[L0:[0-9]+]]=, __stack_pointer
 ; BULK-MEM-NEXT: i32.const $push[[L1:[0-9]+]]=, 112
-; BULK-MEM-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
-; BULK-MEM-NEXT: i32.const $push[[L3:[0-9]+]]=, 12
-; BULK-MEM-NEXT: i32.add $push[[L4:[0-9]+]]=, $pop[[L2]], $pop[[L3]]
-; BULK-MEM-NEXT: i32.const $push[[L5:[0-9]+]]=, 100
-; BULK-MEM-NEXT: memory.fill 0, $pop[[L4]], $0, $pop[[L5]]
+; BULK-MEM-NEXT: i32.sub $1=, $pop[[L0]], $pop[[L1]]
+; BULK-MEM-NEXT: block
+; BULK-MEM-NEXT: i32.const $push[[L2:[0-9]+]]=, 100
+; BULK-MEM-NEXT: i32.eqz $push[[L3:[0-9]+]]=, $pop[[L2]]
+; BULK-MEM-NEXT: br_if 0, $pop[[L3]]
+; BULK-MEM-NEXT: i32.const $push[[L4:[0-9]+]]=, 12
+; BULK-MEM-NEXT: i32.add $push[[L5:[0-9]+]]=, $1, $pop[[L4]]
+; BULK-MEM-NEXT: i32.const $push[[L6:[0-9]+]]=, 100
+; BULK-MEM-NEXT: memory.fill 0, $pop[[L5]], $0, $pop[[L6]]
+; BULK-MEM-NEXT: .LBB{{.*}}:
+; BULK-MEM-NEXT: end_block
 ; BULK-MEM-NEXT: return
 define void @memset_alloca(i8 %val) {
   %a = alloca [100 x i8]

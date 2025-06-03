@@ -11,20 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Driver/DriverDiagnostic.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <numeric>
 
 using namespace clang;
 using namespace ento;
@@ -45,16 +42,17 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : public RecursiveASTVisitor<LocalVisitor> {
+    struct LocalVisitor : DynamicRecursiveASTVisitor {
       const PaddingChecker *Checker;
-      bool shouldVisitTemplateInstantiations() const { return true; }
-      bool shouldVisitImplicitCode() const { return true; }
-      explicit LocalVisitor(const PaddingChecker *Checker) : Checker(Checker) {}
-      bool VisitRecordDecl(const RecordDecl *RD) {
+      explicit LocalVisitor(const PaddingChecker *Checker) : Checker(Checker) {
+        ShouldVisitTemplateInstantiations = true;
+        ShouldVisitImplicitCode = true;
+      }
+      bool VisitRecordDecl(RecordDecl *RD) override {
         Checker->visitRecord(RD);
         return true;
       }
-      bool VisitVarDecl(const VarDecl *VD) {
+      bool VisitVarDecl(VarDecl *VD) override {
         Checker->visitVariable(VD);
         return true;
       }

@@ -9,6 +9,26 @@
 declare float @foo()
 
 ; Check comparison with registers.
+define i64 @f0(i64 %a, i64 %b, half %f1, half %f2) #0 {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: kebr %f0, %f9
+; CHECK-SCALAR-NEXT: je
+; CHECK-SCALAR: lgr %r13, %r12
+; CHECK-SCALAR: lgr %r2, %r13
+; CHECK-VECTOR: locgrne %r12, %r13
+; CHECK-VECTOR: lgr %r2, %r12
+; CHECK: br %r14
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f16(
+                                               half %f1, half %f2,
+                                               metadata !"oeq",
+                                               metadata !"fpexcept.strict") #0
+  %res = select i1 %cond, i64 %a, i64 %b
+  ret i64 %res
+}
+
+; Check comparison with registers.
 define i64 @f1(i64 %a, i64 %b, float %f1, float %f2) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK: kebr %f0, %f2
