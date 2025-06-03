@@ -1702,36 +1702,7 @@ static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
 
   assert(allLookupResultsAreTheSame(Calls) &&
          "More than one lambda call operator!");
-
-  // FIXME: If we have multiple call operators, we might be in a situation
-  // where we merged this lambda with one from another module; in that
-  // case, return our method (instead of that of the other lambda).
-  //
-  // This avoids situations where, given two modules A and B, if we
-  // try to instantiate A's call operator in a function in B, anything
-  // in the call operator that relies on local decls in the surrounding
-  // function will crash because it tries to find A's decls, but we only
-  // instantiated B's:
-  //
-  //   template <typename>
-  //   void f() {
-  //     using T = int;      // We only instantiate B's version of this.
-  //     auto L = [](T) { }; // But A's call operator would want A's here.
-  //   }
-  //
-  // Walk the call operator’s redecl chain to find the one that belongs
-  // to this module.
-  //
-  // TODO: We need to fix this properly (see
-  // https://github.com/llvm/llvm-project/issues/90154).
-  Module *M = RD.getOwningModule();
-  for (Decl *D : Calls.front()->redecls()) {
-    auto *MD = cast<NamedDecl>(D);
-    if (MD->getOwningModule() == M)
-      return MD;
-  }
-
-  llvm_unreachable("Couldn't find our call operator!");
+  return Calls.front();
 }
 
 FunctionTemplateDecl* CXXRecordDecl::getDependentLambdaCallOperator() const {
