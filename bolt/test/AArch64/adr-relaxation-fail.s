@@ -4,6 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -static
 # RUN: not llvm-bolt %t.exe -o %t.bolt 2>&1 | FileCheck %s
+# RUN: not llvm-bolt %t.exe -o %t.bolt --strict 2>&1 | FileCheck %s
 
 # CHECK: BOLT-ERROR: cannot relax ADR in non-simple function _start
 
@@ -16,6 +17,8 @@
 _start:
   .cfi_startproc
   adr x1, foo
+  adr x2, .L1
+.L1:
   br x0
   ret  x0
   .cfi_endproc
