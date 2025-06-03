@@ -1365,7 +1365,14 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
           BoolCondVal, Stmt::getLikelihood(S.getBody()));
 
-    Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+    auto *I = Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+    // Key Instructions: Emit the condition and branch as separate atoms to
+    // match existing loop stepping behaviour. FIXME: We could have the branch
+    // as the backup location for the condition, which would probably be a
+    // better experience (no jumping to the brace).
+    if (auto *CondI = dyn_cast<llvm::Instruction>(BoolCondVal))
+      addInstToNewSourceAtom(CondI, nullptr);
+    addInstToNewSourceAtom(I, nullptr);
 
     if (ExitBlock != LoopExit.getBlock()) {
       EmitBlock(ExitBlock);
@@ -1389,6 +1396,10 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     RunCleanupsScope BodyScope(*this);
     EmitStmt(S.getBody());
   }
+
+  // The last block in the loop's body (which unconditionally branches to the
+  // `inc` block if there is one).
+  auto *FinalBodyBB = Builder.GetInsertBlock();
 
   // If there is an increment, emit it next.
   if (S.getInc()) {
@@ -1419,6 +1430,12 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
+
+  if (FinalBodyBB) {
+    // Key Instructions: We want the for closing brace to be step-able on to
+    // match existing behaviour.
+    addInstToNewSourceAtom(FinalBodyBB->getTerminator(), nullptr);
+  }
 }
 
 void
@@ -1701,6 +1718,7 @@ void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
   if (HaveInsertPoint())
     EmitStopPoint(&S);
 
+  ApplyAtomGroup Grp(getDebugInfo());
   EmitBranchThroughCleanup(BreakContinueStack.back().BreakBlock);
 }
 
@@ -1713,6 +1731,7 @@ void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
   if (HaveInsertPoint())
     EmitStopPoint(&S);
 
+  ApplyAtomGroup Grp(getDebugInfo());
   EmitBranchThroughCleanup(BreakContinueStack.back().ContinueBlock);
 }
 
