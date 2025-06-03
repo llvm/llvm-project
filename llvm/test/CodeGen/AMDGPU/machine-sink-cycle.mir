@@ -1324,3 +1324,575 @@ body:             |
     S_ENDPGM 0
 ...
 
+# Sinking will increase pressure in loop
+---
+name:            test_sink_no_increase
+alignment:       1
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; GFX9-SUNK-LABEL: name: test_sink_no_increase
+  ; GFX9-SUNK: bb.0:
+  ; GFX9-SUNK-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   [[DEF:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF5:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF6:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF7:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.1:
+  ; GFX9-SUNK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF8]], [[DEF9]], 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]]
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]]
+  ; GFX9-SUNK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.2
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.2:
+  ; GFX9-SUNK-NEXT:   S_ENDPGM 0
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.3.entry:
+  ;
+  ; GFX10-SUNK-LABEL: name: test_sink_no_increase
+  ; GFX10-SUNK: bb.0:
+  ; GFX10-SUNK-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[DEF:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF5:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF6:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF7:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.1:
+  ; GFX10-SUNK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF8]], [[DEF9]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]]
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]]
+  ; GFX10-SUNK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.2
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.2:
+  ; GFX10-SUNK-NEXT:   S_ENDPGM 0
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.3.entry:
+  bb.0:
+    %0:vreg_256 = IMPLICIT_DEF
+    %1:vreg_256 = IMPLICIT_DEF
+    %2:vreg_256 = IMPLICIT_DEF
+    %3:vreg_256 = IMPLICIT_DEF
+    %4:vreg_256 = IMPLICIT_DEF
+    %5:vreg_256 = IMPLICIT_DEF
+    %6:vreg_256 = IMPLICIT_DEF
+    %7:vreg_256 = IMPLICIT_DEF
+    %8:vreg_256 = IMPLICIT_DEF
+    %9:vgpr_32 = IMPLICIT_DEF
+    %10:vgpr_32 = IMPLICIT_DEF
+    %11:vgpr_32 = V_ADD_U32_e64 %9, %10, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    INLINEASM &"", 1, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %6, implicit %7, implicit %8
+    INLINEASM &"", 1, implicit %11
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.5
+
+  bb.5:
+    S_ENDPGM 0
+...
+
+# Sinking %11 and %12 will not decrease rp
+---
+name:            test_sink_no_rp_decrease
+alignment:       1
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; GFX9-SUNK-LABEL: name: test_sink_no_rp_decrease
+  ; GFX9-SUNK: bb.0:
+  ; GFX9-SUNK-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   [[DEF:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF5:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF6:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF7:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.1:
+  ; GFX9-SUNK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF8]], [[DEF9]], 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[V_ADD_U32_e64_]], [[DEF9]], 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]]
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_MUL_U32_U24_e64_]]
+  ; GFX9-SUNK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.2
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.2:
+  ; GFX9-SUNK-NEXT:   S_ENDPGM 0
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.3.entry:
+  ;
+  ; GFX10-SUNK-LABEL: name: test_sink_no_rp_decrease
+  ; GFX10-SUNK: bb.0:
+  ; GFX10-SUNK-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[DEF:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF5:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF6:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF7:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.1:
+  ; GFX10-SUNK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF8]], [[DEF9]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[V_ADD_U32_e64_]], [[DEF9]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]]
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_MUL_U32_U24_e64_]]
+  ; GFX10-SUNK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.2
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.2:
+  ; GFX10-SUNK-NEXT:   S_ENDPGM 0
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.3.entry:
+  bb.0:
+    %0:vreg_256 = IMPLICIT_DEF
+    %1:vreg_256 = IMPLICIT_DEF
+    %2:vreg_256 = IMPLICIT_DEF
+    %3:vreg_256 = IMPLICIT_DEF
+    %4:vreg_256 = IMPLICIT_DEF
+    %5:vreg_256 = IMPLICIT_DEF
+    %6:vreg_256 = IMPLICIT_DEF
+    %7:vreg_256 = IMPLICIT_DEF
+    %8:vreg_256 = IMPLICIT_DEF
+    %9:vgpr_32 = IMPLICIT_DEF
+    %10:vgpr_32 = IMPLICIT_DEF
+    %11:vgpr_32 = V_ADD_U32_e64 %9, %10, 0, implicit $exec
+    %12:vgpr_32 = V_MUL_U32_U24_e64 %11, %10, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    INLINEASM &"", 1, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %6, implicit %7, implicit %8
+    INLINEASM &"", 1, implicit %11, implicit %12
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.5
+
+  bb.5:
+    S_ENDPGM 0
+...
+
+
+# Drecreases rp only if %11 and %12 are sunk together
+---
+name:            test_sink_rp_decrease
+alignment:       1
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; GFX9-SUNK-LABEL: name: test_sink_rp_decrease
+  ; GFX9-SUNK: bb.0:
+  ; GFX9-SUNK-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   [[DEF:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF5:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF6:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF7:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.1:
+  ; GFX9-SUNK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]]
+  ; GFX9-SUNK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.3
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.2:
+  ; GFX9-SUNK-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF8]], [[DEF8]], 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[V_ADD_U32_e64_]], [[DEF8]], 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_MUL_U32_U24_e64_]]
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.4
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.3:
+  ; GFX9-SUNK-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF8]], [[DEF8]], 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_1]]
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.4
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.4:
+  ; GFX9-SUNK-NEXT:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.5
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.5:
+  ; GFX9-SUNK-NEXT:   S_ENDPGM 0
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.6.entry:
+  ;
+  ; GFX10-SUNK-LABEL: name: test_sink_rp_decrease
+  ; GFX10-SUNK: bb.0:
+  ; GFX10-SUNK-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[DEF:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF5:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF6:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF7:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.1:
+  ; GFX10-SUNK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]]
+  ; GFX10-SUNK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.3
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.2:
+  ; GFX10-SUNK-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF8]], [[DEF8]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[V_ADD_U32_e64_]], [[DEF8]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_MUL_U32_U24_e64_]]
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.4
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.3:
+  ; GFX10-SUNK-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF8]], [[DEF8]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_1]]
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.4
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.4:
+  ; GFX10-SUNK-NEXT:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.5
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.5:
+  ; GFX10-SUNK-NEXT:   S_ENDPGM 0
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.6.entry:
+  bb.0:
+    %0:vreg_256 = IMPLICIT_DEF
+    %1:vreg_256 = IMPLICIT_DEF
+    %2:vreg_256 = IMPLICIT_DEF
+    %3:vreg_256 = IMPLICIT_DEF
+    %4:vreg_256 = IMPLICIT_DEF
+    %5:vreg_256 = IMPLICIT_DEF
+    %6:vreg_256 = IMPLICIT_DEF
+    %7:vreg_256 = IMPLICIT_DEF
+    %8:vreg_256 = IMPLICIT_DEF
+    %9:vgpr_32 = IMPLICIT_DEF
+    %10:vgpr_32 = IMPLICIT_DEF
+    %11:vgpr_32 = V_ADD_U32_e64 %10, %10, 0, implicit $exec
+    %12:vgpr_32 = V_MUL_U32_U24_e64 %11, %10, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    INLINEASM &"", 1, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %6, implicit %7, implicit %8
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    INLINEASM &"", 1, implicit %11, implicit %12
+    S_BRANCH %bb.4
+
+  bb.3:
+    INLINEASM &"", 1, implicit %11
+    S_BRANCH %bb.4
+
+  bb.4:
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.5
+
+  bb.5:
+    S_ENDPGM 0
+...
+
+# Prioritise sinking %13 as it's used fewer times
+---
+name:            test_sink_fewest_uses
+alignment:       1
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; GFX9-SUNK-LABEL: name: test_sink_fewest_uses
+  ; GFX9-SUNK: bb.0:
+  ; GFX9-SUNK-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   [[DEF:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF5:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF6:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF7:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF10:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF9]], [[DEF9]], 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF10]], [[DEF10]], 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.1:
+  ; GFX9-SUNK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]], implicit [[DEF9]], implicit [[DEF10]]
+  ; GFX9-SUNK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.3
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.2:
+  ; GFX9-SUNK-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_ADD_U32_e64_1]]
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.4
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.3:
+  ; GFX9-SUNK-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]]
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.4
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.4:
+  ; GFX9-SUNK-NEXT:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.5
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.5:
+  ; GFX9-SUNK-NEXT:   S_ENDPGM 0
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.6.entry:
+  ;
+  ; GFX10-SUNK-LABEL: name: test_sink_fewest_uses
+  ; GFX10-SUNK: bb.0:
+  ; GFX10-SUNK-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[DEF:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF5:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF6:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF7:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF10:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.1:
+  ; GFX10-SUNK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]], implicit [[DEF9]], implicit [[DEF10]]
+  ; GFX10-SUNK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.3
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.2:
+  ; GFX10-SUNK-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF9]], [[DEF9]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF10]], [[DEF10]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_ADD_U32_e64_1]]
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.4
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.3:
+  ; GFX10-SUNK-NEXT:   successors: %bb.4(0x80000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF9]], [[DEF9]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_2]]
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.4
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.4:
+  ; GFX10-SUNK-NEXT:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.5
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.5:
+  ; GFX10-SUNK-NEXT:   S_ENDPGM 0
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.6.entry:
+  bb.0:
+    %0:vreg_256 = IMPLICIT_DEF
+    %1:vreg_256 = IMPLICIT_DEF
+    %2:vreg_256 = IMPLICIT_DEF
+    %3:vreg_256 = IMPLICIT_DEF
+    %4:vreg_256 = IMPLICIT_DEF
+    %5:vreg_256 = IMPLICIT_DEF
+    %6:vreg_256 = IMPLICIT_DEF
+    %7:vreg_256 = IMPLICIT_DEF
+    %8:vreg_128 = IMPLICIT_DEF
+    %9:vgpr_32 = IMPLICIT_DEF
+    %10:vgpr_32 = IMPLICIT_DEF
+    %11:vgpr_32 = IMPLICIT_DEF
+    %12:vgpr_32 = V_ADD_U32_e64 %10, %10, 0, implicit $exec
+    %13:vgpr_32 = V_ADD_U32_e64 %11, %11, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    INLINEASM &"", 1, implicit %0, implicit %1, implicit %2, implicit %3, implicit %4, implicit %6, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    INLINEASM &"", 1, implicit %12, implicit %13
+    S_BRANCH %bb.4
+
+  bb.3:
+    INLINEASM &"", 1, implicit %12
+    S_BRANCH %bb.4
+
+  bb.4:
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.5
+
+  bb.5:
+    S_ENDPGM 0
+...
+
+---
+name:            test_high_rp_inside
+alignment:       1
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  ; GFX9-SUNK-LABEL: name: test_high_rp_inside
+  ; GFX9-SUNK: bb.0:
+  ; GFX9-SUNK-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   [[DEF:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[DEF5:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX9-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF4]], [[DEF5]], 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[V_ADD_U32_e64_]], [[DEF5]], 0, implicit $exec
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.1:
+  ; GFX9-SUNK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]]
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, def %8
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, def %9
+  ; GFX9-SUNK-NEXT:   [[COPY:%[0-9]+]]:vreg_256_align2 = COPY %8
+  ; GFX9-SUNK-NEXT:   [[COPY1:%[0-9]+]]:vreg_256_align2 = COPY %9
+  ; GFX9-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_MUL_U32_U24_e64_]], implicit %8, implicit %9, implicit [[COPY]], implicit [[COPY1]], implicit [[DEF4]], implicit [[DEF5]]
+  ; GFX9-SUNK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+  ; GFX9-SUNK-NEXT:   S_BRANCH %bb.2
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.2:
+  ; GFX9-SUNK-NEXT:   S_ENDPGM 0
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.3.entry:
+  ; GFX9-SUNK-NEXT:   successors:
+  ; GFX9-SUNK-NEXT: {{  $}}
+  ; GFX9-SUNK-NEXT: bb.4.entry:
+  ;
+  ; GFX10-SUNK-LABEL: name: test_high_rp_inside
+  ; GFX10-SUNK: bb.0:
+  ; GFX10-SUNK-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[DEF:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF1:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   [[DEF5:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.1
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.1:
+  ; GFX10-SUNK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[DEF4]], [[DEF5]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[V_ADD_U32_e64_]], [[DEF5]], 0, implicit $exec
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]]
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, def %8
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, def %9
+  ; GFX10-SUNK-NEXT:   [[COPY:%[0-9]+]]:vreg_256 = COPY %8
+  ; GFX10-SUNK-NEXT:   [[COPY1:%[0-9]+]]:vreg_256 = COPY %9
+  ; GFX10-SUNK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]], implicit [[V_MUL_U32_U24_e64_]], implicit %8, implicit %9, implicit [[COPY]], implicit [[COPY1]], implicit [[DEF4]], implicit [[DEF5]]
+  ; GFX10-SUNK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+  ; GFX10-SUNK-NEXT:   S_BRANCH %bb.2
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.2:
+  ; GFX10-SUNK-NEXT:   S_ENDPGM 0
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.3.entry:
+  ; GFX10-SUNK-NEXT:   successors:
+  ; GFX10-SUNK-NEXT: {{  $}}
+  ; GFX10-SUNK-NEXT: bb.4.entry:
+  bb.0:
+    %0:vreg_256 = IMPLICIT_DEF
+    %1:vreg_256 = IMPLICIT_DEF
+    %2:vreg_256 = IMPLICIT_DEF
+    %3:vreg_256 = IMPLICIT_DEF
+    %4:vgpr_32 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:vgpr_32 = V_ADD_U32_e64 %4, %5, 0, implicit $exec
+    %7:vgpr_32 = V_MUL_U32_U24_e64 %6, %5, 0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    INLINEASM &"", 1 /* sideeffect attdialect */, implicit %0, implicit %1, implicit %2, implicit %3
+    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, def %8:vreg_256
+    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, def %9:vreg_256
+    %10:vreg_256 = COPY %8
+    %11:vreg_256 = COPY %9
+    INLINEASM &"", 1 /* sideeffect attdialect */, implicit %6, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %4, implicit %5
+    S_CBRANCH_SCC1 %bb.1, implicit undef $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+
+  bb.3.entry:
+...
