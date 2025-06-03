@@ -298,9 +298,8 @@ bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
 
 ScheduleDAGInstrs *
 RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMILive *DAG = nullptr;
+  ScheduleDAGMILive *DAG = createSchedLive(C);
   if (EnableMISchedLoadStoreClustering) {
-    DAG = createSchedLive(C);
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     DAG->addMutation(createStoreClusterDAGMutation(
@@ -308,18 +307,16 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   }
 
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-  if (!DisableVectorMaskMutation && ST.hasVInstructions()) {
-    DAG = DAG ? DAG : createSchedLive(C);
+  if (!DisableVectorMaskMutation && ST.hasVInstructions())
     DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
-  }
+
   return DAG;
 }
 
 ScheduleDAGInstrs *
 RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  ScheduleDAGMI *DAG = nullptr;
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
   if (EnablePostMISchedLoadStoreClustering) {
-    DAG = createSchedPostRA(C);
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
     DAG->addMutation(createStoreClusterDAGMutation(
