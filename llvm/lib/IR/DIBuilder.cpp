@@ -438,6 +438,9 @@ DIDerivedType *DIBuilder::createVariantMemberType(
     DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     Constant *Discriminant, DINode::DIFlags Flags, DIType *Ty) {
+  // "ExtraData" is overloaded for bit fields and for variants, so
+  // make sure to disallow this.
+  assert((Flags & DINode::FlagBitField) == 0);
   return DIDerivedType::get(
       VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
       getNonCompileUnitScope(Scope), Ty, SizeInBits, AlignInBits, OffsetInBits,
@@ -940,8 +943,7 @@ DISubprogram *DIBuilder::createFunction(
       SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl, nullptr,
       ThrownTypes, Annotations, TargetFuncName);
 
-  if (IsDefinition)
-    AllSubprograms.push_back(Node);
+  AllSubprograms.push_back(Node);
   trackIfUnresolved(Node);
   return Node;
 }
@@ -978,8 +980,7 @@ DISubprogram *DIBuilder::createMethod(
       Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
       nullptr, ThrownTypes);
 
-  if (IsDefinition)
-    AllSubprograms.push_back(SP);
+  AllSubprograms.push_back(SP);
   trackIfUnresolved(SP);
   return SP;
 }
