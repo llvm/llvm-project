@@ -642,8 +642,10 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
   // function names.
   if (Root->getKind() !=
           llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
-      Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
+      Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix) {
+    std::free(OB.getBuffer());
     return;
+  }
 
   ASSERT_TRUE(OB.NameInfo.hasBasename());
 
@@ -670,6 +672,7 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
                        return_right, qualifiers, suffix);
 
   EXPECT_EQ(reconstructed_name, demangled);
+  std::free(OB.getBuffer());
 }
 
 INSTANTIATE_TEST_SUITE_P(
