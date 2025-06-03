@@ -654,8 +654,7 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
                                      Expr *BaseExpr, QualType RTy,
                                      SourceLocation OpLoc, bool IsArrow,
                                      CXXScopeSpec &SS, bool HasTemplateArgs,
-                                     SourceLocation TemplateKWLoc,
-                                     TypoExpr *&TE) {
+                                     SourceLocation TemplateKWLoc) {
   SourceRange BaseRange = BaseExpr ? BaseExpr->getSourceRange() : SourceRange();
   if (!RTy->isDependentType() &&
       !SemaRef.isThisOutsideMemberFunctionBody(RTy) &&
@@ -691,15 +690,11 @@ ExprResult Sema::BuildMemberReferenceExpr(
 
   // Implicit member accesses.
   if (!Base) {
-    TypoExpr *TE = nullptr;
     QualType RecordTy = BaseType;
     if (IsArrow) RecordTy = RecordTy->castAs<PointerType>()->getPointeeType();
     if (LookupMemberExprInRecord(*this, R, nullptr, RecordTy, OpLoc, IsArrow,
-                                 SS, TemplateArgs != nullptr, TemplateKWLoc,
-                                 TE))
+                                 SS, TemplateArgs != nullptr, TemplateKWLoc))
       return ExprError();
-    if (TE)
-      return TE;
 
   // Explicit member accesses.
   } else {
@@ -1294,16 +1289,15 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
 
   // Handle field access to simple records.
   if (BaseType->getAsRecordDecl()) {
-    TypoExpr *TE = nullptr;
     if (LookupMemberExprInRecord(S, R, BaseExpr.get(), BaseType, OpLoc, IsArrow,
-                                 SS, HasTemplateArgs, TemplateKWLoc, TE))
+                                 SS, HasTemplateArgs, TemplateKWLoc))
       return ExprError();
 
     // Returning valid-but-null is how we indicate to the caller that
     // the lookup result was filled in. If typo correction was attempted and
     // failed, the lookup result will have been cleared--that combined with the
     // valid-but-null ExprResult will trigger the appropriate diagnostics.
-    return ExprResult(TE);
+    return ExprResult{};
   } else if (BaseType->isDependentType()) {
     R.setNotFoundInCurrentInstantiation();
     return ExprEmpty();

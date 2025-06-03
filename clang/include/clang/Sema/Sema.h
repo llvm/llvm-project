@@ -6696,10 +6696,6 @@ public:
     /// this expression evaluation context.
     unsigned NumCleanupObjects;
 
-    /// The number of typos encountered during this expression evaluation
-    /// context (i.e. the number of TypoExprs created).
-    unsigned NumTypos;
-
     MaybeODRUseExprSet SavedMaybeODRUseExprs;
 
     /// The lambdas that are present within this context, if it
@@ -6796,7 +6792,7 @@ public:
                                       Decl *ManglingContextDecl,
                                       ExpressionKind ExprContext)
         : Context(Context), ParentCleanup(ParentCleanup),
-          NumCleanupObjects(NumCleanupObjects), NumTypos(0),
+          NumCleanupObjects(NumCleanupObjects),
           ManglingContextDecl(ManglingContextDecl), ExprContext(ExprContext),
           InDiscardedStatement(false), InImmediateFunctionContext(false),
           InImmediateEscalatingFunctionContext(false) {}
@@ -7129,8 +7125,7 @@ public:
                       CorrectionCandidateCallback &CCC,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr,
                       ArrayRef<Expr *> Args = {},
-                      DeclContext *LookupCtx = nullptr,
-                      TypoExpr **Out = nullptr);
+                      DeclContext *LookupCtx = nullptr);
 
   /// If \p D cannot be odr-used in the current expression evaluation context,
   /// return a reason explaining why. Otherwise, return NOUR_None.
@@ -9229,12 +9224,6 @@ public:
   /// A cache of special member function overload resolution results
   /// for C++ records.
   llvm::FoldingSet<SpecialMemberOverloadResultEntry> SpecialMemberCache;
-
-  /// Holds TypoExprs that are created from `createDelayedTypo`. This is used by
-  /// `TransformTypos` in order to keep track of any TypoExprs that are created
-  /// recursively during typo correction and wipe them away if the correction
-  /// fails.
-  llvm::SmallVector<TypoExpr *, 2> TypoExprs;
 
   enum class AcceptableKind { Visible, Reachable };
 

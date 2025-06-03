@@ -2555,8 +2555,7 @@ bool Sema::DiagnoseDependentMemberLookup(const LookupResult &R) {
 bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                                CorrectionCandidateCallback &CCC,
                                TemplateArgumentListInfo *ExplicitTemplateArgs,
-                               ArrayRef<Expr *> Args, DeclContext *LookupCtx,
-                               TypoExpr **Out) {
+                               ArrayRef<Expr *> Args, DeclContext *LookupCtx) {
   DeclarationName Name = R.getLookupName();
   SourceRange NameRange = R.getLookupNameInfo().getSourceRange();
 
@@ -2879,7 +2878,6 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
 
     // If this name wasn't predeclared and if this is not a function
     // call, diagnose the problem.
-    TypoExpr *TE = nullptr;
     DefaultFilterCCC DefaultValidator(II, SS.isValid() ? SS.getScopeRep()
                                                        : nullptr);
     DefaultValidator.IsAddressOfOperand = IsAddressOfOperand;
@@ -2895,29 +2893,8 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // a template name, but we happen to have always already looked up the name
     // before we get here if it must be a template name.
     if (DiagnoseEmptyLookup(S, SS, R, CCC ? *CCC : DefaultValidator, nullptr,
-                            {}, nullptr, &TE)) {
-      if (TE && KeywordReplacement) {
-        auto &State = getTypoExprState(TE);
-        auto BestTC = State.Consumer->getNextCorrection();
-        if (BestTC.isKeyword()) {
-          auto *II = BestTC.getCorrectionAsIdentifierInfo();
-          if (State.DiagHandler)
-            State.DiagHandler(BestTC);
-          KeywordReplacement->startToken();
-          KeywordReplacement->setKind(II->getTokenID());
-          KeywordReplacement->setIdentifierInfo(II);
-          KeywordReplacement->setLocation(BestTC.getCorrectionRange().getBegin());
-          // Clean up the state associated with the TypoExpr, since it has
-          // now been diagnosed (without a call to CorrectDelayedTyposInExpr).
-          clearDelayedTypo(TE);
-          // Signal that a correction to a keyword was performed by returning a
-          // valid-but-null ExprResult.
-          return (Expr*)nullptr;
-        }
-        State.Consumer->resetCorrectionStream();
-      }
-      return TE ? TE : ExprError();
-    }
+                            {}, nullptr))
+      return ExprError();
 
     assert(!R.empty() &&
            "DiagnoseEmptyLookup returned false but added no results");
