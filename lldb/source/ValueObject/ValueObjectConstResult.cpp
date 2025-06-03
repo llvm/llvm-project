@@ -265,9 +265,9 @@ lldb::ValueObjectSP ValueObjectConstResult::AddressOf(Status &error) {
   return m_impl.AddressOf(error);
 }
 
-lldb::addr_t ValueObjectConstResult::GetAddressOf(bool scalar_is_load_address,
-                                                  AddressType *address_type) {
-  return m_impl.GetAddressOf(scalar_is_load_address, address_type);
+ValueObject::AddrAndType
+ValueObjectConstResult::GetAddressOf(bool scalar_is_load_address) {
+  return m_impl.GetAddressOf(scalar_is_load_address);
 }
 
 size_t ValueObjectConstResult::GetPointeeData(DataExtractor &data,

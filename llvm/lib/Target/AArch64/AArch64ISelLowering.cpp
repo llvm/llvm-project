@@ -5989,6 +5989,26 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           DAG.getNode(
               AArch64ISD::URSHR_I, dl, Op.getOperand(1).getValueType(), Op.getOperand(1), Op.getOperand(2)));
     return SDValue();
+  case Intrinsic::aarch64_neon_sqadd:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(ISD::SADDSAT, dl, Op.getValueType(), Op.getOperand(1),
+                         Op.getOperand(2));
+    return SDValue();
+  case Intrinsic::aarch64_neon_sqsub:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(ISD::SSUBSAT, dl, Op.getValueType(), Op.getOperand(1),
+                         Op.getOperand(2));
+    return SDValue();
+  case Intrinsic::aarch64_neon_uqadd:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(ISD::UADDSAT, dl, Op.getValueType(), Op.getOperand(1),
+                         Op.getOperand(2));
+    return SDValue();
+  case Intrinsic::aarch64_neon_uqsub:
+    if (Op.getValueType().isVector())
+      return DAG.getNode(ISD::USUBSAT, dl, Op.getValueType(), Op.getOperand(1),
+                         Op.getOperand(2));
+    return SDValue();
   case Intrinsic::aarch64_sve_whilelt:
     return optimizeIncrementingWhile(Op.getNode(), DAG, /*IsSigned=*/true,
                                      /*IsEqual=*/false);
@@ -7731,7 +7751,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     (void)Res;
   }
 
-  SMEAttrs Attrs(MF.getFunction());
+  SMEAttrs Attrs = FuncInfo->getSMEFnAttrs();
   bool IsLocallyStreaming =
       !Attrs.hasStreamingInterface() && Attrs.hasStreamingBody();
   assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
@@ -8085,7 +8105,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
 
   // Create a 16 Byte TPIDR2 object. The dynamic buffer
   // will be expanded and stored in the static object later using a pseudonode.
-  if (SMEAttrs(MF.getFunction()).hasZAState()) {
+  if (Attrs.hasZAState()) {
     TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
     TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
     SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
@@ -8105,7 +8125,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     Chain = DAG.getNode(
         AArch64ISD::INIT_TPIDR2OBJ, DL, DAG.getVTList(MVT::Other),
         {/*Chain*/ Buffer.getValue(1), /*Buffer ptr*/ Buffer.getValue(0)});
-  } else if (SMEAttrs(MF.getFunction()).hasAgnosticZAInterface()) {
+  } else if (Attrs.hasAgnosticZAInterface()) {
     // Call __arm_sme_state_size().
     SDValue BufferSize =
         DAG.getNode(AArch64ISD::GET_SME_SAVE_SIZE, DL,
@@ -9590,7 +9610,7 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
 
   // Emit SMSTOP before returning from a locally streaming function
-  SMEAttrs FuncAttrs(MF.getFunction());
+  SMEAttrs FuncAttrs = FuncInfo->getSMEFnAttrs();
   if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface()) {
     if (FuncAttrs.hasStreamingCompatibleInterface()) {
       Register Reg = FuncInfo->getPStateSMReg();
@@ -29188,6 +29208,10 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   EVT OpVT = Op.getValueType();
   assert(OpVT.isScalableVector() &&
          "Expected scalable vector in LowerVECTOR_DEINTERLEAVE.");
+
+  if (Op->getNumOperands() != 2)
+    return SDValue();
+
   SDValue Even = DAG.getNode(AArch64ISD::UZP1, DL, OpVT, Op.getOperand(0),
                              Op.getOperand(1));
   SDValue Odd = DAG.getNode(AArch64ISD::UZP2, DL, OpVT, Op.getOperand(0),
@@ -29201,6 +29225,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
   EVT OpVT = Op.getValueType();
   assert(OpVT.isScalableVector() &&
          "Expected scalable vector in LowerVECTOR_INTERLEAVE.");
+
+  if (Op->getNumOperands() != 2)
+    return SDValue();
 
   SDValue Lo = DAG.getNode(AArch64ISD::ZIP1, DL, OpVT, Op.getOperand(0),
                            Op.getOperand(1));

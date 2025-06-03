@@ -1322,14 +1322,7 @@ struct OperationEquivalence {
     // When provided, the location attached to the operation are ignored.
     IgnoreLocations = 1,
 
-    // When provided, the discardable attributes attached to the operation are
-    // ignored.
-    IgnoreDiscardableAttrs = 2,
-
-    // When provided, the properties attached to the operation are ignored.
-    IgnoreProperties = 4,
-
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreProperties)
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IgnoreLocations)
   };
 
   /// Compute a hash for the given operation.
