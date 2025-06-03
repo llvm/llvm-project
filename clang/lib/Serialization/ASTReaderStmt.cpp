@@ -2156,7 +2156,7 @@ void ASTStmtReader::VisitTypeTraitExpr(TypeTraitExpr *E) {
 
 void ASTStmtReader::VisitArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
   VisitExpr(E);
-  E->ATT = (ArrayTypeTrait)Record.readInt();
+  E->ArrayTypeTraitExprBits.ATT = (ArrayTypeTrait)Record.readInt();
   E->Value = (unsigned int)Record.readInt();
   SourceRange Range = readSourceRange();
   E->Loc = Range.getBegin();
@@ -2167,8 +2167,8 @@ void ASTStmtReader::VisitArrayTypeTraitExpr(ArrayTypeTraitExpr *E) {
 
 void ASTStmtReader::VisitExpressionTraitExpr(ExpressionTraitExpr *E) {
   VisitExpr(E);
-  E->ET = (ExpressionTrait)Record.readInt();
-  E->Value = (bool)Record.readInt();
+  E->ExpressionTraitExprBits.ET = (ExpressionTrait)Record.readInt();
+  E->ExpressionTraitExprBits.Value = (bool)Record.readInt();
   SourceRange Range = readSourceRange();
   E->QueriedExpression = Record.readSubExpr();
   E->Loc = Range.getBegin();
@@ -2209,14 +2209,14 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 
 void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
-  E->TransformedExpressions = Record.readInt();
-  E->FullySubstituted = Record.readInt();
+  E->PackIndexingExprBits.TransformedExpressions = Record.readInt();
+  E->PackIndexingExprBits.FullySubstituted = Record.readInt();
   E->EllipsisLoc = readSourceLocation();
   E->RSquareLoc = readSourceLocation();
   E->SubExprs[0] = Record.readStmt();
   E->SubExprs[1] = Record.readStmt();
   auto **Exprs = E->getTrailingObjects<Expr *>();
-  for (unsigned I = 0; I < E->TransformedExpressions; ++I)
+  for (unsigned I = 0; I < E->PackIndexingExprBits.TransformedExpressions; ++I)
     Exprs[I] = Record.readExpr();
 }
 
@@ -2275,7 +2275,7 @@ void ASTStmtReader::VisitCXXFoldExpr(CXXFoldExpr *E) {
   E->SubExprs[0] = Record.readSubExpr();
   E->SubExprs[1] = Record.readSubExpr();
   E->SubExprs[2] = Record.readSubExpr();
-  E->Opcode = (BinaryOperatorKind)Record.readInt();
+  E->CXXFoldExprBits.Opcode = (BinaryOperatorKind)Record.readInt();
 }
 
 void ASTStmtReader::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
