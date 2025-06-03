@@ -314,7 +314,8 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
         tmpC = rewriter.create<xegpu::DpasOp>(loc, resTy, operands);
-        xegpu::setLayoutAttr(cast<OpResult>(tmpC), originalLayout.dropSgLayoutAndData());
+        xegpu::setLayoutAttr(cast<OpResult>(tmpC),
+                             originalLayout.dropSgLayoutAndData());
 
         newDpasOps.push_back(tmpC);
       }
@@ -347,7 +348,8 @@ struct UnrealizedConversionCastOpPattern
   matchAndRewrite(mlir::UnrealizedConversionCastOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (op.getNumOperands() == 1 && op.getNumResults() == 1) {
-      rewriter.replaceOpWithMultiple(op, xegpu::flattenValues(adaptor.getInputs()));
+      rewriter.replaceOpWithMultiple(op,
+                                     xegpu::flattenValues(adaptor.getInputs()));
       return mlir::success();
     }
     return mlir::failure();
