@@ -131,10 +131,20 @@ static void dumpTLIEntries(const TargetLibraryInfo &TLI) {
   for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
     LibFunc LF = static_cast<LibFunc>(FI);
     bool IsAvailable = TLI.has(LF);
-    StringRef FuncName = TargetLibraryInfo::getStandardName(LF);
 
-    outs() << (IsAvailable ? "    " : "not ")
-           << "available: " << getPrintableName(FuncName) << '\n';
+    outs() << (IsAvailable ? "    " : "not ") << "available: ";
+
+    if (IsAvailable) {
+      StringRef Name = TLI.getName(LF);
+      // If there is a custom name, print it.
+      // TODO: Should we include the standard name in the printed line?
+      outs() << getPrintableName(Name);
+    } else {
+      // If it's not available, refer to it by the standard name.
+      outs() << getPrintableName(TargetLibraryInfo::getStandardName(LF));
+    }
+
+    outs() << '\n';
   }
 }
 
