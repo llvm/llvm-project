@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 #include "DXILRootSignature.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -57,7 +58,7 @@ static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
 
 static std::optional<StringRef> extractMdStringValue(MDNode *Node,
                                                      unsigned int OpId) {
-  MDString *NodeText = cast<MDString>(Node->getOperand(OpId));
+  MDString *NodeText = dyn_cast<MDString>(Node->getOperand(OpId));
   if (NodeText == nullptr)
     return std::nullopt;
   return NodeText->getString();
@@ -117,25 +118,31 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
 
 static bool parseRootDescriptors(LLVMContext *Ctx,
                                  mcdxbc::RootSignatureDesc &RSD,
-                                 MDNode *RootDescriptorNode) {
-
+                                 MDNode *RootDescriptorNode,
+                                 RootSignatureElementKind ElementKind) {
+  assert(ElementKind == RootSignatureElementKind::SRV ||
+         ElementKind == RootSignatureElementKind::UAV ||
+         ElementKind == RootSignatureElementKind::CBV &&
+             "parseRootDescriptors should only be called with RootDescriptor "
+             "element kind.");
   if (RootDescriptorNode->getNumOperands() != 5)
     return reportError(Ctx, "Invalid format for Root Descriptor Element");
 
-  std::optional<StringRef> ElementText =
-      extractMdStringValue(RootDescriptorNode, 0);
-
-  if (!ElementText.has_value())
-    return reportError(Ctx, "Root Descriptor, first element is not a string.");
-
   dxbc::RTS0::v1::RootParameterHeader Header;
-  // a default scenario is not needed here. Scenarios where ElementText is
-  // invalid is previously checked and error handled when this method is called.
-  Header.ParameterType =
-      StringSwitch<uint32_t>(*ElementText)
-          .Case("RootCBV", llvm::to_underlying(dxbc::RootParameterType::CBV))
-          .Case("RootSRV", llvm::to_underlying(dxbc::RootParameterType::SRV))
-          .Case("RootUAV", llvm::to_underlying(dxbc::RootParameterType::UAV));
+  switch (ElementKind) {
+  case RootSignatureElementKind::SRV:
+    Header.ParameterType = llvm::to_underlying(dxbc::RootParameterType::SRV);
+    break;
+  case RootSignatureElementKind::UAV:
+    Header.ParameterType = llvm::to_underlying(dxbc::RootParameterType::UAV);
+    break;
+  case RootSignatureElementKind::CBV:
+    Header.ParameterType = llvm::to_underlying(dxbc::RootParameterType::CBV);
+    break;
+  default:
+    llvm_unreachable("invalid Root Descriptor kind");
+    break;
+  }
 
   if (std::optional<uint32_t> Val = extractMdIntValue(RootDescriptorNode, 1))
     Header.ShaderVisibility = *Val;
@@ -171,17 +178,17 @@ static bool parseRootDescriptors(LLVMContext *Ctx,
 static bool parseRootSignatureElement(LLVMContext *Ctx,
                                       mcdxbc::RootSignatureDesc &RSD,
                                       MDNode *Element) {
-  MDString *ElementText = cast<MDString>(Element->getOperand(0));
-  if (ElementText == nullptr)
+  std::optional<StringRef> ElementText = extractMdStringValue(Element, 0);
+  if (!ElementText.has_value())
     return reportError(Ctx, "Invalid format for Root Element");
 
   RootSignatureElementKind ElementKind =
-      StringSwitch<RootSignatureElementKind>(ElementText->getString())
+      StringSwitch<RootSignatureElementKind>(*ElementText)
           .Case("RootFlags", RootSignatureElementKind::RootFlags)
           .Case("RootConstants", RootSignatureElementKind::RootConstants)
-          .Case("RootCBV", RootSignatureElementKind::RootDescriptors)
-          .Case("RootSRV", RootSignatureElementKind::RootDescriptors)
-          .Case("RootUAV", RootSignatureElementKind::RootDescriptors)
+          .Case("RootCBV", RootSignatureElementKind::CBV)
+          .Case("RootSRV", RootSignatureElementKind::SRV)
+          .Case("RootUAV", RootSignatureElementKind::UAV)
           .Default(RootSignatureElementKind::Error);
 
   switch (ElementKind) {
@@ -190,11 +197,12 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
     return parseRootFlags(Ctx, RSD, Element);
   case RootSignatureElementKind::RootConstants:
     return parseRootConstants(Ctx, RSD, Element);
-  case RootSignatureElementKind::RootDescriptors:
-    return parseRootDescriptors(Ctx, RSD, Element);
+  case RootSignatureElementKind::CBV:
+  case RootSignatureElementKind::SRV:
+  case RootSignatureElementKind::UAV:
+    return parseRootDescriptors(Ctx, RSD, Element, ElementKind);
   case RootSignatureElementKind::Error:
-    return reportError(Ctx, "Invalid Root Signature Element: " +
-                                ElementText->getString());
+    return reportError(Ctx, "Invalid Root Signature Element: " + *ElementText);
   }
 
   llvm_unreachable("Unhandled RootSignatureElementKind enum.");
@@ -223,7 +231,7 @@ static bool verifyVersion(uint32_t Version) {
 }
 
 static bool verifyRegisterValue(uint32_t RegisterValue) {
-  return !(RegisterValue == 0xFFFFFFFF);
+  return RegisterValue != ~0U;
 }
 
 static bool verifyRegisterSpace(uint32_t RegisterSpace) {
