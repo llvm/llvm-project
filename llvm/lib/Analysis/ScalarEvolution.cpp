@@ -1797,13 +1797,11 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
 
     const SCEVConstant *C;
     const SCEV *A;
-    // zext (C + A)<nsw> -> (sext(C) + zext(A))<nsw> if zext (C + A)<nsw> >=s 0
-    // and A >=s V.
+    // zext (C + A)<nsw> -> (sext(C) + sext(A))<nsw> if zext (C + A)<nsw> >=s 0.
     if (SA->hasNoSignedWrap() && isKnownNonNegative(SA) &&
-        match(SA, m_scev_Add(m_SCEVConstant(C), m_SCEV(A))) &&
-        isKnownPredicate(CmpInst::ICMP_SGE, A, C)) {
+        match(SA, m_scev_Add(m_SCEVConstant(C), m_SCEV(A)))) {
       SmallVector<const SCEV *, 4> Ops = {getSignExtendExpr(C, Ty, Depth + 1),
-                                          getZeroExtendExpr(A, Ty, Depth + 1)};
+                                          getSignExtendExpr(A, Ty, Depth + 1)};
       return getAddExpr(Ops, SCEV::FlagNSW, Depth + 1);
     }
 
