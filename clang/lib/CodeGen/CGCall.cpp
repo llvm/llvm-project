@@ -1437,14 +1437,16 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
         addInstToCurrentSourceAtom(I, Elt);
       }
     } else {
-      auto * I = Builder.CreateStore(Src, Dst.withElementType(SrcTy), DstIsVolatile);
+      auto *I =
+          Builder.CreateStore(Src, Dst.withElementType(SrcTy), DstIsVolatile);
       addInstToCurrentSourceAtom(I, Src);
     }
   } else if (SrcTy->isIntegerTy()) {
     // If the source is a simple integer, coerce it directly.
     llvm::Type *DstIntTy = Builder.getIntNTy(DstSize.getFixedValue() * 8);
     Src = CoerceIntOrPtrToIntOrPtr(Src, DstIntTy, *this);
-    auto *I = Builder.CreateStore(Src, Dst.withElementType(DstIntTy), DstIsVolatile);
+    auto *I =
+        Builder.CreateStore(Src, Dst.withElementType(DstIntTy), DstIsVolatile);
     addInstToCurrentSourceAtom(I, Src);
   } else {
     // Otherwise do coercion through memory. This is stupid, but
