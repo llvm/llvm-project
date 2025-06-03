@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -gkey-instructions %s -debug-info-kind=line-tables-only -emit-llvm -o - -Wno-unused-variable \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions %s -debug-info-kind=line-tables-only -emit-llvm -o - -Wno-unused-variable \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 // Check both the addr-store and value-store are part of the same atom.
@@ -18,7 +18,6 @@ void f(int x) {
 // CHECK: %3 = load ptr, ptr %n
 // CHECK: store i32 %2, ptr %3{{.*}}, !dbg [[G3R1:!.*]]
   *n = x;
-// CHECK: ret void, !dbg [[G4R1:!.*]]
 }
 
 // CHECK: [[G1R2_C12]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
@@ -33,5 +32,3 @@ void f(int x) {
 
 // CHECK: [[G3R2]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 2)
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
-
-// CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
