@@ -3743,6 +3743,35 @@ Doxygen-style comments and ignores ordinary comments starting with ``//`` and
   ``-fcomment-block-commands=foo -fcomment-block-commands=bar`` does the same
   as above.
 
+.. _ccc-override-options:
+
+CCC_OVERRIDE_OPTIONS
+--------------------
+The environment variable ``CCC_OVERRIDE_OPTIONS`` can be used to edit clang's
+command line arguments. The value of this variable is a space-separated list of
+edits to perform. The edits are applied in the order in which they appear in
+``CCC_OVERRIDE_OPTIONS``. Each edit should be one of the following forms:
+
+- ``#``: Silence information about the changes to the command line arguments.
+
+- ``^FOO``: Add ``FOO`` as a new argument at the beginning of the command line
+  right after the name of the compiler executable.
+
+- ``+FOO``: Add ``FOO`` as a new argument at the end of the command line.
+
+- ``s/XXX/YYY/``: Substitute the regular expression ``XXX`` with ``YYY`` in the
+  command line.
+
+- ``xOPTION``: Removes all instances of the literal argument ``OPTION``.
+
+- ``XOPTION``: Removes all instances of the literal argument ``OPTION``, and the
+  following argument.
+
+- ``Ox``: Removes all flags matching ``O`` or ``O[sz0-9]`` and adds ``Ox`` at
+  the end of the command line.
+
+This environment variable does not affect the options added by the config files.
+
 .. _c:
 
 C Language Features
