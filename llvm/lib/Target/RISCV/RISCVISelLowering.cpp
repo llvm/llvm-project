@@ -8474,11 +8474,13 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
         DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                     DAG.getConstant(OffsetValue.Offset, dl, MVT::i64));
     OffsetValue.Addr = Addr;
-    OutChains.push_back(DAG.getStore(Root, dl, OffsetValue.Value, Addr,
+    OutChains.push_back(
+        DAG.getStore(Root, dl, OffsetValue.Value, Addr,
                      MachinePointerInfo(TrmpAddr, OffsetValue.Offset)));
   }
 
-  assert(OutChains.size() == StaticChainIdx + 2 && "Size of OutChains mismatch");
+  assert(OutChains.size() == StaticChainIdx + 2 &&
+         "Size of OutChains mismatch");
   SDValue StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 
   // The end of instructions of trampoline is the same as the static chain
