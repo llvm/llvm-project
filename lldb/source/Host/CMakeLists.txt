@@ -176,6 +176,8 @@ endif()
 add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
   ${HOST_SOURCES}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Host
   LINK_LIBS
     lldbUtility
     ${EXTRA_LIBS}
