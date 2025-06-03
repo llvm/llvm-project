@@ -2600,7 +2600,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
-        auto *ScalarR = Builder(PhiR).createScalarPhi(
+        auto *ScalarR = VPBuilder(PhiR).createScalarPhi(
             {PhiR->getStartValue(), PhiR->getBackedgeValue()},
             PhiR->getDebugLoc(), "evl.based.iv");
         PhiR->replaceAllUsesWith(ScalarR);

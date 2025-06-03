@@ -886,7 +886,7 @@ void VPRegionBlock::dissolveToCFGLoop() {
   if (auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(&Header->front())) {
     assert(this == getPlan()->getVectorLoopRegion() &&
            "Canonical IV must be in the entry of the top-level loop region");
-    auto *ScalarR = Builder(CanIV).createScalarPhi(
+    auto *ScalarR = VPBuilder(CanIV).createScalarPhi(
         {CanIV->getStartValue(), CanIV->getBackedgeValue()},
         CanIV->getDebugLoc(), "index");
     CanIV->replaceAllUsesWith(ScalarR);
