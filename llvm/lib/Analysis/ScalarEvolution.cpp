@@ -1795,6 +1795,18 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
       return getAddExpr(Ops, SCEV::FlagNUW, Depth + 1);
     }
 
+    const SCEVConstant *C;
+    const SCEV *A;
+    // zext (C + A)<nsw> -> (sext(C) + zext(A))<nsw> if zext (C + A)<nsw> >=s 0
+    // and A >=s V.
+    if (SA->hasNoSignedWrap() && isKnownNonNegative(SA) &&
+        match(SA, m_scev_Add(m_SCEVConstant(C), m_SCEV(A))) &&
+        isKnownPredicate(CmpInst::ICMP_SGE, A, C)) {
+      SmallVector<const SCEV *, 4> Ops = {getSignExtendExpr(C, Ty, Depth + 1),
+                                          getZeroExtendExpr(A, Ty, Depth + 1)};
+      return getAddExpr(Ops, SCEV::FlagNSW, Depth + 1);
+    }
+
     // zext(C + x + y + ...) --> (zext(D) + zext((C - D) + x + y + ...))
     // if D + (C - D + x + y + ...) could be proven to not unsigned wrap
     // where D maximizes the number of trailing zeros of (C - D + x + y + ...)
