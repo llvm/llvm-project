@@ -612,6 +612,8 @@ Improvements to Clang's diagnostics
   diagnostic group ``-Wimplicit-int-comparison-on-negation``, grouped under
   ``-Wimplicit-int-conversion``, so user can turn it off independently.
 
+- Clang now downgrades the inconsistent language options between modules to warnings instead of errors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
