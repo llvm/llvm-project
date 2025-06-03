@@ -668,7 +668,7 @@ define void @buildvec_seq2_v16i8_v2i64(ptr %x) {
 ; RV64V-LABEL: buildvec_seq2_v16i8_v2i64:
 ; RV64V:       # %bb.0:
 ; RV64V-NEXT:    lui a1, 528432
-; RV64V-NEXT:    addiw a1, a1, 513
+; RV64V-NEXT:    addi a1, a1, 513
 ; RV64V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64V-NEXT:    vmv.v.x v8, a1
 ; RV64V-NEXT:    vsetivli zero, 16, e8, m1, ta, ma

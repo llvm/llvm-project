@@ -127,7 +127,7 @@ public:
       lldb_private::SymbolContextList &sc_list) override;
 
   void Dump(lldb_private::Stream &s) override;
-  void DumpClangAST(lldb_private::Stream &s) override;
+  void DumpClangAST(lldb_private::Stream &s, llvm::StringRef filter) override;
 
   void
   FindGlobalVariables(lldb_private::ConstString name,

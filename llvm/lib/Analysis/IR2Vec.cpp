@@ -59,24 +59,22 @@ AnalysisKey IR2VecVocabAnalysis::Key;
 // Embedder and its subclasses
 //===----------------------------------------------------------------------===//
 
-Embedder::Embedder(const Function &F, const Vocab &Vocabulary,
-                   unsigned Dimension)
-    : F(F), Vocabulary(Vocabulary), Dimension(Dimension),
-      OpcWeight(::OpcWeight), TypeWeight(::TypeWeight), ArgWeight(::ArgWeight) {
-}
+Embedder::Embedder(const Function &F, const Vocab &Vocabulary)
+    : F(F), Vocabulary(Vocabulary),
+      Dimension(Vocabulary.begin()->second.size()), OpcWeight(::OpcWeight),
+      TypeWeight(::TypeWeight), ArgWeight(::ArgWeight) {}
 
-Expected<std::unique_ptr<Embedder>> Embedder::create(IR2VecKind Mode,
-                                                     const Function &F,
-                                                     const Vocab &Vocabulary,
-                                                     unsigned Dimension) {
+Expected<std::unique_ptr<Embedder>>
+Embedder::create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary) {
   switch (Mode) {
   case IR2VecKind::Symbolic:
-    return std::make_unique<SymbolicEmbedder>(F, Vocabulary, Dimension);
+    return std::make_unique<SymbolicEmbedder>(F, Vocabulary);
   }
   return make_error<StringError>("Unknown IR2VecKind", errc::invalid_argument);
 }
 
 void Embedder::addVectors(Embedding &Dst, const Embedding &Src) {
+  assert(Dst.size() == Src.size() && "Vectors must have the same dimension");
   std::transform(Dst.begin(), Dst.end(), Src.begin(), Dst.begin(),
                  std::plus<double>());
 }
@@ -115,6 +113,14 @@ const BBEmbeddingsMap &Embedder::getBBVecMap() const {
   return BBVecMap;
 }
 
+const Embedding &Embedder::getBBVector(const BasicBlock &BB) const {
+  auto It = BBVecMap.find(&BB);
+  if (It != BBVecMap.end())
+    return It->second;
+  computeEmbeddings(BB);
+  return BBVecMap[&BB];
+}
+
 const Embedding &Embedder::getFunctionVector() const {
   // Currently, we always (re)compute the embeddings for the function.
   // This is cheaper than caching the vector.
@@ -151,17 +157,7 @@ Embedding SymbolicEmbedder::getOperandEmbedding(const Value *Op) const {
 
 #undef RETURN_LOOKUP_IF
 
-void SymbolicEmbedder::computeEmbeddings() const {
-  if (F.isDeclaration())
-    return;
-  for (const auto &BB : F) {
-    auto [It, WasInserted] = BBVecMap.try_emplace(&BB, computeBB2Vec(BB));
-    assert(WasInserted && "Basic block already exists in the map");
-    addVectors(FuncVector, It->second);
-  }
-}
-
-Embedding SymbolicEmbedder::computeBB2Vec(const BasicBlock &BB) const {
+void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
   Embedding BBVector(Dimension, 0);
 
   for (const auto &I : BB) {
@@ -183,7 +179,16 @@ Embedding SymbolicEmbedder::computeBB2Vec(const BasicBlock &BB) const {
     InstVecMap[&I] = InstVector;
     addVectors(BBVector, InstVector);
   }
-  return BBVector;
+  BBVecMap[&BB] = BBVector;
+}
+
+void SymbolicEmbedder::computeEmbeddings() const {
+  if (F.isDeclaration())
+    return;
+  for (const auto &BB : F) {
+    computeEmbeddings(BB);
+    addVectors(FuncVector, BBVecMap[&BB]);
+  }
 }
 
 // ==----------------------------------------------------------------------===//
@@ -278,10 +283,9 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
   assert(IR2VecVocabResult.isValid() && "IR2Vec Vocabulary is invalid");
 
   auto Vocab = IR2VecVocabResult.getVocabulary();
-  auto Dim = IR2VecVocabResult.getDimension();
   for (Function &F : M) {
     Expected<std::unique_ptr<Embedder>> EmbOrErr =
-        Embedder::create(IR2VecKind::Symbolic, F, Vocab, Dim);
+        Embedder::create(IR2VecKind::Symbolic, F, Vocab);
     if (auto Err = EmbOrErr.takeError()) {
       handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
         OS << "Error creating IR2Vec embeddings: " << EI.message() << "\n";
