@@ -34,6 +34,7 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <optional>
 #include <variant>
 
@@ -346,21 +347,6 @@ struct TeamsWorkdistributeToSingle : public OpRewritePattern<omp::TeamsOp> {
   }
 };
 
-static std::optional<std::tuple<Operation *, bool, bool>>
-getNestedOpToIsolate(omp::TargetOp targetOp) {
-  auto *targetBlock = &targetOp.getRegion().front();
-  for (auto &op : *targetBlock) {
-    bool first = &op == &*targetBlock->begin();
-    bool last = op.getNextNode() == targetBlock->getTerminator();
-    if (first && last)
-      return std::nullopt;
-
-    if (isa<omp::TeamsOp, omp::ParallelOp>(&op))
-      return {{&op, first, last}};
-  }
-  return std::nullopt;
-}
-
 struct SplitTargetResult {
   omp::TargetOp targetOp;
   omp::TargetDataOp dataOp;
@@ -371,8 +357,7 @@ struct SplitTargetResult {
 /// original data region and avoid unnecessary data movement at each of the
 /// subkernels - we split the target region into a target_data{target}
 /// nest where only the outer one moves the data
-std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp,
-                                                 RewriterBase &rewriter) {
+std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp, RewriterBase &rewriter) {
 
   auto loc = targetOp->getLoc();
   if (targetOp.getMapVars().empty()) {
@@ -391,7 +376,6 @@ std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp,
   }
 
   // Create the new omp.target_data op with these collected map_entries
-  auto targetLoc = targetOp.getLoc();
   rewriter.setInsertionPoint(targetOp);
   auto device = targetOp.getDevice();
   auto ifExpr = targetOp.getIfExpr();
@@ -422,8 +406,420 @@ std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp,
     if (mapInfoRes.getUsers().empty()) 
       rewriter.eraseOp(mapInfo);
   }
-  return SplitTargetResult{targetOp, targetDataOp};
-}                                                  
+  return SplitTargetResult{cast<omp::TargetOp>(newTargetOp), targetDataOp};
+}
+
+static std::optional<std::tuple<Operation *, bool, bool>>
+getNestedOpToIsolate(omp::TargetOp targetOp) {
+  if (targetOp.getRegion().empty())
+    return std::nullopt;
+  auto *targetBlock = &targetOp.getRegion().front();
+  for (auto &op : *targetBlock) {
+    bool first = &op == &*targetBlock->begin();
+    bool last = op.getNextNode() == targetBlock->getTerminator();
+    if (first && last)
+      return std::nullopt;
+
+    if (isa<omp::TeamsOp, omp::ParallelOp>(&op))
+      return {{&op, first, last}};
+  }
+  return std::nullopt;
+}
+
+struct TempOmpVar {
+  omp::MapInfoOp from, to;
+};
+
+static bool isPtr(Type ty) {
+  return isa<fir::ReferenceType>(ty) || isa<LLVM::LLVMPointerType>(ty);
+}
+
+static Type getPtrTypeForOmp(Type ty) {
+  if (isPtr(ty))
+    return LLVM::LLVMPointerType::get(ty.getContext());
+  else
+    return fir::LLVMPointerType::get(ty);
+}
+
+static TempOmpVar 
+allocateTempOmpVar(Location loc, Type ty, RewriterBase &rewriter) {
+  MLIRContext& ctx = *ty.getContext();
+  Value alloc;
+  Type allocType;
+  auto llvmPtrTy = LLVM::LLVMPointerType::get(&ctx);
+  if (isPtr(ty)) {
+    Type intTy = rewriter.getI32Type();
+    auto one = rewriter.create<LLVM::ConstantOp>(loc, intTy, 1);
+    allocType = llvmPtrTy;
+    alloc = rewriter.create<LLVM::AllocaOp>(loc, llvmPtrTy, allocType, one);
+    allocType = intTy;
+  }
+  else {
+    allocType = ty;
+    alloc = rewriter.create<fir::AllocaOp>(loc, allocType);
+  }
+  auto getMapInfo = [&](uint64_t mappingFlags, const char *name) {
+    return rewriter.create<omp::MapInfoOp>(
+      loc, alloc.getType(), alloc,
+      TypeAttr::get(allocType),
+      rewriter.getIntegerAttr(rewriter.getIntegerType(64, /*isSigned=*/false), mappingFlags),
+      rewriter.getAttr<omp::VariableCaptureKindAttr>(
+          omp::VariableCaptureKind::ByRef),
+      /*varPtrPtr=*/Value{},
+      /*members=*/SmallVector<Value>{},
+      /*member_index=*/mlir::ArrayAttr{},
+      /*bounds=*/ValueRange(),
+      /*mapperId=*/mlir::FlatSymbolRefAttr(), 
+      /*name=*/rewriter.getStringAttr(name),
+      rewriter.getBoolAttr(false));
+  };
+  uint64_t mapFrom = static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
+  uint64_t mapTo = static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+  auto mapInfoFrom = getMapInfo(mapFrom, "__flang_workdistribute_from");
+  auto mapInfoTo = getMapInfo(mapTo, "__flang_workdistribute_to");
+  return TempOmpVar{mapInfoFrom, mapInfoTo};
+};
+
+static bool usedOutsideSplit(Value v, Operation *split) {
+  if (!split)
+    return false;
+  auto targetOp = cast<omp::TargetOp>(split->getParentOp());
+  auto *targetBlock = &targetOp.getRegion().front();
+  for (auto *user : v.getUsers()) {
+    while (user->getBlock() != targetBlock) {
+      user = user->getParentOp();
+    }
+    if (!user->isBeforeInBlock(split))
+      return true;
+  }
+  return false;
+};
+
+static bool isOpToBeCached(Operation *op) {
+  if (auto loadOp = dyn_cast<fir::LoadOp>(op)) {  
+    Value memref = loadOp.getMemref();  
+    if (auto blockArg = dyn_cast<BlockArgument>(memref)) {  
+      // 'op' is an operation within the targetOp that 'splitBefore' is also in.
+      Operation *parentOpOfLoadBlock = op->getBlock()->getParentOp();  
+      // Ensure the blockArg belongs to the entry block of this parent omp.TargetOp.  
+      // This implies the load is from a variable directly mapped into the target region.  
+      if (isa<omp::TargetOp>(parentOpOfLoadBlock) &&  
+          !parentOpOfLoadBlock->getRegions().empty()) {  
+        Block *targetOpEntryBlock = &parentOpOfLoadBlock->getRegions().front().front();  
+        if (blockArg.getOwner() == targetOpEntryBlock) {  
+          // This load is from a direct argument of the target op.  
+          // It's safe to recompute.
+          return false;  
+        }  
+      }  
+    }  
+  }
+  return true;
+}
+
+static bool isRecomputableAfterFission(Operation *op, Operation *splitBefore) {
+  if (isa<fir::DeclareOp>(op))
+    return true;
+
+  if (auto loadOp = dyn_cast<fir::LoadOp>(op)) {  
+    Value memref = loadOp.getMemref();  
+    if (auto blockArg = dyn_cast<BlockArgument>(memref)) {  
+      // 'op' is an operation within the targetOp that 'splitBefore' is also in.
+      Operation *parentOpOfLoadBlock = op->getBlock()->getParentOp();  
+      // Ensure the blockArg belongs to the entry block of this parent omp.TargetOp.  
+      // This implies the load is from a variable directly mapped into the target region.  
+      if (isa<omp::TargetOp>(parentOpOfLoadBlock) &&  
+          !parentOpOfLoadBlock->getRegions().empty()) {  
+        Block *targetOpEntryBlock = &parentOpOfLoadBlock->getRegions().front().front();  
+        if (blockArg.getOwner() == targetOpEntryBlock) {  
+          // This load is from a direct argument of the target op.  
+          // It's safe to recompute.
+          return true;  
+        }  
+      }  
+    }  
+  } 
+
+  llvm::SmallVector<MemoryEffects::EffectInstance> effects;
+  MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!interface) {
+    return false;
+  }
+  interface.getEffects(effects);
+  if (effects.empty())
+    return true;
+  return false;
+}
+
+struct SplitResult {
+  omp::TargetOp preTargetOp;
+  omp::TargetOp isolatedTargetOp;
+  omp::TargetOp postTargetOp;
+};
+
+static void collectNonRecomputableDeps(Value& v,
+                                omp::TargetOp targetOp,
+                                SetVector<Operation *>& nonRecomputable,
+                                SetVector<Operation *>& toCache,
+                                SetVector<Operation *>& toRecompute) {
+  Operation *op = v.getDefiningOp();
+  if (!op) {
+    assert(cast<BlockArgument>(v).getOwner()->getParentOp() == targetOp);
+    return;
+  }
+  if (nonRecomputable.contains(op)) {
+    toCache.insert(op);
+    return;
+  }
+  toRecompute.insert(op);
+  for (auto opr : op->getOperands())
+    collectNonRecomputableDeps(opr, targetOp, nonRecomputable, toCache, toRecompute);
+}
+
+
+static void reloadCacheAndRecompute(Location loc, RewriterBase &rewriter,
+                        MLIRContext& ctx,
+                        IRMapping &mapping, Operation *splitBefore,
+                        Block *targetBlock, Block *newTargetBlock,
+                        SmallVector<Value>& allocs,
+                        SetVector<Operation *>& toRecompute) {
+  for (unsigned i = 0; i < targetBlock->getNumArguments(); i++) {
+    auto originalArg = targetBlock->getArgument(i);
+    auto newArg = newTargetBlock->addArgument(originalArg.getType(),
+                                              originalArg.getLoc());
+    mapping.map(originalArg, newArg);
+  }
+  auto llvmPtrTy = LLVM::LLVMPointerType::get(&ctx);
+  for (auto original : allocs) {
+    Value newArg = newTargetBlock->addArgument(
+      getPtrTypeForOmp(original.getType()), original.getLoc());
+    Value restored;
+    if (isPtr(original.getType())) {
+      restored = rewriter.create<LLVM::LoadOp>(loc, llvmPtrTy, newArg);
+      if (!isa<LLVM::LLVMPointerType>(original.getType()))
+        restored = rewriter.create<UnrealizedConversionCastOp>(loc, original.getType(), ValueRange(restored))
+                           .getResult(0);
+    } 
+    else {
+        restored = rewriter.create<fir::LoadOp>(loc, newArg);
+    }
+    mapping.map(original, restored);
+  }
+  for (auto it = targetBlock->begin(); it != splitBefore->getIterator(); it++) {
+    if (toRecompute.contains(&*it))
+      rewriter.clone(*it, mapping);
+  }
+}
+
+static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
+                              RewriterBase &rewriter) {
+  auto targetOp = cast<omp::TargetOp>(splitBeforeOp->getParentOp());
+  MLIRContext& ctx = *targetOp.getContext();
+  assert(targetOp);
+  auto loc = targetOp.getLoc();
+  auto *targetBlock = &targetOp.getRegion().front();
+  rewriter.setInsertionPoint(targetOp);
+   
+  auto preMapOperands = SmallVector<Value>(targetOp.getMapVars());
+  auto postMapOperands = SmallVector<Value>(targetOp.getMapVars());
+
+  SmallVector<Value> requiredVals;
+  SetVector<Operation *> toCache;
+  SetVector<Operation *> toRecompute;
+  SetVector<Operation *> nonRecomputable;
+  SmallVector<Value> allocs;
+
+  for (auto it = targetBlock->begin(); it != splitBeforeOp->getIterator(); it++) {
+    for (auto res : it->getResults()) {
+      if (usedOutsideSplit(res, splitBeforeOp))
+        requiredVals.push_back(res);
+    }
+    if (!isRecomputableAfterFission(&*it, splitBeforeOp))
+        nonRecomputable.insert(&*it);
+  }
+
+  for (auto requiredVal : requiredVals)
+    collectNonRecomputableDeps(requiredVal, targetOp, nonRecomputable, toCache, toRecompute);
+  
+  for (Operation *op : toCache) {
+    for (auto res : op->getResults()) {
+      auto alloc = allocateTempOmpVar(targetOp.getLoc(), res.getType(), rewriter);
+      allocs.push_back(res);
+      preMapOperands.push_back(alloc.from);
+      postMapOperands.push_back(alloc.to);
+    }
+  }
+
+  rewriter.setInsertionPoint(targetOp);
+
+  auto preTargetOp = rewriter.create<omp::TargetOp>(
+        targetOp.getLoc(), targetOp.getAllocateVars(), targetOp.getAllocatorVars(),
+        targetOp.getBareAttr(), targetOp.getDependKindsAttr(),
+        targetOp.getDependVars(), targetOp.getDevice(),
+        targetOp.getHasDeviceAddrVars(), targetOp.getHostEvalVars(),
+        targetOp.getIfExpr(), targetOp.getInReductionVars(),
+        targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
+        targetOp.getIsDevicePtrVars(), preMapOperands,
+        targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
+        targetOp.getPrivateSymsAttr(), targetOp.getThreadLimit(),
+        targetOp.getPrivateMapsAttr()); 
+  auto *preTargetBlock = rewriter.createBlock(
+      &preTargetOp.getRegion(), preTargetOp.getRegion().begin(), {}, {});
+  IRMapping preMapping;
+  for (unsigned i = 0; i < targetBlock->getNumArguments(); i++) {
+    auto originalArg = targetBlock->getArgument(i);
+    auto newArg = preTargetBlock->addArgument(originalArg.getType(),
+                                              originalArg.getLoc());
+    preMapping.map(originalArg, newArg);
+  }
+  for (auto it = targetBlock->begin(); it != splitBeforeOp->getIterator(); it++)
+    rewriter.clone(*it, preMapping);
+
+  auto llvmPtrTy = LLVM::LLVMPointerType::get(targetOp.getContext());
+
+
+  for (auto original : allocs) {
+    Value toStore = preMapping.lookup(original);
+    auto newArg = preTargetBlock->addArgument(
+        getPtrTypeForOmp(original.getType()), original.getLoc());
+    if (isPtr(original.getType())) {
+      if (!isa<LLVM::LLVMPointerType>(toStore.getType()))
+        toStore = rewriter.create<UnrealizedConversionCastOp>(loc, llvmPtrTy,
+                                                           ValueRange(toStore))
+                      .getResult(0);
+      rewriter.create<LLVM::StoreOp>(loc, toStore, newArg);
+    } else {
+      rewriter.create<fir::StoreOp>(loc, toStore, newArg);
+    }
+  }
+  rewriter.create<omp::TerminatorOp>(loc);
+
+  rewriter.setInsertionPoint(targetOp);
+
+  auto isolatedTargetOp = rewriter.create<omp::TargetOp>(
+      targetOp.getLoc(), targetOp.getAllocateVars(), targetOp.getAllocatorVars(),
+      targetOp.getBareAttr(), targetOp.getDependKindsAttr(),
+      targetOp.getDependVars(), targetOp.getDevice(),
+      targetOp.getHasDeviceAddrVars(), targetOp.getHostEvalVars(),
+      targetOp.getIfExpr(), targetOp.getInReductionVars(),
+      targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
+      targetOp.getIsDevicePtrVars(), postMapOperands,
+      targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
+      targetOp.getPrivateSymsAttr(), targetOp.getThreadLimit(),
+      targetOp.getPrivateMapsAttr()); 
+
+  auto *isolatedTargetBlock =
+        rewriter.createBlock(&isolatedTargetOp.getRegion(),
+                             isolatedTargetOp.getRegion().begin(), {}, {});
+
+  IRMapping isolatedMapping;
+  reloadCacheAndRecompute(loc, rewriter, ctx, isolatedMapping, splitBeforeOp,
+                          targetBlock, isolatedTargetBlock,
+                          allocs, toRecompute);
+  rewriter.clone(*splitBeforeOp, isolatedMapping);
+  rewriter.create<omp::TerminatorOp>(loc);
+
+  omp::TargetOp postTargetOp = nullptr;
+  
+  if (splitAfter) {
+      rewriter.setInsertionPoint(targetOp);
+    postTargetOp = rewriter.create<omp::TargetOp>(
+        targetOp.getLoc(), targetOp.getAllocateVars(), targetOp.getAllocatorVars(),
+        targetOp.getBareAttr(), targetOp.getDependKindsAttr(),
+        targetOp.getDependVars(), targetOp.getDevice(),
+        targetOp.getHasDeviceAddrVars(), targetOp.getHostEvalVars(),
+        targetOp.getIfExpr(), targetOp.getInReductionVars(),
+        targetOp.getInReductionByrefAttr(), targetOp.getInReductionSymsAttr(),
+        targetOp.getIsDevicePtrVars(), postMapOperands,
+        targetOp.getNowaitAttr(), targetOp.getPrivateVars(),
+        targetOp.getPrivateSymsAttr(), targetOp.getThreadLimit(),
+        targetOp.getPrivateMapsAttr()); 
+    auto *postTargetBlock = rewriter.createBlock(
+          &postTargetOp.getRegion(), postTargetOp.getRegion().begin(), {}, {});
+    IRMapping postMapping;
+    reloadCacheAndRecompute(loc, rewriter, ctx, postMapping, splitBeforeOp, 
+                            targetBlock, postTargetBlock,
+                            allocs, toRecompute);
+
+    assert(splitBeforeOp->getNumResults() == 0 ||
+             llvm::all_of(splitBeforeOp->getResults(),
+                          [](Value result) { return result.use_empty(); }));
+
+    for (auto it = std::next(splitBeforeOp->getIterator());
+         it != targetBlock->end(); it++)
+      rewriter.clone(*it, postMapping);
+  }
+
+  rewriter.eraseOp(targetOp);
+  return SplitResult{preTargetOp, isolatedTargetOp, postTargetOp};
+}
+
+static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
+  OpBuilder::InsertionGuard guard(rewriter);
+  Block *targetBlock = &targetOp.getRegion().front();
+  assert(targetBlock == &targetOp.getRegion().back());
+  IRMapping mapping;
+  for (auto map :
+       zip_equal(targetOp.getMapVars(), targetBlock->getArguments())) {
+    Value mapInfo = std::get<0>(map);
+    BlockArgument arg = std::get<1>(map);
+    Operation *op = mapInfo.getDefiningOp();
+    assert(op);
+    auto mapInfoOp = cast<omp::MapInfoOp>(op);
+    mapping.map(arg, mapInfoOp.getVarPtr());
+  }
+  rewriter.setInsertionPoint(targetOp);
+  SmallVector<Operation *> opsToMove;
+  for (auto it = targetBlock->begin(), end = std::prev(targetBlock->end());
+       it != end; ++it) {
+    auto *op = &*it;
+    auto allocOp = dyn_cast<fir::AllocMemOp>(op);
+    auto freeOp = dyn_cast<fir::FreeMemOp>(op);
+    fir::CallOp runtimeCall = nullptr;
+    if (isRuntimeCall(op))
+      runtimeCall = cast<fir::CallOp>(op);
+
+    if (allocOp || freeOp || runtimeCall)
+        continue;
+    opsToMove.push_back(op);
+  }
+  // Move ops before targetOp and erase from region
+  for (Operation *op : opsToMove)
+    rewriter.clone(*op, mapping);
+  
+  rewriter.eraseOp(targetOp);
+}
+
+void fissionTarget(omp::TargetOp targetOp, RewriterBase &rewriter) {
+  auto tuple = getNestedOpToIsolate(targetOp);
+  if (!tuple) {
+    LLVM_DEBUG(llvm::dbgs() << " No op to isolate\n");
+    //moveToHost(targetOp, rewriter);
+    return;
+  }
+
+  Operation *toIsolate = std::get<0>(*tuple);
+  bool splitBefore = !std::get<1>(*tuple);
+  bool splitAfter = !std::get<2>(*tuple);
+
+  if (splitBefore && splitAfter) {
+    auto res = isolateOp(toIsolate, splitAfter, rewriter);
+    //moveToHost(res.preTargetOp, rewriter);
+    fissionTarget(res.postTargetOp, rewriter);
+    return;
+  }
+  if (splitBefore) {
+    auto res = isolateOp(toIsolate, splitAfter, rewriter);
+    //moveToHost(res.preTargetOp, rewriter);
+    return;
+  }
+  if (splitAfter) {
+    assert(false && "TODO");
+    auto res = isolateOp(toIsolate->getNextNode(), splitAfter, rewriter);
+    fissionTarget(res.postTargetOp, rewriter);
+    return;
+  }
+}
 
 class LowerWorkdistributePass
     : public flangomp::impl::LowerWorkdistributeBase<LowerWorkdistributePass> {
@@ -457,6 +853,7 @@ public:
       IRRewriter rewriter(&context);
       for (auto targetOp : targetOps) {
         auto res = splitTargetData(targetOp, rewriter);
+        if (res) fissionTarget(res->targetOp, rewriter);
       }
     }
 
