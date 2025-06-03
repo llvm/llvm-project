@@ -8167,6 +8167,10 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     // Look through GEPs. A load from a GEP derived from NULL is still undefined
     if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(User))
       if (GEP->getPointerOperand() == I) {
+        // The type of GEP may differ from the type of base pointer.
+        // Bail out on vector GEPs, as they are not handled by other checks.
+        if (GEP->getType()->isVectorTy())
+          return false;
         // The current base address is null, there are four cases to consider:
         // getelementptr (TY, null, 0)                 -> null
         // getelementptr (TY, null, not zero)          -> may be modified
@@ -8178,10 +8182,6 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
              NullPointerIsDefined(GEP->getFunction(),
                                   GEP->getPointerAddressSpace())))
           PtrValueMayBeModified = true;
-        // The type of GEP may differ from the type of base pointer.
-        if (V->getType() != GEP->getType())
-          V = ConstantVector::getSplat(
-              cast<VectorType>(GEP->getType())->getElementCount(), C);
         return passingValueIsAlwaysUndefined(V, GEP, PtrValueMayBeModified);
       }
 
