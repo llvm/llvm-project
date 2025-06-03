@@ -86,26 +86,6 @@ define i8 @atomic_max_smin_char(ptr %addr) {
 }
 
 ; Idempotent atomicrmw are still canonicalized.
-define i8 @atomic_min_umax_char(ptr %addr) {
-; CHECK-LABEL: @atomic_min_umax_char(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
-; CHECK-NEXT:    ret i8 [[RES]]
-;
-  %res = atomicrmw umin ptr %addr, i8 255 monotonic
-  ret i8 %res
-}
-
-; Idempotent atomicrmw are still canonicalized.
-define i8 @atomic_max_umin_char(ptr %addr) {
-; CHECK-LABEL: @atomic_max_umin_char(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
-; CHECK-NEXT:    ret i8 [[RES]]
-;
-  %res = atomicrmw umax ptr %addr, i8 0 monotonic
-  ret i8 %res
-}
-
-; Idempotent atomicrmw are still canonicalized.
 define float @atomic_fsub_zero(ptr %addr) {
 ; CHECK-LABEL: @atomic_fsub_zero(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 monotonic, align 4

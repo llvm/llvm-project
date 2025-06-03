@@ -622,7 +622,7 @@ define void @or8_nouse_seq_cst(ptr %p) #0 {
   ret void
 }
 
-define void @atomic_umin_uint_max(ptr %addr) {
+define void @atomic_umin_uint_max(ptr %addr) #0 {
 ; CHECK-LABEL: @atomic_umin_uint_max(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -659,7 +659,7 @@ define void @atomic_umin_uint_max(ptr %addr) {
   ret void
 }
 
-define void @atomic_umax_zero(ptr %addr) {
+define void @atomic_umax_zero(ptr %addr) #0 {
 ; CHECK-LABEL: @atomic_umax_zero(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i32 0 monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -696,7 +696,7 @@ define void @atomic_umax_zero(ptr %addr) {
   ret void
 }
 
-define void @atomic_min_smax_char(ptr %addr) {
+define void @atomic_min_smax_char(ptr %addr) #0 {
 ; CHECK-LABEL: @atomic_min_smax_char(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -733,7 +733,7 @@ define void @atomic_min_smax_char(ptr %addr) {
   ret void
 }
 
-define void @atomic_max_smin_char(ptr %addr) {
+define void @atomic_max_smin_char(ptr %addr) #0 {
 ; CHECK-LABEL: @atomic_max_smin_char(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -770,7 +770,7 @@ define void @atomic_max_smin_char(ptr %addr) {
   ret void
 }
 
-define void @atomic_min_umax_char(ptr %addr) {
+define void @atomic_min_umax_char(ptr %addr) #0 {
 ; CHECK-LABEL: @atomic_min_umax_char(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -807,7 +807,7 @@ define void @atomic_min_umax_char(ptr %addr) {
   ret void
 }
 
-define void @atomic_max_umin_char(ptr %addr) {
+define void @atomic_max_umin_char(ptr %addr) #0 {
 ; CHECK-LABEL: @atomic_max_umin_char(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw or ptr [[ADDR:%.*]], i8 0 monotonic, align 1
 ; CHECK-NEXT:    ret i8 [[RES]]
@@ -845,7 +845,7 @@ define void @atomic_max_umin_char(ptr %addr) {
 }
 
 ; TODO: Add floating point support.
-define void @atomic_fadd_zero(ptr %addr) {
+define void @atomic_fadd_zero(ptr %addr) #0 {
 ; CHECK-LABEL: @atomic_fadd_zero(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 monotonic, align 4
 ; CHECK-NEXT:    ret float [[RES]]
@@ -878,7 +878,6 @@ define void @atomic_fadd_zero(ptr %addr) {
 ; X86-SLM-LABEL: atomic_fadd_zero:
 ; X86-SLM:       # %bb.0:
 ; X86-SLM-NEXT:    subl $8, %esp
-; X86-SLM-NEXT:    .cfi_def_cfa_offset 12
 ; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SLM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SLM-NEXT:    .p2align 4
@@ -892,13 +891,11 @@ define void @atomic_fadd_zero(ptr %addr) {
 ; X86-SLM-NEXT:    jne .LBB21_1
 ; X86-SLM-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-SLM-NEXT:    addl $8, %esp
-; X86-SLM-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: atomic_fadd_zero:
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    leal -{{[0-9]+}}(%esp), %esp
-; X86-ATOM-NEXT:    .cfi_def_cfa_offset 12
 ; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-ATOM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-ATOM-NEXT:    .p2align 4
@@ -912,13 +909,12 @@ define void @atomic_fadd_zero(ptr %addr) {
 ; X86-ATOM-NEXT:    jne .LBB21_1
 ; X86-ATOM-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-ATOM-NEXT:    leal {{[0-9]+}}(%esp), %esp
-; X86-ATOM-NEXT:    .cfi_def_cfa_offset 4
 ; X86-ATOM-NEXT:    retl
   atomicrmw fadd ptr %addr, float -0.0 monotonic
   ret void
 }
 
-define void @atomic_fsub_zero(ptr %addr) {
+define void @atomic_fsub_zero(ptr %addr) #0 {
 ; CHECK-LABEL: @atomic_fsub_canon(
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr [[ADDR:%.*]], float -0.000000e+00 release, align 4
 ; CHECK-NEXT:    ret float [[RES]]
@@ -951,7 +947,6 @@ define void @atomic_fsub_zero(ptr %addr) {
 ; X86-SLM-LABEL: atomic_fsub_zero:
 ; X86-SLM:       # %bb.0:
 ; X86-SLM-NEXT:    subl $8, %esp
-; X86-SLM-NEXT:    .cfi_def_cfa_offset 12
 ; X86-SLM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SLM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SLM-NEXT:    .p2align 4
@@ -965,13 +960,11 @@ define void @atomic_fsub_zero(ptr %addr) {
 ; X86-SLM-NEXT:    jne .LBB22_1
 ; X86-SLM-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-SLM-NEXT:    addl $8, %esp
-; X86-SLM-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SLM-NEXT:    retl
 ;
 ; X86-ATOM-LABEL: atomic_fsub_zero:
 ; X86-ATOM:       # %bb.0:
 ; X86-ATOM-NEXT:    leal -{{[0-9]+}}(%esp), %esp
-; X86-ATOM-NEXT:    .cfi_def_cfa_offset 12
 ; X86-ATOM-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-ATOM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-ATOM-NEXT:    .p2align 4
@@ -985,7 +978,6 @@ define void @atomic_fsub_zero(ptr %addr) {
 ; X86-ATOM-NEXT:    jne .LBB22_1
 ; X86-ATOM-NEXT:  # %bb.2: # %atomicrmw.end
 ; X86-ATOM-NEXT:    leal {{[0-9]+}}(%esp), %esp
-; X86-ATOM-NEXT:    .cfi_def_cfa_offset 4
 ; X86-ATOM-NEXT:    retl
   atomicrmw fsub ptr %addr, float 0.0 release
   ret void
