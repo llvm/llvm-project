@@ -419,7 +419,7 @@ llvm::json::Value toJSON(const SteppingGranularity &);
 /// which single target the `stepIn` request should step.
 struct StepInTarget {
   /// Unique identifier for a step-in target.
-  uint64_t id = std::numeric_limits<uint64_t>::max();
+  uint64_t id = LLDB_INVALID_ADDRESS;
 
   /// The name of the step-in target (shown in the UI).
   std::string label;

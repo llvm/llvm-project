@@ -593,10 +593,8 @@ bool fromJSON(const llvm::json::Value &Params, StepInTarget &SIT,
 }
 
 llvm::json::Value toJSON(const StepInTarget &SIT) {
-  json::Object target;
+  json::Object target{{"id", SIT.id}, {"label", SIT.label}};
 
-  target.insert({"id", SIT.id});
-  target.insert({"label", SIT.label});
   if (SIT.line)
     target.insert({"line", SIT.line});
   if (SIT.column)

@@ -78,3 +78,31 @@ class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
         leaf_frame = self.dap_server.get_stackFrame()
         self.assertIsNotNone(leaf_frame, "expect a leaf frame")
         self.assertEqual(step_in_targets[1]["label"], leaf_frame["name"])
+
+    def test_dynamic_capability(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        bp_lines = [line_number(source, "// set breakpoint here")]
+        breakpoint_ids = self.set_source_breakpoints(source, bp_lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(bp_lines), "expect correct number of breakpoints"
+        )
+        is_supported = self.dap_server.get_initialize_value(
+            "supportsStepInTargetsRequest"
+        )
+        arch: str = self.getArchitecture()
+        if arch.startswith("x86"):
+            self.assertTrue(
+                is_supported,
+                f"expect capability `stepInTarget` is supported with architecture {arch}",
+            )
+        else:
+            self.assertFalse(
+                is_supported,
+                f"expect capability `stepInTarget` is not supported with architecture {arch}",
+            )
+
+        # clear breakpoints.
+        self.set_source_breakpoints(source, [])
+        self.continue_to_exit()

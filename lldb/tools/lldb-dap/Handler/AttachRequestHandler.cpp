@@ -141,6 +141,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
 
 void AttachRequestHandler::PostRun() const {
   dap.SendJSON(CreateEventObject("initialized"));
+  SendAdditionalCapabilities(dap);
 }
 
 } // namespace lldb_dap
