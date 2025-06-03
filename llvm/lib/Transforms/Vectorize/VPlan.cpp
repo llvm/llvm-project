@@ -290,18 +290,22 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     return Data.VPV2Vector[Def];
 
   auto GetBroadcastInstrs = [this, Def](Value *V) {
+    VPBasicBlock *PreheaderVPBB = nullptr;
+    if (auto *Header = vputils::getFirstLoopHeader(*Plan, VPDT))
+      PreheaderVPBB = cast<VPBasicBlock>(Header->getPredecessors()[0]);
+
     bool SafeToHoist =
-        !Def->hasDefiningRecipe() ||
-        VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
-                               Plan->getVectorPreheader());
+        PreheaderVPBB &&
+        (!Def->hasDefiningRecipe() ||
+         VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
+                                PreheaderVPBB));
 
     if (VF.isScalar())
       return V;
     // Place the code for broadcasting invariant variables in the new preheader.
     IRBuilder<>::InsertPointGuard Guard(Builder);
     if (SafeToHoist) {
-      BasicBlock *LoopVectorPreHeader =
-          CFG.VPBB2IRBB[Plan->getVectorPreheader()];
+      BasicBlock *LoopVectorPreHeader = CFG.VPBB2IRBB[PreheaderVPBB];
       if (LoopVectorPreHeader)
         Builder.SetInsertPoint(LoopVectorPreHeader->getTerminator());
     }

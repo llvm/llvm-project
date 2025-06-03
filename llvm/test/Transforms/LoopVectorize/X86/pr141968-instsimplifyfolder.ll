@@ -14,6 +14,8 @@ define i8 @pr141968(i1 %cond, i8 %v) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[COND]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor <16 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT31:%.*]] = insertelement <16 x i8> poison, i8 [[V]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT32:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT31]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE30:.*]] ]
@@ -97,8 +99,6 @@ define i8 @pr141968(i1 %cond, i8 %v) {
 ; CHECK:       [[PRED_SDIV_IF29]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE30]]
 ; CHECK:       [[PRED_SDIV_CONTINUE30]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT31:%.*]] = insertelement <16 x i8> poison, i8 [[V]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT32:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT31]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[BROADCAST_SPLAT]], <16 x i8> zeroinitializer, <16 x i8> [[BROADCAST_SPLAT32]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
