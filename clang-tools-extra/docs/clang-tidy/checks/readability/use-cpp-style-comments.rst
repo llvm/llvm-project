@@ -2,6 +2,7 @@
 
 readability-use-cpp-style-comments
 ==================================
+
 Replaces C-style comments with C++-style comments.
 
 C-style comments (``/* ... */``) are inherited from C, while C++ introduces
