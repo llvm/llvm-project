@@ -1829,27 +1829,30 @@ static ExprResult PointerAuthStringDiscriminator(Sema &S, CallExpr *Call) {
 static ExprResult GetVTablePointer(Sema &S, CallExpr *Call) {
   if (S.checkArgCount(Call, 1))
     return ExprError();
-  ExprResult ThisArg = S.DefaultFunctionArrayLvalueConversion(Call->getArg(0));
-  if (ThisArg.isInvalid())
+  Expr *ThisArg = Call->getArg(0);
+  ExprResult ThisValue = S.DefaultFunctionArrayLvalueConversion(ThisArg);
+  if (ThisValue.isInvalid())
     return ExprError();
-  Call->setArg(0, ThisArg.get());
-  const Expr *Subject = Call->getArg(0);
-  QualType SubjectType = Subject->getType();
-  const CXXRecordDecl *SubjectRecord = SubjectType->getPointeeCXXRecordDecl();
-  if (!SubjectType->isPointerType() || !SubjectRecord) {
-    S.Diag(Subject->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
-        << 0 << SubjectType;
+  Call->setArg(0, ThisValue.get());
+  QualType ThisType = ThisArg->getType();
+  if (ThisType->canDecayToPointerType() && ThisType->isArrayType())
+    ThisType = S.Context.getDecayedType(ThisType);
+
+  const CXXRecordDecl *SubjectRecord = ThisType->getPointeeCXXRecordDecl();
+  if (!SubjectRecord) {
+    S.Diag(ThisArg->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
+        << /*isPolymorphic=*/0 << ThisType;
     return ExprError();
   }
   if (S.RequireCompleteType(
-          Subject->getBeginLoc(), SubjectType->getPointeeType(),
+          ThisArg->getBeginLoc(), ThisType->getPointeeType(),
           diag::err_get_vtable_pointer_requires_complete_type)) {
     return ExprError();
   }
 
   if (!SubjectRecord->isPolymorphic()) {
-    S.Diag(Subject->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
-        << 1 << SubjectRecord;
+    S.Diag(ThisArg->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
+        << /*isPolymorphic=*/ 1 << SubjectRecord;
     return ExprError();
   }
   QualType ReturnType = S.Context.getPointerType(S.Context.VoidTy.withConst());
