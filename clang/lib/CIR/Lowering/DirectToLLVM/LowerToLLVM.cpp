@@ -2006,9 +2006,8 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
   const mlir::Value oneElement = rewriter.create<mlir::LLVM::InsertElementOp>(
       loc, poison, elementValue, indexValue);
   const SmallVector<int32_t> zeroValues(vecTy.getSize(), 0);
-  const mlir::Value shuffled = rewriter.create<mlir::LLVM::ShuffleVectorOp>(
-      loc, oneElement, poison, zeroValues);
-  rewriter.replaceOp(op, shuffled);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ShuffleVectorOp>(op, oneElement,
+                                                           poison, zeroValues);
   return mlir::success();
 }
 
