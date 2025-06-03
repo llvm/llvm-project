@@ -663,8 +663,8 @@ define void @vld3_v2i8(ptr %src, ptr %dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, #8
-; CHECK-NEXT:    ldrd r2, r0, [r0]
-; CHECK-NEXT:    strd r2, r0, [sp]
+; CHECK-NEXT:    ldrd r0, r2, [r0]
+; CHECK-NEXT:    strd r0, r2, [sp]
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vldrb.u16 q0, [r0]
 ; CHECK-NEXT:    vmov.u16 r0, q0[4]
