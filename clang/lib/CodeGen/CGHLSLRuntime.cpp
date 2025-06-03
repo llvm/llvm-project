@@ -23,6 +23,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"

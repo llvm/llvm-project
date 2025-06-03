@@ -138,6 +138,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcsncpy
+  SRCS
+    wcsncpy.cpp
+  HDRS
+    wcsncpy.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+    libc.src.string.string_utils
+)
+
+add_entrypoint_object(
+  wcscat
+  SRCS
+    wcscat.cpp
+  HDRS
+    wcscat.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+    libc.src.string.string_utils
+)
+
+add_entrypoint_object(
   wcsstr
   SRCS
     wcsstr.cpp

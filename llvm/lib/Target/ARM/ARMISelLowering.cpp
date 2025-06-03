@@ -692,20 +692,17 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
         const RTLIB::Libcall Op;
         const char *const Name;
         const CallingConv::ID CC;
-        const ISD::CondCode Cond;
       } MemOpsLibraryCalls[] = {
-        // Memory operations
-        // RTABI chapter 4.3.4
-        { RTLIB::MEMCPY,  "__aeabi_memcpy",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-        { RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
-        { RTLIB::MEMSET,  "__aeabi_memset",  CallingConv::ARM_AAPCS, ISD::SETCC_INVALID },
+          // Memory operations
+          // RTABI chapter 4.3.4
+          {RTLIB::MEMCPY, "__aeabi_memcpy", CallingConv::ARM_AAPCS},
+          {RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS},
+          {RTLIB::MEMSET, "__aeabi_memset", CallingConv::ARM_AAPCS},
       };
 
       for (const auto &LC : MemOpsLibraryCalls) {
         setLibcallName(LC.Op, LC.Name);
         setLibcallCallingConv(LC.Op, LC.CC);
-        if (LC.Cond != ISD::SETCC_INVALID)
-          setCmpLibcallCC(LC.Op, LC.Cond);
       }
     }
   }
