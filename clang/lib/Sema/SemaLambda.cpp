@@ -2022,6 +2022,7 @@ bool Sema::CaptureHasSideEffects(const Capture &From) {
 }
 
 bool Sema::DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
+                                       SourceRange FixItRange,
                                        const Capture &From) {
   if (CaptureHasSideEffects(From))
     return false;
@@ -2041,7 +2042,12 @@ bool Sema::DiagnoseUnusedLambdaCapture(SourceRange CaptureRange,
   else
     diag << From.getVariable();
   diag << From.isNonODRUsed();
-  diag << FixItHint::CreateRemoval(CaptureRange);
+  // If we were able to resolve the fixit range we'll create a fixit,
+  // otherwise we just use the raw capture range for the diagnostic.
+  if (FixItRange.isValid())
+    diag << FixItHint::CreateRemoval(FixItRange);
+  else
+    diag << CaptureRange;
   return true;
 }
 
@@ -2166,7 +2172,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
           if (CaptureRange.isValid()) {
             auto GetTrailingEndLocation = [&](SourceLocation StartPoint) {
               SourceRange NextToken =
-                  getRangeForNextToken(StartPoint, /*IncludeComments=*/true);
+                  getRangeForNextToken(StartPoint, /*IncludeMacros=*/false, /*IncludeComments=*/true);
               if (!NextToken.isValid())
                 return SourceLocation();
               // Return the last location preceding the next token
@@ -2176,7 +2182,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
               // If there are no captures preceding this capture, remove the
               // trailing comma and anything up to the next token
               SourceRange CommaRange =
-                  getRangeForNextToken(CaptureRange.getEnd());
+                  getRangeForNextToken(CaptureRange.getEnd(), /*IncludeMacros=*/false, /*IncludeComments=*/false, tok::comma);
               SourceLocation FixItEnd =
                   GetTrailingEndLocation(CommaRange.getBegin());
               FixItRange = SourceRange(CaptureRange.getBegin(), FixItEnd);
@@ -2190,7 +2196,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
             }
           }
 
-          IsCaptureUsed = !DiagnoseUnusedLambdaCapture(FixItRange, From);
+          IsCaptureUsed = !DiagnoseUnusedLambdaCapture(CaptureRange, FixItRange, From);
         }
       }
 

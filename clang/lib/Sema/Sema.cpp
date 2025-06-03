@@ -85,17 +85,25 @@ SourceLocation Sema::getLocForEndOfToken(SourceLocation Loc, unsigned Offset) {
 }
 
 SourceRange Sema::getRangeForNextToken(SourceLocation Loc,
-                                       bool IncludeComments) {
+                                       bool IncludeMacros,
+                                       bool IncludeComments,
+                                       std::optional<tok::TokenKind> ExpectedToken) {
   if (!Loc.isValid())
     return SourceRange();
   std::optional<Token> NextToken =
       Lexer::findNextToken(Loc, SourceMgr, LangOpts, IncludeComments);
   if (!NextToken)
     return SourceRange();
+  if (ExpectedToken && NextToken->getKind() != *ExpectedToken)
+    return SourceRange();
   SourceLocation TokenStart = NextToken->getLocation();
   SourceLocation TokenEnd = NextToken->getLastLoc();
   if (!TokenStart.isValid() || !TokenEnd.isValid())
     return SourceRange();
+  if (!IncludeMacros) {
+    if (TokenStart.isMacroID() || TokenEnd.isMacroID())
+      return SourceRange();
+  }
   return SourceRange(TokenStart, TokenEnd);
 }
 
