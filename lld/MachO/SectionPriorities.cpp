@@ -271,7 +271,8 @@ std::optional<int>
 macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
   if (sym->isAbsolute())
     return std::nullopt;
-  return getSymbolOrCStringPriority(utils::getRootSymbol(sym->getName()), sym->isec()->getFile());
+  return getSymbolOrCStringPriority(utils::getRootSymbol(sym->getName()),
+                                    sym->isec()->getFile());
 }
 
 void macho::PriorityBuilder::extractCallGraphProfile() {
@@ -344,8 +345,7 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
       uint32_t hash = 0;
       if (to_integer(possibleHash, hash))
         symbolOrCStrHash = possibleHash;
-    }
-    else
+    } else
       symbolOrCStrHash = utils::getRootSymbol(line);
 
     if (!symbolOrCStrHash.empty()) {
