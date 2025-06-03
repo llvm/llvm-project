@@ -12,14 +12,15 @@ define void @add_nsw_zext_fold_results_in_sext(i64 %len) {
 ; CHECK-NEXT:    [[LEN_TRUNC:%.*]] = trunc i64 [[LEN]] to i32
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[LEN_TRUNC]], i1 false)
 ; CHECK-NEXT:    [[SUB_I:%.*]] = lshr i32 [[LZ]], 3
-; CHECK-NEXT:    [[ADD_I:%.*]] = sub i32 5, [[SUB_I]]
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp eq i32 [[SUB_I]], 5
 ; CHECK-NEXT:    br i1 [[PRECOND]], label %[[EXIT:.*]], label %[[LOOP_PREHEADER:.*]]
 ; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[ADD_I]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 0, [[SUB_I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[TMP1]], 5
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP1]], %[[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP2]], %[[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[SH_PROM:%.*]] = zext nneg i32 [[IV_NEXT]] to i64
@@ -65,9 +66,9 @@ define void @add_nsw_zext_fold_results_in_sext_known_positive(i32 %mask, ptr %sr
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp slt i32 [[ADD]], 0
 ; CHECK-NEXT:    br i1 [[PRECOND]], label %[[EXIT:.*]], label %[[PH:.*]]
 ; CHECK:       [[PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 78, [[SPEC_SELECT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[SPEC_SELECT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[TMP1]], 79
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP2]]
