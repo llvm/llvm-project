@@ -99,8 +99,6 @@ private:
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
 
-  bool HasLayout : 1;
-
   bool IsRegistered : 1;
 
   bool IsText : 1;
@@ -110,8 +108,6 @@ private:
   /// Whether the section contains linker-relaxable fragments. If true, the
   /// offset between two locations may not be fully resolved.
   bool LinkerRelaxable : 1;
-
-  MCDummyFragment DummyFragment;
 
   // Mapping from subsection number to fragment list. At layout time, the
   // subsection 0 list is replaced with concatenated fragments from all
@@ -173,17 +169,13 @@ public:
   bool hasInstructions() const { return HasInstructions; }
   void setHasInstructions(bool Value) { HasInstructions = Value; }
 
-  bool hasLayout() const { return HasLayout; }
-  void setHasLayout(bool Value) { HasLayout = Value; }
-
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }
 
   bool isLinkerRelaxable() const { return LinkerRelaxable; }
   void setLinkerRelaxable() { LinkerRelaxable = true; }
 
-  const MCDummyFragment &getDummyFragment() const { return DummyFragment; }
-  MCDummyFragment &getDummyFragment() { return DummyFragment; }
+  MCFragment &getDummyFragment() { return *Subsections[0].second.Head; }
 
   FragList *curFragList() const { return CurFragList; }
   iterator begin() const { return iterator(CurFragList->Head); }

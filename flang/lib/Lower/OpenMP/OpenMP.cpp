@@ -34,6 +34,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Flags.h"
 #include "flang/Support/OpenMP-utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -2423,7 +2424,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       if (sym.GetType()->category() == semantics::DeclTypeSpec::TypeDerived) {
         auto &typeSpec = sym.GetType()->derivedTypeSpec();
         std::string mapperIdName =
-            typeSpec.name().ToString() + ".omp.default.mapper";
+            typeSpec.name().ToString() + llvm::omp::OmpDefaultMapperName;
         if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
           mapperIdName = converter.mangleName(mapperIdName, sym->owner());
         if (converter.getModuleOp().lookupSymbol(mapperIdName))

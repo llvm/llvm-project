@@ -293,11 +293,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
         }
         // Only permit `vsetvli x0, x0, vtype` between COPY and the source
         // define instruction.
-        if (MBBI->getOperand(0).getReg() != RISCV::X0)
-          return false;
-        if (MBBI->getOperand(1).isImm())
-          return false;
-        if (MBBI->getOperand(1).getReg() != RISCV::X0)
+        if (!RISCVInstrInfo::isVLPreservingConfig(*MBBI))
           return false;
         continue;
       }
@@ -4187,6 +4183,15 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
       MI.getOperand(2).ChangeToImmediate(0);
       MI.setDesc(get(RISCV::ADDI));
       return true;
+    }
+    break;
+  case RISCV::BEQ:
+  case RISCV::BNE:
+    // b{eq,ne} zero, rs, imm => b{eq,ne} rs, zero, imm
+    if (MI.getOperand(0).getReg() == RISCV::X0) {
+      MachineOperand MO0 = MI.getOperand(0);
+      MI.removeOperand(0);
+      MI.insert(MI.operands_begin() + 1, {MO0});
     }
     break;
   case RISCV::BLTU:

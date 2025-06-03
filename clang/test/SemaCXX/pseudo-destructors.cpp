@@ -22,21 +22,21 @@ void cv_test(const volatile T* cvt) {
 void f(A* a, Foo *f, int *i, double *d, int ii) {
   a->~A();
   a->A::~A();
-  
+
   a->~foo(); // expected-error{{undeclared identifier 'foo' in destructor name}}
-  
+
   a->~Bar(); // expected-error{{destructor type 'Bar' (aka 'Foo') in object destruction expression does not match the type 'A' of the object being destroyed}}
-  
+
   f->~Bar();
   f->~Foo();
   i->~Bar(); // expected-error{{does not match}}
-  
+
   g().~Bar(); // expected-error{{non-scalar}}
-  
+
   f->::~Bar(); // expected-error {{not a structure or union}}
   f->::Bar::~Bar();
   f->N::~Wibble(); // expected-error{{'N' does not refer to a type}} expected-error{{'Wibble' does not refer to a type}}
-  
+
   f->Bar::~Bar(17, 42); // expected-error{{cannot have any arguments}}
 
   i->~Integer();
