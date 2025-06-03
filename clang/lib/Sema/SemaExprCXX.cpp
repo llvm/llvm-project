@@ -1500,13 +1500,7 @@ Sema::ActOnCXXTypeConstructExpr(ParsedType TypeRep,
 
   auto Result = BuildCXXTypeConstructExpr(TInfo, LParenOrBraceLoc, exprs,
                                           RParenOrBraceLoc, ListInitialization);
-  // Avoid creating a non-type-dependent expression that contains typos.
-  // Non-type-dependent expressions are liable to be discarded without
-  // checking for embedded typos.
-  if (!Result.isInvalid() && Result.get()->isInstantiationDependent() &&
-      !Result.get()->isTypeDependent())
-    Result = CorrectDelayedTyposInExpr(Result.get());
-  else if (Result.isInvalid())
+  if (Result.isInvalid())
     Result = CreateRecoveryExpr(TInfo->getTypeLoc().getBeginLoc(),
                                 RParenOrBraceLoc, exprs, Ty);
   return Result;
@@ -8023,38 +8017,6 @@ public:
 };
 }
 
-ExprResult
-Sema::CorrectDelayedTyposInExpr(Expr *E, VarDecl *InitDecl,
-                                bool RecoverUncorrectedTypos,
-                                llvm::function_ref<ExprResult(Expr *)> Filter) {
-  // If the current evaluation context indicates there are uncorrected typos
-  // and the current expression isn't guaranteed to not have typos, try to
-  // resolve any TypoExpr nodes that might be in the expression.
-  if (E && !ExprEvalContexts.empty() && ExprEvalContexts.back().NumTypos &&
-      (E->isTypeDependent() || E->isValueDependent() ||
-       E->isInstantiationDependent())) {
-    auto TyposResolved = DelayedTypos.size();
-    auto Result = TransformTypos(*this, InitDecl, Filter).Transform(E);
-    TyposResolved -= DelayedTypos.size();
-    if (Result.isInvalid() || Result.get() != E) {
-      ExprEvalContexts.back().NumTypos -= TyposResolved;
-      if (Result.isInvalid() && RecoverUncorrectedTypos) {
-        struct TyposReplace : TreeTransform<TyposReplace> {
-          TyposReplace(Sema &SemaRef) : TreeTransform(SemaRef) {}
-          ExprResult TransformTypoExpr(clang::TypoExpr *E) {
-            return this->SemaRef.CreateRecoveryExpr(E->getBeginLoc(),
-                                                    E->getEndLoc(), {});
-          }
-        } TT(*this);
-        return TT.TransformExpr(E);
-      }
-      return Result;
-    }
-    assert(TyposResolved == 0 && "Corrected typo but got same Expr back?");
-  }
-  return E;
-}
-
 ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
                                      bool DiscardedValue, bool IsConstexpr,
                                      bool IsTemplateArgument) {
@@ -8086,8 +8048,6 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
     DiagnoseUnusedExprResult(FullExpr.get(), diag::warn_unused_expr);
   }
 
-  FullExpr = CorrectDelayedTyposInExpr(FullExpr.get(), /*InitDecl=*/nullptr,
-                                       /*RecoverUncorrectedTypos=*/true);
   if (FullExpr.isInvalid())
     return ExprError();
 

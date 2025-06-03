@@ -477,8 +477,6 @@ ExprResult Parser::ParseBraceInitializer() {
     if (Tok.is(tok::ellipsis))
       SubElt = Actions.ActOnPackExpansion(SubElt.get(), ConsumeToken());
 
-    SubElt = Actions.CorrectDelayedTyposInExpr(SubElt.get());
-
     // If we couldn't parse the subelement, bail out.
     if (SubElt.isUsable()) {
       InitExprs.push_back(SubElt.get());

@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -frecovery-ast -frecovery-ast-type -fdelayed-typo-correction -fblocks -ast-dump %s | FileCheck -strict-whitespace %s
+// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -frecovery-ast -frecovery-ast-type -fblocks -ast-dump %s | FileCheck -strict-whitespace %s
 
 @interface Foo
 - (void)method:(int)n;
@@ -6,9 +6,9 @@
 
 void k(Foo *foo) {
   // CHECK:       ObjCMessageExpr {{.*}} 'void' contains-errors
-  // CHECK-CHECK:  |-ImplicitCastExpr {{.*}} 'Foo *' <LValueToRValue>
-  // CHECK-CHECK:  | `-DeclRefExpr {{.*}} 'foo'
-  // CHECK-CHECK:  `-RecoveryExpr {{.*}}
+  // CHECK-NEXT:  |-ImplicitCastExpr {{.*}} 'Foo *' <LValueToRValue>
+  // CHECK-NEXT:  | `-DeclRefExpr {{.*}} 'foo'
+  // CHECK-NEXT:  `-RecoveryExpr {{.*}}
   [foo method:undef];
 
   // CHECK:      ImplicitCastExpr {{.*}} '<dependent type>' contains-errors

@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -frecovery-ast -fno-recovery-ast-type -fdelayed-typo-correction -ast-dump %s | FileCheck -strict-whitespace %s
+// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -frecovery-ast -fno-recovery-ast-type -ast-dump %s | FileCheck -strict-whitespace %s
 
 int some_func(int);
 
@@ -23,7 +23,7 @@ int postfix_inc = a++;
 // CHECK-NEXT:      `-IntegerLiteral {{.*}} 'int'
 int unary_address = &(a + 1);
 
-// CHECK:       VarDecl {{.*}} ternary 'int' cinit
+// CHECK:       VarDecl {{.*}} ternary 'int'
 // CHECK-NEXT:  `-ConditionalOperator {{.*}}
 // CHECK-NEXT:    |-DeclRefExpr {{.*}} 'a'
 // CHECK-NEXT:    |-RecoveryExpr {{.*}}

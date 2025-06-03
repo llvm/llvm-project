@@ -1,5 +1,5 @@
-// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -fdelayed-typo-correction -std=gnu++17 -frecovery-ast -frecovery-ast-type -ast-dump %s | FileCheck -strict-whitespace %s
-// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -fdelayed-typo-correction -std=gnu++17 -fno-recovery-ast -ast-dump %s | FileCheck --check-prefix=DISABLED -strict-whitespace %s
+// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -std=gnu++17 -frecovery-ast -frecovery-ast-type -ast-dump %s | FileCheck -strict-whitespace %s
+// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -Wno-unused-value -fcxx-exceptions -std=gnu++17 -fno-recovery-ast -ast-dump %s | FileCheck --check-prefix=DISABLED -strict-whitespace %s
 
 int some_func(int *);
 
@@ -444,7 +444,6 @@ void InitializerOfInvalidDecl() {
   Unknown InvalidDeclWithInvalidInit = Invalid;
   // CHECK:      VarDecl {{.*}} invalid InvalidDeclWithInvalidInit
   // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
-  // CHECK-NOT:    `-TypoExpr
 }
 
 void RecoverToAnInvalidDecl() {
