@@ -869,13 +869,13 @@ void PromoteMem2Reg::run() {
   // Set the incoming values for the basic block to be null values for all of
   // the alloca's.  We do this in case there is a load of a value that has not
   // been stored yet.  In this case, it will get this null value.
-  IncomingVals.assign(Allocas.size(), nullptr);
+  IncomingVals.resize(Allocas.size());
   for (unsigned i = 0, e = Allocas.size(); i != e; ++i)
     IncomingVals[i] = UndefValue::get(Allocas[i]->getAllocatedType());
 
   // When handling debug info, treat all incoming values as if they have unknown
   // locations until proven otherwise.
-  IncomingLocs.assign(Allocas.size(), {});
+  IncomingLocs.resize(Allocas.size());
 
   // The renamer uses the Visited set to avoid infinite loops.
   Visited.resize(F.getMaxBlockNumber());
