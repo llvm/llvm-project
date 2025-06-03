@@ -48,13 +48,13 @@
 # original order, but only parital covered
 #--- ord-1
 #foo2
-CSTR:1433942677
+CSTR;1433942677
 #bar
-CSTR:540201826
+CSTR;540201826
 #bar2
-CSTR:1496286555
+CSTR;1496286555
 #foo3
-CSTR:1343999025
+CSTR;1343999025
 
 # ONE_SYM: _globl_foo2
 # ONE_SYM: _local_foo2
@@ -140,47 +140,47 @@ CSTR:1343999025
 # change order, parital covered
 #--- ord-2
 #foo2
-CSTR:1433942677
+CSTR;1433942677
 #foo1
-CSTR:1663475769
+CSTR;1663475769
 #baz
-CSTR:862947621
+CSTR;862947621
 #bar
-CSTR:540201826
+CSTR;540201826
 #bar2
-CSTR:1496286555
+CSTR;1496286555
 
 # change order, parital covered, with mismatches, duplicates
 #--- ord-3
 foo2222
-CSTR:0x11111111
+CSTR;0x11111111
 #bar (mismatched cpu and file name)
-fakeCPU:fake-file-name.o:CSTR:540201826
+fakeCPU:fake-file-name.o:CSTR;540201826
 #not a hash
-CSTR:xxx
+CSTR;xxx
 #foo1
-CSTR:1663475769
+CSTR;1663475769
 #baz
-CSTR:862947621
+CSTR;862947621
 #bar
-CSTR:540201826
+CSTR;540201826
 #bar2
-CSTR:1496286555
+CSTR;1496286555
 #baz
-CSTR:862947621
+CSTR;862947621
 
 # test escape strings
 #--- ord-4
 #\t\n
-CSTR:1035903177
+CSTR;1035903177
 #foo2
-CSTR:1433942677
+CSTR;1433942677
 #@\"NSDictionary\"
-CSTR:1202669430
+CSTR;1202669430
 #foo3
-CSTR:1343999025
+CSTR;1343999025
 #bar
-CSTR:540201826
+CSTR;540201826
 
 
 #--- test.s

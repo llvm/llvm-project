@@ -79,7 +79,7 @@ private:
     // The priority given to a matching symbol from a particular object file.
     llvm::DenseMap<llvm::StringRef, int> objectFiles;
   };
-  const llvm::StringRef CStringEntryPrefix = "CSTR:";
+  const llvm::StringRef CStringEntryPrefix = "CSTR;";
 
   std::optional<int> getSymbolPriority(const Defined *sym);
   std::optional<int> getSymbolOrCStringPriority(const StringRef key,
