@@ -32,6 +32,7 @@
 //     - each element of exts is nonnegative and is representable as a value of type index_type.
 //
 
+#include <span> // dynamic_extent
 #include <mdspan>
 #include <cassert>
 

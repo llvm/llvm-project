@@ -24,6 +24,7 @@
 //
 //   Returns: Di.
 
+#include <span> // dynamic_extent
 #include <mdspan>
 #include <cassert>
 
