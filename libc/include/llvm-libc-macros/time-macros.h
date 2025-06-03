@@ -5,13 +5,8 @@
 #include "gpu/time-macros.h"
 #elif defined(__linux__)
 #include "linux/time-macros.h"
-#elif defined(__arm__) || defined(_M_ARM) || defined(__aarch64__)
-#ifdef __CLK_TCK
-#define CLOCKS_PER_SEC __CLK_TCK
 #else
-// Semihosting uses centiseconds as default
-#define CLOCKS_PER_SEC 100
-#endif
+#include "baremetal/time-macros.h"
 #endif
 
 #define CLK_TCK CLOCKS_PER_SEC
