@@ -223,6 +223,23 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
       Copy->addOperand(R);
       Copy->addOperand(getConstantVPV(Part));
     } else if (RdxPhi) {
+      // If the start value is a ReductionStartVector, use the identity value
+      // (second operand) for unrolled parts. If the scaling factor is > 1,
+      // create a new ReductionStartVector with the scale factor and both
+      // operands set to the identity value.
+      if (auto *VPI = dyn_cast<VPInstruction>(RdxPhi->getStartValue())) {
+        if (cast<ConstantInt>(VPI->getOperand(2)->getLiveInIRValue())
+                ->getZExtValue() == 1)
+          Copy->setOperand(0, VPI->getOperand(1));
+        else {
+          if (Part == 1) {
+            auto *C = VPI->clone();
+            C->setOperand(0, C->getOperand(1));
+            C->insertAfter(VPI);
+            addUniformForAllParts(C);
+          }
+        }
+      }
       Copy->addOperand(getConstantVPV(Part));
     } else {
       assert(isa<VPActiveLaneMaskPHIRecipe>(R) &&
@@ -327,10 +344,12 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     // Add all VPValues for all parts to ComputeReductionResult which combines
     // the parts to compute the final reduction value.
     VPValue *Op1;
-    if (match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
+    if (match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
+                      m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
+        match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
                       m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeFindLastIVResult>(
-                      m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
+                      m_VPValue(), m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));

@@ -1153,6 +1153,16 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       return;
     }
   }
+  // Simplify redundant ReductionStartVector recipes after unrolling.
+  VPValue *StartV;
+  if (match(Def, m_VPInstruction<VPInstruction::ReductionStartVector>(
+                     m_VPValue(StartV), m_VPValue(), m_VPValue()))) {
+    Def->replaceUsesWithIf(StartV, [Def](const VPUser &U, unsigned Idx) {
+      auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&U);
+      return PhiR && Def == PhiR->getOperand(Idx) && PhiR->isInLoop();
+    });
+    return;
+  }
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
@@ -1703,8 +1713,7 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!PhiR)
       continue;
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     if (RK != RecurKind::Add && RK != RecurKind::Mul)
       continue;
 
