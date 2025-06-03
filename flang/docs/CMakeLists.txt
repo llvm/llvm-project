@@ -91,9 +91,7 @@ function (gen_rst_file_from_td output_file td_option source)
   list(APPEND LLVM_TABLEGEN_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/../../clang/include/clang/Driver/")
   clang_tablegen(Source/${output_file} ${td_option} SOURCE ${source} TARGET "gen-${output_file}")
   # clang_tablegen() does not create the output directory automatically,
-  # so we have to create it explicitly. Note that copy-flang-src-docs below
-  # does create the output directory, but it is not necessarily run
-  # before RST generation.
+  # so we have to create it explicitly. 
   add_custom_target(create-flang-rst-output-dir
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/Source
   )
@@ -110,28 +108,56 @@ if (LLVM_ENABLE_SPHINX)
     # Generate the RST file from TableGen (shared by both HTML and MAN builds)
     gen_rst_file_from_td(FlangCommandLineReference.rst -gen-opt-docs FlangOptionsDocs.td)
 
-    # Copy the flang/docs directory and the generated FIRLangRef.md file to a place in the binary directory.
-    # Having all the files in a single directory makes it possible for Sphinx to process them together.
-    # Add a dependency to the flang-doc target to ensure that the FIRLangRef.md file is generated before the copying happens.
-    add_custom_target(copy-flang-src-docs
-      COMMAND "${CMAKE_COMMAND}" -E copy_directory
-      "${CMAKE_CURRENT_SOURCE_DIR}"
-      "${CMAKE_CURRENT_BINARY_DIR}/Source"
-      DEPENDS flang-doc gen-FlangCommandLineReference.rst) 
-
-    # Run Python preprocessing to prepend header to FIRLangRef.md
-    add_custom_command(TARGET copy-flang-src-docs
-      COMMAND "${Python3_EXECUTABLE}"
-      ARGS ${CMAKE_CURRENT_BINARY_DIR}/Source/FIR/CreateFIRLangRef.py)
-
     if (${SPHINX_OUTPUT_HTML})
+      message(STATUS "Using index.md for html build")
+
+      # Copy the entire flang/docs directory to the build Source dir,
+      # then remove the index.rst file, to avoid clash with index.md 
+      # which is used for the HTML build.
+      add_custom_target(copy-flang-src-docs-html
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory
+              "${CMAKE_CURRENT_SOURCE_DIR}"
+              "${CMAKE_CURRENT_BINARY_DIR}/Source"
+        COMMAND "${CMAKE_COMMAND}" -E remove
+          "${CMAKE_CURRENT_BINARY_DIR}/Source/index.rst"
+        DEPENDS flang-doc gen-FlangCommandLineReference.rst)
+
+      # Run Python preprocessing ONLY for HTML build
+      # This script prepends headers to FIRLangRef.md for proper formatting
+      add_custom_command(TARGET copy-flang-src-docs-html
+        COMMAND "${Python3_EXECUTABLE}"
+        ARGS ${CMAKE_CURRENT_BINARY_DIR}/Source/FIR/CreateFIRLangRef.py)
+
       add_sphinx_target(html flang SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Source")
-      add_dependencies(docs-flang-html copy-flang-src-docs)
+      add_dependencies(docs-flang-html copy-flang-src-docs-html)
     endif()
+
+    # ----------------------------
+    # MAN BUILD SETUP
+    # ----------------------------
     if (${SPHINX_OUTPUT_MAN})
       message(STATUS "NOTE: The Flang man page is currently a placeholder with a TODO. See docs/index.rst for details")
+
+      # Create minimal Source dir with ONLY the files needed for man build:
+      # - conf.py (Sphinx config)
+      # - index.rst (top-level man page)
+      # - FlangCommandLineReference.rst (generated reference)
+      add_custom_target(copy-flang-src-docs-man
+        COMMAND "${CMAKE_COMMAND}" -E make_directory
+                "${CMAKE_CURRENT_BINARY_DIR}/Source"
+        COMMAND "${CMAKE_COMMAND}" -E copy
+          "${CMAKE_CURRENT_SOURCE_DIR}/conf.py"
+          "${CMAKE_CURRENT_BINARY_DIR}/Source/conf.py"
+        COMMAND "${CMAKE_COMMAND}" -E copy
+                "${CMAKE_CURRENT_SOURCE_DIR}/index.rst"
+                "${CMAKE_CURRENT_BINARY_DIR}/Source/index.rst"
+        COMMAND "${CMAKE_COMMAND}" -E copy
+                "${CMAKE_CURRENT_BINARY_DIR}/Source/FlangCommandLineReference.rst"
+                "${CMAKE_CURRENT_BINARY_DIR}/Source/FlangCommandLineReference.rst"
+        DEPENDS flang-doc gen-FlangCommandLineReference.rst)
+        
       add_sphinx_target(man flang SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Source")
-      add_dependencies(docs-flang-man copy-flang-src-docs)
+      add_dependencies(docs-flang-man copy-flang-src-docs-man)
     endif()
   endif()
 endif()

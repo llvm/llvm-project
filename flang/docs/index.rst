@@ -6,6 +6,16 @@ Flang Manual Page (In Progress)
 
 For full documentation, please see the online HTML docs:
 
-https://flang.llvm.org/docs/FlangCommandLineReference.html
+https://flang.llvm.org/docs/
 
-TODO: Replace this placeholder with finalized man page content.
+TODO: This man page currently shows FlangCommandLineReference this with finalized man page content.
+
+----
+
+Flang Command Line Reference
+----------------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   FlangCommandLineReference
