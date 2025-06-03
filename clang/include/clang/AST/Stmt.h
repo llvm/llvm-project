@@ -19,6 +19,7 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtIterator.h"
 #include "clang/Basic/CapturedStmt.h"
+#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
@@ -736,6 +737,15 @@ protected:
     unsigned ProducedByFoldExpansion : 1;
   };
 
+  class ShuffleVectorExprBitfields {
+    friend class ShuffleVectorExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    unsigned NumExprs;
+  };
+
   class StmtExprBitfields {
     friend class ASTStmtReader;
     friend class StmtExpr;
@@ -796,6 +806,17 @@ protected:
 
     unsigned NumExprs : 32 - 1;
     unsigned Unbind : 1;
+  };
+
+  class ChooseExprBitfields {
+    friend class ASTStmtReader;
+    friend class ChooseExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    bool CondIsTrue : 1;
   };
 
   //===--- C++ Expression bitfields classes ---===//
@@ -1233,6 +1254,57 @@ protected:
     SourceLocation RequiresKWLoc;
   };
 
+  class ArrayTypeTraitExprBitfields {
+    friend class ArrayTypeTraitExpr;
+    friend class ASTStmtReader;
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    /// The trait. An ArrayTypeTrait enum in MSVC compat unsigned.
+    LLVM_PREFERRED_TYPE(ArrayTypeTrait)
+    unsigned ATT : 2;
+  };
+
+  class ExpressionTraitExprBitfields {
+    friend class ExpressionTraitExpr;
+    friend class ASTStmtReader;
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    /// The trait. A ExpressionTrait enum in MSVC compatible unsigned.
+    LLVM_PREFERRED_TYPE(ExpressionTrait)
+    unsigned ET : 31;
+
+    /// The value of the type trait. Unspecified if dependent.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Value : 1;
+  };
+
+  class CXXFoldExprBitfields {
+    friend class CXXFoldExpr;
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    BinaryOperatorKind Opcode;
+  };
+
+  class PackIndexingExprBitfields {
+    friend class PackIndexingExpr;
+    friend class ASTStmtWriter;
+    friend class ASTStmtReader;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+    // The size of the trailing expressions.
+    unsigned TransformedExpressions : 31;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned FullySubstituted : 1;
+  };
+
   //===--- C++ Coroutines bitfields classes ---===//
 
   class CoawaitExprBitfields {
@@ -1337,9 +1409,11 @@ protected:
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
     ParenExprBitfields ParenExprBits;
+    ShuffleVectorExprBitfields ShuffleVectorExprBits;
 
     // GNU Extensions.
     StmtExprBitfields StmtExprBits;
+    ChooseExprBitfields ChooseExprBits;
 
     // BoundsSafety Expression
     AssumptionExprBitfields AssumptionExprBits;
@@ -1373,6 +1447,10 @@ protected:
     SubstNonTypeTemplateParmExprBitfields SubstNonTypeTemplateParmExprBits;
     LambdaExprBitfields LambdaExprBits;
     RequiresExprBitfields RequiresExprBits;
+    ArrayTypeTraitExprBitfields ArrayTypeTraitExprBits;
+    ExpressionTraitExprBitfields ExpressionTraitExprBits;
+    CXXFoldExprBitfields CXXFoldExprBits;
+    PackIndexingExprBitfields PackIndexingExprBits;
 
     // C++ Coroutines expressions
     CoawaitExprBitfields CoawaitBits;
