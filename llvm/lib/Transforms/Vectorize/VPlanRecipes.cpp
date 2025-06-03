@@ -604,6 +604,20 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateVectorSplat(
         State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
   }
+  case VPInstruction::ComputeAnyOfResult: {
+    // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
+    // and will be removed by breaking up the recipe further.
+    auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
+    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
+    Value *ReducedPartRdx = State.get(getOperand(2));
+    for (unsigned Idx = 3; Idx < getNumOperands(); ++Idx)
+      ReducedPartRdx = Builder.CreateBinOp(
+          (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(
+              RecurKind::AnyOf),
+          State.get(getOperand(Idx)), ReducedPartRdx, "bin.rdx");
+    return createAnyOfReduction(Builder, ReducedPartRdx,
+                                State.get(getOperand(1), VPLane(0)), OrigPhi);
+  }
   case VPInstruction::ComputeFindLastIVResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
@@ -681,18 +695,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     // Create the reduction after the loop. Note that inloop reductions create
     // the target reduction in the loop using a Reduction recipe.
-    if ((State.VF.isVector() ||
-         RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) &&
-        !PhiR->isInLoop()) {
+    if (State.VF.isVector() && !PhiR->isInLoop()) {
       // TODO: Support in-order reductions based on the recurrence descriptor.
       // All ops in the reduction inherit fast-math-flags from the recurrence
       // descriptor.
-      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-        ReducedPartRdx =
-            createAnyOfReduction(Builder, ReducedPartRdx,
-                                 RdxDesc.getRecurrenceStartValue(), OrigPhi);
-      else
-        ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
+      ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
 
       // If the reduction can be performed in a smaller type, we need to extend
       // the reduction to the wider type before we branch to the original loop.
@@ -830,6 +837,7 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::ExtractPenultimateElement ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::FirstActiveLane ||
+         getOpcode() == VPInstruction::ComputeAnyOfResult ||
          getOpcode() == VPInstruction::ComputeFindLastIVResult ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
@@ -925,6 +933,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return true;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
+  case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindLastIVResult:
     return Op == getOperand(1);
   };
@@ -1004,6 +1013,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
+    break;
+  case VPInstruction::ComputeAnyOfResult:
+    O << "compute-anyof-result";
     break;
   case VPInstruction::ComputeFindLastIVResult:
     O << "compute-find-last-iv-result";
@@ -1185,6 +1197,14 @@ void VPIRPhi::execute(VPTransformState &State) {
   State.Builder.SetInsertPoint(Phi->getParent(), std::next(Phi->getIterator()));
 }
 
+void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
+  VPRecipeBase *R = const_cast<VPRecipeBase *>(getAsRecipe());
+  assert(R->getNumOperands() == R->getParent()->getNumPredecessors() &&
+         "Number of phi operands must match number of predecessors");
+  unsigned Position = R->getParent()->getIndexForPredecessor(IncomingBlock);
+  R->removeOperand(Position);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPhiAccessors::printPhiOperands(raw_ostream &O,
                                       VPSlotTracker &SlotTracker) const {
@@ -1240,7 +1260,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   FunctionType *VFTy = Variant->getFunctionType();
   // Add return type if intrinsic is overloaded on it.
   SmallVector<Value *, 4> Args;
-  for (const auto &I : enumerate(arg_operands())) {
+  for (const auto &I : enumerate(args())) {
     Value *Arg;
     // Some vectorized function variants may also take a scalar argument,
     // e.g. linear parameters for pointers. This needs to be the scalar value
@@ -1289,7 +1309,7 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
   O << "call";
   printFlags(O);
   O << " @" << CalledFn->getName() << "(";
-  interleaveComma(arg_operands(), O, [&O, &SlotTracker](VPValue *Op) {
+  interleaveComma(args(), O, [&O, &SlotTracker](VPValue *Op) {
     Op->printAsOperand(O, SlotTracker);
   });
   O << ")";
@@ -3835,24 +3855,17 @@ void VPFirstOrderRecurrencePHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
-  auto &Builder = State.Builder;
-
   // If this phi is fed by a scaled reduction then it should output a
   // vector with fewer elements than the VF.
   ElementCount VF = State.VF.divideCoefficientBy(VFScaleFactor);
-
-  // Reductions do not have to start at zero. They can start with
-  // any loop invariant values.
-  VPValue *StartVPV = getStartValue();
-  Value *StartV = StartVPV->getLiveInIRValue();
 
   // In order to support recurrences we need to be able to vectorize Phi nodes.
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
   // stage #1: We create a new vector PHI node with no incoming edges. We'll use
   // this value when we vectorize all of the instructions that use the PHI.
+  auto *ScalarTy = State.TypeAnalysis.inferScalarType(this);
   bool ScalarPHI = State.VF.isScalar() || IsInLoop;
-  Type *VecTy =
-      ScalarPHI ? StartV->getType() : VectorType::get(StartV->getType(), VF);
+  Type *VecTy = ScalarPHI ? ScalarTy : VectorType::get(ScalarTy, VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
   assert(State.CurrentParentLoop->getHeader() == HeaderBB &&
@@ -3863,22 +3876,18 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
 
   BasicBlock *VectorPH =
       State.CFG.VPBB2IRBB.at(getParent()->getCFGPredecessor(0));
+  // Create start and identity vector values for the reduction in the preheader.
+  // TODO: Introduce recipes in VPlan preheader to create initial values.
+  IRBuilderBase::InsertPointGuard IPBuilder(State.Builder);
+  State.Builder.SetInsertPoint(VectorPH->getTerminator());
 
-  Value *Iden = nullptr;
+  // Reductions do not have to start at zero. They can start with
+  // any loop invariant values.
+  VPValue *StartVPV = getStartValue();
   RecurKind RK = RdxDesc.getRecurrenceKind();
-  unsigned CurrentPart = getUnrollPart(*this);
-
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-    // MinMax and AnyOf reductions have the start value as their identity.
-    if (ScalarPHI) {
-      Iden = StartV;
-    } else {
-      IRBuilderBase::InsertPointGuard IPBuilder(Builder);
-      Builder.SetInsertPoint(VectorPH->getTerminator());
-      StartV = Iden = State.get(StartVPV);
-    }
-  } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+      RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
+      RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
     // [I|F]FindLastIV will use a sentinel value to initialize the reduction
     // phi or the resume value from the main vector loop when vectorizing the
     // epilogue loop. In the exit block, ComputeReductionResult will generate
@@ -3888,33 +3897,24 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
     // TODO: The sentinel value is not always necessary. When the start value is
     // a constant, and smaller than the start value of the induction variable,
     // the start value can be directly used to initialize the reduction phi.
-    Iden = StartV;
-    if (!ScalarPHI) {
-      IRBuilderBase::InsertPointGuard IPBuilder(Builder);
-      Builder.SetInsertPoint(VectorPH->getTerminator());
-      StartV = Iden = Builder.CreateVectorSplat(State.VF, Iden);
-    }
-  } else {
-    Iden = llvm::getRecurrenceIdentity(RK, VecTy->getScalarType(),
-                                       RdxDesc.getFastMathFlags());
+    Phi->addIncoming(State.get(StartVPV, ScalarPHI), VectorPH);
+    return;
+  }
 
-    if (!ScalarPHI) {
-      if (CurrentPart == 0) {
-        // Create start and identity vector values for the reduction in the
-        // preheader.
-        // TODO: Introduce recipes in VPlan preheader to create initial values.
-        Iden = Builder.CreateVectorSplat(VF, Iden);
-        IRBuilderBase::InsertPointGuard IPBuilder(Builder);
-        Builder.SetInsertPoint(VectorPH->getTerminator());
-        Constant *Zero = Builder.getInt32(0);
-        StartV = Builder.CreateInsertElement(Iden, StartV, Zero);
-      } else {
-        Iden = Builder.CreateVectorSplat(VF, Iden);
-      }
+  Value *Iden = getRecurrenceIdentity(RK, VecTy->getScalarType(),
+                                      RdxDesc.getFastMathFlags());
+  unsigned CurrentPart = getUnrollPart(*this);
+  Value *StartV = StartVPV->getLiveInIRValue();
+  if (!ScalarPHI) {
+    if (CurrentPart == 0) {
+      Iden = State.Builder.CreateVectorSplat(VF, Iden);
+      Constant *Zero = State.Builder.getInt32(0);
+      StartV = State.Builder.CreateInsertElement(Iden, StartV, Zero);
+    } else {
+      Iden = State.Builder.CreateVectorSplat(VF, Iden);
     }
   }
 
-  Phi = cast<PHINode>(State.get(this, IsInLoop));
   Value *StartVal = (CurrentPart == 0) ? StartV : Iden;
   Phi->addIncoming(StartVal, VectorPH);
 }
