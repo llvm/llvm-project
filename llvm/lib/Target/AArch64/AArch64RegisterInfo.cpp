@@ -99,6 +99,13 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_Win_AArch64_AAPCS_SwiftError_SaveList;
     if (MF->getFunction().getCallingConv() == CallingConv::SwiftTail)
       return CSR_Win_AArch64_AAPCS_SwiftTail_SaveList;
+    if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
+      return CSR_Win_AArch64_AAVPCS_SaveList;
+    if (MF->getFunction().getCallingConv() ==
+        CallingConv::AArch64_SVE_VectorCall)
+      return CSR_Win_AArch64_SVE_AAPCS_SaveList;
+    if (MF->getInfo<AArch64FunctionInfo>()->isSVECC())
+      return CSR_Win_AArch64_SVE_AAPCS_SaveList;
     return CSR_Win_AArch64_AAPCS_SaveList;
   }
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
