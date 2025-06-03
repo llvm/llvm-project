@@ -88,6 +88,8 @@ void ModList() {
   // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc kernels copyout(readonly: V1)
   for(int i = 0; i < 6;++i);
-#pragma acc parallel copyout(always, alwaysin, zero: V1)
-  for(int i = 0; i < 6;++i);
+#pragma acc parallel copyout(capture:V1)
+  for(int i = 5; i < 10;++i);
+#pragma acc parallel copyout(always, alwaysin, zero, capture: V1)
+  for(int i = 5; i < 10;++i);
 }

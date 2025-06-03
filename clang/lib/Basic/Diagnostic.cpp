@@ -18,13 +18,11 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -42,7 +40,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -77,11 +74,11 @@ DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
   Output.append(Str.begin(), Str.end());
 }
 
-DiagnosticsEngine::DiagnosticsEngine(
-    IntrusiveRefCntPtr<DiagnosticIDs> diags,
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts, DiagnosticConsumer *client,
-    bool ShouldOwnClient)
-    : Diags(std::move(diags)), DiagOpts(std::move(DiagOpts)) {
+DiagnosticsEngine::DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> diags,
+                                     DiagnosticOptions &DiagOpts,
+                                     DiagnosticConsumer *client,
+                                     bool ShouldOwnClient)
+    : Diags(std::move(diags)), DiagOpts(DiagOpts) {
   setClient(client, ShouldOwnClient);
   ArgToStringFn = DummyArgToStringFn;
 
@@ -553,7 +550,12 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
     // Each section has a matcher with that section's name, attached to that
     // line.
     const auto &DiagSectionMatcher = Entry.SectionMatcher;
-    unsigned DiagLine = DiagSectionMatcher->Globs.at(DiagName).second;
+    unsigned DiagLine = 0;
+    for (const auto &Glob : DiagSectionMatcher->Globs)
+      if (Glob->Name == DiagName) {
+        DiagLine = Glob->LineNo;
+        break;
+      }
     LineAndSectionEntry.emplace_back(DiagLine, &Entry);
   }
   llvm::sort(LineAndSectionEntry);
@@ -625,12 +627,12 @@ bool WarningsSpecialCaseList::globsMatches(
     StringRef Category = Entry.getKey();
     const llvm::SpecialCaseList::Matcher &Matcher = Entry.getValue();
     bool IsPositive = Category != "emit";
-    for (const auto &[Pattern, Glob] : Matcher.Globs) {
-      if (Pattern.size() < LongestMatch.size())
+    for (const auto &Glob : Matcher.Globs) {
+      if (Glob->Name.size() < LongestMatch.size())
         continue;
-      if (!Glob.first.match(FilePath))
+      if (!Glob->Pattern.match(FilePath))
         continue;
-      LongestMatch = Pattern;
+      LongestMatch = Glob->Name;
       LongestIsPositive = IsPositive;
     }
   }

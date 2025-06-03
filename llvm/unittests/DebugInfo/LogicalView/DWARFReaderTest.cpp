@@ -126,6 +126,22 @@ void checkElementProperties(LVReader *Reader) {
   const LVLines *Lines = Function->getLines();
   ASSERT_NE(Lines, nullptr);
   ASSERT_EQ(Lines->size(), 0x12u);
+
+  // Check size of types in CompileUnit.
+  const LVTypes *Types = CompileUnit->getTypes();
+  ASSERT_NE(Types, nullptr);
+  EXPECT_EQ(Types->size(), 7u);
+
+  const auto BoolType = llvm::find_if(
+      *Types, [](const LVElement *elt) { return elt->getName() == "bool"; });
+  ASSERT_NE(BoolType, Types->end());
+  const auto IntType = llvm::find_if(
+      *Types, [](const LVElement *elt) { return elt->getName() == "int"; });
+  ASSERT_NE(IntType, Types->end());
+  EXPECT_EQ(static_cast<LVType *>(*BoolType)->getBitSize(), 8u);
+  EXPECT_EQ(static_cast<LVType *>(*BoolType)->getStorageSizeInBytes(), 1u);
+  EXPECT_EQ(static_cast<LVType *>(*IntType)->getBitSize(), 32u);
+  EXPECT_EQ(static_cast<LVType *>(*IntType)->getStorageSizeInBytes(), 4u);
 }
 
 // Check proper handling of DW_AT_unspecified_parameters in
@@ -149,13 +165,10 @@ void checkUnspecifiedParameters(LVReader *Reader) {
   // `int foo_printf(const char *, ...)`, where the '...' is represented by a
   // DW_TAG_unspecified_parameters, i.e. we expect to find at least one child
   // for which getIsUnspecified() returns true.
-  EXPECT_EQ(std::any_of(
-                Elements->begin(), Elements->end(),
-                [](const LVElement *elt) {
-                  return elt->getIsSymbol() &&
-                         static_cast<const LVSymbol *>(elt)->getIsUnspecified();
-                }),
-            true);
+  EXPECT_TRUE(llvm::any_of(*Elements, [](const LVElement *elt) {
+    return elt->getIsSymbol() &&
+           static_cast<const LVSymbol *>(elt)->getIsUnspecified();
+  }));
 }
 
 // Check the basic properties on parsed DW_TAG_module.
@@ -304,6 +317,7 @@ void elementProperties(SmallString<128> &InputsDir) {
   ReaderOptions.setAttributeRange();
   ReaderOptions.setAttributeLocation();
   ReaderOptions.setAttributeInserted();
+  ReaderOptions.setAttributeSize();
   ReaderOptions.setPrintAll();
   ReaderOptions.resolveDependencies();
 

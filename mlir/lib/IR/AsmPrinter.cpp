@@ -1110,9 +1110,7 @@ void AliasInitializer::initializeAliases(
     llvm::MapVector<const void *, SymbolAlias> &symbolToAlias) {
   SmallVector<std::pair<const void *, InProgressAliasInfo>, 0>
       unprocessedAliases = visitedSymbols.takeVector();
-  llvm::stable_sort(unprocessedAliases, [](const auto &lhs, const auto &rhs) {
-    return lhs.second < rhs.second;
-  });
+  llvm::stable_sort(unprocessedAliases, llvm::less_second());
 
   // This keeps track of all of the non-numeric names that are in flight,
   // allowing us to check for duplicates.
