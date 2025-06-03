@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions -x c++ %s -debug-info-kind=line-tables-only -emit-llvm -o - \
-// RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
+// RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank --check-prefixes=CHECK,CHECK-CXX
 
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions -x c %s -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank --check-prefixes=CHECK,CHECK-C
@@ -96,4 +96,5 @@ void test() {
 // CHECK-C: [[G10R1]] = !DILocation({{.*}}, atomGroup: 10, atomRank: 1)
 // CHECK-C: [[G11R2]] = !DILocation({{.*}}, atomGroup: 11, atomRank: 2)
 // CHECK-C: [[G11R1]] = !DILocation({{.*}}, atomGroup: 11, atomRank: 1)
-// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])
+// CHECK-C: [[RET]] = !DILocation({{.*}}, atomGroup: 12, atomRank: 1)
+// CHECK-CXX: [[RET]] = !DILocation({{.*}}, atomGroup: 8, atomRank: 1)
