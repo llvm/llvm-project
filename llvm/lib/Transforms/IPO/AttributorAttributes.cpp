@@ -12569,6 +12569,7 @@ struct AAInvariantLoadPointerImpl
   bool isKnownInvariant() const final {
     return isKnownLocallyInvariant() && isKnown(IS_LOCALLY_CONSTRAINED);
   }
+
   bool isKnownLocallyInvariant() const final {
     if (isKnown(IS_LOCALLY_INVARIANT))
       return true;
@@ -12578,6 +12579,7 @@ struct AAInvariantLoadPointerImpl
   bool isAssumedInvariant() const final {
     return isAssumedLocallyInvariant() && isAssumed(IS_LOCALLY_CONSTRAINED);
   }
+
   bool isAssumedLocallyInvariant() const final {
     if (isAssumed(IS_LOCALLY_INVARIANT))
       return true;
@@ -12585,44 +12587,15 @@ struct AAInvariantLoadPointerImpl
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    if (isKnownInvariant())
-      return indicateOptimisticFixpoint();
-
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
-    Changed |= checkNoAlias(A);
+    Changed |= updateNoAlias(A);
     if (requiresNoAlias() && !isAssumed(IS_NOALIAS))
       return indicatePessimisticFixpoint();
 
-    Changed |= checkNoEffect(A);
+    Changed |= updateNoEffect(A);
 
-    // try to infer invariance from underlying objects
-    const auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(
-        getIRPosition(), this, DepClassTy::REQUIRED);
-
-    bool UsedAssumedInformation = false;
-    const auto IsInvariantLoadIfPointer = [&](const Value &V) {
-      if (!V.getType()->isPointerTy())
-        return true;
-      const auto *IsInvariantLoadPointer =
-          A.getOrCreateAAFor<AAInvariantLoadPointer>(IRPosition::value(V), this,
-                                                     DepClassTy::REQUIRED);
-      if (IsInvariantLoadPointer->isKnownLocallyInvariant())
-        return true;
-      if (!IsInvariantLoadPointer->isAssumedLocallyInvariant())
-        return false;
-
-      UsedAssumedInformation = true;
-      return true;
-    };
-    if (!AUO->forallUnderlyingObjects(IsInvariantLoadIfPointer))
-      return indicatePessimisticFixpoint();
-
-    if (!UsedAssumedInformation) {
-      // pointer is known (not assumed) to be locally invariant
-      addKnownBits(IS_LOCALLY_INVARIANT);
-      return Changed;
-    }
+    Changed |= updateLocalInvariance(A);
 
     return Changed;
   }
@@ -12632,7 +12605,7 @@ struct AAInvariantLoadPointerImpl
       return ChangeStatus::UNCHANGED;
 
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
-    Value *Ptr = &getAssociatedValue();
+    const Value *Ptr = &getAssociatedValue();
     const auto TagInvariantLoads = [&](const Use &U, bool &) {
       if (U.get() != Ptr)
         return true;
@@ -12649,7 +12622,6 @@ struct AAInvariantLoadPointerImpl
         return true;
 
       if (auto *LI = dyn_cast<LoadInst>(I)) {
-
         LI->setMetadata(LLVMContext::MD_invariant_load,
                         MDNode::get(LI->getContext(), {}));
         Changed = ChangeStatus::CHANGED;
@@ -12677,14 +12649,14 @@ protected:
 
 private:
   bool isExternal() const {
-    const auto *F = getAssociatedFunction();
+    const Function *F = getAssociatedFunction();
     if (!F)
       return true;
     return isCallableCC(F->getCallingConv()) &&
            getPositionKind() != IRP_CALL_SITE_RETURNED;
   }
 
-  ChangeStatus checkNoAlias(Attributor &A) {
+  ChangeStatus updateNoAlias(Attributor &A) {
     if (isKnown(IS_NOALIAS) || !isAssumed(IS_NOALIAS))
       return ChangeStatus::UNCHANGED;
 
@@ -12693,7 +12665,7 @@ private:
             getIRPosition(), this, DepClassTy::REQUIRED)) {
       if (ANoAlias->isKnownNoAlias()) {
         addKnownBits(IS_NOALIAS);
-        return ChangeStatus::UNCHANGED;
+        return ChangeStatus::CHANGED;
       }
 
       if (!ANoAlias->isAssumedNoAlias()) {
@@ -12706,7 +12678,7 @@ private:
 
     // try to infer noalias from argument attribute, since it is applicable for
     // the duration of the function
-    if (const auto *Arg = getAssociatedArgument()) {
+    if (const Argument *Arg = getAssociatedArgument()) {
       if (Arg->hasNoAliasAttr()) {
         addKnownBits(IS_NOALIAS);
         return ChangeStatus::UNCHANGED;
@@ -12721,7 +12693,7 @@ private:
     return ChangeStatus::UNCHANGED;
   }
 
-  ChangeStatus checkNoEffect(Attributor &A) {
+  ChangeStatus updateNoEffect(Attributor &A) {
     if (isKnown(IS_NOEFFECT) || !isAssumed(IS_NOEFFECT))
       return ChangeStatus::UNCHANGED;
 
@@ -12729,10 +12701,8 @@ private:
       return indicatePessimisticFixpoint();
 
     const auto HasNoEffectLoads = [&](const Use &U, bool &) {
-      if (const auto *LI = dyn_cast<LoadInst>(U.getUser()))
-        return !LI->mayHaveSideEffects();
-
-      return true;
+      const auto *LI = dyn_cast<LoadInst>(U.getUser());
+      return !LI || !LI->mayHaveSideEffects();
     };
     if (!A.checkForAllUses(HasNoEffectLoads, *this, getAssociatedValue()))
       return indicatePessimisticFixpoint();
@@ -12751,7 +12721,7 @@ private:
       return ChangeStatus::UNCHANGED;
     }
 
-    if (const auto *Arg = getAssociatedArgument()) {
+    if (const Argument *Arg = getAssociatedArgument()) {
       if (Arg->onlyReadsMemory()) {
         addKnownBits(IS_NOEFFECT);
         return ChangeStatus::UNCHANGED;
@@ -12760,6 +12730,47 @@ private:
       // readonly information is not provided, and cannot be inferred from
       // AAMemoryBehavior
       return indicatePessimisticFixpoint();
+    }
+
+    return ChangeStatus::UNCHANGED;
+  }
+
+  ChangeStatus updateLocalInvariance(Attributor &A) {
+    if (isKnown(IS_LOCALLY_INVARIANT) || !isAssumed(IS_LOCALLY_INVARIANT))
+      return ChangeStatus::UNCHANGED;
+
+    // try to infer invariance from underlying objects
+    const auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(
+        getIRPosition(), this, DepClassTy::REQUIRED);
+    if (!AUO)
+      return ChangeStatus::UNCHANGED;
+
+    bool UsedAssumedInformation = false;
+    const auto IsLocallyInvariantLoadIfPointer = [&](const Value &V) {
+      if (!V.getType()->isPointerTy())
+        return true;
+      const auto *IsInvariantLoadPointer =
+          A.getOrCreateAAFor<AAInvariantLoadPointer>(IRPosition::value(V), this,
+                                                     DepClassTy::REQUIRED);
+      // conservatively fail if invariance cannot be inferred
+      if (!IsInvariantLoadPointer)
+        return false;
+
+      if (IsInvariantLoadPointer->isKnownLocallyInvariant())
+        return true;
+      if (!IsInvariantLoadPointer->isAssumedLocallyInvariant())
+        return false;
+
+      UsedAssumedInformation = true;
+      return true;
+    };
+    if (!AUO->forallUnderlyingObjects(IsLocallyInvariantLoadIfPointer))
+      return indicatePessimisticFixpoint();
+
+    if (!UsedAssumedInformation) {
+      // pointer is known (not assumed) to be locally invariant
+      addKnownBits(IS_LOCALLY_INVARIANT);
+      return ChangeStatus::CHANGED;
     }
 
     return ChangeStatus::UNCHANGED;
@@ -12786,7 +12797,7 @@ struct AAInvariantLoadPointerCallSiteReturned final
       : AAInvariantLoadPointerImpl(IRP, A) {}
 
   void initialize(Attributor &A) override {
-    const auto *F = getAssociatedFunction();
+    const Function *F = getAssociatedFunction();
     assert(F && "no associated function for return from call");
 
     // not much we can say about opaque functions
@@ -12808,16 +12819,21 @@ struct AAInvariantLoadPointerArgument final : AAInvariantLoadPointerImpl {
       : AAInvariantLoadPointerImpl(IRP, A) {}
 
   void initialize(Attributor &) override {
-    const auto *F = getAssociatedFunction();
+    const Function *F = getAssociatedFunction();
     assert(F && "no associated function to argument");
 
-    if (isCallableCC(F->getCallingConv()) && !F->hasLocalLinkage())
+    if (!isCallableCC(F->getCallingConv())) {
+      addKnownBits(IS_LOCALLY_CONSTRAINED);
+      return;
+    }
+
+    if (!F->hasLocalLinkage())
       removeAssumedBits(IS_LOCALLY_CONSTRAINED);
   }
 
 protected:
   virtual bool requiresNoAlias() const override {
-    const auto *F = getAssociatedFunction();
+    const Function *F = getAssociatedFunction();
     assert(F && "no associated function to argument");
     return !isCallableCC(F->getCallingConv());
   }
