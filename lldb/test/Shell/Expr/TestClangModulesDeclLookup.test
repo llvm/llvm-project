@@ -1,5 +1,6 @@
 # XFAIL: target-windows
 # XFAIL: system-linux
+# XFAIL: system-windows && remote-linux
 
 # Test that we can successfully locate decls in Clang modules for C++.
 
