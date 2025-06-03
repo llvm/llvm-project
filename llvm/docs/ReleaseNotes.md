@@ -70,6 +70,12 @@ Changes to the LLVM IR
   `llvm.load.relative`.
 * Inline asm calls no longer accept ``label`` arguments. Use ``callbr`` instead.
 
+* Updated semantics of the `callbr` instruction to clarify that its
+  'indirect labels' are not expected to be reached by indirect (as in
+  register-controlled) branch instructions, and therefore are not
+  guaranteed to start with a `bti` or `endbr64` instruction, where
+  those exist.
+
 Changes to LLVM infrastructure
 ------------------------------
 
