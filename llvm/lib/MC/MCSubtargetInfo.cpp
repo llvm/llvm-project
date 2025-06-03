@@ -33,13 +33,13 @@ static const T *Find(StringRef S, ArrayRef<T> A) {
 }
 
 /// For each feature that is (transitively) implied by this feature, set it.
-template <typename FeatureKVType>
-static void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
-                           ArrayRef<FeatureKVType> FeatureTable) {
+static
+void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
+                    ArrayRef<SubtargetFeatureKV> FeatureTable) {
   // OR the Implies bits in outside the loop. This allows the Implies for CPUs
   // which might imply features not in FeatureTable to use this.
   Bits |= Implies;
-  for (const FeatureKVType &FE : FeatureTable)
+  for (const SubtargetFeatureKV &FE : FeatureTable)
     if (Implies.test(FE.Value))
       SetImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
 }
