@@ -1329,9 +1329,6 @@ bool isModuleEntryFunctionCC(CallingConv::ID CC);
 LLVM_READNONE
 bool isChainCC(CallingConv::ID CC);
 
-bool isKernelCC(const Function *Func);
-
-// FIXME: Remove this when calling conventions cleaned up
 LLVM_READNONE
 inline bool isKernel(CallingConv::ID CC) {
   switch (CC) {
@@ -1342,6 +1339,10 @@ inline bool isKernel(CallingConv::ID CC) {
     return false;
   }
 }
+
+/// Return true if we might ever do TCO for calls with this calling convention.
+bool mayTailCallThisCC(CallingConv::ID CC);
+bool canGuaranteeTCO(CallingConv::ID CC);
 
 bool hasXNACK(const MCSubtargetInfo &STI);
 bool hasSRAMECC(const MCSubtargetInfo &STI);

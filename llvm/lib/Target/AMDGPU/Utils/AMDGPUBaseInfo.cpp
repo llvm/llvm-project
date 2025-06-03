@@ -2185,8 +2185,16 @@ bool isChainCC(CallingConv::ID CC) {
   }
 }
 
-bool isKernelCC(const Function *Func) {
-  return AMDGPU::isModuleEntryFunctionCC(Func->getCallingConv());
+bool canGuaranteeTCO(CallingConv::ID CC) { return CC == CallingConv::Fast; }
+
+bool mayTailCallThisCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::AMDGPU_Gfx:
+    return true;
+  default:
+    return canGuaranteeTCO(CC);
+  }
 }
 
 bool hasXNACK(const MCSubtargetInfo &STI) {

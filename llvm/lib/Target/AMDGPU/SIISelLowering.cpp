@@ -3574,21 +3574,6 @@ void SITargetLowering::passSpecialInputs(
   }
 }
 
-static bool canGuaranteeTCO(CallingConv::ID CC) {
-  return CC == CallingConv::Fast;
-}
-
-/// Return true if we might ever do TCO for calls with this calling convention.
-static bool mayTailCallThisCC(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::C:
-  case CallingConv::AMDGPU_Gfx:
-    return true;
-  default:
-    return canGuaranteeTCO(CC);
-  }
-}
-
 bool SITargetLowering::isEligibleForTailCallOptimization(
     SDValue Callee, CallingConv::ID CalleeCC, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -3597,7 +3582,7 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   if (AMDGPU::isChainCC(CalleeCC))
     return true;
 
-  if (!mayTailCallThisCC(CalleeCC))
+  if (!AMDGPU::mayTailCallThisCC(CalleeCC))
     return false;
 
   // For a divergent call target, we need to do a waterfall loop over the
@@ -3619,7 +3604,7 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   bool CCMatch = CallerCC == CalleeCC;
 
   if (DAG.getTarget().Options.GuaranteedTailCallOpt) {
-    if (canGuaranteeTCO(CalleeCC) && CCMatch)
+    if (AMDGPU::canGuaranteeTCO(CalleeCC) && CCMatch)
       return true;
     return false;
   }
