@@ -8,8 +8,6 @@
 
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/AutoConvert.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
