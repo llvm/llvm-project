@@ -1556,12 +1556,6 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       Bypasses.Init(CGM, Body);
   }
 
-  // Finalize function debug info on exit.
-  auto Cleanup = llvm::make_scope_exit([this] {
-    if (CGDebugInfo *DI = getDebugInfo())
-      DI->completeFunction();
-  });
-
   // Emit the standard function prologue.
   StartFunction(GD, ResTy, Fn, FnInfo, Args, Loc, BodyRange.getBegin());
 
