@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions -gno-column-info -x c %s -debug-info-kind=line-tables-only -emit-llvm -o -  \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
+// Check that when a cast is a Key Instruction backup we add its operand
+// instruction, if there is one, to the source atom too.
+
 float g;
 void a() {
 // CHECK: %0 = load float, ptr @g{{.*}}, !dbg [[G1R3:!.*]]
