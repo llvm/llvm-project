@@ -135,10 +135,9 @@ struct Config {
 };
 
 // fill the CAS with random data of specified tree depth and children numbers.
-static void fillData(ObjectStore &CAS, const Config &Conf) {
+static void fillData(ObjectStore &CAS, ActionCache &AC, const Config &Conf) {
   ExitOnError ExitOnErr("llvm-cas-test fill data: ");
   DefaultThreadPool ThreadPool(hardware_concurrency());
-  std::atomic<uint64_t> NumCreated = 0;
   for (size_t I = 0; I != Conf.NumShards; ++I) {
     ThreadPool.async([&] {
       std::vector<ObjectRef> Refs;
@@ -163,8 +162,11 @@ static void fillData(ObjectStore &CAS, const Config &Conf) {
             auto Ref = ExitOnErr(CAS.store(Parent, Data));
             Created.push_back(Ref);
           }
-          ++NumCreated;
         }
+        // Put a self mapping in action cache to avoid cache poisoning.
+        if (!Created.empty())
+          ExitOnErr(
+              AC.put(CAS.getID(Created.back()), CAS.getID(Created.back())));
         Refs.swap(Created);
       }
     });
@@ -179,7 +181,7 @@ static int genData() {
   Conf.init();
 
   auto DB = ExitOnErr(cas::createOnDiskUnifiedCASDatabases(CASPath));
-  fillData(*DB.first, Conf);
+  fillData(*DB.first, *DB.second, Conf);
 
   return 0;
 }
@@ -203,10 +205,11 @@ static int runOneTest(const char *Argv0) {
   }
 
   auto DB = ExitOnErr(cas::createOnDiskUnifiedCASDatabases(CASPath));
-  auto &CAS = DB.first;
+  auto &CAS = *DB.first;
+  auto &AC = *DB.second;
 
   // Size limit in MB.
-  ExitOnErr(CAS->setSizeLimit(SizeLimit * 1024 * 1024));
+  ExitOnErr(CAS.setSizeLimit(SizeLimit * 1024 * 1024));
   if (Conf.Settings & Fork) {
     // fill data using sub processes.
     std::string MainExe = sys::fs::getMainExecutable(Argv0, &CASPath);
@@ -236,12 +239,12 @@ static int runOneTest(const char *Argv0) {
 
   } else {
     // in-process fill data.
-    fillData(*CAS, Conf);
+    fillData(CAS, AC, Conf);
   }
 
   // validate and prune in the end.
-  ExitOnErr(CAS->validate(true));
-  ExitOnErr(CAS->pruneStorageData());
+  ExitOnErr(CAS.validate(true));
+  ExitOnErr(CAS.pruneStorageData());
 
   return 0;
 }
