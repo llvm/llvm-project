@@ -23,8 +23,6 @@ CFIAnalysisMCStreamer::ICFI::ICFI(MCInst Instruction,
                                   std::pair<unsigned, unsigned> CFIDirectives)
     : Instruction(Instruction), CFIDirectivesRange(CFIDirectives) {}
 
-std::optional<MCInst> LastInstruction;
-
 std::pair<unsigned, unsigned> CFIAnalysisMCStreamer::getCFIDirectivesRange() {
   auto DwarfFrameInfos = getDwarfFrameInfos();
   int FrameIndex = FrameIndices.back();
@@ -85,23 +83,6 @@ CFIAnalysisMCStreamer::CFIAnalysisMCStreamer(
       LastCFIDirectivesState(), LastInstruction(std::nullopt) {
   FrameIndices.push_back(-1);
 }
-
-bool CFIAnalysisMCStreamer::hasRawTextSupport() const { return true; }
-void CFIAnalysisMCStreamer::emitRawTextImpl(StringRef String) {}
-
-bool CFIAnalysisMCStreamer::emitSymbolAttribute(MCSymbol *Symbol,
-                                                MCSymbolAttr Attribute) {
-  return true;
-}
-
-void CFIAnalysisMCStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                             Align ByteAlignment) {}
-void CFIAnalysisMCStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {}
-void CFIAnalysisMCStreamer::emitCOFFSymbolStorageClass(int StorageClass) {}
-void CFIAnalysisMCStreamer::emitCOFFSymbolType(int Type) {}
-void CFIAnalysisMCStreamer::endCOFFSymbolDef() {}
-void CFIAnalysisMCStreamer::emitXCOFFSymbolLinkageWithVisibility(
-    MCSymbol *Symbol, MCSymbolAttr Linkage, MCSymbolAttr Visibility) {}
 
 void CFIAnalysisMCStreamer::emitInstruction(const MCInst &Inst,
                                             const MCSubtargetInfo &STI) {

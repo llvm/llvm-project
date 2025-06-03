@@ -45,18 +45,24 @@ public:
   CFIAnalysisMCStreamer(MCContext &Context, const MCInstrInfo &MCII,
                         std::unique_ptr<MCInstrAnalysis> MCIA);
 
-  bool hasRawTextSupport() const override;
-  void emitRawTextImpl(StringRef String) override;
-  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
+  bool hasRawTextSupport() const override { return true; }
+  void emitRawTextImpl(StringRef String) override {}
+
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
+    return true;
+  }
+
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        Align ByteAlignment) override;
-  void beginCOFFSymbolDef(const MCSymbol *Symbol) override;
-  void emitCOFFSymbolStorageClass(int StorageClass) override;
-  void emitCOFFSymbolType(int Type) override;
-  void endCOFFSymbolDef() override;
+                        Align ByteAlignment) override {}
+  void emitSubsectionsViaSymbols() override {};
+  void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
+  void emitCOFFSymbolStorageClass(int StorageClass) override {}
+  void emitCOFFSymbolType(int Type) override {}
+  void endCOFFSymbolDef() override {}
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
                                             MCSymbolAttr Linkage,
-                                            MCSymbolAttr Visibility) override;
+                                            MCSymbolAttr Visibility) override {}
+
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) override;
