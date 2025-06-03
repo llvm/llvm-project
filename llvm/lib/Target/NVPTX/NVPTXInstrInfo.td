@@ -257,6 +257,11 @@ def BF16X2RT : RegTyInfo<v2bf16, Int32Regs, ?, ?, supports_imm = 0>;
 //                         "prmt.b32${mode}">;
 //         ---> "prmt.b32${mode} \t$d, $a, $b, $c;"
 //
+//   * BasicFlagsNVPTXInst<(outs Int64Regs:$state),
+//                         (ins ADDR:$addr),
+//                         "mbarrier.arrive.b64">;
+//         ---> "mbarrier.arrive.b64 \t$state, [$addr];"
+//
 class BasicFlagsNVPTXInst<dag outs_dag, dag ins_dag, dag flags_dag, string asmstr,
                           list<dag> pattern = []>
   : NVPTXInst<
@@ -274,7 +279,11 @@ class BasicFlagsNVPTXInst<dag outs_dag, dag ins_dag, dag flags_dag, string asmst
             !if(!or(!empty(ins_dag), !empty(outs_dag)), "", ", "),
             !interleave(
               !foreach(i, !range(!size(ins_dag)),
-                "$" # !getdagname(ins_dag, i)),
+                 !if(!eq(!cast<string>(!getdagarg<DAGOperand>(ins_dag, i)), "ADDR"),
+                    "[$" # !getdagname(ins_dag, i) # "]",
+                    "$" # !getdagname(ins_dag, i)
+                 )
+                ),
               ", "))),
         ";"),
       pattern>;
@@ -1538,7 +1547,7 @@ def bfi : SDNode<"NVPTXISD::BFI", SDTBFI>;
 
 def SDTPRMT :
   SDTypeProfile<1, 4, [SDTCisVT<0, i32>, SDTCisVT<1, i32>,
-                       SDTCisVT<2, i32>, SDTCisVT<3, i32>, SDTCisVT<4, i32>,]>;
+                       SDTCisVT<2, i32>, SDTCisVT<3, i32>, SDTCisVT<4, i32>]>;
 def prmt : SDNode<"NVPTXISD::PRMT", SDTPRMT>;
 
 multiclass BFE<string Instr, ValueType T, RegisterClass RC> {
@@ -1961,7 +1970,7 @@ multiclass FSET_FORMAT<PatFrag OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
   // f16 -> pred
   def : Pat<(i1 (OpNode f16:$a, f16:$b)),
             (SETP_f16rr $a, $b, ModeFTZ)>,
-        Requires<[useFP16Math,doF32FTZ]>;
+        Requires<[useFP16Math, doF32FTZ]>;
   def : Pat<(i1 (OpNode f16:$a, f16:$b)),
             (SETP_f16rr $a, $b, Mode)>,
         Requires<[useFP16Math]>;
@@ -1969,7 +1978,7 @@ multiclass FSET_FORMAT<PatFrag OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
   // bf16 -> pred
   def : Pat<(i1 (OpNode bf16:$a, bf16:$b)),
             (SETP_bf16rr $a, $b, ModeFTZ)>,
-        Requires<[hasBF16Math,doF32FTZ]>;
+        Requires<[hasBF16Math, doF32FTZ]>;
   def : Pat<(i1 (OpNode bf16:$a, bf16:$b)),
             (SETP_bf16rr $a, $b, Mode)>,
         Requires<[hasBF16Math]>;
@@ -3124,7 +3133,7 @@ def : Pat <
 ////////////////////////////////////////////////////////////////////////////////
 
 class NVPTXFenceInst<string scope, string sem, Predicate ptx>:
-    NVPTXInst<(outs), (ins), "fence."#sem#"."#scope#";", []>,
+    BasicNVPTXInst<(outs), (ins), "fence."#sem#"."#scope>,
     Requires<[ptx, hasSM<70>]>;
 
 foreach scope = ["sys", "gpu", "cluster", "cta"] in {
