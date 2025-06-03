@@ -10,8 +10,8 @@
 
 #include <stdexcept>
 
-__SYCL_BEGIN_VERSIONED_NAMESPACE
+__LIBSYCL_BEGIN_VERSIONED_NAMESPACE
 
 platform::platform() { throw std::runtime_error("Unimplemented"); }
 
-__SYCL_END_VERSIONED_NAMESPACE
+__LIBSYCL_END_VERSIONED_NAMESPACE
