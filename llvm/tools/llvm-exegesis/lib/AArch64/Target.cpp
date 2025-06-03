@@ -39,7 +39,11 @@
 namespace llvm {
 namespace exegesis {
 
-extern llvm::cl::opt<bool> AArch64DisablePacControl;
+static cl::opt<bool> AArch64DisablePacControl(
+    "aarch64-disable-pac-control",
+    cl::desc("Disable PAC key control at runtime for benchmarking. Use this if "
+             "llvm-exegesis crashes or instruction timings are affected."),
+    cl::init(false));
 
 bool isPointerAuth(unsigned Opcode) {
   switch (Opcode) {
