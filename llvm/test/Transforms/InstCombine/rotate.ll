@@ -749,11 +749,11 @@ define i32 @rotateright_32_trunc_neg_mask_amount(i32 %x, i64 %y) {
 
 define i32 @rotateleft_32_restricted_shamt(i32 %x, i32 %shAmt) {
 ; CHECK-LABEL: @rotateleft_32_restricted_shamt(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 30
-; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X]], i32 [[X]], i32 [[AND]])
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHAMT:%.*]], 30
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 [[AND]])
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
-  %and = and i32 %x, 30
+  %and = and i32 %shAmt, 30
   %shl = shl i32 %x, %and
   %sub = sub i32 0, %and
   %shr = lshr i32 %x, %sub
