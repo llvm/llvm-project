@@ -192,7 +192,7 @@ define <4 x i32> @popcount32vec(<4 x i32> %0) {
   ret <4 x i32> %13
 }
 
-define signext i32 @popcount64_zext(i32 %x) {
+define i32 @popcount64_zext(i32 %x) {
 ; CHECK-LABEL: @popcount64_zext(
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.ctpop.i64(i64 [[ZEXT]])
