@@ -561,6 +561,8 @@ Improvements to Clang's diagnostics
 - Fixed a crash when checking a ``__thread``-specified variable declaration
   with a dependent type in C++. (#GH140509)
 
+- Improved the FixIts for unused lambda captures.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
