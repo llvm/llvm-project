@@ -229,6 +229,26 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::POWI_F64, nullptr);
   }
 
+  // Setup Windows compiler runtime calls.
+  if (TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()) {
+    static const struct {
+      const RTLIB::Libcall Op;
+      const char *const Name;
+      const CallingConv::ID CC;
+    } LibraryCalls[] = {
+        {RTLIB::SDIV_I64, "_alldiv", CallingConv::X86_StdCall},
+        {RTLIB::UDIV_I64, "_aulldiv", CallingConv::X86_StdCall},
+        {RTLIB::SREM_I64, "_allrem", CallingConv::X86_StdCall},
+        {RTLIB::UREM_I64, "_aullrem", CallingConv::X86_StdCall},
+        {RTLIB::MUL_I64, "_allmul", CallingConv::X86_StdCall},
+    };
+
+    for (const auto &LC : LibraryCalls) {
+      setLibcallName(LC.Op, LC.Name);
+      setLibcallCallingConv(LC.Op, LC.CC);
+    }
+  }
+
   if (TT.getArch() == Triple::ArchType::avr) {
     // Division rtlib functions (not supported), use divmod functions instead
     setLibcallName(RTLIB::SDIV_I8, nullptr);
