@@ -16,7 +16,7 @@ struct DAP;
 
 enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
 
-void SendAdditionalCapabilities(DAP &dap);
+void SendTargetBasedCapabilities(DAP &dap);
 
 void SendProcessEvent(DAP &dap, LaunchMethod launch_method);
 

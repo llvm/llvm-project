@@ -68,7 +68,6 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
 
 void LaunchRequestHandler::PostRun() const {
   dap.SendJSON(CreateEventObject("initialized"));
-  SendAdditionalCapabilities(dap);
 }
 
 } // namespace lldb_dap

@@ -79,7 +79,8 @@ class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
         self.assertIsNotNone(leaf_frame, "expect a leaf frame")
         self.assertEqual(step_in_targets[1]["label"], leaf_frame["name"])
 
-    def test_supported_capability(self):
+    @skipIf(archs=no_match(["x86", "x86_64"]))
+    def test_supported_capability_x86_arch(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         source = "main.cpp"
@@ -91,18 +92,35 @@ class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
         is_supported = self.dap_server.get_initialize_value(
             "supportsStepInTargetsRequest"
         )
-        arch: str = self.getArchitecture()
-        if arch.startswith("x86"):
-            self.assertTrue(
-                is_supported,
-                f"expect capability `stepInTarget` is supported with architecture {arch}",
-            )
-        else:
-            self.assertFalse(
-                is_supported,
-                f"expect capability `stepInTarget` is not supported with architecture {arch}",
-            )
 
+        self.assertEqual(
+            is_supported,
+            True,
+            f"expect capability `stepInTarget` is supported with architecture {self.getArchitecture()}",
+        )
+        # clear breakpoints.
+        self.set_source_breakpoints(source, [])
+        self.continue_to_exit()
+
+    @skipIf(archs=["x86", "x86_64"])
+    def test_supported_capability_other_archs(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        bp_lines = [line_number(source, "// set breakpoint here")]
+        breakpoint_ids = self.set_source_breakpoints(source, bp_lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(bp_lines), "expect correct number of breakpoints"
+        )
+        is_supported = self.dap_server.get_initialize_value(
+            "supportsStepInTargetsRequest"
+        )
+
+        self.assertEqual(
+            is_supported,
+            False,
+            f"expect capability `stepInTarget` is not supported with architecture {self.getArchitecture()}",
+        )
         # clear breakpoints.
         self.set_source_breakpoints(source, [])
         self.continue_to_exit()

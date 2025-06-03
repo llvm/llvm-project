@@ -33,22 +33,21 @@ static void SendThreadExitedEvent(DAP &dap, lldb::tid_t tid) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
-void SendAdditionalCapabilities(DAP &dap) {
-  if (dap.target.IsValid()) {
-    // FIXME: stepInTargets request is only supported by the x86 architecture
-    // remove when `lldb::InstructionControlFlowKind` is supported by other
-    // architectures
-    const llvm::StringRef target_triple = dap.target.GetTriple();
-    if (!target_triple.starts_with("x86")) {
-      llvm::json::Object event(CreateEventObject("capabilities"));
-      llvm::json::Object capabilities{{"supportsStepInTargetsRequest", false}};
+void SendTargetBasedCapabilities(DAP &dap) {
+  if (!dap.target.IsValid())
+    return;
 
-      llvm::json::Object body;
-      body.try_emplace("capabilities", std::move(capabilities));
-      event.try_emplace("body", std::move(body));
-      dap.SendJSON(llvm::json::Value(std::move(event)));
-    }
-  }
+  // FIXME: stepInTargets request is only supported by the x86
+  // architecture remove when `lldb::InstructionControlFlowKind` is
+  // supported by other architectures
+  const llvm::StringRef target_triple = dap.target.GetTriple();
+  if (target_triple.starts_with("x86"))
+    return;
+
+  protocol::Event event;
+  event.event = "capabilities";
+  event.body = llvm::json::Object{{"supportsStepInTargetsRequest", false}};
+  dap.Send(event);
 }
 // "ProcessEvent": {
 //   "allOf": [
