@@ -1291,11 +1291,14 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     xegpu::TensorDescType distributedTensorDescTy =
         descOp.getType().dropLayouts(); // Distributed tensor descriptor type
                                         // does not contain layout info.
-    auto newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
+    Value newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
         newWarpOp.getLoc(), distributedTensorDescTy, newDescOperands,
         descOp->getAttrs());
 
     Value distributedVal = newWarpOp.getResult(operandIdx);
+    // Resolve the distributed type to the expected type.
+    newDescOp =
+        resolveDistributedTy(newDescOp, distributedVal.getType(), rewriter);
     rewriter.replaceAllUsesWith(distributedVal, newDescOp);
     return success();
   }
@@ -1697,10 +1700,13 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
       }
     }
     // Create a new update op outside the warp op.
-    auto newUpdateOp = rewriter.create<xegpu::UpdateNdOffsetOp>(
+    Value newUpdateOp = rewriter.create<xegpu::UpdateNdOffsetOp>(
         newWarpOp.getLoc(), newTensorDescTy, newUpdateOperands,
         removeTemporaryLayoutAttributes(updateOp->getAttrs()));
     Value distributedVal = newWarpOp.getResult(operandIdx);
+    // Resolve the distributed type with the original type.
+    newUpdateOp =
+        resolveDistributedTy(newUpdateOp, distributedVal.getType(), rewriter);
     rewriter.replaceAllUsesWith(distributedVal, newUpdateOp);
     return success();
   }
@@ -1836,55 +1842,44 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     updateBlockTypes(builder, *block, getXeGPULayoutForValue);
   });
 
-  // Assign xegpu::LayoutAttr to all ops and their users based on the layout
-  // propagation analysis result.
-  // LayoutAttrAssignment layoutAssignment(getOperation(), getPropagatedLayout);
-  // if (failed(layoutAssignment.run())) {
-  //   signalPassFailure();
-  //   return;
-  // }
-
   // Move all operations of a GPU function inside gpu.warp_execute_on_lane_0
   // operation.
-  // {
-  //   RewritePatternSet patterns(&getContext());
-  //   patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
+  {
+    RewritePatternSet patterns(&getContext());
+    patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
 
-  //   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-  //     signalPassFailure();
-  //     return;
-  //   }
-  //   // At this point, we have moved the entire function body inside the
-  //   warpOp.
-  //   // Now move any scalar uniform code outside of the warpOp (like GPU index
-  //   // ops, scalar constants, etc.). This will simplify the later lowering
-  //   and
-  //   // avoid custom patterns for these ops.
-  //   getOperation()->walk([&](Operation *op) {
-  //     if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
-  //       vector::moveScalarUniformCode(warpOp);
-  //     }
-  //   });
-  // }
-  // // Finally, do the SIMD to SIMT distribution.
-  // RewritePatternSet patterns(&getContext());
-  // xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
-  // // TODO: distributionFn and shuffleFn are not used at this point.
-  // auto distributionFn = [](Value val) {
-  //   VectorType vecType = dyn_cast<VectorType>(val.getType());
-  //   int64_t vecRank = vecType ? vecType.getRank() : 0;
-  //   OpBuilder builder(val.getContext());
-  //   if (vecRank == 0)
-  //     return AffineMap::get(val.getContext());
-  //   return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
-  // };
-  // auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value
-  // srcIdx,
-  //                     int64_t warpSz) { return Value(); };
-  // vector::populatePropagateWarpVectorDistributionPatterns(
-  //     patterns, distributionFn, shuffleFn);
-  // if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-  //   signalPassFailure();
-  //   return;
-  // }
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+      signalPassFailure();
+      return;
+    }
+    // At this point, we have moved the entire function body inside the
+    // warpOp. Now move any scalar uniform code outside of the warpOp (like GPU
+    // index ops, scalar constants, etc.). This will simplify the later lowering
+    // and avoid custom patterns for these ops.
+    getOperation()->walk([&](Operation *op) {
+      if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
+        vector::moveScalarUniformCode(warpOp);
+      }
+    });
+  }
+  // Finally, do the SIMD to SIMT distribution.
+  RewritePatternSet patterns(&getContext());
+  xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
+  // TODO: distributionFn and shuffleFn are not used at this point.
+  auto distributionFn = [](Value val) {
+    VectorType vecType = dyn_cast<VectorType>(val.getType());
+    int64_t vecRank = vecType ? vecType.getRank() : 0;
+    OpBuilder builder(val.getContext());
+    if (vecRank == 0)
+      return AffineMap::get(val.getContext());
+    return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
+  };
+  auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value srcIdx,
+                      int64_t warpSz) { return Value(); };
+  vector::populatePropagateWarpVectorDistributionPatterns(
+      patterns, distributionFn, shuffleFn);
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+    signalPassFailure();
+    return;
+  }
 }
