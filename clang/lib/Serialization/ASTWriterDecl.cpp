@@ -1670,7 +1670,7 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     if (auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
         FD && isDefinitionInDependentContext(FD)) {
       Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
-          Writer.GetDeclRef(D));
+          Writer.GetDeclRef(D->getLambdaCallOperator()));
     }
   } else {
     Record.push_back(CXXRecNotTemplate);
