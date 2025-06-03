@@ -2,6 +2,8 @@
 # RUN: llc -mtriple=amdgcn -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-fast | FileCheck %s
 # RUN: llc -mtriple=amdgcn -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-greedy | FileCheck %s
 
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass="amdgpu-regbankselect,amdgpu-regbanklegalize" %s -verify-machineinstrs -o - | FileCheck %s --check-prefix=NEW_RBS
+
 ---
 name: inttoptr_s_p0
 legalized: true
@@ -14,6 +16,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p0) = G_INTTOPTR [[COPY]](s64)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_s_p0
+    ; NEW_RBS: liveins: $sgpr0_sgpr1
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p0) = G_INTTOPTR [[COPY]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(p0) = G_INTTOPTR %0
 ...
@@ -30,6 +38,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p0) = G_INTTOPTR [[COPY]](s64)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_v_p0
+    ; NEW_RBS: liveins: $vgpr0_vgpr1
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p0) = G_INTTOPTR [[COPY]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(p0) = G_INTTOPTR %0
 ...
@@ -46,6 +60,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p1) = G_INTTOPTR [[COPY]](s64)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_s_p1
+    ; NEW_RBS: liveins: $sgpr0_sgpr1
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p1) = G_INTTOPTR [[COPY]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(p1) = G_INTTOPTR %0
 ...
@@ -62,6 +82,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p1) = G_INTTOPTR [[COPY]](s64)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_v_p1
+    ; NEW_RBS: liveins: $vgpr0_vgpr1
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p1) = G_INTTOPTR [[COPY]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(p1) = G_INTTOPTR %0
 ...
@@ -78,6 +104,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p2) = G_INTTOPTR [[COPY]](s32)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_s_p2
+    ; NEW_RBS: liveins: $sgpr0
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p2) = G_INTTOPTR [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(p2) = G_INTTOPTR %0
 ...
@@ -94,6 +126,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p2) = G_INTTOPTR [[COPY]](s32)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_v_p2
+    ; NEW_RBS: liveins: $vgpr0
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p2) = G_INTTOPTR [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(p2) = G_INTTOPTR %0
 ...
@@ -110,6 +148,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p3) = G_INTTOPTR [[COPY]](s32)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_s_p3
+    ; NEW_RBS: liveins: $sgpr0
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p3) = G_INTTOPTR [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(p3) = G_INTTOPTR %0
 ...
@@ -126,6 +170,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p3) = G_INTTOPTR [[COPY]](s32)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_v_p3
+    ; NEW_RBS: liveins: $vgpr0
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p3) = G_INTTOPTR [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(p3) = G_INTTOPTR %0
 ...
@@ -142,6 +192,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p4) = G_INTTOPTR [[COPY]](s64)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_s_p4
+    ; NEW_RBS: liveins: $sgpr0_sgpr1
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p4) = G_INTTOPTR [[COPY]](s64)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(p4) = G_INTTOPTR %0
 ...
@@ -158,6 +214,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p4) = G_INTTOPTR [[COPY]](s64)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_v_p4
+    ; NEW_RBS: liveins: $vgpr0_vgpr1
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p4) = G_INTTOPTR [[COPY]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(p4) = G_INTTOPTR %0
 ...
@@ -174,6 +236,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p5) = G_INTTOPTR [[COPY]](s32)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_s_p5
+    ; NEW_RBS: liveins: $sgpr0
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p5) = G_INTTOPTR [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(p5) = G_INTTOPTR %0
 ...
@@ -190,6 +258,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p5) = G_INTTOPTR [[COPY]](s32)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_v_p5
+    ; NEW_RBS: liveins: $vgpr0
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p5) = G_INTTOPTR [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(p5) = G_INTTOPTR %0
 ...
@@ -206,6 +280,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p6) = G_INTTOPTR [[COPY]](s32)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_s_p6
+    ; NEW_RBS: liveins: $sgpr0
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p6) = G_INTTOPTR [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(p6) = G_INTTOPTR %0
 ...
@@ -222,6 +302,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p6) = G_INTTOPTR [[COPY]](s32)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_v_p6
+    ; NEW_RBS: liveins: $vgpr0
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p6) = G_INTTOPTR [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(p6) = G_INTTOPTR %0
 ...
@@ -238,6 +324,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p8) = G_INTTOPTR [[COPY]](s128)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_s_p8
+    ; NEW_RBS: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:sgpr(p8) = G_INTTOPTR [[COPY]](s128)
     %0:_(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:_(p8) = G_INTTOPTR %0
 ...
@@ -254,6 +346,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p8) = G_INTTOPTR [[COPY]](s128)
+    ;
+    ; NEW_RBS-LABEL: name: inttoptr_v_p8
+    ; NEW_RBS: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; NEW_RBS-NEXT: {{  $}}
+    ; NEW_RBS-NEXT: [[COPY:%[0-9]+]]:vgpr(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; NEW_RBS-NEXT: [[INTTOPTR:%[0-9]+]]:vgpr(p8) = G_INTTOPTR [[COPY]](s128)
     %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(p8) = G_INTTOPTR %0
 ...
