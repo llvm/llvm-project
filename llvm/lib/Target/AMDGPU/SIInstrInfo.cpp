@@ -3125,6 +3125,14 @@ unsigned SIInstrInfo::getBranchOpcode(SIInstrInfo::BranchPredicate Cond) {
     return AMDGPU::S_CBRANCH_EXECNZ;
   case SIInstrInfo::EXECZ:
     return AMDGPU::S_CBRANCH_EXECZ;
+  case SIInstrInfo::UNIFORM_NZ:
+    return AMDGPU::SI_BRCOND_UNIFORM;
+  case SIInstrInfo::UNIFORM_Z:
+    return AMDGPU::SI_BRCOND_UNIFORM_Z;
+  case SIInstrInfo::DIVERGE_NZ:
+    return AMDGPU::SI_BRCOND;
+  case SIInstrInfo::DIVERGE_Z:
+    return AMDGPU::SI_BRCOND_Z;
   default:
     llvm_unreachable("invalid branch predicate");
   }
@@ -3144,6 +3152,14 @@ SIInstrInfo::BranchPredicate SIInstrInfo::getBranchPredicate(unsigned Opcode) {
     return EXECNZ;
   case AMDGPU::S_CBRANCH_EXECZ:
     return EXECZ;
+  case AMDGPU::SI_BRCOND:
+    return DIVERGE_NZ;
+  case AMDGPU::SI_BRCOND_Z:
+    return DIVERGE_Z;
+  case AMDGPU::SI_BRCOND_UNIFORM:
+    return UNIFORM_NZ;
+  case AMDGPU::SI_BRCOND_UNIFORM_Z:
+    return UNIFORM_Z;
   default:
     return INVALID_BR;
   }
@@ -3165,16 +3181,9 @@ bool SIInstrInfo::analyzeBranchImpl(MachineBasicBlock &MBB,
   if (Pred == INVALID_BR)
     return true;
 
-  MachineBasicBlock *CondBB = nullptr;
-  if (I->getOpcode() == AMDGPU::SI_BRCOND ||
-      I->getOpcode() == AMDGPU::SI_BRCOND_UNIFORM) {
-    CondBB = I->getOperand(1).getMBB();
-    Cond.push_back(I->getOperand(0));
-  } else {
-    CondBB = I->getOperand(0).getMBB();
-    Cond.push_back(MachineOperand::CreateImm(Pred));
-    Cond.push_back(I->getOperand(1)); // Save the branch register.
-  }
+  MachineBasicBlock *CondBB = I->getOperand(0).getMBB();
+  Cond.push_back(MachineOperand::CreateImm(Pred));
+  Cond.push_back(I->getOperand(1)); // Save the branch register.
   ++I;
 
   if (I == MBB.end()) {
@@ -3289,6 +3298,12 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
       BuildMI(&MBB, DL, get(Opcode))
       .addMBB(TBB);
 
+    if (Opcode == AMDGPU::SI_BRCOND_UNIFORM ||
+        Opcode == AMDGPU::SI_BRCOND_UNIFORM_Z || Opcode == AMDGPU::SI_BRCOND ||
+        Opcode == AMDGPU::SI_BRCOND_Z) {
+      assert(Cond.size() == 2 && "Branch should have two operands");
+      CondBr->addOperand(Cond[1]); // Add the condition register.
+    }
     // Copy the flags onto the implicit condition register operand.
     preserveCondRegFlags(CondBr->getOperand(1), Cond[1]);
     fixImplicitOperands(*CondBr);
@@ -3303,6 +3318,12 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
   MachineInstr *CondBr =
     BuildMI(&MBB, DL, get(Opcode))
     .addMBB(TBB);
+  if (Opcode == AMDGPU::SI_BRCOND_UNIFORM ||
+      Opcode == AMDGPU::SI_BRCOND_UNIFORM_Z || Opcode == AMDGPU::SI_BRCOND ||
+      Opcode == AMDGPU::SI_BRCOND_Z) {
+    assert(Cond.size() == 2 && "Branch should have two operands");
+    CondBr->addOperand(Cond[1]); // Add the condition register.
+  }
   fixImplicitOperands(*CondBr);
   BuildMI(&MBB, DL, get(AMDGPU::S_BRANCH))
     .addMBB(FBB);

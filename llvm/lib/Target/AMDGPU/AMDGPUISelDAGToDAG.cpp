@@ -2528,8 +2528,8 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
     auto Opc =
         Cond->isDivergent() ? AMDGPU::SI_BRCOND : AMDGPU::SI_BRCOND_UNIFORM;
     CurDAG->SelectNodeTo(N, Opc, MVT::Other,
-                         Cond,              // condition
                          N->getOperand(2),  // true basic block
+                         Cond,              // condition
                          N->getOperand(0)); // chain
     return;
   }

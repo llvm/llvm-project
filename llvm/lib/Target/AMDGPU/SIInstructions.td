@@ -571,17 +571,51 @@ def SI_BR_UNDEF : SPseudoInstSI <(outs), (ins SOPPBrTarget:$simm16)> {
   let isBranch = 1;
 }
 
-// Conditional thread-level branch mirroring G_BRCOND.
-// Used by new control flow on the SelectionDAG path.
+// Pseudo thread-level conditional branch used in WaveTransform mode.
+// It takes a virtual lanemask register as the condition. Semantically,
+// a current active lane jumps to the target if its cond-bit is set to 1,
+// falls through if its cond-bit is set to zero. This pseudo-op is lowered
+// to the real AMDGPU branch instruction plus some exec-mask manipulation
+// instructions during WaveTransform.
 def SI_BRCOND
-    : SPseudoInstSI<(outs), (ins SReg_1:$cond, SOPPBrTarget:$target)> {
+    : SPseudoInstSI<(outs), (ins SOPPBrTarget:$target, SReg_1:$cond)> {
   let isTerminator = 1;
   // let usesCustomInserter = 1;
   let isBranch = 1;
 }
-
+// Mirror of SI_BRCOND for flipping branch during MIR optimizations.
+// It takes a virtual lanemask register as the condition. Semantically,
+// a current active lane jumps to the target if its cond-bit is set to 0,
+// falls through if its cond-bit is set to 1. This pseudo-op is lowered
+// to some real AMDGPU branch instruction plus some exec-mask manipulation
+// instructions during WaveTransform.
+def SI_BRCOND_Z
+    : SPseudoInstSI<(outs), (ins SOPPBrTarget:$target, SReg_1:$cond)> {
+  let isTerminator = 1;
+  // let usesCustomInserter = 1;
+  let isBranch = 1;
+}
+// Pseudo wave-level conditional branch used in WaveTransform mode.
+// It takes a virtual scalar register as the condition. Semantically,
+// a wave jumps to the target if its condition is NOT zero,
+// falls through if its condition is zero. This pseudo-op is lowered
+// to the real AMDGPU branch instruction during WaveTransform.
+// It does NOT affect exec-mask.
 def SI_BRCOND_UNIFORM
-    : SPseudoInstSI<(outs), (ins SReg_1:$cond, SOPPBrTarget:$target)> {
+    : SPseudoInstSI<(outs), (ins SOPPBrTarget:$target, SReg_1:$cond)> {
+  let isTerminator = 1;
+  // let usesCustomInserter = 1;
+  let isBranch = 1;
+}
+// Mirror of SI_BRCOND_UNIFORM for flipping branch during MIR optimization.
+// Pseudo wave-level conditional branch used in WaveTransform mode.
+// It takes a virtual scalar register as the condition. Semantically,
+// a wave jumps to the target if its condition is zero,
+// falls through if its condition is NOT zero. This pseudo-op is lowered
+// to the real AMDGPU branch instruction during WaveTransform.
+// It does NOT affect exec-mask.
+def SI_BRCOND_UNIFORM_Z
+    : SPseudoInstSI<(outs), (ins SOPPBrTarget:$target, SReg_1:$cond)> {
   let isTerminator = 1;
   // let usesCustomInserter = 1;
   let isBranch = 1;

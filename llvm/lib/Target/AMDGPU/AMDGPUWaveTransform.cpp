@@ -450,7 +450,8 @@ void ReconvergeCFGHelper::run() {
     WaveNode *WN = Nodes.back().get();
     auto TerminatorMI = Block->getFirstTerminator();
     if (TerminatorMI != Block->end()) {
-      WN->IsDivergent = (TerminatorMI->getOpcode() == AMDGPU::SI_BRCOND);
+      WN->IsDivergent = (TerminatorMI->getOpcode() == AMDGPU::SI_BRCOND ||
+                         TerminatorMI->getOpcode() == AMDGPU::SI_BRCOND_Z);
     } else {
       // Handle the case where there's no terminator.
       WN->IsDivergent = false;
@@ -1654,11 +1655,13 @@ void ControlFlowRewriter::prepareWaveCfg() {
       unsigned Opcode = Terminator.getOpcode();
 
       assert(!Info.OrigSuccFinal);
-      if (Opcode == AMDGPU::SI_BRCOND || Opcode == AMDGPU::SI_BRCOND_UNIFORM) {
+      if (Opcode == AMDGPU::SI_BRCOND || Opcode == AMDGPU::SI_BRCOND_UNIFORM ||
+          Opcode == AMDGPU::SI_BRCOND_Z ||
+          Opcode == AMDGPU::SI_BRCOND_UNIFORM_Z) {
         assert(!Info.OrigCondition);
-        Info.OrigCondition = Terminator.getOperand(0).getReg();
+        Info.OrigCondition = Terminator.getOperand(1).getReg();
         Info.OrigSuccCond =
-            ReconvergeCfg.nodeForBlock(Terminator.getOperand(1).getMBB());
+            ReconvergeCfg.nodeForBlock(Terminator.getOperand(0).getMBB());
       } else if (Opcode == AMDGPU::S_BRANCH) {
         Info.OrigSuccFinal =
             ReconvergeCfg.nodeForBlock(Terminator.getOperand(0).getMBB());

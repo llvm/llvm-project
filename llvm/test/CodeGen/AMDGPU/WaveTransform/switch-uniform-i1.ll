@@ -56,7 +56,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GFX90A-NEXT:   S_CMP_LT_I32 [[S_LOAD_DWORD_IMM]], killed [[S_MOV_B32_2]], implicit-def $scc
   ; GFX90A-NEXT:   [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
   ; GFX90A-NEXT:   [[COPY10:%[0-9]+]]:sreg_64 = COPY [[S_CSELECT_B64_]]
-  ; GFX90A-NEXT:   SI_BRCOND_UNIFORM killed [[COPY10]], %bb.4
+  ; GFX90A-NEXT:   SI_BRCOND_UNIFORM %bb.4, killed [[COPY10]]
   ; GFX90A-NEXT:   S_BRANCH %bb.2
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2.NodeBlock:
@@ -67,7 +67,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GFX90A-NEXT:   S_CMP_LT_I32 [[COPY3]], killed [[S_MOV_B32_3]], implicit-def $scc
   ; GFX90A-NEXT:   [[S_CSELECT_B64_1:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
   ; GFX90A-NEXT:   [[COPY11:%[0-9]+]]:sreg_64 = COPY [[S_CSELECT_B64_1]]
-  ; GFX90A-NEXT:   SI_BRCOND_UNIFORM killed [[COPY11]], %bb.6
+  ; GFX90A-NEXT:   SI_BRCOND_UNIFORM %bb.6, killed [[COPY11]]
   ; GFX90A-NEXT:   S_BRANCH %bb.3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.3.LeafBlock4:
@@ -78,7 +78,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GFX90A-NEXT:   S_CMP_EQ_U32 [[COPY3]], killed [[S_MOV_B32_4]], implicit-def $scc
   ; GFX90A-NEXT:   [[S_CSELECT_B64_2:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
   ; GFX90A-NEXT:   [[COPY12:%[0-9]+]]:sreg_64 = COPY [[S_CSELECT_B64_2]]
-  ; GFX90A-NEXT:   SI_BRCOND_UNIFORM killed [[COPY12]], %bb.7
+  ; GFX90A-NEXT:   SI_BRCOND_UNIFORM %bb.7, killed [[COPY12]]
   ; GFX90A-NEXT:   S_BRANCH %bb.8
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.4.LeafBlock:
@@ -88,7 +88,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GFX90A-NEXT:   S_CMP_LG_U32 [[COPY3]], killed [[S_MOV_B32_5]], implicit-def $scc
   ; GFX90A-NEXT:   [[S_CSELECT_B64_3:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit $scc
   ; GFX90A-NEXT:   [[COPY13:%[0-9]+]]:sreg_64 = COPY [[S_CSELECT_B64_3]]
-  ; GFX90A-NEXT:   SI_BRCOND_UNIFORM killed [[COPY13]], %bb.8
+  ; GFX90A-NEXT:   SI_BRCOND_UNIFORM %bb.8, killed [[COPY13]]
   ; GFX90A-NEXT:   S_BRANCH %bb.5
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.5.sw.bb:
@@ -138,7 +138,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GFX90A-NEXT:   [[S_MOV_B32_10:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GFX90A-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[V_CNDMASK_B32_e64_]], killed [[S_MOV_B32_10]], implicit $exec
-  ; GFX90A-NEXT:   SI_BRCOND_UNIFORM killed [[V_CMP_NE_U32_e64_]], %bb.11
+  ; GFX90A-NEXT:   SI_BRCOND_UNIFORM %bb.11, killed [[V_CMP_NE_U32_e64_]]
   ; GFX90A-NEXT:   S_BRANCH %bb.10
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.10.if.then:
@@ -191,7 +191,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GFX1200-NEXT:   S_CMP_LT_I32 [[S_LOAD_DWORD_IMM]], killed [[S_MOV_B32_2]], implicit-def $scc
   ; GFX1200-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; GFX1200-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_]]
-  ; GFX1200-NEXT:   SI_BRCOND_UNIFORM killed [[COPY6]], %bb.4
+  ; GFX1200-NEXT:   SI_BRCOND_UNIFORM %bb.4, killed [[COPY6]]
   ; GFX1200-NEXT:   S_BRANCH %bb.2
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.2.NodeBlock:
@@ -202,7 +202,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GFX1200-NEXT:   S_CMP_LT_I32 [[COPY3]], killed [[S_MOV_B32_4]], implicit-def $scc
   ; GFX1200-NEXT:   [[S_CSELECT_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; GFX1200-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_1]]
-  ; GFX1200-NEXT:   SI_BRCOND_UNIFORM killed [[COPY7]], %bb.6
+  ; GFX1200-NEXT:   SI_BRCOND_UNIFORM %bb.6, killed [[COPY7]]
   ; GFX1200-NEXT:   S_BRANCH %bb.3
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3.LeafBlock4:
@@ -213,7 +213,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GFX1200-NEXT:   S_CMP_EQ_U32 [[COPY3]], killed [[S_MOV_B32_6]], implicit-def $scc
   ; GFX1200-NEXT:   [[S_CSELECT_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; GFX1200-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_2]]
-  ; GFX1200-NEXT:   SI_BRCOND_UNIFORM killed [[COPY8]], %bb.7
+  ; GFX1200-NEXT:   SI_BRCOND_UNIFORM %bb.7, killed [[COPY8]]
   ; GFX1200-NEXT:   S_BRANCH %bb.8
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.4.LeafBlock:
@@ -223,7 +223,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GFX1200-NEXT:   S_CMP_LG_U32 [[COPY3]], killed [[S_MOV_B32_7]], implicit-def $scc
   ; GFX1200-NEXT:   [[S_CSELECT_B32_3:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; GFX1200-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_3]]
-  ; GFX1200-NEXT:   SI_BRCOND_UNIFORM killed [[COPY9]], %bb.8
+  ; GFX1200-NEXT:   SI_BRCOND_UNIFORM %bb.8, killed [[COPY9]]
   ; GFX1200-NEXT:   S_BRANCH %bb.5
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.5.sw.bb:
@@ -273,7 +273,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GFX1200-NEXT:   [[S_MOV_B32_12:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GFX1200-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX1200-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 [[V_CNDMASK_B32_e64_]], killed [[S_MOV_B32_12]], implicit $exec
-  ; GFX1200-NEXT:   SI_BRCOND_UNIFORM killed [[V_CMP_NE_U32_e64_]], %bb.11
+  ; GFX1200-NEXT:   SI_BRCOND_UNIFORM %bb.11, killed [[V_CMP_NE_U32_e64_]]
   ; GFX1200-NEXT:   S_BRANCH %bb.10
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.10.if.then:
@@ -320,7 +320,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GISEL-NEXT:   S_CMP_LT_I32 [[S_LOAD_DWORD_IMM]], killed [[S_MOV_B32_2]], implicit-def $scc
   ; GISEL-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; GISEL-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_]]
-  ; GISEL-NEXT:   SI_BRCOND_UNIFORM killed [[COPY6]], %bb.4
+  ; GISEL-NEXT:   SI_BRCOND_UNIFORM %bb.4, killed [[COPY6]]
   ; GISEL-NEXT:   S_BRANCH %bb.2
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.2.NodeBlock:
@@ -331,7 +331,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GISEL-NEXT:   S_CMP_LT_I32 [[COPY3]], killed [[S_MOV_B32_4]], implicit-def $scc
   ; GISEL-NEXT:   [[S_CSELECT_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; GISEL-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_1]]
-  ; GISEL-NEXT:   SI_BRCOND_UNIFORM killed [[COPY7]], %bb.6
+  ; GISEL-NEXT:   SI_BRCOND_UNIFORM %bb.6, killed [[COPY7]]
   ; GISEL-NEXT:   S_BRANCH %bb.3
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.3.LeafBlock4:
@@ -342,7 +342,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GISEL-NEXT:   S_CMP_EQ_U32 [[COPY3]], killed [[S_MOV_B32_6]], implicit-def $scc
   ; GISEL-NEXT:   [[S_CSELECT_B32_2:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; GISEL-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_2]]
-  ; GISEL-NEXT:   SI_BRCOND_UNIFORM killed [[COPY8]], %bb.7
+  ; GISEL-NEXT:   SI_BRCOND_UNIFORM %bb.7, killed [[COPY8]]
   ; GISEL-NEXT:   S_BRANCH %bb.8
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.4.LeafBlock:
@@ -352,7 +352,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GISEL-NEXT:   S_CMP_LG_U32 [[COPY3]], killed [[S_MOV_B32_7]], implicit-def $scc
   ; GISEL-NEXT:   [[S_CSELECT_B32_3:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
   ; GISEL-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_3]]
-  ; GISEL-NEXT:   SI_BRCOND_UNIFORM killed [[COPY9]], %bb.8
+  ; GISEL-NEXT:   SI_BRCOND_UNIFORM %bb.8, killed [[COPY9]]
   ; GISEL-NEXT:   S_BRANCH %bb.5
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.5.sw.bb:
@@ -402,7 +402,7 @@ define amdgpu_kernel void @switch_uniform_i1(ptr addrspace(1) %filter.coerce, pt
   ; GISEL-NEXT:   [[S_MOV_B32_12:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GISEL-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GISEL-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 [[V_CNDMASK_B32_e64_]], killed [[S_MOV_B32_12]], implicit $exec
-  ; GISEL-NEXT:   SI_BRCOND_UNIFORM killed [[V_CMP_NE_U32_e64_]], %bb.11
+  ; GISEL-NEXT:   SI_BRCOND_UNIFORM %bb.11, killed [[V_CMP_NE_U32_e64_]]
   ; GISEL-NEXT:   S_BRANCH %bb.10
   ; GISEL-NEXT: {{  $}}
   ; GISEL-NEXT: bb.10.if.then:
