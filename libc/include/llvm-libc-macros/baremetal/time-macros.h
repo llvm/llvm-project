@@ -14,7 +14,9 @@
 #else
 #if defined(__arm__) || defined(_M_ARM) || defined(__aarch64__) ||             \
     defined(__arm64__) || defined(_M_ARM64)
-// Semihosting uses centiseconds as default
+// This default implementation of this function shall use semihosting
+// Semihosting uses centiseconds as default.
+// https://github.com/ARM-software/abi-aa/blob/main/semihosting/semihosting.rst#sys-clock-0x10
 #define CLOCKS_PER_SEC 100
 #else
 #define CLOCKS_PER_SEC 1000000
