@@ -6308,9 +6308,11 @@ struct AAInvariantLoadPointer : public AbstractAttribute {
 
   /// Return true if the pointer's contents are known to remain invariant.
   virtual bool isKnownInvariant() const = 0;
+  virtual bool isKnownLocallyInvariant() const = 0;
 
   /// Return true if the pointer's contents are assumed to remain invariant.
   virtual bool isAssumedInvariant() const = 0;
+  virtual bool isAssumedLocallyInvariant() const = 0;
 
   /// See AbstractAttribute::getName().
   StringRef getName() const override { return "AAInvariantLoadPointer"; }
