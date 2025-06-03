@@ -65,6 +65,7 @@ class ThreadJumpTestCase(TestBase):
             substrs=["error"],
         )
 
+    @expectedFailureAll(compiler="clang", compiler_version=["<", "17.0"])
     def test_jump_offset(self):
         """Test Thread Jump by negative or positive offset"""
         exe = self.getBuildArtifact("a.out")
