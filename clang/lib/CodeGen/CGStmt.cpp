@@ -1396,6 +1396,8 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     EmitStmt(S.getBody());
   }
 
+  // The last block in the loop's body (which unconditionally branches to the
+  // `inc` block if there is one).
   auto *FinalBodyBB = Builder.GetInsertBlock();
 
   // If there is an increment, emit it next.
