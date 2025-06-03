@@ -55,14 +55,6 @@ static CIRGenCXXABI *createCXXABI(CIRGenModule &cgm) {
   llvm_unreachable("invalid C++ ABI kind");
 }
 
-namespace clang::CIRGen {
-// TODO(cir): Implement target-specific CIRGenCXXABIs
-CIRGenCXXABI *CreateCIRGenItaniumCXXABI(CIRGenModule &cgm) {
-  assert(!cir::MissingFeatures::targetSpecificCXXABI());
-  return new CIRGenCXXABI(cgm);
-}
-} // namespace clang::CIRGen
-
 CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                            clang::ASTContext &astContext,
                            const clang::CodeGenOptions &cgo,

@@ -2548,9 +2548,9 @@ static Value *getExpandedStep(const InductionDescriptor &ID,
     return C->getValue();
   if (auto *U = dyn_cast<SCEVUnknown>(Step))
     return U->getValue();
-  auto I = ExpandedSCEVs.find(Step);
-  assert(I != ExpandedSCEVs.end() && "SCEV must be expanded at this point");
-  return I->second;
+  Value *V = ExpandedSCEVs.lookup(Step);
+  assert(V && "SCEV must be expanded at this point");
+  return V;
 }
 
 /// Knowing that loop \p L executes a single vector iteration, add instructions
@@ -7209,15 +7209,25 @@ static void addRuntimeUnrollDisableMetaData(Loop *L) {
   }
 }
 
-// If \p R is a ComputeReductionResult when vectorizing the epilog loop,
-// fix the reduction's scalar PHI node by adding the incoming value from the
-// main vector loop.
+static Value *getStartValueFromReductionResult(VPInstruction *RdxResult) {
+  using namespace VPlanPatternMatch;
+  assert(RdxResult->getOpcode() == VPInstruction::ComputeFindLastIVResult &&
+         "RdxResult must be ComputeFindLastIVResult");
+  VPValue *StartVPV = RdxResult->getOperand(1);
+  match(StartVPV, m_Freeze(m_VPValue(StartVPV)));
+  return StartVPV->getLiveInIRValue();
+}
+
+// If \p R is a Compute{Reduction,AnyOf,FindLastIV}Result when vectorizing the
+// epilog loop, fix the reduction's scalar PHI node by adding the incoming value
+// from the main vector loop.
 static void fixReductionScalarResumeWhenVectorizingEpilog(
     VPRecipeBase *R, VPTransformState &State, BasicBlock *LoopMiddleBlock,
     BasicBlock *BypassBlock) {
   auto *EpiRedResult = dyn_cast<VPInstruction>(R);
   if (!EpiRedResult ||
-      (EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult &&
+      (EpiRedResult->getOpcode() != VPInstruction::ComputeAnyOfResult &&
+       EpiRedResult->getOpcode() != VPInstruction::ComputeReductionResult &&
        EpiRedResult->getOpcode() != VPInstruction::ComputeFindLastIVResult))
     return;
 
@@ -7229,15 +7239,18 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
       EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
           RdxDesc.getRecurrenceKind())) {
+    Value *StartV = EpiRedResult->getOperand(1)->getLiveInIRValue();
+    (void)StartV;
     auto *Cmp = cast<ICmpInst>(MainResumeValue);
     assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
            "AnyOf expected to start with ICMP_NE");
-    assert(Cmp->getOperand(1) == RdxDesc.getRecurrenceStartValue() &&
+    assert(Cmp->getOperand(1) == StartV &&
            "AnyOf expected to start by comparing main resume value to original "
            "start value");
     MainResumeValue = Cmp->getOperand(0);
   } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(
                  RdxDesc.getRecurrenceKind())) {
+    Value *StartV = getStartValueFromReductionResult(EpiRedResult);
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
     bool IsExpectedPattern =
@@ -7246,10 +7259,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
                                         m_Value(OrigResumeV))) &&
         (match(Cmp, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Specific(OrigResumeV),
                                    m_Value(CmpOp))) &&
-         (match(CmpOp,
-                m_Freeze(m_Specific(RdxDesc.getRecurrenceStartValue()))) ||
-          (CmpOp == RdxDesc.getRecurrenceStartValue() &&
-           isGuaranteedNotToBeUndefOrPoison(CmpOp))));
+         ((CmpOp == StartV && isGuaranteedNotToBeUndefOrPoison(CmpOp))));
     assert(IsExpectedPattern && "Unexpected reduction resume pattern");
     (void)IsExpectedPattern;
     MainResumeValue = OrigResumeV;
@@ -7289,14 +7299,14 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
+  VPlanTransforms::convertToConcreteRecipes(BestVPlan,
+                                            *Legal->getWidestInductionType());
   // Retrieve and store the middle block before dissolving regions. Regions are
   // dissolved after optimizing for VF and UF, which completely removes unneeded
   // loop regions first.
   VPBasicBlock *MiddleVPBB =
       BestVPlan.getVectorLoopRegion() ? BestVPlan.getMiddleBlock() : nullptr;
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
-  VPlanTransforms::convertToConcreteRecipes(BestVPlan,
-                                            *Legal->getWidestInductionType());
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
                          OrigLoop->getParentLoop(),
@@ -9184,6 +9194,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
         return isa<VPInstruction>(&U) &&
                (cast<VPInstruction>(&U)->getOpcode() ==
+                    VPInstruction::ComputeAnyOfResult ||
+                cast<VPInstruction>(&U)->getOpcode() ==
                     VPInstruction::ComputeReductionResult ||
                 cast<VPInstruction>(&U)->getOpcode() ==
                     VPInstruction::ComputeFindLastIVResult);
@@ -9235,6 +9247,12 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       VPValue *Start = PhiR->getStartValue();
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeFindLastIVResult,
+                               {PhiR, Start, NewExitingVPV}, ExitDL);
+    } else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
+                   RdxDesc.getRecurrenceKind())) {
+      VPValue *Start = PhiR->getStartValue();
+      FinalReductionResult =
+          Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
     } else {
       VPIRFlags Flags = RecurrenceDescriptor::isFloatingPointRecurrenceKind(
@@ -9764,23 +9782,37 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
+      auto *RdxResult =
+          cast<VPInstruction>(*find_if(ReductionPhi->users(), [](VPUser *U) {
+            auto *VPI = dyn_cast<VPInstruction>(U);
+            return VPI &&
+                   (VPI->getOpcode() == VPInstruction::ComputeAnyOfResult ||
+                    VPI->getOpcode() == VPInstruction::ComputeReductionResult ||
+                    VPI->getOpcode() == VPInstruction::ComputeFindLastIVResult);
+          }));
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
       const RecurrenceDescriptor &RdxDesc =
           ReductionPhi->getRecurrenceDescriptor();
       RecurKind RK = RdxDesc.getRecurrenceKind();
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
+        Value *StartV = RdxResult->getOperand(1)->getLiveInIRValue();
+        assert(RdxDesc.getRecurrenceStartValue() == StartV &&
+               "start value from ComputeAnyOfResult must match");
+
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
         // to the start value.
         BasicBlock *PBB = cast<Instruction>(ResumeV)->getParent();
         IRBuilder<> Builder(PBB, PBB->getFirstNonPHIIt());
-        ResumeV =
-            Builder.CreateICmpNE(ResumeV, RdxDesc.getRecurrenceStartValue());
+        ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
       } else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
-        ToFrozen[RdxDesc.getRecurrenceStartValue()] =
-            cast<PHINode>(ResumeV)->getIncomingValueForBlock(
-                EPI.MainLoopIterationCountCheck);
+        Value *StartV = getStartValueFromReductionResult(RdxResult);
+        assert(RdxDesc.getRecurrenceStartValue() == StartV &&
+               "start value from ComputeFindLastIVResult must match");
+
+        ToFrozen[StartV] = cast<PHINode>(ResumeV)->getIncomingValueForBlock(
+            EPI.MainLoopIterationCountCheck);
 
         // VPReductionPHIRecipe for FindLastIV reductions requires an adjustment
         // to the resume value. The resume value is adjusted to the sentinel
@@ -9790,8 +9822,7 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
         // variable.
         BasicBlock *ResumeBB = cast<Instruction>(ResumeV)->getParent();
         IRBuilder<> Builder(ResumeBB, ResumeBB->getFirstNonPHIIt());
-        Value *Cmp = Builder.CreateICmpEQ(
-            ResumeV, ToFrozen[RdxDesc.getRecurrenceStartValue()]);
+        Value *Cmp = Builder.CreateICmpEQ(ResumeV, ToFrozen[StartV]);
         ResumeV =
             Builder.CreateSelect(Cmp, RdxDesc.getSentinelValue(), ResumeV);
       }
@@ -9829,8 +9860,8 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
     auto *ExpandR = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandR)
       continue;
-    auto *ExpandedVal =
-        Plan.getOrAddLiveIn(ExpandedSCEVs.find(ExpandR->getSCEV())->second);
+    VPValue *ExpandedVal =
+        Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR->getSCEV()));
     ExpandR->replaceAllUsesWith(ExpandedVal);
     if (Plan.getTripCount() == ExpandR)
       Plan.resetTripCount(ExpandedVal);
