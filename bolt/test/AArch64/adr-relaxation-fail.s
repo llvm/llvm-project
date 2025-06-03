@@ -28,11 +28,6 @@ _start:
   .type foo, %function
 foo:
   .cfi_startproc
-  cmp  x1, x11
-  b.hi  .L2
-  mov  x0, #0x0
-.L2:
-  adr x1, foo
-  ret  x30
+  ret  x0
   .cfi_endproc
   .size foo, .-foo
