@@ -8826,7 +8826,7 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   OptionalImmIndexMap OptionalIdx;
   unsigned Opc = Inst.getOpcode();
   unsigned I = 1;
-  int CbszInsIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cbsz);
+  int CbszOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cbsz);
 
   const MCInstrDesc &Desc = MII.get(Opc);
 
@@ -8839,7 +8839,7 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
     // The order of operands in MCInst and parsed operands are different.
     // Adding dummy cbsz and blgp operands at corresponding MCInst operand
     // indices for parsing scale values correctly.
-    if (NumOperands == CbszInsIdx) {
+    if (NumOperands == CbszOpIdx) {
       Inst.addOperand(MCOperand::createImm(0));
       Inst.addOperand(MCOperand::createImm(0));
     }
@@ -8856,14 +8856,14 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   auto CbszIdx = OptionalIdx.find(AMDGPUOperand::ImmTyCBSZ);
   if (CbszIdx != OptionalIdx.end()) {
     int CbszVal = ((AMDGPUOperand &)*Operands[CbszIdx->second]).getImm();
-    Inst.getOperand(CbszInsIdx).setImm(CbszVal);
+    Inst.getOperand(CbszOpIdx).setImm(CbszVal);
   }
 
-  int BlgpInsIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
+  int BlgpOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
   auto BlgpIdx = OptionalIdx.find(AMDGPUOperand::ImmTyBLGP);
   if (BlgpIdx != OptionalIdx.end()) {
     int BlgpVal = ((AMDGPUOperand &)*Operands[BlgpIdx->second]).getImm();
-    Inst.getOperand(BlgpInsIdx).setImm(BlgpVal);
+    Inst.getOperand(BlgpOpIdx).setImm(BlgpVal);
   }
 
   // Add dummy src_modifiers
