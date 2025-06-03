@@ -23,7 +23,7 @@ entry:
 
 ; INSTR-LABEL: define void @OneVar(
 ; INSTR:  [[BASE:%.*]] = call ptr @llvm.aarch64.irg.sp(i64 0)
-; INSTR:  [[TLS:%.*]] = call ptr @llvm.thread.pointer()
+; INSTR:  [[TLS:%.*]] = call ptr @llvm.thread.pointer.p0()
 ; INSTR:  [[TLS_SLOT:%.*]] = getelementptr i8, ptr [[TLS]], i32 -24
 ; INSTR:  [[TLS_VALUE:%.*]] = load i64, ptr [[TLS_SLOT]], align 8
 ; INSTR:  [[FP:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)

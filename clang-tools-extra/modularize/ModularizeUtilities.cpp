@@ -48,10 +48,8 @@ ModularizeUtilities::ModularizeUtilities(std::vector<std::string> &InputPaths,
       MissingHeaderCount(0),
       // Init clang stuff needed for loading the module map and preprocessing.
       LangOpts(new LangOptions()), DiagIDs(new DiagnosticIDs()),
-      DiagnosticOpts(new DiagnosticOptions()),
-      DC(llvm::errs(), DiagnosticOpts.get()),
-      Diagnostics(
-          new DiagnosticsEngine(DiagIDs, DiagnosticOpts.get(), &DC, false)),
+      DC(llvm::errs(), DiagnosticOpts),
+      Diagnostics(new DiagnosticsEngine(DiagIDs, DiagnosticOpts, &DC, false)),
       TargetOpts(new ModuleMapTargetOptions()),
       Target(TargetInfo::CreateTargetInfo(*Diagnostics, *TargetOpts)),
       FileMgr(new FileManager(FileSystemOpts)),
@@ -443,7 +441,7 @@ static std::string replaceDotDot(StringRef Path) {
 // \returns The file path in canonical form.
 std::string ModularizeUtilities::getCanonicalPath(StringRef FilePath) {
   std::string Tmp(replaceDotDot(FilePath));
-  std::replace(Tmp.begin(), Tmp.end(), '\\', '/');
+  llvm::replace(Tmp, '\\', '/');
   StringRef Tmp2(Tmp);
   if (Tmp2.starts_with("./"))
     Tmp = std::string(Tmp2.substr(2));

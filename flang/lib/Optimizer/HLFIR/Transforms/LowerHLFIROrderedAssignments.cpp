@@ -24,12 +24,15 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
+#include "mlir/Analysis/Liveness.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <unordered_set>
 
 namespace hlfir {
 #define GEN_PASS_DEF_LOWERHLFIRORDEREDASSIGNMENTS
@@ -262,6 +265,19 @@ private:
     assert(inserted.second && "temp must have been emplaced");
     return &inserted.first->second;
   }
+
+  /// Given a top-level hlfir.where, look for hlfir.exactly_once operations
+  /// inside it and see if any of the values live into hlfir.exactly_once
+  /// do not dominate hlfir.where. This may happen due to CSE reusing
+  /// results of operations from the region parent to hlfir.exactly_once.
+  /// Since we are going to clone the body of hlfir.exactly_once before
+  /// the top-level hlfir.where, such def-use will cause problems.
+  /// There are options how to resolve this in a different way,
+  /// e.g. making hlfir.exactly_once IsolatedFromAbove or making
+  /// it a region of hlfir.where and wiring the result(s) through
+  /// the block arguments. For the time being, this canonicalization
+  /// tries to undo the effects of CSE.
+  void canonicalizeExactlyOnceInsideWhere(hlfir::WhereOp whereOp);
 
   fir::FirOpBuilder &builder;
 
@@ -523,6 +539,10 @@ void OrderedAssignmentRewriter::generateMaskIfOp(mlir::Value cdt) {
 void OrderedAssignmentRewriter::pre(hlfir::WhereOp whereOp) {
   mlir::Location loc = whereOp.getLoc();
   if (!whereLoopNest) {
+    // Make sure liveness information is valid for the inner hlfir.exactly_once
+    // operations, and their bodies can be cloned before the top-level
+    // hlfir.where.
+    canonicalizeExactlyOnceInsideWhere(whereOp);
     // This is the top-level WHERE. Start a loop nest iterating on the shape of
     // the where mask.
     if (auto maybeSaved = getIfSaved(whereOp.getMaskRegion())) {
@@ -1348,6 +1368,106 @@ void OrderedAssignmentRewriter::saveLeftHandSide(
     constructStack.pop_back();
     builder.setInsertionPointAfter(loweredLhs.vectorSubscriptLoopNest->outerOp);
   }
+}
+
+void OrderedAssignmentRewriter::canonicalizeExactlyOnceInsideWhere(
+    hlfir::WhereOp whereOp) {
+  auto getDefinition = [](mlir::Value v) {
+    mlir::Operation *op = v.getDefiningOp();
+    bool isValid = true;
+    if (!op) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "Value live into hlfir.exactly_once has no defining operation: "
+          << v << "\n");
+      isValid = false;
+    }
+    if (op->getNumRegions() != 0) {
+      LLVM_DEBUG(
+          llvm::dbgs()
+          << "Cannot pull an operation with regions into hlfir.exactly_once"
+          << *op << "\n");
+      isValid = false;
+    }
+    auto effects = mlir::getEffectsRecursively(op);
+    if (!effects || !effects->empty()) {
+      LLVM_DEBUG(llvm::dbgs() << "Side effects on operation with result live "
+                                 "into hlfir.exactly_once"
+                              << *op << "\n");
+      isValid = false;
+    }
+    assert(isValid && "invalid live-in");
+    (void)isValid;
+    return op;
+  };
+  mlir::Liveness liveness(whereOp.getOperation());
+  whereOp->walk([&](hlfir::ExactlyOnceOp op) {
+    std::unordered_set<mlir::Operation *> liveInSet;
+    LLVM_DEBUG(llvm::dbgs() << "Canonicalizing:\n" << op << "\n");
+    auto &liveIns = liveness.getLiveIn(&op.getBody().front());
+    if (liveIns.empty())
+      return;
+    // Note that the liveIns set is not ordered.
+    for (mlir::Value liveIn : liveIns) {
+      if (!dominanceInfo.properlyDominates(liveIn, whereOp)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Does not dominate top-level where: " << liveIn << "\n");
+        liveInSet.insert(getDefinition(liveIn));
+      }
+    }
+
+    // Populate the set of operations that we need to pull into
+    // hlfir.exactly_once, so that the only live-ins left are the ones
+    // that dominate whereOp.
+    std::unordered_set<mlir::Operation *> cloneSet(liveInSet);
+    llvm::SmallVector<mlir::Operation *> workList(cloneSet.begin(),
+                                                  cloneSet.end());
+    while (!workList.empty()) {
+      mlir::Operation *current = workList.pop_back_val();
+      for (mlir::Value operand : current->getOperands()) {
+        if (dominanceInfo.properlyDominates(operand, whereOp))
+          continue;
+        mlir::Operation *def = getDefinition(operand);
+        if (cloneSet.count(def))
+          continue;
+        cloneSet.insert(def);
+        workList.push_back(def);
+      }
+    }
+
+    // Sort the operations by dominance. This preserves their order
+    // after the cloning, and also guarantees stable IR generation.
+    llvm::SmallVector<mlir::Operation *> cloneList(cloneSet.begin(),
+                                                   cloneSet.end());
+    llvm::sort(cloneList, [&](mlir::Operation *L, mlir::Operation *R) {
+      return dominanceInfo.properlyDominates(L, R);
+    });
+
+    // Clone the operations.
+    mlir::IRMapping mapper;
+    mlir::Operation::CloneOptions options;
+    options.cloneOperands();
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&op.getBody().front());
+
+    for (auto *toClone : cloneList) {
+      LLVM_DEBUG(llvm::dbgs() << "Cloning: " << *toClone << "\n");
+      builder.insert(toClone->clone(mapper, options));
+    }
+    for (mlir::Operation *oldOps : liveInSet)
+      for (mlir::Value oldVal : oldOps->getResults()) {
+        mlir::Value newVal = mapper.lookup(oldVal);
+        if (!newVal) {
+          LLVM_DEBUG(llvm::dbgs() << "No clone found for: " << oldVal << "\n");
+          assert(false && "missing clone");
+        }
+        mlir::replaceAllUsesInRegionWith(oldVal, newVal, op.getBody());
+      }
+
+    LLVM_DEBUG(llvm::dbgs() << "Finished canonicalization\n");
+    if (!liveInSet.empty())
+      LLVM_DEBUG(llvm::dbgs() << op << "\n");
+  });
 }
 
 /// Lower an ordered assignment tree to fir.do_loop and hlfir.assign given

@@ -25,6 +25,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -2798,6 +2799,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     //       fneg/fabs operations.
     if (match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X))) &&
         (cast<FPMathOperator>(CondVal)->hasNoNaNs() || SI.hasNoNaNs() ||
+         (SI.hasOneUse() && canIgnoreSignBitOfNaN(*SI.use_begin())) ||
          isKnownNeverNaN(X, /*Depth=*/0,
                          IC.getSimplifyQuery().getWithInstruction(
                              cast<Instruction>(CondVal))))) {
@@ -2844,7 +2846,11 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     // Note: We require "nnan" for this fold because fcmp ignores the signbit
     //       of NAN, but IEEE-754 specifies the signbit of NAN values with
     //       fneg/fabs operations.
-    if (!SI.hasNoSignedZeros() || !SI.hasNoNaNs())
+    if (!SI.hasNoSignedZeros() &&
+        (!SI.hasOneUse() || !canIgnoreSignBitOfZero(*SI.use_begin())))
+      return nullptr;
+    if (!SI.hasNoNaNs() &&
+        (!SI.hasOneUse() || !canIgnoreSignBitOfNaN(*SI.use_begin())))
       return nullptr;
 
     if (Swap)
@@ -3874,11 +3880,16 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // (X ugt Y) ? X : Y -> (X ole Y) ? Y : X
       if (FCmp->hasOneUse() && FCmpInst::isUnordered(Pred)) {
         FCmpInst::Predicate InvPred = FCmp->getInversePredicate();
-        // FIXME: The FMF should propagate from the select, not the fcmp.
         Value *NewCond = Builder.CreateFCmpFMF(InvPred, Cmp0, Cmp1, FCmp,
                                                FCmp->getName() + ".inv");
+        // Propagate ninf/nnan from fcmp to select.
+        FastMathFlags FMF = SI.getFastMathFlags();
+        if (FCmp->hasNoNaNs())
+          FMF.setNoNaNs(true);
+        if (FCmp->hasNoInfs())
+          FMF.setNoInfs(true);
         Value *NewSel =
-            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FCmp);
+            Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FMF);
         return replaceInstUsesWith(SI, NewSel);
       }
     }
@@ -3924,7 +3935,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
     // Canonicalize select of FP values where NaN and -0.0 are not valid as
     // minnum/maxnum intrinsics.
-    if (SIFPOp->hasNoNaNs() && SIFPOp->hasNoSignedZeros()) {
+    if (SIFPOp->hasNoNaNs() &&
+        (SIFPOp->hasNoSignedZeros() ||
+         (SIFPOp->hasOneUse() &&
+          canIgnoreSignBitOfZero(*SIFPOp->use_begin())))) {
       Value *X, *Y;
       if (match(&SI, m_OrdOrUnordFMax(m_Value(X), m_Value(Y)))) {
         Value *BinIntr =

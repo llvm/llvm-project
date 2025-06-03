@@ -39,12 +39,10 @@
 #include "Writer.h"
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
-#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -1421,7 +1419,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.mergeArmExidx =
       args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
   ctx.arg.mmapOutputFile =
-      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, true);
+      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, false);
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   ctx.arg.noinhibitExec = args.hasArg(OPT_noinhibit_exec);
   ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);

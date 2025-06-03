@@ -172,6 +172,15 @@ def CA_Meta: Category<"Meta"> {}
 def CA_Subsidiary: Category<"Subsidiary"> {}
 def CA_Utility: Category<"Utility"> {}
 
+class SourceLanguage<string n> {
+  string name = n;  // Name of the enum value in enum class Association.
+}
+
+// The C languages also implies C++ until there is a reason to add C++
+// separately.
+def L_C : SourceLanguage<"C"> {}
+def L_Fortran : SourceLanguage<"Fortran"> {}
+
 // Information about a specific directive.
 class Directive<string d> {
   // Name of the directive. Can be composite directive sepearted by whitespace.
@@ -205,4 +214,7 @@ class Directive<string d> {
 
   // The category of the directive.
   Category category = ?;
+
+  // The languages that allow this directive. Default: all languages.
+  list<SourceLanguage> languages = [L_C, L_Fortran];
 }

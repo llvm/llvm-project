@@ -71,12 +71,12 @@ subroutine acc_parallel_loop
   END DO
   !$acc end parallel loop
 
-! CHECK:      acc.parallel {{.*}} {
+! CHECK:      acc.parallel {{.*}} async {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]}
+! CHECK-NEXT: }
 
   !$acc parallel loop async(1)
   DO i = 1, n
@@ -103,6 +103,12 @@ subroutine acc_parallel_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+
+  !$acc parallel loop async(async) device_type(nvidia) async(1)
+  DO i = 1, n
+    a(i) = b(i)
+  END DO
+! CHECK: acc.parallel combined(loop) async(%{{.*}} : i32, %c1{{.*}} : i32 [#acc.device_type<nvidia>])
 
   !$acc parallel loop wait
   DO i = 1, n

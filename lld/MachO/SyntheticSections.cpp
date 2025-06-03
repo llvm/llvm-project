@@ -12,7 +12,6 @@
 #include "ExportTrie.h"
 #include "ICF.h"
 #include "InputFiles.h"
-#include "MachOStructs.h"
 #include "ObjC.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
@@ -21,11 +20,9 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
 
 #if defined(__APPLE__)
@@ -1248,10 +1245,7 @@ void SymtabSection::emitStabs() {
     }
   }
 
-  llvm::stable_sort(symbolsNeedingStabs,
-                    [&](const SortingPair &a, const SortingPair &b) {
-                      return a.second < b.second;
-                    });
+  llvm::stable_sort(symbolsNeedingStabs, llvm::less_second());
 
   // Emit STABS symbols so that dsymutil and/or the debugger can map address
   // regions in the final binary to the source and object files from which they

@@ -45,36 +45,36 @@ define half @fh(ptr %p) {
 ; ENABLED-LABEL: fh(
 ; ENABLED:       {
 ; ENABLED-NEXT:    .reg .b16 %rs<10>;
-; ENABLED-NEXT:    .reg .b32 %f<13>;
+; ENABLED-NEXT:    .reg .b32 %r<13>;
 ; ENABLED-NEXT:    .reg .b64 %rd<2>;
 ; ENABLED-EMPTY:
 ; ENABLED-NEXT:  // %bb.0:
 ; ENABLED-NEXT:    ld.param.b64 %rd1, [fh_param_0];
 ; ENABLED-NEXT:    ld.v4.b16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
 ; ENABLED-NEXT:    ld.b16 %rs5, [%rd1+8];
-; ENABLED-NEXT:    cvt.f32.f16 %f1, %rs2;
-; ENABLED-NEXT:    cvt.f32.f16 %f2, %rs1;
-; ENABLED-NEXT:    add.rn.f32 %f3, %f2, %f1;
-; ENABLED-NEXT:    cvt.rn.f16.f32 %rs6, %f3;
-; ENABLED-NEXT:    cvt.f32.f16 %f4, %rs4;
-; ENABLED-NEXT:    cvt.f32.f16 %f5, %rs3;
-; ENABLED-NEXT:    add.rn.f32 %f6, %f5, %f4;
-; ENABLED-NEXT:    cvt.rn.f16.f32 %rs7, %f6;
-; ENABLED-NEXT:    cvt.f32.f16 %f7, %rs7;
-; ENABLED-NEXT:    cvt.f32.f16 %f8, %rs6;
-; ENABLED-NEXT:    add.rn.f32 %f9, %f8, %f7;
-; ENABLED-NEXT:    cvt.rn.f16.f32 %rs8, %f9;
-; ENABLED-NEXT:    cvt.f32.f16 %f10, %rs8;
-; ENABLED-NEXT:    cvt.f32.f16 %f11, %rs5;
-; ENABLED-NEXT:    add.rn.f32 %f12, %f10, %f11;
-; ENABLED-NEXT:    cvt.rn.f16.f32 %rs9, %f12;
+; ENABLED-NEXT:    cvt.f32.f16 %r1, %rs2;
+; ENABLED-NEXT:    cvt.f32.f16 %r2, %rs1;
+; ENABLED-NEXT:    add.rn.f32 %r3, %r2, %r1;
+; ENABLED-NEXT:    cvt.rn.f16.f32 %rs6, %r3;
+; ENABLED-NEXT:    cvt.f32.f16 %r4, %rs4;
+; ENABLED-NEXT:    cvt.f32.f16 %r5, %rs3;
+; ENABLED-NEXT:    add.rn.f32 %r6, %r5, %r4;
+; ENABLED-NEXT:    cvt.rn.f16.f32 %rs7, %r6;
+; ENABLED-NEXT:    cvt.f32.f16 %r7, %rs7;
+; ENABLED-NEXT:    cvt.f32.f16 %r8, %rs6;
+; ENABLED-NEXT:    add.rn.f32 %r9, %r8, %r7;
+; ENABLED-NEXT:    cvt.rn.f16.f32 %rs8, %r9;
+; ENABLED-NEXT:    cvt.f32.f16 %r10, %rs8;
+; ENABLED-NEXT:    cvt.f32.f16 %r11, %rs5;
+; ENABLED-NEXT:    add.rn.f32 %r12, %r10, %r11;
+; ENABLED-NEXT:    cvt.rn.f16.f32 %rs9, %r12;
 ; ENABLED-NEXT:    st.param.b16 [func_retval0], %rs9;
 ; ENABLED-NEXT:    ret;
 ;
 ; DISABLED-LABEL: fh(
 ; DISABLED:       {
 ; DISABLED-NEXT:    .reg .b16 %rs<10>;
-; DISABLED-NEXT:    .reg .b32 %f<13>;
+; DISABLED-NEXT:    .reg .b32 %r<13>;
 ; DISABLED-NEXT:    .reg .b64 %rd<2>;
 ; DISABLED-EMPTY:
 ; DISABLED-NEXT:  // %bb.0:
@@ -84,22 +84,22 @@ define half @fh(ptr %p) {
 ; DISABLED-NEXT:    ld.b16 %rs3, [%rd1+4];
 ; DISABLED-NEXT:    ld.b16 %rs4, [%rd1+6];
 ; DISABLED-NEXT:    ld.b16 %rs5, [%rd1+8];
-; DISABLED-NEXT:    cvt.f32.f16 %f1, %rs2;
-; DISABLED-NEXT:    cvt.f32.f16 %f2, %rs1;
-; DISABLED-NEXT:    add.rn.f32 %f3, %f2, %f1;
-; DISABLED-NEXT:    cvt.rn.f16.f32 %rs6, %f3;
-; DISABLED-NEXT:    cvt.f32.f16 %f4, %rs4;
-; DISABLED-NEXT:    cvt.f32.f16 %f5, %rs3;
-; DISABLED-NEXT:    add.rn.f32 %f6, %f5, %f4;
-; DISABLED-NEXT:    cvt.rn.f16.f32 %rs7, %f6;
-; DISABLED-NEXT:    cvt.f32.f16 %f7, %rs7;
-; DISABLED-NEXT:    cvt.f32.f16 %f8, %rs6;
-; DISABLED-NEXT:    add.rn.f32 %f9, %f8, %f7;
-; DISABLED-NEXT:    cvt.rn.f16.f32 %rs8, %f9;
-; DISABLED-NEXT:    cvt.f32.f16 %f10, %rs8;
-; DISABLED-NEXT:    cvt.f32.f16 %f11, %rs5;
-; DISABLED-NEXT:    add.rn.f32 %f12, %f10, %f11;
-; DISABLED-NEXT:    cvt.rn.f16.f32 %rs9, %f12;
+; DISABLED-NEXT:    cvt.f32.f16 %r1, %rs2;
+; DISABLED-NEXT:    cvt.f32.f16 %r2, %rs1;
+; DISABLED-NEXT:    add.rn.f32 %r3, %r2, %r1;
+; DISABLED-NEXT:    cvt.rn.f16.f32 %rs6, %r3;
+; DISABLED-NEXT:    cvt.f32.f16 %r4, %rs4;
+; DISABLED-NEXT:    cvt.f32.f16 %r5, %rs3;
+; DISABLED-NEXT:    add.rn.f32 %r6, %r5, %r4;
+; DISABLED-NEXT:    cvt.rn.f16.f32 %rs7, %r6;
+; DISABLED-NEXT:    cvt.f32.f16 %r7, %rs7;
+; DISABLED-NEXT:    cvt.f32.f16 %r8, %rs6;
+; DISABLED-NEXT:    add.rn.f32 %r9, %r8, %r7;
+; DISABLED-NEXT:    cvt.rn.f16.f32 %rs8, %r9;
+; DISABLED-NEXT:    cvt.f32.f16 %r10, %rs8;
+; DISABLED-NEXT:    cvt.f32.f16 %r11, %rs5;
+; DISABLED-NEXT:    add.rn.f32 %r12, %r10, %r11;
+; DISABLED-NEXT:    cvt.rn.f16.f32 %rs9, %r12;
 ; DISABLED-NEXT:    st.param.b16 [func_retval0], %rs9;
 ; DISABLED-NEXT:    ret;
   %p.1 = getelementptr half, ptr %p, i32 1
@@ -121,37 +121,37 @@ define half @fh(ptr %p) {
 define float @ff(ptr %p) {
 ; ENABLED-LABEL: ff(
 ; ENABLED:       {
-; ENABLED-NEXT:    .reg .b32 %f<10>;
+; ENABLED-NEXT:    .reg .b32 %r<10>;
 ; ENABLED-NEXT:    .reg .b64 %rd<2>;
 ; ENABLED-EMPTY:
 ; ENABLED-NEXT:  // %bb.0:
 ; ENABLED-NEXT:    ld.param.b64 %rd1, [ff_param_0];
-; ENABLED-NEXT:    ld.v4.b32 {%f1, %f2, %f3, %f4}, [%rd1];
-; ENABLED-NEXT:    ld.b32 %f5, [%rd1+16];
-; ENABLED-NEXT:    add.rn.f32 %f6, %f1, %f2;
-; ENABLED-NEXT:    add.rn.f32 %f7, %f3, %f4;
-; ENABLED-NEXT:    add.rn.f32 %f8, %f6, %f7;
-; ENABLED-NEXT:    add.rn.f32 %f9, %f8, %f5;
-; ENABLED-NEXT:    st.param.b32 [func_retval0], %f9;
+; ENABLED-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; ENABLED-NEXT:    ld.b32 %r5, [%rd1+16];
+; ENABLED-NEXT:    add.rn.f32 %r6, %r1, %r2;
+; ENABLED-NEXT:    add.rn.f32 %r7, %r3, %r4;
+; ENABLED-NEXT:    add.rn.f32 %r8, %r6, %r7;
+; ENABLED-NEXT:    add.rn.f32 %r9, %r8, %r5;
+; ENABLED-NEXT:    st.param.b32 [func_retval0], %r9;
 ; ENABLED-NEXT:    ret;
 ;
 ; DISABLED-LABEL: ff(
 ; DISABLED:       {
-; DISABLED-NEXT:    .reg .b32 %f<10>;
+; DISABLED-NEXT:    .reg .b32 %r<10>;
 ; DISABLED-NEXT:    .reg .b64 %rd<2>;
 ; DISABLED-EMPTY:
 ; DISABLED-NEXT:  // %bb.0:
 ; DISABLED-NEXT:    ld.param.b64 %rd1, [ff_param_0];
-; DISABLED-NEXT:    ld.b32 %f1, [%rd1];
-; DISABLED-NEXT:    ld.b32 %f2, [%rd1+4];
-; DISABLED-NEXT:    ld.b32 %f3, [%rd1+8];
-; DISABLED-NEXT:    ld.b32 %f4, [%rd1+12];
-; DISABLED-NEXT:    ld.b32 %f5, [%rd1+16];
-; DISABLED-NEXT:    add.rn.f32 %f6, %f1, %f2;
-; DISABLED-NEXT:    add.rn.f32 %f7, %f3, %f4;
-; DISABLED-NEXT:    add.rn.f32 %f8, %f6, %f7;
-; DISABLED-NEXT:    add.rn.f32 %f9, %f8, %f5;
-; DISABLED-NEXT:    st.param.b32 [func_retval0], %f9;
+; DISABLED-NEXT:    ld.b32 %r1, [%rd1];
+; DISABLED-NEXT:    ld.b32 %r2, [%rd1+4];
+; DISABLED-NEXT:    ld.b32 %r3, [%rd1+8];
+; DISABLED-NEXT:    ld.b32 %r4, [%rd1+12];
+; DISABLED-NEXT:    ld.b32 %r5, [%rd1+16];
+; DISABLED-NEXT:    add.rn.f32 %r6, %r1, %r2;
+; DISABLED-NEXT:    add.rn.f32 %r7, %r3, %r4;
+; DISABLED-NEXT:    add.rn.f32 %r8, %r6, %r7;
+; DISABLED-NEXT:    add.rn.f32 %r9, %r8, %r5;
+; DISABLED-NEXT:    st.param.b32 [func_retval0], %r9;
 ; DISABLED-NEXT:    ret;
   %p.1 = getelementptr float, ptr %p, i32 1
   %p.2 = getelementptr float, ptr %p, i32 2
