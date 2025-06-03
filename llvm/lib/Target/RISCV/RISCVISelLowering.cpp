@@ -8390,12 +8390,7 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
     return Encoding;
   };
 
-  SDValue OutChains[6];
-  SDValue OutChainsLPAD[7];
-  if (HasCFBranch)
-    assert(std::size(OutChainsLPAD) == StaticChainIdx + 2);
-  else
-    assert(std::size(OutChains) == StaticChainIdx + 2);
+  SmallVector<SDValue> OutChains;
 
   SmallVector<uint32_t> Encodings;
   if (!HasCFBranch) {
@@ -8451,16 +8446,14 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
                          .addImm(0))});
   }
 
-  SDValue *OutChainsUsed = HasCFBranch ? OutChainsLPAD : OutChains;
-
   // Store encoded instructions.
   for (auto [Idx, Encoding] : llvm::enumerate(Encodings)) {
     SDValue Addr = Idx > 0 ? DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                                          DAG.getConstant(Idx * 4, dl, MVT::i64))
                            : Trmp;
-    OutChainsUsed[Idx] = DAG.getTruncStore(
+    OutChains.push_back(DAG.getTruncStore(
         Root, dl, DAG.getConstant(Encoding, dl, MVT::i64), Addr,
-        MachinePointerInfo(TrmpAddr, Idx * 4), MVT::i32);
+        MachinePointerInfo(TrmpAddr, Idx * 4), MVT::i32));
   }
 
   // Now store the variable part of the trampoline.
@@ -8476,21 +8469,16 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
       {StaticChainOffset, StaticChain},
       {FunctionAddressOffset, FunctionAddress},
   };
-  for (auto [Idx, OffsetValue] : llvm::enumerate(OffsetValues)) {
+  for (auto &OffsetValue : OffsetValues) {
     SDValue Addr =
         DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
                     DAG.getConstant(OffsetValue.Offset, dl, MVT::i64));
     OffsetValue.Addr = Addr;
-    OutChainsUsed[Idx + StaticChainIdx] =
-        DAG.getStore(Root, dl, OffsetValue.Value, Addr,
-                     MachinePointerInfo(TrmpAddr, OffsetValue.Offset));
+    OutChains.push_back(DAG.getStore(Root, dl, OffsetValue.Value, Addr,
+                     MachinePointerInfo(TrmpAddr, OffsetValue.Offset)));
   }
 
-  SDValue StoreToken;
-  if (HasCFBranch)
-    StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChainsLPAD);
-  else
-    StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+  SDValue StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 
   // The end of instructions of trampoline is the same as the static chain
   // address that we computed earlier.
