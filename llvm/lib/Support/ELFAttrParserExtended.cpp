@@ -119,7 +119,7 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
     // type(1)
     // Extended Build Attributes subsection has to fit inside the section.
     if (ExtBASubsectionLength < 8 ||
-        ExtBASubsectionLength > (Section.size() - Cursor.tell() + 4))
+        ExtBASubsectionLength > (Section.size() - Cursor.tell() + 5))
       return createStringError(
           errc::invalid_argument,
           "invalid Extended Build Attributes subsection size at offset: " +
