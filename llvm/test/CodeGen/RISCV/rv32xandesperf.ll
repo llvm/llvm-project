@@ -79,8 +79,7 @@ define i64 @bfoz_from_lshr_and_i64(i64 %x) {
 define i32 @bfoz_from_and_shl_with_msb_zero_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_and_shl_with_msb_zero_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 31
-; CHECK-NEXT:    srli a0, a0, 16
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 15
 ; CHECK-NEXT:    ret
   %shifted = shl i32 %x, 15
   %masked = and i32 %shifted, 32768
@@ -90,8 +89,7 @@ define i32 @bfoz_from_and_shl_with_msb_zero_i32(i32 %x) {
 define i32 @bfoz_from_lshr_shl_with_msb_zero_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_lshr_shl_with_msb_zero_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 31
-; CHECK-NEXT:    srli a0, a0, 13
+; CHECK-NEXT:    nds.bfoz a0, a0, 0, 18
 ; CHECK-NEXT:    ret
   %shl = shl i32 %x, 31
   %lshr = lshr i32 %shl, 13
@@ -103,8 +101,7 @@ define i32 @bfoz_from_lshr_shl_with_msb_zero_i32(i32 %x) {
 define i32 @bfoz_from_and_shl_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_and_shl_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 20
-; CHECK-NEXT:    srli a0, a0, 8
+; CHECK-NEXT:    nds.bfoz a0, a0, 12, 23
 ; CHECK-NEXT:    ret
   %shifted = shl i32 %x, 12
   %masked = and i32 %shifted, 16773120
@@ -114,8 +111,7 @@ define i32 @bfoz_from_and_shl_i32(i32 %x) {
 define i32 @bfoz_from_lshr_shl_i32(i32 %x) {
 ; CHECK-LABEL: bfoz_from_lshr_shl_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 26
-; CHECK-NEXT:    srli a0, a0, 7
+; CHECK-NEXT:    nds.bfoz a0, a0, 19, 24
 ; CHECK-NEXT:    ret
   %shl = shl i32 %x, 26
   %lshr = lshr i32 %shl, 7
