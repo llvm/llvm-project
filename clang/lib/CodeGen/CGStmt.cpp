@@ -1516,6 +1516,10 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
     EmitStmt(S.getBody());
   }
 
+  // The last block in the loop's body (which unconditionally branches to theAdd commentMore actions
+  // `inc` block if there is one).
+  auto *FinalBodyBB = Builder.GetInsertBlock();
+
   EmitStopPoint(&S);
   // If there is an increment, emit it next.
   EmitBlock(Continue.getBlock());
@@ -1542,7 +1546,7 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   // We want the for closing brace to be step-able on to match existing
   // behaviour.
-  addInstToNewSourceAtom(ForBody->getTerminator(), nullptr);
+  addInstToNewSourceAtom(FinalBodyBB->getTerminator(), nullptr);
 }
 
 void CodeGenFunction::EmitReturnOfRValue(RValue RV, QualType Ty) {

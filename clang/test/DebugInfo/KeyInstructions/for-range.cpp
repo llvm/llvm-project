@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu  -gkey-instructions %s -debug-info-kind=line-tables-only -emit-llvm -o - \
-// RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
+// RUN: | FileCheck %s
 
 // Perennial question: should the inc be its own source atom or not
 // (currently it is).
@@ -51,9 +51,22 @@ struct Range {
 // CHECK-NEXT:    ret void, !dbg [[DBG30:![0-9]+]]
 //
 void a() {
-    for (int i: r)
-        ;
+  for (int i: r)
+    ;
 }
+
+// - Check the branch out of the body gets an atom group (and gets it correct
+// if there's ctrl-flow in the body).
+void b() {
+  for (int i: r) {
+    if (i)
+      ;
+// CHECK: entry:
+// CHECK: if.end:
+// CHECK-NEXT: br label %for.inc, !dbg [[b_br:!.*]]
+  }
+}
+
 //.
 // CHECK: [[DBG14]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
 // CHECK: [[DBG15]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 2)
@@ -69,4 +82,6 @@ void a() {
 // CHECK: [[DBG25]] = !DILocation({{.*}}, atomGroup: 7, atomRank: 2)
 // CHECK: [[DBG26]] = !DILocation({{.*}}, atomGroup: 7, atomRank: 1)
 // CHECK: [[DBG30]] = !DILocation({{.*}})
+//
+// CHECK: [[b_br]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])
 //.
