@@ -8,7 +8,7 @@
 
 // The stores in the setup (stores to __RANGE1, __BEGIN1, __END1) are all
 // marked as Key. Unclear whether that's desirable. Keep for now as that's
-// least risky (at worst it introduces an unecessary step while debugging,
+// least risky (at worst it introduces an unnecessary step while debugging,
 // as opposed to potentially losing one we want).
 
 // Check the conditional branch (and the condition) in FOR_COND and
