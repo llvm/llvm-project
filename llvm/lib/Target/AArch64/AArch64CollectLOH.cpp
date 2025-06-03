@@ -230,6 +230,10 @@ static bool isCandidateStore(const MachineInstr &MI, const MachineOperand &MO) {
   case AArch64::STNPSi:
   case AArch64::STNPDi:
   case AArch64::STNPQi:
+    // We can only optimize the index operand.
+    // In case we have str xA, xB, [xA, #imm] or str xA, xB [xB, #imm], this is
+    // two different uses of xA or xB and we cannot fold, otherwise the xA or xB
+    // stored may be wrong, even if #imm == 0.
     return MO.getOperandNo() == 2 &&
            MI.getOperand(0).getReg() != MI.getOperand(2).getReg() &&
            MI.getOperand(1).getReg() != MI.getOperand(2).getReg();
