@@ -86,7 +86,7 @@ bool isLoadTagMultiple(unsigned Opcode) {
   }
 }
 
-  static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
+static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
   case 32:
     return AArch64::MOVi32imm;
