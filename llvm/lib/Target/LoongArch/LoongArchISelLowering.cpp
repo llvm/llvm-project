@@ -4322,14 +4322,9 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
   default:
     return SDValue();
   case ISD::SETEQ:
-    if (EltVT == MVT::i8) {
-      // x == 0 => not (vmsknez.b x)
-      if (ISD::isBuildVectorAllZeros(SrcN1.getNode()))
-        ISD = UseLASX ? LoongArchISD::XVMSKEQZ : LoongArchISD::VMSKEQZ;
-      // x == -1 => vmsknez.b x
-      else if (ISD::isBuildVectorAllOnes(SrcN1.getNode()))
-        ISD = UseLASX ? LoongArchISD::XVMSKNEZ : LoongArchISD::VMSKNEZ;
-    }
+    // x == 0 => not (vmsknez.b x)
+    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
+      ISD = UseLASX ? LoongArchISD::XVMSKEQZ : LoongArchISD::VMSKEQZ;
     break;
   case ISD::SETGT:
     // x > -1 => vmskgez.b x
@@ -4356,14 +4351,9 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
       ISD = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
     break;
   case ISD::SETNE:
-    if (EltVT == MVT::i8) {
-      // x != 0 => vmsknez.b x
-      if (ISD::isBuildVectorAllZeros(SrcN1.getNode()))
-        ISD = UseLASX ? LoongArchISD::XVMSKNEZ : LoongArchISD::VMSKNEZ;
-      // x != -1 => not (vmsknez.b x)
-      else if (ISD::isBuildVectorAllOnes(SrcN1.getNode()))
-        ISD = UseLASX ? LoongArchISD::XVMSKEQZ : LoongArchISD::VMSKEQZ;
-    }
+    // x != 0 => vmsknez.b x
+    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
+      ISD = UseLASX ? LoongArchISD::XVMSKNEZ : LoongArchISD::VMSKNEZ;
     break;
   }
 
