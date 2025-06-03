@@ -46,7 +46,7 @@ static cl::opt<unsigned>
     HardClauseLengthLimit("amdgpu-hard-clause-length-limit",
                           cl::desc("Maximum number of memory instructions to "
                                    "place in the same hard clause"),
-                          cl::init(255), cl::Hidden);
+                          cl::Hidden);
 
 namespace {
 
@@ -196,11 +196,11 @@ public:
       return false;
 
     unsigned MaxClauseLength = MF.getFunction().getFnAttributeAsParsedInteger(
-        "amdgpu-hard-clause-length-limit", HardClauseLengthLimit);
+        "amdgpu-hard-clause-length-limit", 255);
     if (HardClauseLengthLimit.getNumOccurrences())
       MaxClauseLength = HardClauseLengthLimit;
     MaxClauseLength = std::min(MaxClauseLength, ST->maxHardClauseLength());
-    if (!MaxClauseLength)
+    if (MaxClauseLength <= 1)
       return false;
 
     const SIInstrInfo *SII = ST->getInstrInfo();
