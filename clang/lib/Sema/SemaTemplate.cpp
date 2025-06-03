@@ -4444,8 +4444,16 @@ static bool IsLibstdcxxStdFormatKind(Preprocessor &PP, VarDecl *Var) {
       !Var->getDeclContext()->isStdNamespace())
     return false;
 
-  // Checking old versions of libstdc++ is not needed because 15.1 is the first
-  // release in which users can access std::format_kind.
+  MacroInfo *MacroGLIBCXX =
+      PP.getMacroInfo(PP.getIdentifierInfo("__GLIBCXX__"));
+
+  if (!MacroGLIBCXX || MacroGLIBCXX->getNumTokens() != 1)
+    return false;
+
+  const Token &RevisionDateTok = MacroGLIBCXX->getReplacementToken(0);
+  bool Invalid = false;
+  std::string RevisionDate = PP.getSpelling(RevisionDateTok, &Invalid);
+
   // We can use 20250520 as the final date, see the following commits.
   // GCC releases/gcc-15 branch:
   // https://gcc.gnu.org/g:fedf81ef7b98e5c9ac899b8641bb670746c51205
@@ -4453,7 +4461,18 @@ static bool IsLibstdcxxStdFormatKind(Preprocessor &PP, VarDecl *Var) {
   // GCC master branch:
   // https://gcc.gnu.org/g:9361966d80f625c5accc25cbb439f0278dd8b278
   // https://gcc.gnu.org/g:c65725eccbabf3b9b5965f27fff2d3b9f6c75930
-  return PP.NeedsStdLibCxxWorkaroundBefore(2025'05'20);
+  StringRef FixDate = "20250520";
+
+  if (Invalid)
+    return false;
+
+  // The format of the revision date is in compressed ISO date format.
+  // See https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
+  // So we can use string comparison.
+  //
+  // Checking old versions of libstdc++ is not needed because 15.1 is the first
+  // release in which users can access std::format_kind.
+  return RevisionDate.size() == 8 && RevisionDate < FixDate;
 }
 } // end anonymous namespace
 
