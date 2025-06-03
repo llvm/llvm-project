@@ -514,7 +514,7 @@ Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
   if (auto Err = KernelImpl->init(Device, *Program->Image))
     return Err;
 
-  *Kernel = new ol_kernel_impl_t(std::move(&*KernelImpl), Program);
+  *Kernel = new ol_kernel_impl_t(&*KernelImpl, Program);
 
   return Error::success();
 }
