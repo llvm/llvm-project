@@ -2817,8 +2817,9 @@ void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
     RD = LeastDerivedClassWithSameLayout(RD);
 
   auto [Ordinal, _] = SanitizerInfoFromCFICheckKind(TCK);
-  SanitizerDebugLocation SanScope(this, {Ordinal},
-                                  SanitizerHandler::CFICheckFail);
+  ApplyDebugLocation ApplyTrapDI(
+      *this,
+      SanitizerAnnotateDebugInfo(Ordinal, SanitizerHandler::CFICheckFail));
 
   EmitVTablePtrCheck(RD, VTable, TCK, Loc);
 }
@@ -2843,8 +2844,9 @@ void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T, Address Derived,
     ClassDecl = LeastDerivedClassWithSameLayout(ClassDecl);
 
   auto [Ordinal, _] = SanitizerInfoFromCFICheckKind(TCK);
-  SanitizerDebugLocation SanScope(this, {Ordinal},
-                                  SanitizerHandler::CFICheckFail);
+  ApplyDebugLocation ApplyTrapDI(
+      *this,
+      SanitizerAnnotateDebugInfo(Ordinal, SanitizerHandler::CFICheckFail));
 
   llvm::BasicBlock *ContBlock = nullptr;
 
