@@ -2817,9 +2817,8 @@ void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
     RD = LeastDerivedClassWithSameLayout(RD);
 
   auto [Ordinal, _] = SanitizerInfoFromCFICheckKind(TCK);
-  ApplyDebugLocation ApplyTrapDI(
-      *this,
-      SanitizerAnnotateDebugInfo(Ordinal, SanitizerHandler::CFICheckFail));
+  SanitizerDebugLocation SanScope(this, {Ordinal},
+                                  SanitizerHandler::CFICheckFail);
 
   EmitVTablePtrCheck(RD, VTable, TCK, Loc);
 }
@@ -2844,9 +2843,8 @@ void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T, Address Derived,
     ClassDecl = LeastDerivedClassWithSameLayout(ClassDecl);
 
   auto [Ordinal, _] = SanitizerInfoFromCFICheckKind(TCK);
-  ApplyDebugLocation ApplyTrapDI(
-      *this,
-      SanitizerAnnotateDebugInfo(Ordinal, SanitizerHandler::CFICheckFail));
+  SanitizerDebugLocation SanScope(this, {Ordinal},
+                                  SanitizerHandler::CFICheckFail);
 
   llvm::BasicBlock *ContBlock = nullptr;
 
@@ -2878,6 +2876,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
                                          llvm::Value *VTable,
                                          CFITypeCheckKind TCK,
                                          SourceLocation Loc) {
+  // N.B. all callers have established SanitizerDebugLocation
+
   if (!CGM.getCodeGenOpts().SanitizeCfiCrossDso &&
       !CGM.HasHiddenLTOVisibility(RD))
     return;
@@ -2889,8 +2889,6 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
           SanitizerMask::bitPosToMask(M), TypeName))
     return;
 
-  auto CheckHandler = SanitizerHandler::CFICheckFail;
-  SanitizerDebugLocation SanScope(this, {M}, CheckHandler);
   EmitSanitizerStatReport(SSK);
 
   llvm::Metadata *MD =
@@ -2914,7 +2912,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
 
   if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
     bool NoMerge = !CGM.getCodeGenOpts().SanitizeMergeHandlers.has(M);
-    EmitTrapCheck(TypeTest, CheckHandler, NoMerge);
+    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail, NoMerge);
     return;
   }
 
@@ -2923,8 +2921,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
       llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
   llvm::Value *ValidVtable = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, AllVtables});
-  EmitCheck(std::make_pair(TypeTest, M), CheckHandler, StaticData,
-            {VTable, ValidVtable});
+  EmitCheck(std::make_pair(TypeTest, M), SanitizerHandler::CFICheckFail,
+            StaticData, {VTable, ValidVtable});
 }
 
 bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
