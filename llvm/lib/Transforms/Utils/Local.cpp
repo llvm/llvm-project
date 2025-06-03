@@ -4117,7 +4117,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   if (!MatchBSwaps && !MatchBitReversals)
     return false;
   Type *ITy = I->getType();
-  if (!ITy->isIntOrIntVectorTy() || ITy->getScalarSizeInBits() > 128)
+  if (!ITy->isIntOrIntVectorTy() || ITy->getScalarSizeInBits() == 1 ||
+      ITy->getScalarSizeInBits() > 128)
     return false;  // Can't do integer/elements > 128 bits.
 
   // Try to find all the pieces corresponding to the bswap.
@@ -4220,12 +4221,19 @@ void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
 }
 
 bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
+  const auto *Op = I->getOperand(OpIdx);
   // We can't have a PHI with a metadata type.
-  if (I->getOperand(OpIdx)->getType()->isMetadataTy())
+  if (Op->getType()->isMetadataTy())
+    return false;
+
+  // swifterror pointers can only be used by a load, store, or as a swifterror
+  // argument; swifterror pointers are not allowed to be used in select or phi
+  // instructions.
+  if (Op->isSwiftError())
     return false;
 
   // Early exit.
-  if (!isa<Constant, InlineAsm>(I->getOperand(OpIdx)))
+  if (!isa<Constant, InlineAsm>(Op))
     return true;
 
   switch (I->getOpcode()) {
@@ -4354,4 +4362,33 @@ bool llvm::inferAttributesFromOthers(Function &F) {
   // can infer by inspecting arguments of argmemonly-ish functions.
 
   return Changed;
+}
+
+void OverflowTracking::mergeFlags(Instruction &I) {
+#ifndef NDEBUG
+  if (Opcode)
+    assert(Opcode == I.getOpcode() &&
+           "can only use mergeFlags on instructions with matching opcodes");
+  else
+    Opcode = I.getOpcode();
+#endif
+  if (isa<OverflowingBinaryOperator>(&I)) {
+    HasNUW &= I.hasNoUnsignedWrap();
+    HasNSW &= I.hasNoSignedWrap();
+  }
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    IsDisjoint &= DisjointOp->isDisjoint();
+}
+
+void OverflowTracking::applyFlags(Instruction &I) {
+  I.clearSubclassOptionalData();
+  if (I.getOpcode() == Instruction::Add ||
+      (I.getOpcode() == Instruction::Mul && AllKnownNonZero)) {
+    if (HasNUW)
+      I.setHasNoUnsignedWrap();
+    if (HasNSW && (AllKnownNonNegative || HasNUW))
+      I.setHasNoSignedWrap();
+  }
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    DisjointOp->setIsDisjoint(IsDisjoint);
 }

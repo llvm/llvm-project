@@ -91,6 +91,7 @@ config.substitutions.append(("%llvmshlibdir", config.llvm_shlib_dir))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
 config.substitutions.append(("%pluginext", config.llvm_plugin_ext))
 config.substitutions.append(("%exeext", config.llvm_exe_ext))
+config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 
 
 lli_args = []
@@ -382,6 +383,13 @@ if sys.platform in ["win32"]:
 else:
     # Others/can-execute.txt
     config.available_features.add("can-execute")
+
+# Detect Windows Subsystem for Linux (WSL)
+uname_r = platform.uname().release
+if uname_r.endswith("-Microsoft"):
+    config.available_features.add("wsl1")
+elif uname_r.endswith("microsoft-standard-WSL2"):
+    config.available_features.add("wsl2")
 
 # Loadable module
 if config.has_plugins:

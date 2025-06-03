@@ -571,6 +571,41 @@ void VectorTest(uint16_t4 first, uint16_t4 second) {
   // CHECK: %[[ADD:.+]] = add <3 x i16> %[[Shuffle]], %[[Shuffle1]]
 }
 
+typedef unsigned _BitInt(4) uint4_t4 __attribute__((ext_vector_type(4)));
+void VectorTest(uint4_t4 first, uint4_t4 second) {
+  // LIN64: define{{.*}} void @_Z10VectorTestDv4_DU4_S0_(i32 %{{.+}}, i32 %{{.+}})
+  // LIN32: define{{.*}} void @_Z10VectorTestDv4_DU4_S0_(<4 x i4> %{{.+}}, <4 x i4> %{{.+}})
+  // WIN64: define dso_local void @"?VectorTest@@YAXT?$__vector@U?$_UBitInt@$03@__clang@@$03@__clang@@0@Z"(<4 x i4> %{{.+}}, <4 x i4> %{{.+}})
+  // WIN32: define dso_local void @"?VectorTest@@YAXT?$__vector@U?$_UBitInt@$03@__clang@@$03@__clang@@0@Z"(<4 x i4> inreg %{{.+}}, <4 x i4> inreg %{{.+}})
+  first.xzw + second.zwx;
+  // CHECK: %[[Shuffle:.+]] = shufflevector <4 x i4> %{{.+}}, <4 x i4> poison, <3 x i32> <i32 0, i32 2, i32 3>
+  // CHECK: %[[Shuffle1:.+]] = shufflevector <4 x i4> %{{.+}}, <4 x i4> poison, <3 x i32> <i32 2, i32 3, i32 0>
+  // CHECK: %[[ADD:.+]] = add <3 x i4> %[[Shuffle]], %[[Shuffle1]]
+}
+
+typedef unsigned _BitInt(2) uint2_t2 __attribute__((ext_vector_type(2)));
+uint2_t2 TestBitIntVector2x2Alloca(uint2_t2 v1, uint2_t2 v2) {
+  // LIN64: define dso_local i16 @_Z25TestBitIntVector2x2AllocaDv2_DU2_S0_(i16 %[[V1Coerce:.+]], i16 %[[V2Coerce:.+]])
+  // LIN64: %[[RetVal:.+]] = alloca <2 x i2>, align 2
+  // LIN64: %[[V1Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN64: %[[V2Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN64: %[[RetValCoerce:.+]] = alloca i16, align 2
+  // LIN64: call void @llvm.memcpy.p0.p0.i64(ptr align 2 %[[RetValCoerce]], ptr align 2 %[[RetVal]], i64 1, i1 false)
+  // LIN64: %[[Ret:.+]] = load i16, ptr %[[RetValCoerce]], align 2
+  // LIN64: ret i16 %[[Ret]]
+
+  // LIN32: define dso_local <2 x i2> @_Z25TestBitIntVector2x2AllocaDv2_DU2_S0_(<2 x i2> %{{.+}}, <2 x i2> %{{.+}})
+  // LIN32: %[[V1Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN32: %[[V2Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN32: ret <2 x i2> %[[Ret:.+]]
+
+  // WIN: define dso_local <2 x i2> @"?TestBitIntVector2x2Alloca@@YAT?$__vector@U?$_UBitInt@$01@__clang@@$01@__clang@@T12@0@Z"(<2 x i2>{{.*}}, <2 x i2>{{.*}})
+  // WIN: %[[V1:.+]] = alloca <2 x i2>, align 2
+  // WIN: %[[V2:.+]] = alloca <2 x i2>, align 2
+  // WIN: ret <2 x i2> %[[Ret:.+]]
+  return v1 + v2;
+}
+
 // Ensure that these types don't alias the normal int types.
 void TBAATest(_BitInt(sizeof(int) * 8) ExtInt,
               unsigned _BitInt(sizeof(int) * 8) ExtUInt,

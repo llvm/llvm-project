@@ -370,6 +370,13 @@ struct ContinueResponseBody {
 };
 llvm::json::Value toJSON(const ContinueResponseBody &);
 
+/// Arguments for `configurationDone` request.
+using ConfigurationDoneArguments = EmptyArguments;
+
+/// Response to `configurationDone` request. This is just an acknowledgement, so
+/// no body field is required.
+using ConfigurationDoneResponse = VoidResponse;
+
 /// Arguments for `setVariable` request.
 struct SetVariableArguments {
   /// The reference of the variable container. The `variablesReference` must
@@ -438,6 +445,19 @@ struct SetVariableResponseBody {
   std::optional<uint64_t> valueLocationReference;
 };
 llvm::json::Value toJSON(const SetVariableResponseBody &);
+
+struct ScopesArguments {
+  /// Retrieve the scopes for the stack frame identified by `frameId`. The
+  /// `frameId` must have been obtained in the current suspended state. See
+  /// 'Lifetime of Object References' in the Overview section for details.
+  uint64_t frameId = LLDB_INVALID_FRAME_ID;
+};
+bool fromJSON(const llvm::json::Value &, ScopesArguments &, llvm::json::Path);
+
+struct ScopesResponseBody {
+  std::vector<Scope> scopes;
+};
+llvm::json::Value toJSON(const ScopesResponseBody &);
 
 /// Arguments for `source` request.
 struct SourceArguments {
@@ -693,7 +713,7 @@ llvm::json::Value toJSON(const DataBreakpointInfoResponseBody &);
 struct SetDataBreakpointsArguments {
   /// The contents of this array replaces all existing data breakpoints. An
   /// empty array clears all data breakpoints.
-  std::vector<DataBreakpointInfo> breakpoints;
+  std::vector<DataBreakpoint> breakpoints;
 };
 bool fromJSON(const llvm::json::Value &, SetDataBreakpointsArguments &,
               llvm::json::Path);
@@ -705,6 +725,44 @@ struct SetDataBreakpointsResponseBody {
   std::vector<Breakpoint> breakpoints;
 };
 llvm::json::Value toJSON(const SetDataBreakpointsResponseBody &);
+
+/// Arguments to `disassemble` request.
+struct DisassembleArguments {
+  /// Memory reference to the base location containing the instructions to
+  /// disassemble.
+  std::string memoryReference;
+
+  /// Offset (in bytes) to be applied to the reference location before
+  /// disassembling. Can be negative.
+  std::optional<int64_t> offset;
+
+  /// Offset (in instructions) to be applied after the byte offset (if any)
+  /// before disassembling. Can be negative.
+  std::optional<int64_t> instructionOffset;
+
+  /// Number of instructions to disassemble starting at the specified location
+  /// and offset.
+  /// An adapter must return exactly this number of instructions - any
+  /// unavailable instructions should be replaced with an implementation-defined
+  /// 'invalid instruction' value.
+  uint32_t instructionCount;
+
+  /// If true, the adapter should attempt to resolve memory addresses and other
+  /// values to symbolic names.
+  std::optional<bool> resolveSymbols;
+};
+bool fromJSON(const llvm::json::Value &, DisassembleArguments &,
+              llvm::json::Path);
+llvm::json::Value toJSON(const DisassembleArguments &);
+
+/// Response to `disassemble` request.
+struct DisassembleResponseBody {
+  /// The list of disassembled instructions.
+  std::vector<DisassembledInstruction> instructions;
+};
+bool fromJSON(const llvm::json::Value &, DisassembleResponseBody &,
+              llvm::json::Path);
+llvm::json::Value toJSON(const DisassembleResponseBody &);
 
 } // namespace lldb_dap::protocol
 

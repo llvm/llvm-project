@@ -23,13 +23,13 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Compare>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<const _Tp&, const _Tp&>
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI pair<const _Tp&, const _Tp&>
 minmax(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b, _Compare __comp) {
   return __comp(__b, __a) ? pair<const _Tp&, const _Tp&>(__b, __a) : pair<const _Tp&, const _Tp&>(__a, __b);
 }
 
 template <class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<const _Tp&, const _Tp&>
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI pair<const _Tp&, const _Tp&>
 minmax(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b) {
   return std::minmax(__a, __b, __less<>());
 }

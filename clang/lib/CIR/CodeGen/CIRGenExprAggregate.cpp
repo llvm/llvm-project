@@ -162,8 +162,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
     // TODO(CIR): Replace this part later with cir::DoWhileOp
     for (unsigned i = numInitElements; i != numArrayElements; ++i) {
-      cir::LoadOp currentElement =
-          builder.createLoad(loc, tmpAddr.getPointer());
+      cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
 
       // Emit the actual filler expression.
       const LValue elementLV = cgf.makeAddrLValue(

@@ -1293,6 +1293,7 @@ def WaitVMVSrc : NamedIntOperand<"wait_vm_vsrc"> {
 def ByteSel : NamedIntOperand<"byte_sel"> {
   let Validator = "isUInt<2>";
 }
+def ByteSel0 : DefaultOperand<ByteSel, 0>;
 
 let PrintMethod = "printBitOp3" in
 def BitOp3 : NamedIntOperand<"bitop3">;
@@ -1971,92 +1972,46 @@ class getIns32 <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs> 
 class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
                 RegisterOperand Src2RC, int NumSrcArgs,
                 bit HasClamp, bit HasModifiers, bit HasSrc2Mods, bit HasOMod,
-                Operand Src0Mod, Operand Src1Mod, Operand Src2Mod> {
+                Operand Src0Mod, Operand Src1Mod, Operand Src2Mod,
+                bit HasFP8ByteSel = 0, bit HasFP8DstByteSel = 0> {
+  dag src0 = !if(!ge(NumSrcArgs, 1),
+                 !if (HasModifiers,
+                      (ins Src0Mod:$src0_modifiers, Src0RC:$src0),
+                      (ins Src0RC:$src0)),
+                 (ins));
+  dag src1 = !if(!ge(NumSrcArgs, 2),
+                 !if (HasModifiers,
+                      (ins Src1Mod:$src1_modifiers, Src1RC:$src1),
+                      (ins Src1RC:$src1)),
+                 (ins));
+  dag src2 = !if(!ge(NumSrcArgs, 3),
+                 !if (HasSrc2Mods,
+                      (ins Src2Mod:$src2_modifiers, Src2RC:$src2),
+                      (ins Src2RC:$src2)),
+                 (ins));
+  // If there is vdst_in after clamp with HasFP8DstByteSel we cannot use
+  // Clamp0 with default value, all default operands must be at the end.
+  dag clamp = !if(HasClamp, !if(HasFP8DstByteSel, (ins Clamp:$clamp),
+                                                  (ins Clamp0:$clamp)),
+                            (ins));
+  dag omod = !if(HasOMod, (ins omod0:$omod), (ins));
+  dag bytesel = !if(HasFP8ByteSel,
+                    !con(!if(HasFP8DstByteSel, (ins VGPR_32:$vdst_in), (ins)),
+                         (ins ByteSel0:$byte_sel)),
+                    (ins));
 
-  dag ret =
-    !if (!eq(NumSrcArgs, 0),
-      // VOP1 without input operands (V_NOP, V_CLREXCP)
-      (ins),
-      /* else */
-    !if (!eq(NumSrcArgs, 1),
-      !if (HasModifiers,
-        // VOP1 with modifiers
-        !if(HasOMod,
-          (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-               Clamp0:$clamp, omod0:$omod),
-          !if (HasClamp,
-            (ins Src0Mod:$src0_modifiers, Src0RC:$src0, Clamp0:$clamp),
-            (ins Src0Mod:$src0_modifiers, Src0RC:$src0)))
-      /* else */,
-        // VOP1 without modifiers
-        !if(HasOMod,
-          (ins Src0RC:$src0, Clamp0:$clamp, omod0:$omod),
-          !if (HasClamp,
-            (ins Src0RC:$src0, Clamp0:$clamp),
-            (ins Src0RC:$src0)))
-      /* endif */ ),
-    !if (!eq(NumSrcArgs, 2),
-      !if (HasModifiers,
-        // VOP 2 with modifiers
-        !if(HasOMod,
-          (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-               Src1Mod:$src1_modifiers, Src1RC:$src1,
-               Clamp0:$clamp, omod0:$omod),
-          !con((ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                    Src1Mod:$src1_modifiers, Src1RC:$src1),
-                !if(HasClamp, (ins Clamp0:$clamp), (ins))))
-      /* else */,
-        // VOP2 without modifiers
-        !if (HasClamp,
-          (ins Src0RC:$src0, Src1RC:$src1, Clamp0:$clamp),
-          (ins Src0RC:$src0, Src1RC:$src1))
-
-      /* endif */ )
-    /* NumSrcArgs == 3 */,
-      !if (HasModifiers,
-        !if (HasSrc2Mods,
-          // VOP3 with modifiers
-          !if (HasOMod,
-            (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                 Src1Mod:$src1_modifiers, Src1RC:$src1,
-                 Src2Mod:$src2_modifiers, Src2RC:$src2,
-                 Clamp0:$clamp, omod0:$omod),
-            !if (HasClamp,
-              (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                   Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2Mod:$src2_modifiers, Src2RC:$src2,
-                   Clamp0:$clamp),
-              (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                   Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2Mod:$src2_modifiers, Src2RC:$src2))),
-          // VOP3 with modifiers except src2
-          !if (HasOMod,
-            (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                 Src1Mod:$src1_modifiers, Src1RC:$src1,
-                 Src2RC:$src2, Clamp0:$clamp, omod0:$omod),
-            !if (HasClamp,
-              (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                   Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2RC:$src2, Clamp0:$clamp),
-              (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                   Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2RC:$src2))))
-      /* else */,
-        // VOP3 without modifiers
-        !if (HasClamp,
-          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2, Clamp0:$clamp),
-          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2))
-      /* endif */ ))));
+  dag ret = !con(src0, src1, src2, clamp, omod, bytesel);
 }
 
 class getInsVOP3Base<RegisterOperand Src0RC, RegisterOperand Src1RC,
                 RegisterOperand Src2RC, int NumSrcArgs,
                 bit HasClamp, bit HasModifiers, bit HasSrc2Mods, bit HasOMod,
-                Operand Src0Mod, Operand Src1Mod, Operand Src2Mod, bit HasOpSel> {
+                Operand Src0Mod, Operand Src1Mod, Operand Src2Mod, bit HasOpSel,
+                bit HasFP8ByteSel = 0, bit HasFP8DstByteSel = 0> {
   // getInst64 handles clamp and omod. implicit mutex between vop3p and omod
   dag base = getIns64 <Src0RC, Src1RC, Src2RC, NumSrcArgs,
                 HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
-                Src0Mod, Src1Mod, Src2Mod>.ret;
+                Src0Mod, Src1Mod, Src2Mod, HasFP8ByteSel, HasFP8DstByteSel>.ret;
   dag opsel = (ins op_sel0:$op_sel);
   dag ret = !con(base, !if(HasOpSel, opsel, (ins)));
 }
@@ -2595,11 +2550,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit IsWMMA = 0;
   field bit IsSWMMAC = 0;
 
-  field bit IsFP8SrcByteSel = 0;
-  field bit IsFP8DstByteSel = 0;
+  field bit HasFP8SrcByteSel = 0;
   field bit HasFP8DstByteSel = 0;
   field bit HasFP4DstByteSel = 0;
-  field bit IsFP8ByteSel = !or(IsFP8SrcByteSel, IsFP8DstByteSel);
+  field bit HasFP8ByteSel = !or(HasFP8SrcByteSel, HasFP8DstByteSel);
 
   field bit HasDst = !ne(DstVT.Value, untyped.Value);
   field bit HasDst32 = HasDst;
@@ -2669,7 +2623,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field dag Ins32 = getIns32<Src0RC32, Src1RC32, NumSrcArgs>.ret;
   field dag Ins64 = getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
                              HasClamp, HasModifiers, HasSrc2Mods,
-                             HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
+                             HasOMod, Src0Mod, Src1Mod, Src2Mod,
+                             HasFP8ByteSel, HasFP8DstByteSel>.ret;
   field dag InsVOP3P = getInsVOP3P<Src0RC64, Src1RC64, Src2RC64,
                                    NumSrcArgs, HasClamp, HasOpSel, HasNeg,
                                    Src0PackedMod, Src1PackedMod, Src2PackedMod>.ret;
@@ -2687,7 +2642,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
                                  Src0ModDPP, Src1ModDPP, Src2ModDPP>.ret;
   defvar InsVOP3DPPBase = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
-                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel>.ret;
+                  Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel,
+                  HasFP8ByteSel, HasFP8DstByteSel>.ret;
   defvar InsVOP3PDPPBase = getInsVOP3P<Src0VOP3DPP, Src1VOP3DPP,
                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasOpSel, HasNeg,
                   Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP>.ret;
@@ -2716,7 +2672,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
    HasOpSel, HasOMod, IsVOP3P, HasNeg, HasModifiers, HasModifiers,
-   HasModifiers, DstVT, IsFP8ByteSel>.ret;
+   HasModifiers, DstVT, HasFP8ByteSel>.ret;
   field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasNeg, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,

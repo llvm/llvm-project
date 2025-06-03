@@ -28,7 +28,7 @@
 
 namespace mlir {
 namespace tensor {
-#define GEN_PASS_DEF_FOLDTENSORSUBSETOPS
+#define GEN_PASS_DEF_FOLDTENSORSUBSETOPSPASS
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 } // namespace tensor
 } // namespace mlir
@@ -268,7 +268,8 @@ void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
 namespace {
 
 struct FoldTensorSubsetOpsPass final
-    : public tensor::impl::FoldTensorSubsetOpsBase<FoldTensorSubsetOpsPass> {
+    : public tensor::impl::FoldTensorSubsetOpsPassBase<
+          FoldTensorSubsetOpsPass> {
   void runOnOperation() override;
 };
 
@@ -278,8 +279,4 @@ void FoldTensorSubsetOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> tensor::createFoldTensorSubsetOpsPass() {
-  return std::make_unique<FoldTensorSubsetOpsPass>();
 }
