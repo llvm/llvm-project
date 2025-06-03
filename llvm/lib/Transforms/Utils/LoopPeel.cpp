@@ -357,23 +357,30 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
 }
 
-/// Returns true if the last iteration should be peeled off, i.e. the condition
-/// (Pred LeftAR, RightSCEV) is known at the last iteration and the inverse
-/// condition is known at the second-to-last.
+/// Returns true if the last iteration can be peeled off and the condition (Pred
+/// LeftAR, RightSCEV) is known at the last iteration and the inverse condition
+/// is known at the second-to-last.
 static bool shouldPeelLastIteration(Loop &L, CmpPredicate Pred,
                                     const SCEVAddRecExpr *LeftAR,
-                                    const SCEV *RightSCEV, const SCEV *BTC,
-                                    ScalarEvolution &SE,
+                                    const SCEV *RightSCEV, ScalarEvolution &SE,
                                     const TargetTransformInfo &TTI) {
+  if (!canPeelLastIteration(L, SE))
+    return false;
+
+  const SCEV *BTC = SE.getBackedgeTakenCount(&L);
   SCEVExpander Expander(SE, L.getHeader()->getDataLayout(), "loop-peel");
   if (!SE.isKnownNonZero(BTC) &&
       Expander.isHighCostExpansion(BTC, &L, SCEVCheapExpansionBudget, &TTI,
                                    L.getLoopPredecessor()->getTerminator()))
     return false;
 
+  auto Guards = ScalarEvolution::LoopGuards::collect(&L, SE);
+  BTC = SE.applyLoopGuards(BTC, Guards);
+  RightSCEV = SE.applyLoopGuards(RightSCEV, Guards);
   const SCEV *ValAtLastIter = LeftAR->evaluateAtIteration(BTC, SE);
   const SCEV *ValAtSecondToLastIter = LeftAR->evaluateAtIteration(
       SE.getMinusSCEV(BTC, SE.getOne(BTC->getType())), SE);
+
   return SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), ValAtLastIter,
                              RightSCEV) &&
          SE.isKnownPredicate(Pred, ValAtSecondToLastIter, RightSCEV);
@@ -480,19 +487,8 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
     const SCEV *Step = LeftAR->getStepRecurrence(SE);
     if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, RightSCEV, Step,
                                    Pred)) {
-      if (!canPeelLastIteration(L, SE))
-        return;
-
-      const SCEV *BTC = SE.getBackedgeTakenCount(&L);
-      auto Guards = ScalarEvolution::LoopGuards::collect(&L, SE);
-      if (shouldPeelLastIteration(L, Pred, LeftAR,
-                                  SE.applyLoopGuards(RightSCEV, Guards),
-                                  SE.applyLoopGuards(BTC, Guards), SE, TTI))
+      if (shouldPeelLastIteration(L, Pred, LeftAR, RightSCEV, SE, TTI))
         DesiredPeelCountLast = 1;
-      else
-        assert(!shouldPeelLastIteration(L, Pred, LeftAR, RightSCEV, BTC, SE,
-                                        TTI) &&
-               "loop guards pessimized result");
       return;
     }
 
