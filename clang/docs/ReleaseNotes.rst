@@ -310,6 +310,8 @@ Non-comprehensive list of changes in this release
   different than before.
 - Fixed a crash when a VLA with an invalid size expression was used within a
   ``sizeof`` or ``typeof`` expression. (#GH138444)
+- Deprecation warning is emitted for the deprecated ``__reference_binds_to_temporary`` intrinsic.
+  ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
 
 New Compiler Flags
 ------------------

@@ -1458,6 +1458,9 @@ void DiagnoseBuiltinDeprecation(Sema &S, TypeTrait Kind, SourceLocation KWLoc) {
   case UTT_IsTriviallyRelocatable:
     Replacement = clang::UTT_IsCppTriviallyRelocatable;
     break;
+  case BTT_ReferenceBindsToTemporary:
+    Replacement = clang::BTT_ReferenceConstructsFromTemporary;
+    break;
   default:
     return;
   }
