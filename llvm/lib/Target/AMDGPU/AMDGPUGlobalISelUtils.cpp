@@ -108,7 +108,7 @@ bool AMDGPU::IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd) {
     // metadata to all the ptr-def instructions originated from the GV.
     Val = linearValueTracking(Val);
     if (auto *Inst = dyn_cast<Instruction>(Val))
-      return Inst->hasMetadata("lane-shared-in-vgpr");
+      return Inst->hasMetadata("laneshared-in-vgpr");
 
     if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(Val)) {
       std::optional<ConstantRange> AbsSymRange = GV->getAbsoluteSymbolRange();

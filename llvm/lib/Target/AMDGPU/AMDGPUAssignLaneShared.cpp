@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
@@ -59,7 +60,7 @@ recordLaneSharedAbsoluteAddress(Module *M, GlobalVariable *GV, uint32_t Offset,
     MDNode *EmptyMD = MDNode::get(Ctx, {});
     for (Value *Ptr : *PtrSet) {
       if (auto *Inst = dyn_cast<Instruction>(Ptr))
-        Inst->setMetadata("lane-shared-in-vgpr", EmptyMD);
+        Inst->setMetadata("laneshared-in-vgpr", EmptyMD);
     }
   }
 }
@@ -93,7 +94,10 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
 
   DenseSet<Function *> WavegroupKernels;
   for (auto &F : M.functions()) {
-    if (isKernel(F.getCallingConv()) && getWavegroupEnable(F))
+    if (F.isDeclaration())
+      continue;
+    if (isKernel(F.getCallingConv()) && getWavegroupEnable(F) &&
+         !getWavegroupRankFunction(F))
       WavegroupKernels.insert(&F);
   }
   if (WavegroupKernels.empty())
@@ -160,7 +164,18 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
       for (const CallGraphNode::CallRecord &R : *CG[F]) {
         Function *Ith = R.second->getFunction();
         if (Ith) {
-          if (!Seen.contains(Ith)) {
+          if (Ith->isIntrinsic()) {
+            if (Ith->getIntrinsicID() == Intrinsic::amdgcn_wavegroup_rank) {
+              assert(R.first);
+              if (CallInst *CI = dyn_cast<CallInst>(*R.first)) {
+                if (auto *Callee = dyn_cast<Function>(CI->getArgOperand(1));
+                    Callee && !Seen.contains(Callee)) {
+                  Seen.insert(Callee);
+                  WorkList.push_back(Callee);
+                }
+              }
+            }
+          } else if (!Seen.contains(Ith)) {
             Seen.insert(Ith);
             WorkList.push_back(Ith);
           }
@@ -188,6 +203,7 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
   // gets a kernel relative address on top of the module absolute address.
   unsigned LaneSharedVGPRSize = 0;
   auto DL = M.getDataLayout();
+  DenseMap<Function *, unsigned> Kernel2Offset;
   for (auto *GV : GVsInVGPR) {
     if (GV2Kernels.find(GV) == GV2Kernels.end())
       continue;
@@ -201,17 +217,20 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
     recordLaneSharedAbsoluteAddress(&M, GV, LaneSharedVGPRSize, &GVPtrSets[GV]);
 
     LaneSharedVGPRSize = alignTo(LaneSharedVGPRSize + GVBytes, 4u);
+
+    for (auto *Kernel : GV2Kernels[GV])
+      Kernel2Offset[Kernel] =
+          std::max(LaneSharedVGPRSize, Kernel2Offset[Kernel]);
   }
-  DenseMap<Function *, unsigned> Kernel2Offset;
   for (auto *GV : GVsInVGPR) {
     if (GV2Kernels.find(GV) == GV2Kernels.end())
       continue;
     if (GV2Kernels[GV].size() != 1)
       continue;
+
     Function *Kernel = *GV2Kernels[GV].begin();
-    if (Kernel2Offset.find(Kernel) == Kernel2Offset.end()) {
-      Kernel2Offset[Kernel] = LaneSharedVGPRSize;
-    }
+    Kernel2Offset[Kernel] = std::max(LaneSharedVGPRSize, Kernel2Offset[Kernel]);
+
     unsigned GVBytes = DL.getTypeAllocSize(GV->getValueType());
     if (Kernel2Offset[Kernel] + GVBytes > MaxLaneSharedVGPRs * 4) {
       GVsInOverflow.push_back(GV);
@@ -222,12 +241,26 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
 
     Kernel2Offset[Kernel] = alignTo(Kernel2Offset[Kernel] + GVBytes, 4u);
   }
+  // Lambda to record kernel offset as metadata with a given metadata name.
+  auto RecordKernelOffsetMetadata = [&](const std::string &MetadataName) {
+    for (auto K : Kernel2Offset) {
+      Function *Kernel = K.first;
+      unsigned Offset = K.second;
+      Kernel->setMetadata(
+          MetadataName,
+          MDNode::get(M.getContext(),
+                      {ConstantAsMetadata::get(ConstantInt::get(
+                          Type::getInt32Ty(M.getContext()), Offset))}));
+    }
+  };
+
+  RecordKernelOffsetMetadata("laneshared-vgpr-size");
+  Kernel2Offset.clear();
 
   GVsInOverflow.insert(GVsInOverflow.end(), GVsInScratch.begin(),
                        GVsInScratch.end());
   // Perform the similar assignment for GVsInOverflow to scratch.
   unsigned LaneSharedScratchSize = 0;
-  Kernel2Offset.clear();
   for (auto *GV : GVsInOverflow) {
     if (GV2Kernels.find(GV) == GV2Kernels.end())
       continue;
@@ -240,16 +273,21 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
         DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
     LaneSharedScratchSize = alignTo(LaneSharedScratchSize, Alignment);
     LaneSharedScratchSize = LaneSharedScratchSize + GVBytes;
+
+    for (auto *Kernel : GV2Kernels[GV])
+      Kernel2Offset[Kernel] =
+          std::max(LaneSharedScratchSize, Kernel2Offset[Kernel]);
   }
   for (auto *GV : GVsInOverflow) {
     if (GV2Kernels.find(GV) == GV2Kernels.end())
       continue;
     if (GV2Kernels[GV].size() != 1)
       continue;
+
     Function *Kernel = *GV2Kernels[GV].begin();
-    if (Kernel2Offset.find(Kernel) == Kernel2Offset.end()) {
-      Kernel2Offset[Kernel] = LaneSharedScratchSize;
-    }
+    Kernel2Offset[Kernel] =
+        std::max(LaneSharedScratchSize, Kernel2Offset[Kernel]);
+
     unsigned GVBytes = DL.getTypeAllocSize(GV->getValueType());
     recordLaneSharedAbsoluteAddress(&M, GV, Kernel2Offset[Kernel]);
 
@@ -259,6 +297,7 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
     Kernel2Offset[Kernel] = Kernel2Offset[Kernel] + GVBytes;
   }
 
+  RecordKernelOffsetMetadata("laneshared-scratch-size");
   return true;
 }
 

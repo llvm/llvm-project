@@ -32,8 +32,8 @@ v_permute_pack_tensor_2src_b64 v5, v6, v2, v3 supr
 v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 aux_data:131 supr
 // GFX13: v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 aux_data:131 supr ; encoding: [0x05,0x20,0x08,0xdd,0x05,0x64,0x80,0x0c,0x00,0x20,0x00,0x01]
 
-v_scale_bias_activate_scatter2_f16 v5, v6, v[5:6], 4.0, v3 aux_data:131 supr
-// GFX13: v_scale_bias_activate_scatter2_f16 v5, v6, v[5:6], 4.0, v3 aux_data:131 supr ; encoding: [0x05,0x60,0x08,0xdd,0x05,0x64,0x80,0x0c,0x06,0x20,0x00,0xf6]
+v_scale_bias_activate_f16 v5, v6, v[5:6], 4.0, v3 aux_data:131 supr
+// GFX13: v_scale_bias_activate_f16 v5, v6, v[5:6], 4.0, v3 aux_data:131 supr ; encoding: [0x05,0x60,0x08,0xdd,0x05,0x64,0x80,0x0c,0x06,0x20,0x00,0xf6]
 
 v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp supr
 // GFX13: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp supr ; encoding: [0x04,0x30,0x1d,0xdd,0x04,0x04,0x80,0x00,0x02,0x00,0x00,0x00]
