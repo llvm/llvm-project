@@ -54,12 +54,18 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(0, 64);
   case P1:
     return MRI.getType(Reg) == LLT::pointer(1, 64);
+  case P2:
+    return MRI.getType(Reg) == LLT::pointer(2, 32);
   case P3:
     return MRI.getType(Reg) == LLT::pointer(3, 32);
   case P4:
     return MRI.getType(Reg) == LLT::pointer(4, 64);
   case P5:
     return MRI.getType(Reg) == LLT::pointer(5, 32);
+  case P6:
+    return MRI.getType(Reg) == LLT::pointer(6, 32);
+  case P8:
+    return MRI.getType(Reg) == LLT::pointer(8, 128);
   case V2S32:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 32);
   case V4S32:
@@ -88,12 +94,18 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(0, 64) && MUI.isUniform(Reg);
   case UniP1:
     return MRI.getType(Reg) == LLT::pointer(1, 64) && MUI.isUniform(Reg);
+  case UniP2:
+    return MRI.getType(Reg) == LLT::pointer(2, 32) && MUI.isUniform(Reg);
   case UniP3:
     return MRI.getType(Reg) == LLT::pointer(3, 32) && MUI.isUniform(Reg);
   case UniP4:
     return MRI.getType(Reg) == LLT::pointer(4, 64) && MUI.isUniform(Reg);
   case UniP5:
     return MRI.getType(Reg) == LLT::pointer(5, 32) && MUI.isUniform(Reg);
+  case UniP6:
+    return MRI.getType(Reg) == LLT::pointer(6, 32) && MUI.isUniform(Reg);
+  case UniP8:
+    return MRI.getType(Reg) == LLT::pointer(8, 128) && MUI.isUniform(Reg);
   case UniV2S16:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isUniform(Reg);
   case UniB32:
@@ -120,12 +132,18 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(0, 64) && MUI.isDivergent(Reg);
   case DivP1:
     return MRI.getType(Reg) == LLT::pointer(1, 64) && MUI.isDivergent(Reg);
+  case DivP2:
+    return MRI.getType(Reg) == LLT::pointer(2, 32) && MUI.isDivergent(Reg);
   case DivP3:
     return MRI.getType(Reg) == LLT::pointer(3, 32) && MUI.isDivergent(Reg);
   case DivP4:
     return MRI.getType(Reg) == LLT::pointer(4, 64) && MUI.isDivergent(Reg);
   case DivP5:
     return MRI.getType(Reg) == LLT::pointer(5, 32) && MUI.isDivergent(Reg);
+  case DivP6:
+    return MRI.getType(Reg) == LLT::pointer(6, 32) && MUI.isDivergent(Reg);
+  case DivP8:
+    return MRI.getType(Reg) == LLT::pointer(8, 128) && MUI.isDivergent(Reg);
   case DivV2S16:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isDivergent(Reg);
   case DivB32:
