@@ -94,6 +94,13 @@ functions:
       - type: __restrict wchar_t *
       - type: const __restrict wchar_t *
       - type: size_t
+  - name: wcsstr
+    standards:
+      - stdc
+    return_type: const wchar_t *
+    arguments: 
+      - type: const wchar_t *
+      - type: const wchar_t *
   - name: wcsncat
     standards:
       - stdc
