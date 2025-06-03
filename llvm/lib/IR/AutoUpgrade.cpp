@@ -767,6 +767,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return false; // Not 'arm.mve.vctp64'.
       }
 
+      if (Name.starts_with("vrintn.v")) {
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), Intrinsic::roundeven, F->arg_begin()->getType());
+        return true;
+      }
+
       // These too are changed to accept a v2i1 instead of the old v4i1.
       if (Name.consume_back(".v4i1")) {
         // 'arm.mve.*.v4i1'.
