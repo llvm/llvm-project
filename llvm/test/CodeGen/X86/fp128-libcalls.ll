@@ -2403,3 +2403,112 @@ define fp128 @Test128Tanh(fp128 %a) nounwind {
   %x = call fp128 @llvm.tanh.f128(fp128 %a)
   ret fp128 %x
 }
+
+define { fp128, fp128 } @Test128Modf(fp128 %a) nounwind {
+; ANDROID-LABEL: Test128Modf:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    subq $24, %rsp
+; ANDROID-NEXT:    movq %rsp, %rdi
+; ANDROID-NEXT:    callq modfl@PLT
+; ANDROID-NEXT:    movaps (%rsp), %xmm1
+; ANDROID-NEXT:    addq $24, %rsp
+; ANDROID-NEXT:    retq
+;
+; GNU-LABEL: Test128Modf:
+; GNU:       # %bb.0:
+; GNU-NEXT:    subq $24, %rsp
+; GNU-NEXT:    movq %rsp, %rdi
+; GNU-NEXT:    callq modfl@PLT
+; GNU-NEXT:    movaps (%rsp), %xmm1
+; GNU-NEXT:    addq $24, %rsp
+; GNU-NEXT:    retq
+;
+; X86-LABEL: Test128Modf:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $40, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %ecx
+; X86-NEXT:    calll modfl
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    movaps {{[0-9]+}}(%esp), %xmm1
+; X86-NEXT:    movaps %xmm1, 16(%esi)
+; X86-NEXT:    movaps %xmm0, (%esi)
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $40, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl $4
+;
+; WIN-LABEL: Test128Modf:
+; WIN:       # %bb.0:
+; WIN-NEXT:    subq $72, %rsp
+; WIN-NEXT:    movaps (%rcx), %xmm0
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN-NEXT:    callq modfl
+; WIN-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; WIN-NEXT:    addq $72, %rsp
+; WIN-NEXT:    retq
+;
+; WIN-X86-LABEL: Test128Modf:
+; WIN-X86:       # %bb.0:
+; WIN-X86-NEXT:    pushl %ebp
+; WIN-X86-NEXT:    movl %esp, %ebp
+; WIN-X86-NEXT:    pushl %ebx
+; WIN-X86-NEXT:    pushl %edi
+; WIN-X86-NEXT:    pushl %esi
+; WIN-X86-NEXT:    andl $-16, %esp
+; WIN-X86-NEXT:    subl $64, %esp
+; WIN-X86-NEXT:    movl 8(%ebp), %esi
+; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; WIN-X86-NEXT:    pushl %eax
+; WIN-X86-NEXT:    pushl 24(%ebp)
+; WIN-X86-NEXT:    pushl 20(%ebp)
+; WIN-X86-NEXT:    pushl 16(%ebp)
+; WIN-X86-NEXT:    pushl 12(%ebp)
+; WIN-X86-NEXT:    pushl %ecx
+; WIN-X86-NEXT:    calll _modfl
+; WIN-X86-NEXT:    addl $24, %esp
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN-X86-NEXT:    movl %edx, 28(%esi)
+; WIN-X86-NEXT:    movl %eax, 24(%esi)
+; WIN-X86-NEXT:    movl %ecx, 20(%esi)
+; WIN-X86-NEXT:    movl %ebx, 16(%esi)
+; WIN-X86-NEXT:    movl %edi, 12(%esi)
+; WIN-X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; WIN-X86-NEXT:    movl %eax, 8(%esi)
+; WIN-X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; WIN-X86-NEXT:    movl %eax, 4(%esi)
+; WIN-X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; WIN-X86-NEXT:    movl %eax, (%esi)
+; WIN-X86-NEXT:    movl %esi, %eax
+; WIN-X86-NEXT:    leal -12(%ebp), %esp
+; WIN-X86-NEXT:    popl %esi
+; WIN-X86-NEXT:    popl %edi
+; WIN-X86-NEXT:    popl %ebx
+; WIN-X86-NEXT:    popl %ebp
+; WIN-X86-NEXT:    retl
+  %x = call { fp128, fp128 } @llvm.modf.f128(fp128 %a)
+  ret { fp128, fp128 } %x
+}

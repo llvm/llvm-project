@@ -481,7 +481,7 @@ let Predicates = [IsISAFuture] in {
                      RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
 
   def DMSHA3HASH :
-    XForm_ATp2_SR5<31, 15, 177, (outs dmrprc:$ATp), (ins dmrprc:$ATpi , u5imm:$SR),
+    XForm_ATp2_SR5<31, 15, 177, (outs dmrp:$ATp), (ins dmrp:$ATpi , u5imm:$SR),
                    "dmsha3hash $ATp, $SR",
                    [(set v2048i1:$ATp, (int_ppc_mma_dmsha3hash v2048i1:$ATpi, timm:$SR))]>,
                    RegConstraint<"$ATpi = $ATp">, NoEncode<"$ATpi">;
@@ -626,10 +626,10 @@ let Predicates = [IsISAFuture] in {
                   (DMSHA2HASH dmr:$AT, dmr:$AB, 1)>;
 
   def : InstAlias<"dmsha3dw $ATp",
-                  (DMSHA3HASH dmrprc:$ATp, 0)>;
+                  (DMSHA3HASH dmrp:$ATp, 0)>;
 
   def : InstAlias<"dmcryshash $ATp",
-                  (DMSHA3HASH dmrprc:$ATp, 12)>;
+                  (DMSHA3HASH dmrp:$ATp, 12)>;
 
   def : InstAlias<"dmxxsha3512pad $AT, $XB, $E",
                   (DMXXSHAPAD dmr:$AT, vsrc:$XB, 0, u1imm:$E, 0)>;
