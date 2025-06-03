@@ -6986,22 +6986,17 @@ static void FixupDebugInfoForOutlinedFunction(
       // snippet) as location of variable. The AMDGPU backend drops the debug
       // info for variable in such cases. So we change the location to alloca
       // instead.
+      if (DR->getNumVariableLocationOps() != 1u)
+        return;
+      auto Loc = DR->getVariableLocationOp(0u);
       bool PassByRef = false;
-      llvm::Type *locType = nullptr;
-      for (auto Loc : DR->location_ops()) {
-        locType = Loc->getType();
-        if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Loc)) {
-          DR->replaceVariableLocationOp(Loc, Load->getPointerOperand());
-          PassByRef = true;
-        }
+      if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Loc)) {
+        Loc = Load->getPointerOperand();
+        PassByRef = true;
       }
       // Add DIOps based expression. Note that we generate an extra indirection
       // if an argument is mapped by reference. The first reads the pointer
       // from alloca and 2nd read the value of the variable from that pointer.
-      llvm::DIExprBuilder ExprBuilder(Builder.getContext());
-      unsigned int allocaAS = M->getDataLayout().getAllocaAddrSpace();
-      unsigned int defaultAS = M->getDataLayout().getProgramAddressSpace();
-      ExprBuilder.append<llvm::DIOp::Arg>(0u, Builder.getPtrTy(allocaAS));
       // We have 2 options for the variables that are mapped byRef.
       // 1. Use a single indirection but change the type to the reference to the
       // original type. It will show up in the debugger as
@@ -7010,10 +7005,15 @@ static void FixupDebugInfoForOutlinedFunction(
       // 2. Use double indirection and keep the original type. It will show up
       // in debugger as "x=5". This approached is used here as it is
       // consistent with the normal fortran parameters display.
-      if (PassByRef)
-        ExprBuilder.append<llvm::DIOp::Deref>(Builder.getPtrTy(defaultAS));
-      ExprBuilder.append<llvm::DIOp::Deref>(locType);
-      DR->setExpression(ExprBuilder.intoExpression());
+      if (auto AI = dyn_cast<llvm::AllocaInst>(Loc->stripPointerCasts())) {
+        DR->replaceVariableLocationOp(0u, AI);
+        llvm::DIExprBuilder ExprBuilder(Builder.getContext());
+        ExprBuilder.append<llvm::DIOp::Arg>(0u, AI->getType());
+        if (PassByRef)
+          ExprBuilder.append<llvm::DIOp::Deref>(AI->getAllocatedType());
+        ExprBuilder.append<llvm::DIOp::Deref>(AI->getAllocatedType());
+        DR->setExpression(ExprBuilder.intoExpression());
+      }
     }
 
     DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
