@@ -187,8 +187,8 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
 static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
                              AllocationType AllocType,
                              ArrayRef<ContextTotalSize> ContextSizeInfo,
-                             uint64_t &TotalBytes, uint64_t &ColdBytes,
-                             uint64_t MaxColdSize) {
+                             const uint64_t MaxColdSize,
+                             uint64_t &TotalBytes, uint64_t &ColdBytes) {
   SmallVector<Metadata *> MIBPayload(
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
@@ -388,7 +388,7 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
     collectContextSizeInfo(Node, ContextSizeInfo);
     MIBNodes.push_back(
         createMIBNode(Ctx, MIBCallStack, (AllocationType)Node->AllocTypes,
-                      ContextSizeInfo, TotalBytes, ColdBytes, MaxColdSize));
+                      ContextSizeInfo, MaxColdSize, TotalBytes, ColdBytes));
     return true;
   }
 
@@ -442,8 +442,8 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   std::vector<ContextTotalSize> ContextSizeInfo;
   collectContextSizeInfo(Node, ContextSizeInfo);
   MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack, AllocationType::NotCold,
-                                   ContextSizeInfo, TotalBytes, ColdBytes,
-                                   MaxColdSize));
+                                   ContextSizeInfo, MaxColdSize, TotalBytes,
+                                   ColdBytes));
   return true;
 }
 
