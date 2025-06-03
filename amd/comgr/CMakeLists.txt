@@ -179,12 +179,24 @@ message("")
 option(COMGR_DISABLE_SPIRV "To disable SPIRV in Comgr" OFF)
 
 if (NOT COMGR_DISABLE_SPIRV)
-  # TODO: Explore switching this to CHECK_INCLUDE_FILE_CXX() macro
-  if (NOT EXISTS "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib/LLVMSPIRVLib.h")
+  # Candidate include paths for LLVMSPIRVLib.h:
+  # 1. ${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib (standalone build)
+  # 2. ${LLVM_EXTERNAL_SPIRV_LLVM_TRANSLATOR_SOURCE_DIR}/include (external project)
+  # 3. ${CMAKE_SOURCE_DIR}/projects/SPIRV-LLVM-Translator/include (usual location)
+  find_path(
+    FOUND_SPIRV_INCLUDE_DIR
+    LLVMSPIRVLib.h
+    PATHS
+      "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib"
+      "${LLVM_EXTERNAL_SPIRV_LLVM_TRANSLATOR_SOURCE_DIR}/include"
+      "${CMAKE_SOURCE_DIR}/projects/SPIRV-LLVM-Translator/include"
+    NO_DEFAULT_PATH
+  )
+  if (NOT EXISTS "${FOUND_SPIRV_INCLUDE_DIR}/LLVMSPIRVLib.h")
     message("-- LLVMSPIRVLib/LLVMSPIRVLib.h not found")
     set(COMGR_DISABLE_SPIRV ON)
   else()
-    message("-- LLVMSPIRVLib/LLVMSPIRVLib.h found")
+    message("-- LLVMSPIRVLib/LLVMSPIRVLib.h found at ${FOUND_SPIRV_INCLUDE_DIR}")
   endif()
 endif()
 
@@ -195,7 +207,7 @@ else()
   message("-- Comgr SPIRV Enabled")
   target_include_directories(amd_comgr
       PRIVATE
-        "${LLVM_INCLUDE_DIRS}/LLVMSPIRVLib")
+        "${FOUND_SPIRV_INCLUDE_DIR}")
 endif()
 
 
