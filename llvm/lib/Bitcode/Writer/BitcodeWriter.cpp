@@ -23,7 +23,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -4586,23 +4585,14 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     Stream.EmitRecord(bitc::FS_STACK_IDS, Vals, StackIdAbbvId);
   }
 
-  unsigned ContextIdAbbvId = 0;
-  if (metadataMayIncludeContextSizeInfo()) {
-    // n x context id
-    auto ContextIdAbbv = std::make_shared<BitCodeAbbrev>();
-    ContextIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_ALLOC_CONTEXT_IDS));
-    ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-    // The context ids are hashes that are close to 64 bits in size, so emitting
-    // as a pair of 32-bit fixed-width values is more efficient than a VBR if we
-    // are emitting them for all MIBs. Otherwise we use VBR to better compress 0
-    // values that are expected to more frequently occur in an alloc's memprof
-    // summary.
-    if (metadataIncludesAllContextSizeInfo())
-      ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
-    else
-      ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
-    ContextIdAbbvId = Stream.EmitAbbrev(std::move(ContextIdAbbv));
-  }
+  // n x context id
+  auto ContextIdAbbv = std::make_shared<BitCodeAbbrev>();
+  ContextIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_ALLOC_CONTEXT_IDS));
+  ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  // The context ids are hashes that are close to 64 bits in size, so emitting
+  // as a pair of 32-bit fixed-width values is more efficient than a VBR.
+  ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+  unsigned ContextIdAbbvId = Stream.EmitAbbrev(std::move(ContextIdAbbv));
 
   // Abbrev for FS_PERMODULE_PROFILE.
   Abbv = std::make_shared<BitCodeAbbrev>();
