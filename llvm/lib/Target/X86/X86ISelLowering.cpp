@@ -137,7 +137,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // Set up the TargetLowering object.
 
-  // X86 supports unaligned atomic memory accesses via cmpxchg8b and cmpxchg16b
+  // X86 supports unaligned atomic memory accesses via cmpxchg
   setSupportsUnalignedAtomics(true);
 
   // X86 is weird. It always uses i8 for shift amounts and setcc results.
