@@ -10,16 +10,16 @@ define void @loads_of_same_pointer_with_different_sizes1(ptr %A, ptr %B, i64 %N)
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: ((4 * %N) + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: (3 + %N + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
@@ -58,16 +58,16 @@ define void @loads_of_same_pointer_with_different_sizes2(ptr %A, ptr %B, i64 %N)
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: ((4 * %N) + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %A High: (3 + %N + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
@@ -106,41 +106,41 @@ define void @loads_of_same_pointer_with_different_sizes_retry_with_runtime_check
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B.iv = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.B.inc = getelementptr inbounds i32, ptr %B, i64 %inc
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP5]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B.iv = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP5]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.B.iv = getelementptr inbounds i32, ptr %B, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Check 3:
-; CHECK-NEXT:        Comparing group ([[GRP6]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.B.inc = getelementptr inbounds i32, ptr %B, i64 %inc
-; CHECK-NEXT:        Against group ([[GRP7]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Check 4:
-; CHECK-NEXT:        Comparing group ([[GRP6]]):
+; CHECK-NEXT:        Comparing group GRP1:
 ; CHECK-NEXT:          %gep.B.inc = getelementptr inbounds i32, ptr %B, i64 %inc
-; CHECK-NEXT:        Against group ([[GRP8]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i8, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: ((4 * %N) + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: ((4 * %off) + %B) High: ((4 * %N) + (4 * %off) + %B))
 ; CHECK-NEXT:            Member: {((4 * %off) + %B),+,4}<%loop>
-; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %A High: (%N + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %A High: (3 + %N + %A))
 ; CHECK-NEXT:            Member: {%A,+,1}<nuw><%loop>
 ; CHECK-EMPTY:

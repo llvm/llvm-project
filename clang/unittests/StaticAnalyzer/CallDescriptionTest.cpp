@@ -35,11 +35,7 @@ class ResultMap {
 
 public:
   ResultMap(std::initializer_list<std::pair<CallDescription, bool>> Data)
-      : Found(0),
-        Total(std::count_if(Data.begin(), Data.end(),
-                            [](const std::pair<CallDescription, bool> &Pair) {
-                              return Pair.second == true;
-                            })),
+      : Found(0), Total(llvm::count(llvm::make_second_range(Data), true)),
         Impl(std::move(Data)) {}
 
   const bool *lookup(const CallEvent &Call) {

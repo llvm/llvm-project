@@ -22,7 +22,7 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t stream, bool *pinned,
+int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t *stream, bool *pinned,
     bool hasStat, const Descriptor *errMsg, const char *sourceFile,
     int sourceLine) {
   if (desc.HasAddendum()) {
@@ -43,7 +43,7 @@ int RTDEF(CUFPointerAllocate)(Descriptor &desc, int64_t stream, bool *pinned,
   return stat;
 }
 
-int RTDEF(CUFPointerAllocateSync)(Descriptor &desc, int64_t stream,
+int RTDEF(CUFPointerAllocateSync)(Descriptor &desc, int64_t *stream,
     bool *pinned, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFPointerAllocate)(
@@ -62,7 +62,7 @@ int RTDEF(CUFPointerAllocateSync)(Descriptor &desc, int64_t stream,
 }
 
 int RTDEF(CUFPointerAllocateSource)(Descriptor &pointer,
-    const Descriptor &source, int64_t stream, bool *pinned, bool hasStat,
+    const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFPointerAllocate)(
       pointer, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};
@@ -75,7 +75,7 @@ int RTDEF(CUFPointerAllocateSource)(Descriptor &pointer,
 }
 
 int RTDEF(CUFPointerAllocateSourceSync)(Descriptor &pointer,
-    const Descriptor &source, int64_t stream, bool *pinned, bool hasStat,
+    const Descriptor &source, int64_t *stream, bool *pinned, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(CUFPointerAllocateSync)(
       pointer, stream, pinned, hasStat, errMsg, sourceFile, sourceLine)};

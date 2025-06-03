@@ -30,6 +30,7 @@
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
+#include "OffloadError.h"
 #include "RPC.h"
 #include "omptarget.h"
 
@@ -1379,10 +1380,19 @@ namespace Plugin {
 /// Plugin::check().
 static inline Error success() { return Error::success(); }
 
-/// Create a string error.
+/// Create an Offload error.
 template <typename... ArgsTy>
-static Error error(const char *ErrFmt, ArgsTy... Args) {
-  return createStringError(inconvertibleErrorCode(), ErrFmt, Args...);
+static Error error(error::ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
+  return error::createOffloadError(Code, ErrFmt, Args...);
+}
+
+inline Error error(error::ErrorCode Code, const char *S) {
+  return make_error<error::OffloadError>(Code, S);
+}
+
+inline Error error(error::ErrorCode Code, Error &&OtherError,
+                   const char *Context) {
+  return error::createOffloadError(Code, std::move(OtherError), Context);
 }
 
 /// Check the plugin-specific error code and return an error or success

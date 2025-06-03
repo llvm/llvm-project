@@ -95,8 +95,9 @@ public:
                                                 unsigned &NumIntermediates,
                                                 MVT &RegisterVT) const override;
 
-  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                            EVT VT) const override;
+  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                            unsigned SelectOpcode, SDValue X,
+                                            SDValue Y) const override;
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
@@ -152,6 +153,12 @@ public:
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
                                            unsigned Depth) const override;
+
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth) const override;
 
   bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,
@@ -450,6 +457,8 @@ public:
   MachineBasicBlock *emitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
+  ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -550,6 +559,7 @@ private:
 
   SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,

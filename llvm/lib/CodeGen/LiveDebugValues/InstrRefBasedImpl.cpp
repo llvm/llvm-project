@@ -386,8 +386,8 @@ public:
       // for it. Use an empty ValueLocPair to search for an entry in ValueToLoc.
       const ValueIDNum &Num = Op.ID;
       ValueLocPair Probe(Num, LocationAndQuality());
-      auto ValuesPreferredLoc = std::lower_bound(
-          ValueToLoc.begin(), ValueToLoc.end(), Probe, ValueToLocSort);
+      auto ValuesPreferredLoc =
+          llvm::lower_bound(ValueToLoc, Probe, ValueToLocSort);
 
       // There must be a legitimate entry found for Num.
       assert(ValuesPreferredLoc != ValueToLoc.end() &&
@@ -1691,8 +1691,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // filled in later.
   for (const DbgOp &Op : DbgOps) {
     if (!Op.IsConst)
-      if (FoundLocs.insert({Op.ID, TransferTracker::LocationAndQuality()})
-              .second)
+      if (FoundLocs.try_emplace(Op.ID).second)
         ValuesToFind.push_back(Op.ID);
   }
 

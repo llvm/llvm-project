@@ -17,7 +17,6 @@ if(MLIR_INCLUDE_TESTS)
     MLIRTestFuncToLLVM
     MLIRAffineTransformsTestPasses
     MLIRArithTestPasses
-    MLIRArmNeonTestPasses
     MLIRArmSMETestPasses
     MLIRBufferizationTestPasses
     MLIRControlFlowTestPasses
@@ -53,6 +52,7 @@ if(MLIR_INCLUDE_TESTS)
   set(test_libs ${test_libs}
     MLIRTestPDLL
     MLIRTestTransformDialect
+    MLIRTestIRDLToCppDialect
     )
 
   if (MLIR_ENABLE_PDL_IN_PATTERNMATCH)

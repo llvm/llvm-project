@@ -48,6 +48,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include <string>
@@ -113,7 +114,7 @@ struct NoAutoPaddingScope {
 static void emitX86Nops(MCStreamer &OS, unsigned NumBytes,
                         const X86Subtarget *Subtarget);
 
-void X86AsmPrinter::StackMapShadowTracker::count(MCInst &Inst,
+void X86AsmPrinter::StackMapShadowTracker::count(const MCInst &Inst,
                                                  const MCSubtargetInfo &STI,
                                                  MCCodeEmitter *CodeEmitter) {
   if (InShadow) {
@@ -2214,6 +2215,31 @@ static void addConstantComments(const MachineInstr *MI,
   }
 }
 
+// Does the given operand refer to a DLLIMPORT function?
+bool isImportedFunction(const MachineOperand &MO) {
+  return MO.isGlobal() && (MO.getTargetFlags() == X86II::MO_DLLIMPORT);
+}
+
+// Is the given instruction a call to a CFGuard function?
+bool isCallToCFGuardFunction(const MachineInstr *MI) {
+  assert(MI->getOpcode() == X86::TAILJMPm64_REX ||
+         MI->getOpcode() == X86::CALL64m);
+  const MachineOperand &MO = MI->getOperand(3);
+  return MO.isGlobal() && (MO.getTargetFlags() == X86II::MO_NO_FLAG) &&
+         isCFGuardFunction(MO.getGlobal());
+}
+
+// Does the containing block for the given instruction contain any jump table
+// info (indicating that the block is a dispatch for a jump table)?
+bool hasJumpTableInfoInBlock(const llvm::MachineInstr *MI) {
+  const MachineBasicBlock &MBB = *MI->getParent();
+  for (auto I = MBB.instr_rbegin(), E = MBB.instr_rend(); I != E; ++I)
+    if (I->isJumpTableDebugInfo())
+      return true;
+
+  return false;
+}
+
 void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   // FIXME: Enable feature predicate checks once all the test pass.
   // X86_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -2292,7 +2318,16 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::TAILJMPd64:
     if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
       EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
-    [[fallthrough]];
+
+    if (EnableImportCallOptimization && isImportedFunction(MI->getOperand(0))) {
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_IMPORT_BR);
+    }
+
+    // Lower this as normal, but add a comment.
+    OutStreamer->AddComment("TAILCALL");
+    break;
+
   case X86::TAILJMPr:
   case X86::TAILJMPm:
   case X86::TAILJMPd:
@@ -2300,10 +2335,56 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::TAILJMPr64:
   case X86::TAILJMPm64:
   case X86::TAILJMPd64_CC:
-  case X86::TAILJMPr64_REX:
-  case X86::TAILJMPm64_REX:
+    if (EnableImportCallOptimization)
+      report_fatal_error("Unexpected TAILJMP instruction was emitted when "
+                         "import call optimization was enabled");
+
     // Lower these as normal, but add some comments.
     OutStreamer->AddComment("TAILCALL");
+    break;
+
+  case X86::TAILJMPm64_REX:
+    if (EnableImportCallOptimization && isCallToCFGuardFunction(MI)) {
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_CFG_BR_REX);
+    }
+
+    OutStreamer->AddComment("TAILCALL");
+    break;
+
+  case X86::TAILJMPr64_REX: {
+    if (EnableImportCallOptimization) {
+      assert(MI->getOperand(0).getReg() == X86::RAX &&
+             "Indirect tail calls with impcall enabled must go through RAX (as "
+             "enforced by TCRETURNImpCallri64)");
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_INDIR_BR);
+    }
+
+    OutStreamer->AddComment("TAILCALL");
+    break;
+  }
+
+  case X86::JMP64r:
+    if (EnableImportCallOptimization && hasJumpTableInfoInBlock(MI)) {
+      uint16_t EncodedReg =
+          this->getSubtarget().getRegisterInfo()->getEncodingValue(
+              MI->getOperand(0).getReg().asMCReg());
+      emitLabelAndRecordForImportCallOptimization(
+          (ImportCallKind)(IMAGE_RETPOLINE_AMD64_SWITCHTABLE_FIRST +
+                           EncodedReg));
+    }
+    break;
+
+  case X86::JMP16r:
+  case X86::JMP16m:
+  case X86::JMP32r:
+  case X86::JMP32m:
+  case X86::JMP64m:
+    if (EnableImportCallOptimization && hasJumpTableInfoInBlock(MI))
+      report_fatal_error(
+          "Unexpected JMP instruction was emitted for a jump-table when import "
+          "call optimization was enabled");
     break;
 
   case X86::TLS_addr32:
@@ -2492,7 +2573,50 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::CALL64pcrel32:
     if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
       EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
+
+    if (EnableImportCallOptimization && isImportedFunction(MI->getOperand(0))) {
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_IMPORT_CALL);
+
+      MCInst TmpInst;
+      MCInstLowering.Lower(MI, TmpInst);
+
+      // For Import Call Optimization to work, we need a the call instruction
+      // with a rex prefix, and a 5-byte nop after the call instruction.
+      EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
+      emitCallInstruction(TmpInst);
+      emitNop(*OutStreamer, 5, Subtarget);
+      return;
+    }
+
     break;
+
+  case X86::CALL64r:
+    if (EnableImportCallOptimization) {
+      assert(MI->getOperand(0).getReg() == X86::RAX &&
+             "Indirect calls with impcall enabled must go through RAX (as "
+             "enforced by CALL64r_ImpCall)");
+
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_INDIR_CALL);
+      MCInst TmpInst;
+      MCInstLowering.Lower(MI, TmpInst);
+      emitCallInstruction(TmpInst);
+
+      // For Import Call Optimization to work, we need a 3-byte nop after the
+      // call instruction.
+      emitNop(*OutStreamer, 3, Subtarget);
+      return;
+    }
+    break;
+
+  case X86::CALL64m:
+    if (EnableImportCallOptimization && isCallToCFGuardFunction(MI)) {
+      emitLabelAndRecordForImportCallOptimization(
+          IMAGE_RETPOLINE_AMD64_CFG_CALL);
+    }
+    break;
+
   case X86::JCC_1:
     // Two instruction prefixes (2EH for branch not-taken and 3EH for branch
     // taken) are used as branch hints. Here we add branch taken prefix for
@@ -2513,20 +2637,36 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
 
-  // Stackmap shadows cannot include branch targets, so we can count the bytes
-  // in a call towards the shadow, but must ensure that the no thread returns
-  // in to the stackmap shadow.  The only way to achieve this is if the call
-  // is at the end of the shadow.
   if (MI->isCall()) {
-    // Count then size of the call towards the shadow
-    SMShadowTracker.count(TmpInst, getSubtargetInfo(), CodeEmitter.get());
-    // Then flush the shadow so that we fill with nops before the call, not
-    // after it.
-    SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
-    // Then emit the call
-    OutStreamer->emitInstruction(TmpInst, getSubtargetInfo());
+    emitCallInstruction(TmpInst);
     return;
   }
 
   EmitAndCountInstruction(TmpInst);
+}
+
+void X86AsmPrinter::emitCallInstruction(const llvm::MCInst &MCI) {
+  // Stackmap shadows cannot include branch targets, so we can count the bytes
+  // in a call towards the shadow, but must ensure that the no thread returns
+  // in to the stackmap shadow.  The only way to achieve this is if the call
+  // is at the end of the shadow.
+
+  // Count then size of the call towards the shadow
+  SMShadowTracker.count(MCI, getSubtargetInfo(), CodeEmitter.get());
+  // Then flush the shadow so that we fill with nops before the call, not
+  // after it.
+  SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
+  // Then emit the call
+  OutStreamer->emitInstruction(MCI, getSubtargetInfo());
+}
+
+void X86AsmPrinter::emitLabelAndRecordForImportCallOptimization(
+    ImportCallKind Kind) {
+  assert(EnableImportCallOptimization);
+
+  MCSymbol *CallSiteSymbol = MMI->getContext().createNamedTempSymbol("impcall");
+  OutStreamer->emitLabel(CallSiteSymbol);
+
+  SectionToImportedFunctionCalls[OutStreamer->getCurrentSectionOnly()]
+      .push_back({CallSiteSymbol, Kind});
 }

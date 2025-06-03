@@ -21,6 +21,7 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Utils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Path.h"
@@ -270,7 +271,7 @@ std::optional<int>
 macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
   if (sym->isAbsolute())
     return std::nullopt;
-  return getSymbolOrCStringPriority(sym->getName(), sym->isec()->getFile());
+  return getSymbolOrCStringPriority(utils::getRootSymbol(sym->getName()), sym->isec()->getFile());
 }
 
 void macho::PriorityBuilder::extractCallGraphProfile() {
@@ -337,13 +338,15 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
 
     // The rest of the line is either <symbol name> or
     // CStringEntryPrefix<cstring hash>
+    line = line.trim();
     if (line.starts_with(CStringEntryPrefix)) {
       StringRef possibleHash = line.drop_front(CStringEntryPrefix.size());
       uint32_t hash = 0;
       if (to_integer(possibleHash, hash))
-        line = possibleHash;
+        symbolOrCStrHash = possibleHash;
     }
-    symbolOrCStrHash = line.trim();
+    else
+      symbolOrCStrHash = utils::getRootSymbol(line);
 
     if (!symbolOrCStrHash.empty()) {
       SymbolPriorityEntry &entry = priorities[symbolOrCStrHash];

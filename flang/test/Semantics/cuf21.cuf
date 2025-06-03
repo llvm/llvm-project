@@ -1,0 +1,27 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+! Test generic matching with scalars argument without device attr
+
+module mlocModule
+  interface maxlocUpdate
+     module procedure :: &
+          maxlocUpdateR_32F, &
+          maxlocUpdateR_64F
+  end interface maxlocUpdate
+contains
+
+  attributes(global) subroutine maxlocPartialMaskR_32F1D()
+    implicit none
+    real(4) :: mval
+
+    call maxlocUpdate(mval)
+
+  end subroutine maxlocPartialMaskR_32F1D
+
+  attributes(device) subroutine maxlocUpdateR_32F(mval)
+    real(4) :: mval
+  end subroutine maxlocUpdateR_32F
+
+  attributes(device) subroutine maxlocUpdateR_64F(mval)
+    real(8) :: mval
+  end subroutine maxlocUpdateR_64F
+end module

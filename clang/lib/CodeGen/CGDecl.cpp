@@ -18,6 +18,7 @@
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "EHScopeStack.h"
 #include "PatternInit.h"
@@ -368,7 +369,7 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
     return GV;
   }
 
-  PGO.markStmtMaybeUsed(D.getInit()); // FIXME: Too lazy
+  PGO->markStmtMaybeUsed(D.getInit()); // FIXME: Too lazy
 
 #ifndef NDEBUG
   CharUnits VarSize = CGM.getContext().getTypeSizeInChars(D.getType()) +
@@ -429,8 +430,10 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   bool isCudaSharedVar = getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
                          D.hasAttr<CUDASharedAttr>();
   // If this value has an initializer, emit it.
-  if (D.getInit() && !isCudaSharedVar)
+  if (D.getInit() && !isCudaSharedVar) {
+    ApplyAtomGroup Grp(getDebugInfo());
     var = AddInitializerToStaticVarDecl(D, var);
+  }
 
   var->setAlignment(alignment.getAsAlign());
 
@@ -945,6 +948,7 @@ void CodeGenFunction::emitStoresForInitAfterBZero(llvm::Constant *Init,
       isa<llvm::ConstantVector>(Init) || isa<llvm::BlockAddress>(Init) ||
       isa<llvm::ConstantExpr>(Init)) {
     auto *I = Builder.CreateStore(Init, Loc, isVolatile);
+    addInstToCurrentSourceAtom(I, nullptr);
     if (IsAutoInit)
       I->addAnnotationMetadata("auto-init");
     return;
@@ -1188,6 +1192,7 @@ void CodeGenFunction::emitStoresForConstant(const VarDecl &D, Address Loc,
                           Ty->isPtrOrPtrVectorTy() || Ty->isFPOrFPVectorTy();
   if (canDoSingleStore) {
     auto *I = Builder.CreateStore(constant, Loc, isVolatile);
+    addInstToCurrentSourceAtom(I, nullptr);
     if (IsAutoInit)
       I->addAnnotationMetadata("auto-init");
     return;
@@ -1200,6 +1205,8 @@ void CodeGenFunction::emitStoresForConstant(const VarDecl &D, Address Loc,
   if (shouldUseBZeroPlusStoresToInitialize(constant, ConstantSize)) {
     auto *I = Builder.CreateMemSet(Loc, llvm::ConstantInt::get(CGM.Int8Ty, 0),
                                    SizeVal, isVolatile);
+    addInstToCurrentSourceAtom(I, nullptr);
+
     if (IsAutoInit)
       I->addAnnotationMetadata("auto-init");
 
@@ -1224,6 +1231,7 @@ void CodeGenFunction::emitStoresForConstant(const VarDecl &D, Address Loc,
     }
     auto *I = Builder.CreateMemSet(
         Loc, llvm::ConstantInt::get(CGM.Int8Ty, Value), SizeVal, isVolatile);
+    addInstToCurrentSourceAtom(I, nullptr);
     if (IsAutoInit)
       I->addAnnotationMetadata("auto-init");
     return;
@@ -1270,6 +1278,8 @@ void CodeGenFunction::emitStoresForConstant(const VarDecl &D, Address Loc,
                            createUnnamedGlobalForMemcpyFrom(
                                CGM, D, Builder, constant, Loc.getAlignment()),
                            SizeVal, isVolatile);
+  addInstToCurrentSourceAtom(I, nullptr);
+
   if (IsAutoInit)
     I->addAnnotationMetadata("auto-init");
 }
@@ -1925,6 +1935,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
 
   const VarDecl &D = *emission.Variable;
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(*this, D.getLocation());
+  ApplyAtomGroup Grp(getDebugInfo());
   QualType type = D.getType();
 
   // If this local has an initializer, emit it now.
@@ -1934,7 +1945,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   // unless it contains a label.
   if (!HaveInsertPoint()) {
     if (!Init || !ContainsLabel(Init)) {
-      PGO.markStmtMaybeUsed(Init);
+      PGO->markStmtMaybeUsed(Init);
       return;
     }
     EnsureInsertPoint();
@@ -2047,7 +2058,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     return EmitExprAsInit(Init, &D, lv, capturedByInit);
   }
 
-  PGO.markStmtMaybeUsed(Init);
+  PGO->markStmtMaybeUsed(Init);
 
   if (!emission.IsConstantAggregate) {
     // For simple scalar/complex initialization, store the value directly.

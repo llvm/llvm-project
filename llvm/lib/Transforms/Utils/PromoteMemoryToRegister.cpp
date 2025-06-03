@@ -424,8 +424,8 @@ private:
                            const SmallPtrSetImpl<BasicBlock *> &DefBlocks,
                            SmallPtrSetImpl<BasicBlock *> &LiveInBlocks);
   void RenamePass(BasicBlock *BB, BasicBlock *Pred,
-                  RenamePassData::ValVector &IncVals,
-                  RenamePassData::LocationVector &IncLocs,
+                  RenamePassData::ValVector IncVals,
+                  RenamePassData::LocationVector IncLocs,
                   std::vector<RenamePassData> &Worklist);
   bool QueuePhiNode(BasicBlock *BB, unsigned AllocaIdx, unsigned &Version);
 
@@ -869,7 +869,8 @@ void PromoteMem2Reg::run() {
     RenamePassData RPD = std::move(RenamePassWorkList.back());
     RenamePassWorkList.pop_back();
     // RenamePass may add new worklist entries.
-    RenamePass(RPD.BB, RPD.Pred, RPD.Values, RPD.Locations, RenamePassWorkList);
+    RenamePass(RPD.BB, RPD.Pred, std::move(RPD.Values),
+               std::move(RPD.Locations), RenamePassWorkList);
   } while (!RenamePassWorkList.empty());
 
   // Remove the allocas themselves from the function.
@@ -1096,10 +1097,9 @@ static void updateForIncomingValueLocation(PHINode *PN, DebugLoc DL,
 /// IncomingVals indicates what value each Alloca contains on exit from the
 /// predecessor block Pred.
 void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred,
-                                RenamePassData::ValVector &IncomingVals,
-                                RenamePassData::LocationVector &IncomingLocs,
+                                RenamePassData::ValVector IncomingVals,
+                                RenamePassData::LocationVector IncomingLocs,
                                 std::vector<RenamePassData> &Worklist) {
-NextIteration:
   // If we are inserting any phi nodes into this BB, they will already be in the
   // block.
   if (PHINode *APN = dyn_cast<PHINode>(BB->begin())) {
@@ -1215,24 +1215,20 @@ NextIteration:
   }
 
   // 'Recurse' to our successors.
-  succ_iterator I = succ_begin(BB), E = succ_end(BB);
-  if (I == E)
-    return;
 
   // Keep track of the successors so we don't visit the same successor twice
   SmallPtrSet<BasicBlock *, 8> VisitedSuccs;
 
-  // Handle the first successor without using the worklist.
-  VisitedSuccs.insert(*I);
-  Pred = BB;
-  BB = *I;
-  ++I;
-
-  for (; I != E; ++I)
-    if (VisitedSuccs.insert(*I).second)
-      Worklist.emplace_back(*I, Pred, IncomingVals, IncomingLocs);
-
-  goto NextIteration;
+  for (BasicBlock *S : reverse(successors(BB)))
+    if (VisitedSuccs.insert(S).second) {
+      if (VisitedSuccs.size() > 1) {
+        // Let the first successor own allocated arrays, other will make a copy.
+        IncomingVals = Worklist.back().Values;
+        IncomingLocs = Worklist.back().Locations;
+      }
+      Worklist.emplace_back(S, BB, std::move(IncomingVals),
+                            std::move(IncomingLocs));
+    }
 }
 
 void llvm::PromoteMemToReg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,

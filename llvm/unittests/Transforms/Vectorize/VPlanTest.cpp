@@ -752,13 +752,13 @@ edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     "preheader:\l" +
-    "  EMIT vp\<%1\> = add\l" +
+    "  EMIT vp\<%1\> = add \l" +
     "Successor(s): bb1\l"
   ]
   N0 -> N1 [ label=""]
   N1 [label =
     "bb1:\l" +
-    "  EMIT vp\<%2\> = add\l" +
+    "  EMIT vp\<%2\> = add \l" +
     "  EMIT vp\<%3\> = sub vp\<%2\>\l" +
     "  EMIT br vp\<%2\>, vp\<%3\>\l" +
     "Successor(s): bb2\l"
@@ -780,7 +780,7 @@ compound=true
   EXPECT_EQ(ExpectedStr, FullDump);
 
   const char *ExpectedBlock1Str = R"(bb1:
-  EMIT vp<%2> = add
+  EMIT vp<%2> = add 
   EMIT vp<%3> = sub vp<%2>
   EMIT br vp<%2>, vp<%3>
 Successor(s): bb2
@@ -842,11 +842,11 @@ TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
 vp<%1> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub
+  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add
+  EMIT vp<%2> = add 
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -866,11 +866,11 @@ No successors
 vp<%1> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub
+  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add
+  EMIT vp<%2> = add 
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -890,11 +890,11 @@ No successors
 vp<%1> = original trip-count
 
 preheader:
-  EMIT vp<%1> = sub
+  EMIT vp<%1> = sub 
 Successor(s): bb1
 
 bb1:
-  EMIT vp<%2> = add
+  EMIT vp<%2> = add 
 Successor(s): ir-bb<scalar.header>
 
 ir-bb<scalar.header>:
@@ -903,6 +903,49 @@ No successors
 )";
     EXPECT_EQ(ExpectedStr, FullDump);
   }
+}
+
+TEST_F(VPBasicBlockTest, cloneAndPrint) {
+  VPlan &Plan = getPlan(nullptr);
+  VPBasicBlock *VPBB0 = Plan.getEntry();
+
+  VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
+  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1});
+  VPInstruction *I3 = new VPInstruction(Instruction::Br, {I1, I2});
+
+  VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
+  VPBB1->appendRecipe(I1);
+  VPBB1->appendRecipe(I2);
+  VPBB1->appendRecipe(I3);
+  VPBB1->setName("bb1");
+  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
+
+  const char *ExpectedStr = R"(digraph VPlan {
+graph [labelloc=t, fontsize=30; label="Vectorization Plan\n for UF\>=1\n"]
+node [shape=rect, fontname=Courier, fontsize=30]
+edge [fontname=Courier, fontsize=30]
+compound=true
+  N0 [label =
+    "preheader:\l" +
+    "Successor(s): bb1\l"
+  ]
+  N0 -> N1 [ label=""]
+  N1 [label =
+    "bb1:\l" +
+    "  EMIT vp\<%1\> = add \l" +
+    "  EMIT vp\<%2\> = sub vp\<%1\>\l" +
+    "  EMIT br vp\<%1\>, vp\<%2\>\l" +
+    "No successors\l"
+  ]
+}
+)";
+  // Check that printing a cloned plan produces the same output.
+  std::string FullDump;
+  raw_string_ostream OS(FullDump);
+  VPlan *Clone = Plan.duplicate();
+  Clone->printDOT(OS);
+  EXPECT_EQ(ExpectedStr, FullDump);
+  delete Clone;
 }
 #endif
 

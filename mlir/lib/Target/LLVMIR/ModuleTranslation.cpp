@@ -35,6 +35,7 @@
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -52,6 +53,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -238,6 +240,23 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       if (alignment == 0)
         continue;
       layoutStream << "-S" << alignment;
+      continue;
+    }
+    if (key.getValue() == DLTIDialect::kDataLayoutFunctionPointerAlignmentKey) {
+      auto value = cast<FunctionPointerAlignmentAttr>(entry.getValue());
+      uint64_t alignment = value.getAlignment();
+      // Skip the default function pointer alignment.
+      if (alignment == 0)
+        continue;
+      layoutStream << "-F" << (value.getFunctionDependent() ? "n" : "i")
+                   << alignment;
+      continue;
+    }
+    if (key.getValue() == DLTIDialect::kDataLayoutLegalIntWidthsKey) {
+      layoutStream << "-n";
+      llvm::interleave(
+          cast<DenseI32ArrayAttr>(entry.getValue()).asArrayRef(), layoutStream,
+          [&](int32_t val) { layoutStream << val; }, ":");
       continue;
     }
     emitError(*loc) << "unsupported data layout key " << key;
@@ -553,8 +572,10 @@ static llvm::Constant *convertDenseResourceElementsAttr(
 llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     llvm::Type *llvmType, Attribute attr, Location loc,
     const ModuleTranslation &moduleTranslation) {
-  if (!attr)
+  if (!attr || isa<UndefAttr>(attr))
     return llvm::UndefValue::get(llvmType);
+  if (isa<ZeroAttr>(attr))
+    return llvm::Constant::getNullValue(llvmType);
   if (auto *structType = dyn_cast<::llvm::StructType>(llvmType)) {
     auto arrayAttr = dyn_cast<ArrayAttr>(attr);
     if (!arrayAttr) {
@@ -713,6 +734,33 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
         ArrayRef<char>{stringAttr.getValue().data(),
                        stringAttr.getValue().size()});
   }
+
+  // Handle arrays of structs that cannot be represented as DenseElementsAttr
+  // in MLIR.
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+    if (auto *arrayTy = dyn_cast<llvm::ArrayType>(llvmType)) {
+      llvm::Type *elementType = arrayTy->getElementType();
+      Attribute previousElementAttr;
+      llvm::Constant *elementCst = nullptr;
+      SmallVector<llvm::Constant *> constants;
+      constants.reserve(arrayTy->getNumElements());
+      for (Attribute elementAttr : arrayAttr) {
+        // Arrays with a single value or with repeating values are quite common.
+        // Short-circuit the translation when the element value is the same as
+        // the previous one.
+        if (!previousElementAttr || previousElementAttr != elementAttr) {
+          previousElementAttr = elementAttr;
+          elementCst =
+              getLLVMConstant(elementType, elementAttr, loc, moduleTranslation);
+          if (!elementCst)
+            return nullptr;
+        }
+        constants.push_back(elementCst);
+      }
+      return llvm::ConstantArray::get(arrayTy, constants);
+    }
+  }
+
   emitError(loc, "unsupported constant value");
   return nullptr;
 }
@@ -1500,6 +1548,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   if (auto tuneCpu = func.getTuneCpu())
     llvmFunc->addFnAttr("tune-cpu", *tuneCpu);
+
+  if (auto preferVectorWidth = func.getPreferVectorWidth())
+    llvmFunc->addFnAttr("prefer-vector-width", *preferVectorWidth);
 
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
