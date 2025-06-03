@@ -39,10 +39,12 @@ public:
   void Enter(const parser::FunctionSubprogram &);
   void Enter(const parser::SeparateModuleSubprogram &);
   void Enter(const parser::CUFKernelDoConstruct &);
+  void Leave(const parser::CUFKernelDoConstruct &);
   void Enter(const parser::AssignmentStmt &);
 
 private:
   SemanticsContext &context_;
+  bool inCUFKernelDoConstruct_ = false;
 };
 
 bool CanonicalizeCUDA(parser::Program &);

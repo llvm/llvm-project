@@ -22,6 +22,10 @@
 
 #include "test_macros.h"
 
+#ifndef _WIN32
+#  define TEST_SYSTEM_CATEGORY_IS_GENERIC_CATEGORY
+#endif
+
 int main(int, char**) {
   std::error_code e_code1(5, std::generic_category());
   std::error_code e_code2(5, std::system_category());
@@ -45,7 +49,9 @@ int main(int, char**) {
   assert(e_code2 == e_code2);
   assert(e_code2 != e_code3);
   assert(e_code2 != e_code4);
+#ifdef TEST_SYSTEM_CATEGORY_IS_GENERIC_CATEGORY
   LIBCPP_ASSERT(e_code2 == e_condition1);
+#endif
   assert(e_code2 == e_condition2);
   LIBCPP_ASSERT(e_code2 != e_condition3);
   assert(e_code2 != e_condition4);
@@ -65,11 +71,15 @@ int main(int, char**) {
   assert(e_code4 == e_code4);
   LIBCPP_ASSERT(e_code4 != e_condition1);
   assert(e_code4 != e_condition2);
+#ifdef TEST_SYSTEM_CATEGORY_IS_GENERIC_CATEGORY
   LIBCPP_ASSERT(e_code4 == e_condition3);
+#endif
   assert(e_code4 == e_condition4);
 
   assert(e_condition1 == e_code1);
+#ifdef TEST_SYSTEM_CATEGORY_IS_GENERIC_CATEGORY
   LIBCPP_ASSERT(e_condition1 == e_code2);
+#endif
   assert(e_condition1 != e_code3);
   LIBCPP_ASSERT(e_condition1 != e_code4);
   assert(e_condition1 == e_condition1);
@@ -89,7 +99,9 @@ int main(int, char**) {
   assert(e_condition3 != e_code1);
   LIBCPP_ASSERT(e_condition3 != e_code2);
   assert(e_condition3 == e_code3);
+#ifdef TEST_SYSTEM_CATEGORY_IS_GENERIC_CATEGORY
   LIBCPP_ASSERT(e_condition3 == e_code4);
+#endif
   assert(e_condition3 != e_condition1);
   assert(e_condition3 != e_condition2);
   assert(e_condition3 == e_condition3);

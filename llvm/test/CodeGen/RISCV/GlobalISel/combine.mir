@@ -8,9 +8,8 @@ body:             |
 
     ; RV64-LABEL: name: nneg_zext
     ; RV64: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; RV64-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; RV64-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s32)
-    ; RV64-NEXT: $x10 = COPY [[SEXT]](s64)
+    ; RV64-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[COPY]], 32
+    ; RV64-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
     ; RV64-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %2:_(s32) = G_TRUNC %0

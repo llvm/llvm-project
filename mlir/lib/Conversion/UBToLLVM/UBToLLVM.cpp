@@ -91,8 +91,8 @@ struct UBToLLVMConversionPass
 // Pattern Population
 //===----------------------------------------------------------------------===//
 
-void mlir::ub::populateUBToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                                  RewritePatternSet &patterns) {
+void mlir::ub::populateUBToLLVMConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<PoisonOpLowering>(converter);
 }
 

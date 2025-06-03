@@ -21,6 +21,7 @@ module m
     type(hasLen(*)), target :: nclen
     integer, intent(in) :: n
     character(2), target :: ch
+    character(1,4), target :: unicode
     real :: arr1(purefun1(c_loc(targ))) ! ok
     real :: arr2(purefun2(c_funloc(subr))) ! ok
     character(:), allocatable, target :: deferred
@@ -40,14 +41,16 @@ module m
     cp = c_loc(nclen)
     !ERROR: C_LOC() argument may not be zero-length character
     cp = c_loc(ch(2:1))
-    !WARNING: C_LOC() argument has non-interoperable intrinsic type, kind, or length
+    !WARNING: C_LOC() argument has non-interoperable character length
     cp = c_loc(ch)
+    !WARNING: C_LOC() argument has non-interoperable intrinsic type or kind
+    cp = c_loc(unicode)
     cp = c_loc(ch(1:1)) ! ok
     cp = c_loc(deferred) ! ok
     cp = c_loc(p2ch) ! ok
-    !ERROR: PRIVATE name '__address' is only accessible within module '__fortran_builtins'
+    !ERROR: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
     cp = c_ptr(0)
-    !ERROR: PRIVATE name '__address' is only accessible within module '__fortran_builtins'
+    !ERROR: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
     cfp = c_funptr(0)
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types TYPE(c_ptr) and TYPE(c_funptr)
     cp = cfp

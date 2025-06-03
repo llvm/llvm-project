@@ -44,7 +44,7 @@ entry:
   %9 = add i32 %f.promoted, %smax
   %10 = add i32 %9, 2
   call void @llvm.memset.p0.i32(ptr %scevgep, i8 %conv6, i32 %10, i1 false)
-; CHECK: call void @llvm.memset.p0.i32(ptr getelementptr inbounds (i8, ptr @j, i32 239), i8 %conv6, i32 1, i1 false)
+; CHECK: call void @llvm.memset.p0.i32(ptr getelementptr inbounds nuw (i8, ptr @j, i32 239), i8 %conv6, i32 1, i1 false)
   ret i32 0
 }
 ; Function Attrs: argmemonly nounwind

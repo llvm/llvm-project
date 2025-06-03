@@ -50,7 +50,6 @@ public:
     FT_CVInlineLines,
     FT_CVDefRange,
     FT_PseudoProbe,
-    FT_Dummy
   };
 
 private:
@@ -109,13 +108,6 @@ public:
   bool hasInstructions() const { return HasInstructions; }
 
   void dump() const;
-};
-
-class MCDummyFragment : public MCFragment {
-public:
-  explicit MCDummyFragment() : MCFragment(FT_Dummy, false) {}
-
-  static bool classof(const MCFragment *F) { return F->getKind() == FT_Dummy; }
 };
 
 /// Interface implemented by fragments that contain encoded instructions and/or
@@ -190,21 +182,15 @@ protected:
       : MCEncodedFragment(FType, HasInstructions) {}
 
 public:
-
-  using const_fixup_iterator = SmallVectorImpl<MCFixup>::const_iterator;
-  using fixup_iterator = SmallVectorImpl<MCFixup>::iterator;
-
   SmallVectorImpl<char> &getContents() { return Contents; }
   const SmallVectorImpl<char> &getContents() const { return Contents; }
 
+  void appendContents(ArrayRef<char> C) { Contents.append(C.begin(), C.end()); }
+  void appendContents(size_t Num, char Elt) { Contents.append(Num, Elt); }
+  void setContents(ArrayRef<char> C) { Contents.assign(C.begin(), C.end()); }
+
   SmallVectorImpl<MCFixup> &getFixups() { return Fixups; }
   const SmallVectorImpl<MCFixup> &getFixups() const { return Fixups; }
-
-  fixup_iterator fixup_begin() { return Fixups.begin(); }
-  const_fixup_iterator fixup_begin() const { return Fixups.begin(); }
-
-  fixup_iterator fixup_end() { return Fixups.end(); }
-  const_fixup_iterator fixup_end() const { return Fixups.end(); }
 
   static bool classof(const MCFragment *F) {
     MCFragment::FragmentType Kind = F->getKind();
@@ -307,6 +293,7 @@ class MCFillFragment : public MCFragment {
   uint64_t Value;
   /// The number of bytes to insert.
   const MCExpr &NumValues;
+  uint64_t Size = 0;
 
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
@@ -320,6 +307,8 @@ public:
   uint64_t getValue() const { return Value; }
   uint8_t getValueSize() const { return ValueSize; }
   const MCExpr &getNumValues() const { return NumValues; }
+  uint64_t getSize() const { return Size; }
+  void setSize(uint64_t Value) { Size = Value; }
 
   SMLoc getLoc() const { return Loc; }
 

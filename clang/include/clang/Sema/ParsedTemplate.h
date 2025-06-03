@@ -19,6 +19,7 @@
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Ownership.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <cstdlib>
@@ -249,8 +250,7 @@ namespace clang {
           Kind(TemplateKind), LAngleLoc(LAngleLoc), RAngleLoc(RAngleLoc),
           NumArgs(TemplateArgs.size()), ArgsInvalid(ArgsInvalid) {
 
-      std::uninitialized_copy(TemplateArgs.begin(), TemplateArgs.end(),
-                              getTemplateArgs());
+      llvm::uninitialized_copy(TemplateArgs, getTemplateArgs());
     }
     ~TemplateIdAnnotation() = default;
   };

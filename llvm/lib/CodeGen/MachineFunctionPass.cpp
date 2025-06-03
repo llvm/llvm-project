@@ -20,6 +20,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/CodeGen/DroppedVariableStatsMIR.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -31,6 +32,11 @@
 
 using namespace llvm;
 using namespace ore;
+
+static cl::opt<bool> DroppedVarStatsMIR(
+    "dropped-variable-stats-mir", cl::Hidden,
+    cl::desc("Dump dropped debug variables stats for MIR passes"),
+    cl::init(false));
 
 Pass *MachineFunctionPass::createPrinterPass(raw_ostream &O,
                                              const std::string &Banner) const {
@@ -91,7 +97,16 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
 
   MFProps.reset(ClearedProperties);
 
-  bool RV = runOnMachineFunction(MF);
+  bool RV;
+  if (DroppedVarStatsMIR) {
+    DroppedVariableStatsMIR DroppedVarStatsMF;
+    auto PassName = getPassName();
+    DroppedVarStatsMF.runBeforePass(PassName, &MF);
+    RV = runOnMachineFunction(MF);
+    DroppedVarStatsMF.runAfterPass(PassName, &MF);
+  } else {
+    RV = runOnMachineFunction(MF);
+  }
 
   if (ShouldEmitSizeRemarks) {
     // We wanted size remarks. Check if there was a change to the number of

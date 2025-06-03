@@ -1,0 +1,48 @@
+## Show that llvm-strip correctly zeroes out indirectsymoff and indirectsyms
+## in LC_DYSYMTAB if there are no symbols
+#
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-strip --strip-all %t -o %t.stripped
+# RUN: obj2yaml %t.stripped | FileCheck %s
+
+# CHECK: indirectsymoff: 0
+# CHECK-NEXT: nindirectsyms: 0
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x80000003
+  filetype:        0x00000002
+  ncmds:           2
+  sizeofcmds:      104
+  flags:           0x00200085
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0
+    nsyms:           0
+    stroff:          0
+    strsize:         0
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      0
+    iundefsym:       0
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  42
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+...

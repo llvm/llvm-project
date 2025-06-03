@@ -58,8 +58,9 @@ public:
 
   void test_subnormal_range(FmaFunc func) {
     constexpr InStorageType COUNT = 100'001;
-    constexpr InStorageType STEP =
+    constexpr InStorageType RAW_STEP =
         (IN_MAX_SUBNORMAL_U - IN_MIN_SUBNORMAL_U) / COUNT;
+    constexpr InStorageType STEP = (RAW_STEP == 0 ? 1 : RAW_STEP);
     LIBC_NAMESPACE::srand(1);
     for (InStorageType v = IN_MIN_SUBNORMAL_U, w = IN_MAX_SUBNORMAL_U;
          v <= IN_MAX_SUBNORMAL_U && w >= IN_MIN_SUBNORMAL_U;
@@ -75,7 +76,9 @@ public:
 
   void test_normal_range(FmaFunc func) {
     constexpr InStorageType COUNT = 100'001;
-    constexpr InStorageType STEP = (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
+    constexpr InStorageType RAW_STEP =
+        (IN_MAX_NORMAL_U - IN_MIN_NORMAL_U) / COUNT;
+    constexpr InStorageType STEP = (RAW_STEP == 0 ? 1 : RAW_STEP);
     LIBC_NAMESPACE::srand(1);
     for (InStorageType v = IN_MIN_NORMAL_U, w = IN_MAX_NORMAL_U;
          v <= IN_MAX_NORMAL_U && w >= IN_MIN_NORMAL_U; v += STEP, w -= STEP) {

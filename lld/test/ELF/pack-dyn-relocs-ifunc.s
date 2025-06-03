@@ -47,3 +47,28 @@ _start:
 .globl bar
 bar:
   ret
+
+#--- c.s
+
+# RUN: llvm-mc -filetype=obj -triple=aarch64-linux-android c.s -o c.o
+# RUN: ld.lld --pack-dyn-relocs=android c.o -o c
+# RUN: llvm-readelf -sS c | FileCheck --check-prefix=STATIC %s
+
+# STATIC: .rela.plt         RELA            0000000000200158 000158 000018 18  AI  0   5  8
+# STATIC: 0000000000200158     0 NOTYPE  LOCAL  HIDDEN      1 __rela_iplt_start
+# STATIC: 0000000000200170     0 NOTYPE  LOCAL  HIDDEN      1 __rela_iplt_end
+
+.text
+.type foo, %gnu_indirect_function
+.globl foo
+foo:
+  ret
+
+.globl _start
+_start:
+  bl foo
+
+.data
+.balign 8
+.quad __rela_iplt_start
+.quad __rela_iplt_end

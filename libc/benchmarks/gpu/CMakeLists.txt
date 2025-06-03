@@ -10,7 +10,7 @@ function(add_benchmark benchmark_name)
     "LINK_LIBRARIES;DEPENDS" # Multi-value arguments
     ${ARGN}
   )
-  
+
   if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     message(FATAL_ERROR "target does not support clock")
   endif()

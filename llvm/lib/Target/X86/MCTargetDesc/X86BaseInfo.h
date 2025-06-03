@@ -329,8 +329,8 @@ enum EncodingOfSegmentOverridePrefix : uint8_t {
 /// Given a segment register, return the encoding of the segment override
 /// prefix for it.
 inline EncodingOfSegmentOverridePrefix
-getSegmentOverridePrefixForReg(unsigned Reg) {
-  switch (Reg) {
+getSegmentOverridePrefixForReg(MCRegister Reg) {
+  switch (Reg.id()) {
   default:
     llvm_unreachable("Unknown segment register!");
   case X86::CS:
@@ -1156,52 +1156,52 @@ inline int getMemoryOperandNo(uint64_t TSFlags) {
 }
 
 /// \returns true if the register is a XMM.
-inline bool isXMMReg(unsigned RegNo) {
+inline bool isXMMReg(MCRegister Reg) {
   static_assert(X86::XMM15 - X86::XMM0 == 15,
                 "XMM0-15 registers are not continuous");
   static_assert(X86::XMM31 - X86::XMM16 == 15,
                 "XMM16-31 registers are not continuous");
-  return (RegNo >= X86::XMM0 && RegNo <= X86::XMM15) ||
-         (RegNo >= X86::XMM16 && RegNo <= X86::XMM31);
+  return (Reg >= X86::XMM0 && Reg <= X86::XMM15) ||
+         (Reg >= X86::XMM16 && Reg <= X86::XMM31);
 }
 
 /// \returns true if the register is a YMM.
-inline bool isYMMReg(unsigned RegNo) {
+inline bool isYMMReg(MCRegister Reg) {
   static_assert(X86::YMM15 - X86::YMM0 == 15,
                 "YMM0-15 registers are not continuous");
   static_assert(X86::YMM31 - X86::YMM16 == 15,
                 "YMM16-31 registers are not continuous");
-  return (RegNo >= X86::YMM0 && RegNo <= X86::YMM15) ||
-         (RegNo >= X86::YMM16 && RegNo <= X86::YMM31);
+  return (Reg >= X86::YMM0 && Reg <= X86::YMM15) ||
+         (Reg >= X86::YMM16 && Reg <= X86::YMM31);
 }
 
 /// \returns true if the register is a ZMM.
-inline bool isZMMReg(unsigned RegNo) {
+inline bool isZMMReg(MCRegister Reg) {
   static_assert(X86::ZMM31 - X86::ZMM0 == 31,
                 "ZMM registers are not continuous");
-  return RegNo >= X86::ZMM0 && RegNo <= X86::ZMM31;
+  return Reg >= X86::ZMM0 && Reg <= X86::ZMM31;
 }
 
-/// \returns true if \p RegNo is an apx extended register.
-inline bool isApxExtendedReg(unsigned RegNo) {
+/// \returns true if \p Reg is an apx extended register.
+inline bool isApxExtendedReg(MCRegister Reg) {
   static_assert(X86::R31WH - X86::R16 == 95, "EGPRs are not continuous");
-  return RegNo >= X86::R16 && RegNo <= X86::R31WH;
+  return Reg >= X86::R16 && Reg <= X86::R31WH;
 }
 
 /// \returns true if the MachineOperand is a x86-64 extended (r8 or
 /// higher) register,  e.g. r8, xmm8, xmm13, etc.
-inline bool isX86_64ExtendedReg(unsigned RegNo) {
-  if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM15) ||
-      (RegNo >= X86::XMM16 && RegNo <= X86::XMM31) ||
-      (RegNo >= X86::YMM8 && RegNo <= X86::YMM15) ||
-      (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
-      (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM31))
+inline bool isX86_64ExtendedReg(MCRegister Reg) {
+  if ((Reg >= X86::XMM8 && Reg <= X86::XMM15) ||
+      (Reg >= X86::XMM16 && Reg <= X86::XMM31) ||
+      (Reg >= X86::YMM8 && Reg <= X86::YMM15) ||
+      (Reg >= X86::YMM16 && Reg <= X86::YMM31) ||
+      (Reg >= X86::ZMM8 && Reg <= X86::ZMM31))
     return true;
 
-  if (isApxExtendedReg(RegNo))
+  if (isApxExtendedReg(Reg))
     return true;
 
-  switch (RegNo) {
+  switch (Reg.id()) {
   default:
     break;
   case X86::R8:
@@ -1299,15 +1299,15 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
 
 /// \returns true if the MemoryOperand is a 32 extended (zmm16 or higher)
 /// registers, e.g. zmm21, etc.
-static inline bool is32ExtendedReg(unsigned RegNo) {
-  return ((RegNo >= X86::XMM16 && RegNo <= X86::XMM31) ||
-          (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
-          (RegNo >= X86::ZMM16 && RegNo <= X86::ZMM31));
+static inline bool is32ExtendedReg(MCRegister Reg) {
+  return ((Reg >= X86::XMM16 && Reg <= X86::XMM31) ||
+          (Reg >= X86::YMM16 && Reg <= X86::YMM31) ||
+          (Reg >= X86::ZMM16 && Reg <= X86::ZMM31));
 }
 
-inline bool isX86_64NonExtLowByteReg(unsigned reg) {
-  return (reg == X86::SPL || reg == X86::BPL || reg == X86::SIL ||
-          reg == X86::DIL);
+inline bool isX86_64NonExtLowByteReg(MCRegister Reg) {
+  return (Reg == X86::SPL || Reg == X86::BPL || Reg == X86::SIL ||
+          Reg == X86::DIL);
 }
 
 /// \returns true if this is a masked instruction.
@@ -1321,7 +1321,7 @@ inline bool isKMergeMasked(uint64_t TSFlags) {
 }
 
 /// \returns true if the intruction needs a SIB.
-inline bool needSIB(unsigned BaseReg, unsigned IndexReg, bool In64BitMode) {
+inline bool needSIB(MCRegister BaseReg, MCRegister IndexReg, bool In64BitMode) {
   // The SIB byte must be used if there is an index register.
   if (IndexReg)
     return true;
@@ -1329,7 +1329,7 @@ inline bool needSIB(unsigned BaseReg, unsigned IndexReg, bool In64BitMode) {
   // The SIB byte must be used if the base is ESP/RSP/R12/R20/R28, all of
   // which encode to an R/M value of 4, which indicates that a SIB byte is
   // present.
-  switch (BaseReg) {
+  switch (BaseReg.id()) {
   default:
     // If there is no base register and we're in 64-bit mode, we need a SIB
     // byte to emit an addr that is just 'disp32' (the non-RIP relative form).

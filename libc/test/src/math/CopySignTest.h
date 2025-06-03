@@ -42,10 +42,10 @@ public:
       if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
 
-      double res1 = func(x, -x);
+      T res1 = func(x, -x);
       ASSERT_FP_EQ(res1, -x);
 
-      double res2 = func(x, x);
+      T res2 = func(x, x);
       ASSERT_FP_EQ(res2, x);
     }
   }

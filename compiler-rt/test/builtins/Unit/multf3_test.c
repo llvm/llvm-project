@@ -77,6 +77,12 @@ int main()
                      UINT64_C(0x0),
                      UINT64_C(0x0)))
         return 1;
+    // test carry between lo and hi in widening multiply
+    if (test__multf3(0x0.7fffffffffffffffffffffffffffp-16382L,
+                     0x1.7fffffffffffffffffffffffffffp+1L,
+                     UINT64_C(0x00017fffffffffff),
+                     UINT64_C(0xfffffffffffffffc)))
+      return 1;
 
 #else
     printf("skipped\n");

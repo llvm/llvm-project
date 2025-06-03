@@ -8,7 +8,7 @@
 ; the second run is a no-op.
 
 @dynlds = external addrspace(3) global [0 x i32], align 4
-@lds = internal unnamed_addr addrspace(3) global i32 undef, align 4
+@lds = internal unnamed_addr addrspace(3) global i32 poison, align 4
 
 define amdgpu_kernel void @test() {
 entry:

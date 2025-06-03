@@ -17,6 +17,7 @@ unittest("IRTests") {
     "BasicBlockDbgInfoTest.cpp",
     "BasicBlockTest.cpp",
     "CFGBuilder.cpp",
+    "ConstantFPRangeTest.cpp",
     "ConstantRangeListTest.cpp",
     "ConstantRangeTest.cpp",
     "ConstantsTest.cpp",
@@ -27,6 +28,7 @@ unittest("IRTests") {
     "DemandedBitsTest.cpp",
     "DominatorTreeBatchUpdatesTest.cpp",
     "DominatorTreeTest.cpp",
+    "DroppedVariableStatsIRTest.cpp",
     "FunctionTest.cpp",
     "IRBuilderTest.cpp",
     "InstructionsTest.cpp",
@@ -53,6 +55,7 @@ unittest("IRTests") {
     "ValueMapTest.cpp",
     "ValueTest.cpp",
     "VectorBuilderTest.cpp",
+    "VectorTypeUtilsTest.cpp",
     "VectorTypesTest.cpp",
     "VerifierTest.cpp",
   ]

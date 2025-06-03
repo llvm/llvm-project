@@ -33,7 +33,7 @@
     br i1 %tmp3.inv, label %bb4, label %bb8, !amdgpu.uniform !2
 
   bb4:                                              ; preds = %bb
-    %tmp5 = load volatile float, ptr addrspace(1) undef, align 4
+    %tmp5 = load volatile float, ptr addrspace(1) poison, align 4
     %tmp6 = fcmp oeq float %tmp5, 0x7FF0000000000000
     br i1 %tmp6, label %bb7, label %Flow, !amdgpu.uniform !2
 
@@ -103,7 +103,7 @@ body:             |
     renamable $sgpr4_sgpr5 = IMPLICIT_DEF
     $vgpr0 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr4_sgpr5
     $vgpr1 = V_MOV_B32_e32 $sgpr5, implicit $exec, implicit killed $sgpr4_sgpr5, implicit $exec
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`, addrspace 1)
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`, addrspace 1)
     renamable $sgpr4 = S_MOV_B32 2139095040
     S_WAITCNT 3952
     renamable $sgpr4_sgpr5 = nofpexcept V_CMP_NEQ_F32_e64 0, killed $sgpr4, 0, killed $vgpr0, 0, implicit $mode, implicit $exec

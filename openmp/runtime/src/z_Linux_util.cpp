@@ -32,7 +32,7 @@
 #if KMP_OS_AIX
 #include <sys/ldr.h>
 #include <libperfstat.h>
-#else
+#elif !KMP_OS_HAIKU
 #include <sys/syscall.h>
 #endif
 #include <sys/time.h>
@@ -70,6 +70,9 @@
 #include <sys/sysctl.h>
 #if KMP_OS_NETBSD
 #include <sched.h>
+#endif
+#if KMP_OS_OPENBSD
+#include <pthread_np.h>
 #endif
 #elif KMP_OS_SOLARIS
 #include <libproc.h>
@@ -462,7 +465,7 @@ void __kmp_terminate_thread(int gtid) {
 static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
   int stack_data;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
+    KMP_OS_HAIKU || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
   int status;
   size_t size = 0;
   void *addr = 0;
@@ -514,7 +517,7 @@ static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
     return TRUE;
   }
 #endif /* KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD  \
-          || KMP_OS_HURD || KMP_OS_SOLARIS */
+          || KMP_OS_HAIKU || KMP_OS_HURD || KMP_OS_SOLARIS */
   /* Use incremental refinement starting from initial conservative estimate */
   TCW_PTR(th->th.th_info.ds.ds_stacksize, 0);
   TCW_PTR(th->th.th_info.ds.ds_stackbase, &stack_data);
@@ -529,7 +532,8 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
   void *exit_val;
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
+    KMP_OS_OPENBSD || KMP_OS_HAIKU || KMP_OS_HURD || KMP_OS_SOLARIS ||         \
+    KMP_OS_AIX
   void *volatile padding = 0;
 #endif
   int gtid;
@@ -578,7 +582,8 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_AIX
+    KMP_OS_OPENBSD || KMP_OS_HAIKU || KMP_OS_HURD || KMP_OS_SOLARIS ||         \
+    KMP_OS_AIX
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
     (void)padding;
@@ -878,12 +883,18 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
     KMP_SYSFAIL("pthread_create", status);
   }
 
-#ifdef LIBOMP_HAVE_LINUX_PTHREAD_SETNAME
   // Rename worker threads for improved debuggability
   if (!KMP_UBER_GTID(gtid)) {
+#if defined(LIBOMP_HAVE_PTHREAD_SET_NAME_NP)
+    pthread_set_name_np(handle, "openmp_worker");
+#elif defined(LIBOMP_HAVE_PTHREAD_SETNAME_NP) && !KMP_OS_DARWIN
+#if KMP_OS_NETBSD
+    pthread_setname_np(handle, "%s", const_cast<char *>("openmp_worker"));
+#else
     pthread_setname_np(handle, "openmp_worker");
-  }
 #endif
+#endif
+  }
 
   th->th.th_info.ds.ds_thread = handle;
 
@@ -1893,7 +1904,7 @@ static int __kmp_get_xproc(void) {
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_CONF), &(r));
 
 #elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || \
-    KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
+    KMP_OS_HAIKU || KMP_OS_HURD || KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
 
   __kmp_type_convert(sysconf(_SC_NPROCESSORS_ONLN), &(r));
 
@@ -2391,6 +2402,9 @@ int __kmp_is_address_mapped(void *addr) {
   }
   KMP_INTERNAL_FREE(loadQueryBuf);
 
+#elif KMP_OS_HAIKU
+
+  found = 1;
 #else
 
 #error "Unknown or unsupported OS"

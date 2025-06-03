@@ -10,13 +10,10 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/Option.h"
@@ -217,10 +214,11 @@ static bool ActionFailed(const Action *A,
   if (FailingCommands.empty())
     return false;
 
-  // CUDA/HIP can have the same input source code compiled multiple times so do
-  // not compiled again if there are already failures. It is OK to abort the
-  // CUDA pipeline on errors.
-  if (A->isOffloading(Action::OFK_Cuda) || A->isOffloading(Action::OFK_HIP))
+  // CUDA/HIP/SYCL can have the same input source code compiled multiple times
+  // so do not compile again if there are already failures. It is OK to abort
+  // the CUDA/HIP/SYCL pipeline on errors.
+  if (A->isOffloading(Action::OFK_Cuda) || A->isOffloading(Action::OFK_HIP) ||
+      A->isOffloading(Action::OFK_SYCL))
     return true;
 
   for (const auto &CI : FailingCommands)

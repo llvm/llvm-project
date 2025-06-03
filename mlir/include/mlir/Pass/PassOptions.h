@@ -75,16 +75,13 @@ static void printOptionValue(raw_ostream &os, const std::string &str) {
     os << "}";
 }
 template <typename ParserT, typename DataT>
-static std::enable_if_t<has_stream_operator<DataT>::value>
-printOptionValue(raw_ostream &os, const DataT &value) {
-  os << value;
-}
-template <typename ParserT, typename DataT>
-static std::enable_if_t<!has_stream_operator<DataT>::value>
-printOptionValue(raw_ostream &os, const DataT &value) {
-  // If the value can't be streamed, fallback to checking for a print in the
-  // parser.
-  ParserT::print(os, value);
+static void printOptionValue(raw_ostream &os, const DataT &value) {
+  if constexpr (has_stream_operator<DataT>::value)
+    os << value;
+  else
+    // If the value can't be streamed, fallback to checking for a print in the
+    // parser.
+    ParserT::print(os, value);
 }
 } // namespace pass_options
 
@@ -253,6 +250,11 @@ public:
       assert(!(this->getMiscFlags() & llvm::cl::MiscFlags::CommaSeparated) &&
              "ListOption is implicitly comma separated, specifying "
              "CommaSeparated is extraneous");
+
+      // Make the default explicitly "empty" if no default was given.
+      if (!this->isDefaultAssigned())
+        this->setInitialValues({});
+
       parent.options.push_back(this);
       elementParser.initialize();
     }
@@ -296,11 +298,21 @@ public:
     const llvm::cl::Option *getOption() const final { return this; }
 
     /// Print the name and value of this option to the given stream.
+    /// Note that there is currently a limitation with regards to
+    /// `ListOption<string>`: parsing 'option=""` will result in `option` being
+    /// set to the empty list, not to a size-1 list containing an empty string.
     void print(raw_ostream &os) final {
-      // Don't print the list if empty. An empty option value can be treated as
-      // an element of the list in certain cases (e.g. ListOption<std::string>).
-      if ((**this).empty())
-        return;
+      // Don't print the list if the value is the default value.
+      if (this->isDefaultAssigned() &&
+          this->getDefault().size() == (**this).size()) {
+        unsigned i = 0;
+        for (unsigned e = (**this).size(); i < e; i++) {
+          if (!this->getDefault()[i].compare((**this)[i]))
+            break;
+        }
+        if (i == (**this).size())
+          return;
+      }
 
       os << this->ArgStr << "={";
       auto printElementFn = [&](const DataType &value) {
@@ -391,6 +403,7 @@ namespace llvm {
 namespace cl {
 //===----------------------------------------------------------------------===//
 // std::vector+SmallVector
+//===----------------------------------------------------------------------===//
 
 namespace detail {
 template <typename VectorT, typename ElementT>
@@ -455,6 +468,7 @@ public:
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: OptionValue
+//===----------------------------------------------------------------------===//
 
 template <>
 struct OptionValue<mlir::OpPassManager> final : GenericOptionValue {
@@ -499,6 +513,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: Parser
+//===----------------------------------------------------------------------===//
 
 extern template class basic_parser<mlir::OpPassManager>;
 

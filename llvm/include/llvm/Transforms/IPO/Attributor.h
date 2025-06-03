@@ -294,11 +294,16 @@ struct RangeTy {
     return *this;
   }
 
-  /// Comparison for sorting ranges by offset.
+  /// Comparison for sorting ranges.
   ///
-  /// Returns true if the offset \p L is less than that of \p R.
-  inline static bool OffsetLessThan(const RangeTy &L, const RangeTy &R) {
-    return L.Offset < R.Offset;
+  /// Returns true if the offset of \p L is less than that of \p R. If the two
+  /// offsets are same, compare the sizes instead.
+  inline static bool LessThan(const RangeTy &L, const RangeTy &R) {
+    if (L.Offset < R.Offset)
+      return true;
+    if (L.Offset == R.Offset)
+      return L.Size < R.Size;
+    return false;
   }
 
   /// Constants used to represent special offsets or sizes.
@@ -1203,7 +1208,8 @@ struct InformationCache {
         TargetTriple(M.getTargetTriple()) {
     if (UseExplorer)
       Explorer = new (Allocator) MustBeExecutedContextExplorer(
-          /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
+          /* ExploreInterBlock */
+          true, /* ExploreCFGForward */ true,
           /* ExploreCFGBackward */ true,
           /* LIGetter */
           [&](const Function &F) { return AG.getAnalysis<LoopAnalysis>(F); },
@@ -1282,6 +1288,12 @@ struct InformationCache {
     return AG.getAnalysis<TargetLibraryAnalysis>(F);
   }
 
+  /// Return true if \p F has the "kernel" function attribute
+  bool isKernel(const Function &F) {
+    FunctionInfo &FI = getFunctionInfo(F);
+    return FI.IsKernel;
+  }
+
   /// Return true if \p Arg is involved in a must-tail call, thus the argument
   /// of the caller or callee.
   bool isInvolvedInMustTailCall(const Argument &Arg) {
@@ -1327,14 +1339,14 @@ struct InformationCache {
   bool stackIsAccessibleByOtherThreads() { return !targetIsGPU(); }
 
   /// Return true if the target is a GPU.
-  bool targetIsGPU() {
-    return TargetTriple.isAMDGPU() || TargetTriple.isNVPTX();
-  }
+  bool targetIsGPU() { return TargetTriple.isGPU(); }
 
   /// Return all functions that might be called indirectly, only valid for
   /// closed world modules (see isClosedWorldModule).
-  const ArrayRef<Function *>
-  getIndirectlyCallableFunctions(Attributor &A) const;
+  ArrayRef<Function *> getIndirectlyCallableFunctions(Attributor &A) const;
+
+  /// Return the flat address space if the associated target has.
+  std::optional<unsigned> getFlatAddressSpace() const;
 
 private:
   struct FunctionInfo {
@@ -1353,6 +1365,9 @@ private:
 
     /// Function contains a `musttail` call.
     bool ContainsMustTailCall;
+
+    /// Function has the `"kernel"` attribute
+    bool IsKernel;
   };
 
   /// A map type from functions to informatio about it.
@@ -1448,7 +1463,7 @@ struct AttributorConfig {
   /// Callback function to determine if an indirect call targets should be made
   /// direct call targets (with an if-cascade).
   std::function<bool(Attributor &A, const AbstractAttribute &AA, CallBase &CB,
-                     Function &AssummedCallee)>
+                     Function &AssumedCallee, unsigned NumAssumedCallees)>
       IndirectCalleeSpecializationCallback = nullptr;
 
   /// Helper to update an underlying call graph and to delete functions.
@@ -1470,7 +1485,7 @@ struct AttributorConfig {
   /// The name of the pass running the attributor, used to emit remarks.
   const char *PassName = nullptr;
 
-  using IPOAmendableCBTy = function_ref<bool(const Function &F)>;
+  using IPOAmendableCBTy = std::function<bool(const Function &F)>;
   IPOAmendableCBTy IPOAmendableCB;
 };
 
@@ -1599,7 +1614,7 @@ struct Attributor {
     // information, e.g., function -> call site.
     {
       TimeTraceScope TimeScope("initialize", [&]() {
-        return AA.getName() +
+        return AA.getName().str() +
                std::to_string(AA.getIRPosition().getPositionKind());
       });
       ++InitializationChainLength;
@@ -1718,10 +1733,11 @@ struct Attributor {
   /// Return true if we should specialize the call site \b CB for the potential
   /// callee \p Fn.
   bool shouldSpecializeCallSiteForCallee(const AbstractAttribute &AA,
-                                         CallBase &CB, Function &Callee) {
+                                         CallBase &CB, Function &Callee,
+                                         unsigned NumAssumedCallees) {
     return Configuration.IndirectCalleeSpecializationCallback
-               ? Configuration.IndirectCalleeSpecializationCallback(*this, AA,
-                                                                    CB, Callee)
+               ? Configuration.IndirectCalleeSpecializationCallback(
+                     *this, AA, CB, Callee, NumAssumedCallees)
                : true;
   }
 
@@ -1936,8 +1952,12 @@ struct Attributor {
 private:
   /// Helper to check \p Attrs for \p AK, if not found, check if \p
   /// AAType::isImpliedByIR is true, and if not, create AAType for \p IRP.
+  /// If \p SkipHasAttrCheck is true, don't check whether the attribute is set
+  /// first. This should be used if only some values of a complex IR attribute
+  /// imply the AAType.
   template <Attribute::AttrKind AK, typename AAType>
-  void checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs);
+  void checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
+                           bool SkipHasAttrCheck = false);
 
   /// Helper to apply \p CB on all attributes of type \p AttrDescs of \p IRP.
   template <typename DescTy>
@@ -3365,7 +3385,7 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   virtual const std::string getAsStr(Attributor *A) const = 0;
 
   /// This function should return the name of the AbstractAttribute
-  virtual const std::string getName() const = 0;
+  virtual StringRef getName() const = 0;
 
   /// This function should return the address of the ID of the AbstractAttribute
   virtual const char *getIdAddr() const = 0;
@@ -3479,7 +3499,7 @@ struct AANoUnwind
   static AANoUnwind &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANoUnwind"; }
+  StringRef getName() const override { return "AANoUnwind"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3562,7 +3582,7 @@ struct AANoSync
   static AANoSync &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANoSync"; }
+  StringRef getName() const override { return "AANoSync"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3603,7 +3623,7 @@ struct AAMustProgress
                                            Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAMustProgress"; }
+  StringRef getName() const override { return "AAMustProgress"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3655,7 +3675,7 @@ struct AANonNull
   static AANonNull &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANonNull"; }
+  StringRef getName() const override { return "AANonNull"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3686,7 +3706,7 @@ struct AANoRecurse
   static AANoRecurse &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANoRecurse"; }
+  StringRef getName() const override { return "AANoRecurse"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3750,7 +3770,7 @@ struct AAWillReturn
   static AAWillReturn &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAWillReturn"; }
+  StringRef getName() const override { return "AAWillReturn"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3787,7 +3807,7 @@ struct AAUndefinedBehavior
                                                 Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAUndefinedBehavior"; }
+  StringRef getName() const override { return "AAUndefinedBehavior"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3820,7 +3840,7 @@ struct AAIntraFnReachability
                                                   Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAIntraFnReachability"; }
+  StringRef getName() const override { return "AAIntraFnReachability"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3844,7 +3864,7 @@ struct AANoAlias
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -3867,7 +3887,7 @@ struct AANoAlias
   static AANoAlias &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANoAlias"; }
+  StringRef getName() const override { return "AANoAlias"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3917,7 +3937,7 @@ struct AANoFree
   static AANoFree &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANoFree"; }
+  StringRef getName() const override { return "AANoFree"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -3948,7 +3968,7 @@ struct AANoReturn
   static AANoReturn &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANoReturn"; }
+  StringRef getName() const override { return "AANoReturn"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4043,7 +4063,7 @@ public:
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAIsDead"; }
+  StringRef getName() const override { return "AAIsDead"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4211,7 +4231,7 @@ struct AADereferenceable
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4239,7 +4259,7 @@ struct AADereferenceable
                                               Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AADereferenceable"; }
+  StringRef getName() const override { return "AADereferenceable"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4277,7 +4297,7 @@ struct AAAlign
   Align getKnownAlign() const { return Align(getKnown()); }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAAlign"; }
+  StringRef getName() const override { return "AAAlign"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4319,7 +4339,7 @@ struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
                                            Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAInstanceInfo"; }
+  StringRef getName() const override { return "AAInstanceInfo"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4337,7 +4357,7 @@ struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
 /// An abstract interface for all nocapture attributes.
 struct AANoCapture
     : public IRAttribute<
-          Attribute::NoCapture,
+          Attribute::Captures,
           StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>,
           AANoCapture> {
   AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
@@ -4355,7 +4375,7 @@ struct AANoCapture
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4401,7 +4421,7 @@ struct AANoCapture
   static AANoCapture &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANoCapture"; }
+  StringRef getName() const override { return "AANoCapture"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4501,7 +4521,7 @@ struct AAValueSimplify
                                             Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAValueSimplify"; }
+  StringRef getName() const override { return "AAValueSimplify"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4542,7 +4562,7 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
   static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAHeapToStack"; }
+  StringRef getName() const override { return "AAHeapToStack"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4597,7 +4617,7 @@ struct AAPrivatizablePtr
                                               Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAPrivatizablePtr"; }
+  StringRef getName() const override { return "AAPrivatizablePtr"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4626,8 +4646,7 @@ struct AAMemoryBehavior
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.isFunctionScope() &&
-        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.isFunctionScope() && !IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4672,7 +4691,7 @@ struct AAMemoryBehavior
                                              Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAMemoryBehavior"; }
+  StringRef getName() const override { return "AAMemoryBehavior"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4857,7 +4876,7 @@ struct AAMemoryLocation
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAMemoryLocation"; }
+  StringRef getName() const override { return "AAMemoryLocation"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -4925,7 +4944,7 @@ struct AAValueConstantRange
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAValueConstantRange"; }
+  StringRef getName() const override { return "AAValueConstantRange"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -5081,8 +5100,7 @@ private:
       indicatePessimisticFixpoint();
       return;
     }
-    for (const MemberTy &C : R.Set)
-      Set.insert(C);
+    Set.insert_range(R.Set);
     UndefIsContained |= R.undefIsContained();
     checkAndInvalidate();
   }
@@ -5278,9 +5296,7 @@ struct AAPotentialConstantValues
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override {
-    return "AAPotentialConstantValues";
-  }
+  StringRef getName() const override { return "AAPotentialConstantValues"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -5317,7 +5333,7 @@ struct AAPotentialValues
                                SmallVectorImpl<AA::ValueAndContext> &Values);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAPotentialValues"; }
+  StringRef getName() const override { return "AAPotentialValues"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -5367,7 +5383,7 @@ struct AANoUndef
   static AANoUndef &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANoUndef"; }
+  StringRef getName() const override { return "AANoUndef"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -5418,7 +5434,7 @@ struct AANoFPClass
   static AANoFPClass &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANoFPClass"; }
+  StringRef getName() const override { return "AANoFPClass"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -5507,7 +5523,7 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
   static AACallEdges &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AACallEdges"; }
+  StringRef getName() const override { return "AACallEdges"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -5629,7 +5645,7 @@ struct AAExecutionDomain
                                               Attributor &A);
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override { return "AAExecutionDomain"; }
+  StringRef getName() const override { return "AAExecutionDomain"; }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -5695,7 +5711,7 @@ struct AAInterFnReachability
                                                   Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAInterFnReachability"; }
+  StringRef getName() const override { return "AAInterFnReachability"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -5727,7 +5743,7 @@ struct AANonConvergent : public StateWrapper<BooleanState, AbstractAttribute> {
   bool isKnownNotConvergent() const { return getKnown(); }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AANonConvergent"; }
+  StringRef getName() const override { return "AANonConvergent"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -5777,6 +5793,53 @@ struct AAPointerInfo : public AbstractAttribute {
     AK_MUST_READ_WRITE = AK_MUST | AK_R | AK_W,
   };
 
+  /// A helper containing a list of offsets computed for a Use. Ideally this
+  /// list should be strictly ascending, but we ensure that only when we
+  /// actually translate the list of offsets to a RangeList.
+  struct OffsetInfo {
+    using VecTy = SmallSet<int64_t, 4>;
+    using const_iterator = VecTy::const_iterator;
+    VecTy Offsets;
+
+    const_iterator begin() const { return Offsets.begin(); }
+    const_iterator end() const { return Offsets.end(); }
+
+    bool operator==(const OffsetInfo &RHS) const {
+      return Offsets == RHS.Offsets;
+    }
+
+    bool operator!=(const OffsetInfo &RHS) const { return !(*this == RHS); }
+
+    bool insert(int64_t Offset) { return Offsets.insert(Offset).second; }
+    bool isUnassigned() const { return Offsets.size() == 0; }
+
+    bool isUnknown() const {
+      if (isUnassigned())
+        return false;
+      if (Offsets.size() == 1)
+        return *Offsets.begin() == AA::RangeTy::Unknown;
+      return false;
+    }
+
+    void setUnknown() {
+      Offsets.clear();
+      Offsets.insert(AA::RangeTy::Unknown);
+    }
+
+    void addToAll(int64_t Inc) {
+      VecTy NewOffsets;
+      for (auto &Offset : Offsets)
+        NewOffsets.insert(Offset + Inc);
+      Offsets = std::move(NewOffsets);
+    }
+
+    /// Copy offsets from \p R into the current list.
+    ///
+    /// Ideally all lists should be strictly ascending, but we defer that to the
+    /// actual use of the list. So we just blindly append here.
+    bool merge(const OffsetInfo &R) { return set_union(Offsets, R.Offsets); }
+  };
+
   /// A container for a list of ranges.
   struct RangeList {
     // The set of ranges rarely contains more than one element, and is unlikely
@@ -5808,7 +5871,7 @@ struct AAPointerInfo : public AbstractAttribute {
     // Helpers required for std::set_difference
     using value_type = RangeTy;
     void push_back(const RangeTy &R) {
-      assert((Ranges.empty() || RangeTy::OffsetLessThan(Ranges.back(), R)) &&
+      assert((Ranges.empty() || RangeTy::LessThan(Ranges.back(), R)) &&
              "Ensure the last element is the greatest.");
       Ranges.push_back(R);
     }
@@ -5817,7 +5880,7 @@ struct AAPointerInfo : public AbstractAttribute {
     static void set_difference(const RangeList &L, const RangeList &R,
                                RangeList &D) {
       std::set_difference(L.begin(), L.end(), R.begin(), R.end(),
-                          std::back_inserter(D), RangeTy::OffsetLessThan);
+                          std::back_inserter(D), RangeTy::LessThan);
     }
 
     unsigned size() const { return Ranges.size(); }
@@ -5855,7 +5918,7 @@ struct AAPointerInfo : public AbstractAttribute {
 
     /// Insert \p R at the given iterator \p Pos, and merge if necessary.
     ///
-    /// This assumes that all ranges before \p Pos are OffsetLessThan \p R, and
+    /// This assumes that all ranges before \p Pos are LessThan \p R, and
     /// then maintains the sorted order for the suffix list.
     ///
     /// \return The place of insertion and true iff anything changed.
@@ -5867,7 +5930,7 @@ struct AAPointerInfo : public AbstractAttribute {
       }
 
       // Maintain this as a sorted vector of unique entries.
-      auto LB = std::lower_bound(Pos, Ranges.end(), R, RangeTy::OffsetLessThan);
+      auto LB = std::lower_bound(Pos, Ranges.end(), R, RangeTy::LessThan);
       if (LB == Ranges.end() || LB->Offset != R.Offset)
         return std::make_pair(Ranges.insert(LB, R), true);
       bool Changed = *LB != R;
@@ -6103,7 +6166,7 @@ struct AAPointerInfo : public AbstractAttribute {
   static AAPointerInfo &createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAPointerInfo"; }
+  StringRef getName() const override { return "AAPointerInfo"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -6113,6 +6176,8 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual const_bin_iterator begin() const = 0;
   virtual const_bin_iterator end() const = 0;
   virtual int64_t numOffsetBins() const = 0;
+  virtual bool reachesReturn() const = 0;
+  virtual void addReturnedOffsetsTo(OffsetInfo &) const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p Range and return
   /// true if all such accesses were known and the callback returned true for
@@ -6167,7 +6232,7 @@ struct AAAssumptionInfo
                                              Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAAssumptionInfo"; }
+  StringRef getName() const override { return "AAAssumptionInfo"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -6201,7 +6266,7 @@ struct AAUnderlyingObjects : AbstractAttribute {
                                                 Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAUnderlyingObjects"; }
+  StringRef getName() const override { return "AAUnderlyingObjects"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -6242,14 +6307,14 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
   /// Return the address space of the associated value. \p NoAddressSpace is
   /// returned if the associated value is dead. This functions is not supposed
   /// to be called if the AA is invalid.
-  virtual int32_t getAddressSpace() const = 0;
+  virtual uint32_t getAddressSpace() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAAddressSpace &createForPosition(const IRPosition &IRP,
                                            Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAAddressSpace"; }
+  StringRef getName() const override { return "AAAddressSpace"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -6260,11 +6325,12 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
     return (AA->getIdAddr() == &ID);
   }
 
-  // No address space which indicates the associated value is dead.
-  static const int32_t NoAddressSpace = -1;
-
   /// Unique ID (due to the unique address)
   static const char ID;
+
+protected:
+  // Invalid address space which indicates the associated value is dead.
+  static const uint32_t InvalidAddressSpace = ~0U;
 };
 
 struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
@@ -6285,7 +6351,7 @@ struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
   virtual std::optional<TypeSize> getAllocatedSize() const = 0;
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAAllocationInfo"; }
+  StringRef getName() const override { return "AAAllocationInfo"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -6326,7 +6392,7 @@ struct AAGlobalValueInfo
   virtual bool isPotentialUse(const Use &U) const = 0;
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAGlobalValueInfo"; }
+  StringRef getName() const override { return "AAGlobalValueInfo"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -6365,7 +6431,7 @@ struct AAIndirectCallInfo
   virtual bool foreachCallee(function_ref<bool(Function *)> CB) const = 0;
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAIndirectCallInfo"; }
+  StringRef getName() const override { return "AAIndirectCallInfo"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -6395,7 +6461,7 @@ struct AADenormalFPMath
                                              Attributor &A);
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AADenormalFPMath"; }
+  StringRef getName() const override { return "AADenormalFPMath"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -6446,7 +6512,7 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
     CASE(NoUnwind, AANoUnwind, );
     CASE(WillReturn, AAWillReturn, );
     CASE(NoFree, AANoFree, );
-    CASE(NoCapture, AANoCapture, );
+    CASE(Captures, AANoCapture, );
     CASE(NoRecurse, AANoRecurse, );
     CASE(NoReturn, AANoReturn, );
     CASE(NoSync, AANoSync, );

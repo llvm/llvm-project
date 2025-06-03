@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 ; CHECK-LABEL: ret_struct_i8_i16_i8
 define { i8, i16, i8 } @ret_struct_i8_i16_i8() {

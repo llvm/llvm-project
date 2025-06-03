@@ -54,7 +54,7 @@ define i1 @PR41069(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @PR41069(
 ; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[UNO1]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[UNO1]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno1 = fcmp uno double %a, %b
@@ -87,7 +87,7 @@ define i1 @PR41069_commute(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @PR41069_commute(
 ; CHECK-NEXT:    [[UNO1:%.*]] = fcmp uno double [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno double [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[UNO1]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[UNO1]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %uno1 = fcmp uno double %a, %b
@@ -4603,5 +4603,57 @@ define i1 @intersect_fmf_4(double %a, double %b) {
   %cmp = fcmp ninf olt double %a, %b
   %cmp1 = fcmp nnan ogt double %a, %b
   %retval = or i1 %cmp, %cmp1
+  ret i1 %retval
+}
+
+define i1 @or_fcmp_reassoc1(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @or_fcmp_reassoc1(
+; CHECK-NEXT:    [[OR:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = or i1 [[OR]], [[CMP1:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp olt double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %or = or i1 %cmp, %x
+  %retval = or i1 %or, %cmp1
+  ret i1 %retval
+}
+
+define i1 @or_fcmp_reassoc2(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @or_fcmp_reassoc2(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = or i1 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp olt double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %or = or i1 %x, %cmp
+  %retval = or i1 %or, %cmp1
+  ret i1 %retval
+}
+
+define i1 @or_fcmp_reassoc3(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @or_fcmp_reassoc3(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = or i1 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp olt double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %or = or i1 %cmp, %x
+  %retval = or i1 %cmp1, %or
+  ret i1 %retval
+}
+
+define i1 @or_fcmp_reassoc4(i1 %x, double %a, double %b) {
+; CHECK-LABEL: @or_fcmp_reassoc4(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp one double [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = or i1 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RETVAL]]
+;
+  %cmp = fcmp olt double %a, %b
+  %cmp1 = fcmp ogt double %a, %b
+  %or = or i1 %x, %cmp
+  %retval = or i1 %cmp1, %or
   ret i1 %retval
 }

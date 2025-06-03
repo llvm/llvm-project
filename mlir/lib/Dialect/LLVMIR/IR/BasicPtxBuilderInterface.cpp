@@ -99,14 +99,12 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
       } else {
         ss << getModifier() << getRegisterType(t) << ",";
       }
-      ss.flush();
     }
     return;
   }
   // Handle Scalars
   addValue(v);
   ss << getModifier() << getRegisterType(v) << ",";
-  ss.flush();
 }
 
 LLVM::InlineAsmOp PtxBuilder::build() {
@@ -132,7 +130,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
 
   // Tablegen doesn't accept $, so we use %, but inline assembly uses $.
   // Replace all % with $
-  std::replace(ptxInstruction.begin(), ptxInstruction.end(), '%', '$');
+  llvm::replace(ptxInstruction, '%', '$');
 
   return rewriter.create<LLVM::InlineAsmOp>(
       interfaceOp->getLoc(),
@@ -141,7 +139,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
       /*asm_string=*/llvm::StringRef(ptxInstruction),
       /*constraints=*/registerConstraints.data(),
       /*has_side_effects=*/interfaceOp.hasSideEffect(),
-      /*is_align_stack=*/false,
+      /*is_align_stack=*/false, LLVM::TailCallKind::None,
       /*asm_dialect=*/asmDialectAttr,
       /*operand_attrs=*/ArrayAttr());
 }

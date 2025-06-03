@@ -13,6 +13,7 @@
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .cs:
 ; GCN-NEXT:         .entry_point:    _amdgpu_cs_main
+; GCN-NEXT:         .entry_point_symbol:    _amdgpu_cs_main
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; SI-NEXT:          .sgpr_count:     0x11
 ; VI-NEXT:          .sgpr_count:     0x60

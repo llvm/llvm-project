@@ -31,6 +31,10 @@ private:
   ///
   bool IsWin64;
 
+  /// IsUEFI64 - Is UEFI 64 bit target.
+  ///
+  bool IsUEFI64;
+
   /// SlotSize - Stack slot size in bytes.
   ///
   unsigned SlotSize;
@@ -54,9 +58,6 @@ public:
   /// Return the number of registers for the function.
   unsigned getNumSupportedRegs(const MachineFunction &MF) const override;
 
-  // FIXME: This should be tablegen'd like getDwarfRegNum is
-  int getSEHRegNum(unsigned i) const;
-
   /// getMatchingSuperRegClass - Return a subclass of the specified register
   /// class A so that each register in it has a sub-register of the
   /// specified sub-register index which is in the specified register class B.
@@ -72,11 +73,6 @@ public:
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;
-
-  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                            unsigned DefSubReg,
-                            const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
 
   /// getPointerRegClass - Returns a TargetRegisterClass used for pointer
   /// values.
@@ -102,6 +98,9 @@ public:
   /// callee-save registers on this target.
   const MCPhysReg *
   getCalleeSavedRegs(const MachineFunction* MF) const override;
+  /// getIPRACSRegs - This API can be removed when rbp is safe to optimized out
+  /// when IPRA is on.
+  const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
   const MCPhysReg *
   getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
@@ -160,8 +159,8 @@ public:
 
   // Debug information queries.
   Register getFrameRegister(const MachineFunction &MF) const override;
-  unsigned getPtrSizedFrameRegister(const MachineFunction &MF) const;
-  unsigned getPtrSizedStackRegister(const MachineFunction &MF) const;
+  Register getPtrSizedFrameRegister(const MachineFunction &MF) const;
+  Register getPtrSizedStackRegister(const MachineFunction &MF) const;
   Register getStackRegister() const { return StackPtr; }
   Register getBaseRegister() const { return BasePtr; }
   /// Returns physical register used as frame pointer.
@@ -176,6 +175,11 @@ public:
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  const TargetRegisterClass *
+  constrainRegClassToNonRex2(const TargetRegisterClass *RC) const;
+
+  bool isNonRex2RegClass(const TargetRegisterClass *RC) const;
 };
 
 } // End llvm namespace

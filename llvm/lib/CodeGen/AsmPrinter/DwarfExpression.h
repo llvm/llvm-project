@@ -45,17 +45,17 @@ class DwarfExpression {
 protected:
   /// Holds information about all subregisters comprising a register location.
   struct Register {
-    int DwarfRegNo;
+    int64_t DwarfRegNo;
     unsigned SubRegSize;
     const char *Comment;
 
     /// Create a full register, no extra DW_OP_piece operators necessary.
-    static Register createRegister(int RegNo, const char *Comment) {
+    static Register createRegister(int64_t RegNo, const char *Comment) {
       return {RegNo, 0, Comment};
     }
 
     /// Create a subregister that needs a DW_OP_piece operator with SizeInBits.
-    static Register createSubRegister(int RegNo, unsigned SizeInBits,
+    static Register createSubRegister(int64_t RegNo, unsigned SizeInBits,
                                       const char *Comment) {
       return {RegNo, SizeInBits, Comment};
     }
@@ -161,13 +161,13 @@ protected:
 
   /// Emit a DW_OP_reg operation. Note that this is only legal inside a DWARF
   /// register location description.
-  void addReg(int DwarfReg, const char *Comment = nullptr);
+  void addReg(int64_t DwarfReg, const char *Comment = nullptr);
 
   /// Emit a DW_OP_breg operation.
-  void addBReg(int DwarfReg, int Offset);
+  void addBReg(int64_t DwarfReg, int64_t Offset);
 
   /// Emit DW_OP_fbreg <Offset>.
-  void addFBReg(int Offset);
+  void addFBReg(int64_t Offset);
 
   /// Emit a partial DWARF register operation.
   ///

@@ -19,7 +19,6 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %7 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<3 x array<3 x array<3 x i32>>>)   map_clauses(tofrom) capture(ByRef) bounds(%5, %5, %6) -> !llvm.ptr {name = "inarray(1:3,1:3,2:2)"}
     %8 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.array<3 x array<3 x array<3 x i32>>>)   map_clauses(tofrom) capture(ByRef) bounds(%5, %5, %5) -> !llvm.ptr {name = "outarray(1:3,1:3,1:3)"}
     omp.target   map_entries(%7 -> %arg0, %8 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-      ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
       %9 = llvm.mlir.constant(0 : i64) : i64
       %10 = llvm.mlir.constant(1 : i64) : i64
       %11 = llvm.getelementptr %arg0[0, %10, %9, %9] : (!llvm.ptr, i64, i64, i64) -> !llvm.ptr, !llvm.array<3 x array<3 x array<3 x i32>>>
@@ -49,7 +48,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // CHECK: store ptr @_QFEinarray, ptr %[[OFFLOADBASEPTRS]], align 8
 // CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
-// CHECK: store ptr getelementptr inbounds ([3 x [3 x [3 x i32]]], ptr @_QFEinarray, i64 0, i64 1, i64 0, i64 0), ptr %[[OFFLOADPTRS]], align 8
+// CHECK: store ptr getelementptr inbounds nuw (i8, ptr @_QFEinarray, i64 36), ptr %[[OFFLOADPTRS]], align 8
 
 // CHECK: %[[OFFLOADBASEPTRS2:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 // CHECK: store ptr @_QFEoutarray, ptr %[[OFFLOADBASEPTRS2]], align 8
