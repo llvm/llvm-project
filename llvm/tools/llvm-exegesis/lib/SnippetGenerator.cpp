@@ -278,13 +278,10 @@ static Error randomizeMCOperand(const LLVMState &State,
   }
   /// Omit unknown and pc-relative operands to imm value based on the
   /// instruction
-  // TODO: Neccesity of AArch64 guard ?
-#ifdef __aarch64__
   case MCOI::OperandType::OPERAND_UNKNOWN:
   case MCOI::OperandType::OPERAND_PCREL:
     return State.getExegesisTarget().randomizeTargetMCOperand(
         Instr, Var, AssignedValue, ForbiddenRegs);
-#endif
   default:
     break;
   }
