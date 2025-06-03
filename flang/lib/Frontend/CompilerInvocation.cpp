@@ -488,6 +488,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   }
 
   parseDoConcurrentMapping(opts, args, diags);
+
+  opts.DeferDescriptorMapping =
+      args.hasFlag(clang::driver::options::OPT_fdefer_desc_map,
+                   clang::driver::options::OPT_fno_defer_desc_map, true);
 }
 
 /// Parses all target input arguments and populates the target

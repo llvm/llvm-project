@@ -42,6 +42,8 @@ CODEGENOPT(AliasAnalysis, 1, 0) ///< Enable alias analysis pass
 
 CODEGENOPT(Underscoring, 1, 1)
 CODEGENOPT(OffloadGlobalFiltering, 1, 0)
+CODEGENOPT(DeferDescriptorMapping, 1, 0) ///< Fortran OpenMP specific optimisation for delaying descriptor mapping until target/target data regions
+
 ENUM_CODEGENOPT(RelocationModel, llvm::Reloc::Model, 3, llvm::Reloc::PIC_) ///< Name of the relocation model to use.
 ENUM_CODEGENOPT(DebugInfo,  llvm::codegenoptions::DebugInfoKind, 4,  llvm::codegenoptions::NoDebugInfo) ///< Level of debug info to generate
 ENUM_CODEGENOPT(VecLib, llvm::driver::VectorLibrary, 4, llvm::driver::VectorLibrary::NoLibrary) ///< Vector functions library to use

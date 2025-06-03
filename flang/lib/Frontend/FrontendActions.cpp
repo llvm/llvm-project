@@ -307,6 +307,8 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
   opts.enableOffloadGlobalFiltering =
       ci.getInvocation().getCodeGenOpts().OffloadGlobalFiltering;
+  opts.deferDescMap =
+      ci.getInvocation().getCodeGenOpts().DeferDescriptorMapping;
 
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
       !isOpenMPEnabled) {

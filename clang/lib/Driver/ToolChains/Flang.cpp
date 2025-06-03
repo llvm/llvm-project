@@ -184,7 +184,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_frepack_arrays_contiguity_EQ,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
-       options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
+       options::OPT_funroll_loops, options::OPT_fno_unroll_loops,
+       options::OPT_fdefer_desc_map, options::OPT_fno_defer_desc_map});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
