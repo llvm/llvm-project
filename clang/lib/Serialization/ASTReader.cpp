@@ -2854,25 +2854,25 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       while (!ImportStack.back()->ImportedBy.empty())
         ImportStack.push_back(ImportStack.back()->ImportedBy[0]);
 
-      // The top-level PCH is stale.
-      StringRef TopLevelPCHName(ImportStack.back()->FileName);
+      // The top-level AST file is stale.
+      StringRef TopLevelASTFileName(ImportStack.back()->FileName);
       Diag(diag::err_fe_ast_file_modified)
           << *Filename << moduleKindForDiagnostic(ImportStack.back()->Kind)
-          << TopLevelPCHName << FileChange.Kind
+          << TopLevelASTFileName << FileChange.Kind
           << (FileChange.Old && FileChange.New)
           << llvm::itostr(FileChange.Old.value_or(0))
           << llvm::itostr(FileChange.New.value_or(0));
 
       // Print the import stack.
       if (ImportStack.size() > 1) {
-        Diag(diag::note_pch_required_by)
+        Diag(diag::note_ast_file_required_by)
             << *Filename << ImportStack[0]->FileName;
         for (unsigned I = 1; I < ImportStack.size(); ++I)
-          Diag(diag::note_pch_required_by)
-            << ImportStack[I-1]->FileName << ImportStack[I]->FileName;
+          Diag(diag::note_ast_file_required_by)
+              << ImportStack[I - 1]->FileName << ImportStack[I]->FileName;
       }
 
-      Diag(diag::note_pch_rebuild_required) << TopLevelPCHName;
+      Diag(diag::note_ast_file_rebuild_required) << TopLevelASTFileName;
     }
 
     IsOutOfDate = true;
