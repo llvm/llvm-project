@@ -148,9 +148,42 @@ class DXILPrepareModule : public ModulePass {
                                      Type *Ty) {
     // Omit bitcasts if the incoming value matches the instruction type.
     auto It = PointerTypes.find(Operand);
-    if (It != PointerTypes.end())
-      if (cast<TypedPointerType>(It->second)->getElementType() == Ty)
+    if (It != PointerTypes.end()) {
+      auto OpTy = cast<TypedPointerType>(It->second)->getElementType();
+      if (OpTy == Ty)
         return nullptr;
+    }
+
+    // Also omit the bitcast for matching global array types
+    if (auto *GlobalVar = llvm::dyn_cast<llvm::GlobalVariable>(Operand)) {
+      llvm::Type *ValTy = GlobalVar->getValueType();
+
+      if (auto *ArrTy = llvm::dyn_cast<llvm::ArrayType>(ValTy)) {
+        llvm::Type *ElTy = ArrTy->getElementType();
+        if (ElTy == Ty)
+          return nullptr;
+      }
+    }
+
+    // finally, drill down GEP instructions until we get the array
+    // that is being accessed, and compare element types
+    if (auto *GEPInstr = llvm::dyn_cast<llvm::ConstantExpr>(Operand)) {
+      while (GEPInstr->getOpcode() == llvm::Instruction::GetElementPtr) {
+        llvm::Value *OpArg = GEPInstr->getOperand(0);
+
+        if (auto *GlobalVar = llvm::dyn_cast<llvm::GlobalVariable>(OpArg)) {
+          llvm::Constant *initializer = GlobalVar->getInitializer();
+
+          llvm::Type *ValTy = GlobalVar->getValueType();
+          if (auto *ArrTy = llvm::dyn_cast<llvm::ArrayType>(ValTy)) {
+            llvm::Type *ElTy = ArrTy->getElementType();
+            if (ElTy == Ty)
+              return nullptr;
+          }
+        }
+      }
+    }
+
     // Insert bitcasts where we are removing the instruction.
     Builder.SetInsertPoint(&Inst);
     // This code only gets hit in opaque-pointer mode, so the type of the
