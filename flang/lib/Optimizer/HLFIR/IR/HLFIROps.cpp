@@ -1586,7 +1586,7 @@ void hlfir::AssociateOp::build(mlir::OpBuilder &builder,
   mlir::Type firVarType;
   auto sourceExprType = mlir::dyn_cast<hlfir::ExprType>(source.getType());
   if (sourceExprType && sourceExprType.isPolymorphic())
-    firVarType = fir::ClassType::get(fir::HeapType::get(dataType));
+    firVarType = fir::ClassType::get(dataType);
   else
     firVarType = fir::ReferenceType::get(dataType);
 
