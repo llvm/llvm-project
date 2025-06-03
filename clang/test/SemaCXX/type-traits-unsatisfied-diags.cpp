@@ -265,4 +265,18 @@ static_assert(__is_trivially_copyable(S10));
 // expected-note@-1 {{because it has a user provided move assignment operator}} \
 // expected-note@-1 {{'S10' is not trivially copyable}} \
 // expected-note@#tc-S10 {{'S10' defined here}}
+
+struct B5 : B4 {
+};
+
+struct B6 : B5  {
+};
+
+struct S11 : B6 { // #tc-S11
+};
+static_assert(__is_trivially_copyable(S11));
+// expected-error@-1 {{static assertion failed due to requirement '__is_trivially_copyable(trivially_copyable::S11)'}} \
+// expected-note@-1 {{because it has a non-trivially-copyable base 'B6'}} \
+// expected-note@-1 {{'S11' is not trivially copyable}} \
+// expected-note@#tc-S11 {{'S11' defined here}}
 }
