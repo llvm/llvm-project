@@ -68,8 +68,14 @@ constexpr unsigned packedSizeInBitsForDefault =
     16; // Minimum packing size per register for DPAS A.
 constexpr unsigned packedSizeInBitsForDpasB =
     32; // Minimum packing size per register for DPAS B.
-static const char *const operandLayoutNamePrefix = "layout_operand_";
-static const char *const resultLayoutNamePrefix = "layout_result_";
+static const char *const operandLayoutNamePrefix =
+    "layout_operand_"; // Attribute name for identifying operand layouts.
+static const char *const resultLayoutNamePrefix =
+    "layout_result_"; // Attribute name for identifying result layouts.
+static const char *const resolveSIMTTypeMismatch =
+    "resolve_simt_type_mismatch"; // Attribute name for identifying
+                                  // UnrelizedConversionCastOp added to resolve
+                                  // SIMT type mismatches.
 
 namespace {
 
@@ -946,11 +952,11 @@ static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
     }
   }
 }
-static void handleBranchTerminatorOpInterface(
+static void updateBranchTerminatorOpInterface(
     mlir::OpBuilder &builder,
     mlir::RegionBranchTerminatorOpInterface terminator,
     GetLayoutCallbackFnTy getLayoutOfValue) {}
-static void handleBranchOpInterface(mlir::OpBuilder &builder,
+static void updateBranchOpInterface(mlir::OpBuilder &builder,
                                     mlir::RegionBranchOpInterface branch,
                                     GetLayoutCallbackFnTy getLayoutOfValue) {
   mlir::Operation *op = branch.getOperation();
@@ -966,7 +972,6 @@ static void handleBranchOpInterface(mlir::OpBuilder &builder,
 
     mlir::OperandRange initArgs = branch.getEntrySuccessorOperands(successor);
     mlir::ValueRange blockArgs = successor.getSuccessorInputs();
-    unsigned index = 0;
 
     for (auto [initArg, blockArg, result] :
          llvm::zip(initArgs, blockArgs, results)) {
@@ -1117,6 +1122,7 @@ static Value resolveDistributedTy(Value orig, T expected,
   if (isa<xegpu::TensorDescType>(orig.getType())) {
     auto castOp = rewriter.create<UnrealizedConversionCastOp>(orig.getLoc(),
                                                               expected, orig);
+    castOp->setAttr(resolveSIMTTypeMismatch, rewriter.getUnitAttr());
     return castOp.getResult(0);
   }
   llvm_unreachable("Unsupported type for reconciliation");
@@ -1804,9 +1810,7 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     analyis.printAnalysisResult(os);
     return;
   }
-  // auto getPropagatedLayout = [&](Value val) {
-  //   return analyis.getLayoutInfo(val);
-  // };
+
   auto getXeGPULayoutForValue = [&](Value val) -> xegpu::LayoutAttr {
     LayoutInfo layout = analyis.getLayoutInfo(val);
     if (!layout.isAssigned()) {
@@ -1827,13 +1831,13 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
       if (auto terminator =
               mlir::dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
-        handleBranchTerminatorOpInterface(builder, terminator,
+        updateBranchTerminatorOpInterface(builder, terminator,
                                           getXeGPULayoutForValue);
         continue;
       }
 
       if (auto iface = mlir::dyn_cast<mlir::RegionBranchOpInterface>(op)) {
-        handleBranchOpInterface(builder, iface, getXeGPULayoutForValue);
+        updateBranchOpInterface(builder, iface, getXeGPULayoutForValue);
         continue;
       }
       updateOp(builder, &op, getXeGPULayoutForValue);
@@ -1882,4 +1886,50 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     signalPassFailure();
     return;
   }
+
+  // Clean up UnrealizedConversionCastOps that were inserted due to tensor desc
+  // type mismatches created by using upstream distribution patterns (scf.for)
+  getOperation()->walk([&](mlir::UnrealizedConversionCastOp op) {
+    // We are only interested in UnrealizedConversionCastOps there were added
+    // for resolving SIMT type mismatches.
+    if (!op->getAttr(resolveSIMTTypeMismatch))
+      return WalkResult::skip();
+
+    Value input = op.getOperand(0);
+    Value output = op.getResult(0);
+
+    // Both input and output must have tensor descriptor types.
+    xegpu::TensorDescType inputDescType =
+        mlir::dyn_cast<xegpu::TensorDescType>(input.getType());
+    xegpu::TensorDescType outputDescType =
+        mlir::dyn_cast<xegpu::TensorDescType>(output.getType());
+    assert(inputDescType && outputDescType &&
+           "Unrealized conversion cast must have tensor descriptor types");
+
+    // tensor_desc<shape, layout> -> tensor_desc<shape> Type of conversions.
+    // This occurs iside scf.for body to resolve the block argument type to SIMT
+    // type.
+    if (inputDescType.getLayout()) {
+      auto argument = mlir::dyn_cast<mlir::BlockArgument>(input);
+      if (argument) {
+        argument.setType(output.getType());
+        output.replaceAllUsesWith(argument);
+        if (auto loopOp = mlir::dyn_cast<mlir::LoopLikeOpInterface>(
+                argument.getOwner()->getParentOp())) {
+          auto result = loopOp.getTiedLoopResult(argument);
+          result.setType(output.getType());
+        }
+      }
+    }
+
+    // tensor_desc<shape> -> tensor_desc<shape, layout> Type of
+    // conversions. This occurs at the yield op of scf.for body to go back from
+    // SIMT type to original type.
+    if (outputDescType.getLayout())
+      output.replaceAllUsesWith(input);
+
+    if (op->use_empty())
+      op->erase();
+    return WalkResult::advance();
+  });
 }
