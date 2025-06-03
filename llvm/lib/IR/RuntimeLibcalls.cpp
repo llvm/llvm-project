@@ -25,8 +25,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
     setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
-  // Use the f128 variants of math functions on x86_64
-  if (TT.getArch() == Triple::ArchType::x86_64 && TT.isGNUEnvironment()) {
+  // Use the f128 variants of math functions on x86
+  if (TT.isX86() && TT.isGNUEnvironment()) {
     setLibcallName(RTLIB::REM_F128, "fmodf128");
     setLibcallName(RTLIB::FMA_F128, "fmaf128");
     setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
@@ -65,12 +65,17 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
     setLibcallName(RTLIB::FMIN_F128, "fminf128");
     setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
+    setLibcallName(RTLIB::FMINIMUM_F128, "fminimumf128");
+    setLibcallName(RTLIB::FMAXIMUM_F128, "fmaximumf128");
+    setLibcallName(RTLIB::FMINIMUMNUM_F128, "fminimum_numf128");
+    setLibcallName(RTLIB::FMAXIMUMNUM_F128, "fmaximum_numf128");
     setLibcallName(RTLIB::LROUND_F128, "lroundf128");
     setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
     setLibcallName(RTLIB::LRINT_F128, "lrintf128");
     setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
     setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
     setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+    setLibcallName(RTLIB::MODF_F128, "modff128");
   }
 
   // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".

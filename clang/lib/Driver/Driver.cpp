@@ -4226,6 +4226,39 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                              const InputList &Inputs,
                              ActionList &Actions) const {
 
+  // Diagnose misuse of /Fo.
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fo)) {
+    StringRef V = A->getValue();
+    if (Inputs.size() > 1 && !V.empty() &&
+        !llvm::sys::path::is_separator(V.back())) {
+      // Check whether /Fo tries to name an output file for multiple inputs.
+      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
+          << A->getSpelling() << V;
+      Args.eraseArg(options::OPT__SLASH_Fo);
+    }
+  }
+
+  // Diagnose misuse of /Fa.
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fa)) {
+    StringRef V = A->getValue();
+    if (Inputs.size() > 1 && !V.empty() &&
+        !llvm::sys::path::is_separator(V.back())) {
+      // Check whether /Fa tries to name an asm file for multiple inputs.
+      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
+          << A->getSpelling() << V;
+      Args.eraseArg(options::OPT__SLASH_Fa);
+    }
+  }
+
+  // Diagnose misuse of /o.
+  if (Arg *A = Args.getLastArg(options::OPT__SLASH_o)) {
+    if (A->getValue()[0] == '\0') {
+      // It has to have a value.
+      Diag(clang::diag::err_drv_missing_argument) << A->getSpelling() << 1;
+      Args.eraseArg(options::OPT__SLASH_o);
+    }
+  }
+
   // Ignore /Yc/Yu if both /Yc and /Yu passed but with different filenames.
   Arg *YcArg = Args.getLastArg(options::OPT__SLASH_Yc);
   Arg *YuArg = Args.getLastArg(options::OPT__SLASH_Yu);
@@ -4366,39 +4399,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   if (!SuppressMissingInputWarning && Inputs.empty()) {
     Diag(clang::diag::err_drv_no_input_files);
     return;
-  }
-
-  // Diagnose misuse of /Fo.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fo)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fo tries to name an output file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fo);
-    }
-  }
-
-  // Diagnose misuse of /Fa.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fa)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fa tries to name an asm file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fa);
-    }
-  }
-
-  // Diagnose misuse of /o.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_o)) {
-    if (A->getValue()[0] == '\0') {
-      // It has to have a value.
-      Diag(clang::diag::err_drv_missing_argument) << A->getSpelling() << 1;
-      Args.eraseArg(options::OPT__SLASH_o);
-    }
   }
 
   handleArguments(C, Args, Inputs, Actions);
@@ -7204,9 +7204,10 @@ static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {
 ///
 ///  '#': Silence information about the changes to the command line arguments.
 ///
-///  '^': Add FOO as a new argument at the beginning of the command line.
+///  '^FOO': Add FOO as a new argument at the beginning of the command line
+///  right after the name of the compiler executable.
 ///
-///  '+': Add FOO as a new argument at the end of the command line.
+///  '+FOO': Add FOO as a new argument at the end of the command line.
 ///
 ///  's/XXX/YYY/': Substitute the regular expression XXX with YYY in the command
 ///  line.
@@ -7294,7 +7295,7 @@ static void applyOneOverrideOption(raw_ostream &OS,
 void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                                   const char *OverrideStr,
                                   llvm::StringSet<> &SavedStrings,
-                                  raw_ostream *OS) {
+                                  StringRef EnvVar, raw_ostream *OS) {
   if (!OS)
     OS = &llvm::nulls();
 
@@ -7303,7 +7304,7 @@ void driver::applyOverrideOptions(SmallVectorImpl<const char *> &Args,
     OS = &llvm::nulls();
   }
 
-  *OS << "### CCC_OVERRIDE_OPTIONS: " << OverrideStr << "\n";
+  *OS << "### " << EnvVar << ": " << OverrideStr << "\n";
 
   // This does not need to be efficient.
 

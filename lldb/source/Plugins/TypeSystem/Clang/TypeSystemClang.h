@@ -687,9 +687,6 @@ public:
 
   static bool IsObjCClassType(const CompilerType &type);
 
-  static bool IsObjCClassTypeAndHasIVars(const CompilerType &type,
-                                         bool check_superclass);
-
   static bool IsObjCObjectOrInterfaceType(const CompilerType &type);
 
   static bool IsObjCObjectPointerType(const CompilerType &type,
@@ -1077,7 +1074,7 @@ public:
 #endif
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   /// Dump clang AST types from the symbol file.
   ///
@@ -1321,7 +1318,7 @@ public:
   }
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,
