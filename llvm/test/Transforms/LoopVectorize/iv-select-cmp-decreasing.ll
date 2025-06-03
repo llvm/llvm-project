@@ -7,36 +7,36 @@ define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
 ; CHECK-LABEL: define i64 @select_decreasing_induction_icmp_const_start(
 ; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 19999, %[[ENTRY]] ], [ [[DEC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ], [ [[SPEC_SELECT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP0]], 3
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP]], i64 [[IV]], i64 [[RDX]]
-; CHECK-NEXT:    [[DEC]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 19999, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
+; CHECK-NEXT:    [[CMP_A_3:%.*]] = icmp sgt i64 [[LD_A]], 3
+; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP_A_3]], i64 [[IV]], i64 [[RDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:                                         ; preds = %entry, %for.body
-  %iv = phi i64 [ 19999, %entry ], [ %dec, %for.body ]
-  %rdx = phi i64 [ 331, %entry ], [ %spec.select, %for.body ]
-  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
-  %0 = load i64, ptr %arrayidx, align 8
-  %cmp = icmp sgt i64 %0, 3
-  %spec.select = select i1 %cmp, i64 %iv, i64 %rdx
-  %dec = add nsw i64 %iv, -1
-  %cmp.not = icmp eq i64 %iv, 0
-  br i1 %cmp.not, label %exit, label %for.body
+loop:                                             ; preds = %entry, %loop
+  %iv = phi i64 [ 19999, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i64 [ 331, %entry ], [ %spec.select, %loop ]
+  %gep.a.iv = getelementptr inbounds i64, ptr %a, i64 %iv
+  %ld.a = load i64, ptr %gep.a.iv, align 8
+  %cmp.a.3 = icmp sgt i64 %ld.a, 3
+  %spec.select = select i1 %cmp.a.3, i64 %iv, i64 %rdx
+  %iv.next = add nsw i64 %iv, -1
+  %exit.cond = icmp eq i64 %iv, 0
+  br i1 %exit.cond, label %exit, label %loop
 
-exit:                                             ; preds = %for.body
+exit:                                             ; preds = %loop
   ret i64 %spec.select
 }
 
@@ -46,38 +46,38 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; CHECK-LABEL: define i16 @select_decreasing_induction_icmp_table_i16(
 ; CHECK-SAME: i16 noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i16 [ [[SPEC_SELECT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 12, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_TABLE_IV:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[IV]]
+; CHECK-NEXT:    [[LD_TABLE:%.*]] = load i16, ptr [[GEP_TABLE_IV]], align 1
+; CHECK-NEXT:    [[CMP_TABLE_VAL:%.*]] = icmp ugt i16 [[LD_TABLE]], [[VAL]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i16 [[IV]], -1
+; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP_TABLE_VAL]], i16 [[IV_NEXT]], i16 [[RDX]]
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i16 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i16 [ [[SPEC_SELECT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i16 [[SPEC_SELECT_LCSSA]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_05:%.*]] = phi i16 [ 12, %[[ENTRY]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[K_04:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[SPEC_SELECT]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[I_05]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i16 [[TMP0]], [[VAL]]
-; CHECK-NEXT:    [[SUB]] = add nsw i16 [[I_05]], -1
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP1]], i16 [[SUB]], i16 [[K_04]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body
-  %spec.select.lcssa = phi i16 [ %spec.select, %for.body ]
+loop:                                             ; preds = %entry, %loop
+  %iv = phi i16 [ 12, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i16 [ 0, %entry ], [ %spec.select, %loop ]
+  %gep.table.iv = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %iv
+  %ld.table = load i16, ptr %gep.table.iv, align 1
+  %cmp.table.val = icmp ugt i16 %ld.table, %val
+  %iv.next = add nsw i16 %iv, -1
+  %spec.select = select i1 %cmp.table.val, i16 %iv.next, i16 %rdx
+  %exit.cond = icmp eq i16 %iv.next, 0
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:                                             ; preds = %loop
+  %spec.select.lcssa = phi i16 [ %spec.select, %loop ]
   ret i16 %spec.select.lcssa
-
-for.body:                                         ; preds = %entry, %for.body
-  %i.05 = phi i16 [ 12, %entry ], [ %sub, %for.body ]
-  %k.04 = phi i16 [ 0, %entry ], [ %spec.select, %for.body ]
-  %arrayidx = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %i.05
-  %0 = load i16, ptr %arrayidx, align 1
-  %cmp1 = icmp ugt i16 %0, %val
-  %sub = add nsw i16 %i.05, -1
-  %spec.select = select i1 %cmp1, i16 %sub, i16 %k.04
-  %cmp.not = icmp eq i16 %sub, 0
-  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
 }
 
 @tablef = constant [13 x half] [half 10.0, half 35.0, half 69.0, half 147.0, half 280.0, half 472.0, half 682.0, half 1013.0, half 1559.0, half 2544.0, half 4556.0, half 6496.0, half 10000.0], align 1
@@ -86,78 +86,78 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; CHECK-LABEL: define i16 @select_decreasing_induction_icmp_table_half(
 ; CHECK-SAME: half noundef [[VAL:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
-; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i16 [ [[SPEC_SELECT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 12, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_TABLE_IV:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[IV]]
+; CHECK-NEXT:    [[LD_TABLE:%.*]] = load half, ptr [[GEP_TABLE_IV]], align 1
+; CHECK-NEXT:    [[CMP_TABLE_VAL:%.*]] = fcmp ugt half [[LD_TABLE]], [[VAL]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i16 [[IV]], -1
+; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP_TABLE_VAL]], i16 [[IV_NEXT]], i16 [[RDX]]
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i16 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i16 [ [[SPEC_SELECT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i16 [[SPEC_SELECT_LCSSA]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_05:%.*]] = phi i16 [ 12, %[[ENTRY]] ], [ [[SUB:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[K_04:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[SPEC_SELECT]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 [[I_05]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp ugt half [[TMP0]], [[VAL]]
-; CHECK-NEXT:    [[SUB]] = add nsw i16 [[I_05]], -1
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[FCMP1]], i16 [[SUB]], i16 [[K_04]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i16 [[SUB]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.cond.cleanup:                                 ; preds = %for.body
-  %spec.select.lcssa = phi i16 [ %spec.select, %for.body ]
+loop:                                             ; preds = %entry, %loop
+  %iv = phi i16 [ 12, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i16 [ 0, %entry ], [ %spec.select, %loop ]
+  %gep.table.iv = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %iv
+  %ld.table = load half, ptr %gep.table.iv, align 1
+  %cmp.table.val = fcmp ugt half %ld.table, %val
+  %iv.next = add nsw i16 %iv, -1
+  %spec.select = select i1 %cmp.table.val, i16 %iv.next, i16 %rdx
+  %exit.cond = icmp eq i16 %iv.next, 0
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:                                             ; preds = %loop
+  %spec.select.lcssa = phi i16 [ %spec.select, %loop ]
   ret i16 %spec.select.lcssa
-
-for.body:                                         ; preds = %entry, %for.body
-  %i.05 = phi i16 [ 12, %entry ], [ %sub, %for.body ]
-  %k.04 = phi i16 [ 0, %entry ], [ %spec.select, %for.body ]
-  %arrayidx = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 %i.05
-  %0 = load half, ptr %arrayidx, align 1
-  %fcmp1 = fcmp ugt half %0, %val
-  %sub = add nsw i16 %i.05, -1
-  %spec.select = select i1 %fcmp1, i16 %sub, i16 %k.04
-  %cmp.not = icmp eq i16 %sub, 0
-  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
 }
 
 define i64 @not_vectorized_select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: define i64 @not_vectorized_select_decreasing_induction_icmp_non_const_start(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_0_IN10:%.*]] = phi i64 [ [[IV:%.*]], %[[FOR_BODY]] ], [ [[N]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ [[COND:%.*]], %[[FOR_BODY]] ], [ [[RDX_START]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[IV]] = add nsw i64 [[I_0_IN10]], -1
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX1]], align 8
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[COND]] = select i1 [[CMP2]], i64 [[IV]], i64 [[RDX]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[I_0_IN10]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[N]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ [[COND:%.*]], %[[LOOP]] ], [ [[RDX_START]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
+; CHECK-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
+; CHECK-NEXT:    [[GEP_B_IV:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[LD_B:%.*]] = load i64, ptr [[GEP_B_IV]], align 8
+; CHECK-NEXT:    [[CMP_A_B:%.*]] = icmp sgt i64 [[LD_A]], [[LD_B]]
+; CHECK-NEXT:    [[COND]] = select i1 [[CMP_A_B]], i64 [[IV_NEXT]], i64 [[RDX]]
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp ugt i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[COND_LCSSA]]
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:                                         ; preds = %entry, %for.body
-  %i.0.in10 = phi i64 [ %iv, %for.body ], [ %n, %entry ]
-  %rdx = phi i64 [ %cond, %for.body ], [ %rdx.start, %entry ]
-  %iv = add nsw i64 %i.0.in10, -1
-  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
-  %0 = load i64, ptr %arrayidx, align 8
-  %arrayidx1 = getelementptr inbounds i64, ptr %b, i64 %iv
-  %1 = load i64, ptr %arrayidx1, align 8
-  %cmp2 = icmp sgt i64 %0, %1
-  %cond = select i1 %cmp2, i64 %iv, i64 %rdx
-  %cmp = icmp ugt i64 %i.0.in10, 1
-  br i1 %cmp, label %for.body, label %exit
+loop:                                             ; preds = %entry, %loop
+  %iv = phi i64 [ %iv.next, %loop ], [ %n, %entry ]
+  %rdx = phi i64 [ %cond, %loop ], [ %rdx.start, %entry ]
+  %iv.next = add nsw i64 %iv, -1
+  %gep.a.iv = getelementptr inbounds i64, ptr %a, i64 %iv.next
+  %ld.a = load i64, ptr %gep.a.iv, align 8
+  %gep.b.iv = getelementptr inbounds i64, ptr %b, i64 %iv.next
+  %ld.b = load i64, ptr %gep.b.iv, align 8
+  %cmp.a.b = icmp sgt i64 %ld.a, %ld.b
+  %cond = select i1 %cmp.a.b, i64 %iv.next, i64 %rdx
+  %exit.cond = icmp ugt i64 %iv, 1
+  br i1 %exit.cond, label %loop, label %exit
 
-exit:                                             ; preds = %for.body
+exit:                                             ; preds = %loop
   ret i64 %cond
 }
 
@@ -167,36 +167,36 @@ define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(ptr 
 ; CHECK-LABEL: define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(
 ; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 9223372036854775807, %[[ENTRY]] ], [ [[DEC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ], [ [[SPEC_SELECT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[TMP0]], 3
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP1]], i64 [[IV]], i64 [[RDX]]
-; CHECK-NEXT:    [[DEC]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 9223372036854775807, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
+; CHECK-NEXT:    [[CMP_A_3:%.*]] = icmp sgt i64 [[LD_A]], 3
+; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP_A_3]], i64 [[IV]], i64 [[RDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[LOOP]] ]
 ; CHECK-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:                                         ; preds = %entry, %for.body
-  %iv = phi i64 [ 9223372036854775807, %entry ], [ %dec, %for.body ]
-  %rdx = phi i64 [ 331, %entry ], [ %spec.select, %for.body ]
-  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
-  %0 = load i64, ptr %arrayidx, align 8
-  %cmp1 = icmp sgt i64 %0, 3
-  %spec.select = select i1 %cmp1, i64 %iv, i64 %rdx
-  %dec = add nsw i64 %iv, -1
-  %cmp.not = icmp eq i64 %iv, 0
-  br i1 %cmp.not, label %exit, label %for.body
+loop:                                             ; preds = %entry, %loop
+  %iv = phi i64 [ 9223372036854775807, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i64 [ 331, %entry ], [ %spec.select, %loop ]
+  %gep.a.iv = getelementptr inbounds i64, ptr %a, i64 %iv
+  %ld.a = load i64, ptr %gep.a.iv, align 8
+  %cmp.a.3 = icmp sgt i64 %ld.a, 3
+  %spec.select = select i1 %cmp.a.3, i64 %iv, i64 %rdx
+  %iv.next = add nsw i64 %iv, -1
+  %exit.cond = icmp eq i64 %iv, 0
+  br i1 %exit.cond, label %exit, label %loop
 
-exit:                                             ; preds = %for.body
+exit:                                             ; preds = %loop
   ret i64 %spec.select
 }
 
