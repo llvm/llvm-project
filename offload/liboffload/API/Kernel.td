@@ -10,6 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+def : Enum {
+  let name = "ol_kernel_info_t";
+  let desc = "Supported kernel info.";
+  let is_typed = 1;
+  let etors =[
+    TaggedEtor<"PROGRAM", "ol_program_handle_t", "the program associated with this kernel">,
+  ];
+}
+
 def : Function {
     let name = "olGetKernel";
     let desc = "Get a kernel from the function identified by `KernelName` in the given program.";
@@ -58,4 +67,45 @@ def : Function {
         Return<"OL_ERRC_INVALID_ARGUMENT", ["`Queue == NULL && EventOut != NULL`"]>,
         Return<"OL_ERRC_INVALID_DEVICE", ["If Queue is non-null but does not belong to Device"]>,
     ];
+}
+
+def : Function {
+  let name = "olGetKernelInfo";
+  let desc = "Queries the given property of the device.";
+  let details = [];
+  let params = [
+    Param<"ol_kernel_handle_t", "Kernel", "handle of the kernel instance", PARAM_IN>,
+    Param<"ol_kernel_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
+    Param<"size_t", "PropSize", "the number of bytes pointed to by PropValue.", PARAM_IN>,
+    TypeTaggedParam<"void*", "PropValue", "array of bytes holding the info. If PropSize is not equal to or greater than the real "
+                    "number of bytes needed to return the info then the OL_ERRC_INVALID_SIZE error is returned and "
+                    "PropValue is not used.", PARAM_OUT, TypeInfo<"PropName" , "PropSize">>
+  ];
+  let returns = [
+    Return<"OL_ERRC_UNSUPPORTED_ENUMERATION", [
+      "If `PropName` is not supported by the kernel."
+    ]>,
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`PropSize == 0`",
+      "If `PropSize` is less than the real number of bytes needed to return the info."
+    ]>,
+    Return<"OL_ERRC_INVALID_DEVICE">
+  ];
+}
+
+def : Function {
+  let name = "olGetKernelInfoSize";
+  let desc = "Returns the storage size of the given device query.";
+  let details = [];
+  let params = [
+    Param<"ol_kernel_handle_t", "Kernel", "handle of the kernel instance", PARAM_IN>,
+    Param<"ol_kernel_info_t", "PropName", "type of the info to retrieve", PARAM_IN>,
+    Param<"size_t*", "PropSizeRet", "pointer to the number of bytes required to store the query", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_UNSUPPORTED_ENUMERATION", [
+      "If `PropName` is not supported by the kernel."
+    ]>,
+    Return<"OL_ERRC_INVALID_DEVICE">
+  ];
 }

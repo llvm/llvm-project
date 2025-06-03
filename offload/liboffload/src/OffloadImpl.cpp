@@ -85,6 +85,13 @@ struct ol_program_impl_t {
   __tgt_device_image DeviceImage;
 };
 
+struct ol_kernel_impl_t {
+  ol_kernel_impl_t(plugin::GenericKernelTy *Kernel, ol_program_handle_t Program)
+      : Kernel(Kernel), Program(Program) {}
+  plugin::GenericKernelTy *Kernel;
+  ol_program_handle_t Program;
+};
+
 namespace llvm {
 namespace offload {
 
@@ -286,6 +293,34 @@ Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
   return olGetDeviceInfoImplDetail(Device, PropName, 0, nullptr, PropSizeRet);
 }
 
+Error olGetKernelInfoImplDetail(ol_kernel_handle_t Kernel,
+                                ol_kernel_info_t PropName, size_t PropSize,
+                                void *PropValue, size_t *PropSizeRet) {
+
+  ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_KERNEL_INFO_PROGRAM:
+    return ReturnValue(Kernel->Program);
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "getKernelInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetKernelInfo_impl(ol_kernel_handle_t Kernel, ol_kernel_info_t PropName,
+                           size_t PropSize, void *PropValue) {
+  return olGetKernelInfoImplDetail(Kernel, PropName, PropSize, PropValue,
+                                   nullptr);
+}
+
+Error olGetKernelInfoSize_impl(ol_kernel_handle_t Kernel,
+                               ol_kernel_info_t PropName, size_t *PropSizeRet) {
+  return olGetKernelInfoImplDetail(Kernel, PropName, 0, nullptr, PropSizeRet);
+}
+
 Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
   for (auto &Platform : Platforms()) {
     for (auto &Device : Platform.Devices) {
@@ -479,7 +514,7 @@ Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
   if (auto Err = KernelImpl->init(Device, *Program->Image))
     return Err;
 
-  *Kernel = &*KernelImpl;
+  *Kernel = new ol_kernel_impl_t(std::move(&*KernelImpl), Program);
 
   return Error::success();
 }
@@ -514,7 +549,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   // Don't do anything with pointer indirection; use arg data as-is
   LaunchArgs.Flags.IsCUDA = true;
 
-  auto *KernelImpl = reinterpret_cast<GenericKernelTy *>(Kernel);
+  auto *KernelImpl = Kernel->Kernel;
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
                                 LaunchArgs, AsyncInfoWrapper);
 
