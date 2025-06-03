@@ -368,6 +368,10 @@ private:
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
+  /// True if the function is used for remapping hot text and shall not be
+  /// placed on a huge page.
+  bool IsHotTextMover{false};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -1411,6 +1415,8 @@ public:
   /// Return true if the function uses ORC format for stack unwinding.
   bool hasORC() const { return HasORC; }
 
+  bool isHotTextMover() const { return IsHotTextMover; }
+
   const JumpTable *getJumpTable(const MCInst &Inst) const {
     const uint64_t Address = BC.MIB->getJumpTable(Inst);
     return getJumpTableContainingAddress(Address);
@@ -1760,6 +1766,8 @@ public:
 
   /// Mark function that should not be emitted.
   void setIgnored();
+
+  void setHotTextMover(bool V) { IsHotTextMover = V; }
 
   void setHasIndirectTargetToSplitFragment(bool V) {
     HasIndirectTargetToSplitFragment = V;

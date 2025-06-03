@@ -271,6 +271,14 @@ void BinaryEmitter::emitFunctions() {
 
       if (Emitted)
         Function->setEmitted(/*KeepCFG=*/opts::PrintCacheMetrics);
+
+      // Emit thunks.
+      if (BC.getThunkLocation() != Function)
+        continue;
+
+      for (BinaryFunction *Thunk : BC.getThunkBinaryFunctions()) {
+        emitFunction(*Thunk, Thunk->getLayout().getMainFragment());
+      }
     }
   };
 

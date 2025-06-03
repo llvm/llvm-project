@@ -1600,7 +1600,21 @@ std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
                   SortedFunctions.begin(),
                   [](BinaryFunction &BF) { return &BF; });
 
-  llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
+  llvm::stable_sort(SortedFunctions,
+                    [](const BinaryFunction *A, const BinaryFunction *B) {
+                      // Place hot text movers at the start.
+                      if (A->isHotTextMover() && !B->isHotTextMover())
+                        return true;
+                      if (!A->isHotTextMover() && B->isHotTextMover())
+                        return false;
+                      if (A->hasValidIndex() && B->hasValidIndex()) {
+                        return A->getIndex() < B->getIndex();
+                      }
+                      if (opts::HotFunctionsAtEnd)
+                        return B->hasValidIndex();
+                      else
+                        return A->hasValidIndex();
+                    });
   return SortedFunctions;
 }
 
@@ -2423,8 +2437,21 @@ BinaryContext::createInstructionPatch(uint64_t Address,
   return PBF;
 }
 
+BinaryFunction *
+BinaryContext::createThunkBinaryFunction(const std::string &Name) {
+  ThunkBinaryFunctions.push_back(new BinaryFunction(Name, *this, true));
+  BinaryFunction *BF = ThunkBinaryFunctions.back();
+  setSymbolToFunctionMap(BF->getSymbol(), BF);
+  BF->CurrentState = BinaryFunction::State::CFG;
+  return BF;
+}
+
 std::pair<size_t, size_t>
 BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
+  // Use the original size for non-simple functions.
+  if (!BF.isSimple() || BF.isIgnored())
+    return std::make_pair(BF.getSize(), 0);
+
   // Adjust branch instruction to match the current layout.
   if (FixBranches)
     BF.fixBranches();
