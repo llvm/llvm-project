@@ -20209,7 +20209,7 @@ Arguments:
 
 The argument to this intrinsic must be a vector.
 
-'``llvm.vector.deinterleave2/3/5/7``' Intrinsic
+'``llvm.vector.deinterleave2/3/4/5/6/7/8``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20227,8 +20227,8 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vector.deinterleave2/3/5/7``' intrinsics deinterleave adjacent lanes
-into 2, 3, 5, and 7 separate vectors, respectively, and return them as the
+The '``llvm.vector.deinterleave2/3/4/5/6/7/8``' intrinsics deinterleave adjacent lanes
+into 2 through to 8 separate vectors, respectively, and return them as the
 result.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
@@ -20250,7 +20250,7 @@ Arguments:
 The argument is a vector whose type corresponds to the logical concatenation of
 the aggregated result types.
 
-'``llvm.vector.interleave2/3/5/7``' Intrinsic
+'``llvm.vector.interleave2/3/4/5/6/7/8``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20268,7 +20268,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vector.interleave2/3/5/7``' intrinsic constructs a vector
+The '``llvm.vector.interleave2/3/4/5/6/7/8``' intrinsic constructs a vector
 by interleaving all the input vectors.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic

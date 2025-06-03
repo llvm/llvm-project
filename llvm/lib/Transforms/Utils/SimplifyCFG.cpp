@@ -7557,8 +7557,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
     if (Seen.insert(BB).second) {
       // Keep track of which PHIs we need as keys in PhiPredIVs below.
       for (BasicBlock *Succ : BI->successors())
-        for (PHINode &Phi : Succ->phis())
-          Phis.insert(&Phi);
+        Phis.insert_range(llvm::make_pointer_range(Succ->phis()));
       // Add the successor only if not previously visited.
       Cases.emplace_back(SwitchSuccWrapper{BB, &PhiPredIVs});
     }
@@ -8224,8 +8223,8 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       if (CB->isArgOperand(&Use)) {
         unsigned ArgIdx = CB->getArgOperandNo(&Use);
         // Passing null to a nonnnull+noundef argument is undefined.
-        if (C->isNullValue() && CB->isPassingUndefUB(ArgIdx) &&
-            CB->paramHasAttr(ArgIdx, Attribute::NonNull))
+        if (isa<ConstantPointerNull>(C) &&
+            CB->paramHasNonNullAttr(ArgIdx, /*AllowUndefOrPoison=*/false))
           return !PtrValueMayBeModified;
         // Passing undef to a noundef argument is undefined.
         if (isa<UndefValue>(C) && CB->isPassingUndefUB(ArgIdx))

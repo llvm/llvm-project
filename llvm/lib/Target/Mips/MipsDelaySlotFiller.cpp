@@ -41,7 +41,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
-#include <algorithm>
 #include <cassert>
 #include <iterator>
 #include <memory>
