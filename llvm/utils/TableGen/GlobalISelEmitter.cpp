@@ -1115,9 +1115,8 @@ Error GlobalISelEmitter::importChildMatcher(
     for (const TreePredicateCall &Call : SrcChild.getPredicateCalls()) {
       const TreePredicateFn &Predicate = Call.Fn;
 
-      if (!Predicate.hasGISelLeafPredicateCode()) {
+      if (!Predicate.hasGISelLeafPredicateCode())
         return failedImport("Src pattern child has unsupported predicate");
-      }
       OM.addPredicate<OperandLeafPredicateMatcher>(Predicate);
     }
     return Error::success();

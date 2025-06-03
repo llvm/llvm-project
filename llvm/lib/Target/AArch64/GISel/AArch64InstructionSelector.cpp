@@ -511,16 +511,6 @@ private:
   /// Return true if \p MI is a load or store of \p NumBytes bytes.
   bool isLoadStoreOfNumBytes(const MachineInstr &MI, unsigned NumBytes) const;
 
-  /// Return true if top 16 bits of register are zero.
-  bool isTop16Zero(const MachineOperand &MO) const;
-
-  /// Return true if top 32 bits of register are zero.
-  bool isTop32Zero(const MachineOperand &MO) const;
-
-  /// Return true if all bits of register except the lowest bit are known zero.
-  bool isTopBitsAllZero32(const MachineOperand &MO) const;
-  bool isTopBitsAllZero64(const MachineOperand &MO) const;
-
   /// Returns true if \p MI is guaranteed to have the high-half of a 64-bit
   /// register zeroed out. In other words, the result of MI has been explicitly
   /// zero extended.
