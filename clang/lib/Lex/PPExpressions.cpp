@@ -984,9 +984,13 @@ static std::optional<CXXStandardLibraryVersionInfo>
 getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
                              CXXStandardLibraryVersionInfo::Library Lib) {
   MacroInfo *Macro = PP.getMacroInfo(PP.getIdentifierInfo(MacroName));
-
-  if (!Macro || Macro->getNumTokens() != 1 || !Macro->isObjectLike())
+  if (!Macro)
     return std::nullopt;
+
+  if (Macro->getNumTokens() != 1 || !Macro->isObjectLike()) {
+    Macro->dump();
+    return std::nullopt;
+  }
 
   const Token &RevisionDateTok = Macro->getReplacementToken(0);
 
@@ -995,10 +999,13 @@ getCXXStandardLibraryVersion(Preprocessor &PP, StringRef MacroName,
   llvm::StringRef RevisionDate =
       PP.getSpelling(RevisionDateTok, Buffer, &Invalid);
   if (!Invalid) {
+    llvm::errs() << RevisionDate << "\n";
     unsigned Value;
     // We don't use NumericParser to avoid diagnostics
-    if (!RevisionDate.consumeInteger(10, Value))
+    if (!RevisionDate.consumeInteger(10, Value)) {
+      llvm::errs() << "Value:" << Value << "\n";
       return CXXStandardLibraryVersionInfo{Lib, Value};
+    }
   }
   return CXXStandardLibraryVersionInfo{CXXStandardLibraryVersionInfo::Unknown,
                                        0};
