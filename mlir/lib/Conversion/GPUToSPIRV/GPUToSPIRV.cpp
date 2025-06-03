@@ -479,12 +479,12 @@ static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
         .getResult();
   }
 
-  Value clusterSizeValue =
-      clusterSize.has_value()
-          ? builder.create<spirv::ConstantOp>(
-                loc, builder.getI32Type(),
-                builder.getIntegerAttr(builder.getI32Type(), *clusterSize))
-          : Value{};
+  Value clusterSizeValue = {};
+  if (clusterSize.has_value())
+    clusterSizeValue = builder.create<spirv::ConstantOp>(
+        loc, builder.getI32Type(),
+        builder.getIntegerAttr(builder.getI32Type(), *clusterSize));
+
   return builder
       .create<NonUniformOp>(loc, type, scope, groupOp, arg, clusterSizeValue)
       .getResult();
