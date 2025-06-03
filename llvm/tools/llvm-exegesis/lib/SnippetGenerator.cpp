@@ -277,7 +277,7 @@ static Error randomizeMCOperand(const LLVMState &State,
     break;
   }
   /// Omit unknown and pc-relative operands to imm value based on the instruction
-  // TODO: Is aarch64 gaurd neccessary ?
+  // TODO: Neccesity of AArch64 guard ?
 #ifdef __aarch64__
   case MCOI::OperandType::OPERAND_UNKNOWN:
   case MCOI::OperandType::OPERAND_PCREL:

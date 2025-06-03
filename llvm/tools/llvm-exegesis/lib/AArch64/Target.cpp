@@ -256,7 +256,6 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
       }
     }
     case MCOI::OperandType::OPERAND_PCREL:
-    case MCOI::OperandType::OPERAND_FIRST_TARGET:
       AssignedValue = MCOperand::createImm(0);
       return Error::success();
     default:
