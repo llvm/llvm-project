@@ -574,12 +574,17 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
                                    const SimplifyQuery &SQ) {
   const Value *CmpLHS = Cmp->getOperand(0);
   const Value *CmpRHS = Cmp->getOperand(1);
-  const ICmpInst::Predicate Pred = Cmp->getPredicate();
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
 
   // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
   // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
   // This transformation is valid when overflow corresponding to the sign of
   // the comparison is poison and we must drop the non-matching overflow flag.
+  if (CmpRHS == TVal) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
+
   if (CmpLHS == TVal) {
     if (Pred == CmpInst::ICMP_SGT &&
         match(FVal, m_NSWAddLike(m_Specific(CmpRHS), m_One()))) {
