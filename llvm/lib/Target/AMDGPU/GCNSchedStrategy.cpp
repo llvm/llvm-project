@@ -940,12 +940,10 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   // GCNScheduleDAGMILive::schedule().
   LiveIns.resize(Regions.size());
   Pressure.resize(Regions.size());
-  RescheduleRegions.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
   RegionsWithMinOcc.resize(Regions.size());
   RegionsWithIGLPInstrs.resize(Regions.size());
-  RescheduleRegions.set();
   RegionsWithHighRP.reset();
   RegionsWithExcessRP.reset();
   RegionsWithMinOcc.reset();
@@ -1240,10 +1238,7 @@ bool ClusteredLowOccStage::initGCNRegion() {
 }
 
 bool PreRARematStage::initGCNRegion() {
-  if (!DAG.RescheduleRegions[RegionIdx])
-    return false;
-
-  return GCNSchedStage::initGCNRegion();
+  return RescheduleRegions[RegionIdx] && GCNSchedStage::initGCNRegion();
 }
 
 void GCNSchedStage::setupNewBlock() {
@@ -1262,7 +1257,6 @@ void GCNSchedStage::setupNewBlock() {
 
 void GCNSchedStage::finalizeGCNRegion() {
   DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
-  DAG.RescheduleRegions[RegionIdx] = false;
   if (S.HasHighPressure)
     DAG.RegionsWithHighRP[RegionIdx] = true;
 
@@ -1275,7 +1269,7 @@ void GCNSchedStage::finalizeGCNRegion() {
     SavedMutations.swap(DAG.Mutations);
 
   DAG.exitRegion();
-  RegionIdx++;
+  advanceRegion();
 }
 
 void GCNSchedStage::checkScheduling() {
@@ -1339,10 +1333,9 @@ void GCNSchedStage::checkScheduling() {
   unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
 
   if (PressureAfter.getVGPRNum(ST.hasGFX90AInsts()) > MaxVGPRs ||
-      PressureAfter.getVGPRNum(false) > MaxArchVGPRs ||
+      PressureAfter.getArchVGPRNum() > MaxArchVGPRs ||
       PressureAfter.getAGPRNum() > MaxArchVGPRs ||
       PressureAfter.getSGPRNum() > MaxSGPRs) {
-    DAG.RescheduleRegions[RegionIdx] = true;
     DAG.RegionsWithHighRP[RegionIdx] = true;
     DAG.RegionsWithExcessRP[RegionIdx] = true;
   }
@@ -1590,9 +1583,6 @@ void GCNSchedStage::revertScheduling() {
       PressureBefore.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize()) ==
       DAG.MinOccupancy;
   LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");
-  DAG.RescheduleRegions[RegionIdx] =
-      S.hasNextStage() &&
-      S.getNextStage() != GCNSchedStageID::UnclusteredHighRPReschedule;
   DAG.RegionEnd = DAG.RegionBegin;
   int SkippedDebugInstr = 0;
   for (MachineInstr *MI : Unsched) {
@@ -2170,7 +2160,7 @@ void PreRARematStage::rematerialize() {
   AchievedOcc = TargetOcc;
   for (auto &[I, OriginalRP] : ImpactedRegions) {
     bool IsEmptyRegion = DAG.Regions[I].first == DAG.Regions[I].second;
-    DAG.RescheduleRegions[I] = !IsEmptyRegion;
+    RescheduleRegions[I] = !IsEmptyRegion;
     if (!RecomputeRP.contains(I))
       continue;
 

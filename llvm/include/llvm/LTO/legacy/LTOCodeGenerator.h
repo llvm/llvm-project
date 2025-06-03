@@ -53,15 +53,15 @@
 
 namespace llvm {
 template <typename T> class ArrayRef;
-  class LLVMContext;
-  class DiagnosticInfo;
-  class Linker;
-  class Mangler;
-  class MemoryBuffer;
-  class TargetLibraryInfo;
-  class TargetMachine;
-  class raw_ostream;
-  class raw_pwrite_stream;
+class LLVMContext;
+class DiagnosticInfo;
+class Linker;
+class Mangler;
+class MemoryBuffer;
+class TargetLibraryInfo;
+class TargetMachine;
+class raw_ostream;
+class raw_pwrite_stream;
 
 /// Enable global value internalization in LTO.
 extern cl::opt<bool> EnableLTOInternalization;
@@ -253,5 +253,5 @@ private:
 /// A convenience function that calls cl::ParseCommandLineOptions on the given
 /// set of options.
 void parseCommandLineOptions(std::vector<std::string> &Options);
-}
+} // namespace llvm
 #endif

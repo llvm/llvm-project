@@ -546,7 +546,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 
 bool RISCVAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
                                            const MCFragment &F) {
-  // If the section does not contain linker-relaxable instructions, PC-relative
+  // If the section does not contain linker-relaxable fragments, PC-relative
   // fixups can be resolved.
   if (!F.getParent()->isLinkerRelaxable())
     return true;

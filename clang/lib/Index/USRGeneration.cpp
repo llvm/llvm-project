@@ -13,7 +13,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/ODRHash.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -767,7 +766,7 @@ void USRGenerator::VisitType(QualType T) {
   case BuiltinType::Id:                                                        \
     Out << "@BT@" << #Name;                                                    \
     break;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
         case BuiltinType::Id: \
           Out << "@BT@" << #Name; break;

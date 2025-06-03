@@ -515,12 +515,15 @@ void Sema::Initialize() {
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
-  if (Context.getTargetInfo().hasAArch64SVETypes() ||
+  if (Context.getTargetInfo().hasAArch64ACLETypes() ||
       (Context.getAuxTargetInfo() &&
-       Context.getAuxTargetInfo()->hasAArch64SVETypes())) {
+       Context.getAuxTargetInfo()->hasAArch64ACLETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId)                                        \
   addImplicitTypedef(#Name, Context.SingletonId);
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#define NEON_VECTOR_TYPE(Name, BaseType, ElBits, NumEls, VectorKind)           \
+  addImplicitTypedef(                                                          \
+      #Name, Context.getVectorType(Context.BaseType, NumEls, VectorKind));
+#include "clang/Basic/AArch64ACLETypes.def"
   }
 
   if (Context.getTargetInfo().getTriple().isPPC64()) {
@@ -2062,11 +2065,14 @@ Sema::SemaDiagnosticBuilder::~SemaDiagnosticBuilder() {
   if (ImmediateDiag) {
     // Emit our diagnostic and, if it was a warning or error, output a callstack
     // if Fn isn't a priori known-emitted.
-    bool IsWarningOrError = S.getDiagnostics().getDiagnosticLevel(
-                                DiagID, Loc) >= DiagnosticsEngine::Warning;
     ImmediateDiag.reset(); // Emit the immediate diag.
-    if (IsWarningOrError && ShowCallStack)
-      emitCallStackNotes(S, Fn);
+
+    if (ShowCallStack) {
+      bool IsWarningOrError = S.getDiagnostics().getDiagnosticLevel(
+                                  DiagID, Loc) >= DiagnosticsEngine::Warning;
+      if (IsWarningOrError)
+        emitCallStackNotes(S, Fn);
+    }
   } else {
     assert((!PartialDiagId || ShowCallStack) &&
            "Must always show call stack for deferred diags.");

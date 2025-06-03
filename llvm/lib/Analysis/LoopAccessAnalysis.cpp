@@ -290,10 +290,16 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   if (AccSink[0] < AccSrc[0])
     std::swap(Src, Sink);
 
-  auto *SrcAR = dyn_cast<SCEVAddRecExpr>(Src->Expr);
-  auto *SinkAR = dyn_cast<SCEVAddRecExpr>(Sink->Expr);
-  if (!SrcAR || !SinkAR || SrcAR->getLoop() != DC.getInnermostLoop() ||
-      SinkAR->getLoop() != DC.getInnermostLoop())
+  const SCEVConstant *Step;
+  const SCEV *SrcStart;
+  const SCEV *SinkStart;
+  const Loop *InnerLoop = DC.getInnermostLoop();
+  if (!match(Src->Expr,
+             m_scev_AffineAddRec(m_SCEV(SrcStart), m_SCEVConstant(Step),
+                                 m_SpecificLoop(InnerLoop))) ||
+      !match(Sink->Expr,
+             m_scev_AffineAddRec(m_SCEV(SinkStart), m_scev_Specific(Step),
+                                 m_SpecificLoop(InnerLoop))))
     return false;
 
   SmallVector<Instruction *, 4> SrcInsts =
@@ -305,17 +311,14 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   if (isa<ScalableVectorType>(SrcTy) || isa<ScalableVectorType>(DstTy))
     return false;
 
-  const DataLayout &DL =
-      SinkAR->getLoop()->getHeader()->getDataLayout();
+  const DataLayout &DL = InnerLoop->getHeader()->getDataLayout();
   unsigned AllocSize =
       std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
 
   // Only matching constant steps matching the AllocSize are supported at the
   // moment. This simplifies the difference computation. Can be extended in the
   // future.
-  auto *Step = dyn_cast<SCEVConstant>(SinkAR->getStepRecurrence(*SE));
-  if (!Step || Step != SrcAR->getStepRecurrence(*SE) ||
-      Step->getAPInt().abs() != AllocSize)
+  if (Step->getAPInt().abs() != AllocSize)
     return false;
 
   IntegerType *IntTy =
@@ -324,15 +327,14 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
 
   // When counting down, the dependence distance needs to be swapped.
   if (Step->getValue()->isNegative())
-    std::swap(SinkAR, SrcAR);
+    std::swap(SinkStart, SrcStart);
 
-  const SCEV *SinkStartInt = SE->getPtrToIntExpr(SinkAR->getStart(), IntTy);
-  const SCEV *SrcStartInt = SE->getPtrToIntExpr(SrcAR->getStart(), IntTy);
+  const SCEV *SinkStartInt = SE->getPtrToIntExpr(SinkStart, IntTy);
+  const SCEV *SrcStartInt = SE->getPtrToIntExpr(SrcStart, IntTy);
   if (isa<SCEVCouldNotCompute>(SinkStartInt) ||
       isa<SCEVCouldNotCompute>(SrcStartInt))
     return false;
 
-  const Loop *InnerLoop = SrcAR->getLoop();
   // If the start values for both Src and Sink also vary according to an outer
   // loop, then it's probably better to avoid creating diff checks because
   // they may not be hoisted. We should instead let llvm::addRuntimeChecks
@@ -999,24 +1001,22 @@ static void findForkedSCEVs(
       break;
     }
 
-    // Find the pointer type we need to extend to.
-    Type *IntPtrTy = SE->getEffectiveSCEVType(
-        SE->getSCEV(GEP->getPointerOperand())->getType());
+    Type *IntPtrTy = SE->getEffectiveSCEVType(GEP->getPointerOperandType());
 
     // Find the size of the type being pointed to. We only have a single
     // index term (guarded above) so we don't need to index into arrays or
     // structures, just get the size of the scalar value.
     const SCEV *Size = SE->getSizeOfExpr(IntPtrTy, SourceTy);
 
-    // Scale up the offsets by the size of the type, then add to the bases.
-    const SCEV *Scaled1 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[0]), IntPtrTy));
-    const SCEV *Scaled2 = SE->getMulExpr(
-        Size, SE->getTruncateOrSignExtend(get<0>(OffsetScevs[1]), IntPtrTy));
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[0]), Scaled1),
-                          NeedsFreeze);
-    ScevList.emplace_back(SE->getAddExpr(get<0>(BaseScevs[1]), Scaled2),
-                          NeedsFreeze);
+    for (auto [B, O] : zip(BaseScevs, OffsetScevs)) {
+      const SCEV *Base = get<0>(B);
+      const SCEV *Offset = get<0>(O);
+
+      // Scale up the offsets by the size of the type, then add to the bases.
+      const SCEV *Scaled =
+          SE->getMulExpr(Size, SE->getTruncateOrSignExtend(Offset, IntPtrTy));
+      ScevList.emplace_back(SE->getAddExpr(Base, Scaled), NeedsFreeze);
+    }
     break;
   }
   case Instruction::Select: {
@@ -1026,10 +1026,9 @@ static void findForkedSCEVs(
     // then we just bail out and return the generic SCEV.
     findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
     findForkedSCEVs(SE, L, I->getOperand(2), ChildScevs, Depth);
-    if (ChildScevs.size() == 2) {
-      ScevList.push_back(ChildScevs[0]);
-      ScevList.push_back(ChildScevs[1]);
-    } else
+    if (ChildScevs.size() == 2)
+      append_range(ScevList, ChildScevs);
+    else
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
@@ -1042,10 +1041,9 @@ static void findForkedSCEVs(
       findForkedSCEVs(SE, L, I->getOperand(0), ChildScevs, Depth);
       findForkedSCEVs(SE, L, I->getOperand(1), ChildScevs, Depth);
     }
-    if (ChildScevs.size() == 2) {
-      ScevList.push_back(ChildScevs[0]);
-      ScevList.push_back(ChildScevs[1]);
-    } else
+    if (ChildScevs.size() == 2)
+      append_range(ScevList, ChildScevs);
+    else
       ScevList.emplace_back(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr));
     break;
   }
@@ -1072,12 +1070,9 @@ static void findForkedSCEVs(
       break;
     }
 
-    ScevList.emplace_back(
-        GetBinOpExpr(Opcode, get<0>(LScevs[0]), get<0>(RScevs[0])),
-        NeedsFreeze);
-    ScevList.emplace_back(
-        GetBinOpExpr(Opcode, get<0>(LScevs[1]), get<0>(RScevs[1])),
-        NeedsFreeze);
+    for (auto [L, R] : zip(LScevs, RScevs))
+      ScevList.emplace_back(GetBinOpExpr(Opcode, get<0>(L), get<0>(R)),
+                            NeedsFreeze);
     break;
   }
   default:
@@ -2744,7 +2739,7 @@ OptimizationRemarkAnalysis &
 LoopAccessInfo::recordAnalysis(StringRef RemarkName, const Instruction *I) {
   assert(!Report && "Multiple reports generated");
 
-  const Value *CodeRegion = TheLoop->getHeader();
+  const BasicBlock *CodeRegion = TheLoop->getHeader();
   DebugLoc DL = TheLoop->getStartLoc();
 
   if (I) {
@@ -2755,8 +2750,8 @@ LoopAccessInfo::recordAnalysis(StringRef RemarkName, const Instruction *I) {
       DL = I->getDebugLoc();
   }
 
-  Report = std::make_unique<OptimizationRemarkAnalysis>(DEBUG_TYPE, RemarkName, DL,
-                                                   CodeRegion);
+  Report = std::make_unique<OptimizationRemarkAnalysis>(DEBUG_TYPE, RemarkName,
+                                                        DL, CodeRegion);
   return *Report;
 }
 
@@ -2811,16 +2806,8 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
     while (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
       V = C->getOperand();
 
-  auto *S = dyn_cast<SCEVAddRecExpr>(V);
-  if (!S)
+  if (!match(V, m_scev_AffineAddRec(m_SCEV(), m_SCEV(V), m_SpecificLoop(Lp))))
     return nullptr;
-
-  // If the pointer is invariant then there is no stride and it makes no
-  // sense to add it here.
-  if (Lp != S->getLoop())
-    return nullptr;
-
-  V = S->getStepRecurrence(*SE);
 
   // Note that the restriction after this loop invariant check are only
   // profitability restrictions.
@@ -2985,7 +2972,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 }
 
 const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
-  const auto &[It, Inserted] = LoopAccessInfoMap.insert({&L, nullptr});
+  const auto &[It, Inserted] = LoopAccessInfoMap.try_emplace(&L);
 
   if (Inserted)
     It->second =
