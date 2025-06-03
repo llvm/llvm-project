@@ -8,7 +8,7 @@ For full documentation, please see the online HTML docs:
 
 https://flang.llvm.org/docs/
 
-TODO: This man page currently shows FlangCommandLineReference this with finalized man page content.
+TODO: This man page currently shows FlangCommandLineReference, will be ultimately replaced with finalized man page content.
 
 ----
 
