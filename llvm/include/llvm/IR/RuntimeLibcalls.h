@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
@@ -96,7 +97,7 @@ private:
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
-  void initLibcalls(const Triple &TT);
+  LLVM_ABI void initLibcalls(const Triple &TT);
 };
 
 } // namespace RTLIB
