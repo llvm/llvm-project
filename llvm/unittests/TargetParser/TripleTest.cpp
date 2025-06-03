@@ -1424,6 +1424,8 @@ TEST(TripleTest, Normalization) {
 
   EXPECT_EQ("aarch64-amazon-linux-gnu",
             Triple::normalize("aarch64-amazon-linux"));
+  EXPECT_EQ("x86_64-amazon-linux-gnu",
+            Triple::normalize("x86_64-amazon-linux"));
 
   EXPECT_EQ("a-unknown-unknown",
             Triple::normalize("a", Triple::CanonicalForm::THREE_IDENT));
