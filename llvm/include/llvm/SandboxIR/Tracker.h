@@ -47,6 +47,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/SandboxIR/Use.h"
+#include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/Debug.h"
 #include <memory>
 

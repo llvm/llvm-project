@@ -1086,6 +1086,17 @@ public:
   }
 };
 
+// Explicit instantiations.
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                                 llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
+                                 llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
+                                 GlobalObject, llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                                 llvm::GlobalValue>;
+
+ #if defined(_MSC_VER) && !defined(__clang__)
 // These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
 extern template LLVM_TEMPLATE_ABI GlobalIFunc &
 GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
@@ -1104,6 +1115,7 @@ extern template LLVM_TEMPLATE_ABI GlobalAlias &
 GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
                   llvm::GlobalValue>::LLVMGVToGV::operator()(llvm::GlobalAlias
                                                                  &LLVMGV) const;
+#endif
 
 class GlobalIFunc final
     : public GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
