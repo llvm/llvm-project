@@ -211,6 +211,22 @@ define double @fmul_nnan_ninf_nneg_n0.0_commute(i127 %x) {
   ret double %r
 }
 
+define float @fmul_ninf_nnan_mul_zero_nsz(float nofpclass(inf nan) %f) {
+; CHECK-LABEL: @fmul_ninf_nnan_mul_zero_nsz(
+; CHECK-NEXT:     ret float 0.000000e+00
+;
+  %r = fmul nsz float %f, 0.0
+  ret float %r
+}
+
+define float @fmul_ninf_nnan_mul_nzero_nsz(float nofpclass(inf nan) %f) {
+; CHECK-LABEL: @fmul_ninf_nnan_mul_nzero_nsz(
+; CHECK-NEXT:     ret float 0.000000e+00
+;
+  %r = fmul nsz float %f, -0.0
+  ret float %r
+}
+
 define float @src_mul_nzero_neg(float nofpclass(inf nan pzero psub pnorm) %f) {
 ; CHECK-LABEL: @src_mul_nzero_neg(
 ; CHECK-NEXT:    ret float 0.000000e+00

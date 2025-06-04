@@ -721,7 +721,7 @@ define <4 x i16> @dont_fold_urem_one(<4 x i16> %x) nounwind {
 ; RV64I-NEXT:    call __umoddi3
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a1, a0, 1327
+; RV64I-NEXT:    addi a1, a0, 1327
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __umoddi3
 ; RV64I-NEXT:    sh zero, 0(s2)
@@ -941,7 +941,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) nounwind {
 ; RV64I-NEXT:    call __umoddi3
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    lui a0, 1
-; RV64I-NEXT:    addiw a1, a0, 1327
+; RV64I-NEXT:    addi a1, a0, 1327
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call __umoddi3
 ; RV64I-NEXT:    sd zero, 0(s2)
@@ -973,7 +973,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) nounwind {
 ; RV64IM-NEXT:    srli a4, a4, 7
 ; RV64IM-NEXT:    mul a4, a4, a6
 ; RV64IM-NEXT:    lui a6, 1
-; RV64IM-NEXT:    addiw a6, a6, 1327
+; RV64IM-NEXT:    addi a6, a6, 1327
 ; RV64IM-NEXT:    mulhu a5, a3, a5
 ; RV64IM-NEXT:    mulhu a7, a1, a7
 ; RV64IM-NEXT:    srli a7, a7, 12

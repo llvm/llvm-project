@@ -124,6 +124,7 @@ constexpr Definition g_function_child_entries[] = {
     Definition("initial-function", EntryType::FunctionInitial),
     Definition("changed", EntryType::FunctionChanged),
     Definition("is-optimized", EntryType::FunctionIsOptimized),
+    Definition("prefix", EntryType::FunctionPrefix),
     Definition("scope", EntryType::FunctionScope),
     Definition("basename", EntryType::FunctionBasename),
     Definition("template-arguments", EntryType::FunctionTemplateArguments),
@@ -385,6 +386,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FunctionNameWithArgs);
     ENUM_TO_CSTR(FunctionNameNoArgs);
     ENUM_TO_CSTR(FunctionMangledName);
+    ENUM_TO_CSTR(FunctionPrefix);
     ENUM_TO_CSTR(FunctionScope);
     ENUM_TO_CSTR(FunctionBasename);
     ENUM_TO_CSTR(FunctionTemplateArguments);
@@ -1277,13 +1279,13 @@ static bool FormatFunctionNameForLanguage(Stream &s,
   if (!language_plugin)
     return false;
 
-  const auto *format = language_plugin->GetFunctionNameFormat();
+  FormatEntity::Entry format = language_plugin->GetFunctionNameFormat();
   if (!format)
     return false;
 
   StreamString name_stream;
   const bool success =
-      FormatEntity::Format(*format, name_stream, sc, exe_ctx, /*addr=*/nullptr,
+      FormatEntity::Format(format, name_stream, sc, exe_ctx, /*addr=*/nullptr,
                            /*valobj=*/nullptr, /*function_changed=*/false,
                            /*initial_function=*/false);
   if (success)
@@ -1835,6 +1837,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return true;
   }
 
+  case Entry::Type::FunctionPrefix:
   case Entry::Type::FunctionScope:
   case Entry::Type::FunctionBasename:
   case Entry::Type::FunctionTemplateArguments:

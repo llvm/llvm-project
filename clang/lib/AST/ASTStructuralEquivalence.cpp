@@ -1751,9 +1751,20 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // fulfill the preceding requirements. ... Otherwise, the structure, union,
   // or enumerated types are incompatible.
 
-  if (!NameIsStructurallyEquivalent(*D1, *D2)) {
+  // Note: "the same tag" refers to the identifier for the structure; two
+  // structures without names are not compatible within a TU. In C23, if either
+  // declaration has no name, they're not equivalent. However, the paragraph
+  // after the bulleted list goes on to talk about compatibility of anonymous
+  // structure and union members, so this prohibition only applies to top-level
+  // declarations; if either declaration is not a member, they cannot be
+  // compatible.
+  if (Context.LangOpts.C23 && (!D1->getIdentifier() || !D2->getIdentifier()) &&
+      (!D1->getDeclContext()->isRecord() || !D2->getDeclContext()->isRecord()))
     return false;
-  }
+
+  // Otherwise, check the names for equivalence.
+  if (!NameIsStructurallyEquivalent(*D1, *D2))
+    return false;
 
   if (D1->isUnion() != D2->isUnion()) {
     if (Context.Complain) {
