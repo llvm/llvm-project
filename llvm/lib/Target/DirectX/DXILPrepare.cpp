@@ -149,7 +149,7 @@ class DXILPrepareModule : public ModulePass {
     // Omit bitcasts if the incoming value matches the instruction type.
     auto It = PointerTypes.find(Operand);
     if (It != PointerTypes.end()) {
-      auto OpTy = cast<TypedPointerType>(It->second)->getElementType();
+      auto *OpTy = cast<TypedPointerType>(It->second)->getElementType();
       if (OpTy == Ty)
         return nullptr;
     }
