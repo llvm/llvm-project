@@ -1,8 +1,6 @@
 ;; Tests optional matching of memprof profile on call to operator new
 ;; with manual hot/cold hint.
 
-;; Avoid failures on big-endian systems that can't read the profile properly
-; REQUIRES: x86_64-linux
 
 ;; Generate the profile and the IR.
 ; RUN: split-file %s %t
