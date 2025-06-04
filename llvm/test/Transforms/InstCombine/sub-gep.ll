@@ -764,9 +764,9 @@ declare void @use(ptr)
 
 define i64 @sub_multi_use(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @sub_multi_use(
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [0 x i32], ptr [[BASE:%.*]], i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[P2_IDX]]
 ; CHECK-NEXT:    call void @use(ptr [[P2]])
-; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX]], 2
 ; CHECK-NEXT:    ret i64 [[P2_IDX]]
 ;
   %p2 = getelementptr inbounds [0 x i32], ptr %base, i64 0, i64 %idx
@@ -779,9 +779,9 @@ define i64 @sub_multi_use(ptr %base, i64 %idx) {
 
 define i64 @sub_multi_use_nuw(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @sub_multi_use_nuw(
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [0 x i32], ptr [[BASE:%.*]], i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nsw i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[P2_IDX]]
 ; CHECK-NEXT:    call void @use(ptr [[P2]])
-; CHECK-NEXT:    [[P2_IDX:%.*]] = shl nuw nsw i64 [[IDX]], 2
 ; CHECK-NEXT:    ret i64 [[P2_IDX]]
 ;
   %p2 = getelementptr inbounds [0 x i32], ptr %base, i64 0, i64 %idx
