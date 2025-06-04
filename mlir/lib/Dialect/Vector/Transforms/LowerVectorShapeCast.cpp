@@ -120,6 +120,73 @@ namespace {
 /// algorithm described above.
 ///
 class ShapeCastOpRewritePattern : public OpRewritePattern<vector::ShapeCastOp> {
+
+  // Case (i) of description.
+  // Assumes source and result shapes are identical up to some leading ones.
+  static LogicalResult leadingOnesLowering(vector::ShapeCastOp shapeCast,
+                                           PatternRewriter &rewriter) {
+
+    const Location loc = shapeCast.getLoc();
+    const VectorType sourceType = shapeCast.getSourceVectorType();
+    const VectorType resultType = shapeCast.getResultVectorType();
+
+    const int64_t sourceRank = sourceType.getRank();
+    const int64_t resultRank = resultType.getRank();
+    const int64_t delta = sourceRank - resultRank;
+    const int64_t sourceLeading = delta > 0 ? delta : 0;
+    const int64_t resultLeading = delta > 0 ? 0 : -delta;
+
+    const Value source = shapeCast.getSource();
+    const Value poison = rewriter.create<ub::PoisonOp>(loc, resultType);
+    const Value extracted = rewriter.create<vector::ExtractOp>(
+        loc, source, SmallVector<int64_t>(sourceLeading, 0));
+    const Value result = rewriter.create<vector::InsertOp>(
+        loc, extracted, poison, SmallVector<int64_t>(resultLeading, 0));
+
+    rewriter.replaceOp(shapeCast, result);
+    return success();
+  }
+
+  // Case (ii) of description.
+  // Assumes a shape_cast where the suffix shape of the source starting at
+  // `sourceDim` and the suffix shape of the result starting at `resultDim` are
+  // identical.
+  static LogicalResult noStridedSliceLowering(vector::ShapeCastOp shapeCast,
+                                              int64_t sourceDim,
+                                              int64_t resultDim,
+                                              PatternRewriter &rewriter) {
+
+    const Location loc = shapeCast.getLoc();
+
+    const Value source = shapeCast.getSource();
+    const ArrayRef<int64_t> sourceShape =
+        shapeCast.getSourceVectorType().getShape();
+
+    const VectorType resultType = shapeCast.getResultVectorType();
+    const ArrayRef<int64_t> resultShape = resultType.getShape();
+
+    const int64_t nSlices =
+        std::accumulate(sourceShape.begin(), sourceShape.begin() + sourceDim, 1,
+                        std::multiplies<int64_t>());
+
+    SmallVector<int64_t> extractIndex(sourceDim, 0);
+    SmallVector<int64_t> insertIndex(resultDim, 0);
+    Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+
+    for (int i = 0; i < nSlices; ++i) {
+      Value extracted =
+          rewriter.create<vector::ExtractOp>(loc, source, extractIndex);
+
+      result = rewriter.create<vector::InsertOp>(loc, extracted, result,
+                                                 insertIndex);
+
+      inplaceAdd(1, sourceShape.take_front(sourceDim), extractIndex);
+      inplaceAdd(1, resultShape.take_front(resultDim), insertIndex);
+    }
+    rewriter.replaceOp(shapeCast, result);
+    return success();
+  }
+
 public:
   using OpRewritePattern::OpRewritePattern;
 
@@ -163,18 +230,8 @@ public:
     // This is the case (i) where there are just some leading ones to contend
     // with in the source or result. It can be handled with a single
     // extract/insert pair.
-    if (resultSuffixStartDim < 0 || sourceSuffixStartDim < 0) {
-      const int64_t delta = sourceRank - resultRank;
-      const int64_t sourceLeading = delta > 0 ? delta : 0;
-      const int64_t resultLeading = delta > 0 ? 0 : -delta;
-      const Value poison = rewriter.create<ub::PoisonOp>(loc, resultType);
-      const Value extracted = rewriter.create<vector::ExtractOp>(
-          loc, source, SmallVector<int64_t>(sourceLeading, 0));
-      const Value result = rewriter.create<vector::InsertOp>(
-          loc, extracted, poison, SmallVector<int64_t>(resultLeading, 0));
-      rewriter.replaceOp(op, result);
-      return success();
-    }
+    if (resultSuffixStartDim < 0 || sourceSuffixStartDim < 0)
+      return leadingOnesLowering(op, rewriter);
 
     const int64_t sourceSuffixStartDimSize =
         sourceType.getDimSize(sourceSuffixStartDim);
@@ -200,27 +257,9 @@ public:
     // IR is generated in this case if we just extract and insert the elements
     // directly. In other words, we don't use extract_strided_slice and
     // insert_strided_slice.
-    if (greatestCommonDivisor == 1) {
-      sourceSuffixStartDim += 1;
-      resultSuffixStartDim += 1;
-      SmallVector<int64_t> extractIndex(sourceSuffixStartDim, 0);
-      SmallVector<int64_t> insertIndex(resultSuffixStartDim, 0);
-      Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
-      for (size_t i = 0; i < nAtomicSlices; ++i) {
-        Value extracted =
-            rewriter.create<vector::ExtractOp>(loc, source, extractIndex);
-
-        result = rewriter.create<vector::InsertOp>(loc, extracted, result,
-                                                   insertIndex);
-
-        inplaceAdd(1, sourceShape.take_front(sourceSuffixStartDim),
-                   extractIndex);
-        inplaceAdd(1, resultShape.take_front(resultSuffixStartDim),
-                   insertIndex);
-      }
-      rewriter.replaceOp(op, result);
-      return success();
-    }
+    if (greatestCommonDivisor == 1)
+      return noStridedSliceLowering(op, sourceSuffixStartDim + 1,
+                                    resultSuffixStartDim + 1, rewriter);
 
     // The insert_strided_slice result's type
     const ArrayRef<int64_t> insertStridedShape =
