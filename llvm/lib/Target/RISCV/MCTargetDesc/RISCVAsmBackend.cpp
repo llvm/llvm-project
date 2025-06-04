@@ -163,7 +163,7 @@ static unsigned getRelaxedOpcode(const MCInst &Inst,
       break;
 
     // And only if it is using X0 or X1 for rd.
-    const MCRegister &Reg = Inst.getOperand(0).getReg();
+    MCRegister Reg = Inst.getOperand(0).getReg();
     if (Reg == RISCV::X0)
       return RISCV::QC_E_J;
     if (Reg == RISCV::X1)
