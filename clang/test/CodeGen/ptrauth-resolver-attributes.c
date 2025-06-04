@@ -10,16 +10,16 @@ int __attribute__((target_clones("crc", "default"))) ftc(void) { return 0; }
 int __attribute__((target_version("crc")))     fmv(void) { return 0; }
 int __attribute__((target_version("default"))) fmv(void) { return 0; }
 
-// CHECK: define{{.*}} i32 @ftc._Mcrc() #0
-// CHECK: define{{.*}} ptr @ftc.resolver() #1
-// CHECK: define{{.*}} i32 @fmv._Mcrc() #0
-// CHECK: define{{.*}} i32 @fmv.default() #2
-// CHECK: define{{.*}} i32 @ftc.default() #2
-// CHECK: define{{.*}} ptr @fmv.resolver() #1
+// CHECK-DAG: define{{.*}} i32 @ftc._Mcrc() #[[ATTR_CRC:[0-9]+]]
+// CHECK-DAG: define{{.*}} i32 @ftc.default() #[[ATTR_DEFAULT:[0-9]+]]
+// CHECK-DAG: define{{.*}} ptr @ftc.resolver() #[[ATTR_RESOLVER:[0-9]+]]
+// CHECK-DAG: define{{.*}} i32 @fmv._Mcrc() #[[ATTR_CRC]]
+// CHECK-DAG: define{{.*}} i32 @fmv.default() #[[ATTR_DEFAULT]]
+// CHECK-DAG: define{{.*}} ptr @fmv.resolver() #[[ATTR_RESOLVER]]
 
-// BTI-SIGNRA: attributes #0 = { {{.*}}"branch-target-enforcement" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"{{.*}} }
-// BTI-SIGNRA: attributes #1 = { {{.*}}"branch-target-enforcement" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"{{.*}} }
-// BTI-SIGNRA: attributes #2 = { {{.*}}"branch-target-enforcement" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"{{.*}} }
-// PAUTHTEST: attributes #0 = { {{.*}}"ptrauth-auth-traps" "ptrauth-calls" "ptrauth-returns"{{.*}} }
-// PAUTHTEST: attributes #1 = { {{.*}}"ptrauth-auth-traps" "ptrauth-calls" "ptrauth-returns"{{.*}} }
-// PAUTHTEST: attributes #2 = { {{.*}}"ptrauth-auth-traps" "ptrauth-calls" "ptrauth-returns"{{.*}} }
+// BTI-SIGNRA-DAG: attributes #[[ATTR_CRC]]      = { {{.*}}"branch-target-enforcement" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"{{.*}} }
+// BTI-SIGNRA-DAG: attributes #[[ATTR_RESOLVER]] = { {{.*}}"branch-target-enforcement" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"{{.*}} }
+// BTI-SIGNRA-DAG: attributes #[[ATTR_DEFAULT]]  = { {{.*}}"branch-target-enforcement" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"{{.*}} }
+// PAUTHTEST-DAG:  attributes #[[ATTR_CRC]]      = { {{.*}}"ptrauth-auth-traps" "ptrauth-calls" "ptrauth-returns"{{.*}} }
+// PAUTHTEST-DAG:  attributes #[[ATTR_RESOLVER]] = { {{.*}}"ptrauth-auth-traps" "ptrauth-calls" "ptrauth-returns"{{.*}} }
+// PAUTHTEST-DAG:  attributes #[[ATTR_DEFAULT]]  = { {{.*}}"ptrauth-auth-traps" "ptrauth-calls" "ptrauth-returns"{{.*}} }
