@@ -315,14 +315,14 @@ GlobalT &GlobalWithNodeAPI<GlobalT, LLVMGlobalT, ParentT, LLVMParentT>::
 }
 
 // Explicit instantiations.
-template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
-                                 llvm::GlobalObject>;
-template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
-                                 llvm::GlobalObject>;
-template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
-                                 GlobalObject, llvm::GlobalObject>;
-template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
-                                 llvm::GlobalValue>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalIFunc, llvm::GlobalIFunc, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    Function, llvm::Function, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalAlias, llvm::GlobalAlias, GlobalValue, llvm::GlobalValue>;
 
 #if defined(_MSC_VER) && !defined(__clang__)
 // These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB

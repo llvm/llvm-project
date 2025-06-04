@@ -212,7 +212,8 @@ public:
   bool runOnFunction(Function &F, const Analyses &A) final;
 };
 
-class LLVM_ABI RegionPassManager final : public PassManager<RegionPass, RegionPass> {
+class LLVM_ABI RegionPassManager final
+    : public PassManager<RegionPass, RegionPass> {
 public:
   RegionPassManager(StringRef Name) : PassManager(Name) {}
   RegionPassManager(StringRef Name, StringRef Pipeline,

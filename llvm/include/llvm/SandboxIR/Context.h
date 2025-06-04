@@ -9,13 +9,13 @@
 #ifndef LLVM_SANDBOXIR_CONTEXT_H
 #define LLVM_SANDBOXIR_CONTEXT_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/SandboxIR/Tracker.h"
 #include "llvm/SandboxIR/Type.h"
+#include "llvm/Support/Compiler.h"
 
 #include <cstdint>
 
@@ -123,7 +123,8 @@ protected:
   friend class EraseFromParent; // For registerValue().
   /// This is the actual function that creates sandboxir values for \p V,
   /// and among others handles all instruction types.
-  LLVM_ABI Value *getOrCreateValueInternal(llvm::Value *V, llvm::User *U = nullptr);
+  LLVM_ABI Value *getOrCreateValueInternal(llvm::Value *V,
+                                           llvm::User *U = nullptr);
   /// Get or create a sandboxir::Argument for an existing LLVM IR \p LLVMArg.
   LLVM_ABI Argument *getOrCreateArgument(llvm::Argument *LLVMArg);
   /// Get or create a sandboxir::Value for an existing LLVM IR \p LLVMV.
@@ -163,13 +164,17 @@ protected:
   friend FenceInst; // For createFenceInst()
   LLVM_ABI SelectInst *createSelectInst(llvm::SelectInst *SI);
   friend SelectInst; // For createSelectInst()
-  LLVM_ABI InsertElementInst *createInsertElementInst(llvm::InsertElementInst *IEI);
+  LLVM_ABI InsertElementInst *
+  createInsertElementInst(llvm::InsertElementInst *IEI);
   friend InsertElementInst; // For createInsertElementInst()
-  LLVM_ABI ExtractElementInst *createExtractElementInst(llvm::ExtractElementInst *EEI);
+  LLVM_ABI ExtractElementInst *
+  createExtractElementInst(llvm::ExtractElementInst *EEI);
   friend ExtractElementInst; // For createExtractElementInst()
-  LLVM_ABI ShuffleVectorInst *createShuffleVectorInst(llvm::ShuffleVectorInst *SVI);
+  LLVM_ABI ShuffleVectorInst *
+  createShuffleVectorInst(llvm::ShuffleVectorInst *SVI);
   friend ShuffleVectorInst; // For createShuffleVectorInst()
-  LLVM_ABI ExtractValueInst *createExtractValueInst(llvm::ExtractValueInst *IVI);
+  LLVM_ABI ExtractValueInst *
+  createExtractValueInst(llvm::ExtractValueInst *IVI);
   friend ExtractValueInst; // For createExtractValueInst()
   LLVM_ABI InsertValueInst *createInsertValueInst(llvm::InsertValueInst *IVI);
   friend InsertValueInst; // For createInsertValueInst()
@@ -195,9 +200,11 @@ protected:
   friend CleanupPadInst; // For createCleanupPadInst()
   LLVM_ABI CatchReturnInst *createCatchReturnInst(llvm::CatchReturnInst *I);
   friend CatchReturnInst; // For createCatchReturnInst()
-  LLVM_ABI CleanupReturnInst *createCleanupReturnInst(llvm::CleanupReturnInst *I);
+  LLVM_ABI CleanupReturnInst *
+  createCleanupReturnInst(llvm::CleanupReturnInst *I);
   friend CleanupReturnInst; // For createCleanupReturnInst()
-  LLVM_ABI GetElementPtrInst *createGetElementPtrInst(llvm::GetElementPtrInst *I);
+  LLVM_ABI GetElementPtrInst *
+  createGetElementPtrInst(llvm::GetElementPtrInst *I);
   friend GetElementPtrInst; // For createGetElementPtrInst()
   LLVM_ABI CatchSwitchInst *createCatchSwitchInst(llvm::CatchSwitchInst *I);
   friend CatchSwitchInst; // For createCatchSwitchInst()
@@ -211,7 +218,8 @@ protected:
   friend BinaryOperator; // For createBinaryOperator()
   LLVM_ABI AtomicRMWInst *createAtomicRMWInst(llvm::AtomicRMWInst *I);
   friend AtomicRMWInst; // For createAtomicRMWInst()
-  LLVM_ABI AtomicCmpXchgInst *createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I);
+  LLVM_ABI AtomicCmpXchgInst *
+  createAtomicCmpXchgInst(llvm::AtomicCmpXchgInst *I);
   friend AtomicCmpXchgInst; // For createAtomicCmpXchgInst()
   LLVM_ABI AllocaInst *createAllocaInst(llvm::AllocaInst *I);
   friend AllocaInst; // For createAllocaInst()

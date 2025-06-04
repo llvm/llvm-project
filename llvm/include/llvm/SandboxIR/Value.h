@@ -9,10 +9,10 @@
 #ifndef LLVM_SANDBOXIR_VALUE_H
 #define LLVM_SANDBOXIR_VALUE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h"
 #include "llvm/SandboxIR/Use.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -261,8 +261,9 @@ public:
 
   Context &getContext() const { return Ctx; }
 
-  LLVM_ABI void replaceUsesWithIf(Value *OtherV,
-                         llvm::function_ref<bool(const Use &)> ShouldReplace);
+  LLVM_ABI void
+  replaceUsesWithIf(Value *OtherV,
+                    llvm::function_ref<bool(const Use &)> ShouldReplace);
   LLVM_ABI void replaceAllUsesWith(Value *Other);
 
   /// \Returns the LLVM IR name of the bottom-most LLVM value.

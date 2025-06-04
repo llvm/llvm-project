@@ -9,11 +9,11 @@
 #ifndef LLVM_SANDBOXIR_USER_H
 #define LLVM_SANDBOXIR_USER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/SandboxIR/Value.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 

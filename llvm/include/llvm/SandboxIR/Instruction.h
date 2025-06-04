@@ -9,7 +9,6 @@
 #ifndef LLVM_SANDBOXIR_INSTRUCTION_H
 #define LLVM_SANDBOXIR_INSTRUCTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -17,6 +16,7 @@
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/User.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -416,8 +416,8 @@ class FenceInst : public SingleLLVMInstructionImpl<llvm::FenceInst> {
 
 public:
   LLVM_ABI static FenceInst *create(AtomicOrdering Ordering, InsertPosition Pos,
-                           Context &Ctx,
-                           SyncScope::ID SSID = SyncScope::System);
+                                    Context &Ctx,
+                                    SyncScope::ID SSID = SyncScope::System);
   /// Returns the ordering constraint of this fence instruction.
   AtomicOrdering getOrdering() const {
     return cast<llvm::FenceInst>(Val)->getOrdering();
@@ -445,8 +445,8 @@ class SelectInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
 
 public:
   LLVM_ABI static Value *create(Value *Cond, Value *True, Value *False,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
 
   const Value *getCondition() const { return getOperand(0); }
   const Value *getTrueValue() const { return getOperand(1); }
@@ -482,8 +482,8 @@ class InsertElementInst final
 
 public:
   LLVM_ABI static Value *create(Value *Vec, Value *NewElt, Value *Idx,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::InsertElement;
   }
@@ -504,8 +504,8 @@ class ExtractElementInst final
                         // create*()
 
 public:
-  LLVM_ABI static Value *create(Value *Vec, Value *Idx, InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+  LLVM_ABI static Value *create(Value *Vec, Value *Idx, InsertPosition Pos,
+                                Context &Ctx, const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::ExtractElement;
   }
@@ -529,11 +529,12 @@ class ShuffleVectorInst final
   friend class Context; // For accessing the constructor in create*()
 
 public:
-  LLVM_ABI static Value *create(Value *V1, Value *V2, Value *Mask, InsertPosition Pos,
-                       Context &Ctx, const Twine &Name = "");
+  LLVM_ABI static Value *create(Value *V1, Value *V2, Value *Mask,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
   LLVM_ABI static Value *create(Value *V1, Value *V2, ArrayRef<int> Mask,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::ShuffleVector;
   }
@@ -581,7 +582,7 @@ public:
   LLVM_ABI Constant *getShuffleMaskForBitcode() const;
 
   LLVM_ABI static Constant *convertShuffleMaskForBitcode(ArrayRef<int> Mask,
-                                                Type *ResultTy);
+                                                         Type *ResultTy);
 
   LLVM_ABI void setShuffleMask(ArrayRef<int> Mask);
 
@@ -967,8 +968,8 @@ class InsertValueInst
 
 public:
   LLVM_ABI static Value *create(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::InsertValue;
@@ -1026,9 +1027,10 @@ class BranchInst : public SingleLLVMInstructionImpl<llvm::BranchInst> {
 
 public:
   LLVM_ABI static BranchInst *create(BasicBlock *IfTrue, InsertPosition Pos,
-                            Context &Ctx);
+                                     Context &Ctx);
   LLVM_ABI static BranchInst *create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                            Value *Cond, InsertPosition Pos, Context &Ctx);
+                                     Value *Cond, InsertPosition Pos,
+                                     Context &Ctx);
   /// For isa/dyn_cast.
   LLVM_ABI static bool classof(const Value *From);
   bool isUnconditional() const {
@@ -1110,8 +1112,9 @@ class ExtractValueInst : public UnaryInstruction {
   friend Context; // for ExtractValueInst()
 
 public:
-  LLVM_ABI static Value *create(Value *Agg, ArrayRef<unsigned> Idxs, InsertPosition Pos,
-                       Context &Ctx, const Twine &Name = "");
+  LLVM_ABI static Value *create(Value *Agg, ArrayRef<unsigned> Idxs,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::ExtractValue;
@@ -1165,7 +1168,7 @@ class VAArgInst : public UnaryInstruction {
 
 public:
   LLVM_ABI static VAArgInst *create(Value *List, Type *Ty, InsertPosition Pos,
-                           Context &Ctx, const Twine &Name = "");
+                                    Context &Ctx, const Twine &Name = "");
   LLVM_ABI Value *getPointerOperand();
   const Value *getPointerOperand() const {
     return const_cast<VAArgInst *>(this)->getPointerOperand();
@@ -1185,7 +1188,7 @@ class FreezeInst : public UnaryInstruction {
 
 public:
   LLVM_ABI static FreezeInst *create(Value *V, InsertPosition Pos, Context &Ctx,
-                            const Twine &Name = "");
+                                     const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Freeze;
   }
@@ -1204,8 +1207,8 @@ public:
   LLVM_ABI void setVolatile(bool V);
 
   LLVM_ABI static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
-                          InsertPosition Pos, bool IsVolatile, Context &Ctx,
-                          const Twine &Name = "");
+                                   InsertPosition Pos, bool IsVolatile,
+                                   Context &Ctx, const Twine &Name = "");
   static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
                           InsertPosition Pos, Context &Ctx,
                           const Twine &Name = "") {
@@ -1233,7 +1236,8 @@ public:
   LLVM_ABI void setVolatile(bool V);
 
   LLVM_ABI static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
-                           InsertPosition Pos, bool IsVolatile, Context &Ctx);
+                                    InsertPosition Pos, bool IsVolatile,
+                                    Context &Ctx);
   static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
                            InsertPosition Pos, Context &Ctx) {
     return create(V, Ptr, Align, Pos, /*IsVolatile=*/false, Ctx);
@@ -1281,7 +1285,8 @@ class ReturnInst final : public SingleLLVMInstructionImpl<llvm::ReturnInst> {
                                   Context &Ctx);
 
 public:
-  LLVM_ABI static ReturnInst *create(Value *RetVal, InsertPosition Pos, Context &Ctx);
+  LLVM_ABI static ReturnInst *create(Value *RetVal, InsertPosition Pos,
+                                     Context &Ctx);
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Ret;
   }
@@ -1430,8 +1435,8 @@ class CallInst : public CallBase {
 
 public:
   LLVM_ABI static CallInst *create(FunctionType *FTy, Value *Func,
-                          ArrayRef<Value *> Args, InsertPosition Pos,
-                          Context &Ctx, const Twine &NameStr = "");
+                                   ArrayRef<Value *> Args, InsertPosition Pos,
+                                   Context &Ctx, const Twine &NameStr = "");
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Call;
@@ -1448,9 +1453,10 @@ class InvokeInst final : public CallBase {
 
 public:
   LLVM_ABI static InvokeInst *create(FunctionType *FTy, Value *Func,
-                            BasicBlock *IfNormal, BasicBlock *IfException,
-                            ArrayRef<Value *> Args, InsertPosition Pos,
-                            Context &Ctx, const Twine &NameStr = "");
+                                     BasicBlock *IfNormal,
+                                     BasicBlock *IfException,
+                                     ArrayRef<Value *> Args, InsertPosition Pos,
+                                     Context &Ctx, const Twine &NameStr = "");
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Invoke;
@@ -1483,10 +1489,10 @@ class CallBrInst final : public CallBase {
 
 public:
   LLVM_ABI static CallBrInst *create(FunctionType *FTy, Value *Func,
-                            BasicBlock *DefaultDest,
-                            ArrayRef<BasicBlock *> IndirectDests,
-                            ArrayRef<Value *> Args, InsertPosition Pos,
-                            Context &Ctx, const Twine &NameStr = "");
+                                     BasicBlock *DefaultDest,
+                                     ArrayRef<BasicBlock *> IndirectDests,
+                                     ArrayRef<Value *> Args, InsertPosition Pos,
+                                     Context &Ctx, const Twine &NameStr = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CallBr;
   }
@@ -1513,9 +1519,10 @@ class LandingPadInst : public SingleLLVMInstructionImpl<llvm::LandingPadInst> {
   friend class Context; // For constructor.
 
 public:
-  LLVM_ABI static LandingPadInst *create(Type *RetTy, unsigned NumReservedClauses,
-                                InsertPosition Pos, Context &Ctx,
-                                const Twine &Name = "");
+  LLVM_ABI static LandingPadInst *create(Type *RetTy,
+                                         unsigned NumReservedClauses,
+                                         InsertPosition Pos, Context &Ctx,
+                                         const Twine &Name = "");
   /// Return 'true' if this landingpad instruction is a
   /// cleanup. I.e., it should be run when unwinding even if its landing pad
   /// doesn't catch the exception.
@@ -1591,8 +1598,8 @@ public:
   // for now, as there is no CatchPadInst member function that can undo it.
 
   LLVM_ABI static CatchPadInst *create(Value *ParentPad, ArrayRef<Value *> Args,
-                              InsertPosition Pos, Context &Ctx,
-                              const Twine &Name = "");
+                                       InsertPosition Pos, Context &Ctx,
+                                       const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CatchPad;
   }
@@ -1604,9 +1611,10 @@ class CleanupPadInst : public FuncletPadInst {
   friend class Context; // For constructor.
 
 public:
-  LLVM_ABI static CleanupPadInst *create(Value *ParentPad, ArrayRef<Value *> Args,
-                                InsertPosition Pos, Context &Ctx,
-                                const Twine &Name = "");
+  LLVM_ABI static CleanupPadInst *create(Value *ParentPad,
+                                         ArrayRef<Value *> Args,
+                                         InsertPosition Pos, Context &Ctx,
+                                         const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CleanupPad;
   }
@@ -1620,8 +1628,9 @@ class CatchReturnInst
   friend class Context; // For constructor.
 
 public:
-  LLVM_ABI static CatchReturnInst *create(CatchPadInst *CatchPad, BasicBlock *BB,
-                                 InsertPosition Pos, Context &Ctx);
+  LLVM_ABI static CatchReturnInst *create(CatchPadInst *CatchPad,
+                                          BasicBlock *BB, InsertPosition Pos,
+                                          Context &Ctx);
   LLVM_ABI CatchPadInst *getCatchPad() const;
   LLVM_ABI void setCatchPad(CatchPadInst *CatchPad);
   LLVM_ABI BasicBlock *getSuccessor() const;
@@ -1644,8 +1653,8 @@ class CleanupReturnInst
 
 public:
   LLVM_ABI static CleanupReturnInst *create(CleanupPadInst *CleanupPad,
-                                   BasicBlock *UnwindBB, InsertPosition Pos,
-                                   Context &Ctx);
+                                            BasicBlock *UnwindBB,
+                                            InsertPosition Pos, Context &Ctx);
   bool hasUnwindDest() const {
     return cast<llvm::CleanupReturnInst>(Val)->hasUnwindDest();
   }
@@ -1679,8 +1688,8 @@ class GetElementPtrInst final
 
 public:
   LLVM_ABI static Value *create(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &NameStr = "");
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &NameStr = "");
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::GetElementPtr;
@@ -1751,9 +1760,9 @@ class CatchSwitchInst
   friend class Context; // For accessing the constructor in create*()
 
 public:
-  LLVM_ABI static CatchSwitchInst *create(Value *ParentPad, BasicBlock *UnwindBB,
-                                 unsigned NumHandlers, InsertPosition Pos,
-                                 Context &Ctx, const Twine &Name = "");
+  LLVM_ABI static CatchSwitchInst *
+  create(Value *ParentPad, BasicBlock *UnwindBB, unsigned NumHandlers,
+         InsertPosition Pos, Context &Ctx, const Twine &Name = "");
 
   LLVM_ABI Value *getParentPad() const;
   LLVM_ABI void setParentPad(Value *ParentPad);
@@ -1840,7 +1849,8 @@ class ResumeInst : public SingleLLVMInstructionImpl<llvm::ResumeInst> {
   friend class Context; // For accessing the constructor in create*()
 
 public:
-  LLVM_ABI static ResumeInst *create(Value *Exn, InsertPosition Pos, Context &Ctx);
+  LLVM_ABI static ResumeInst *create(Value *Exn, InsertPosition Pos,
+                                     Context &Ctx);
   LLVM_ABI Value *getValue() const;
   unsigned getNumSuccessors() const {
     return cast<llvm::ResumeInst>(Val)->getNumSuccessors();
@@ -1859,9 +1869,9 @@ public:
   static constexpr const unsigned DefaultPseudoIndex =
       llvm::SwitchInst::DefaultPseudoIndex;
 
-  LLVM_ABI static SwitchInst *create(Value *V, BasicBlock *Dest, unsigned NumCases,
-                            InsertPosition Pos, Context &Ctx,
-                            const Twine &Name = "");
+  LLVM_ABI static SwitchInst *create(Value *V, BasicBlock *Dest,
+                                     unsigned NumCases, InsertPosition Pos,
+                                     Context &Ctx, const Twine &Name = "");
 
   LLVM_ABI Value *getCondition() const;
   LLVM_ABI void setCondition(Value *V);
@@ -1951,11 +1961,13 @@ class UnaryOperator : public UnaryInstruction {
                          Ctx) {}
   friend Context; // for constructor.
 public:
-  LLVM_ABI static Value *create(Instruction::Opcode Op, Value *OpV, InsertPosition Pos,
-                       Context &Ctx, const Twine &Name = "");
-  LLVM_ABI static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
-                                      Value *CopyFrom, InsertPosition Pos,
-                                      Context &Ctx, const Twine &Name = "");
+  LLVM_ABI static Value *create(Instruction::Opcode Op, Value *OpV,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
+  LLVM_ABI static Value *createWithCopiedFlags(Instruction::Opcode Op,
+                                               Value *OpV, Value *CopyFrom,
+                                               InsertPosition Pos, Context &Ctx,
+                                               const Twine &Name = "");
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::UnOp;
@@ -2015,13 +2027,14 @@ protected:
 
 public:
   LLVM_ABI static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
 
-  LLVM_ABI static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
-                                      Value *RHS, Value *CopyFrom,
-                                      InsertPosition Pos, Context &Ctx,
-                                      const Twine &Name = "");
+  LLVM_ABI static Value *createWithCopiedFlags(Instruction::Opcode Op,
+                                               Value *LHS, Value *RHS,
+                                               Value *CopyFrom,
+                                               InsertPosition Pos, Context &Ctx,
+                                               const Twine &Name = "");
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::BinaryOperator;
@@ -2098,11 +2111,10 @@ public:
     return From->getSubclassID() == ClassID::AtomicRMW;
   }
 
-  LLVM_ABI static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
-                               MaybeAlign Align, AtomicOrdering Ordering,
-                               InsertPosition Pos, Context &Ctx,
-                               SyncScope::ID SSID = SyncScope::System,
-                               const Twine &Name = "");
+  LLVM_ABI static AtomicRMWInst *
+  create(BinOp Op, Value *Ptr, Value *Val, MaybeAlign Align,
+         AtomicOrdering Ordering, InsertPosition Pos, Context &Ctx,
+         SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
 };
 
 class AtomicCmpXchgInst
@@ -2191,9 +2203,10 @@ class AllocaInst final : public UnaryInstruction {
   friend class Context; // For constructor.
 
 public:
-  LLVM_ABI static AllocaInst *create(Type *Ty, unsigned AddrSpace, InsertPosition Pos,
-                            Context &Ctx, Value *ArraySize = nullptr,
-                            const Twine &Name = "");
+  LLVM_ABI static AllocaInst *create(Type *Ty, unsigned AddrSpace,
+                                     InsertPosition Pos, Context &Ctx,
+                                     Value *ArraySize = nullptr,
+                                     const Twine &Name = "");
 
   /// Return true if there is an allocation size parameter to the allocation
   /// instruction that is not 1.
@@ -2295,8 +2308,8 @@ class CastInst : public UnaryInstruction {
 
 public:
   LLVM_ABI static Value *create(Type *DestTy, Opcode Op, Value *Operand,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
   /// For isa/dyn_cast.
   LLVM_ABI static bool classof(const Value *From);
   LLVM_ABI Type *getSrcTy() const;
@@ -2389,8 +2402,8 @@ class PHINode final : public SingleLLVMInstructionImpl<llvm::PHINode> {
 
 public:
   LLVM_ABI static PHINode *create(Type *Ty, unsigned NumReservedValues,
-                         InsertPosition Pos, Context &Ctx,
-                         const Twine &Name = "");
+                                  InsertPosition Pos, Context &Ctx,
+                                  const Twine &Name = "");
   /// For isa/dyn_cast.
   LLVM_ABI static bool classof(const Value *From);
 
@@ -2445,7 +2458,8 @@ public:
     return cast<llvm::PHINode>(Val)->hasConstantOrUndefValue();
   }
   bool isComplete() const { return cast<llvm::PHINode>(Val)->isComplete(); }
-  LLVM_ABI void replaceIncomingBlockWith(const BasicBlock *Old, BasicBlock *New);
+  LLVM_ABI void replaceIncomingBlockWith(const BasicBlock *Old,
+                                         BasicBlock *New);
   LLVM_ABI void removeIncomingValueIf(function_ref<bool(unsigned)> Predicate);
   // TODO: Implement
   // void copyIncomingBlocks(iterator_range<const_block_iterator> BBRange,
@@ -2473,18 +2487,20 @@ protected:
       : SingleLLVMInstructionImpl(Id, Opc, CI, Ctx) {}
   friend Context; // for CmpInst()
   LLVM_ABI static Value *createCommon(Value *Cond, Value *True, Value *False,
-                             const Twine &Name, IRBuilder<> &Builder,
-                             Context &Ctx);
+                                      const Twine &Name, IRBuilder<> &Builder,
+                                      Context &Ctx);
 
 public:
   using Predicate = llvm::CmpInst::Predicate;
 
-  LLVM_ABI static Value *create(Predicate Pred, Value *S1, Value *S2, InsertPosition Pos,
-                       Context &Ctx, const Twine &Name = "");
-  LLVM_ABI static Value *createWithCopiedFlags(Predicate Pred, Value *S1, Value *S2,
-                                      const Instruction *FlagsSource,
-                                      InsertPosition Pos, Context &Ctx,
-                                      const Twine &Name = "");
+  LLVM_ABI static Value *create(Predicate Pred, Value *S1, Value *S2,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
+  LLVM_ABI static Value *createWithCopiedFlags(Predicate Pred, Value *S1,
+                                               Value *S2,
+                                               const Instruction *FlagsSource,
+                                               InsertPosition Pos, Context &Ctx,
+                                               const Twine &Name = "");
   LLVM_ABI void setPredicate(Predicate P);
   LLVM_ABI void swapOperands();
 

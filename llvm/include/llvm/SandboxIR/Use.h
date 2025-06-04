@@ -13,8 +13,8 @@
 #ifndef LLVM_SANDBOXIR_USE_H
 #define LLVM_SANDBOXIR_USE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Use.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm::sandboxir {
