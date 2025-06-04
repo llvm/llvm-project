@@ -338,6 +338,10 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   bool HasCFBranch =
       Subtarget.hasStdExtZicfilp() &&
       MF.getFunction().getParent()->getModuleFlag("cf-protection-branch");
+  if (HasCFBranch && (Subtarget.isRV32() && Subtarget.hasStdExtE()))
+    reportFatalUsageError(
+        "Alternative static chain register is not supported on RV32E");
+
   // Normal: t2, Branch control flow protection: t3
   const auto StaticChainReg = HasCFBranch ? RISCV::X28 : RISCV::X7;
 
