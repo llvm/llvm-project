@@ -15,6 +15,7 @@
 #ifndef LLVM_PROFILEDATA_INDEXEDMEMPROFDATA_H
 #define LLVM_PROFILEDATA_INDEXEDMEMPROFDATA_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
@@ -87,7 +88,7 @@ private:
 } // namespace memprof
 
 // Write the MemProf data to OS.
-Error writeMemProf(
+LLVM_ABI Error writeMemProf(
     ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
     std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
