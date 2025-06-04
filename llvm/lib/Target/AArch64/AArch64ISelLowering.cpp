@@ -1501,7 +1501,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
     }
 
-    setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv32i1, Custom);
+    if (Subtarget->hasSVE2p1())
+      setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv32i1, Custom);
 
     for (auto VT : {MVT::v16i8, MVT::v8i8, MVT::v4i16, MVT::v2i32})
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Custom);
@@ -27332,8 +27333,8 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
 
 void AArch64TargetLowering::ReplaceGetActiveLaneMaskResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
-  if (!Subtarget->hasSVE2p1())
-    return;
+  assert(Subtarget->hasSVE2p1() &&
+         "Custom lower of get.active.lane.mask missing required feature.");
 
   assert(N->getValueType(0) == MVT::nxv32i1 &&
          "Unexpected result type for get.active.lane.mask");
