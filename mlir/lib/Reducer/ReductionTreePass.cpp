@@ -62,11 +62,11 @@ static void applyPatterns(Region &region,
   // before that transform.
   for (Operation *op : opsInRange) {
     // `applyOpPatternsGreedily` with folding returns whether the op is
-    // convered. Omit it because we don't have expectation this reduction will
+    // converted. Omit it because we don't have expectation this reduction will
     // be success or not.
-    GreedyRewriteConfig config;
-    config.strictMode = GreedyRewriteStrictness::ExistingOps;
-    (void)applyOpPatternsGreedily(op, patterns, config);
+    (void)applyOpPatternsGreedily(op, patterns,
+                                  GreedyRewriteConfig().setStrictness(
+                                      GreedyRewriteStrictness::ExistingOps));
   }
 
   if (eraseOpNotInRange)

@@ -396,8 +396,14 @@ def err_drv_print_header_env_var : Error<
   "environment variable CC_PRINT_HEADERS_%select{FORMAT|FILTERING}0 has invalid value %1">;
 def err_drv_print_header_env_var_combination : Error<
   "unsupported combination: CC_PRINT_HEADERS_FORMAT=%0 and CC_PRINT_HEADERS_FILTERING=%1">;
-def err_drv_print_header_env_var_combination_cc1 : Error<
+def err_drv_print_header_env_var_invalid_format : Error<
+  "environment variable CC_PRINT_HEADERS_FORMAT=%0 requires a compatible value for CC_PRINT_HEADERS_FILTERING">;
+def err_drv_print_header_cc1_invalid_combination : Error<
   "unsupported combination: -header-include-format=%0 and -header-include-filtering=%1">;
+def err_drv_print_header_cc1_invalid_filtering : Error<
+  "-header-include-filtering=%0 requires a compatible value for -header-include-format">;
+def err_drv_print_header_cc1_invalid_format : Error<
+  "-header-include-format=%0 requires a compatible value for -header-include-filtering">;
 
 def warn_O4_is_O3 : Warning<"-O4 is equivalent to -O3">, InGroup<Deprecated>;
 def warn_drv_optimization_value : Warning<"optimization level '%0' is not supported; using '%1%2' instead">,
@@ -663,6 +669,10 @@ def warn_drv_fine_grained_bitfield_accesses_ignored : Warning<
 def note_drv_verify_prefix_spelling : Note<
   "-verify prefixes must start with a letter and contain only alphanumeric"
   " characters, hyphens, and underscores">;
+
+def note_command_line_code_loc_requirement
+    : Note<"-code-completion-at=<file>:<line>:<column> requires <line> and "
+           "<column> to be integers greater than zero">;
 
 def warn_drv_global_isel_incomplete : Warning<
   "-fglobal-isel support for the '%0' architecture is incomplete">,

@@ -1804,8 +1804,9 @@ T *find_singleton(R &&Range, Predicate P, bool AllowRepeats = false) {
       if (RC) {
         if (!AllowRepeats || PRC != RC)
           return nullptr;
-      } else
+      } else {
         RC = PRC;
+      }
     }
   }
   return RC;
@@ -1835,8 +1836,9 @@ std::pair<T *, bool> find_singleton_nested(R &&Range, Predicate P,
       if (RC) {
         if (!AllowRepeats || PRC.first != RC)
           return {nullptr, true};
-      } else
+      } else {
         RC = PRC.first;
+      }
     }
   }
   return {RC, false};
@@ -2036,6 +2038,11 @@ template <typename R, typename Compare> auto max_element(R &&Range, Compare C) {
 template <typename R1, typename R2> auto mismatch(R1 &&Range1, R2 &&Range2) {
   return std::mismatch(adl_begin(Range1), adl_end(Range1), adl_begin(Range2),
                        adl_end(Range2));
+}
+
+template <typename R, typename IterTy>
+auto uninitialized_copy(R &&Src, IterTy Dst) {
+  return std::uninitialized_copy(adl_begin(Src), adl_end(Src), Dst);
 }
 
 template <typename R>

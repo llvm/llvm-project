@@ -370,8 +370,9 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   if (HasAmbigousOrMissingEntry) {
     OS << "    if (RegBankID != InvalidRegBankID)\n"
           "      return getRegBank(RegBankID);\n";
-  } else
+  } else {
     OS << "    return getRegBank(RegBankID);\n";
+  }
   OS << "  }\n"
         "  llvm_unreachable(llvm::Twine(\"Target needs to handle register "
         "class ID "

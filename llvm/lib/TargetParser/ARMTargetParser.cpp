@@ -657,6 +657,10 @@ void ARM::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
     // Extensions without a feature cannot be used with -march.
     if (!Ext.Feature.empty()) {
       std::string Description = DescMap[Ext.Name].str();
+      // With SIMD, this links to the NEON feature, so the description should be
+      // taken from here, as SIMD does not exist in TableGen.
+      if (Ext.Name == "simd")
+        Description = DescMap["neon"].str();
       outs() << "    "
              << format(Description.empty() ? "%s\n" : "%-20s%s\n",
                        Ext.Name.str().c_str(), Description.c_str());

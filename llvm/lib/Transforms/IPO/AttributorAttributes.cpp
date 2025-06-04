@@ -63,6 +63,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
@@ -625,8 +626,7 @@ static void followUsesInContext(AAType &AA, Attributor &A,
     if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
       bool Found = Explorer.findInContextOf(UserI, EIt, EEnd);
       if (Found && AA.followUseInMBEC(A, U, UserI, State))
-        for (const Use &Us : UserI->uses())
-          Uses.insert(&Us);
+        Uses.insert_range(llvm::make_pointer_range(UserI->uses()));
     }
   }
 }
@@ -1012,12 +1012,7 @@ namespace {
 #ifndef NDEBUG
 static raw_ostream &operator<<(raw_ostream &OS,
                                const AAPointerInfo::OffsetInfo &OI) {
-  ListSeparator LS;
-  OS << "[";
-  for (auto Offset : OI) {
-    OS << LS << Offset;
-  }
-  OS << "]";
+  OS << llvm::interleaved_array(OI);
   return OS;
 }
 #endif // NDEBUG
@@ -2154,7 +2149,8 @@ struct AANoUnwindCallSite final
 
 bool AANoSync::isAlignedBarrier(const CallBase &CB, bool ExecutedAligned) {
   switch (CB.getIntrinsicID()) {
-  case Intrinsic::nvvm_barrier0:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_all:
+  case Intrinsic::nvvm_barrier_cta_sync_aligned_count:
   case Intrinsic::nvvm_barrier0_and:
   case Intrinsic::nvvm_barrier0_or:
   case Intrinsic::nvvm_barrier0_popc:
@@ -3928,12 +3924,6 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     // (iii) There is no other pointer argument which could alias with the
     //       value.
 
-    auto IsDereferenceableOrNull = [&](Value *O, const DataLayout &DL) {
-      const auto *DerefAA = A.getAAFor<AADereferenceable>(
-          *this, IRPosition::value(*O), DepClassTy::OPTIONAL);
-      return DerefAA ? DerefAA->getAssumedDereferenceableBytes() : 0;
-    };
-
     const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
     const Function *ScopeFn = VIRP.getAnchorScope();
     // Check whether the value is captured in the scope using AANoCapture.
@@ -3973,8 +3963,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       //       is CGSCC runs. For those we would need to "allow" AANoCapture for
       //       a value in the module slice.
       // TODO(captures): Make this more precise.
-      UseCaptureInfo CI =
-          DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
+      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
       if (capturesNothing(CI))
         return true;
       if (CI.isPassthrough()) {
@@ -5753,7 +5742,7 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   assert(ImpliedAttributeKind == Attribute::Captures &&
          "Unexpected attribute kind");
   Value &V = IRP.getAssociatedValue();
-  if (!IRP.isArgumentPosition())
+  if (!isa<Constant>(V) && !IRP.isArgumentPosition())
     return V.use_empty();
 
   // You cannot "capture" null in the default address space.
@@ -6035,16 +6024,9 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     }
   }
 
-  auto IsDereferenceableOrNull = [&](Value *O, const DataLayout &DL) {
-    const auto *DerefAA = A.getAAFor<AADereferenceable>(
-        *this, IRPosition::value(*O), DepClassTy::OPTIONAL);
-    return DerefAA && DerefAA->getAssumedDereferenceableBytes();
-  };
-
   auto UseCheck = [&](const Use &U, bool &Follow) -> bool {
     // TODO(captures): Make this more precise.
-    UseCaptureInfo CI =
-        DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
+    UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
     if (capturesNothing(CI))
       return true;
     if (CI.isPassthrough()) {
@@ -10927,9 +10909,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return II.I == I && II.S == S;
     };
     bool operator<(const ItemInfo &II) const {
-      if (I == II.I)
-        return S < II.S;
-      return I < II.I;
+      return std::tie(I, S) < std::tie(II.I, II.S);
     };
   };
 
@@ -12177,7 +12157,7 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
     auto UsePred = [&](const Use &U, bool &Follow) -> bool {
       Uses.insert(&U);
       // TODO(captures): Make this more precise.
-      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr, nullptr);
+      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr);
       if (CI.isPassthrough()) {
         Follow = true;
         return true;
@@ -12611,29 +12591,18 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
   }
 
   ChangeStatus updateImpl(Attributor &A) override {
-    unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
     uint32_t OldAddressSpace = AssumedAddressSpace;
 
     auto CheckAddressSpace = [&](Value &Obj) {
       if (isa<UndefValue>(&Obj))
         return true;
-      // If an argument in flat address space only has addrspace cast uses, and
-      // those casts are same, then we take the dst addrspace.
       if (auto *Arg = dyn_cast<Argument>(&Obj)) {
-        if (Arg->getType()->getPointerAddressSpace() == FlatAS) {
-          unsigned CastAddrSpace = FlatAS;
-          for (auto *U : Arg->users()) {
-            auto *ASCI = dyn_cast<AddrSpaceCastInst>(U);
-            if (!ASCI)
-              return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
-            if (CastAddrSpace != FlatAS &&
-                CastAddrSpace != ASCI->getDestAddressSpace())
-              return false;
-            CastAddrSpace = ASCI->getDestAddressSpace();
-          }
-          if (CastAddrSpace != FlatAS)
-            return takeAddressSpace(CastAddrSpace);
-        }
+        auto *TTI =
+            A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(
+                *Arg->getParent());
+        unsigned AssumedAS = TTI->getAssumedAddrSpace(Arg);
+        if (AssumedAS != ~0U)
+          return takeAddressSpace(AssumedAS);
       }
       return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
     };

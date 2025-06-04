@@ -14,7 +14,7 @@ typedef struct {int a;} ndrange_t;
 kernel void enqueue_kernel_tests(void) {
   queue_t default_queue;
   unsigned flags = 0;
-  QUALS ndrange_t ndrange;
+  QUALS ndrange_t ndrange = { 0 };
   clk_event_t evt;
   clk_event_t event_wait_list;
   clk_event_t event_wait_list2[] = {evt, evt};
@@ -97,7 +97,7 @@ kernel void enqueue_kernel_tests(void) {
                  },
                  c, 1024L);
 #ifdef WCONV
-// expected-warning-re@-2{{implicit conversion changes signedness: '__private char' to 'unsigned {{int|long}}'}}
+// expected-warning-re@-2{{implicit conversion changes signedness: 'char' to 'unsigned {{int|long}}'}}
 #endif
 #define UINT_MAX 4294967295
 

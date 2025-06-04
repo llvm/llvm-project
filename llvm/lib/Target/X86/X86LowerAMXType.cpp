@@ -1084,7 +1084,7 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   assert(Tile->getType()->isX86_AMXTy() && "Not Tile Operand!");
 
   // TODO: Specially handle the multi-use case.
-  if (Tile->getNumUses() != 1)
+  if (!Tile->hasOneUse())
     return false;
 
   // We don't fetch shape from tilestore, we only get shape from tiledef,
@@ -1198,7 +1198,6 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
       for (auto *Store : DeadStores)
         Store->eraseFromParent();
     } else { // x86_cast_vector_to_tile
-      SmallVector<Instruction *, 2> DeadLoads;
       auto *Load = dyn_cast<LoadInst>(Cast->getOperand(0));
       if (!Load || !Load->hasOneUse())
         continue;

@@ -24,8 +24,9 @@ def err_fe_ast_file_modified : Error<
     DefaultFatal;
 def err_fe_pch_file_overridden : Error<
     "file '%0' from the precompiled header has been overridden">;
-def note_pch_required_by : Note<"'%0' required by '%1'">;
-def note_pch_rebuild_required : Note<"please rebuild precompiled header '%0'">;
+def note_ast_file_required_by : Note<"'%0' required by '%1'">;
+def note_ast_file_rebuild_required
+    : Note<"please rebuild precompiled file '%0'">;
 def note_module_cache_path : Note<
     "after modifying system headers, please delete the module cache at '%0'">;
 
@@ -138,6 +139,11 @@ def warn_decls_in_multiple_modules : Warning<
   "the compiler may not be good at merging the definitions. ">,
   InGroup<DiagGroup<"decls-in-multiple-modules">>,
   DefaultIgnore;
+
+def warn_module_file_mapping_mismatch
+    : Warning<"loaded module file '%0' conflicts with imported file '%1'">,
+      InGroup<DiagGroup<"module-file-mapping-mismatch">>,
+      DefaultIgnore;
 
 def err_failed_to_find_module_file : Error<
   "failed to find module file for module '%0'">;

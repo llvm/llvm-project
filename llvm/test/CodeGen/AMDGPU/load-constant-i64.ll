@@ -22,6 +22,9 @@ define amdgpu_kernel void @constant_load_i64(ptr addrspace(1) %out, ptr addrspac
 ; GFX7-LABEL: constant_load_i64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
@@ -95,6 +98,9 @@ define amdgpu_kernel void @constant_load_v2i64(ptr addrspace(1) %out, ptr addrsp
 ; GFX7-LABEL: constant_load_v2i64:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
 ; GFX7-NEXT:    v_mov_b32_e32 v4, s0
@@ -179,6 +185,9 @@ define amdgpu_kernel void @constant_load_v3i64(ptr addrspace(1) %out, ptr addrsp
 ; GFX7-LABEL: constant_load_v3i64:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_load_dwordx2 s[8:9], s[2:3], 0x4
 ; GFX7-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
@@ -294,6 +303,9 @@ define amdgpu_kernel void @constant_load_v4i64(ptr addrspace(1) %out, ptr addrsp
 ; GFX7-LABEL: constant_load_v4i64:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx4 s[8:11], s[8:9], 0x0
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_load_dwordx8 s[0:7], s[10:11], 0x0
 ; GFX7-NEXT:    s_add_u32 s10, s8, 16
@@ -421,7 +433,10 @@ define amdgpu_kernel void @constant_load_v8i64(ptr addrspace(1) %out, ptr addrsp
 ;
 ; GFX7-LABEL: constant_load_v8i64:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
 ; GFX7-NEXT:    s_load_dwordx4 s[16:19], s[8:9], 0x0
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_load_dwordx16 s[0:15], s[18:19], 0x0
 ; GFX7-NEXT:    s_add_u32 s18, s16, 48
@@ -638,7 +653,10 @@ define amdgpu_kernel void @constant_load_v16i64(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX7-LABEL: constant_load_v16i64:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
 ; GFX7-NEXT:    s_load_dwordx4 s[16:19], s[8:9], 0x0
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_load_dwordx16 s[0:15], s[18:19], 0x10
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)

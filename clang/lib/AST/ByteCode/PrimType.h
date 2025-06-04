@@ -46,26 +46,30 @@ enum PrimType : unsigned {
   PT_FixedPoint = 11,
   PT_Float = 12,
   PT_Ptr = 13,
-  PT_FnPtr = 14,
-  PT_MemberPtr = 15,
+  PT_MemberPtr = 14,
 };
 
 inline constexpr bool isPtrType(PrimType T) {
-  return T == PT_Ptr || T == PT_FnPtr || T == PT_MemberPtr;
+  return T == PT_Ptr || T == PT_MemberPtr;
 }
 
 enum class CastKind : uint8_t {
   Reinterpret,
-  Atomic,
+  Volatile,
+  Dynamic,
 };
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      interp::CastKind CK) {
   switch (CK) {
   case interp::CastKind::Reinterpret:
     OS << "reinterpret_cast";
     break;
-  case interp::CastKind::Atomic:
-    OS << "atomic";
+  case interp::CastKind::Volatile:
+    OS << "volatile";
+    break;
+  case interp::CastKind::Dynamic:
+    OS << "dynamic";
     break;
   }
   return OS;
@@ -113,9 +117,6 @@ template <> struct PrimConv<PT_Bool> {
 };
 template <> struct PrimConv<PT_Ptr> {
   using T = Pointer;
-};
-template <> struct PrimConv<PT_FnPtr> {
-  using T = FunctionPointer;
 };
 template <> struct PrimConv<PT_MemberPtr> {
   using T = MemberPointer;
@@ -166,7 +167,6 @@ static inline bool aligned(const void *P) {
       TYPE_SWITCH_CASE(PT_Float, B)                                            \
       TYPE_SWITCH_CASE(PT_Bool, B)                                             \
       TYPE_SWITCH_CASE(PT_Ptr, B)                                              \
-      TYPE_SWITCH_CASE(PT_FnPtr, B)                                            \
       TYPE_SWITCH_CASE(PT_MemberPtr, B)                                        \
       TYPE_SWITCH_CASE(PT_FixedPoint, B)                                       \
     }                                                                          \

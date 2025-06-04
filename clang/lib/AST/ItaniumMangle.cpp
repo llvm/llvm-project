@@ -309,10 +309,8 @@ class CXXNameMangler {
             !AdditionalAbiTags &&
             "only function and variables need a list of additional abi tags");
         if (const auto *NS = dyn_cast<NamespaceDecl>(ND)) {
-          if (const auto *AbiTag = NS->getAttr<AbiTagAttr>()) {
-            UsedAbiTags.insert(UsedAbiTags.end(), AbiTag->tags().begin(),
-                               AbiTag->tags().end());
-          }
+          if (const auto *AbiTag = NS->getAttr<AbiTagAttr>())
+            llvm::append_range(UsedAbiTags, AbiTag->tags());
           // Don't emit abi tags for namespaces.
           return;
         }
@@ -320,21 +318,17 @@ class CXXNameMangler {
 
       AbiTagList TagList;
       if (const auto *AbiTag = ND->getAttr<AbiTagAttr>()) {
-        UsedAbiTags.insert(UsedAbiTags.end(), AbiTag->tags().begin(),
-                           AbiTag->tags().end());
-        TagList.insert(TagList.end(), AbiTag->tags().begin(),
-                       AbiTag->tags().end());
+        llvm::append_range(UsedAbiTags, AbiTag->tags());
+        llvm::append_range(TagList, AbiTag->tags());
       }
 
       if (AdditionalAbiTags) {
-        UsedAbiTags.insert(UsedAbiTags.end(), AdditionalAbiTags->begin(),
-                           AdditionalAbiTags->end());
-        TagList.insert(TagList.end(), AdditionalAbiTags->begin(),
-                       AdditionalAbiTags->end());
+        llvm::append_range(UsedAbiTags, *AdditionalAbiTags);
+        llvm::append_range(TagList, *AdditionalAbiTags);
       }
 
       llvm::sort(TagList);
-      TagList.erase(std::unique(TagList.begin(), TagList.end()), TagList.end());
+      TagList.erase(llvm::unique(TagList), TagList.end());
 
       writeSortedUniqueAbiTags(Out, TagList);
     }
@@ -350,8 +344,7 @@ class CXXNameMangler {
 
     const AbiTagList &getSortedUniqueUsedAbiTags() {
       llvm::sort(UsedAbiTags);
-      UsedAbiTags.erase(std::unique(UsedAbiTags.begin(), UsedAbiTags.end()),
-                        UsedAbiTags.end());
+      UsedAbiTags.erase(llvm::unique(UsedAbiTags), UsedAbiTags.end());
       return UsedAbiTags;
     }
 
@@ -462,7 +455,8 @@ public:
   void mangleSeqID(unsigned SeqID);
   void mangleName(GlobalDecl GD);
   void mangleType(QualType T);
-  void mangleCXXRecordDecl(const CXXRecordDecl *Record);
+  void mangleCXXRecordDecl(const CXXRecordDecl *Record,
+                           bool SuppressSubstitution = false);
   void mangleLambdaSig(const CXXRecordDecl *Lambda);
   void mangleModuleNamePrefix(StringRef Name, bool IsPartition = false);
   void mangleVendorQualifier(StringRef Name);
@@ -1405,16 +1399,6 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
     //   - a template template parameter with arguments
     // In all of these cases, we should have no prefix.
     if (NestedNameSpecifier *Prefix = qualifier->getPrefix()) {
-      if (const auto *DTST =
-              dyn_cast<DependentTemplateSpecializationType>(type)) {
-        Out << "srN";
-        TemplateName Template = getASTContext().getDependentTemplateName(
-            {Prefix, DTST->getDependentTemplateName().getName(),
-             /*HasTemplateKeyword=*/true});
-        mangleTemplatePrefix(Template);
-        mangleTemplateArgs(Template, DTST->template_arguments());
-        break;
-      }
       mangleUnresolvedPrefix(Prefix,
                              /*recursive=*/true);
     } else {
@@ -2478,6 +2462,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Attributed:
   case Type::BTFTagAttributed:
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
   case Type::PackExpansion:
@@ -2618,7 +2603,8 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
         cast<DependentTemplateSpecializationType>(Ty);
     TemplateName Template = getASTContext().getDependentTemplateName(
         DTST->getDependentTemplateName());
-    mangleTemplatePrefix(Template);
+    const DependentTemplateStorage &S = DTST->getDependentTemplateName();
+    mangleSourceName(S.getName().getIdentifier());
     mangleTemplateArgs(Template, DTST->template_arguments());
     break;
   }
@@ -2895,6 +2881,26 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
   if (Quals.hasUnaligned())
     mangleVendorQualifier("__unaligned");
 
+  // __ptrauth.  Note that this is parameterized.
+  if (PointerAuthQualifier PtrAuth = Quals.getPointerAuth()) {
+    mangleVendorQualifier("__ptrauth");
+    // For now, since we only allow non-dependent arguments, we can just
+    // inline the mangling of those arguments as literals.  We treat the
+    // key and extra-discriminator arguments as 'unsigned int' and the
+    // address-discriminated argument as 'bool'.
+    Out << "I"
+           "Lj"
+        << PtrAuth.getKey()
+        << "E"
+           "Lb"
+        << unsigned(PtrAuth.isAddressDiscriminated())
+        << "E"
+           "Lj"
+        << PtrAuth.getExtraDiscriminator()
+        << "E"
+           "E";
+  }
+
   // Remaining ARC ownership qualifiers.
   switch (Quals.getObjCLifetime()) {
   case Qualifiers::OCL_None:
@@ -3098,11 +3104,12 @@ void CXXNameMangler::mangleType(QualType T) {
     addSubstitution(T);
 }
 
-void CXXNameMangler::mangleCXXRecordDecl(const CXXRecordDecl *Record) {
+void CXXNameMangler::mangleCXXRecordDecl(const CXXRecordDecl *Record,
+                                         bool SuppressSubstitution) {
   if (mangleSubstitution(Record))
     return;
   mangleName(Record);
-  if (isCompatibleWith(LangOptions::ClangABI::Ver19))
+  if (SuppressSubstitution)
     return;
   addSubstitution(Record);
 }
@@ -3483,7 +3490,7 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     type_name = #MangledName;                                                  \
     Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
     break;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
   case BuiltinType::Id:                                                        \
     mangleVendorType(#Name);                                                   \
@@ -4688,6 +4695,44 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
   mangleType(T->getWrappedType());
 }
 
+void CXXNameMangler::mangleType(const HLSLInlineSpirvType *T) {
+  SmallString<20> TypeNameStr;
+  llvm::raw_svector_ostream TypeNameOS(TypeNameStr);
+
+  TypeNameOS << "spirv_type";
+
+  TypeNameOS << "_" << T->getOpcode();
+  TypeNameOS << "_" << T->getSize();
+  TypeNameOS << "_" << T->getAlignment();
+
+  mangleVendorType(TypeNameStr);
+
+  for (auto &Operand : T->getOperands()) {
+    using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+    switch (Operand.getKind()) {
+    case SpirvOperandKind::ConstantId:
+      mangleVendorQualifier("_Const");
+      mangleIntegerLiteral(Operand.getResultType(),
+                           llvm::APSInt(Operand.getValue()));
+      break;
+    case SpirvOperandKind::Literal:
+      mangleVendorQualifier("_Lit");
+      mangleIntegerLiteral(Context.getASTContext().IntTy,
+                           llvm::APSInt(Operand.getValue()));
+      break;
+    case SpirvOperandKind::TypeId:
+      mangleVendorQualifier("_Type");
+      mangleType(Operand.getResultType());
+      break;
+    default:
+      llvm_unreachable("Invalid SpirvOperand kind");
+      break;
+    }
+    TypeNameOS << Operand.getKind();
+  }
+}
+
 void CXXNameMangler::mangleIntegerLiteral(QualType T,
                                           const llvm::APSInt &Value) {
   //  <expr-primary> ::= L <type> <value number> E # integer literal
@@ -4701,7 +4746,6 @@ void CXXNameMangler::mangleIntegerLiteral(QualType T,
     mangleNumber(Value);
   }
   Out << 'E';
-
 }
 
 void CXXNameMangler::mangleMemberExprBase(const Expr *Base, bool IsArrow) {
@@ -6047,8 +6091,6 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   case Dtor_Comdat:
     Out << "D5";
     break;
-  case Dtor_VectorDeleting:
-    llvm_unreachable("Itanium ABI does not use vector deleting dtors");
   }
 }
 
@@ -7517,7 +7559,12 @@ void ItaniumMangleContextImpl::mangleCXXCtorVTable(const CXXRecordDecl *RD,
   // <special-name> ::= TC <type> <offset number> _ <base type>
   CXXNameMangler Mangler(*this, Out);
   Mangler.getStream() << "_ZTC";
-  Mangler.mangleCXXRecordDecl(RD);
+  // Older versions of clang did not add the record as a substitution candidate
+  // here.
+  bool SuppressSubstitution =
+      getASTContext().getLangOpts().getClangABICompat() <=
+      LangOptions::ClangABI::Ver19;
+  Mangler.mangleCXXRecordDecl(RD, SuppressSubstitution);
   Mangler.getStream() << Offset;
   Mangler.getStream() << '_';
   Mangler.mangleCXXRecordDecl(Type);

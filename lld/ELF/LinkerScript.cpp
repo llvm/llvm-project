@@ -26,7 +26,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
@@ -35,7 +34,6 @@
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::ELF;

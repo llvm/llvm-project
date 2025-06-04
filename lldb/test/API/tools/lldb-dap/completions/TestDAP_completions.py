@@ -2,7 +2,6 @@
 Test lldb-dap completions request
 """
 
-
 import lldbdap_testcase
 import dap_server
 from lldbsuite.test import lldbutil
@@ -32,6 +31,7 @@ variable_var_completion = {
 variable_var1_completion = {"text": "var1", "label": "var1 -- int &"}
 variable_var2_completion = {"text": "var2", "label": "var2 -- int &"}
 
+
 # Older version of libcxx produce slightly different typename strings for
 # templates like vector.
 @skipIf(compiler="clang", compiler_version=["<", "16.0"])
@@ -43,22 +43,23 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         for not_expected_item in not_expected_list:
             self.assertNotIn(not_expected_item, actual_list)
 
-
-    def setup_debugee(self):
+    def setup_debuggee(self):
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-
         source = "main.cpp"
-        breakpoint1_line = line_number(source, "// breakpoint 1")
-        breakpoint2_line = line_number(source, "// breakpoint 2")
-
-        self.set_source_breakpoints(source, [breakpoint1_line, breakpoint2_line])
+        self.build_and_launch(program)
+        self.set_source_breakpoints(
+            source,
+            [
+                line_number(source, "// breakpoint 1"),
+                line_number(source, "// breakpoint 2"),
+            ],
+        )
 
     def test_command_completions(self):
         """
         Tests completion requests for lldb commands, within "repl-mode=command"
         """
-        self.setup_debugee()
+        self.setup_debuggee()
         self.continue_to_next_stop()
 
         res = self.dap_server.request_evaluate(
@@ -137,7 +138,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests completion requests in "repl-mode=variable"
         """
-        self.setup_debugee()
+        self.setup_debuggee()
         self.continue_to_next_stop()
 
         res = self.dap_server.request_evaluate(
@@ -235,7 +236,7 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests completion requests in "repl-mode=auto"
         """
-        self.setup_debugee()
+        self.setup_debuggee()
 
         res = self.dap_server.request_evaluate(
             "`lldb-dap repl-mode auto", context="repl"

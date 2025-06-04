@@ -14,7 +14,6 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/BLAKE3.h"
-#include "llvm/Support/StringSaver.h"
 #include <optional>
 
 using namespace clang;
@@ -574,7 +573,6 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
                                         llvm::vfs::FileSystem &VFS) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>, llvm::endianness::native>
       HashBuilder;
-  SmallString<32> Scratch;
 
   // Hash the compiler version and serialization version to ensure the module
   // will be readable.
@@ -630,13 +628,6 @@ void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
   if (Reason != LexedFileChangeReason::EnterFile)
     return;
 
-  // This has to be delayed as the context hash can change at the start of
-  // `CompilerInstance::ExecuteAction`.
-  if (MDC.ContextHash.empty()) {
-    MDC.ContextHash = MDC.ScanInstance.getInvocation().getModuleHash();
-    MDC.Consumer.handleContextHash(MDC.ContextHash);
-  }
-
   SourceManager &SM = MDC.ScanInstance.getSourceManager();
 
   // Dependency generation really does want to go all the way to the
@@ -664,7 +655,7 @@ void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
                                         const Module *Imported) {
   if (MDC.ScanInstance.getPreprocessor().isInImportingCXXNamedModules()) {
     P1689ModuleInfo RequiredModule;
-    RequiredModule.ModuleName = Path[0].first->getName().str();
+    RequiredModule.ModuleName = Path[0].getIdentifierInfo()->getName().str();
     RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
     MDC.RequiredStdCXXModules.push_back(RequiredModule);
     return;
@@ -718,6 +709,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   for (const Module *M : MDC.DirectModularDeps)
     handleTopLevelModule(M);
 
+  MDC.Consumer.handleContextHash(
+      MDC.ScanInstance.getInvocation().getModuleHash());
+
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
   if (MDC.Service.getFormat() == ScanningOutputFormat::P1689)
@@ -763,14 +757,9 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MD.IsSystem = M->IsSystem;
 
   // Start off with the assumption that this module is shareable when there
-  // is a sysroot provided. As more dependencies are discovered, check if those
-  // come from the provided shared directories.
-  const llvm::SmallVector<StringRef> StableDirs = {
-      MDC.ScanInstance.getHeaderSearchOpts().Sysroot,
-      MDC.ScanInstance.getHeaderSearchOpts().ResourceDir};
-  MD.IsInStableDirectories =
-      !StableDirs[0].empty() &&
-      (llvm::sys::path::root_directory(StableDirs[0]) != StableDirs[0]);
+  // are stable directories. As more dependencies are discovered, check if those
+  // come from the provided directories.
+  MD.IsInStableDirectories = !MDC.StableDirs.empty();
 
   // For modules which use export_as link name, the linked product that of the
   // corresponding export_as-named module.
@@ -817,7 +806,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
           auto FullFilePath = ASTReader::ResolveImportedPath(
               PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
           MD.IsInStableDirectories =
-              isPathInStableDir(StableDirs, *FullFilePath);
+              isPathInStableDir(MDC.StableDirs, *FullFilePath);
         }
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
@@ -864,7 +853,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   // IsInStableDirectories.
   if (MD.IsInStableDirectories)
     MD.IsInStableDirectories =
-        areOptionsInStableDir(StableDirs, CI.getHeaderSearchOpts());
+        areOptionsInStableDir(MDC.StableDirs, CI.getHeaderSearchOpts());
 
   MDC.associateWithContextHash(CI, IgnoreCWD, MD);
 
@@ -978,11 +967,12 @@ ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
-    const PrebuiltModulesAttrsMap PrebuiltModulesASTMap)
+    const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+    const ArrayRef<StringRef> StableDirs)
     : Service(Service), ScanInstance(ScanInstance), Consumer(C),
       Controller(Controller),
       PrebuiltModulesASTMap(std::move(PrebuiltModulesASTMap)),
-      Opts(std::move(Opts)),
+      StableDirs(StableDirs), Opts(std::move(Opts)),
       CommonInvocation(
           makeCommonInvocationForModuleBuild(std::move(OriginalCI))) {}
 

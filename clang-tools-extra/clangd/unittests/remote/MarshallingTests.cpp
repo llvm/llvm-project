@@ -223,6 +223,7 @@ TEST(RemoteMarshallingTest, RefSerialization) {
   Location.FileURI = testPathURI(
       "llvm-project/llvm/clang-tools-extra/clangd/Protocol.h", Strings);
   Ref.Location = Location;
+  Ref.Container = llvm::cantFail(SymbolID::fromStr("0000000000000001"));
 
   Marshaller ProtobufMarshaller(testPath("llvm-project/"),
                                 testPath("llvm-project/"));

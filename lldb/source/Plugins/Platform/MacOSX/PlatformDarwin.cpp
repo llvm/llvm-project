@@ -237,12 +237,9 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
               // ScriptInterpreter. For now, we just replace dots with
               // underscores, but if we ever support anything other than
               // Python we will need to rework this
-              std::replace(module_basename.begin(), module_basename.end(), '.',
-                           '_');
-              std::replace(module_basename.begin(), module_basename.end(), ' ',
-                           '_');
-              std::replace(module_basename.begin(), module_basename.end(), '-',
-                           '_');
+              llvm::replace(module_basename, '.', '_');
+              llvm::replace(module_basename, ' ', '_');
+              llvm::replace(module_basename, '-', '_');
               ScriptInterpreter *script_interpreter =
                   target->GetDebugger().GetScriptInterpreter();
               if (script_interpreter &&

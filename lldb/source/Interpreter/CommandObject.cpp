@@ -32,7 +32,6 @@
 #include "lldb/Target/Language.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 
 using namespace lldb;
@@ -338,14 +337,11 @@ void CommandObject::HandleArgumentCompletion(
 
 }
 
-
 bool CommandObject::HelpTextContainsWord(llvm::StringRef search_word,
                                          bool search_short_help,
                                          bool search_long_help,
                                          bool search_syntax,
                                          bool search_options) {
-  std::string options_usage_help;
-
   bool found_word = false;
 
   llvm::StringRef short_help = GetHelp();

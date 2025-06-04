@@ -3,13 +3,13 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=X86,X86-AVX,X86-AVX1OR2,X86-AVX1
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=X86,X86-AVX,X86-AVX1OR2,X86-AVX2
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512vl | FileCheck %s --check-prefixes=X86,X86-AVX,X86-AVX512,X86-AVX512VL
-; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512fp16 | FileCheck %s --check-prefixes=X86,X86-AVX,X86-AVX512,X86-AVX512FP16
+; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512fp16,+avx512vl | FileCheck %s --check-prefixes=X86,X86-AVX,X86-AVX512,X86-AVX512FP16
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512dq,+avx512vl | FileCheck %s --check-prefixes=X86,X86-AVX,X86-AVX512,X86-AVX512VLDQ
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=X64,X64-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX1OR2,X64-AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX1OR2,X64-AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX512,X64-AVX512VL
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16 | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX512,X64-AVX512FP16
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512fp16,+avx512vl | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX512,X64-AVX512FP16
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+avx512vl | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX512,X64-AVX512VLDQ
 
 ;

@@ -83,7 +83,7 @@ template <typename T, char CH>
 void bar() {
   T t = 0;
   A a(CH, 1.1); // OK; C++ paren list constructors are supported in semantic tree transformations.
-  // beforecxx20-warning@-1 2{{aggregate initialization of type 'A' from a parenthesized list of values is a C++20 extension}}
+  // beforecxx20-warning@-1 {{aggregate initialization of type 'A' from a parenthesized list of values is a C++20 extension}}
 }
 
 template <class T, class... Args>
@@ -156,9 +156,6 @@ void foo(int n) { // expected-note {{declared here}}
 
   constexpr F f2(1, 1); // OK: f2.b is initialized by a constant expression.
   // beforecxx20-warning@-1 {{aggregate initialization of type 'const F' from a parenthesized list of values is a C++20 extension}}
-
-  bar<int, 'a'>();
-  // beforecxx20-note@-1 {{in instantiation of function template specialization 'bar<int, 'a'>' requested here}}
 
   G<char> g('b', 'b');
   // beforecxx20-warning@-1 {{aggregate initialization of type 'G<char>' from a parenthesized list of values is a C++20 extension}}
@@ -354,7 +351,7 @@ using Td = int[]; Td d(42,43);
 // beforecxx20-warning@-1 {{aggregate initialization of type 'int[2]' from a parenthesized list of values is a C++20 extension}}
 template<typename T, int Sz> using ThroughAlias = T[Sz];
 ThroughAlias<int, 1> e(42);
-// beforecxx20-warning@-1 {{aggregate initialization of type 'ThroughAlias<int, 1>' (aka 'int[1]') from a parenthesized list of values is a C++20 extension}} 
+// beforecxx20-warning@-1 {{aggregate initialization of type 'ThroughAlias<int, 1>' (aka 'int[1]') from a parenthesized list of values is a C++20 extension}}
 
 }
 
@@ -374,5 +371,57 @@ static_assert(S(1, 2) == S(1, 2)); // beforecxx20-warning 2{{C++20 extension}}
 static_assert(S(1, 2) == S(3, 4));
 // expected-error@-1 {{failed due to requirement 'CXXParenListInitExpr::S(1, 2) == CXXParenListInitExpr::S(3, 4)'}} \
 // beforecxx20-warning@-1 2{{C++20 extension}}
+
+}
+
+namespace GH72880 {
+struct Base {};
+struct Derived : Base {
+    int count = 42;
+};
+
+template <typename T>
+struct BaseTpl {};
+template <typename T>
+struct DerivedTpl : BaseTpl<T> {
+    int count = 43;
+};
+template <typename T> struct S {
+  void f() {
+      Derived a = static_cast<Derived>(Base());
+      // beforecxx20-warning@-1 {{C++20 extension}}
+      DerivedTpl b = static_cast<DerivedTpl<T>>(BaseTpl<T>());
+      // beforecxx20-warning@-1 {{C++20 extension}}
+      static_assert(static_cast<Derived>(Base()).count == 42);
+      // beforecxx20-warning@-1 {{C++20 extension}}
+      static_assert(static_cast<DerivedTpl<T>>(BaseTpl<T>()).count == 43);
+      // beforecxx20-warning@-1 {{C++20 extension}}
+  }
+};
+
+void test() {
+    S<int>{}.f(); // beforecxx20-note {{requested here}}
+}
+}
+
+namespace GH72880_regression {
+struct E {
+    int i = 42;
+};
+struct G {
+  E e;
+};
+template <typename>
+struct Test {
+  void f() {
+    constexpr E e;
+    //FIXME: We should only warn one
+    constexpr G g(e); // beforecxx20-warning 2{{C++20 extension}}
+    static_assert(g.e.i == 42);
+  }
+};
+void test() {
+    Test<int>{}.f(); // beforecxx20-note {{requested here}}
+}
 
 }

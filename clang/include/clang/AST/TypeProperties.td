@@ -154,40 +154,22 @@ let Class = IncompleteArrayType in {
 }
 
 let Class = VariableArrayType in {
-  def : Property<"leftBracketLoc", SourceLocation> {
-    let Read = [{ node->getLBracketLoc() }];
-  }
-  def : Property<"rightBracketLoc", SourceLocation> {
-    let Read = [{ node->getRBracketLoc() }];
-  }
   def : Property<"size", ExprRef> {
     let Read = [{ node->getSizeExpr() }];
   }
 
   def : Creator<[{
     return ctx.getVariableArrayType(elementType, size, sizeModifier,
-                                    indexQualifiers.getCVRQualifiers(),
-                                    SourceRange(leftBracketLoc,
-                                                rightBracketLoc));
+                                    indexQualifiers.getCVRQualifiers());
   }]>;
 }
 
 let Class = DependentSizedArrayType in {
-  def : Property<"size", ExprRef> {
-    let Read = [{ node->getSizeExpr() }];
-  }
-  def : Property<"leftBracketLoc", SourceLocation> {
-    let Read = [{ node->getLBracketLoc() }];
-  }
-  def : Property<"rightBracketLoc", SourceLocation> {
-    let Read = [{ node->getRBracketLoc() }];
-  }
+  def : Property<"size", ExprRef> { let Read = [{ node->getSizeExpr() }]; }
 
   def : Creator<[{
     return ctx.getDependentSizedArrayType(elementType, size, sizeModifier,
-                                          indexQualifiers.getCVRQualifiers(),
-                                          SourceRange(leftBracketLoc,
-                                                      rightBracketLoc));
+                                          indexQualifiers.getCVRQualifiers());
   }]>;
 }
 
@@ -719,6 +701,24 @@ let Class = HLSLAttributedResourceType in {
   }]>;
 }
 
+let Class = HLSLInlineSpirvType in {
+  def : Property<"opcode", UInt32> {
+    let Read = [{ node->getOpcode() }];
+  }
+  def : Property<"size", UInt32> {
+    let Read = [{ node->getSize() }];
+  }
+  def : Property<"alignment", UInt32> {
+    let Read = [{ node->getAlignment() }];
+  }
+  def : Property<"operands", Array<HLSLSpirvOperand>> {
+    let Read = [{ node->getOperands() }];
+  }
+  def : Creator<[{
+    return ctx.getHLSLInlineSpirvType(opcode, size, alignment, operands);
+  }]>;
+}
+
 let Class = DependentAddressSpaceType in {
   def : Property<"pointeeType", QualType> {
     let Read = [{ node->getPointeeType() }];
@@ -881,7 +881,7 @@ let Class = BuiltinType in {
 
 #define SVE_TYPE(NAME, ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 
 #define PPC_VECTOR_TYPE(NAME, ID, SIZE) \
       case BuiltinType::ID: return ctx.ID##Ty;

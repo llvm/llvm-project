@@ -55,6 +55,15 @@ public:
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
 
+  /// CXXThisDecl - When generating code for a C++ member function,
+  /// this will hold the implicit 'this' declaration.
+  ImplicitParamDecl *cxxabiThisDecl = nullptr;
+  mlir::Value cxxabiThisValue = nullptr;
+  mlir::Value cxxThisValue = nullptr;
+
+  // Holds the Decl for the current outermost non-closure context
+  const clang::Decl *curFuncDecl = nullptr;
+
   /// The function for which code is currently being generated.
   cir::FuncOp curFn;
 
@@ -62,6 +71,9 @@ public:
   /// This keeps track of the CIR allocas or globals for local C
   /// declarations.
   DeclMapTy localDeclMap;
+
+  /// The type of the condition for the emitting switch statement.
+  llvm::SmallVector<mlir::Type, 2> condTypeStack;
 
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
 
@@ -93,13 +105,156 @@ public:
     return getEvaluationKind(type) == cir::TEK_Scalar;
   }
 
+  static bool hasAggregateEvaluationKind(clang::QualType type) {
+    return getEvaluationKind(type) == cir::TEK_Aggregate;
+  }
+
   CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                  bool suppressNewContext = false);
   ~CIRGenFunction();
 
   CIRGenTypes &getTypes() const { return cgm.getTypes(); }
 
+  const TargetInfo &getTarget() const { return cgm.getTarget(); }
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
+
+  // ---------------------
+  // Opaque value handling
+  // ---------------------
+
+  /// Keeps track of the current set of opaque value expressions.
+  llvm::DenseMap<const OpaqueValueExpr *, LValue> opaqueLValues;
+  llvm::DenseMap<const OpaqueValueExpr *, RValue> opaqueRValues;
+
+public:
+  /// A non-RAII class containing all the information about a bound
+  /// opaque value.  OpaqueValueMapping, below, is a RAII wrapper for
+  /// this which makes individual mappings very simple; using this
+  /// class directly is useful when you have a variable number of
+  /// opaque values or don't want the RAII functionality for some
+  /// reason.
+  class OpaqueValueMappingData {
+    const OpaqueValueExpr *opaqueValue;
+    bool boundLValue;
+
+    OpaqueValueMappingData(const OpaqueValueExpr *ov, bool boundLValue)
+        : opaqueValue(ov), boundLValue(boundLValue) {}
+
+  public:
+    OpaqueValueMappingData() : opaqueValue(nullptr) {}
+
+    static bool shouldBindAsLValue(const Expr *expr) {
+      // gl-values should be bound as l-values for obvious reasons.
+      // Records should be bound as l-values because IR generation
+      // always keeps them in memory.  Expressions of function type
+      // act exactly like l-values but are formally required to be
+      // r-values in C.
+      return expr->isGLValue() || expr->getType()->isFunctionType() ||
+             hasAggregateEvaluationKind(expr->getType());
+    }
+
+    static OpaqueValueMappingData
+    bind(CIRGenFunction &cgf, const OpaqueValueExpr *ov, const Expr *e) {
+      if (shouldBindAsLValue(ov))
+        return bind(cgf, ov, cgf.emitLValue(e));
+      return bind(cgf, ov, cgf.emitAnyExpr(e));
+    }
+
+    static OpaqueValueMappingData
+    bind(CIRGenFunction &cgf, const OpaqueValueExpr *ov, const LValue &lv) {
+      assert(shouldBindAsLValue(ov));
+      cgf.opaqueLValues.insert(std::make_pair(ov, lv));
+      return OpaqueValueMappingData(ov, true);
+    }
+
+    static OpaqueValueMappingData
+    bind(CIRGenFunction &cgf, const OpaqueValueExpr *ov, const RValue &rv) {
+      assert(!shouldBindAsLValue(ov));
+      cgf.opaqueRValues.insert(std::make_pair(ov, rv));
+
+      OpaqueValueMappingData data(ov, false);
+
+      // Work around an extremely aggressive peephole optimization in
+      // EmitScalarConversion which assumes that all other uses of a
+      // value are extant.
+      assert(!cir::MissingFeatures::peepholeProtection() && "NYI");
+      return data;
+    }
+
+    bool isValid() const { return opaqueValue != nullptr; }
+    void clear() { opaqueValue = nullptr; }
+
+    void unbind(CIRGenFunction &cgf) {
+      assert(opaqueValue && "no data to unbind!");
+
+      if (boundLValue) {
+        cgf.opaqueLValues.erase(opaqueValue);
+      } else {
+        cgf.opaqueRValues.erase(opaqueValue);
+        assert(!cir::MissingFeatures::peepholeProtection() && "NYI");
+      }
+    }
+  };
+
+  /// An RAII object to set (and then clear) a mapping for an OpaqueValueExpr.
+  class OpaqueValueMapping {
+    CIRGenFunction &cgf;
+    OpaqueValueMappingData data;
+
+  public:
+    static bool shouldBindAsLValue(const Expr *expr) {
+      return OpaqueValueMappingData::shouldBindAsLValue(expr);
+    }
+
+    /// Build the opaque value mapping for the given conditional
+    /// operator if it's the GNU ?: extension.  This is a common
+    /// enough pattern that the convenience operator is really
+    /// helpful.
+    ///
+    OpaqueValueMapping(CIRGenFunction &cgf,
+                       const AbstractConditionalOperator *op)
+        : cgf(cgf) {
+      if (mlir::isa<ConditionalOperator>(op))
+        // Leave Data empty.
+        return;
+
+      const BinaryConditionalOperator *e =
+          mlir::cast<BinaryConditionalOperator>(op);
+      data = OpaqueValueMappingData::bind(cgf, e->getOpaqueValue(),
+                                          e->getCommon());
+    }
+
+    /// Build the opaque value mapping for an OpaqueValueExpr whose source
+    /// expression is set to the expression the OVE represents.
+    OpaqueValueMapping(CIRGenFunction &cgf, const OpaqueValueExpr *ov)
+        : cgf(cgf) {
+      if (ov) {
+        assert(ov->getSourceExpr() && "wrong form of OpaqueValueMapping used "
+                                      "for OVE with no source expression");
+        data = OpaqueValueMappingData::bind(cgf, ov, ov->getSourceExpr());
+      }
+    }
+
+    OpaqueValueMapping(CIRGenFunction &cgf, const OpaqueValueExpr *opaqueValue,
+                       LValue lvalue)
+        : cgf(cgf),
+          data(OpaqueValueMappingData::bind(cgf, opaqueValue, lvalue)) {}
+
+    OpaqueValueMapping(CIRGenFunction &cgf, const OpaqueValueExpr *opaqueValue,
+                       RValue rvalue)
+        : cgf(cgf),
+          data(OpaqueValueMappingData::bind(cgf, opaqueValue, rvalue)) {}
+
+    void pop() {
+      data.unbind(cgf);
+      data.clear();
+    }
+
+    ~OpaqueValueMapping() {
+      if (data.isValid())
+        data.unbind(cgf);
+    }
+  };
 
 private:
   /// Declare a variable in the current scope, return success if the variable
@@ -161,6 +316,17 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
+  // an ObjCMethodDecl.
+  struct PrototypeWrapper {
+    llvm::PointerUnion<const clang::FunctionProtoType *,
+                       const clang::ObjCMethodDecl *>
+        p;
+
+    PrototypeWrapper(const clang::FunctionProtoType *ft) : p(ft) {}
+    PrototypeWrapper(const clang::ObjCMethodDecl *md) : p(md) {}
+  };
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -169,6 +335,23 @@ public:
   public:
     AbstractCallee() : calleeDecl(nullptr) {}
     AbstractCallee(const clang::FunctionDecl *fd) : calleeDecl(fd) {}
+
+    bool hasFunctionDecl() const {
+      return llvm::isa_and_nonnull<clang::FunctionDecl>(calleeDecl);
+    }
+
+    unsigned getNumParams() const {
+      if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
+        return fd->getNumParams();
+      return llvm::cast<clang::ObjCMethodDecl>(calleeDecl)->param_size();
+    }
+
+    const clang::ParmVarDecl *getParamDecl(unsigned I) const {
+      if (const auto *fd = llvm::dyn_cast<clang::FunctionDecl>(calleeDecl))
+        return fd->getParamDecl(I);
+      return *(llvm::cast<clang::ObjCMethodDecl>(calleeDecl)->param_begin() +
+               I);
+    }
   };
 
   void finishFunction(SourceLocation endLoc);
@@ -227,7 +410,7 @@ public:
     /// Returns the address of the object within this declaration.
     /// Note that this does not chase the forwarding pointer for
     /// __block decls.
-    Address getObjectAddress(CIRGenFunction &CGF) const {
+    Address getObjectAddress(CIRGenFunction &cgf) const {
       if (!IsEscapingByRef)
         return Addr;
 
@@ -246,6 +429,8 @@ public:
     localDeclMap.insert({vd, addr});
     // TODO: Add symbol table support
   }
+
+  LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
 
   /// Construct an address with the natural alignment of T. If a pointer to T
   /// is expected to be signed, the pointer passed to this function must have
@@ -268,6 +453,28 @@ public:
   LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
     return LValue::makeAddr(addr, ty, baseInfo);
   }
+
+  /// Return the address of a local variable.
+  Address getAddrOfLocalVar(const clang::VarDecl *vd) {
+    auto it = localDeclMap.find(vd);
+    assert(it != localDeclMap.end() &&
+           "Invalid argument to getAddrOfLocalVar(), no decl!");
+    return it->second;
+  }
+
+  /// Load the value for 'this'. This function is only valid while generating
+  /// code for an C++ member function.
+  /// FIXME(cir): this should return a mlir::Value!
+  mlir::Value loadCXXThis() {
+    assert(cxxThisValue && "no 'this' value for this function");
+    return cxxThisValue;
+  }
+
+  /// Get an appropriate 'undef' rvalue for the given type.
+  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
+  /// void types so it just returns RValue::get(nullptr) but it'll need
+  /// addressed later.
+  RValue getUndefRValue(clang::QualType ty);
 
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
@@ -417,6 +624,10 @@ private:
                               clang::CharUnits alignment);
 
 public:
+  Address emitAddrOfFieldStorage(Address base, const FieldDecl *field,
+                                 llvm::StringRef fieldName,
+                                 unsigned fieldIndex);
+
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment,
                          bool insertIntoFnEntryBlock,
@@ -428,13 +639,21 @@ public:
 
   void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
 
+  LValue emitAggExprToLValue(const Expr *e);
+
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e);
 
+  /// Similarly to emitAnyExpr(), however, the result will always be accessible
+  /// even if no aggregate location is provided.
+  RValue emitAnyExprToTemp(const clang::Expr *e);
+
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+
+  Address emitArrayToPointerDecay(const Expr *array);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
 
@@ -451,14 +670,60 @@ public:
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
-                  const CIRGenCallee &callee, cir::CIRCallOpInterface *callOp,
+                  const CIRGenCallee &callee, ReturnValueSlot returnValue,
+                  const CallArgList &args, cir::CIRCallOpInterface *callOp,
                   mlir::Location loc);
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
-                  const clang::CallExpr *e);
-  RValue emitCallExpr(const clang::CallExpr *e);
+                  const clang::CallExpr *e, ReturnValueSlot returnValue);
+  void emitCallArg(CallArgList &args, const clang::Expr *e,
+                   clang::QualType argType);
+  void emitCallArgs(
+      CallArgList &args, PrototypeWrapper prototype,
+      llvm::iterator_range<clang::CallExpr::const_arg_iterator> argRange,
+      AbstractCallee callee = AbstractCallee(), unsigned paramsToSkip = 0);
+  RValue emitCallExpr(const clang::CallExpr *e,
+                      ReturnValueSlot returnValue = ReturnValueSlot());
+  LValue emitCallExprLValue(const clang::CallExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
+  template <typename T>
+  mlir::LogicalResult emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
+                                             mlir::ArrayAttr value,
+                                             cir::CaseOpKind kind,
+                                             bool buildingTopLevelCase);
+
+  mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
+                                   mlir::Type condType,
+                                   bool buildingTopLevelCase);
+
+  LValue emitCastLValue(const CastExpr *e);
+
+  LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+
+  mlir::LogicalResult emitCXXForRangeStmt(const CXXForRangeStmt &s,
+                                          llvm::ArrayRef<const Attr *> attrs);
+
+  RValue emitCXXMemberCallExpr(const clang::CXXMemberCallExpr *e,
+                               ReturnValueSlot returnValue);
+
+  RValue emitCXXMemberOrOperatorCall(
+      const clang::CXXMethodDecl *md, const CIRGenCallee &callee,
+      ReturnValueSlot returnValue, mlir::Value thisPtr,
+      mlir::Value implicitParam, clang::QualType implicitParamTy,
+      const clang::CallExpr *ce, CallArgList *rtlArgs);
+
+  RValue emitCXXMemberOrOperatorMemberCallExpr(
+      const clang::CallExpr *ce, const clang::CXXMethodDecl *md,
+      ReturnValueSlot returnValue, bool hasQualifier,
+      clang::NestedNameSpecifier *qualifier, bool isArrow,
+      const clang::Expr *base);
+
+  RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
+                                       const CXXMethodDecl *md,
+                                       ReturnValueSlot returnValue);
+
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
@@ -506,6 +771,10 @@ public:
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
 
+  mlir::LogicalResult emitDefaultStmt(const clang::DefaultStmt &s,
+                                      mlir::Type condType,
+                                      bool buildingTopLevelCase);
+
   /// Emit an `if` on a boolean condition to the specified blocks.
   /// FIXME: Based on the condition, this might try to simplify the codegen of
   /// the conditional based on the branch.
@@ -534,6 +803,11 @@ public:
   /// returning the rvalue.
   RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
 
+  Address emitLoadOfReference(LValue refLVal, mlir::Location loc,
+                              LValueBaseInfo *pointeeBaseInfo);
+  LValue emitLoadOfReferenceLValue(Address refAddr, mlir::Location loc,
+                                   QualType refTy, AlignmentSource source);
+
   /// EmitLoadOfScalar - Load a scalar value from an address, taking
   /// care to appropriately convert from the memory representation to
   /// the LLVM value representation.  The l-value must be a simple
@@ -544,6 +818,9 @@ public:
   /// of the expression.
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
+  LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  LValue emitMemberExpr(const MemberExpr *e);
 
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.
@@ -557,6 +834,9 @@ public:
   /// explicit source.
   Address emitPointerWithAlignment(const clang::Expr *expr,
                                    LValueBaseInfo *baseInfo);
+
+  /// Emits a reference binding to the passed in expression.
+  RValue emitReferenceBindingToExpr(const Expr *e);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
@@ -581,6 +861,13 @@ public:
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
+  LValue emitStringLiteralLValue(const StringLiteral *e);
+
+  mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
+  mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
+                                     bool buildingTopLevelCase);
+  mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
+
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
   /// Note: CIR defers most of the special casting to the final lowering passes
@@ -600,22 +887,110 @@ public:
   void emitNullabilityCheck(LValue lhs, mlir::Value rhs,
                             clang::SourceLocation loc);
 
+  /// An object to manage conditionally-evaluated expressions.
+  class ConditionalEvaluation {
+    CIRGenFunction &cgf;
+    mlir::OpBuilder::InsertPoint insertPt;
+
+  public:
+    ConditionalEvaluation(CIRGenFunction &cgf)
+        : cgf(cgf), insertPt(cgf.builder.saveInsertionPoint()) {}
+    ConditionalEvaluation(CIRGenFunction &cgf, mlir::OpBuilder::InsertPoint ip)
+        : cgf(cgf), insertPt(ip) {}
+
+    void beginEvaluation() {
+      assert(cgf.outermostConditional != this);
+      if (!cgf.outermostConditional)
+        cgf.outermostConditional = this;
+    }
+
+    void endEvaluation() {
+      assert(cgf.outermostConditional != nullptr);
+      if (cgf.outermostConditional == this)
+        cgf.outermostConditional = nullptr;
+    }
+
+    /// Returns the insertion point which will be executed prior to each
+    /// evaluation of the conditional code. In LLVM OG, this method
+    /// is called getStartingBlock.
+    mlir::OpBuilder::InsertPoint getInsertPoint() const { return insertPt; }
+  };
+
+  struct ConditionalInfo {
+    std::optional<LValue> lhs{}, rhs{};
+    mlir::Value result{};
+  };
+
+  // Return true if we're currently emitting one branch or the other of a
+  // conditional expression.
+  bool isInConditionalBranch() const { return outermostConditional != nullptr; }
+
+  void setBeforeOutermostConditional(mlir::Value value, Address addr) {
+    assert(isInConditionalBranch());
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
+      builder.createStore(
+          value.getLoc(), value, addr,
+          mlir::IntegerAttr::get(
+              mlir::IntegerType::get(value.getContext(), 64),
+              (uint64_t)addr.getAlignment().getAsAlign().value()));
+    }
+  }
+
+  // Points to the outermost active conditional control. This is used so that
+  // we know if a temporary should be destroyed conditionally.
+  ConditionalEvaluation *outermostConditional = nullptr;
+
+  template <typename FuncTy>
+  ConditionalInfo emitConditionalBlocks(const AbstractConditionalOperator *e,
+                                        const FuncTy &branchGenFunc);
+
+  mlir::Value emitTernaryOnBoolExpr(const clang::Expr *cond, mlir::Location loc,
+                                    const clang::Stmt *thenS,
+                                    const clang::Stmt *elseS);
+
   /// ----------------------
   /// CIR build helpers
   /// -----------------
 public:
+  cir::AllocaOp createTempAlloca(mlir::Type ty, mlir::Location loc,
+                                 const Twine &name = "tmp",
+                                 mlir::Value arraySize = nullptr,
+                                 bool insertIntoFnEntryBlock = false);
+  cir::AllocaOp createTempAlloca(mlir::Type ty, mlir::Location loc,
+                                 const Twine &name = "tmp",
+                                 mlir::OpBuilder::InsertPoint ip = {},
+                                 mlir::Value arraySize = nullptr);
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
-                           const Twine &name, bool insertIntoFnEntryBlock);
+                           const Twine &name = "tmp",
+                           mlir::Value arraySize = nullptr,
+                           Address *alloca = nullptr,
+                           mlir::OpBuilder::InsertPoint ip = {});
+  Address createTempAllocaWithoutCast(mlir::Type ty, CharUnits align,
+                                      mlir::Location loc,
+                                      const Twine &name = "tmp",
+                                      mlir::Value arraySize = nullptr,
+                                      mlir::OpBuilder::InsertPoint ip = {});
+
+  /// Create a temporary memory object of the given type, with
+  /// appropriate alignmen and cast it to the default address space. Returns
+  /// the original alloca instruction by \p Alloca if it is not nullptr.
+  Address createMemTemp(QualType t, mlir::Location loc,
+                        const Twine &name = "tmp", Address *alloca = nullptr,
+                        mlir::OpBuilder::InsertPoint ip = {});
+  Address createMemTemp(QualType t, CharUnits align, mlir::Location loc,
+                        const Twine &name = "tmp", Address *alloca = nullptr,
+                        mlir::OpBuilder::InsertPoint ip = {});
 
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission
   //===--------------------------------------------------------------------===//
 private:
   template <typename Op>
-  mlir::LogicalResult
-  emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
-                SourceLocation dirLoc,
-                llvm::ArrayRef<const OpenACCClause *> clauses);
+  Op emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
+                   SourceLocation dirLoc,
+                   llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>
@@ -623,6 +998,27 @@ private:
       mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
       SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
       const Stmt *associatedStmt);
+
+  template <typename Op, typename TermOp>
+  mlir::LogicalResult emitOpenACCOpCombinedConstruct(
+      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
+      const Stmt *loopStmt);
+
+  template <typename Op>
+  void emitOpenACCClauses(Op &op, OpenACCDirectiveKind dirKind,
+                          SourceLocation dirLoc,
+                          ArrayRef<const OpenACCClause *> clauses);
+  // The second template argument doesn't need to be a template, since it should
+  // always be an mlir::acc::LoopOp, but as this is a template anyway, we make
+  // it a template argument as this way we can avoid including the OpenACC MLIR
+  // headers here. We will count on linker failures/explicit instantiation to
+  // ensure we don't mess this up, but it is only called from 1 place, and
+  // instantiated 3x.
+  template <typename ComputeOp, typename LoopOp>
+  void emitOpenACCClauses(ComputeOp &op, LoopOp &loopOp,
+                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+                          ArrayRef<const OpenACCClause *> clauses);
 
 public:
   mlir::LogicalResult
@@ -650,6 +1046,9 @@ public:
 
   void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
   void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
+
+private:
+  QualType getVarArgType(const Expr *arg);
 };
 
 } // namespace clang::CIRGen

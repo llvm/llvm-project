@@ -261,12 +261,13 @@ __DO_LANE_SUM(double, f64);   // double __gpu_lane_sum_f64(m, x)
 // Returns a bitmask marking all lanes that have the same value of __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_any_u32_impl(uint64_t __lane_mask, uint32_t __x) {
-  uint32_t __match_mask = 0;
+  uint64_t __match_mask = 0;
 
   bool __done = 0;
-  while (__gpu_ballot(__lane_mask, !__done)) {
+  for (uint64_t __active_mask = __lane_mask; __active_mask;
+       __active_mask = __gpu_ballot(__lane_mask, !__done)) {
     if (!__done) {
-      uint32_t __first = __gpu_read_first_lane_u32(__lane_mask, __x);
+      uint32_t __first = __gpu_read_first_lane_u32(__active_mask, __x);
       if (__first == __x) {
         __match_mask = __gpu_lane_mask();
         __done = 1;
@@ -283,9 +284,10 @@ __gpu_match_any_u64_impl(uint64_t __lane_mask, uint64_t __x) {
   uint64_t __match_mask = 0;
 
   bool __done = 0;
-  while (__gpu_ballot(__lane_mask, !__done)) {
+  for (uint64_t __active_mask = __lane_mask; __active_mask;
+       __active_mask = __gpu_ballot(__lane_mask, !__done)) {
     if (!__done) {
-      uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+      uint64_t __first = __gpu_read_first_lane_u64(__active_mask, __x);
       if (__first == __x) {
         __match_mask = __gpu_lane_mask();
         __done = 1;

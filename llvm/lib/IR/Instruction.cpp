@@ -26,6 +26,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Compiler.h"
 using namespace llvm;
 
 InsertPosition::InsertPosition(Instruction *InsertBefore)
@@ -129,7 +130,7 @@ BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
   return getIterator();
 }
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
+LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
 
 void Instruction::insertBefore(BasicBlock &BB,
                                InstListType::iterator InsertPos) {
@@ -373,7 +374,7 @@ std::optional<BasicBlock::iterator> Instruction::getInsertionPointAfterDef() {
 }
 
 bool Instruction::isOnlyUserOfAnyOperand() {
-  return any_of(operands(), [](Value *V) { return V->hasOneUser(); });
+  return any_of(operands(), [](const Value *V) { return V->hasOneUser(); });
 }
 
 void Instruction::setHasNoUnsignedWrap(bool b) {
@@ -490,7 +491,7 @@ bool Instruction::hasNonDebugLocLoopMetadata() const {
   // the first item because it is a self-reference.
   for (const MDOperand &Op : llvm::drop_begin(LoopMD->operands())) {
     // check for debug location type by attempting a cast.
-    if (!dyn_cast<DILocation>(Op)) {
+    if (!isa<DILocation>(Op)) {
       return true;
     }
   }
@@ -532,8 +533,8 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
   if (!CB)
     return;
   // For call instructions, we also need to drop parameter and return attributes
-  // that are can cause UB if the call is moved to a location where the
-  // attribute is not valid.
+  // that can cause UB if the call is moved to a location where the attribute is
+  // not valid.
   AttributeList AL = CB->getAttributes();
   if (AL.isEmpty())
     return;
@@ -552,6 +553,20 @@ void Instruction::dropUBImplyingAttrsAndMetadata() {
   unsigned KnownIDs[] = {LLVMContext::MD_annotation, LLVMContext::MD_range,
                          LLVMContext::MD_nonnull, LLVMContext::MD_align};
   dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
+}
+
+bool Instruction::hasUBImplyingAttrs() const {
+  auto *CB = dyn_cast<CallBase>(this);
+  if (!CB)
+    return false;
+  // For call instructions, we also need to check parameter and return
+  // attributes that can cause UB.
+  for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+    if (CB->isPassingUndefUB(ArgNo))
+      return true;
+  return CB->hasRetAttr(Attribute::NoUndef) ||
+         CB->hasRetAttr(Attribute::Dereferenceable) ||
+         CB->hasRetAttr(Attribute::DereferenceableOrNull);
 }
 
 bool Instruction::isExact() const {

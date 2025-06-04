@@ -18,7 +18,6 @@
 
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemStatCache.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
@@ -26,7 +25,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -330,6 +328,8 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
   UFE->UID = NextFileUID++;
   UFE->UniqueID = Status.getUniqueID();
   UFE->IsNamedPipe = Status.getType() == llvm::sys::fs::file_type::fifo_file;
+  UFE->IsDeviceFile =
+      Status.getType() == llvm::sys::fs::file_type::character_file;
   UFE->File = std::move(F);
 
   if (UFE->File) {

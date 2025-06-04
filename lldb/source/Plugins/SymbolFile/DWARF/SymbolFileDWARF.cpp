@@ -1188,6 +1188,8 @@ bool SymbolFileDWARF::ParseImportedModules(
       SourceModule module;
       module.path.push_back(ConstString(name));
 
+      const char *include_path = module_die.GetAttributeValueAsString(
+          DW_AT_LLVM_include_path, nullptr);
       DWARFDIE parent_die = module_die;
       while ((parent_die = parent_die.GetParent())) {
         if (parent_die.Tag() != DW_TAG_module)
@@ -1195,10 +1197,16 @@ bool SymbolFileDWARF::ParseImportedModules(
         if (const char *name =
                 parent_die.GetAttributeValueAsString(DW_AT_name, nullptr))
           module.path.push_back(ConstString(name));
+
+        // Inferred submodule declarations may not have a
+        // DW_AT_LLVM_include_path. Pick the parent (aka umbrella) module's
+        // include path instead.
+        if (!include_path)
+          include_path = parent_die.GetAttributeValueAsString(
+              DW_AT_LLVM_include_path, nullptr);
       }
       std::reverse(module.path.begin(), module.path.end());
-      if (const char *include_path = module_die.GetAttributeValueAsString(
-              DW_AT_LLVM_include_path, nullptr)) {
+      if (include_path) {
         FileSpec include_spec(include_path, dwarf_cu->GetPathStyle());
         MakeAbsoluteAndRemap(include_spec, *dwarf_cu,
                              m_objfile_sp->GetModule());
@@ -1323,7 +1331,7 @@ bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
 
 size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
                                              Block *parent_block, DWARFDIE die,
-                                             addr_t subprogram_low_pc) {
+                                             addr_t function_file_addr) {
   size_t blocks_added = 0;
   for (; die; die = die.GetSibling()) {
     dw_tag_t tag = die.Tag();
@@ -1346,19 +1354,9 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
                                  decl_line, decl_column, call_file, call_line,
                                  call_column, nullptr)) {
       for (const llvm::DWARFAddressRange &range : ranges) {
-        if (!range.valid())
-          continue;
-        if (range.LowPC >= subprogram_low_pc)
-          block->AddRange(Block::Range(range.LowPC - subprogram_low_pc,
+        if (range.valid() && range.LowPC >= m_first_code_address)
+          block->AddRange(Block::Range(range.LowPC - function_file_addr,
                                        range.HighPC - range.LowPC));
-        else {
-          GetObjectFile()->GetModule()->ReportError(
-              "{0:x8}: adding range [{1:x16}-{2:x16}) which has a base "
-              "that is less than the function's low PC {3:x16}. Please file "
-              "a bug and attach the file at the "
-              "start of this error message",
-              block->GetID(), range.LowPC, range.HighPC, subprogram_low_pc);
-        }
       }
       block->FinalizeRanges();
 
@@ -1368,15 +1366,15 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
         if (decl_file || decl_line || decl_column)
           decl_up = std::make_unique<Declaration>(
               comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                  decl_file ? *decl_file : 0),
-              decl_line ? *decl_line : 0, decl_column ? *decl_column : 0);
+                  decl_file.value_or(0)),
+              decl_line.value_or(0), decl_column.value_or(0));
 
         std::unique_ptr<Declaration> call_up;
         if (call_file || call_line || call_column)
           call_up = std::make_unique<Declaration>(
               comp_unit.GetSupportFiles().GetFileSpecAtIndex(
-                  call_file ? *call_file : 0),
-              call_line ? *call_line : 0, call_column ? *call_column : 0);
+                  call_file.value_or(0)),
+              call_line.value_or(0), call_column.value_or(0));
 
         block->SetInlinedFunctionInfo(name, mangled_name, decl_up.get(),
                                       call_up.get());
@@ -1386,7 +1384,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
 
       if (die.HasChildren()) {
         blocks_added += ParseBlocksRecursive(
-            comp_unit, block, die.GetFirstChild(), subprogram_low_pc);
+            comp_unit, block, die.GetFirstChild(), function_file_addr);
       }
     }
   }
@@ -1548,8 +1546,7 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
           compiler_type_no_qualifiers.GetOpaqueQualType())) {
     return true;
   }
-  auto type_system = compiler_type.GetTypeSystem();
-  auto clang_type_system = type_system.dyn_cast_or_null<TypeSystemClang>();
+  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (!clang_type_system)
     return false;
   DWARFASTParserClang *ast_parser =
@@ -1559,8 +1556,7 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
 
 bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  auto clang_type_system =
-      compiler_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (clang_type_system) {
     DWARFASTParserClang *ast_parser =
         static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
@@ -4131,7 +4127,7 @@ void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
   m_index->Dump(s);
 }
 
-void SymbolFileDWARF::DumpClangAST(Stream &s) {
+void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
   auto ts_or_err = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   if (!ts_or_err)
     return;
@@ -4139,7 +4135,7 @@ void SymbolFileDWARF::DumpClangAST(Stream &s) {
   TypeSystemClang *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang)
     return;
-  clang->Dump(s.AsRawOstream());
+  clang->Dump(s.AsRawOstream(), filter);
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
@@ -4221,6 +4217,9 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
 
 const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
   llvm::call_once(m_dwp_symfile_once_flag, [this]() {
+    if (m_objfile_sp->GetArchitecture().GetTriple().isAppleMachO())
+      return;
+
     // Create a list of files to try and append .dwp to.
     FileSpecList symfiles;
     // Append the module's object file path.
@@ -4255,8 +4254,9 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
           FileSpec(symfile.GetPath() + ".dwp", symfile.GetPathStyle());
       LLDB_LOG(log, "Searching for DWP using: \"{0}\"",
                module_spec.GetSymbolFileSpec());
-      dwp_filespec =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+      dwp_filespec = PluginManager::LocateExecutableSymbolFile(
+          module_spec, search_paths,
+          m_objfile_sp->GetModule()->GetSymbolLocatorStatistics());
       if (FileSystem::Instance().Exists(dwp_filespec)) {
         break;
       }
@@ -4267,8 +4267,9 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       // find the correct DWP file, as the Debuginfod plugin uses *only* this
       // data to correctly match the DWP file with the binary.
       module_spec.GetUUID() = m_objfile_sp->GetUUID();
-      dwp_filespec =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+      dwp_filespec = PluginManager::LocateExecutableSymbolFile(
+          module_spec, search_paths,
+          m_objfile_sp->GetModule()->GetSymbolLocatorStatistics());
     }
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);

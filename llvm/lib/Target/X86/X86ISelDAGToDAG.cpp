@@ -275,8 +275,23 @@ namespace {
 #define GET_ND_IF_ENABLED(OPC) (Subtarget->hasNDD() ? OPC##_ND : OPC)
       // Negate the index if needed.
       if (AM.NegateIndex) {
-        unsigned NegOpc = VT == MVT::i64 ? GET_ND_IF_ENABLED(X86::NEG64r)
-                                         : GET_ND_IF_ENABLED(X86::NEG32r);
+        unsigned NegOpc;
+        switch (VT.SimpleTy) {
+        default:
+          llvm_unreachable("Unsupported VT!");
+        case MVT::i64:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG64r);
+          break;
+        case MVT::i32:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG32r);
+          break;
+        case MVT::i16:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG16r);
+          break;
+        case MVT::i8:
+          NegOpc = GET_ND_IF_ENABLED(X86::NEG8r);
+          break;
+        }
         SDValue Neg = SDValue(CurDAG->getMachineNode(NegOpc, DL, VT, MVT::i32,
                                                      AM.IndexReg), 0);
         AM.IndexReg = Neg;
@@ -2497,7 +2512,6 @@ SDValue X86DAGToDAGISel::matchIndexRecursively(SDValue N,
 
 bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
                                               unsigned Depth) {
-  SDLoc dl(N);
   LLVM_DEBUG({
     dbgs() << "MatchAddress: ";
     AM.dump(CurDAG);
@@ -2888,7 +2902,6 @@ bool X86DAGToDAGISel::matchAddressBase(SDValue N, X86ISelAddressMode &AM) {
 bool X86DAGToDAGISel::matchVectorAddressRecursively(SDValue N,
                                                     X86ISelAddressMode &AM,
                                                     unsigned Depth) {
-  SDLoc dl(N);
   LLVM_DEBUG({
     dbgs() << "MatchVectorAddress: ";
     AM.dump(CurDAG);

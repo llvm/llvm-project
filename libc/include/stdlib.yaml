@@ -158,7 +158,7 @@ functions:
       - type: __qsortcompare_t
   - name: qsort_r
     standards:
-      - GNUExtensions
+      - POSIX
     return_type: void
     arguments:
       - type: void *
