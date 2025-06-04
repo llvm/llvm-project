@@ -267,7 +267,8 @@ static llvm::Error handleMappingFailures(llvm::Error Err) {
 
 static llvm::Error createDirectories(llvm::StringRef OutDirectory) {
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory))
-    return llvm::createFileError(OutDirectory, Err);
+    return llvm::createFileError(OutDirectory, Err,
+                                 "failed to create directory.");
   return llvm::Error::success();
 }
 
