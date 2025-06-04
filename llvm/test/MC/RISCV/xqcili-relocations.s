@@ -84,7 +84,7 @@ qc.li a1, %qc.abs20(abs_symbol)
 qc.e.li s1, abs_symbol
 
 # ASM: qc.li a1, %qc.abs20(undef)
-# OBJ: qc.li a1, 0x0
+# OBJ-NEXT: qc.li a1, 0x0
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
 # OBJ-NEXT: R_RISCV_CUSTOM192 undef{{$}}
 # OBJ-NEXT: R_RISCV_RELAX
