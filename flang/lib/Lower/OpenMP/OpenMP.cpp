@@ -1125,6 +1125,16 @@ markDeclareTarget(mlir::Operation *op, lower::AbstractConverter &converter,
   declareTargetOp.setDeclareTarget(deviceType, captureClause);
 }
 
+static bool isPointerAssignment(const evaluate::Assignment &assign) {
+  return common::visit(
+      common::visitors{
+          [](const evaluate::Assignment::BoundsSpec &) { return true; },
+          [](const evaluate::Assignment::BoundsRemapping &) { return true; },
+          [](const auto &) { return false; },
+      },
+      assign.u);
+}
+
 //===----------------------------------------------------------------------===//
 // Op body generation helper structures and functions
 //===----------------------------------------------------------------------===//
@@ -2869,6 +2879,10 @@ genAtomicOperation(lower::AbstractConverter &converter, mlir::Location loc,
                    fir::FirOpBuilder::InsertPoint preAt,
                    fir::FirOpBuilder::InsertPoint atomicAt,
                    fir::FirOpBuilder::InsertPoint postAt) {
+  if (isPointerAssignment(assign)) {
+    TODO(loc, "Code generation for pointer assignment is not implemented yet");
+  }
+
   // This function and the functions called here do not preserve the
   // builder's insertion point, or set it to anything specific.
   switch (action) {
