@@ -955,7 +955,54 @@ static void updateOp(mlir::OpBuilder &builder, mlir::Operation *op,
 static void updateBranchTerminatorOpInterface(
     mlir::OpBuilder &builder,
     mlir::RegionBranchTerminatorOpInterface terminator,
-    GetLayoutCallbackFnTy getLayoutOfValue) {}
+    GetLayoutCallbackFnTy getLayoutOfValue) {
+  if (!mlir::isa<mlir::RegionBranchOpInterface>(terminator->getParentOp()))
+    return;
+
+  llvm::SmallVector<mlir::RegionSuccessor> successors;
+  llvm::SmallVector<mlir::Attribute> operands(terminator->getNumOperands(),
+                                              nullptr);
+  terminator.getSuccessorRegions(operands, successors);
+
+  for (mlir::RegionSuccessor &successor : successors) {
+    if (!successor.isParent())
+      continue;
+
+    mlir::OperandRange operands = terminator.getSuccessorOperands(successor);
+    mlir::ValueRange inputs = successor.getSuccessorInputs();
+    for (auto [operand, input] : llvm::zip(operands, inputs)) {
+      // print arg and inp
+      // llvm::errs() << "arg: " << operand << ", inp: " << input << "\n";
+      Type inputType = input.getType();
+      if (!isa<xegpu::TensorDescType>(inputType))
+        continue;
+      xegpu::LayoutAttr inputLayout = getLayoutOfValue(input);
+      xegpu::LayoutAttr operandLayout = getLayoutOfValue(operand);
+
+      if (!operandLayout) {
+        LLVM_DEBUG(DBGS() << "Expecting layout for region successor operand : "
+                          << operand << " but got none.\n");
+        continue;
+      }
+
+      if (inputLayout && inputLayout != operandLayout) {
+        LLVM_DEBUG(
+            DBGS()
+            << "Conflicting layouts for region successor operand and input: "
+            << inputLayout << " vs " << operandLayout << "\n");
+        continue;
+      }
+      llvm::errs() << "Setting layout for input to "
+                   << ": " << operandLayout << "\n";
+      // Get tensor descriptor type with the layout.
+      auto tdescTy = dyn_cast<xegpu::TensorDescType>(inputType);
+      auto newTdescTy = xegpu::TensorDescType::get(
+          tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
+          tdescTy.getEncoding(), operandLayout);
+      input.setType(newTdescTy);
+    }
+  }
+}
 static void updateBranchOpInterface(mlir::OpBuilder &builder,
                                     mlir::RegionBranchOpInterface branch,
                                     GetLayoutCallbackFnTy getLayoutOfValue) {
@@ -970,20 +1017,19 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
     if (successor.isParent())
       continue;
 
-    mlir::OperandRange initArgs = branch.getEntrySuccessorOperands(successor);
-    mlir::ValueRange blockArgs = successor.getSuccessorInputs();
+    mlir::OperandRange operands = branch.getEntrySuccessorOperands(successor);
+    mlir::ValueRange inputs = successor.getSuccessorInputs();
 
-    for (auto [initArg, blockArg, result] :
-         llvm::zip(initArgs, blockArgs, results)) {
-      Type inputType = blockArg.getType();
+    for (auto [operand, input, result] : llvm::zip(operands, inputs, results)) {
+      Type inputType = input.getType();
       if (!isa<xegpu::TensorDescType>(inputType))
         continue;
-      xegpu::LayoutAttr blockArgLayout = getLayoutOfValue(blockArg);
-      xegpu::LayoutAttr initArgLayout = getLayoutOfValue(initArg);
+      xegpu::LayoutAttr blockArgLayout = getLayoutOfValue(input);
+      xegpu::LayoutAttr initArgLayout = getLayoutOfValue(operand);
 
       if (!blockArgLayout || !initArgLayout) {
-        LLVM_DEBUG(DBGS() << "No layout assigned for block arg: " << blockArg
-                          << " or init arg: " << initArg << "\n");
+        LLVM_DEBUG(DBGS() << "No layout assigned for block arg: " << input
+                          << " or init arg: " << operand << "\n");
         continue;
       }
 
@@ -996,52 +1042,54 @@ static void updateBranchOpInterface(mlir::OpBuilder &builder,
       auto newTdescTy = xegpu::TensorDescType::get(
           tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
           tdescTy.getEncoding(), blockArgLayout);
-      blockArg.setType(newTdescTy);
+      input.setType(newTdescTy);
       // Store the layout for the result.
-      if (resultToLayouts.count(result) != 0 &&
-          resultToLayouts[result] != blockArgLayout) {
-        LLVM_DEBUG(DBGS() << "Conflicting layouts for result: " << result
-                          << " - " << resultToLayouts[result] << " vs "
-                          << blockArgLayout << "\n");
-      } else {
-        resultToLayouts[result] = blockArgLayout;
-      }
+      // if (resultToLayouts.count(result) != 0 &&
+      //     resultToLayouts[result] != blockArgLayout) {
+      //   LLVM_DEBUG(DBGS() << "Conflicting layouts for result: " << result
+      //                     << " - " << resultToLayouts[result] << " vs "
+      //                     << blockArgLayout << "\n");
+      // } else {
+      //   resultToLayouts[result] = blockArgLayout;
+      // }
     }
   }
-  for (auto [i, r] : llvm::enumerate(op->getResults())) {
-    Type resultType = r.getType();
-    if (!isa<xegpu::TensorDescType, VectorType>(resultType))
-      continue;
-    xegpu::LayoutAttr layout = getLayoutOfValue(r);
-    if (!layout)
-      layout = resultToLayouts[r];
-    if (!layout) {
-      LLVM_DEBUG(DBGS() << "No layout assigned for vector/tensor desc result: "
-                        << r << "\n");
-      continue;
-    }
-    if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
-      auto newTdescTy = xegpu::TensorDescType::get(
-          tensorDescTy.getContext(), tensorDescTy.getShape(),
-          tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
-      r.setType(newTdescTy);
-      continue;
-    }
-    // If the result is a vector type, add a temporary layout attribute to the
-    // op.
-    std::string resultLayoutName =
-        resultLayoutNamePrefix + std::to_string(r.getResultNumber());
-    op->setAttr(resultLayoutName, layout);
-    // Update all users of the result with the layout.
-    for (OpOperand &user : r.getUses()) {
-      Operation *owner = user.getOwner();
-      unsigned operandNumber = user.getOperandNumber();
-      // Add temporary layout attribute at the user op.
-      std::string attrName =
-          operandLayoutNamePrefix + std::to_string(operandNumber);
-      owner->setAttr(attrName, layout);
-    }
-  }
+  // for (auto [i, r] : llvm::enumerate(op->getResults())) {
+  //   Type resultType = r.getType();
+  //   if (!isa<xegpu::TensorDescType, VectorType>(resultType))
+  //     continue;
+  //   xegpu::LayoutAttr layout = getLayoutOfValue(r);
+  //   if (!layout)
+  //     layout = resultToLayouts[r];
+  //   if (!layout) {
+  //     LLVM_DEBUG(DBGS() << "No layout assigned for vector/tensor desc result:
+  //     "
+  //                       << r << "\n");
+  //     continue;
+  //   }
+  //   if (auto tensorDescTy = dyn_cast<xegpu::TensorDescType>(resultType)) {
+  //     auto newTdescTy = xegpu::TensorDescType::get(
+  //         tensorDescTy.getContext(), tensorDescTy.getShape(),
+  //         tensorDescTy.getElementType(), tensorDescTy.getEncoding(), layout);
+  //     r.setType(newTdescTy);
+  //     continue;
+  //   }
+  //   // If the result is a vector type, add a temporary layout attribute to
+  //   the
+  //   // op.
+  //   std::string resultLayoutName =
+  //       resultLayoutNamePrefix + std::to_string(r.getResultNumber());
+  //   op->setAttr(resultLayoutName, layout);
+  //   // Update all users of the result with the layout.
+  //   for (OpOperand &user : r.getUses()) {
+  //     Operation *owner = user.getOwner();
+  //     unsigned operandNumber = user.getOperandNumber();
+  //     // Add temporary layout attribute at the user op.
+  //     std::string attrName =
+  //         operandLayoutNamePrefix + std::to_string(operandNumber);
+  //     owner->setAttr(attrName, layout);
+  //   }
+  // }
 }
 static void updateBlockTypes(mlir::OpBuilder &builder, mlir::Block &block,
                              GetLayoutCallbackFnTy getLayoutOfValue) {}
@@ -1846,90 +1894,96 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     updateBlockTypes(builder, *block, getXeGPULayoutForValue);
   });
 
-  // Move all operations of a GPU function inside gpu.warp_execute_on_lane_0
-  // operation.
-  {
-    RewritePatternSet patterns(&getContext());
-    patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
+  // // Move all operations of a GPU function inside gpu.warp_execute_on_lane_0
+  // // operation.
+  // {
+  //   RewritePatternSet patterns(&getContext());
+  //   patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
 
-    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-      signalPassFailure();
-      return;
-    }
-    // At this point, we have moved the entire function body inside the
-    // warpOp. Now move any scalar uniform code outside of the warpOp (like GPU
-    // index ops, scalar constants, etc.). This will simplify the later lowering
-    // and avoid custom patterns for these ops.
-    getOperation()->walk([&](Operation *op) {
-      if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
-        vector::moveScalarUniformCode(warpOp);
-      }
-    });
-  }
-  // Finally, do the SIMD to SIMT distribution.
-  RewritePatternSet patterns(&getContext());
-  xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
-  // TODO: distributionFn and shuffleFn are not used at this point.
-  auto distributionFn = [](Value val) {
-    VectorType vecType = dyn_cast<VectorType>(val.getType());
-    int64_t vecRank = vecType ? vecType.getRank() : 0;
-    OpBuilder builder(val.getContext());
-    if (vecRank == 0)
-      return AffineMap::get(val.getContext());
-    return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
-  };
-  auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value srcIdx,
-                      int64_t warpSz) { return Value(); };
-  vector::populatePropagateWarpVectorDistributionPatterns(
-      patterns, distributionFn, shuffleFn);
-  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-    signalPassFailure();
-    return;
-  }
+  //   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+  //     signalPassFailure();
+  //     return;
+  //   }
+  //   // At this point, we have moved the entire function body inside the
+  //   // warpOp. Now move any scalar uniform code outside of the warpOp (like
+  //   GPU
+  //   // index ops, scalar constants, etc.). This will simplify the later
+  //   lowering
+  //   // and avoid custom patterns for these ops.
+  //   getOperation()->walk([&](Operation *op) {
+  //     if (auto warpOp = dyn_cast<gpu::WarpExecuteOnLane0Op>(op)) {
+  //       vector::moveScalarUniformCode(warpOp);
+  //     }
+  //   });
+  // }
+  // // Finally, do the SIMD to SIMT distribution.
+  // RewritePatternSet patterns(&getContext());
+  // xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
+  // // TODO: distributionFn and shuffleFn are not used at this point.
+  // auto distributionFn = [](Value val) {
+  //   VectorType vecType = dyn_cast<VectorType>(val.getType());
+  //   int64_t vecRank = vecType ? vecType.getRank() : 0;
+  //   OpBuilder builder(val.getContext());
+  //   if (vecRank == 0)
+  //     return AffineMap::get(val.getContext());
+  //   return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
+  // };
+  // auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value
+  // srcIdx,
+  //                     int64_t warpSz) { return Value(); };
+  // vector::populatePropagateWarpVectorDistributionPatterns(
+  //     patterns, distributionFn, shuffleFn);
+  // if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+  //   signalPassFailure();
+  //   return;
+  // }
 
-  // Clean up UnrealizedConversionCastOps that were inserted due to tensor desc
-  // type mismatches created by using upstream distribution patterns (scf.for)
-  getOperation()->walk([&](mlir::UnrealizedConversionCastOp op) {
-    // We are only interested in UnrealizedConversionCastOps there were added
-    // for resolving SIMT type mismatches.
-    if (!op->getAttr(resolveSIMTTypeMismatch))
-      return WalkResult::skip();
+  // // Clean up UnrealizedConversionCastOps that were inserted due to tensor
+  // desc
+  // // type mismatches created by using upstream distribution patterns
+  // (scf.for) getOperation()->walk([&](mlir::UnrealizedConversionCastOp op) {
+  //   // We are only interested in UnrealizedConversionCastOps there were added
+  //   // for resolving SIMT type mismatches.
+  //   if (!op->getAttr(resolveSIMTTypeMismatch))
+  //     return WalkResult::skip();
 
-    Value input = op.getOperand(0);
-    Value output = op.getResult(0);
+  //   Value input = op.getOperand(0);
+  //   Value output = op.getResult(0);
 
-    // Both input and output must have tensor descriptor types.
-    xegpu::TensorDescType inputDescType =
-        mlir::dyn_cast<xegpu::TensorDescType>(input.getType());
-    xegpu::TensorDescType outputDescType =
-        mlir::dyn_cast<xegpu::TensorDescType>(output.getType());
-    assert(inputDescType && outputDescType &&
-           "Unrealized conversion cast must have tensor descriptor types");
+  //   // Both input and output must have tensor descriptor types.
+  //   xegpu::TensorDescType inputDescType =
+  //       mlir::dyn_cast<xegpu::TensorDescType>(input.getType());
+  //   xegpu::TensorDescType outputDescType =
+  //       mlir::dyn_cast<xegpu::TensorDescType>(output.getType());
+  //   assert(inputDescType && outputDescType &&
+  //          "Unrealized conversion cast must have tensor descriptor types");
 
-    // tensor_desc<shape, layout> -> tensor_desc<shape> Type of conversions.
-    // This occurs iside scf.for body to resolve the block argument type to SIMT
-    // type.
-    if (inputDescType.getLayout()) {
-      auto argument = mlir::dyn_cast<mlir::BlockArgument>(input);
-      if (argument) {
-        argument.setType(output.getType());
-        output.replaceAllUsesWith(argument);
-        if (auto loopOp = mlir::dyn_cast<mlir::LoopLikeOpInterface>(
-                argument.getOwner()->getParentOp())) {
-          auto result = loopOp.getTiedLoopResult(argument);
-          result.setType(output.getType());
-        }
-      }
-    }
+  //   // tensor_desc<shape, layout> -> tensor_desc<shape> Type of conversions.
+  //   // This occurs iside scf.for body to resolve the block argument type to
+  //   SIMT
+  //   // type.
+  //   if (inputDescType.getLayout()) {
+  //     auto argument = mlir::dyn_cast<mlir::BlockArgument>(input);
+  //     if (argument) {
+  //       argument.setType(output.getType());
+  //       output.replaceAllUsesWith(argument);
+  //       if (auto loopOp = mlir::dyn_cast<mlir::LoopLikeOpInterface>(
+  //               argument.getOwner()->getParentOp())) {
+  //         auto result = loopOp.getTiedLoopResult(argument);
+  //         result.setType(output.getType());
+  //       }
+  //     }
+  //   }
 
-    // tensor_desc<shape> -> tensor_desc<shape, layout> Type of
-    // conversions. This occurs at the yield op of scf.for body to go back from
-    // SIMT type to original type.
-    if (outputDescType.getLayout())
-      output.replaceAllUsesWith(input);
+  //   // tensor_desc<shape> -> tensor_desc<shape, layout> Type of
+  //   // conversions. This occurs at the yield op of scf.for body to go back
+  //   from
+  //   // SIMT type to original type.
+  //   if (outputDescType.getLayout())
+  //     output.replaceAllUsesWith(input);
 
-    if (op->use_empty())
-      op->erase();
-    return WalkResult::advance();
-  });
+  //   if (op->use_empty())
+  //     op->erase();
+  //   return WalkResult::advance();
+  // });
 }
