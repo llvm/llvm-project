@@ -261,8 +261,9 @@ static void ReExecIfNeeded(bool ignore_heap) {
             "Re-execing with fixed virtual address space.\n");
 
     if (personality(old_personality | ADDR_NO_RANDOMIZE) == -1) {
-      Printf("FATAL: ThreadSanitizer: unable to disable ASLR (perhaps "
-             "sandboxing is enabled?).\n");
+      Printf(
+          "FATAL: ThreadSanitizer: unable to disable ASLR (perhaps "
+          "sandboxing is enabled?).\n");
       Printf("FATAL: Please rerun without sandboxing and/or ASLR.\n");
       Die();
     }
@@ -296,11 +297,13 @@ static void ReExecIfNeeded(bool ignore_heap) {
               "N.B. reducing ASLR entropy is preferable.\n");
 
       if (personality(old_personality | ADDR_NO_RANDOMIZE) == -1) {
-        Printf("FATAL: ThreadSanitizer: encountered an incompatible memory "
-               "but was unable to disable ASLR (perhaps sandboxing is "
-               "enabled?).\n");
-        Printf("FATAL: Please rerun with lower ASLR entropy, ASLR disabled, "
-               "and/or sandboxing disabled.\n");
+        Printf(
+            "FATAL: ThreadSanitizer: encountered an incompatible memory "
+            "but was unable to disable ASLR (perhaps sandboxing is "
+            "enabled?).\n");
+        Printf(
+            "FATAL: Please rerun with lower ASLR entropy, ASLR disabled, "
+            "and/or sandboxing disabled.\n");
         Die();
       }
 
