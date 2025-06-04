@@ -13,7 +13,7 @@
 // CHECK-DAG: [[LOC:#[a-zA-Z0-9_]+]] = loc("foo.mlir":0:0)
 #loc = loc("foo.mlir":0:0)
 
-gpu.module @test_module_56 {
+gpu.module @test_module_1 {
   // CHECK-DAG: llvm.mlir.global internal constant @[[$PRINT_GLOBAL0:[A-Za-z0-9_]+]]("Hello, world with location\0A\00") {addr_space = 0 : i32} loc([[LOC]])
   // CHECK-DAG: llvm.func @vprintf(!llvm.ptr, !llvm.ptr) -> i32 loc([[LOC]])
 

@@ -543,9 +543,9 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
   // the device code, not the host code
   auto moduleOp = gpuPrintfOp->getParentOfType<gpu::GPUModuleOp>();
 
-  // Convert the location to a valid global location of type FileLineColLoc if
-  // found else UnknownLoc. Remove any metadata from the location which is not
-  // valid for a global location.
+  // Create a valid global location removing any metadata attached to the
+  // location as debug info metadata inside of a function cannot be used outside
+  // of that function.
   Location globalLoc = loc->findInstanceOfOrUnknown<FileLineColLoc>();
 
   auto vprintfType =
