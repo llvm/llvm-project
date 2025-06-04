@@ -1,0 +1,169 @@
+import hudson.model.Result
+
+/* groovylint-disable-next-line CompileStatic */
+String actualTarget = env.CHANGE_TARGET ?: env.BRANCH_NAME
+
+if (actualTarget != 'upstream-main') {
+    echo 'Pipeline skipped for base branch ' + actualTarget
+    return this
+}
+
+String actualHead = env.CHANGE_BRANCH ?: env.BRANCH_NAME
+Boolean isPrBranch = env.CHANGE_BRANCH != null
+
+if (!isPrBranch) {
+    echo 'Pipeline skipped for non-PR branch ' + actualHead
+    return this
+}
+
+/**
+ * Coerce Result enums to String, seems to
+ * be required by CatchErrorStep.setStageResult()
+ */
+String abortedResultStr = Result.ABORTED, failureResultStr = Result.FAILURE
+String notBuiltResultStr = Result.NOT_BUILT, successResultStr = Result.SUCCESS
+
+String space = ' ', andChain = '&&'
+
+List propsList = []
+if (isPrBranch) {
+    propsList.add(
+        disableConcurrentBuilds(abortPrevious: true)
+    )
+    propsList.add(
+        buildDiscarder(
+            logRotator(
+                daysToKeepStr: '7',
+                numToKeepStr: '10'
+            )
+        )
+    )
+}
+properties(propsList)
+
+String linuxBasePath = '/usr/sbin:/usr/bin:/bin'
+String gitHubAppCredsId = 'Jenkins-AOCC'
+
+Integer fullTimeoutH = 15
+
+try {
+    timeout(time: fullTimeoutH, unit: 'HOURS') {
+        node ('atl && apptainer') {
+            skipDefaultCheckout()
+            List cleanExcludes = [
+                [pattern: 'llvm-project/.git/**', type: 'EXCLUDE']
+            ]
+            stage ('prepare') {
+                String gitTool = 'LinuxGit2.45'
+                String referenceRepo = env.JENKINS_REMOTE_GIT_CACHE ?: 'NoSuchReferenceRepo'
+                cleanWs(
+                    deleteDirs: true,
+                    patterns: cleanExcludes
+                )
+                dir('aocc-devops') {
+                    checkout(
+                        changelog: false,
+                        scm: scmGit(
+                            gitTool: gitTool,
+                            branches: [[name: 'main']],
+                            extensions: [
+                                cloneOption(
+                                    reference: referenceRepo + '/aocc-devops.git'
+                                )
+                            ],
+                            userRemoteConfigs: [
+                                [
+                                    credentialsId: 'mat-amd-csg-demo',
+                                    url: 'https://github.com/AMD-CSG/aocc-devops.git'
+                                ]
+                            ]
+                        )
+                    )
+                }
+                withCredentials([
+                    gitUsernamePassword(
+                        credentialsId: gitHubAppCredsId,
+                        gitToolName: gitTool
+                    )
+                ]) {
+                    withEnv([
+                        'PATH=/proj/csse_jenkins2/swtools/c/rhel7-gcc8.3.1/git-2.45.2-ilh23rcg/bin:' +
+                            linuxBasePath
+                    ]) {
+                        sh(
+                            label: 'clone-essentials',
+                            script: (
+                                'set +x; . aocc-devops/utils.sh' + space + andChain + space +
+                                    'export BRANCH_NAME=amd-staging' + space + andChain + space +
+                                    'sparse_clone_essentials' + space + andChain + space +
+                                    'mv llvm-project/aocc-essentials . '  + space + andChain + space +
+                                    'rm -rf llvm-project'
+                            )
+                        )
+                    }
+                }
+                dir ('llvm-project') {
+                    String theUrl = 'https://er.github.amd.com/AOCC/llvm-project'
+                    checkout(
+                        changelog: true,
+                        scm: scmGit(
+                            gitTool: gitTool,
+                            branches: scm.branches,
+                            browser: github(theUrl),
+                            extensions: scm.extensions + [
+                                cloneOption(
+                                    depth: 2, // To compute the changelog.
+                                    honorRefspec: true, noTags: true, shallow: true,
+                                    reference: referenceRepo + '/llvm-project.git'
+                                ),
+                                firstBuildChangelog()
+                            ],
+                            userRemoteConfigs: [
+                                [
+                                    credentialsId: gitHubAppCredsId,
+                                    refspec: (
+                                        '+refs/heads/' + actualHead + ':' +
+                                            'refs/remotes/origin/' + actualHead
+                                    ),
+                                    url: theUrl
+                                ]
+                            ]
+                        )
+                    )
+                }
+                // ToDo could now call build_essentials/has_active_files.sh
+            }
+            stage ('run') {
+                try {
+                    withEnv([
+                        'PATH=' + linuxBasePath
+                    ]) {
+                        sh 'llvm-project/.amd-ci/upstream/apptainer_run.sh'
+                    }
+                    currentBuild.result = successResultStr
+                } finally {
+                    archiveArtifacts(
+                        allowEmptyArchive: true,
+                        artifacts: '*.tar.xz,*.txt'
+                    )
+                    cleanWs(
+                        deleteDirs: true,
+                        patterns: cleanExcludes
+                    )
+                }
+            }
+        }
+    }
+} catch (org.jenkinsci.plugins.workflow.steps.FlowInterruptedException e) {
+    /*
+     * This may be raised if the run is 'superseded' by a new patch,
+     * when result will be NOT_BUILT. Don't overwrite this.
+     */
+    if (currentBuild.result != notBuiltResultStr) {
+        currentBuild.result = abortedResultStr
+    }
+    throw e
+} catch (Exception e) {
+    currentBuild.result = failureResultStr
+    throw e
+}
