@@ -16737,8 +16737,10 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   }
 
   // fold (fadd (freeze (fmul x, y)), z) -> (fma x, y, z).
-  if ((Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
-      N0.getOpcode() == ISD::FREEZE) {
+  bool CanContract =
+      (Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
+      (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros());
+  if (CanContract && N0.getOpcode() == ISD::FREEZE) {
     SDValue FrozenMul = N0.getOperand(0);
     if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
       SDValue X = FrozenMul.getOperand(0);
@@ -16748,8 +16750,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   }
 
   // fold (fadd x, (freeze (fmul y, z))) -> (fma y, z, x)
-  if ((Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
-      N1.getOpcode() == ISD::FREEZE) {
+  if (CanContract && N1.getOpcode() == ISD::FREEZE) {
     SDValue FrozenMul = N1.getOperand(0);
     if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
       SDValue X = FrozenMul.getOperand(0);
@@ -17036,8 +17037,10 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   }
 
   // fold (fsub (freeze (fmul x, y)), z) -> (fma x, y, (fneg z))
-  if ((Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
-      N0.getOpcode() == ISD::FREEZE) {
+  bool CanContract =
+      (Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
+      (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros());
+  if (CanContract && N0.getOpcode() == ISD::FREEZE) {
     SDValue FrozenMul = N0.getOperand(0);
     if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
       SDValue X = FrozenMul.getOperand(0);
@@ -17048,8 +17051,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   }
 
   // fold (fsub z, (freeze(fmul x, y))) -> (fma (fneg x), y, z)
-  if ((Options.UnsafeFPMath || N->getFlags().hasAllowContract()) &&
-      N1.getOpcode() == ISD::FREEZE) {
+  if (CanContract && N1.getOpcode() == ISD::FREEZE) {
     SDValue FrozenMul = N1.getOperand(0);
     if (matcher.match(FrozenMul, ISD::FMUL) && isContractableFMUL(FrozenMul)) {
       SDValue X = FrozenMul.getOperand(0);
