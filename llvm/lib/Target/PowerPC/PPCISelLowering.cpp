@@ -1531,7 +1531,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // Enable generation of STXVP instructions by default for mcpu=future.
   if (CPUDirective == PPC::DIR_PWR_FUTURE &&
-      !DisableAutoPairedVecSt.getNumOccurrences())
+      DisableAutoPairedVecSt.getNumOccurrences() == 0)
     DisableAutoPairedVecSt = false;
 
   IsStrictFPEnabled = true;
