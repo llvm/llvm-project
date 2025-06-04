@@ -104,6 +104,7 @@ public:
       return builder.createBoolToInt(value, dstTy);
     if (mlir::isa<cir::BoolType>(dstTy))
       return value;
+    llvm_unreachable("Can only promote integer or boolean types");
   }
 
   //===--------------------------------------------------------------------===//

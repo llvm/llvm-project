@@ -300,6 +300,10 @@ Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
   return get(Context, AllocSize, packAllocSizeArgs(ElemSizeArg, NumElemsArg));
 }
 
+Attribute Attribute::getWithAllocKind(LLVMContext &Context, AllocFnKind Kind) {
+  return get(Context, AllocKind, static_cast<uint64_t>(Kind));
+}
+
 Attribute Attribute::getWithVScaleRangeArgs(LLVMContext &Context,
                                             unsigned MinValue,
                                             unsigned MaxValue) {

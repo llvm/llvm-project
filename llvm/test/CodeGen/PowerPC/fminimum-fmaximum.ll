@@ -6,41 +6,37 @@
 define float @f32_minimum(float %a, float %b) {
 ; NOVSX-LABEL: f32_minimum:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    fcmpu 0, 1, 2
-; NOVSX-NEXT:    fmr 3, 1
-; NOVSX-NEXT:    stfs 1, -8(1)
-; NOVSX-NEXT:    stfs 2, -4(1)
-; NOVSX-NEXT:    bc 12, 0, .LBB0_2
+; NOVSX-NEXT:    stfs 1, -4(1)
+; NOVSX-NEXT:    fmr 0, 2
+; NOVSX-NEXT:    lwz 3, -4(1)
+; NOVSX-NEXT:    cmpwi 3, 0
+; NOVSX-NEXT:    bc 4, 2, .LBB0_7
 ; NOVSX-NEXT:  # %bb.1: # %entry
-; NOVSX-NEXT:    fmr 3, 2
+; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    bc 4, 0, .LBB0_8
 ; NOVSX-NEXT:  .LBB0_2: # %entry
 ; NOVSX-NEXT:    bc 4, 3, .LBB0_4
-; NOVSX-NEXT:  # %bb.3:
+; NOVSX-NEXT:  .LBB0_3:
 ; NOVSX-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; NOVSX-NEXT:    lfs 3, .LCPI0_0@toc@l(3)
+; NOVSX-NEXT:    lfs 1, .LCPI0_0@toc@l(3)
 ; NOVSX-NEXT:  .LBB0_4: # %entry
-; NOVSX-NEXT:    lwz 3, -8(1)
-; NOVSX-NEXT:    fmr 0, 3
-; NOVSX-NEXT:    cmpwi 3, 0
+; NOVSX-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
+; NOVSX-NEXT:    lfs 2, .LCPI0_1@toc@l(3)
+; NOVSX-NEXT:    fcmpu 0, 1, 2
 ; NOVSX-NEXT:    bc 12, 2, .LBB0_6
 ; NOVSX-NEXT:  # %bb.5: # %entry
 ; NOVSX-NEXT:    fmr 0, 1
 ; NOVSX-NEXT:  .LBB0_6: # %entry
-; NOVSX-NEXT:    lwz 3, -4(1)
-; NOVSX-NEXT:    cmpwi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB0_8
-; NOVSX-NEXT:  # %bb.7: # %entry
-; NOVSX-NEXT:    fmr 0, 2
-; NOVSX-NEXT:  .LBB0_8: # %entry
-; NOVSX-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
-; NOVSX-NEXT:    lfs 1, .LCPI0_1@toc@l(3)
-; NOVSX-NEXT:    fcmpu 0, 3, 1
-; NOVSX-NEXT:    bc 12, 2, .LBB0_10
-; NOVSX-NEXT:  # %bb.9: # %entry
-; NOVSX-NEXT:    fmr 0, 3
-; NOVSX-NEXT:  .LBB0_10: # %entry
 ; NOVSX-NEXT:    fmr 1, 0
 ; NOVSX-NEXT:    blr
+; NOVSX-NEXT:  .LBB0_7: # %entry
+; NOVSX-NEXT:    fmr 0, 1
+; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    bc 12, 0, .LBB0_2
+; NOVSX-NEXT:  .LBB0_8: # %entry
+; NOVSX-NEXT:    fmr 1, 2
+; NOVSX-NEXT:    bc 12, 3, .LBB0_3
+; NOVSX-NEXT:    b .LBB0_4
 ;
 ; VSX-LABEL: f32_minimum:
 ; VSX:       # %bb.0: # %entry
@@ -73,40 +69,37 @@ entry:
 define float @f32_maximum(float %a, float %b) {
 ; NOVSX-LABEL: f32_maximum:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    stfs 1, -4(1)
 ; NOVSX-NEXT:    fmr 0, 1
-; NOVSX-NEXT:    stfs 1, -8(1)
-; NOVSX-NEXT:    stfs 2, -4(1)
-; NOVSX-NEXT:    bc 12, 1, .LBB1_2
-; NOVSX-NEXT:  # %bb.1: # %entry
-; NOVSX-NEXT:    fmr 0, 2
-; NOVSX-NEXT:  .LBB1_2: # %entry
-; NOVSX-NEXT:    bc 4, 3, .LBB1_4
-; NOVSX-NEXT:  # %bb.3:
-; NOVSX-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
-; NOVSX-NEXT:    lfs 0, .LCPI1_0@toc@l(3)
-; NOVSX-NEXT:  .LBB1_4: # %entry
-; NOVSX-NEXT:    lwz 3, -8(1)
-; NOVSX-NEXT:    cmpwi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB1_6
-; NOVSX-NEXT:  # %bb.5: # %entry
-; NOVSX-NEXT:    fmr 1, 0
-; NOVSX-NEXT:  .LBB1_6: # %entry
 ; NOVSX-NEXT:    lwz 3, -4(1)
 ; NOVSX-NEXT:    cmpwi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB1_8
-; NOVSX-NEXT:  # %bb.7: # %entry
-; NOVSX-NEXT:    fmr 2, 1
-; NOVSX-NEXT:  .LBB1_8: # %entry
+; NOVSX-NEXT:    bc 4, 2, .LBB1_7
+; NOVSX-NEXT:  # %bb.1: # %entry
+; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    bc 4, 1, .LBB1_8
+; NOVSX-NEXT:  .LBB1_2: # %entry
+; NOVSX-NEXT:    bc 4, 3, .LBB1_4
+; NOVSX-NEXT:  .LBB1_3:
+; NOVSX-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
+; NOVSX-NEXT:    lfs 1, .LCPI1_0@toc@l(3)
+; NOVSX-NEXT:  .LBB1_4: # %entry
 ; NOVSX-NEXT:    addis 3, 2, .LCPI1_1@toc@ha
-; NOVSX-NEXT:    lfs 1, .LCPI1_1@toc@l(3)
-; NOVSX-NEXT:    fcmpu 0, 0, 1
-; NOVSX-NEXT:    bc 12, 2, .LBB1_10
-; NOVSX-NEXT:  # %bb.9: # %entry
-; NOVSX-NEXT:    fmr 2, 0
-; NOVSX-NEXT:  .LBB1_10: # %entry
-; NOVSX-NEXT:    fmr 1, 2
+; NOVSX-NEXT:    lfs 2, .LCPI1_1@toc@l(3)
+; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    bc 12, 2, .LBB1_6
+; NOVSX-NEXT:  # %bb.5: # %entry
+; NOVSX-NEXT:    fmr 0, 1
+; NOVSX-NEXT:  .LBB1_6: # %entry
+; NOVSX-NEXT:    fmr 1, 0
 ; NOVSX-NEXT:    blr
+; NOVSX-NEXT:  .LBB1_7: # %entry
+; NOVSX-NEXT:    fmr 0, 2
+; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    bc 12, 1, .LBB1_2
+; NOVSX-NEXT:  .LBB1_8: # %entry
+; NOVSX-NEXT:    fmr 1, 2
+; NOVSX-NEXT:    bc 12, 3, .LBB1_3
+; NOVSX-NEXT:    b .LBB1_4
 ;
 ; VSX-LABEL: f32_maximum:
 ; VSX:       # %bb.0: # %entry
@@ -139,41 +132,37 @@ entry:
 define double @f64_minimum(double %a, double %b) {
 ; NOVSX-LABEL: f64_minimum:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    fcmpu 0, 1, 2
-; NOVSX-NEXT:    fmr 3, 1
-; NOVSX-NEXT:    stfd 1, -16(1)
-; NOVSX-NEXT:    stfd 2, -8(1)
-; NOVSX-NEXT:    bc 12, 0, .LBB2_2
+; NOVSX-NEXT:    stfd 1, -8(1)
+; NOVSX-NEXT:    fmr 0, 2
+; NOVSX-NEXT:    ld 3, -8(1)
+; NOVSX-NEXT:    cmpdi 3, 0
+; NOVSX-NEXT:    bc 4, 2, .LBB2_7
 ; NOVSX-NEXT:  # %bb.1: # %entry
-; NOVSX-NEXT:    fmr 3, 2
+; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    bc 4, 0, .LBB2_8
 ; NOVSX-NEXT:  .LBB2_2: # %entry
 ; NOVSX-NEXT:    bc 4, 3, .LBB2_4
-; NOVSX-NEXT:  # %bb.3:
+; NOVSX-NEXT:  .LBB2_3:
 ; NOVSX-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
-; NOVSX-NEXT:    lfs 3, .LCPI2_0@toc@l(3)
+; NOVSX-NEXT:    lfs 1, .LCPI2_0@toc@l(3)
 ; NOVSX-NEXT:  .LBB2_4: # %entry
-; NOVSX-NEXT:    ld 3, -16(1)
-; NOVSX-NEXT:    fmr 0, 3
-; NOVSX-NEXT:    cmpdi 3, 0
+; NOVSX-NEXT:    addis 3, 2, .LCPI2_1@toc@ha
+; NOVSX-NEXT:    lfs 2, .LCPI2_1@toc@l(3)
+; NOVSX-NEXT:    fcmpu 0, 1, 2
 ; NOVSX-NEXT:    bc 12, 2, .LBB2_6
 ; NOVSX-NEXT:  # %bb.5: # %entry
 ; NOVSX-NEXT:    fmr 0, 1
 ; NOVSX-NEXT:  .LBB2_6: # %entry
-; NOVSX-NEXT:    ld 3, -8(1)
-; NOVSX-NEXT:    cmpdi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB2_8
-; NOVSX-NEXT:  # %bb.7: # %entry
-; NOVSX-NEXT:    fmr 0, 2
-; NOVSX-NEXT:  .LBB2_8: # %entry
-; NOVSX-NEXT:    addis 3, 2, .LCPI2_1@toc@ha
-; NOVSX-NEXT:    lfs 1, .LCPI2_1@toc@l(3)
-; NOVSX-NEXT:    fcmpu 0, 3, 1
-; NOVSX-NEXT:    bc 12, 2, .LBB2_10
-; NOVSX-NEXT:  # %bb.9: # %entry
-; NOVSX-NEXT:    fmr 0, 3
-; NOVSX-NEXT:  .LBB2_10: # %entry
 ; NOVSX-NEXT:    fmr 1, 0
 ; NOVSX-NEXT:    blr
+; NOVSX-NEXT:  .LBB2_7: # %entry
+; NOVSX-NEXT:    fmr 0, 1
+; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    bc 12, 0, .LBB2_2
+; NOVSX-NEXT:  .LBB2_8: # %entry
+; NOVSX-NEXT:    fmr 1, 2
+; NOVSX-NEXT:    bc 12, 3, .LBB2_3
+; NOVSX-NEXT:    b .LBB2_4
 ;
 ; VSX-LABEL: f64_minimum:
 ; VSX:       # %bb.0: # %entry
@@ -206,40 +195,37 @@ entry:
 define double @f64_maximum(double %a, double %b) {
 ; NOVSX-LABEL: f64_maximum:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    stfd 1, -8(1)
 ; NOVSX-NEXT:    fmr 0, 1
-; NOVSX-NEXT:    stfd 1, -16(1)
-; NOVSX-NEXT:    stfd 2, -8(1)
-; NOVSX-NEXT:    bc 12, 1, .LBB3_2
-; NOVSX-NEXT:  # %bb.1: # %entry
-; NOVSX-NEXT:    fmr 0, 2
-; NOVSX-NEXT:  .LBB3_2: # %entry
-; NOVSX-NEXT:    bc 4, 3, .LBB3_4
-; NOVSX-NEXT:  # %bb.3:
-; NOVSX-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
-; NOVSX-NEXT:    lfs 0, .LCPI3_0@toc@l(3)
-; NOVSX-NEXT:  .LBB3_4: # %entry
-; NOVSX-NEXT:    ld 3, -16(1)
-; NOVSX-NEXT:    cmpdi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB3_6
-; NOVSX-NEXT:  # %bb.5: # %entry
-; NOVSX-NEXT:    fmr 1, 0
-; NOVSX-NEXT:  .LBB3_6: # %entry
 ; NOVSX-NEXT:    ld 3, -8(1)
 ; NOVSX-NEXT:    cmpdi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB3_8
-; NOVSX-NEXT:  # %bb.7: # %entry
-; NOVSX-NEXT:    fmr 2, 1
-; NOVSX-NEXT:  .LBB3_8: # %entry
+; NOVSX-NEXT:    bc 4, 2, .LBB3_7
+; NOVSX-NEXT:  # %bb.1: # %entry
+; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    bc 4, 1, .LBB3_8
+; NOVSX-NEXT:  .LBB3_2: # %entry
+; NOVSX-NEXT:    bc 4, 3, .LBB3_4
+; NOVSX-NEXT:  .LBB3_3:
+; NOVSX-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
+; NOVSX-NEXT:    lfs 1, .LCPI3_0@toc@l(3)
+; NOVSX-NEXT:  .LBB3_4: # %entry
 ; NOVSX-NEXT:    addis 3, 2, .LCPI3_1@toc@ha
-; NOVSX-NEXT:    lfs 1, .LCPI3_1@toc@l(3)
-; NOVSX-NEXT:    fcmpu 0, 0, 1
-; NOVSX-NEXT:    bc 12, 2, .LBB3_10
-; NOVSX-NEXT:  # %bb.9: # %entry
-; NOVSX-NEXT:    fmr 2, 0
-; NOVSX-NEXT:  .LBB3_10: # %entry
-; NOVSX-NEXT:    fmr 1, 2
+; NOVSX-NEXT:    lfs 2, .LCPI3_1@toc@l(3)
+; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    bc 12, 2, .LBB3_6
+; NOVSX-NEXT:  # %bb.5: # %entry
+; NOVSX-NEXT:    fmr 0, 1
+; NOVSX-NEXT:  .LBB3_6: # %entry
+; NOVSX-NEXT:    fmr 1, 0
 ; NOVSX-NEXT:    blr
+; NOVSX-NEXT:  .LBB3_7: # %entry
+; NOVSX-NEXT:    fmr 0, 2
+; NOVSX-NEXT:    fcmpu 0, 1, 2
+; NOVSX-NEXT:    bc 12, 1, .LBB3_2
+; NOVSX-NEXT:  .LBB3_8: # %entry
+; NOVSX-NEXT:    fmr 1, 2
+; NOVSX-NEXT:    bc 12, 3, .LBB3_3
+; NOVSX-NEXT:    b .LBB3_4
 ;
 ; VSX-LABEL: f64_maximum:
 ; VSX:       # %bb.0: # %entry
@@ -286,10 +272,7 @@ define <4 x float> @v4f32_minimum(<4 x float> %a, <4 x float> %b) {
 ; NOVSX-NEXT:    vxor 5, 5, 5
 ; NOVSX-NEXT:    vcmpequw 0, 2, 5
 ; NOVSX-NEXT:    vnot 0, 0
-; NOVSX-NEXT:    vsel 2, 4, 2, 0
-; NOVSX-NEXT:    vcmpequw 0, 3, 5
-; NOVSX-NEXT:    vnot 0, 0
-; NOVSX-NEXT:    vsel 2, 2, 3, 0
+; NOVSX-NEXT:    vsel 2, 3, 2, 0
 ; NOVSX-NEXT:    vcmpeqfp 3, 4, 5
 ; NOVSX-NEXT:    vsel 2, 4, 2, 3
 ; NOVSX-NEXT:    blr
@@ -309,11 +292,8 @@ define <4 x float> @v4f32_minimum(<4 x float> %a, <4 x float> %b) {
 ; VSX-NEXT:    lxvd2x 2, 0, 3
 ; VSX-NEXT:    xxsel 0, 0, 2, 1
 ; VSX-NEXT:    xxlnor 1, 37, 37
-; VSX-NEXT:    xxsel 1, 0, 34, 1
-; VSX-NEXT:    vcmpequw 2, 3, 4
-; VSX-NEXT:    xxlnor 2, 34, 34
-; VSX-NEXT:    xxsel 1, 1, 35, 2
 ; VSX-NEXT:    xvcmpeqsp 2, 0, 36
+; VSX-NEXT:    xxsel 1, 35, 34, 1
 ; VSX-NEXT:    xxsel 34, 0, 1, 2
 ; VSX-NEXT:    blr
 ;
@@ -331,11 +311,8 @@ define <4 x float> @v4f32_minimum(<4 x float> %a, <4 x float> %b) {
 ; AIX-NEXT:    lxvw4x 2, 0, 3
 ; AIX-NEXT:    xxsel 0, 0, 2, 1
 ; AIX-NEXT:    xxlnor 1, 37, 37
-; AIX-NEXT:    xxsel 1, 0, 34, 1
-; AIX-NEXT:    vcmpequw 2, 3, 4
-; AIX-NEXT:    xxlnor 2, 34, 34
-; AIX-NEXT:    xxsel 1, 1, 35, 2
 ; AIX-NEXT:    xvcmpeqsp 2, 0, 36
+; AIX-NEXT:    xxsel 1, 35, 34, 1
 ; AIX-NEXT:    xxsel 34, 0, 1, 2
 ; AIX-NEXT:    blr
 entry:
@@ -359,9 +336,7 @@ define <4 x float> @v4f32_maximum(<4 x float> %a, <4 x float> %b) {
 ; NOVSX-NEXT:    vsel 4, 4, 0, 5
 ; NOVSX-NEXT:    vxor 5, 5, 5
 ; NOVSX-NEXT:    vcmpequw 0, 2, 5
-; NOVSX-NEXT:    vsel 2, 4, 2, 0
-; NOVSX-NEXT:    vcmpequw 0, 3, 5
-; NOVSX-NEXT:    vsel 2, 2, 3, 0
+; NOVSX-NEXT:    vsel 2, 3, 2, 0
 ; NOVSX-NEXT:    vcmpeqfp 3, 4, 5
 ; NOVSX-NEXT:    vsel 2, 4, 2, 3
 ; NOVSX-NEXT:    blr
@@ -380,10 +355,8 @@ define <4 x float> @v4f32_maximum(<4 x float> %a, <4 x float> %b) {
 ; VSX-NEXT:    xxlor 1, 2, 1
 ; VSX-NEXT:    lxvd2x 2, 0, 3
 ; VSX-NEXT:    xxsel 0, 0, 2, 1
+; VSX-NEXT:    xxsel 1, 35, 34, 37
 ; VSX-NEXT:    xvcmpeqsp 2, 0, 36
-; VSX-NEXT:    xxsel 1, 0, 34, 37
-; VSX-NEXT:    vcmpequw 2, 3, 4
-; VSX-NEXT:    xxsel 1, 1, 35, 34
 ; VSX-NEXT:    xxsel 34, 0, 1, 2
 ; VSX-NEXT:    blr
 ;
@@ -400,10 +373,8 @@ define <4 x float> @v4f32_maximum(<4 x float> %a, <4 x float> %b) {
 ; AIX-NEXT:    xxlor 1, 2, 1
 ; AIX-NEXT:    lxvw4x 2, 0, 3
 ; AIX-NEXT:    xxsel 0, 0, 2, 1
+; AIX-NEXT:    xxsel 1, 35, 34, 37
 ; AIX-NEXT:    xvcmpeqsp 2, 0, 36
-; AIX-NEXT:    xxsel 1, 0, 34, 37
-; AIX-NEXT:    vcmpequw 2, 3, 4
-; AIX-NEXT:    xxsel 1, 1, 35, 34
 ; AIX-NEXT:    xxsel 34, 0, 1, 2
 ; AIX-NEXT:    blr
 entry:
@@ -414,75 +385,63 @@ entry:
 define <2 x double> @v2f64_minimum(<2 x double> %a, <2 x double> %b) {
 ; NOVSX-LABEL: v2f64_minimum:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    fcmpu 0, 1, 3
+; NOVSX-NEXT:    stfd 1, -8(1)
 ; NOVSX-NEXT:    fmr 0, 1
-; NOVSX-NEXT:    stfd 1, -16(1)
-; NOVSX-NEXT:    stfd 3, -8(1)
-; NOVSX-NEXT:    stfd 2, -32(1)
-; NOVSX-NEXT:    stfd 4, -24(1)
-; NOVSX-NEXT:    bc 12, 0, .LBB6_2
-; NOVSX-NEXT:  # %bb.1: # %entry
 ; NOVSX-NEXT:    fmr 1, 3
-; NOVSX-NEXT:  .LBB6_2: # %entry
-; NOVSX-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
-; NOVSX-NEXT:    lfs 5, .LCPI6_0@toc@l(3)
-; NOVSX-NEXT:    fmr 6, 5
-; NOVSX-NEXT:    bc 12, 3, .LBB6_4
-; NOVSX-NEXT:  # %bb.3: # %entry
-; NOVSX-NEXT:    fmr 6, 1
-; NOVSX-NEXT:  .LBB6_4: # %entry
-; NOVSX-NEXT:    ld 3, -16(1)
-; NOVSX-NEXT:    fmr 1, 6
-; NOVSX-NEXT:    cmpdi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB6_6
-; NOVSX-NEXT:  # %bb.5: # %entry
-; NOVSX-NEXT:    fmr 1, 0
-; NOVSX-NEXT:  .LBB6_6: # %entry
+; NOVSX-NEXT:    stfd 2, -16(1)
 ; NOVSX-NEXT:    ld 3, -8(1)
 ; NOVSX-NEXT:    cmpdi 3, 0
+; NOVSX-NEXT:    bc 12, 2, .LBB6_2
+; NOVSX-NEXT:  # %bb.1: # %entry
+; NOVSX-NEXT:    fmr 1, 0
+; NOVSX-NEXT:  .LBB6_2: # %entry
+; NOVSX-NEXT:    fcmpu 0, 0, 3
+; NOVSX-NEXT:    bc 12, 0, .LBB6_4
+; NOVSX-NEXT:  # %bb.3: # %entry
+; NOVSX-NEXT:    fmr 0, 3
+; NOVSX-NEXT:  .LBB6_4: # %entry
+; NOVSX-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
+; NOVSX-NEXT:    lfs 3, .LCPI6_0@toc@l(3)
+; NOVSX-NEXT:    fmr 6, 3
+; NOVSX-NEXT:    bc 12, 3, .LBB6_6
+; NOVSX-NEXT:  # %bb.5: # %entry
+; NOVSX-NEXT:    fmr 6, 0
+; NOVSX-NEXT:  .LBB6_6: # %entry
+; NOVSX-NEXT:    addis 3, 2, .LCPI6_1@toc@ha
+; NOVSX-NEXT:    lfs 5, .LCPI6_1@toc@l(3)
+; NOVSX-NEXT:    fcmpu 0, 6, 5
 ; NOVSX-NEXT:    bc 12, 2, .LBB6_8
 ; NOVSX-NEXT:  # %bb.7: # %entry
-; NOVSX-NEXT:    fmr 1, 3
-; NOVSX-NEXT:  .LBB6_8: # %entry
-; NOVSX-NEXT:    addis 3, 2, .LCPI6_1@toc@ha
-; NOVSX-NEXT:    lfs 3, .LCPI6_1@toc@l(3)
-; NOVSX-NEXT:    fcmpu 0, 6, 3
-; NOVSX-NEXT:    bc 12, 2, .LBB6_10
-; NOVSX-NEXT:  # %bb.9: # %entry
 ; NOVSX-NEXT:    fmr 1, 6
-; NOVSX-NEXT:  .LBB6_10: # %entry
-; NOVSX-NEXT:    fcmpu 0, 2, 4
-; NOVSX-NEXT:    fmr 0, 2
-; NOVSX-NEXT:    bc 12, 0, .LBB6_12
-; NOVSX-NEXT:  # %bb.11: # %entry
+; NOVSX-NEXT:  .LBB6_8: # %entry
+; NOVSX-NEXT:    ld 3, -16(1)
 ; NOVSX-NEXT:    fmr 0, 4
+; NOVSX-NEXT:    cmpdi 3, 0
+; NOVSX-NEXT:    bc 4, 2, .LBB6_13
+; NOVSX-NEXT:  # %bb.9: # %entry
+; NOVSX-NEXT:    fcmpu 0, 2, 4
+; NOVSX-NEXT:    bc 4, 0, .LBB6_14
+; NOVSX-NEXT:  .LBB6_10: # %entry
+; NOVSX-NEXT:    bc 4, 3, .LBB6_15
+; NOVSX-NEXT:  .LBB6_11: # %entry
+; NOVSX-NEXT:    fcmpu 0, 3, 5
+; NOVSX-NEXT:    bc 4, 2, .LBB6_16
 ; NOVSX-NEXT:  .LBB6_12: # %entry
-; NOVSX-NEXT:    bc 12, 3, .LBB6_14
-; NOVSX-NEXT:  # %bb.13: # %entry
-; NOVSX-NEXT:    fmr 5, 0
-; NOVSX-NEXT:  .LBB6_14: # %entry
-; NOVSX-NEXT:    ld 3, -32(1)
-; NOVSX-NEXT:    fmr 0, 5
-; NOVSX-NEXT:    cmpdi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB6_16
-; NOVSX-NEXT:  # %bb.15: # %entry
-; NOVSX-NEXT:    fmr 0, 2
-; NOVSX-NEXT:  .LBB6_16: # %entry
-; NOVSX-NEXT:    ld 3, -24(1)
-; NOVSX-NEXT:    cmpdi 3, 0
-; NOVSX-NEXT:    bc 4, 2, .LBB6_19
-; NOVSX-NEXT:  # %bb.17: # %entry
-; NOVSX-NEXT:    fcmpu 0, 5, 3
-; NOVSX-NEXT:    bc 4, 2, .LBB6_20
-; NOVSX-NEXT:  .LBB6_18: # %entry
 ; NOVSX-NEXT:    fmr 2, 0
 ; NOVSX-NEXT:    blr
-; NOVSX-NEXT:  .LBB6_19: # %entry
-; NOVSX-NEXT:    fmr 0, 4
-; NOVSX-NEXT:    fcmpu 0, 5, 3
-; NOVSX-NEXT:    bc 12, 2, .LBB6_18
-; NOVSX-NEXT:  .LBB6_20: # %entry
-; NOVSX-NEXT:    fmr 0, 5
+; NOVSX-NEXT:  .LBB6_13: # %entry
+; NOVSX-NEXT:    fmr 0, 2
+; NOVSX-NEXT:    fcmpu 0, 2, 4
+; NOVSX-NEXT:    bc 12, 0, .LBB6_10
+; NOVSX-NEXT:  .LBB6_14: # %entry
+; NOVSX-NEXT:    fmr 2, 4
+; NOVSX-NEXT:    bc 12, 3, .LBB6_11
+; NOVSX-NEXT:  .LBB6_15: # %entry
+; NOVSX-NEXT:    fmr 3, 2
+; NOVSX-NEXT:    fcmpu 0, 3, 5
+; NOVSX-NEXT:    bc 12, 2, .LBB6_12
+; NOVSX-NEXT:  .LBB6_16: # %entry
+; NOVSX-NEXT:    fmr 0, 3
 ; NOVSX-NEXT:    fmr 2, 0
 ; NOVSX-NEXT:    blr
 ;
@@ -501,10 +460,7 @@ define <2 x double> @v2f64_minimum(<2 x double> %a, <2 x double> %b) {
 ; VSX-NEXT:    vcmpequd 5, 2, 4
 ; VSX-NEXT:    xxlnor 37, 37, 37
 ; VSX-NEXT:    xxsel 0, 0, 2, 1
-; VSX-NEXT:    xxsel 1, 0, 34, 37
-; VSX-NEXT:    vcmpequd 2, 3, 4
-; VSX-NEXT:    xxlnor 34, 34, 34
-; VSX-NEXT:    xxsel 1, 1, 35, 34
+; VSX-NEXT:    xxsel 1, 35, 34, 37
 ; VSX-NEXT:    xvcmpeqdp 34, 0, 36
 ; VSX-NEXT:    xxsel 34, 0, 1, 34
 ; VSX-NEXT:    blr
@@ -523,10 +479,7 @@ define <2 x double> @v2f64_minimum(<2 x double> %a, <2 x double> %b) {
 ; AIX-NEXT:    vcmpequd 5, 2, 4
 ; AIX-NEXT:    xxlnor 37, 37, 37
 ; AIX-NEXT:    xxsel 0, 0, 2, 1
-; AIX-NEXT:    xxsel 1, 0, 34, 37
-; AIX-NEXT:    vcmpequd 2, 3, 4
-; AIX-NEXT:    xxlnor 34, 34, 34
-; AIX-NEXT:    xxsel 1, 1, 35, 34
+; AIX-NEXT:    xxsel 1, 35, 34, 37
 ; AIX-NEXT:    xvcmpeqdp 34, 0, 36
 ; AIX-NEXT:    xxsel 34, 0, 1, 34
 ; AIX-NEXT:    blr
@@ -538,71 +491,63 @@ entry:
 define <2 x double> @v2f64_maximum(<2 x double> %a, <2 x double> %b) {
 ; NOVSX-LABEL: v2f64_maximum:
 ; NOVSX:       # %bb.0: # %entry
-; NOVSX-NEXT:    fcmpu 0, 1, 3
-; NOVSX-NEXT:    fmr 6, 1
-; NOVSX-NEXT:    stfd 1, -16(1)
-; NOVSX-NEXT:    stfd 3, -8(1)
-; NOVSX-NEXT:    stfd 2, -32(1)
-; NOVSX-NEXT:    stfd 4, -24(1)
-; NOVSX-NEXT:    bc 12, 1, .LBB7_2
-; NOVSX-NEXT:  # %bb.1: # %entry
-; NOVSX-NEXT:    fmr 6, 3
-; NOVSX-NEXT:  .LBB7_2: # %entry
-; NOVSX-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
-; NOVSX-NEXT:    lfs 0, .LCPI7_0@toc@l(3)
-; NOVSX-NEXT:    fmr 5, 0
-; NOVSX-NEXT:    bc 12, 3, .LBB7_4
-; NOVSX-NEXT:  # %bb.3: # %entry
-; NOVSX-NEXT:    fmr 5, 6
-; NOVSX-NEXT:  .LBB7_4: # %entry
-; NOVSX-NEXT:    ld 3, -16(1)
-; NOVSX-NEXT:    cmpdi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB7_6
-; NOVSX-NEXT:  # %bb.5: # %entry
-; NOVSX-NEXT:    fmr 1, 5
-; NOVSX-NEXT:  .LBB7_6: # %entry
+; NOVSX-NEXT:    stfd 1, -8(1)
+; NOVSX-NEXT:    fmr 0, 1
+; NOVSX-NEXT:    stfd 2, -16(1)
 ; NOVSX-NEXT:    ld 3, -8(1)
 ; NOVSX-NEXT:    cmpdi 3, 0
+; NOVSX-NEXT:    bc 12, 2, .LBB7_2
+; NOVSX-NEXT:  # %bb.1: # %entry
+; NOVSX-NEXT:    fmr 1, 3
+; NOVSX-NEXT:  .LBB7_2: # %entry
+; NOVSX-NEXT:    fcmpu 0, 0, 3
+; NOVSX-NEXT:    bc 12, 1, .LBB7_4
+; NOVSX-NEXT:  # %bb.3: # %entry
+; NOVSX-NEXT:    fmr 0, 3
+; NOVSX-NEXT:  .LBB7_4: # %entry
+; NOVSX-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
+; NOVSX-NEXT:    lfs 3, .LCPI7_0@toc@l(3)
+; NOVSX-NEXT:    fmr 6, 3
+; NOVSX-NEXT:    bc 12, 3, .LBB7_6
+; NOVSX-NEXT:  # %bb.5: # %entry
+; NOVSX-NEXT:    fmr 6, 0
+; NOVSX-NEXT:  .LBB7_6: # %entry
+; NOVSX-NEXT:    addis 3, 2, .LCPI7_1@toc@ha
+; NOVSX-NEXT:    lfs 5, .LCPI7_1@toc@l(3)
+; NOVSX-NEXT:    fcmpu 0, 6, 5
 ; NOVSX-NEXT:    bc 12, 2, .LBB7_8
 ; NOVSX-NEXT:  # %bb.7: # %entry
-; NOVSX-NEXT:    fmr 3, 1
+; NOVSX-NEXT:    fmr 1, 6
 ; NOVSX-NEXT:  .LBB7_8: # %entry
-; NOVSX-NEXT:    addis 3, 2, .LCPI7_1@toc@ha
-; NOVSX-NEXT:    lfs 1, .LCPI7_1@toc@l(3)
-; NOVSX-NEXT:    fcmpu 0, 5, 1
-; NOVSX-NEXT:    bc 12, 2, .LBB7_10
+; NOVSX-NEXT:    ld 3, -16(1)
+; NOVSX-NEXT:    fmr 0, 2
+; NOVSX-NEXT:    cmpdi 3, 0
+; NOVSX-NEXT:    bc 4, 2, .LBB7_13
 ; NOVSX-NEXT:  # %bb.9: # %entry
-; NOVSX-NEXT:    fmr 3, 5
-; NOVSX-NEXT:  .LBB7_10: # %entry
 ; NOVSX-NEXT:    fcmpu 0, 2, 4
-; NOVSX-NEXT:    fmr 5, 2
-; NOVSX-NEXT:    bc 12, 1, .LBB7_12
-; NOVSX-NEXT:  # %bb.11: # %entry
-; NOVSX-NEXT:    fmr 5, 4
+; NOVSX-NEXT:    bc 4, 1, .LBB7_14
+; NOVSX-NEXT:  .LBB7_10: # %entry
+; NOVSX-NEXT:    bc 4, 3, .LBB7_15
+; NOVSX-NEXT:  .LBB7_11: # %entry
+; NOVSX-NEXT:    fcmpu 0, 3, 5
+; NOVSX-NEXT:    bc 4, 2, .LBB7_16
 ; NOVSX-NEXT:  .LBB7_12: # %entry
-; NOVSX-NEXT:    bc 12, 3, .LBB7_14
-; NOVSX-NEXT:  # %bb.13: # %entry
-; NOVSX-NEXT:    fmr 0, 5
-; NOVSX-NEXT:  .LBB7_14: # %entry
-; NOVSX-NEXT:    ld 3, -32(1)
-; NOVSX-NEXT:    cmpdi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB7_16
-; NOVSX-NEXT:  # %bb.15: # %entry
 ; NOVSX-NEXT:    fmr 2, 0
-; NOVSX-NEXT:  .LBB7_16: # %entry
-; NOVSX-NEXT:    ld 3, -24(1)
-; NOVSX-NEXT:    cmpdi 3, 0
-; NOVSX-NEXT:    bc 12, 2, .LBB7_18
-; NOVSX-NEXT:  # %bb.17: # %entry
-; NOVSX-NEXT:    fmr 4, 2
-; NOVSX-NEXT:  .LBB7_18: # %entry
-; NOVSX-NEXT:    fcmpu 0, 0, 1
-; NOVSX-NEXT:    bc 12, 2, .LBB7_20
-; NOVSX-NEXT:  # %bb.19: # %entry
-; NOVSX-NEXT:    fmr 4, 0
-; NOVSX-NEXT:  .LBB7_20: # %entry
-; NOVSX-NEXT:    fmr 1, 3
+; NOVSX-NEXT:    blr
+; NOVSX-NEXT:  .LBB7_13: # %entry
+; NOVSX-NEXT:    fmr 0, 4
+; NOVSX-NEXT:    fcmpu 0, 2, 4
+; NOVSX-NEXT:    bc 12, 1, .LBB7_10
+; NOVSX-NEXT:  .LBB7_14: # %entry
 ; NOVSX-NEXT:    fmr 2, 4
+; NOVSX-NEXT:    bc 12, 3, .LBB7_11
+; NOVSX-NEXT:  .LBB7_15: # %entry
+; NOVSX-NEXT:    fmr 3, 2
+; NOVSX-NEXT:    fcmpu 0, 3, 5
+; NOVSX-NEXT:    bc 12, 2, .LBB7_12
+; NOVSX-NEXT:  .LBB7_16: # %entry
+; NOVSX-NEXT:    fmr 0, 3
+; NOVSX-NEXT:    fmr 2, 0
 ; NOVSX-NEXT:    blr
 ;
 ; VSX-LABEL: v2f64_maximum:
@@ -619,9 +564,7 @@ define <2 x double> @v2f64_maximum(<2 x double> %a, <2 x double> %b) {
 ; VSX-NEXT:    xxlxor 36, 36, 36
 ; VSX-NEXT:    vcmpequd 5, 2, 4
 ; VSX-NEXT:    xxsel 0, 0, 2, 1
-; VSX-NEXT:    xxsel 1, 0, 34, 37
-; VSX-NEXT:    vcmpequd 2, 3, 4
-; VSX-NEXT:    xxsel 1, 1, 35, 34
+; VSX-NEXT:    xxsel 1, 35, 34, 37
 ; VSX-NEXT:    xvcmpeqdp 34, 0, 36
 ; VSX-NEXT:    xxsel 34, 0, 1, 34
 ; VSX-NEXT:    blr
@@ -639,9 +582,7 @@ define <2 x double> @v2f64_maximum(<2 x double> %a, <2 x double> %b) {
 ; AIX-NEXT:    xxlxor 36, 36, 36
 ; AIX-NEXT:    vcmpequd 5, 2, 4
 ; AIX-NEXT:    xxsel 0, 0, 2, 1
-; AIX-NEXT:    xxsel 1, 0, 34, 37
-; AIX-NEXT:    vcmpequd 2, 3, 4
-; AIX-NEXT:    xxsel 1, 1, 35, 34
+; AIX-NEXT:    xxsel 1, 35, 34, 37
 ; AIX-NEXT:    xvcmpeqdp 34, 0, 36
 ; AIX-NEXT:    xxsel 34, 0, 1, 34
 ; AIX-NEXT:    blr
