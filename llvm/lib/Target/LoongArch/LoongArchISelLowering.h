@@ -361,6 +361,8 @@ private:
   SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
@@ -385,6 +387,28 @@ private:
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
 
   bool softPromoteHalfType() const override { return true; }
+
+  bool
+  splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
+                              SDValue *Parts, unsigned NumParts, MVT PartVT,
+                              std::optional<CallingConv::ID> CC) const override;
+
+  SDValue
+  joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
+                             const SDValue *Parts, unsigned NumParts,
+                             MVT PartVT, EVT ValueVT,
+                             std::optional<CallingConv::ID> CC) const override;
+
+  /// Return the register type for a given MVT, ensuring vectors are treated
+  /// as a series of gpr sized integers.
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
+
+  /// Return the number of registers for a given MVT, ensuring vectors are
+  /// treated as a series of gpr sized integers.
+  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                         CallingConv::ID CC,
+                                         EVT VT) const override;
 };
 
 } // end namespace llvm
