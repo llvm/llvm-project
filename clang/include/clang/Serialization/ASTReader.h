@@ -565,7 +565,7 @@ private:
   /// modules. It is used for the following cases:
   /// - Lambda inside a template function definition: The main declaration is
   ///   the enclosing function, and the related declarations are the lambda
-  ///   declarations.
+  ///   call operators.
   /// - Friend function defined inside a template CXXRecord declaration: The
   ///   main declaration is the enclosing record, and the related declarations
   ///   are the friend functions.

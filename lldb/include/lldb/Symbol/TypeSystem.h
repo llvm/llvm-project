@@ -443,7 +443,11 @@ public:
   /// given stream.
   ///
   /// This should not modify the state of the TypeSystem if possible.
-  virtual void Dump(llvm::raw_ostream &output) = 0;
+  ///
+  /// \param[out] output Stream to dup the AST into.
+  /// \param[in] filter If empty, dump whole AST. If non-empty, will only
+  /// dump decls whose names contain \c filter.
+  virtual void Dump(llvm::raw_ostream &output, llvm::StringRef filter) = 0;
 
   /// This is used by swift.
   virtual bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) = 0;
