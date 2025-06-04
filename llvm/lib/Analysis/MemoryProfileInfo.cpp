@@ -46,25 +46,6 @@ cl::opt<unsigned> MinCallsiteColdBytePercent(
     cl::desc("Min percent of cold bytes at a callsite to discard non-cold "
              "contexts"));
 
-// Enable saving context size information for largest cold contexts, which can
-// be used to flag contexts for more aggressive cloning and reporting.
-cl::opt<unsigned> MinPercentMaxColdSize(
-    "memprof-min-percent-max-cold-size", cl::init(100), cl::Hidden,
-    cl::desc("Min percent of max cold bytes for critical cold context"));
-
-bool llvm::memprof::metadataIncludesAllContextSizeInfo() {
-  return MemProfReportHintedSizes || MinClonedColdBytePercent < 100;
-}
-
-bool llvm::memprof::metadataMayIncludeContextSizeInfo() {
-  return metadataIncludesAllContextSizeInfo() || MinPercentMaxColdSize < 100;
-}
-
-bool llvm::memprof::recordContextSizeInfoForAnalysis() {
-  return metadataMayIncludeContextSizeInfo() ||
-         MinCallsiteColdBytePercent < 100;
-}
-
 MDNode *llvm::memprof::buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
                                               LLVMContext &Ctx) {
   SmallVector<Metadata *, 8> StackVals;
@@ -187,8 +168,7 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
 static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
                              AllocationType AllocType,
                              ArrayRef<ContextTotalSize> ContextSizeInfo,
-                             const uint64_t MaxColdSize, uint64_t &TotalBytes,
-                             uint64_t &ColdBytes) {
+                             uint64_t &TotalBytes, uint64_t &ColdBytes) {
   SmallVector<Metadata *> MIBPayload(
       {buildCallstackMetadata(MIBCallStack, Ctx)});
   MIBPayload.push_back(
@@ -204,21 +184,12 @@ static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
 
   for (const auto &[FullStackId, TotalSize] : ContextSizeInfo) {
     TotalBytes += TotalSize;
-    bool LargeColdContext = false;
-    if (AllocType == AllocationType::Cold) {
+    if (AllocType == AllocationType::Cold)
       ColdBytes += TotalSize;
-      // If we have the max cold context size from summary information and have
-      // requested identification of contexts above a percentage of the max, see
-      // if this context qualifies.
-      if (MaxColdSize > 0 && MinPercentMaxColdSize < 100 &&
-          TotalSize * 100 >= MaxColdSize * MinPercentMaxColdSize)
-        LargeColdContext = true;
-    }
     // Only add the context size info as metadata if we need it in the thin
-    // link (currently if reporting of hinted sizes is enabled, we have
-    // specified a threshold for marking allocations cold after cloning, or we
-    // have identified this as a large cold context of interest above).
-    if (metadataIncludesAllContextSizeInfo() || LargeColdContext) {
+    // link (currently if reporting of hinted sizes is enabled or we have
+    // specified a threshold for marking allocations cold after cloning).
+    if (MemProfReportHintedSizes || MinClonedColdBytePercent < 100) {
       auto *FullStackIdMD = ValueAsMetadata::get(
           ConstantInt::get(Type::getInt64Ty(Ctx), FullStackId));
       auto *TotalSizeMD = ValueAsMetadata::get(
@@ -386,9 +357,9 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   if (hasSingleAllocType(Node->AllocTypes)) {
     std::vector<ContextTotalSize> ContextSizeInfo;
     collectContextSizeInfo(Node, ContextSizeInfo);
-    MIBNodes.push_back(
-        createMIBNode(Ctx, MIBCallStack, (AllocationType)Node->AllocTypes,
-                      ContextSizeInfo, MaxColdSize, TotalBytes, ColdBytes));
+    MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack,
+                                     (AllocationType)Node->AllocTypes,
+                                     ContextSizeInfo, TotalBytes, ColdBytes));
     return true;
   }
 
@@ -442,8 +413,7 @@ bool CallStackTrie::buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
   std::vector<ContextTotalSize> ContextSizeInfo;
   collectContextSizeInfo(Node, ContextSizeInfo);
   MIBNodes.push_back(createMIBNode(Ctx, MIBCallStack, AllocationType::NotCold,
-                                   ContextSizeInfo, MaxColdSize, TotalBytes,
-                                   ColdBytes));
+                                   ContextSizeInfo, TotalBytes, ColdBytes));
   return true;
 }
 
