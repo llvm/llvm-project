@@ -36,10 +36,6 @@ typedef __SIZE_TYPE__ size_t;
 
 #include <intrin.h>
 
-#ifdef __ARM_ACLE
-#include <arm_acle.h>
-#endif
-
 // Use some C++ to make sure we closed the extern "C" brackets.
 template <typename T>
 void foo(T V) {}
