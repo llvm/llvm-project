@@ -363,9 +363,6 @@ class StepInTargetsRequestHandler
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "stepInTargets"; }
-  FeatureSet GetSupportedFeatures() const override {
-    return {protocol::eAdapterFeatureStepInTargetsRequest};
-  }
   llvm::Expected<protocol::StepInTargetsResponseBody>
   Run(const protocol::StepInTargetsArguments &args) const override;
 };

@@ -89,13 +89,16 @@ class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoint_ids), len(bp_lines), "expect correct number of breakpoints"
         )
+        # Dynamic capability is sent in 'configurationDone' which is called
+        # prior to continue.
+        self.continue_to_breakpoints(breakpoint_ids)
+
         is_supported = self.dap_server.get_initialize_value(
             "supportsStepInTargetsRequest"
         )
 
-        self.assertEqual(
+        self.assertTrue(
             is_supported,
-            True,
             f"expect capability `stepInTarget` is supported with architecture {self.getArchitecture()}",
         )
         # clear breakpoints.
@@ -112,15 +115,17 @@ class TestDAP_stepInTargets(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(breakpoint_ids), len(bp_lines), "expect correct number of breakpoints"
         )
+        # Dynamic capability is sent in 'configurationDone' which is called
+        # prior to continue.
+        self.continue_to_breakpoints(breakpoint_ids)
+
         is_supported = self.dap_server.get_initialize_value(
             "supportsStepInTargetsRequest"
         )
 
-        self.assertEqual(
+        self.assertFalse(
             is_supported,
-            False,
-            f"expect capability `stepInTarget` is not supported with architecture {self.getArchitecture()}",
+            f"expect capability `stepInTarget` is supported with architecture {self.getArchitecture()}",
         )
         # clear breakpoints.
-        self.set_source_breakpoints(source, [])
         self.continue_to_exit()
