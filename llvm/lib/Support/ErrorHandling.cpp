@@ -18,9 +18,12 @@
 #include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/WindowsError.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
