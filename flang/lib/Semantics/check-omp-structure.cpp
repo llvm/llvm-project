@@ -3142,9 +3142,8 @@ void OmpStructureChecker::ErrorShouldBeVariable(
 ///   function references with scalar data pointer result of non-character
 ///   intrinsic type or variables that are non-polymorphic scalar pointers
 ///   and any length type parameter must be constant.
-void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
-                                          parser::CharBlock source,
-                                          std::string_view name) {
+void OmpStructureChecker::CheckAtomicType(
+    SymbolRef sym, parser::CharBlock source, std::string_view name) {
   const DeclTypeSpec *typeSpec{sym->GetType()};
   if (!typeSpec) {
     return;
@@ -3155,20 +3154,17 @@ void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
     Category cat{typeSpec->category()};
     if (cat == Category::Character) {
       context_.Say(source,
-                   "Atomic variable %s cannot have CHARACTER type"_err_en_US,
-                   name);
+          "Atomic variable %s cannot have CHARACTER type"_err_en_US, name);
     } else if (cat != Category::Numeric && cat != Category::Logical) {
       context_.Say(source,
-                   "Atomic variable %s should have an intrinsic type"_err_en_US,
-                   name);
+          "Atomic variable %s should have an intrinsic type"_err_en_US, name);
     }
     return;
   }
 
   // Variable is a pointer.
   if (typeSpec->IsPolymorphic()) {
-    context_.Say(
-        source,
+    context_.Say(source,
         "Atomic variable %s cannot be a pointer to a polymorphic type"_err_en_US,
         name);
     return;
@@ -3181,19 +3177,18 @@ void OmpStructureChecker::CheckAtomicType(SymbolRef sym,
           // "entry" is a map entry
           return entry.second.isLen() && !entry.second.isExplicit();
         })) {
-      context_.Say(
-          source,
+      context_.Say(source,
           "Atomic variable %s is a pointer to a type with non-constant length parameter"_err_en_US,
           name);
     }
   }
 }
 
-void OmpStructureChecker::CheckAtomicVariable(const SomeExpr &atom,
-                                              parser::CharBlock source) {
+void OmpStructureChecker::CheckAtomicVariable(
+    const SomeExpr &atom, parser::CharBlock source) {
   if (atom.Rank() != 0) {
     context_.Say(source, "Atomic variable %s should be a scalar"_err_en_US,
-                 atom.AsFortran());
+        atom.AsFortran());
   }
 
   std::vector<SomeExpr> dsgs{atomic::DesignatorCollector{}(atom)};
@@ -3204,7 +3199,7 @@ void OmpStructureChecker::CheckAtomicVariable(const SomeExpr &atom,
 
   if (IsAllocatable(syms.back()) && !IsArrayElement(atom)) {
     context_.Say(source, "Atomic variable %s cannot be ALLOCATABLE"_err_en_US,
-                 atom.AsFortran());
+        atom.AsFortran());
   }
 }
 
