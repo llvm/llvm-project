@@ -28,7 +28,6 @@ if(MLIR_INCLUDE_TESTS)
     MLIRMathTestPasses
     MLIRTestMathToVCIX
     MLIRMemRefTestPasses
-    MLIRTestMemRefToLLVMWithTransforms
     MLIRMeshTest
     MLIRNVGPUTestPasses
     MLIRSCFTestPasses
