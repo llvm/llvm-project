@@ -9,8 +9,12 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
+#include "ProtocolUtils.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBLineEntry.h"
 
 namespace lldb_dap {
 
@@ -122,9 +126,9 @@ void LocationsRequestHandler::operator()(
       return;
     }
 
-    lldb::addr_t addr = variable.GetValueAsAddress();
-    lldb::SBLineEntry line_entry =
-        dap.target.ResolveLoadAddress(addr).GetLineEntry();
+    lldb::addr_t raw_addr = variable.GetValueAsAddress();
+    lldb::SBAddress addr = dap.target.ResolveLoadAddress(raw_addr);
+    lldb::SBLineEntry line_entry = GetLineEntryForAddress(dap.target, addr);
 
     if (!line_entry.IsValid()) {
       response["success"] = false;

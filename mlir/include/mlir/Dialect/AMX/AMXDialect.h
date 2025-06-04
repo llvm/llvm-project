@@ -14,10 +14,14 @@
 #define MLIR_DIALECT_AMX_AMXDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+
+/// Include the generated interface declarations.
+#include "mlir/Dialect/AMX/AMXInterfaces.h.inc"
 
 #include "mlir/Dialect/AMX/AMXDialect.h.inc"
 

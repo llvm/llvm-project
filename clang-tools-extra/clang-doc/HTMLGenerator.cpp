@@ -692,9 +692,8 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
   std::vector<std::unique_ptr<TagNode>> Out;
   std::string EnumType = I.Scoped ? "enum class " : "enum ";
   // Determine if enum members have comments attached
-  bool HasComments = std::any_of(
-      I.Members.begin(), I.Members.end(),
-      [](const EnumValueInfo &M) { return !M.Description.empty(); });
+  bool HasComments = llvm::any_of(
+      I.Members, [](const EnumValueInfo &M) { return !M.Description.empty(); });
   std::unique_ptr<TagNode> Table =
       std::make_unique<TagNode>(HTMLTag::TAG_TABLE);
   std::unique_ptr<TagNode> THead =

@@ -48,7 +48,7 @@ int f7(int (*ptr)(int, int)) {
 }
 
 // CIR-LABEL: cir.func @_Z2f7PFiiiE
-// CIR:         %[[#ptr:]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>
+// CIR:         %[[#ptr:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>
 // CIR-NEXT:    %[[#a:]] = cir.const #cir.int<1> : !s32i
 // CIR-NEXT:    %[[#b:]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT:    %{{.+}} = cir.call %[[#ptr]](%[[#a]], %[[#b]]) : (!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>, !s32i, !s32i) -> !s32i
@@ -56,3 +56,17 @@ int f7(int (*ptr)(int, int)) {
 // LLVM-LABEL: define i32 @_Z2f7PFiiiE
 // LLVM:         %[[#ptr:]] = load ptr, ptr %{{.+}}
 // LLVM-NEXT:    %{{.+}} = call i32 %[[#ptr]](i32 1, i32 2)
+
+void f8(int a, ...);
+void f9() {
+  f8(1);
+  f8(1, 2, 3, 4);
+}
+
+// CIR-LABEL: cir.func @_Z2f9v()
+// CIR:         cir.call @_Z2f8iz(%{{.+}}) : (!s32i) -> ()
+// CIR:         cir.call @_Z2f8iz(%{{.+}}, %{{.+}}, %{{.+}}, %{{.+}}) : (!s32i, !s32i, !s32i, !s32i) -> ()
+
+// LLVM-LABEL: define void @_Z2f9v()
+// LLVM:         call void (i32, ...) @_Z2f8iz(i32 1)
+// LLVM:         call void (i32, ...) @_Z2f8iz(i32 1, i32 2, i32 3, i32 4)

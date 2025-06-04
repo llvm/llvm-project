@@ -8,7 +8,7 @@
 
 #include "Breakpoint.h"
 #include "DAP.h"
-#include "JSONUtils.h"
+#include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBLineEntry.h"
@@ -63,14 +63,29 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
     std::string formatted_addr =
         "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(m_bp.GetTarget()));
     breakpoint.instructionReference = formatted_addr;
-    auto line_entry = bp_addr.GetLineEntry();
-    const auto line = line_entry.GetLine();
-    if (line != UINT32_MAX)
-      breakpoint.line = line;
-    const auto column = line_entry.GetColumn();
-    if (column != 0)
-      breakpoint.column = column;
-    breakpoint.source = CreateSource(line_entry);
+
+    auto source = CreateSource(bp_addr, m_dap.target);
+    if (!IsAssemblySource(source)) {
+      auto line_entry = bp_addr.GetLineEntry();
+      const auto line = line_entry.GetLine();
+      if (line != LLDB_INVALID_LINE_NUMBER)
+        breakpoint.line = line;
+      const auto column = line_entry.GetColumn();
+      if (column != LLDB_INVALID_COLUMN_NUMBER)
+        breakpoint.column = column;
+    } else {
+      // Assembly breakpoint.
+      auto symbol = bp_addr.GetSymbol();
+      if (symbol.IsValid()) {
+        breakpoint.line =
+            m_bp.GetTarget()
+                .ReadInstructions(symbol.GetStartAddress(), bp_addr, nullptr)
+                .GetSize() +
+            1;
+      }
+    }
+
+    breakpoint.source = std::move(source);
   }
 
   return breakpoint;

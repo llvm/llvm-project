@@ -6,5 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_BODY <clc/opencl/math/frexp.inc>
+#define __CLC_FUNCTION frexp
+#define __CLC_BODY <clc/math/unary_decl_with_int_ptr.inc>
 #include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION

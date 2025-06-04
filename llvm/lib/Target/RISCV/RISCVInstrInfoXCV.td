@@ -802,12 +802,12 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETNE, bb:$imm12),
             (CV_BNEIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12)>;
 
-  defm CC_SImm5 : SelectCC_GPR_riirr<GPR, simm5>;
+  defm CC_SImm5_CV : SelectCC_GPR_riirr<GPR, simm5>;
 
   class Selectbi<CondCode Cond>
       : Pat<(riscv_selectcc_frag:$cc (i32 GPR:$lhs), simm5:$Constant, Cond,
                                      (i32 GPR:$truev), GPR:$falsev),
-            (Select_GPR_Using_CC_SImm5 GPR:$lhs, simm5:$Constant,
+            (Select_GPR_Using_CC_SImm5_CV GPR:$lhs, simm5:$Constant,
              (IntCCtoRISCVCCCV $cc), GPR:$truev, GPR:$falsev)>;
 
   def : Selectbi<SETEQ>;

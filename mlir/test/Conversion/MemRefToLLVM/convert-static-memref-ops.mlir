@@ -138,8 +138,8 @@ func.func @static_load(%static : memref<10x42xf32>, %i : index, %j : index) {
 // CHECK-DAG:  %[[JJ:.*]] = builtin.unrealized_conversion_cast %[[J]]
 // CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:  %[[st0:.*]] = llvm.mlir.constant(42 : index) : i64
-// CHECK:  %[[offI:.*]] = llvm.mul %[[II]], %[[st0]] : i64
-// CHECK:  %[[off1:.*]] = llvm.add %[[offI]], %[[JJ]] : i64
+// CHECK:  %[[offI:.*]] = llvm.mul %[[II]], %[[st0]] overflow<nsw, nuw> : i64
+// CHECK:  %[[off1:.*]] = llvm.add %[[offI]], %[[JJ]] overflow<nsw, nuw> : i64
 // CHECK:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK:  llvm.load %[[addr]] : !llvm.ptr -> f32
   %0 = memref.load %static[%i, %j] : memref<10x42xf32>
@@ -166,8 +166,8 @@ func.func @static_store(%static : memref<10x42xf32>, %i : index, %j : index, %va
 // CHECK-DAG: %[[JJ:.*]] = builtin.unrealized_conversion_cast %[[J]]
 // CHECK: %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[st0:.*]] = llvm.mlir.constant(42 : index) : i64
-// CHECK: %[[offI:.*]] = llvm.mul %[[II]], %[[st0]] : i64
-// CHECK: %[[off1:.*]] = llvm.add %[[offI]], %[[JJ]] : i64
+// CHECK: %[[offI:.*]] = llvm.mul %[[II]], %[[st0]] overflow<nsw, nuw> : i64
+// CHECK: %[[off1:.*]] = llvm.add %[[offI]], %[[JJ]] overflow<nsw, nuw> : i64
 // CHECK: %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.store %{{.*}}, %[[addr]] : f32, !llvm.ptr
 

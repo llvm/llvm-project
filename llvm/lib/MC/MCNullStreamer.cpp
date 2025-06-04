@@ -9,7 +9,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/SMLoc.h"
 namespace llvm {
 class MCContext;
 class MCExpr;
