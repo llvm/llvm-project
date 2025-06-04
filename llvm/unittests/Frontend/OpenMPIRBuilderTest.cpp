@@ -7716,9 +7716,11 @@ TEST_F(OpenMPIRBuilderTest, createCallbackMetadata) {
       *M, llvm::omp::RuntimeFunction::OMPRTL___kmpc_omp_task_alloc);
 
   M->dump();
-  for (auto [FC, ArgNo] : zip(SmallVector<FunctionCallee>(
-                                  {ForkCall, ForkCallIf, ForkTeam, TaskAlloc}),
-                              SmallVector<unsigned>({2, 2, 2, 5}))) {
+  for (auto [FC, VarArg, ArgNo] :
+       zip(SmallVector<FunctionCallee>(
+               {ForkCall, ForkCallIf, ForkTeam, TaskAlloc}),
+           SmallVector<bool>({true, false, true, false}),
+           SmallVector<unsigned>({2, 2, 2, 5}))) {
     MDNode *CallbackMD =
         cast<Function>(FC.getCallee())->getMetadata(LLVMContext::MD_callback);
     EXPECT_NE(CallbackMD, nullptr);
@@ -7741,13 +7743,13 @@ TEST_F(OpenMPIRBuilderTest, createCallbackMetadata) {
           cast<ConstantInt>(
               cast<ConstantAsMetadata>(OpMD->getOperand(2))->getValue())
               ->getZExtValue();
-      uint64_t VarArg =
+      uint64_t _VarArg =
           cast<ConstantInt>(
               cast<ConstantAsMetadata>(OpMD->getOperand(3))->getValue())
               ->getZExtValue();
       EXPECT_EQ(Arg0, -1);
       EXPECT_EQ(Arg1, -1);
-      EXPECT_EQ(VarArg, true);
+      EXPECT_EQ(_VarArg, VarArg);
     }
     EXPECT_EQ(Num, 1);
   }
