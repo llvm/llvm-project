@@ -1176,6 +1176,7 @@ Expected<concepts::Requirement*> ASTNodeImporter::import(concepts::Requirement* 
       auto& FromTypeRequirement = From->getReturnTypeRequirement();
 
       if(FromTypeRequirement.isTypeConstraint()) {
+        const bool IsDependent = FromTypeRequirement.isDependent();
         auto ParamsOrErr = import(FromTypeRequirement.getTypeConstraintTemplateParameterList());
         if (!ParamsOrErr)
           return ParamsOrErr.takeError();
@@ -1186,7 +1187,7 @@ Expected<concepts::Requirement*> ASTNodeImporter::import(concepts::Requirement* 
             return ExpectSubstitutedConstraintExpr.takeError();
           SubstitutedConstraintExpr = ExpectSubstitutedConstraintExpr.get();
         }
-        Req.emplace(ParamsOrErr.get());
+        Req.emplace(ParamsOrErr.get(), IsDependent);
       }      
       else if(FromTypeRequirement.isSubstitutionFailure()) {
         Error Err = Error::success();
