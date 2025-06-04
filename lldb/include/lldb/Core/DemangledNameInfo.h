@@ -160,23 +160,4 @@ private:
 };
 } // namespace lldb_private
 
-/// Custom deleter to use with unique_ptr.
-///
-/// Usage:
-/// \code{.cpp}
-///
-/// auto OB =
-///     std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
-///         new TrackingOutputBuffer());
-///
-/// \endcode
-struct TrackingOutputBufferDeleter {
-  void operator()(TrackingOutputBuffer *TOB) {
-    if (!TOB)
-      return;
-    std::free(TOB->getBuffer());
-    delete TOB;
-  }
-};
-
 #endif // LLDB_CORE_DEMANGLEDNAMEINFO_H
