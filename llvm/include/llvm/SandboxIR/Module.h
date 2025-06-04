@@ -9,9 +9,9 @@
 #ifndef LLVM_SANDBOXIR_MODULE_H
 #define LLVM_SANDBOXIR_MODULE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {
@@ -51,7 +51,8 @@ public:
   /// does not exist, return null. If AllowInternal is set to true, this
   /// function will return types that have InternalLinkage. By default, these
   /// types are not returned.
-  LLVM_ABI GlobalVariable *getGlobalVariable(StringRef Name, bool AllowInternal) const;
+  LLVM_ABI GlobalVariable *getGlobalVariable(StringRef Name,
+                                             bool AllowInternal) const;
   GlobalVariable *getGlobalVariable(StringRef Name) const {
     return getGlobalVariable(Name, /*AllowInternal=*/false);
   }

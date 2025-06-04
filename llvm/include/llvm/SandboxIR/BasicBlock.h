@@ -9,9 +9,9 @@
 #ifndef LLVM_SANDBOXIR_BASICBLOCK_H
 #define LLVM_SANDBOXIR_BASICBLOCK_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/SandboxIR/Value.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 

@@ -93,7 +93,8 @@ public:
   /// be interpreted as a 64-bit signed integer and sign-extended to fit
   /// the type.
   /// Get a ConstantInt for a specific value.
-  LLVM_ABI static ConstantInt *get(IntegerType *Ty, uint64_t V, bool IsSigned = false);
+  LLVM_ABI static ConstantInt *get(IntegerType *Ty, uint64_t V,
+                                   bool IsSigned = false);
 
   /// Return a ConstantInt with the specified value for the specified type. The
   /// value V will be canonicalized to a an unsigned APInt. Accessing it with
@@ -109,7 +110,8 @@ public:
 
   /// Return a ConstantInt constructed from the string strStart with the given
   /// radix.
-  LLVM_ABI static ConstantInt *get(IntegerType *Ty, StringRef Str, uint8_t Radix);
+  LLVM_ABI static ConstantInt *get(IntegerType *Ty, StringRef Str,
+                                   uint8_t Radix);
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
@@ -275,11 +277,11 @@ public:
   LLVM_ABI static ConstantFP *get(const APFloat &V, Context &Ctx);
 
   LLVM_ABI static Constant *getNaN(Type *Ty, bool Negative = false,
-                          uint64_t Payload = 0);
+                                   uint64_t Payload = 0);
   LLVM_ABI static Constant *getQNaN(Type *Ty, bool Negative = false,
-                           APInt *Payload = nullptr);
+                                    APInt *Payload = nullptr);
   LLVM_ABI static Constant *getSNaN(Type *Ty, bool Negative = false,
-                           APInt *Payload = nullptr);
+                                    APInt *Payload = nullptr);
   LLVM_ABI static Constant *getZero(Type *Ty, bool Negative = false);
 
   LLVM_ABI static Constant *getNegativeZero(Type *Ty);
@@ -396,8 +398,8 @@ public:
     return get(getTypeForElements(Ctx, V, Packed), V);
   }
   /// This version of the method allows an empty list.
-  LLVM_ABI static StructType *getTypeForElements(Context &Ctx, ArrayRef<Constant *> V,
-                                        bool Packed = false);
+  LLVM_ABI static StructType *
+  getTypeForElements(Context &Ctx, ArrayRef<Constant *> V, bool Packed = false);
   /// Return an anonymous struct type to use for a constant with the specified
   /// set of elements. The list must not be empty.
   static StructType *getTypeForElements(ArrayRef<Constant *> V,
@@ -1061,14 +1063,14 @@ public:
 };
 
 // Explicit instantiations.
-extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
-                                 llvm::GlobalObject>;
-extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
-                                 llvm::GlobalObject>;
-extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
-                                 GlobalObject, llvm::GlobalObject>;
-extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
-                                 llvm::GlobalValue>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    GlobalIFunc, llvm::GlobalIFunc, GlobalObject, llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    Function, llvm::Function, GlobalObject, llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject, llvm::GlobalObject>;
+extern template class LLVM_TEMPLATE_ABI GlobalWithNodeAPI<
+    GlobalAlias, llvm::GlobalAlias, GlobalValue, llvm::GlobalValue>;
 
 class GlobalIFunc final
     : public GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
@@ -1361,7 +1363,7 @@ class ConstantPtrAuth final : public Constant {
 public:
   /// Return a pointer signed with the specified parameters.
   LLVM_ABI static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
-                              ConstantInt *Disc, Constant *AddrDisc);
+                                       ConstantInt *Disc, Constant *AddrDisc);
   /// The pointer that is signed in this ptrauth signed pointer.
   LLVM_ABI Constant *getPointer() const;
 

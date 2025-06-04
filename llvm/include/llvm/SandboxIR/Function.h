@@ -9,9 +9,9 @@
 #ifndef LLVM_SANDBOXIR_FUNCTION_H
 #define LLVM_SANDBOXIR_FUNCTION_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/IR/Function.h"
 #include "llvm/SandboxIR/Constant.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 

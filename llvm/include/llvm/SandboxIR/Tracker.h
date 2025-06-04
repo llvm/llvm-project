@@ -40,7 +40,6 @@
 #ifndef LLVM_SANDBOXIR_TRACKER_H
 #define LLVM_SANDBOXIR_TRACKER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StableHashing.h"
@@ -48,6 +47,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/SandboxIR/Use.h"
 #include "llvm/SandboxIR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <memory>
 

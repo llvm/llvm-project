@@ -305,14 +305,14 @@ GlobalT &GlobalWithNodeAPI<GlobalT, LLVMGlobalT, ParentT, LLVMParentT>::
 }
 
 // Explicit instantiations.
-template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
-                                 llvm::GlobalObject>;
-template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
-                                 llvm::GlobalObject>;
-template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
-                                 GlobalObject, llvm::GlobalObject>;
-template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
-                                 llvm::GlobalValue>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalIFunc, llvm::GlobalIFunc, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    Function, llvm::Function, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalAlias, llvm::GlobalAlias, GlobalValue, llvm::GlobalValue>;
 
 void GlobalIFunc::setResolver(Constant *Resolver) {
   Ctx.getTracker()

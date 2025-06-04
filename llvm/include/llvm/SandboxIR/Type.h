@@ -13,10 +13,10 @@
 #ifndef LLVM_SANDBOXIR_TYPE_H
 #define LLVM_SANDBOXIR_TYPE_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -314,7 +314,7 @@ class StructType : public Type {
 public:
   /// This static method is the primary way to create a literal StructType.
   LLVM_ABI static StructType *get(Context &Ctx, ArrayRef<Type *> Elements,
-                         bool IsPacked = false);
+                                  bool IsPacked = false);
 
   bool isPacked() const { return cast<llvm::StructType>(LLVMTy)->isPacked(); }
 
@@ -344,7 +344,8 @@ public:
   LLVM_ABI static VectorType *getInteger(VectorType *VTy);
   LLVM_ABI static VectorType *getExtendedElementVectorType(VectorType *VTy);
   LLVM_ABI static VectorType *getTruncatedElementVectorType(VectorType *VTy);
-  LLVM_ABI static VectorType *getSubdividedVectorType(VectorType *VTy, int NumSubdivs);
+  LLVM_ABI static VectorType *getSubdividedVectorType(VectorType *VTy,
+                                                      int NumSubdivs);
   LLVM_ABI static VectorType *getHalfElementsVectorType(VectorType *VTy);
   LLVM_ABI static VectorType *getDoubleElementsVectorType(VectorType *VTy);
   LLVM_ABI static bool isValidElementType(Type *ElemTy);
@@ -400,7 +401,8 @@ public:
 
 class ScalableVectorType : public VectorType {
 public:
-  LLVM_ABI static ScalableVectorType *get(Type *ElementType, unsigned MinNumElts);
+  LLVM_ABI static ScalableVectorType *get(Type *ElementType,
+                                          unsigned MinNumElts);
 
   static ScalableVectorType *get(Type *ElementType,
                                  const ScalableVectorType *SVTy) {
