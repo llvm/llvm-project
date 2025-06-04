@@ -128,7 +128,7 @@ private:
   bool foldShuffleOfShuffles(Instruction &I);
   bool foldShuffleOfIntrinsics(Instruction &I);
   bool foldShuffleToIdentity(Instruction &I);
-  bool foldShuffleExtExtracts(Instruction &I);
+  bool foldShuffleExt(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
@@ -2792,21 +2792,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   return true;
 }
 
-bool VectorCombine::foldShuffleExtExtracts(Instruction &I) {
+bool VectorCombine::foldShuffleExt(Instruction &I) {
   // Try to fold vector zero- and sign-extends split across multiple operations
-  // into a single extend, removing redundant inserts and shuffles.
+  // into a single extend.
 
-  // Check if we have an extended shuffle that selects the first vector, which
-  // itself is another extend fed by a load.
-  Instruction *L;
-  if (!match(
-          &I,
-          m_OneUse(m_Shuffle(
-              m_OneUse(m_ZExtOrSExt(m_OneUse(m_BitCast(m_OneUse(m_InsertElt(
-                  m_Value(), m_OneUse(m_Instruction(L)), m_SpecificInt(0))))))),
-              m_Value()))) ||
-      !cast<ShuffleVectorInst>(&I)->isIdentityWithExtract() ||
-      !isa<LoadInst>(L))
+  // Check if we have ZEXT/SEXT (SHUFFLE (ZEXT/SEXT %src), _, identity-mask),
+  // with an identity mask extracting the first sub-vector.
+  Value *Src;
+  ArrayRef<int> Mask;
+  if (!match(&I, m_OneUse(m_Shuffle(m_OneUse(m_ZExtOrSExt(m_Value(Src))),
+                                    m_Value(), m_Mask(Mask)))) ||
+      !cast<ShuffleVectorInst>(&I)->isIdentityWithExtract())
     return false;
   auto *InnerExt = cast<Instruction>(I.getOperand(0));
   auto *OuterExt = cast<Instruction>(*I.user_begin());
@@ -2819,27 +2815,34 @@ bool VectorCombine::foldShuffleExtExtracts(Instruction &I) {
   if (isa<SExtInst>(InnerExt) && !isa<SExtInst>(OuterExt))
     return false;
 
-  // Don't try to convert the load if it has an odd size.
-  if (!DL->typeSizeEqualsStoreSize(L->getType()))
-    return false;
   auto *DstTy = cast<FixedVectorType>(OuterExt->getType());
   auto *SrcTy =
       FixedVectorType::get(InnerExt->getOperand(0)->getType()->getScalarType(),
                            DstTy->getNumElements());
-  if (DL->getTypeStoreSize(SrcTy) != DL->getTypeStoreSize(L->getType()))
+
+  // Don't perform the fold if the cost of the new extend is worse than the cost
+  // of the 2 original extends.
+  InstructionCost OriginalCost =
+      TTI.getCastInstrCost(InnerExt->getOpcode(), SrcTy, InnerExt->getType(),
+                           TTI::CastContextHint::None) +
+      TTI.getCastInstrCost(InnerExt->getOpcode(), SrcTy, InnerExt->getType(),
+                           TTI::CastContextHint::None);
+  InstructionCost NewCost = TTI.getCastInstrCost(
+      InnerExt->getOpcode(), SrcTy, DstTy, TTI::CastContextHint::None);
+  if (NewCost > OriginalCost)
     return false;
 
-  // Convert to a vector load feeding a single wide extend.
-  Builder.SetInsertPoint(*L->getInsertionPointAfterDef());
-  auto *NewLoad = cast<LoadInst>(
-      Builder.CreateLoad(SrcTy, L->getOperand(0), L->getName() + ".vec"));
+  // Convert to a shuffle of the input feeding a single wide extend.
+  Builder.SetInsertPoint(*OuterExt->getInsertionPointAfterDef());
+  auto *NewIns =
+      Builder.CreateShuffleVector(Src, PoisonValue::get(Src->getType()), Mask);
   auto *NewExt =
       isa<ZExtInst>(InnerExt)
-          ? Builder.CreateZExt(NewLoad, DstTy, "vec.ext", InnerExt->hasNonNeg())
-          : Builder.CreateSExt(NewLoad, DstTy, "vec.ext");
+          ? Builder.CreateZExt(NewIns, DstTy, "vec.ext", InnerExt->hasNonNeg())
+          : Builder.CreateSExt(NewIns, DstTy, "vec.ext");
   OuterExt->replaceAllUsesWith(NewExt);
   replaceValue(*OuterExt, *NewExt);
-  Worklist.pushValue(NewLoad);
+  Worklist.pushValue(NewExt);
   return true;
 }
 
@@ -3617,7 +3620,7 @@ bool VectorCombine::run() {
         break;
       case Instruction::ShuffleVector:
         MadeChange |= widenSubvectorLoad(I);
-        MadeChange |= foldShuffleExtExtracts(I);
+        MadeChange |= foldShuffleExt(I);
         break;
       default:
         break;

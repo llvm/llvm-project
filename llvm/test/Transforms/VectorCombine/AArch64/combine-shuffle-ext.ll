@@ -11,8 +11,11 @@ define <4 x i32> @load_i32_zext_to_v4i32(ptr %di) {
 ; CHECK-LABEL: define <4 x i32> @load_i32_zext_to_v4i32(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <4 x i8>, ptr [[DI]], align 4
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[L_VEC]] to <4 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
 entry:
@@ -29,8 +32,11 @@ define <4 x i32> @load_i32_zext_to_v4i32_both_nneg(ptr %di) {
 ; CHECK-LABEL: define <4 x i32> @load_i32_zext_to_v4i32_both_nneg(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <4 x i8>, ptr [[DI]], align 4
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i8> [[L_VEC]] to <4 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
 entry:
@@ -47,8 +53,11 @@ define <4 x i32> @load_i32_zext_to_v4i32_inner_nneg(ptr %di) {
 ; CHECK-LABEL: define <4 x i32> @load_i32_zext_to_v4i32_inner_nneg(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <4 x i8>, ptr [[DI]], align 4
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i8> [[L_VEC]] to <4 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
 entry:
@@ -65,8 +74,11 @@ define <4 x i32> @load_i32_zext_to_v4i32_outer_nneg(ptr %di) {
 ; CHECK-LABEL: define <4 x i32> @load_i32_zext_to_v4i32_outer_nneg(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <4 x i8>, ptr [[DI]], align 4
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[L_VEC]] to <4 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
 entry:
@@ -83,8 +95,11 @@ define <4 x i32> @load_i32_zext_to_v4i32_inner_nneg_outer_sext(ptr %di) {
 ; CHECK-LABEL: define <4 x i32> @load_i32_zext_to_v4i32_inner_nneg_outer_sext(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <4 x i8>, ptr [[DI]], align 4
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i8> [[L_VEC]] to <4 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
 entry:
@@ -101,9 +116,12 @@ define <4 x i32> @load_i32_zext_to_v4i32_clobber_after_load(ptr %di) {
 ; CHECK-LABEL: define <4 x i32> @load_i32_zext_to_v4i32_clobber_after_load(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <4 x i8>, ptr [[DI]], align 4
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[L_VEC]] to <4 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
 ; CHECK-NEXT:    call void @use.i32(i32 0)
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
 entry:
@@ -146,9 +164,8 @@ define <4 x i32> @load_i32_zext_to_v4i32_load_other_users(ptr %di) {
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
 ; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
 ; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
-; CHECK-NEXT:    [[E_1:%.*]] = zext <8 x i8> [[VEC_BC]] to <8 x i16>
-; CHECK-NEXT:    [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i16> [[E_1]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i16> [[VEC_SHUFFLE]] to <4 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    call void @use.i32(i32 [[L]])
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
@@ -170,9 +187,8 @@ define <4 x i32> @load_i32_zext_to_v4i32_ins_other_users(ptr %di) {
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
 ; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
 ; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
-; CHECK-NEXT:    [[E_1:%.*]] = zext <8 x i8> [[VEC_BC]] to <8 x i16>
-; CHECK-NEXT:    [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i16> [[E_1]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i16> [[VEC_SHUFFLE]] to <4 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    call void @use.v2i32(<2 x i32> [[VEC_INS]])
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
@@ -194,9 +210,8 @@ define <4 x i32> @load_i32_zext_to_v4i32_bc_other_users(ptr %di) {
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
 ; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
 ; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
-; CHECK-NEXT:    [[E_1:%.*]] = zext <8 x i8> [[VEC_BC]] to <8 x i16>
-; CHECK-NEXT:    [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i16> [[E_1]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i16> [[VEC_SHUFFLE]] to <4 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    call void @use.v8i8(<8 x i8> [[VEC_BC]])
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
@@ -263,8 +278,11 @@ define <8 x i32> @load_i64_zext_to_v8i32(ptr %di) {
 ; CHECK-LABEL: define <8 x i32> @load_i64_zext_to_v8i32(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <8 x i8>, ptr [[DI]], align 8
-; CHECK-NEXT:    [[OUTER_EXT:%.*]] = zext <8 x i8> [[L_VEC]] to <8 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[DI]], align 8
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i64> [[VEC_INS]] to <16 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[VEC_BC]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[OUTER_EXT:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i32>
 ; CHECK-NEXT:    ret <8 x i32> [[OUTER_EXT]]
 ;
 entry:
@@ -281,8 +299,11 @@ define <3 x i32> @load_i24_zext_to_v3i32(ptr %di) {
 ; CHECK-LABEL: define <3 x i32> @load_i24_zext_to_v3i32(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <3 x i8>, ptr [[DI]], align 4
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext <3 x i8> [[L_VEC]] to <3 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i24, ptr [[DI]], align 4
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i24> <i24 poison, i24 0>, i24 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i24> [[VEC_INS]] to <6 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <6 x i8> [[VEC_BC]], <6 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext <3 x i8> [[TMP0]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[EXT_2]]
 ;
 entry:
@@ -302,9 +323,8 @@ define <4 x i32> @load_i32_insert_idx_1_sext(ptr %di) {
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
 ; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[L]], i64 1
 ; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
-; CHECK-NEXT:    [[EXT_1:%.*]] = zext <8 x i8> [[VEC_BC]] to <8 x i16>
-; CHECK-NEXT:    [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i16> [[EXT_1]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[EXT_2:%.*]] = zext nneg <4 x i16> [[VEC_SHUFFLE]] to <4 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = zext <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
 entry:
@@ -387,8 +407,11 @@ define <4 x i32> @load_i32_sext_to_v4i32(ptr %di) {
 ; CHECK-LABEL: define <4 x i32> @load_i32_sext_to_v4i32(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <4 x i8>, ptr [[DI]], align 4
-; CHECK-NEXT:    [[EXT_2:%.*]] = sext <4 x i8> [[L_VEC]] to <4 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = sext <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
 entry:
@@ -405,8 +428,11 @@ define <8 x i32> @load_i64_sext_to_v8i32(ptr %di) {
 ; CHECK-LABEL: define <8 x i32> @load_i64_sext_to_v8i32(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <8 x i8>, ptr [[DI]], align 8
-; CHECK-NEXT:    [[OUTER_EXT:%.*]] = sext <8 x i8> [[L_VEC]] to <8 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[DI]], align 8
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i64> [[VEC_INS]] to <16 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i8> [[VEC_BC]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[OUTER_EXT:%.*]] = sext <8 x i8> [[TMP0]] to <8 x i32>
 ; CHECK-NEXT:    ret <8 x i32> [[OUTER_EXT]]
 ;
 entry:
@@ -423,8 +449,11 @@ define <3 x i32> @load_i24_sext_to_v3i32(ptr %di) {
 ; CHECK-LABEL: define <3 x i32> @load_i24_sext_to_v3i32(
 ; CHECK-SAME: ptr [[DI:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L_VEC:%.*]] = load <3 x i8>, ptr [[DI]], align 4
-; CHECK-NEXT:    [[EXT_2:%.*]] = sext <3 x i8> [[L_VEC]] to <3 x i32>
+; CHECK-NEXT:    [[L:%.*]] = load i24, ptr [[DI]], align 4
+; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i24> <i24 poison, i24 0>, i24 [[L]], i64 0
+; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i24> [[VEC_INS]] to <6 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <6 x i8> [[VEC_BC]], <6 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[EXT_2:%.*]] = sext <3 x i8> [[TMP0]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[EXT_2]]
 ;
 entry:
@@ -444,9 +473,8 @@ define <4 x i32> @load_i32_insert_idx_1(ptr %di) {
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[DI]], align 4
 ; CHECK-NEXT:    [[VEC_INS:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[L]], i64 1
 ; CHECK-NEXT:    [[VEC_BC:%.*]] = bitcast <2 x i32> [[VEC_INS]] to <8 x i8>
-; CHECK-NEXT:    [[EXT_1:%.*]] = sext <8 x i8> [[VEC_BC]] to <8 x i16>
-; CHECK-NEXT:    [[VEC_SHUFFLE:%.*]] = shufflevector <8 x i16> [[EXT_1]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[EXT_2:%.*]] = sext <4 x i16> [[VEC_SHUFFLE]] to <4 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i8> [[VEC_BC]], <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[EXT_2:%.*]] = sext <4 x i8> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[EXT_2]]
 ;
 entry:
