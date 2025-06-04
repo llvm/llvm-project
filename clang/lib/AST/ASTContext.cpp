@@ -12909,8 +12909,8 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   if (D->hasAttr<WeakRefAttr>())
     return false;
 
-  if (LangOpts.SYCLIsDevice &&
-       !D->hasAttr<SYCLKernelEntryPointAttr>() && !D->hasAttr<SYCLExternalAttr>())
+  if (LangOpts.SYCLIsDevice && !D->hasAttr<SYCLKernelEntryPointAttr>() &&
+      !D->hasAttr<SYCLExternalAttr>())
     return false;
 
   // Aliases and used decls are required.
