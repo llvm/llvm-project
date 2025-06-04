@@ -345,15 +345,16 @@ struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
     // not, fail the transformation.
     bool isApplicable = false;
     if (auto prevInt = dyn_cast<IntegerAttr>(prevValue)) {
-      auto currInt = dyn_cast<IntegerAttr>(currValue);
+      auto currInt = cast<IntegerAttr>(currValue);
       isApplicable = prevInt.getValue().urem(currInt.getValue()) == 0;
     } else if (auto prevVec = dyn_cast<DenseElementsAttr>(prevValue)) {
-      auto currVec = dyn_cast<DenseElementsAttr>(currValue);
-      isApplicable = llvm::all_of(
-          llvm::zip(prevVec.getValues<APInt>(), currVec.getValues<APInt>()),
-          [](const auto &pair) {
-            return std::get<0>(pair).urem(std::get<1>(pair)) == 0;
-          });
+      auto currVec = cast<DenseElementsAttr>(currValue);
+      isApplicable = llvm::all_of(llvm::zip_equal(prevVec.getValues<APInt>(),
+                                                  currVec.getValues<APInt>()),
+                                  [](const auto &pair) {
+                                    auto &[prev, curr] = pair;
+                                    return prev.urem(curr) == 0;
+                                  });
     }
 
     if (!isApplicable)
