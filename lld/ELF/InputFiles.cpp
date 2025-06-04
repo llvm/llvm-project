@@ -566,6 +566,14 @@ handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx, bool hasGP,
     // Unlike AArch64 Build Attributes, GNU properties does not give a way to
     // distinguish between no-value given to value of '0' given.
     if (baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema) {
+      // According to the BuildAttributes specification Build Attributes
+      // default to a value of 0 when not present. A (TagPlatform, TagSchema) of
+      // (0, 0) maps to 'no PAuth property present'. A (TagPlatform, TagSchema)
+      // of (0, 1) maps to an explicit PAuth property of platform = 0, version =
+      // 0 ('Invalid').
+      if (baInfo.Pauth.TagPlatform == 0 && baInfo.Pauth.TagSchema == 1) {
+        file->aarch64PauthAbiCoreInfo = {0, 0};
+      }
       file->aarch64PauthAbiCoreInfo = {baInfo.Pauth.TagPlatform,
                                        baInfo.Pauth.TagSchema};
     }
