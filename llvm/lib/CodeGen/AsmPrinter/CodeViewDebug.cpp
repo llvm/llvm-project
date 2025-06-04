@@ -846,8 +846,8 @@ void CodeViewDebug::emitCompilerInformation() {
   }
   using ArchType = llvm::Triple::ArchType;
   ArchType Arch = MMI->getModule()->getTargetTriple().getArch();
-  if (Asm->TM.Options.Hotpatch || Arch == ArchType::thumb ||
-      Arch == ArchType::aarch64) {
+  if (Arch == ArchType::thumb || Arch == ArchType::aarch64 ||
+      MMI->getModule()->getModuleFlag("ms-hotpatch")) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::HotPatch);
   }
 
