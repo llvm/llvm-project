@@ -9,13 +9,15 @@
 #ifndef LLVM_LIBC_MACROS_BFLOAT16_MACROS_H
 #define LLVM_LIBC_MACROS_BFLOAT16_MACROS_H
 
-#if ((defined(__clang__) && __clang_major__ > 17) ||                           \
-     (defined(__GNUC__) && __GNUC__ > 13)) &&                                  \
-    !defined(__arm__) && !defined(_M_ARM) && !defined(__riscv) &&              \
-    !defined(_WIN32)
+// #if ((defined(__clang__) && __clang_major__ > 17) ||                        \
+//      (defined(__GNUC__) && __GNUC__ > 13)) &&                               \
+//     !defined(__arm__) && !defined(_M_ARM) && !defined(__riscv) &&           \
+//     !defined(_WIN32)
 
 #define LIBC_TYPES_HAS_BFLOAT16
 
-#endif // LIBC_TYPES_HAS_BFLOAT16
+struct BFloat16;
+
+// #endif // LIBC_TYPES_HAS_BFLOAT16
 
 #endif // LLVM_LIBC_MACROS_BFLOAT16_MACROS_H
