@@ -104,16 +104,12 @@ void SelfExecutorProcessControl::lookupSymbolsAsync(
       std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
                       (*Sym).size() - !!GlobalManglingPrefix);
       void *Addr = Dylib.getAddressOfSymbol(Tmp.c_str());
-      if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol) {
-        // FIXME: Collect all failing symbols before erroring out.
-        SymbolNameVector MissingSymbols;
-        MissingSymbols.push_back(Sym);
-        return Complete(
-            make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols)));
-      }
-      // FIXME: determine accurate JITSymbolFlags.
-      R.back().push_back(
-          {ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
+      if (!Addr && KV.second == SymbolLookupFlags::RequiredSymbol)
+        R.back().emplace_back();
+      else
+        // FIXME: determine accurate JITSymbolFlags.
+        R.back().push_back(
+            {ExecutorAddr::fromPtr(Addr), JITSymbolFlags::Exported});
     }
   }
 
