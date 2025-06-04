@@ -36,6 +36,10 @@ public:
                               ,
                               float128
 #endif
+#ifdef LIBC_TYPES_HAS_BFLOAT16
+                              ,
+                              bfloat16
+#endif
                               >();
 };
 template <typename T>
