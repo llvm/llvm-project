@@ -430,12 +430,10 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
   unsigned subgroupSize =
       targetEnv.getAttr().getResourceLimits().getSubgroupSize();
   IntegerAttr widthAttr;
-  // The width argument specifies the number of lanes that participate in the
-  // shuffle. The width value should not exceed the subgroup limit.
   if (!matchPattern(shuffleOp.getWidth(), m_Constant(&widthAttr)) ||
-      widthAttr.getValue().getZExtValue() > subgroupSize)
+      widthAttr.getValue().getZExtValue() != subgroupSize)
     return rewriter.notifyMatchFailure(
-        shuffleOp, "shuffle width is larger than target subgroup size");
+        shuffleOp, "shuffle width and target subgroup size mismatch");
 
   Location loc = shuffleOp.getLoc();
   Value trueVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
@@ -453,18 +451,13 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
     break;
   case gpu::ShuffleMode::DOWN:
-    result = rewriter.create<spirv::GroupNonUniformRotateKHROp>(
-        loc, scope, adaptor.getValue(), adaptor.getOffset(),
-        shuffleOp.getWidth());
+    result = rewriter.create<spirv::GroupNonUniformShuffleDownOp>(
+        loc, scope, adaptor.getValue(), adaptor.getOffset());
     break;
-  case gpu::ShuffleMode::UP: {
-    Value offsetForShuffleDown = rewriter.create<arith::SubIOp>(
-        loc, shuffleOp.getWidth(), adaptor.getOffset());
-    result = rewriter.create<spirv::GroupNonUniformRotateKHROp>(
-        loc, scope, adaptor.getValue(), offsetForShuffleDown,
-        shuffleOp.getWidth());
+  case gpu::ShuffleMode::UP:
+    result = rewriter.create<spirv::GroupNonUniformShuffleUpOp>(
+        loc, scope, adaptor.getValue(), adaptor.getOffset());
     break;
-  }
   }
 
   rewriter.replaceOp(shuffleOp, {result, trueVal});
