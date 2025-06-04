@@ -51,7 +51,7 @@ getSgShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
     count = computeProduct(shape) / computeProduct(distUnit);
   }
   return std::make_pair(sgShape, count);
-};
+}
 
 /// This pattern transforms the CreateNdDescOp to create a subgroup descriptor
 /// from a workgroup descriptor. It replaces the offsets and sizes with
