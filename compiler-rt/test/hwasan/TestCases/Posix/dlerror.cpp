@@ -21,8 +21,8 @@ int main(int argc, char **argv) {
   for (int i = 0; i < kKeys; ++i) {
     assert(pthread_key_create(&keys[i], nullptr) == 0);
   }
-  void* o = dlopen("invalid_file_name.so", 0);
-  const char* err = dlerror();
+  void *o = dlopen("invalid_file_name.so", 0);
+  const char *err = dlerror();
   for (int i = 0; i < kKeys; ++i) {
     assert(pthread_key_delete(keys[i]) == 0);
   }
