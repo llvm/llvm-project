@@ -184,10 +184,6 @@ static cl::opt<bool> ClMemProfAttachCalleeGuids(
         "Attach calleeguids as value profile metadata for indirect calls."),
     cl::init(true), cl::Hidden);
 
-extern cl::opt<bool> MemProfReportHintedSizes;
-extern cl::opt<unsigned> MinClonedColdBytePercent;
-extern cl::opt<unsigned> MinCallsiteColdBytePercent;
-
 static cl::opt<unsigned> MinMatchedColdBytePercent(
     "memprof-matching-cold-threshold", cl::init(100), cl::Hidden,
     cl::desc("Min percent of cold bytes matched to hint allocation cold"));
@@ -298,13 +294,6 @@ private:
   ShadowMapping Mapping;
   Function *MemProfCtorFunction = nullptr;
 };
-
-// Options under which we need to record the context size info in the alloc trie
-// used to build metadata.
-bool recordContextSizeInfo() {
-  return MemProfReportHintedSizes || MinClonedColdBytePercent < 100 ||
-         MinCallsiteColdBytePercent < 100;
-}
 
 } // end anonymous namespace
 
@@ -758,7 +747,7 @@ static AllocationType addCallStack(CallStackTrie &AllocTrie,
                                 AllocInfo->Info.getAllocCount(),
                                 AllocInfo->Info.getTotalLifetime());
   std::vector<ContextTotalSize> ContextSizeInfo;
-  if (recordContextSizeInfo()) {
+  if (recordContextSizeInfoForAnalysis()) {
     auto TotalSize = AllocInfo->Info.getTotalSize();
     assert(TotalSize);
     assert(FullStackId != 0);
@@ -815,6 +804,11 @@ static bool isAllocationWithHotColdVariant(const Function *Callee,
     return false;
   }
 }
+
+struct AllocMatchInfo {
+  uint64_t TotalSize = 0;
+  AllocationType AllocType = AllocationType::None;
+};
 
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
 memprof::extractCallsFromIR(Module &M, const TargetLibraryInfo &TLI,
@@ -994,9 +988,11 @@ static void addVPMetadata(Module &M, Instruction &I,
 static void readMemprof(Module &M, Function &F,
                         IndexedInstrProfReader *MemProfReader,
                         const TargetLibraryInfo &TLI,
+                        std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
+                            &FullStackIdToAllocMatchInfo,
                         std::set<std::vector<uint64_t>> &MatchedCallSites,
                         DenseMap<uint64_t, LocToLocMap> &UndriftMaps,
-                        OptimizationRemarkEmitter &ORE) {
+                        OptimizationRemarkEmitter &ORE, uint64_t MaxColdSize) {
   auto &Ctx = M.getContext();
   // Previously we used getIRPGOFuncName() here. If F is local linkage,
   // getIRPGOFuncName() returns FuncName with prefix 'FileName;'. But
@@ -1185,7 +1181,7 @@ static void readMemprof(Module &M, Function &F,
         // We may match this instruction's location list to multiple MIB
         // contexts. Add them to a Trie specialized for trimming the contexts to
         // the minimal needed to disambiguate contexts with unique behavior.
-        CallStackTrie AllocTrie(&ORE);
+        CallStackTrie AllocTrie(&ORE, MaxColdSize);
         uint64_t TotalSize = 0;
         uint64_t TotalColdSize = 0;
         for (auto *AllocInfo : AllocInfoIter->second) {
@@ -1196,7 +1192,7 @@ static void readMemprof(Module &M, Function &F,
                                                  InlinedCallStack)) {
             NumOfMemProfMatchedAllocContexts++;
             uint64_t FullStackId = 0;
-            if (ClPrintMemProfMatchInfo || recordContextSizeInfo())
+            if (ClPrintMemProfMatchInfo || recordContextSizeInfoForAnalysis())
               FullStackId = computeFullStackId(AllocInfo->CallStack);
             auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
             TotalSize += AllocInfo->Info.getTotalSize();
@@ -1206,11 +1202,9 @@ static void readMemprof(Module &M, Function &F,
             // was requested.
             if (ClPrintMemProfMatchInfo) {
               assert(FullStackId != 0);
-              errs() << "MemProf " << getAllocTypeAttributeString(AllocType)
-                     << " context with id " << FullStackId
-                     << " has total profiled size "
-                     << AllocInfo->Info.getTotalSize() << " is matched with "
-                     << InlinedCallStack.size() << " frames\n";
+              FullStackIdToAllocMatchInfo[std::make_pair(
+                  FullStackId, InlinedCallStack.size())] = {
+                  AllocInfo->Info.getTotalSize(), AllocType};
             }
           }
         }
@@ -1325,9 +1319,19 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
   if (SalvageStaleProfile)
     UndriftMaps = computeUndriftMap(M, MemProfReader.get(), TLI);
 
+  // Map from the stack hash and matched frame count of each allocation context
+  // in the function profiles to the total profiled size (bytes) and allocation
+  // type.
+  std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
+      FullStackIdToAllocMatchInfo;
+
   // Set of the matched call sites, each expressed as a sequence of an inline
   // call stack.
   std::set<std::vector<uint64_t>> MatchedCallSites;
+
+  uint64_t MaxColdSize = 0;
+  if (auto *MemProfSum = MemProfReader->getMemProfSummary())
+    MaxColdSize = MemProfSum->getMaxColdTotalSize();
 
   for (auto &F : M) {
     if (F.isDeclaration())
@@ -1335,11 +1339,18 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
 
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-    readMemprof(M, F, MemProfReader.get(), TLI, MatchedCallSites, UndriftMaps,
-                ORE);
+    readMemprof(M, F, MemProfReader.get(), TLI, FullStackIdToAllocMatchInfo,
+                MatchedCallSites, UndriftMaps, ORE, MaxColdSize);
   }
 
   if (ClPrintMemProfMatchInfo) {
+    for (const auto &[IdLengthPair, Info] : FullStackIdToAllocMatchInfo) {
+      auto [Id, Length] = IdLengthPair;
+      errs() << "MemProf " << getAllocTypeAttributeString(Info.AllocType)
+             << " context with id " << Id << " has total profiled size "
+             << Info.TotalSize << " is matched with " << Length << " frames\n";
+    }
+
     for (const auto &CallStack : MatchedCallSites) {
       errs() << "MemProf callsite match for inline call stack";
       for (uint64_t StackId : CallStack)

@@ -1207,8 +1207,8 @@ define void @mulhu_v2i64(ptr %x) {
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 838861
 ; RV64-NEXT:    lui a2, 699051
-; RV64-NEXT:    addiw a1, a1, -819
-; RV64-NEXT:    addiw a2, a2, -1365
+; RV64-NEXT:    addi a1, a1, -819
+; RV64-NEXT:    addi a2, a2, -1365
 ; RV64-NEXT:    slli a3, a1, 32
 ; RV64-NEXT:    add a1, a1, a3
 ; RV64-NEXT:    slli a3, a2, 32
@@ -1368,7 +1368,7 @@ define void @mulhs_v2i64(ptr %x) {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 349525
-; RV64-NEXT:    addiw a1, a1, 1365
+; RV64-NEXT:    addi a1, a1, 1365
 ; RV64-NEXT:    slli a2, a1, 32
 ; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    lui a2, %hi(.LCPI74_0)
@@ -3501,7 +3501,7 @@ define void @mulhs_v4i64(ptr %x) {
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 349525
 ; RV64-NEXT:    lui a2, 1044496
-; RV64-NEXT:    addiw a1, a1, 1365
+; RV64-NEXT:    addi a1, a1, 1365
 ; RV64-NEXT:    addi a2, a2, -256
 ; RV64-NEXT:    vmv.s.x v14, a2
 ; RV64-NEXT:    slli a2, a1, 32
@@ -5527,7 +5527,7 @@ define void @mulhu_vx_v2i64(ptr %x) {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 699051
-; RV64-NEXT:    addiw a1, a1, -1365
+; RV64-NEXT:    addi a1, a1, -1365
 ; RV64-NEXT:    slli a2, a1, 32
 ; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    vmulhu.vx v8, v8, a1

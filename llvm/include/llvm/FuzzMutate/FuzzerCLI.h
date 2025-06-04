@@ -14,6 +14,7 @@
 #ifndef LLVM_FUZZMUTATE_FUZZERCLI_H
 #define LLVM_FUZZMUTATE_FUZZERCLI_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <stddef.h>
 
@@ -24,7 +25,7 @@ class StringRef;
 /// Parse cl::opts from a fuzz target commandline.
 ///
 /// This handles all arguments after -ignore_remaining_args=1 as cl::opts.
-void parseFuzzerCLOpts(int ArgC, char *ArgV[]);
+LLVM_ABI void parseFuzzerCLOpts(int ArgC, char *ArgV[]);
 
 /// Handle backend options that are encoded in the executable name.
 ///
@@ -35,11 +36,11 @@ void parseFuzzerCLOpts(int ArgC, char *ArgV[]);
 ///
 /// This is meant to be used for environments like OSS-Fuzz that aren't capable
 /// of passing in command line arguments in the normal way.
-void handleExecNameEncodedBEOpts(StringRef ExecName);
+LLVM_ABI void handleExecNameEncodedBEOpts(StringRef ExecName);
 
 /// Handle optimizer options which are encoded in the executable name.
 /// Same semantics as in 'handleExecNameEncodedBEOpts'.
-void handleExecNameEncodedOptimizerOpts(StringRef ExecName);
+LLVM_ABI void handleExecNameEncodedOptimizerOpts(StringRef ExecName);
 
 using FuzzerTestFun = int (*)(const uint8_t *Data, size_t Size);
 using FuzzerInitFun = int (*)(int *argc, char ***argv);
@@ -48,7 +49,7 @@ using FuzzerInitFun = int (*)(int *argc, char ***argv);
 ///
 /// Useful for testing fuzz targets without linking to libFuzzer. Finds inputs
 /// in the argument list in a libFuzzer compatible way.
-int runFuzzerOnInputs(
+LLVM_ABI int runFuzzerOnInputs(
     int ArgC, char *ArgV[], FuzzerTestFun TestOne,
     FuzzerInitFun Init = [](int *, char ***) { return 0; });
 
