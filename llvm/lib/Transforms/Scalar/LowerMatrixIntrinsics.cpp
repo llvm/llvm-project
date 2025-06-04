@@ -1408,9 +1408,9 @@ public:
         InstructionCost EmbedCost(0);
         // Roughly estimate the cost for embedding the columns into a vector.
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost +=
-              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 {}, TTI::TCK_RecipThroughput);
+          EmbedCost += TTI.getShuffleCost(
+              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1430,9 +1430,9 @@ public:
         // vector.
         InstructionCost EmbedCost(0);
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost -=
-              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 {}, TTI::TCK_RecipThroughput);
+          EmbedCost -= TTI.getShuffleCost(
+              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
