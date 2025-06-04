@@ -14,7 +14,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;

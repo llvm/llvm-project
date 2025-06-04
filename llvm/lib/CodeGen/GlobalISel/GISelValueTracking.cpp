@@ -675,6 +675,31 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_CONCAT_VECTORS: {
+    if (MRI.getType(MI.getOperand(0).getReg()).isScalableVector())
+      break;
+    // Split DemandedElts and test each of the demanded subvectors.
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+    unsigned NumSubVectorElts =
+        MRI.getType(MI.getOperand(1).getReg()).getNumElements();
+    unsigned NumSubVectors = MI.getNumOperands() - 1;
+
+    for (unsigned i = 0; i != NumSubVectors; ++i) {
+      APInt DemandedSub =
+          DemandedElts.extractBits(NumSubVectorElts, i * NumSubVectorElts);
+      if (!!DemandedSub) {
+        computeKnownBitsImpl(MI.getOperand(i + 1).getReg(), Known2, DemandedSub,
+                             Depth + 1);
+
+        Known = Known.intersectWith(Known2);
+      }
+      // If we don't know any bits, early out.
+      if (Known.isUnknown())
+        break;
+    }
+    break;
+  }
   }
 
   LLVM_DEBUG(dumpResult(MI, Known, Depth));

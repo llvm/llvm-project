@@ -401,8 +401,8 @@ GetDemangledFunctionSuffix(const SymbolContext &sc) {
   if (!info->hasBasename())
     return std::nullopt;
 
-  return demangled_name.slice(info->QualifiersRange.second,
-                              llvm::StringRef::npos);
+  return demangled_name.slice(info->SuffixRange.first,
+                              info->SuffixRange.second);
 }
 
 static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
@@ -592,7 +592,7 @@ class NodeAllocator {
 public:
   void reset() { Alloc.Reset(); }
 
-  template <typename T, typename... Args> T *makeNode(Args &&... args) {
+  template <typename T, typename... Args> T *makeNode(Args &&...args) {
     return new (Alloc.Allocate(sizeof(T), alignof(T)))
         T(std::forward<Args>(args)...);
   }
@@ -614,7 +614,7 @@ public:
   ManglingSubstitutor() : Base(nullptr, nullptr) {}
 
   template <typename... Ts>
-  ConstString substitute(llvm::StringRef Mangled, Ts &&... Vals) {
+  ConstString substitute(llvm::StringRef Mangled, Ts &&...Vals) {
     this->getDerived().reset(Mangled, std::forward<Ts>(Vals)...);
     return substituteImpl(Mangled);
   }
@@ -1449,47 +1449,50 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   stl_deref_flags.SetFrontEndWantsDereference();
 
   cpp_category_sp->AddTypeSynthetic(
-      "^std::vector<.+>(( )?&)?$", eFormatterMatchRegex,
+      "^std::(__debug::)?vector<.+>(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdVectorSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::map<.+> >(( )?&)?$", eFormatterMatchRegex,
+      "^std::(__debug::)?map<.+> >(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::deque<.+>(( )?&)?$", eFormatterMatchRegex,
+      "^std::(__debug)?deque<.+>(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdDequeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::set<.+> >(( )?&)?$", eFormatterMatchRegex,
+      "^std::(__debug::)?set<.+> >(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::multimap<.+> >(( )?&)?$", eFormatterMatchRegex,
+      "^std::(__debug::)?multimap<.+> >(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::multiset<.+> >(( )?&)?$", eFormatterMatchRegex,
+      "^std::(__debug::)?multiset<.+> >(( )?&)?$", eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdMapLikeSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::unordered_(multi)?(map|set)<.+> >$", eFormatterMatchRegex,
+      "^std::(__debug::)?unordered_(multi)?(map|set)<.+> >$",
+      eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdUnorderedMapSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::(__cxx11::)?list<.+>(( )?&)?$", eFormatterMatchRegex,
+      "^std::((__debug::)?|(__cxx11::)?)list<.+>(( )?&)?$",
+      eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_deref_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdListSynthProvider")));
   cpp_category_sp->AddTypeSynthetic(
-      "^std::(__cxx11::)?forward_list<.+>(( )?&)?$", eFormatterMatchRegex,
+      "^std::((__debug::)?|(__cxx11::)?)forward_list<.+>(( )?&)?$",
+      eFormatterMatchRegex,
       SyntheticChildrenSP(new ScriptedSyntheticChildren(
           stl_synth_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.StdForwardListSynthProvider")));
@@ -1501,44 +1504,47 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
-  cpp_category_sp->AddTypeSummary("^std::bitset<.+>(( )?&)?$",
+  cpp_category_sp->AddTypeSummary("^std::(__debug::)?bitset<.+>(( )?&)?$",
                                   eFormatterMatchRegex,
                                   TypeSummaryImplSP(new StringSummaryFormat(
                                       stl_summary_flags, "size=${svar%#}")));
-  cpp_category_sp->AddTypeSummary("^std::vector<.+>(( )?&)?$",
+  cpp_category_sp->AddTypeSummary("^std::(__debug::)?vector<.+>(( )?&)?$",
                                   eFormatterMatchRegex,
                                   TypeSummaryImplSP(new StringSummaryFormat(
                                       stl_summary_flags, "size=${svar%#}")));
-  cpp_category_sp->AddTypeSummary("^std::map<.+> >(( )?&)?$",
+  cpp_category_sp->AddTypeSummary("^std::(__debug::)?map<.+> >(( )?&)?$",
                                   eFormatterMatchRegex,
                                   TypeSummaryImplSP(new StringSummaryFormat(
                                       stl_summary_flags, "size=${svar%#}")));
-  cpp_category_sp->AddTypeSummary("^std::set<.+> >(( )?&)?$",
+  cpp_category_sp->AddTypeSummary("^std::(__debug::)?set<.+> >(( )?&)?$",
                                   eFormatterMatchRegex,
                                   TypeSummaryImplSP(new StringSummaryFormat(
                                       stl_summary_flags, "size=${svar%#}")));
-  cpp_category_sp->AddTypeSummary("^std::deque<.+>(( )?&)?$",
+  cpp_category_sp->AddTypeSummary("^std::(__debug::)?deque<.+>(( )?&)?$",
                                   eFormatterMatchRegex,
                                   TypeSummaryImplSP(new StringSummaryFormat(
                                       stl_summary_flags, "size=${svar%#}")));
-  cpp_category_sp->AddTypeSummary("^std::multimap<.+> >(( )?&)?$",
+  cpp_category_sp->AddTypeSummary("^std::(__debug::)?multimap<.+> >(( )?&)?$",
                                   eFormatterMatchRegex,
                                   TypeSummaryImplSP(new StringSummaryFormat(
                                       stl_summary_flags, "size=${svar%#}")));
-  cpp_category_sp->AddTypeSummary("^std::multiset<.+> >(( )?&)?$",
-                                  eFormatterMatchRegex,
-                                  TypeSummaryImplSP(new StringSummaryFormat(
-                                      stl_summary_flags, "size=${svar%#}")));
-  cpp_category_sp->AddTypeSummary("^std::unordered_(multi)?(map|set)<.+> >$",
-                                  eFormatterMatchRegex,
-                                  TypeSummaryImplSP(new StringSummaryFormat(
-                                      stl_summary_flags, "size=${svar%#}")));
-  cpp_category_sp->AddTypeSummary("^std::(__cxx11::)?list<.+>(( )?&)?$",
+  cpp_category_sp->AddTypeSummary("^std::(__debug::)?multiset<.+> >(( )?&)?$",
                                   eFormatterMatchRegex,
                                   TypeSummaryImplSP(new StringSummaryFormat(
                                       stl_summary_flags, "size=${svar%#}")));
   cpp_category_sp->AddTypeSummary(
-      "^std::(__cxx11::)?forward_list<.+>(( )?&)?$", eFormatterMatchRegex,
+      "^std::(__debug::)?unordered_(multi)?(map|set)<.+> >$",
+      eFormatterMatchRegex,
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::((__debug::)?|(__cxx11::)?)list<.+>(( )?&)?$",
+      eFormatterMatchRegex,
+      TypeSummaryImplSP(
+          new StringSummaryFormat(stl_summary_flags, "size=${svar%#}")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::((__debug::)?|(__cxx11::)?)forward_list<.+>(( )?&)?$",
+      eFormatterMatchRegex,
       TypeSummaryImplSP(new ScriptSummaryFormat(
           stl_summary_flags,
           "lldb.formatters.cpp.gnu_libstdcpp.ForwardListSummaryProvider")));
@@ -1592,7 +1598,7 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibStdcppBitsetSyntheticFrontEndCreator,
-      "std::bitset synthetic child", "^std::bitset<.+>(( )?&)?$",
+      "std::bitset synthetic child", "^std::(__debug::)?bitset<.+>(( )?&)?$",
       stl_deref_flags, true);
 
   AddCXXSynthetic(
@@ -1731,8 +1737,12 @@ lldb::TypeCategoryImplSP CPlusPlusLanguage::GetFormatters() {
     DataVisualization::Categories::GetCategory(ConstString(GetPluginName()),
                                                g_category);
     if (g_category) {
-      LoadLibStdcppFormatters(g_category);
+      // NOTE: the libstdcpp formatters are loaded after libcxx formatters
+      // because we don't want to the libcxx formatters to match the potential
+      // `__debug` inline namespace that libstdcpp may use.
+      // LLDB prioritizes the last loaded matching formatter.
       LoadLibCxxFormatters(g_category);
+      LoadLibStdcppFormatters(g_category);
       LoadSystemFormatters(g_category);
     }
   });
@@ -2056,9 +2066,9 @@ public:
     m_collection_sp->Initialize(g_language_cplusplus_properties);
   }
 
-  const FormatEntity::Entry *GetFunctionNameFormat() const {
-    return GetPropertyAtIndexAs<const FormatEntity::Entry *>(
-        ePropertyFunctionNameFormat);
+  FormatEntity::Entry GetFunctionNameFormat() const {
+    return GetPropertyAtIndexAs<FormatEntity::Entry>(
+        ePropertyFunctionNameFormat, {});
   }
 };
 } // namespace
@@ -2068,7 +2078,7 @@ static PluginProperties &GetGlobalPluginProperties() {
   return g_settings;
 }
 
-const FormatEntity::Entry *CPlusPlusLanguage::GetFunctionNameFormat() const {
+FormatEntity::Entry CPlusPlusLanguage::GetFunctionNameFormat() const {
   return GetGlobalPluginProperties().GetFunctionNameFormat();
 }
 
