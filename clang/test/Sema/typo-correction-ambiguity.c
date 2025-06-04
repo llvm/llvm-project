@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 // Check the following typo correction behavior in C:
 // - no typos are diagnosed when a call expression has ambiguous (multiple) corrections

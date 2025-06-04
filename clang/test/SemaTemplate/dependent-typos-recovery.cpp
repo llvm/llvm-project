@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 // There should be no extra errors about missing 'template' keywords.
 struct B {

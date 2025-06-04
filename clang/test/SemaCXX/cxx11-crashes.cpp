@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fdelayed-typo-correction -verify %s -Wno-deprecated-builtins
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins
 
 namespace rdar12240916 {
 

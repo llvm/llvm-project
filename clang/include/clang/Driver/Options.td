@@ -2025,9 +2025,6 @@ def fcrash_diagnostics_dir : Joined<["-"], "fcrash-diagnostics-dir=">,
   Group<f_clang_Group>, Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Put crash-report files in <dir>">, MetaVarName<"<dir>">;
-def fdelayed_typo_correction : Flag<["-"], "fdelayed-typo-correction">, Group<f_clang_Group>,
-  HelpText<"Enable delayed typo correction">, Visibility<[CC1Option]>,
-  MarshallingInfoFlag<LangOpts<"DelayedTypoCorrection">>;
 def fcreate_profile : Flag<["-"], "fcreate-profile">, Group<f_Group>;
 defm cxx_exceptions: BoolFOption<"cxx-exceptions",
   LangOpts<"CXXExceptions">, DefaultFalse,

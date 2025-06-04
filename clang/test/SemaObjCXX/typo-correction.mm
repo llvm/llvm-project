@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only -fdelayed-typo-correction -Wno-objc-root-class
+// RUN: %clang_cc1 %s -verify -fsyntax-only -Wno-objc-root-class
 
 class ClassA {};
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -fdelayed-typo-correction -verify %s
+// RUN: %clang_cc1 -std=c++20 -verify %s
 
 // expected-error@+1{{use of undeclared identifier 'b'}}
 constexpr bool CausesRecoveryExpr = b;

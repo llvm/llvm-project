@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t -fimplicit-module-maps -fdelayed-typo-correction -I%S/Inputs/suggest-include %s -verify
+// RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t -fimplicit-module-maps -I%S/Inputs/suggest-include %s -verify
 
 #include "empty.h" // import the module file
 

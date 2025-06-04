@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdelayed-typo-correction -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 namespace c { double xxx; }
 namespace d { float xxx; }

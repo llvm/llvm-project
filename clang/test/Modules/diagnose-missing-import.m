@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fmodules-cache-path=%t -I%S/Inputs/diagnose-missing-import \
-// RUN:   -Werror=implicit-function-declaration -fsyntax-only -fdelayed-typo-correction \
+// RUN:   -Werror=implicit-function-declaration -fsyntax-only \
 // RUN:   -fimplicit-module-maps -verify %s
 @import NCI;
 

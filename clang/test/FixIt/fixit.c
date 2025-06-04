@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -pedantic -Wunused-label -Wno-deprecated-non-prototype -fdelayed-typo-correction -verify -x c %s
+// RUN: %clang_cc1 -pedantic -Wunused-label -Wno-deprecated-non-prototype -verify -x c %s
 // RUN: cp %s %t
-// RUN: not %clang_cc1 -pedantic -Wunused-label -fdelayed-typo-correction -fixit -x c %t
+// RUN: not %clang_cc1 -pedantic -Wunused-label -fixit -x c %t
 // RUN: %clang_cc1 -pedantic -Wunused-label -Wno-deprecated-non-prototype -Werror -x c %t
 // RUN: grep -v CHECK %t | FileCheck %t
 
