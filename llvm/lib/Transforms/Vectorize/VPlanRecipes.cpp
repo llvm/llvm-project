@@ -634,10 +634,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // each part of the reduction.
     unsigned UF = getNumOperands() - 2;
     Value *ReducedPartRdx = State.get(getOperand(2));
+    auto MinMaxOp = RecurrenceDescriptor::isSignedRecurrenceKind(RK)
+                        ? RecurKind::SMax
+                        : RecurKind::UMax;
     for (unsigned Part = 1; Part < UF; ++Part) {
-      ReducedPartRdx = createMinMaxOp(
-          Builder, RdxDesc.isReduxSigned() ? RecurKind::SMax : RecurKind::UMax,
-          ReducedPartRdx, State.get(getOperand(2 + Part)));
+      ReducedPartRdx = createMinMaxOp(Builder, MinMaxOp, ReducedPartRdx,
+                                      State.get(getOperand(2 + Part)));
     }
 
     return createFindLastIVReduction(Builder, ReducedPartRdx,
@@ -705,7 +707,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       // If the reduction can be performed in a smaller type, we need to extend
       // the reduction to the wider type before we branch to the original loop.
       if (PhiTy != RdxDesc.getRecurrenceType())
-        ReducedPartRdx = RdxDesc.isResultSigned()
+        ReducedPartRdx = RdxDesc.isSigned()
                              ? Builder.CreateSExt(ReducedPartRdx, PhiTy)
                              : Builder.CreateZExt(ReducedPartRdx, PhiTy);
     }

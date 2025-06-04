@@ -50,7 +50,8 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::UMax:
   case RecurKind::UMin:
   case RecurKind::AnyOf:
-  case RecurKind::FindLastIV:
+  case RecurKind::FindLastIVSMin:
+  case RecurKind::FindLastIVUMin:
     return true;
   }
   return false;
@@ -88,7 +89,7 @@ static Instruction *lookThroughAnd(PHINode *Phi, Type *&RT,
 }
 
 /// Compute the minimal bit width needed to represent a reduction whose exit
-/// instruction is given by Exit, along with its signedness.
+/// instruction is given by Exit.
 static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
                                                      DemandedBits *DB,
                                                      AssumptionCache *AC,
@@ -255,7 +256,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   SmallPtrSet<Instruction *, 4> CastInsts;
   unsigned MinWidthCastToRecurrenceType;
   Instruction *Start = Phi;
-  bool IsResultSigned = false, IsReduxSigned = false;
+  bool IsSigned = false;
 
   SmallPtrSet<Instruction *, 8> VisitedInsts;
   SmallVector<Instruction *, 8> Worklist;
@@ -396,7 +397,6 @@ bool RecurrenceDescriptor::AddReductionVar(
       //       state accurate while processing the worklist?
       if (ReduxDesc.getRecKind() != RecurKind::None)
         Kind = ReduxDesc.getRecKind();
-      IsReduxSigned = ReduxDesc.isSigned();
     }
 
     bool IsASelect = isa<SelectInst>(Cur);
@@ -566,7 +566,7 @@ bool RecurrenceDescriptor::AddReductionVar(
     //       smaller type. We should just generate a correctly typed expression
     //       to begin with.
     Type *ComputedType;
-    std::tie(ComputedType, IsResultSigned) =
+    std::tie(ComputedType, IsSigned) =
         computeRecurrenceType(ExitInstruction, DB, AC, DT);
     if (ComputedType != RecurrenceType)
       return false;
@@ -596,9 +596,8 @@ bool RecurrenceDescriptor::AddReductionVar(
 
   // Save the description of this reduction variable.
   RecurrenceDescriptor RD(RdxStart, ExitInstruction, IntermediateStore, Kind,
-                          FMF, ExactFPMathInst, RecurrenceType, IsResultSigned,
-                          IsReduxSigned, IsOrdered, CastInsts,
-                          MinWidthCastToRecurrenceType);
+                          FMF, ExactFPMathInst, RecurrenceType, IsSigned,
+                          IsOrdered, CastInsts, MinWidthCastToRecurrenceType);
   RedDes = RD;
 
   return true;
@@ -704,7 +703,7 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
 
   // Returns a non-nullopt boolean indicating the signedness of the recurrence
   // when a valid FindLastIV pattern is found.
-  auto GetInductionSignedness = [&](Value *V) -> std::optional<bool> {
+  auto GetRecurKind = [&](Value *V) -> std::optional<RecurKind> {
     Type *Ty = V->getType();
     if (!SE.isSCEVable(Ty))
       return std::nullopt;
@@ -741,9 +740,9 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
       return ValidRange.contains(IVRange);
     };
     if (CheckRange(true))
-      return true;
+      return RecurKind::FindLastIVSMin;
     if (CheckRange(false))
-      return false;
+      return RecurKind::FindLastIVUMin;
     return std::nullopt;
   };
 
@@ -751,8 +750,8 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *TheLoop, PHINode *OrigPhi,
   //   select(cmp(), phi, increasing_loop_induction) or
   //   select(cmp(), increasing_loop_induction, phi)
   // TODO: Support for monotonically decreasing induction variable
-  if (auto IsSigned = GetInductionSignedness(NonRdxPhi))
-    return InstDesc(I, RecurKind::FindLastIV, *IsSigned);
+  if (auto RK = GetRecurKind(NonRdxPhi))
+    return InstDesc(I, *RK);
 
   return InstDesc(false, I);
 }
@@ -999,8 +998,8 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
                       << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FindLastIV, TheLoop, FMF, RedDes, DB, AC,
-                      DT, SE)) {
+  if (AddReductionVar(Phi, RecurKind::FindLastIVSMin, TheLoop, FMF, RedDes, DB,
+                      AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found a FindLastIV reduction PHI." << *Phi << "\n");
     return true;
   }
@@ -1151,7 +1150,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::Mul:
     return Instruction::Mul;
   case RecurKind::AnyOf:
-  case RecurKind::FindLastIV:
+  case RecurKind::FindLastIVSMin:
+  case RecurKind::FindLastIVUMin:
   case RecurKind::Or:
     return Instruction::Or;
   case RecurKind::And:
