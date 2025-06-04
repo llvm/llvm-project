@@ -17,6 +17,7 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <utility>
 
@@ -33,7 +34,7 @@ class Triple;
 
 /// Instances of this class represent a uniqued identifier for a section in the
 /// current translation unit.  The MCContext class uniques and creates these.
-class MCSection {
+class LLVM_ABI MCSection {
 public:
   friend MCAssembler;
   friend MCObjectStreamer;
