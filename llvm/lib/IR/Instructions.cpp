@@ -39,6 +39,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CheckedArithmetic.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -48,7 +49,6 @@
 #include <cassert>
 #include <cstdint>
 #include <optional>
-#include <set>
 #include <vector>
 
 using namespace llvm;
@@ -238,40 +238,6 @@ bool PHINode::hasConstantOrUndefValue() const {
     }
   }
   return true;
-}
-
-/// If the specified PHI node (possibly via other PHI nodes) merges together the
-/// same or identical (i.e. Instruction::isIdenticalTo() returns true) values,
-/// return one of the values, otherwise return null.
-Value *PHINode::hasIdenticalValue() {
-  std::vector<PHINode *> Worklist;
-  std::set<PHINode *> Seen;
-  Value *Result = nullptr;
-  Worklist.push_back(this);
-  while (!Worklist.empty()) {
-    PHINode *PN = Worklist.back();
-    Worklist.pop_back();
-    if (!Seen.insert(PN).second)
-      continue;
-    for (Value *V : PN->incoming_values()) {
-      if (auto *PN = dyn_cast<PHINode>(V)) {
-        Worklist.push_back(PN);
-        continue;
-      }
-      if (!Result) {
-        Result = V;
-        continue;
-      }
-      if (V == Result)
-        continue;
-      if (auto *I = dyn_cast<Instruction>(V))
-        if (auto *ResultI = dyn_cast<Instruction>(Result))
-          if (I->isIdenticalTo(ResultI))
-            continue;
-      return nullptr;
-    }
-  }
-  return Result;
 }
 
 //===----------------------------------------------------------------------===//
@@ -483,7 +449,7 @@ bool CallBase::paramHasNonNullAttr(unsigned ArgNo,
       (AllowUndefOrPoison || paramHasAttr(ArgNo, Attribute::NoUndef)))
     return true;
 
-  if (getParamDereferenceableBytes(ArgNo) > 0 &&
+  if (paramHasAttr(ArgNo, Attribute::Dereferenceable) &&
       !NullPointerIsDefined(
           getCaller(),
           getArgOperand(ArgNo)->getType()->getPointerAddressSpace()))
@@ -520,9 +486,10 @@ Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
   return Attribute();
 }
 
-template Attribute
+template LLVM_ABI Attribute
 CallBase::getFnAttrOnCalledFunction(Attribute::AttrKind Kind) const;
-template Attribute CallBase::getFnAttrOnCalledFunction(StringRef Kind) const;
+template LLVM_ABI Attribute
+CallBase::getFnAttrOnCalledFunction(StringRef Kind) const;
 
 template <typename AK>
 Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
@@ -534,11 +501,10 @@ Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
 
   return Attribute();
 }
-template Attribute
-CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
-                                       Attribute::AttrKind Kind) const;
-template Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
-                                                          StringRef Kind) const;
+template LLVM_ABI Attribute CallBase::getParamAttrOnCalledFunction(
+    unsigned ArgNo, Attribute::AttrKind Kind) const;
+template LLVM_ABI Attribute
+CallBase::getParamAttrOnCalledFunction(unsigned ArgNo, StringRef Kind) const;
 
 void CallBase::getOperandBundlesAsDefs(
     SmallVectorImpl<OperandBundleDef> &Defs) const {

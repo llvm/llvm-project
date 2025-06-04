@@ -1298,12 +1298,7 @@ RISCVVLOptimizer::getMinimumVLForUser(const MachineOperand &UserOp) const {
   // Instructions like reductions may use a vector register as a scalar
   // register. In this case, we should treat it as only reading the first lane.
   if (isVectorOpUsedAsScalarOp(UserOp)) {
-    [[maybe_unused]] Register R = UserOp.getReg();
-    [[maybe_unused]] const TargetRegisterClass *RC = MRI->getRegClass(R);
-    assert(RISCV::VRRegClass.hasSubClassEq(RC) &&
-           "Expect LMUL 1 register class for vector as scalar operands!");
     LLVM_DEBUG(dbgs() << "    Used this operand as a scalar operand\n");
-
     return MachineOperand::CreateImm(1);
   }
 
@@ -1335,8 +1330,8 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
         UserMI.getOperand(0).getSubReg() == RISCV::NoSubRegister &&
         UserMI.getOperand(1).getSubReg() == RISCV::NoSubRegister) {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of COPY\n");
-      for (auto &CopyUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
-        Worklist.insert(&CopyUse);
+      Worklist.insert_range(llvm::make_pointer_range(
+          MRI->use_operands(UserMI.getOperand(0).getReg())));
       continue;
     }
 
@@ -1345,8 +1340,8 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       if (!PHISeen.insert(&UserMI).second)
         continue;
       LLVM_DEBUG(dbgs() << "    Peeking through uses of PHI\n");
-      for (auto &PhiUse : MRI->use_operands(UserMI.getOperand(0).getReg()))
-        Worklist.insert(&PhiUse);
+      Worklist.insert_range(llvm::make_pointer_range(
+          MRI->use_operands(UserMI.getOperand(0).getReg())));
       continue;
     }
 
