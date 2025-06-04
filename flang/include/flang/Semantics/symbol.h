@@ -756,7 +756,7 @@ public:
     return false;
   }
 
-  void AddDecl(const DeclInfo &decl) { declList_.push_back(decl); }
+  void AddDecl(const DeclInfo &decl) { declList_.emplace_back(decl); }
   const DeclVector &GetDeclList() const { return declList_; }
 
 private:
