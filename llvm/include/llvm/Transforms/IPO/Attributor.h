@@ -6477,8 +6477,6 @@ struct AADenormalFPMath
   LLVM_ABI static const char ID;
 };
 
-raw_ostream &operator<<(raw_ostream &, const AAPointerInfo::Access &);
-
 /// Run options, used by the pass manager.
 enum AttributorRunOption {
   NONE = 0,

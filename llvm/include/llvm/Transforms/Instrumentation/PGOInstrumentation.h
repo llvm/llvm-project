@@ -20,6 +20,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
 #include <string>
 
@@ -30,10 +31,6 @@ LLVM_ABI extern cl::opt<bool> DebugInfoCorrelate;
 class Function;
 class Instruction;
 class Module;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// The instrumentation (profile-instr-gen) pass for IR based PGO.
 // We use this pass to create COMDAT profile variables for context

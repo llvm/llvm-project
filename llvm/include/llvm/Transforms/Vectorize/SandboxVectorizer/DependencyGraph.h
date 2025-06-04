@@ -46,6 +46,9 @@ class DGNode;
 class MemDGNode;
 class DependencyGraph;
 
+// Defined in Transforms/Vectorize/SandboxVectorizer/Interval.cpp
+extern template class LLVM_TEMPLATE_ABI Interval<MemDGNode>;
+
 /// Iterate over both def-use and mem dependencies.
 class PredIterator {
   User::op_iterator OpIt;
@@ -461,7 +464,6 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG
 };
-
 } // namespace llvm::sandboxir
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_DEPENDENCYGRAPH_H

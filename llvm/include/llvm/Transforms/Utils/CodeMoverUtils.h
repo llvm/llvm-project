@@ -17,6 +17,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CODEMOVERUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CODEMOVERUTILS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class BasicBlock;

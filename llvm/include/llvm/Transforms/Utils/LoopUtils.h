@@ -508,7 +508,7 @@ LLVM_ABI void setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
 /// structure, so we append to it in *reverse* postorder.
 /// For trees, a preorder traversal is a viable reverse postorder, so we
 /// actually append using a preorder walk algorithm.
-template <typename RangeT>
+template <typename RangeT> LLVM_TEMPLATE_ABI
 void appendLoopsToWorklist(RangeT &&, SmallPriorityWorklist<Loop *, 4> &);
 /// Utility that implements appending of loops onto a worklist given a range.
 /// It has the same behavior as appendLoopsToWorklist, but assumes the range of
@@ -516,6 +516,13 @@ void appendLoopsToWorklist(RangeT &&, SmallPriorityWorklist<Loop *, 4> &);
 template <typename RangeT>
 void appendReversedLoopsToWorklist(RangeT &&,
                                    SmallPriorityWorklist<Loop *, 4> &);
+
+extern template LLVM_TEMPLATE_ABI void llvm::appendLoopsToWorklist<ArrayRef<Loop *> &>(
+    ArrayRef<Loop *> &Loops, SmallPriorityWorklist<Loop *, 4> &Worklist);
+
+extern template LLVM_TEMPLATE_ABI void
+llvm::appendLoopsToWorklist<Loop &>(Loop &L,
+                                    SmallPriorityWorklist<Loop *, 4> &Worklist);
 
 /// Utility that implements appending of loops onto a worklist given LoopInfo.
 /// Calls the templated utility taking a Range of loops, handing it the Loops

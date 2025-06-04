@@ -289,6 +289,10 @@ public:
 #endif // NDEBUG
 };
 
+// Explicit instantiations
+extern template LLVM_TEMPLATE_ABI void SeedContainer::insert<LoadInst>(LoadInst *);
+extern template LLVM_TEMPLATE_ABI void SeedContainer::insert<StoreInst>(StoreInst *);
+
 class SeedCollector {
   SeedContainer StoreSeeds;
   SeedContainer LoadSeeds;
