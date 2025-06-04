@@ -1,7 +1,7 @@
 ; Test plugin options new-pass-manager and debug-pass-manager
 ; RUN: opt -module-summary %s -o %t.o
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=new-pass-manager \
 ; RUN:     --plugin-opt=debug-pass-manager \
