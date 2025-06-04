@@ -151,6 +151,5 @@ private:
   bool warnAllUsage_{false};
   bool disableAllWarnings_{false};
 };
-
 } // namespace Fortran::common
 #endif // FORTRAN_SUPPORT_FORTRAN_FEATURES_H_
