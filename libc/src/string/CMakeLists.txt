@@ -89,7 +89,6 @@ add_entrypoint_object(
   HDRS
     stpcpy.h
   DEPENDS
-    .mempcpy
     .string_utils
 )
 
