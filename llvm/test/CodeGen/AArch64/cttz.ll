@@ -235,15 +235,15 @@ define void @v2i16(ptr %p1) {
 ; CHECK-GI-LABEL: v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #65535 // =0xffff
-; CHECK-GI-NEXT:    ld1 { v1.h }[0], [x0]
-; CHECK-GI-NEXT:    ldr h2, [x0, #2]
-; CHECK-GI-NEXT:    mov v0.s[0], w8
-; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    ld1 { v0.h }[0], [x0]
+; CHECK-GI-NEXT:    ldr h1, [x0, #2]
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    mov v2.s[1], w8
 ; CHECK-GI-NEXT:    add x8, x0, #2
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    add v0.2s, v1.2s, v0.2s
-; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    eor v1.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    add v0.2s, v0.2s, v2.2s
+; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uaddlp v0.4h, v0.8b
@@ -418,7 +418,7 @@ define <3 x i32> @v3i32(<3 x i32> %d) {
 ; CHECK-GI-LABEL: v3i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-GI-NEXT:    mov v1.s[0], w8
+; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    mov v1.s[2], w8
 ; CHECK-GI-NEXT:    eor v2.16b, v0.16b, v1.16b
