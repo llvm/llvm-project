@@ -2,6 +2,9 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=postmisched -verify-misched -o - %s | FileCheck -check-prefix=TopDown %s
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=postmisched -misched-postra-direction=bottomup -verify-misched -o - %s | FileCheck -check-prefix=BottomUp %s
 
+# This test demonstrates how bottom-up scheduling moves IMAGE_SAMPLE instructions
+# earlier compared to top-down scheduling.
+
 ---
 name: sched_image_sample_post_ra
 tracksRegLiveness: true
