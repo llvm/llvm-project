@@ -629,7 +629,8 @@ void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
     LLVMContext &Ctx = GV->getContext();
     IRBuilder<> B(GV->getContext());
     MDNode *Operands = MDNode::get(
-        Ctx, {ConstantAsMetadata::get(B.getInt32(11)),
+        Ctx, {ConstantAsMetadata::get(
+                  B.getInt32(/* Spirv::Decoration::BuiltIn */ 11)),
               ConstantAsMetadata::get(B.getInt32(Attr->getBuiltIn()))});
     MDNode *Decoration = MDNode::get(Ctx, {Operands});
     GV->addMetadata("spirv.Decorations", *Decoration);
