@@ -2652,6 +2652,16 @@ public:
   /// void*).
   void DiscardMisalignedMemberAddress(const Type *T, Expr *E);
 
+  /// Returns true if `From` is a function or pointer to a function with the
+  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
+  /// function without this attribute.
+  bool DiscardingCFIUncheckedCallee(QualType From, QualType To) const;
+
+  /// Returns true if `From` is a function or pointer to a function without the
+  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
+  /// function with this attribute.
+  bool AddingCFIUncheckedCallee(QualType From, QualType To) const;
+
   /// This function calls Action when it determines that E designates a
   /// misaligned member due to the packed attribute. This is used to emit
   /// local diagnostics like in reference binding.
@@ -10262,9 +10272,15 @@ public:
                                  bool CStyle, bool &ObjCLifetimeConversion);
 
   /// Determine whether the conversion from FromType to ToType is a valid
-  /// conversion that strips "noexcept" or "noreturn" off the nested function
-  /// type.
-  bool IsFunctionConversion(QualType FromType, QualType ToType) const;
+  /// conversion that strips "noexcept" or "noreturn" or "cfi_unchecked_callee"
+  /// off the nested function type. This also checks if "cfi_unchecked_callee"
+  /// was added to the function type. If "cfi_unchecked_callee" is added and
+  /// `AddingCFIUncheckedCallee` is provided, it will be set to true. The same
+  /// thing applies for `DiscardingCFIUncheckedCallee` if the attribute is
+  /// discarded.
+  bool IsFunctionConversion(QualType FromType, QualType ToType,
+                            bool *DiscardingCFIUncheckedCallee = nullptr,
+                            bool *AddingCFIUncheckedCallee = nullptr) const;
 
   /// Same as `IsFunctionConversion`, but if this would return true, it sets
   /// `ResultTy` to `ToType`.

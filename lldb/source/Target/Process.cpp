@@ -2281,7 +2281,6 @@ size_t Process::WriteMemoryPrivate(addr_t addr, const void *buf, size_t size,
   return bytes_written;
 }
 
-#define USE_ALLOCATE_MEMORY_CACHE 1
 size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
                             Status &error) {
   if (ABISP abi_sp = GetABI())
@@ -2292,12 +2291,8 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   if (buf == nullptr || size == 0)
     return 0;
 
-#if defined(USE_ALLOCATE_MEMORY_CACHE)
   if (TrackMemoryCacheChanges() || !m_allocated_memory_cache.IsInCache(addr))
     m_mod_id.BumpMemoryID();
-#else
-  m_mod_id.BumpMemoryID();
-#endif
 
   // We need to write any data that would go where any current software traps
   // (enabled software breakpoints) any software traps (breakpoints) that we
@@ -2434,20 +2429,7 @@ addr_t Process::AllocateMemory(size_t size, uint32_t permissions,
     return LLDB_INVALID_ADDRESS;
   }
 
-#if defined(USE_ALLOCATE_MEMORY_CACHE)
   return m_allocated_memory_cache.AllocateMemory(size, permissions, error);
-#else
-  addr_t allocated_addr = DoAllocateMemory(size, permissions, error);
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log,
-            "Process::AllocateMemory(size=%" PRIu64
-            ", permissions=%s) => 0x%16.16" PRIx64
-            " (m_stop_id = %u m_memory_id = %u)",
-            (uint64_t)size, GetPermissionsAsCString(permissions),
-            (uint64_t)allocated_addr, m_mod_id.GetStopID(),
-            m_mod_id.GetMemoryID());
-  return allocated_addr;
-#endif
 }
 
 addr_t Process::CallocateMemory(size_t size, uint32_t permissions,
@@ -2500,21 +2482,10 @@ void Process::SetCanRunCode(bool can_run_code) {
 
 Status Process::DeallocateMemory(addr_t ptr) {
   Status error;
-#if defined(USE_ALLOCATE_MEMORY_CACHE)
   if (!m_allocated_memory_cache.DeallocateMemory(ptr)) {
     error = Status::FromErrorStringWithFormat(
         "deallocation of memory at 0x%" PRIx64 " failed.", (uint64_t)ptr);
   }
-#else
-  error = DoDeallocateMemory(ptr);
-
-  Log *log = GetLog(LLDBLog::Process);
-  LLDB_LOGF(log,
-            "Process::DeallocateMemory(addr=0x%16.16" PRIx64
-            ") => err = %s (m_stop_id = %u, m_memory_id = %u)",
-            ptr, error.AsCString("SUCCESS"), m_mod_id.GetStopID(),
-            m_mod_id.GetMemoryID());
-#endif
   return error;
 }
 

@@ -431,6 +431,11 @@ def CIR_RecordType : CIR_Type<"Record", "record",
     will be the same type. Attempting to build a record with an existing name,
     but a different body will result in an error.
 
+    Each record type will have a `RecordKind` that is either `Class`, `Struct`,
+    or `Union`, depending on the C/C++ type that it is representing. Note that
+    `Class` and `Struct` are semantically identical, but the kind preserves the
+    keyword that was used to declare the type in the original source code.
+
     A few examples:
 
     ```mlir
@@ -482,8 +487,9 @@ def CIR_RecordType : CIR_Type<"Record", "record",
   let extraClassDeclaration = [{
     using Base::verifyInvariants;
 
-    enum RecordKind : uint32_t { Struct, Union };
+    enum RecordKind : uint32_t { Class, Struct, Union };
 
+    bool isClass() const { return getKind() == RecordKind::Class; };
     bool isStruct() const { return getKind() == RecordKind::Struct; };
     bool isUnion() const { return getKind() == RecordKind::Union; };
     bool isComplete() const { return !isIncomplete(); };
@@ -493,6 +499,8 @@ def CIR_RecordType : CIR_Type<"Record", "record",
     size_t getNumElements() const { return getMembers().size(); };
     std::string getKindAsStr() {
       switch (getKind()) {
+      case RecordKind::Class:
+        return "class";
       case RecordKind::Union:
         return "union";
       case RecordKind::Struct:
