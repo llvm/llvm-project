@@ -1,5 +1,5 @@
 ; -- Per-kernel split
-; RUN: llvm-split -sycl-split=kernel -S < %s -o %tC
+; RUN: llvm-split -split-by-category=kernel -S < %s -o %tC
 ; RUN: FileCheck %s -input-file=%tC_0.ll --check-prefixes CHECK-A0
 ; RUN: FileCheck %s -input-file=%tC_1.ll --check-prefixes CHECK-A1
 

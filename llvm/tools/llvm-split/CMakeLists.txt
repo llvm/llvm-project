@@ -7,7 +7,6 @@ set(LLVM_LINK_COMPONENTS
   BitWriter
   CodeGen
   Core
-  FrontendSYCL
   IRReader
   MC
   Support

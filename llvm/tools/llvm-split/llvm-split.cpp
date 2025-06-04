@@ -33,7 +33,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
-#include "llvm/Transforms/Utils/SYCLUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 #include "llvm/Transforms/Utils/SplitModuleByCategory.h"
 
@@ -78,15 +77,22 @@ static cl::opt<std::string>
     MCPU("mcpu", cl::desc("Target CPU, ignored if --mtriple is not used"),
          cl::value_desc("cpu"), cl::cat(SplitCategory));
 
-static cl::opt<sycl::IRSplitMode> SYCLSplitMode(
-    "sycl-split",
-    cl::desc("SYCL Split Mode. If present, SYCL splitting algorithm is used "
-             "with the specified mode."),
-    cl::Optional, cl::init(sycl::IRSplitMode::IRSM_NONE),
-    cl::values(clEnumValN(sycl::IRSplitMode::IRSM_PER_TU, "source",
-                          "1 ouptput module per translation unit"),
-               clEnumValN(sycl::IRSplitMode::IRSM_PER_KERNEL, "kernel",
-                          "1 output module per kernel")),
+enum class SplitByCategoryType {
+  SBCT_ByModuleId,
+  SBCT_ByKernel,
+  SBCT_None,
+};
+
+static cl::opt<SplitByCategoryType> SplitByCategory(
+    "split-by-category",
+    cl::desc("Split by category. If present, splitting by category is used "
+             "with the specified categorization type."),
+    cl::Optional, cl::init(SplitByCategoryType::SBCT_None),
+    cl::values(clEnumValN(SplitByCategoryType::SBCT_ByModuleId, "module-id",
+                          "one output module per translation unit marked with "
+                          "\"module-id\" attribute"),
+               clEnumValN(SplitByCategoryType::SBCT_ByKernel, "kernel",
+                          "one output module per kernel")),
     cl::cat(SplitCategory));
 
 static cl::opt<bool> OutputAssembly{
@@ -119,33 +125,82 @@ void writeModuleToFile(const Module &M, StringRef Path, bool OutputAssembly) {
     WriteBitcodeToFile(M, OS);
 }
 
-void writeSplitModulesAsTable(ArrayRef<sycl::ModuleAndSYCLMetadata> Modules,
-                              StringRef Path) {
-  SmallVector<SmallString<64>> Columns;
-  Columns.emplace_back("Code");
-  Columns.emplace_back("Symbols");
+/// FunctionCategorizer is used for splitting by category either by module-id or
+/// by kernels. It doesn't provide categories for functions other than kernels.
+/// Categorizer computes a string key for the given Function and records the
+/// association between the string key and an integer category. If a string key
+/// is already belongs to some category than the corresponding integer category
+/// is returned.
+class FunctionCategorizer {
+public:
+  FunctionCategorizer(SplitByCategoryType Type) : Type(Type) {}
 
-  sycl::StringTable Table;
-  Table.emplace_back(std::move(Columns));
-  for (const auto &[I, SM] : enumerate(Modules)) {
-    SmallString<128> SymbolsFile;
-    (Twine(Path) + "_" + Twine(I) + ".sym").toVector(SymbolsFile);
-    writeStringToFile(SM.Symbols, SymbolsFile);
-    SmallVector<SmallString<64>> Row;
-    Row.emplace_back(SM.ModuleFilePath);
-    Row.emplace_back(SymbolsFile);
-    Table.emplace_back(std::move(Row));
+  FunctionCategorizer() = delete;
+  FunctionCategorizer(FunctionCategorizer &) = delete;
+  FunctionCategorizer &operator=(const FunctionCategorizer &) = delete;
+  FunctionCategorizer(FunctionCategorizer &&) = default;
+  FunctionCategorizer &operator=(FunctionCategorizer &&) = default;
+
+  /// Returns integer specifying the category for the given \p F.
+  /// If the given function isn't a kernel then returns std::nullopt.
+  std::optional<int> operator()(const Function &F) {
+    if (!isEntryPoint(F))
+      return std::nullopt; // skip the function.
+
+    auto StringKey = computeFunctionCategory(Type, F);
+    if (auto it = StrKeyToID.find(StringRef(StringKey)); it != StrKeyToID.end())
+      return it->second;
+
+    int ID = static_cast<int>(StrKeyToID.size());
+    return StrKeyToID.try_emplace(std::move(StringKey), ID).first->second;
   }
 
-  std::error_code EC;
-  raw_fd_ostream OS((Path + ".table").str(), EC);
-  if (EC) {
-    errs() << formatv("error opening file: {0}\n", Path);
-    exit(1);
+private:
+  static bool isEntryPoint(const Function &F) {
+    if (F.isDeclaration())
+      return false;
+
+    return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
+           F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
+           F.getCallingConv() == CallingConv::PTX_Kernel;
   }
 
-  sycl::writeStringTable(Table, OS);
-}
+  static SmallString<0> computeFunctionCategory(SplitByCategoryType Type,
+                                                const Function &F) {
+    static constexpr char ATTR_MODULE_ID[] = "module-id";
+    SmallString<0> Key;
+    switch (Type) {
+    case SplitByCategoryType::SBCT_ByKernel:
+      Key = F.getName().str();
+      break;
+    case SplitByCategoryType::SBCT_ByModuleId:
+      Key = F.getFnAttribute(ATTR_MODULE_ID).getValueAsString().str();
+      break;
+    default:
+      llvm_unreachable("unexpected mode.");
+    }
+
+    return Key;
+  }
+
+private:
+  struct KeyInfo {
+    static SmallString<0> getEmptyKey() { return SmallString<0>(""); }
+
+    static SmallString<0> getTombstoneKey() { return SmallString<0>("-"); }
+
+    static bool isEqual(const SmallString<0> &LHS, const SmallString<0> &RHS) {
+      return LHS == RHS;
+    }
+
+    static unsigned getHashValue(const SmallString<0> &S) {
+      return llvm::hash_value(StringRef(S));
+    }
+  };
+
+  SplitByCategoryType Type;
+  DenseMap<SmallString<0>, int, KeyInfo> StrKeyToID;
+};
 
 void cleanupModule(Module &M) {
   ModuleAnalysisManager MAM;
@@ -155,30 +210,27 @@ void cleanupModule(Module &M) {
   MPM.run(M, MAM);
 }
 
-Error runSYCLSplitModule(std::unique_ptr<Module> M) {
-  SmallVector<sycl::ModuleAndSYCLMetadata> SplitModules;
+Error runSplitModuleByCategory(std::unique_ptr<Module> M) {
+  size_t OutputID = 0;
   auto PostSplitCallback = [&](std::unique_ptr<Module> MPart) {
     if (verifyModule(*MPart)) {
       errs() << "Broken Module!\n";
       exit(1);
     }
 
-    // TODO: DCE is a crucial pass in a SYCL post-link pipeline.
+    // TODO: DCE is a crucial pass since it removes unused declarations.
     //       At the moment, LIT checking can't be perfomed without DCE.
     cleanupModule(*MPart);
-    size_t ID = SplitModules.size();
+    size_t ID = OutputID;
+    ++OutputID;
     StringRef ModuleSuffix = OutputAssembly ? ".ll" : ".bc";
     std::string ModulePath =
         (Twine(OutputFilename) + "_" + Twine(ID) + ModuleSuffix).str();
     writeModuleToFile(*MPart, ModulePath, OutputAssembly);
-    auto Symbols = sycl::makeSymbolTable(*MPart);
-    SplitModules.emplace_back(std::move(ModulePath), std::move(Symbols));
   };
 
-  auto Categorizer = sycl::FunctionCategorizer(SYCLSplitMode);
-  sycl::SplitModuleByCategory(std::move(M), std::move(Categorizer),
-                              PostSplitCallback);
-  writeSplitModulesAsTable(SplitModules, OutputFilename);
+  auto Categorizer = FunctionCategorizer(SplitByCategory);
+  splitModuleByCategory(std::move(M), Categorizer, PostSplitCallback);
   return Error::success();
 }
 
@@ -235,8 +287,8 @@ int main(int argc, char **argv) {
     Out->keep();
   };
 
-  if (SYCLSplitMode != sycl::IRSplitMode::IRSM_NONE) {
-    auto E = runSYCLSplitModule(std::move(M));
+  if (SplitByCategory != SplitByCategoryType::SBCT_None) {
+    auto E = runSplitModuleByCategory(std::move(M));
     if (E) {
       errs() << E << "\n";
       Err.print(argv[0], errs());

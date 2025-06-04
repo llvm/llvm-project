@@ -1,15 +1,10 @@
 ; This test checks that Module splitting can properly perform device code split by tracking
 ; all uses of functions (not only direct calls).
 
-; RUN: llvm-split -sycl-split=source -S < %s -o %t
-; RUN: FileCheck %s -input-file=%t_0.sym --check-prefix=CHECK-SYM0
-; RUN: FileCheck %s -input-file=%t_1.sym --check-prefix=CHECK-SYM1
+; RUN: llvm-split -split-by-category=module-id -S < %s -o %t
 ; RUN: FileCheck %s -input-file=%t_0.ll --check-prefix=CHECK-IR0
 ; RUN: FileCheck %s -input-file=%t_1.ll --check-prefix=CHECK-IR1
 
-; CHECK-SYM0: kernelA
-; CHECK-SYM1: kernelB
-;
 ; CHECK-IR0: define dso_local spir_kernel void @kernelA
 ;
 ; CHECK-IR1: @FuncTable = weak global ptr @func
@@ -36,8 +31,8 @@ entry:
 
 declare dso_local spir_func i32 @indirect_call(ptr addrspace(4), i32) local_unnamed_addr
 
-attributes #0 = { "sycl-module-id"="TU1.cpp" }
-attributes #1 = { "sycl-module-id"="TU2.cpp" }
+attributes #0 = { "module-id"="TU1.cpp" }
+attributes #1 = { "module-id"="TU2.cpp" }
 
 ; CHECK: kernel1
 ; CHECK: kernel2

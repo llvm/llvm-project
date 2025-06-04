@@ -8,8 +8,8 @@
 // Functionality to split a module by categories.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_FRONTEND_SYCL_SPLIT_MODULE_H
-#define LLVM_FRONTEND_SYCL_SPLIT_MODULE_H
+#ifndef LLVM_TRANSFORM_UTILS_SPLIT_MODULE_BY_CATEGORY_H
+#define LLVM_TRANSFORM_UTILS_SPLIT_MODULE_BY_CATEGORY_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 
@@ -22,21 +22,23 @@ namespace llvm {
 class Module;
 class Function;
 
-namespace sycl {
-
-/// FunctionCategorizer returns integer category for the given Function.
-/// Otherwise, it returns std::nullopt if function doesn't have a category.
-using FunctionCategorizer = function_ref<std::optional<int>(const Function &F)>;
-
-using PostSplitCallbackType = function_ref<void(std::unique_ptr<Module> Part)>;
-
-/// Splits the given module \p M.
-/// Every split image is being passed to \p Callback for further possible
+/// Splits the given module \p M using the given \p FunctionCategorizer.
+/// \p FunctionCategorizer returns integer category for an input Function.
+/// It may return std::nullopt if a function doesn't have a category.
+/// Module's functions are being grouped by categories. Every such group
+/// populates a call graph containing group's functions themselves and all
+/// reachable functions and globals. Split outputs are populated from each call
+/// graph associated with some category.
+///
+/// Every split output is being passed to \p Callback for further possible
 /// processing.
-void splitModuleByCategory(std::unique_ptr<Module> M, FunctionCategorizer FC,
-                           PostSplitCallbackType Callback);
+///
+/// Currently, the supported targets are SPIRV, AMDGPU and NVPTX.
+void splitModuleByCategory(
+    std::unique_ptr<Module> M,
+    function_ref<std::optional<int>(const Function &F)> FunctionCategorizer,
+    function_ref<void(std::unique_ptr<Module> Part)> Callback);
 
-} // namespace sycl
 } // namespace llvm
 
-#endif // LLVM_FRONTEND_SYCL_SPLIT_MODULE_H
+#endif // LLVM_TRANSFORM_UTILS_SPLIT_MODULE_BY_CATEGORY_H

@@ -1,18 +1,13 @@
-; Test checks that kernels are being split by attached TU metadata and
+; Test checks that kernels are being split by attached module-id metadata and
 ; used functions are being moved with kernels that use them.
 
-; RUN: llvm-split -sycl-split=source -S < %s -o %t
+; RUN: llvm-split -split-by-category=module-id -S < %s -o %t
 ; RUN: FileCheck %s -input-file=%t_0.ll --check-prefixes CHECK-TU0,CHECK
 ; RUN: FileCheck %s -input-file=%t_1.ll --check-prefixes CHECK-TU1,CHECK
-; RUN: FileCheck %s -input-file=%t_0.sym --check-prefixes CHECK-TU0-TXT
-; RUN: FileCheck %s -input-file=%t_1.sym --check-prefixes CHECK-TU1-TXT
 
 ; CHECK-TU1-NOT: @GV
 ; CHECK-TU0: @GV = internal addrspace(1) constant [1 x i32] [i32 42], align 4
 @GV = internal addrspace(1) constant [1 x i32] [i32 42], align 4
-
-; CHECK-TU0-TXT-NOT: TU1_kernelA
-; CHECK-TU1-TXT: TU1_kernelA
 
 ; CHECK-TU0-NOT: define dso_local spir_kernel void @TU1_kernelA
 ; CHECK-TU1: define dso_local spir_kernel void @TU1_kernelA
@@ -38,10 +33,6 @@ define linkonce_odr dso_local spir_func void @func2_TU1() {
 entry:
   ret void
 }
-
-
-; CHECK-TU0-TXT-NOT: TU1_kernelB
-; CHECK-TU1-TXT: TU1_kernelB
 
 ; CHECK-TU0-NOT: define dso_local spir_kernel void @TU1_kernelB()
 ; CHECK-TU1: define dso_local spir_kernel void @TU1_kernelB()
@@ -80,8 +71,8 @@ entry:
   ret void
 }
 
-attributes #0 = { "sycl-module-id"="TU1.cpp" }
-attributes #1 = { "sycl-module-id"="TU2.cpp" }
+attributes #0 = { "module-id"="TU1.cpp" }
+attributes #1 = { "module-id"="TU2.cpp" }
 
 ; Metadata is saved in both modules.
 ; CHECK: !opencl.spir.version = !{!0, !0}

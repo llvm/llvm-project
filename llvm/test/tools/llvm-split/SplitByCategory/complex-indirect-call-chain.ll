@@ -1,7 +1,7 @@
 ; Check that Module splitting can trace through more complex call stacks
 ; involving several nested indirect calls.
 
-; RUN: llvm-split -sycl-split=source -S < %s -o %t
+; RUN: llvm-split -split-by-category=module-id -S < %s -o %t
 ; RUN: FileCheck %s -input-file=%t_0.ll --check-prefix CHECK0 \
 ; RUN:     --implicit-check-not @foo --implicit-check-not @kernel_A \
 ; RUN:     --implicit-check-not @kernel_B --implicit-check-not @baz
@@ -12,7 +12,7 @@
 ; RUN:     --implicit-check-not @BAZ --implicit-check-not @kernel_B \
 ; RUN:     --implicit-check-not @kernel_C
 
-; RUN: llvm-split -sycl-split=kernel -S < %s -o %t
+; RUN: llvm-split -split-by-category=kernel -S < %s -o %t
 ; RUN: FileCheck %s -input-file=%t_0.ll --check-prefix CHECK0 \
 ; RUN:     --implicit-check-not @foo --implicit-check-not @kernel_A \
 ; RUN:     --implicit-check-not @kernel_B
@@ -70,6 +70,6 @@ define spir_kernel void @kernel_C() #2 {
   ret void
 }
 
-attributes #0 = { "sycl-module-id"="TU1.cpp" }
-attributes #1 = { "sycl-module-id"="TU2.cpp" }
-attributes #2 = { "sycl-module-id"="TU3.cpp" }
+attributes #0 = { "module-id"="TU1.cpp" }
+attributes #1 = { "module-id"="TU2.cpp" }
+attributes #2 = { "module-id"="TU3.cpp" }

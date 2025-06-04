@@ -1,21 +1,14 @@
 ; Test checks "kernel" splitting mode.
 
-; RUN: llvm-split -sycl-split=kernel -S < %s -o %t.files
+; RUN: llvm-split -split-by-category=kernel -S < %s -o %t.files
 ; RUN: FileCheck %s -input-file=%t.files_0.ll --check-prefixes CHECK-MODULE0,CHECK
-; RUN: FileCheck %s -input-file=%t.files_0.sym --check-prefixes CHECK-MODULE0-TXT
 ; RUN: FileCheck %s -input-file=%t.files_1.ll --check-prefixes CHECK-MODULE1,CHECK
-; RUN: FileCheck %s -input-file=%t.files_1.sym --check-prefixes CHECK-MODULE1-TXT
 ; RUN: FileCheck %s -input-file=%t.files_2.ll --check-prefixes CHECK-MODULE2,CHECK
-; RUN: FileCheck %s -input-file=%t.files_2.sym --check-prefixes CHECK-MODULE2-TXT
 
 ;CHECK-MODULE0: @GV = internal addrspace(1) constant [1 x i32] [i32 42], align 4
 ;CHECK-MODULE1-NOT: @GV
 ;CHECK-MODULE2-NOT: @GV
 @GV = internal addrspace(1) constant [1 x i32] [i32 42], align 4
-
-; CHECK-MODULE0-TXT-NOT: T0_kernelA
-; CHECK-MODULE1-TXT-NOT: TU0_kernelA
-; CHECK-MODULE2-TXT: TU0_kernelA
 
 ; CHECK-MODULE0-NOT: define dso_local spir_kernel void @TU0_kernelA
 ; CHECK-MODULE1-NOT: define dso_local spir_kernel void @TU0_kernelA
@@ -45,10 +38,6 @@ entry:
   ret void
 }
 
-; CHECK-MODULE0-TXT-NOT: TU0_kernelB
-; CHECK-MODULE1-TXT: TU0_kernelB
-; CHECK-MODULE2-TXT-NOT: TU0_kernelB
-
 ; CHECK-MODULE0-NOT: define dso_local spir_kernel void @TU0_kernelB()
 ; CHECK-MODULE1: define dso_local spir_kernel void @TU0_kernelB()
 ; CHECK-MODULE2-NOT: define dso_local spir_kernel void @TU0_kernelB()
@@ -66,10 +55,6 @@ define dso_local spir_func void @foo1() {
 entry:
   ret void
 }
-
-; CHECK-MODULE0-TXT: TU1_kernel
-; CHECK-MODULE1-TXT-NOT: TU1_kernel
-; CHECK-MODULE2-TXT-NOT: TU1_kernel
 
 ; CHECK-MODULE0: define dso_local spir_kernel void @TU1_kernel()
 ; CHECK-MODULE1-NOT: define dso_local spir_kernel void @TU1_kernel()
@@ -91,8 +76,8 @@ entry:
   ret void
 }
 
-attributes #0 = { "sycl-module-id"="TU1.cpp" }
-attributes #1 = { "sycl-module-id"="TU2.cpp" }
+attributes #0 = { "module-id"="TU1.cpp" }
+attributes #1 = { "module-id"="TU2.cpp" }
 
 ; Metadata is saved in both modules.
 ; CHECK: !opencl.spir.version = !{!0, !0}

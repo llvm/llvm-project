@@ -25,17 +25,10 @@
 #include <utility>
 
 using namespace llvm;
-using namespace llvm::sycl;
 
-#define DEBUG_TYPE "sycl-split-module"
+#define DEBUG_TYPE "split-module-by-category"
 
 namespace {
-
-bool isKernel(const Function &F) {
-  return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
-         F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
-         F.getCallingConv() == CallingConv::PTX_Kernel;
-}
 
 // A vector that contains a group of function with the same category.
 using EntryPointSet = SetVector<const Function *>;
@@ -105,6 +98,12 @@ public:
   }
 #endif
 };
+
+bool isKernel(const Function &F) {
+  return F.getCallingConv() == CallingConv::SPIR_KERNEL ||
+         F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
+         F.getCallingConv() == CallingConv::PTX_Kernel;
+}
 
 // Represents "dependency" or "use" graph of global objects (functions and
 // global variables) in a module. It is used during device code split to
@@ -299,17 +298,18 @@ public:
   bool hasMoreSplits() const { return Groups.size() > 0; }
 };
 
-EntryPointGroupVec selectEntryPointGroups(const Module &M,
-                                          FunctionCategorizer FC) {
+EntryPointGroupVec
+selectEntryPointGroups(const Module &M,
+                       function_ref<std::optional<int>(const Function &F)> FC) {
   // std::map is used here to ensure stable ordering of entry point groups,
   // which is based on their contents, this greatly helps LIT tests
   std::map<int, EntryPointSet> EntryPointsMap;
 
   for (const auto &F : M.functions()) {
-    if (auto Key = FC(F); Key) {
-      auto It = EntryPointsMap.find(*Key);
+    if (auto Category = FC(F); Category) {
+      auto It = EntryPointsMap.find(*Category);
       if (It == EntryPointsMap.end())
-        It = EntryPointsMap.emplace(*Key, EntryPointSet()).first;
+        It = EntryPointsMap.emplace(*Category, EntryPointSet()).first;
 
       It->second.insert(&F);
     }
@@ -326,10 +326,11 @@ EntryPointGroupVec selectEntryPointGroups(const Module &M,
 
 } // namespace
 
-void llvm::sycl::splitModuleByCategory(std::unique_ptr<Module> M,
-                                       FunctionCategorizer FC,
-                                       PostSplitCallbackType Callback) {
-  EntryPointGroupVec Groups = selectEntryPointGroups(*M, FC);
+void llvm::splitModuleByCategory(
+    std::unique_ptr<Module> M,
+    function_ref<std::optional<int>(const Function &F)> FunctionCategorizer,
+    function_ref<void(std::unique_ptr<Module> Part)> Callback) {
+  EntryPointGroupVec Groups = selectEntryPointGroups(*M, FunctionCategorizer);
   ModuleDesc MD = std::move(M);
   ModuleSplitter Splitter(std::move(MD), std::move(Groups));
   while (Splitter.hasMoreSplits()) {
