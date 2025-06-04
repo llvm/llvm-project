@@ -4437,6 +4437,7 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_FP_literal_
   %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 0, i32 0, i32 2, i32 1042479491, i32 2, i32 1065353216)
   ret <16 x float> %result
 }
+
 define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_kimm__scaleB_kimm(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %scale0, i32 %scale1) {
 ; SDAG-LABEL: test_mfma_scale_f32_32x32x64_f8f6f4_0_0__scaleA_kimm__scaleB_kimm:
 ; SDAG:       ; %bb.0:
