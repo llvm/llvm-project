@@ -8610,19 +8610,16 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
       !DAG.isKnownNeverZeroFloat(RHS) && !DAG.isKnownNeverZeroFloat(LHS)) {
-    auto IsSpecificZero = [&](SDValue F) {
-      FloatSignAsInt State;
-      DAG.getSignAsIntValue(State, DL, F);
-      return DAG.getSetCC(DL, CCVT, State.IntValue,
-                          DAG.getConstant(0, DL, State.IntValue.getValueType()),
-                          IsMax ? ISD::SETEQ : ISD::SETNE);
-    };
     SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                   DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
-    SDValue LCmp =
-        DAG.getSelect(DL, VT, IsSpecificZero(LHS), LHS, MinMax, Flags);
-    SDValue RCmp = DAG.getSelect(DL, VT, IsSpecificZero(RHS), RHS, LCmp, Flags);
-    MinMax = DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
+    FloatSignAsInt State;
+    DAG.getSignAsIntValue(State, DL, LHS);
+    SDValue IsSpecificZero =
+        DAG.getSetCC(DL, CCVT, State.IntValue,
+                     DAG.getConstant(0, DL, State.IntValue.getValueType()),
+                     IsMax ? ISD::SETEQ : ISD::SETNE);
+    SDValue Sel = DAG.getSelect(DL, VT, IsSpecificZero, LHS, RHS, Flags);
+    MinMax = DAG.getSelect(DL, VT, IsZero, Sel, MinMax, Flags);
   }
 
   return MinMax;
