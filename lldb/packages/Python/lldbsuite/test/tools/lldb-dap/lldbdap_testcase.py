@@ -131,12 +131,12 @@ class DAPTestCaseBase(TestBase):
     def assertCapabilityIsSet(self, key: str, msg: Optional[str] = None) -> None:
         """Assert that given capability is set in the client."""
         self.assertIn(key, self.dap_server.capabilities, msg)
-        self.assertTrue(self.dap_server.capabilities[key], msg)
+        self.assertEqual(self.dap_server.capabilities[key], True, msg)
 
     def assertCapabilityIsNotSet(self, key: str, msg: Optional[str] = None) -> None:
         """Assert that given capability is not set in the client."""
         if key in self.dap_server.capabilities:
-            self.assertFalse(self.dap_server.capabilities[key], msg)
+            self.assertEqual(self.dap_server.capabilities[key], False, msg)
 
     def verify_breakpoint_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify we hit
