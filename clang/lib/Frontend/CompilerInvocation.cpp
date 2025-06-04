@@ -2983,14 +2983,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   Opts.ProgramAction = frontend::ParseSyntaxOnly;
 
-  // If -ignore-pch is used, all pch handling is disabled. clang pch-related
-  // flags are removed.
-  if (Args.hasArg(options::OPT_ignore_pch)) {
-    Args.eraseArg(options::OPT_emit_pch);
-    Args.eraseArg(options::OPT_include_pch);
-    Args.eraseArg(options::OPT_ignore_pch);
-  }
-
   if (const Arg *A = Args.getLastArg(OPT_Action_Group)) {
     OptSpecifier Opt = OptSpecifier(A->getOption().getID());
     std::optional<frontend::ActionKind> ProgramAction = getFrontendAction(Opt);

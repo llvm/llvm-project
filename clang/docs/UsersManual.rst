@@ -1461,8 +1461,7 @@ will be processed from the PCH file. Otherwise, Clang will report an error.
 Ignoring a PCH File
 ^^^^^^^^^^^^^^^^^^^
 
-To ignore a PCH file using Clang, the `-Xclang -ignore-pch` option is passed to
-``clang``:
+To ignore PCH options, a `-ignore-pch` option is passed to ``clang``:
 
 .. code-block:: console
 

@@ -31,7 +31,7 @@ option:
 
   $ clang -cc1 -include-pch test.h.pch test.c -o test.s
 
-To ignore PCH options using ``clang -cc1``, use the option `-ignore-pch`:
+To ignore PCH options, use the option `-ignore-pch`:
 
 .. code-block:: bash
 

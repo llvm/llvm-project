@@ -3348,6 +3348,9 @@ defm pch_codegen: OptInCC1FFlag<"pch-codegen", "Generate ", "Do not generate ",
   "code for uses of this PCH that assumes an explicit object file will be built for the PCH">;
 defm pch_debuginfo: OptInCC1FFlag<"pch-debuginfo", "Generate ", "Do not generate ",
   "debug info for types in an object file built from this PCH and do not generate them elsewhere">;
+def ignore_pch : Flag<["-"], "ignore-pch">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Disable precompiled headers, overrides -emit-pch and -include-pch">;
 
 def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -8127,8 +8130,6 @@ def emit_header_unit : Flag<["-"], "emit-header-unit">,
   HelpText<"Generate C++20 header units from header files">;
 def emit_pch : Flag<["-"], "emit-pch">,
   HelpText<"Generate pre-compiled header file">;
-def ignore_pch : Flag<["-"], "ignore-pch">,
-  HelpText<"Ignore pre-compiled header options">;
 def emit_llvm_only : Flag<["-"], "emit-llvm-only">,
   HelpText<"Build ASTs and convert to LLVM, discarding output">;
 def emit_codegen_only : Flag<["-"], "emit-codegen-only">,
