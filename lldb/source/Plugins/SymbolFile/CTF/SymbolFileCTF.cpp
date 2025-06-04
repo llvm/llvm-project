@@ -489,8 +489,8 @@ SymbolFileCTF::CreateFunction(const CTFFunction &ctf_function) {
         llvm::inconvertibleErrorCode());
 
   CompilerType func_type = m_ast->CreateFunctionType(
-      ret_type->GetFullCompilerType(), arg_types.data(), arg_types.size(),
-      ctf_function.variadic, 0, clang::CallingConv::CC_C);
+      ret_type->GetFullCompilerType(), arg_types, ctf_function.variadic, 0,
+      clang::CallingConv::CC_C);
 
   Declaration decl;
   return MakeType(ctf_function.uid, ConstString(ctf_function.name), 0, nullptr,
@@ -814,8 +814,7 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
       // Create function type.
       CompilerType func_type = m_ast->CreateFunctionType(
           ret_type ? ret_type->GetFullCompilerType() : CompilerType(),
-          arg_types.data(), arg_types.size(), is_variadic, 0,
-          clang::CallingConv::CC_C);
+          arg_types, is_variadic, 0, clang::CallingConv::CC_C);
       lldb::user_id_t function_type_uid = m_types.size() + 1;
       TypeSP type_sp =
           MakeType(function_type_uid, symbol->GetName(), 0, nullptr,
