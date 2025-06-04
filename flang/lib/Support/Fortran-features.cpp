@@ -15,11 +15,6 @@
 
 namespace Fortran::common {
 
-// Namespace for helper functions for parsing CLI options
-// used instead of static so that there can be unit tests for these
-// functions.
-namespace featuresHelpers {
-
 static std::vector<std::string_view> SplitCamelCase(std::string_view x) {
   std::vector<std::string_view> result;
   // NB, we start at 1 because the first character is never a word boundary.
@@ -42,6 +37,9 @@ static std::vector<std::string_view> SplitCamelCase(std::string_view x) {
   return result;
 }
 
+// Namespace for helper functions for parsing CLI options used instead of static
+// so that there can be unit tests for this function.
+namespace featuresHelpers {
 std::string CamelCaseToLowerCaseHyphenated(std::string_view x) {
   std::vector<std::string_view> words{SplitCamelCase(x)};
   std::string result{};
@@ -160,7 +158,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
 
 // Take a string from the CLI and apply it to the LanguageFeatureControl.
 // Return true if the option was applied recognized.
-bool LanguageFeatureControl::applyCLIOption(std::string input) {
+bool LanguageFeatureControl::ApplyCLIOption(std::string input) {
   bool negated{false};
   if (input.size() > 3 && input.substr(0, 3) == "no-") {
     negated = true;
@@ -179,7 +177,7 @@ bool LanguageFeatureControl::applyCLIOption(std::string input) {
   return false;
 }
 
-void LanguageFeatureControl::replaceCliCanonicalSpelling(
+void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
     LanguageFeature f, std::string input) {
   std::string_view old{languageFeatureCliCanonicalSpelling_[EnumToInt(f)]};
   cliOptions_.erase(std::string{old});
@@ -187,7 +185,7 @@ void LanguageFeatureControl::replaceCliCanonicalSpelling(
   cliOptions_.insert({input, {f}});
 }
 
-void LanguageFeatureControl::replaceCliCanonicalSpelling(
+void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
     UsageWarning w, std::string input) {
   std::string_view old{usageWarningCliCanonicalSpelling_[EnumToInt(w)]};
   cliOptions_.erase(std::string{old});

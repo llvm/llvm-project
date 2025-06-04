@@ -115,15 +115,15 @@ public:
   bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }
   bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
   // CLI options
-  bool applyCLIOption(std::string input);
-  void addAlternativeCliSpelling(LanguageFeature f, std::string input) {
+  bool ApplyCLIOption(std::string input);
+  void AddAlternativeCliSpelling(LanguageFeature f, std::string input) {
     cliOptions_.insert({input, {f}});
   }
-  void addAlternativeCliSpelling(UsageWarning w, std::string input) {
+  void AddAlternativeCliSpelling(UsageWarning w, std::string input) {
     cliOptions_.insert({input, {w}});
   }
-  void replaceCliCanonicalSpelling(LanguageFeature f, std::string input);
-  void replaceCliCanonicalSpelling(UsageWarning w, std::string input);
+  void ReplaceCliCanonicalSpelling(LanguageFeature f, std::string input);
+  void ReplaceCliCanonicalSpelling(UsageWarning w, std::string input);
   std::string_view getDefaultCliSpelling(LanguageFeature f) const {
     return languageFeatureCliCanonicalSpelling_[EnumToInt(f)];
   };
