@@ -1787,6 +1787,50 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Ashr = foldAddToAshr(I))
     return Ashr;
 
+  // Ceiling division by power-of-2:
+  // (X >> log2(N)) + zext(X & (N-1) != 0) --> (X + (N-1)) >> log2(N)
+  // This is valid when adding (N-1) to X doesn't overflow.
+  {
+    Value *X = nullptr, *Cmp = nullptr;
+    const APInt *ShiftAmt = nullptr, *Mask = nullptr;
+    CmpPredicate Pred;
+
+    // Match: (X >> C) + zext((X & Mask) != 0)
+    // or:    zext((X & Mask) != 0) + (X >> C)
+    Value *Op0 = I.getOperand(0);
+    Value *Op1 = I.getOperand(1);
+
+    // Try matching with shift on left, zext on right
+    bool Matched = false;
+    if (match(Op0, m_LShr(m_Value(X), m_APInt(ShiftAmt))) &&
+        match(Op1, m_ZExt(m_Value(Cmp)))) {
+      Matched = match(Cmp, m_ICmp(Pred, m_And(m_Specific(X), m_APInt(Mask)),
+                                  m_ZeroInt()));
+    } else if (match(Op1, m_LShr(m_Value(X), m_APInt(ShiftAmt))) &&
+               match(Op0, m_ZExt(m_Value(Cmp)))) {
+      Matched = match(Cmp, m_ICmp(Pred, m_And(m_Specific(X), m_APInt(Mask)),
+                                  m_ZeroInt()));
+    }
+
+    if (Matched &&
+        Pred == ICmpInst::ICMP_NE &&
+        ShiftAmt && ShiftAmt->uge(1) && ShiftAmt->ult(BitWidth) &&
+        Mask && *Mask == (APInt(BitWidth, 1) << *ShiftAmt) - 1) {
+
+      // Check if X + Mask doesn't overflow
+      Constant *MaskC = ConstantInt::get(X->getType(), *Mask);
+      bool WillNotOverflowUnsigned = willNotOverflowUnsignedAdd(X, MaskC, I);
+
+      if (WillNotOverflowUnsigned) {
+        // (X + Mask) >> ShiftAmt
+        bool WillNotOverflowSigned = willNotOverflowSignedAdd(X, MaskC, I);
+        Value *Add = Builder.CreateAdd(X, MaskC, "", WillNotOverflowUnsigned,
+                                      WillNotOverflowSigned);
+        return BinaryOperator::CreateLShr(Add, ConstantInt::get(X->getType(), *ShiftAmt));
+      }
+    }
+  }
+
   // (~X) + (~Y) --> -2 - (X + Y)
   {
     // To ensure we can save instructions we need to ensure that we consume both
